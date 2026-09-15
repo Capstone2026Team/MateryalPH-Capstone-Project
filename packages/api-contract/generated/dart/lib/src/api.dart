@@ -13,7 +13,6 @@ import 'package:materyalph_api_client/src/api/accounts_api.dart';
 import 'package:materyalph_api_client/src/api/agreements_api.dart';
 import 'package:materyalph_api_client/src/api/authentication_api.dart';
 import 'package:materyalph_api_client/src/api/system_api.dart';
-import 'package:materyalph_api_client/src/api/vendor_onboarding_api.dart';
 
 class MateryalphApiClient {
   static const String basePath = r'/api/v1';
@@ -131,11 +130,5 @@ class MateryalphApiClient {
   /// by doing that all interceptors will not be executed
   SystemApi getSystemApi() {
     return SystemApi(dio, serializers);
-  }
-
-  /// Get VendorOnboardingApi instance, base route and serializer can be overridden by a given but be careful,
-  /// by doing that all interceptors will not be executed
-  VendorOnboardingApi getVendorOnboardingApi() {
-    return VendorOnboardingApi(dio, serializers);
   }
 }

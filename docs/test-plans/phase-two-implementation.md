@@ -34,7 +34,7 @@ The acceptance run resumed the existing working tree at repository HEAD `3f5e3c2
 | Backend formatting | `cd services/api; php vendor/bin/pint --test` | Passed |
 | Backend static analysis | `php vendor/bin/phpstan analyse --no-progress --memory-limit=1G` | No errors |
 | Final focused authorization/account security | isolated `api-test php artisan test --compact --filter=PhaseTwoAccountSecurityTest` | 11 tests, 110 assertions passed after the final permission correction |
-| Final backend and Phase 1 regression | isolated `api-test php artisan test --compact` | 86 tests, 1,096 assertions passed after the final permission correction; 59.06 seconds |
+| Final backend and Phase 1 regression (current Phase 2 scope) | isolated `api-test php artisan test --compact` | 86 tests, 1,096 assertions passed after the final permission correction; 59.06 seconds |
 | Buyer regression | `flutter test` | 31 tests passed; repeated after generated-client cleanup |
 | Buyer static analysis | `flutter analyze` | No issues; repeated after generated-client cleanup |
 | Android debug | `flutter build apk --debug` | APK built; repeated after generated-client cleanup |
@@ -103,7 +103,7 @@ Store Staff and Customer Service explicitly receive `auto_accept.view_outcomes`,
 
 The final commit-free snapshot includes both the Store Staff mutation-grant removal and explicit Store Staff/Customer Service read grant, plus the persisted-role regression test. Snapshot tree: `943043c754d07eb520624b9b03639ff275121f3f`. Container image digest: `c67fc17ec8113673fe160ca65d8c8787fd58026edf34117cbd289a8aafd47009`. Isolated project: `materyalph_clean_72ad216eff72`. Local evidence log: `%TEMP%/materyalph-phase2-clean-current.log`.
 
-The final snapshot passed the 6.92 MB source secret scan, live PostgreSQL 16/PostGIS isolation guard, empty migrations, rollback/reapply, schema drift, Passport key handling, SMTP/Mailpit, Pint (177 files), PHPStan (no errors), full backend regression (86 tests / 1,096 assertions, 33.51 seconds), OpenAPI validation, TypeScript/Dart regeneration without drift, Dart serializer generation, Dart analysis (no issues), and whitespace verification. Disposable containers were stopped after success. Development volumes and existing Passport keys were not modified. The report was finalized after that snapshot; implementation source remains the verified candidate.
+The final snapshot passed the 6.92 MB source secret scan, live PostgreSQL 16/PostGIS isolation guard, empty migrations, rollback/reapply, schema drift, Passport key handling, SMTP/Mailpit, Pint (177 files), PHPStan (no errors), Phase 2 backend regression (86 tests / 1,096 assertions, 33.51 seconds), OpenAPI validation, TypeScript/Dart regeneration without drift, Dart serializer generation, Dart analysis (no issues), and whitespace verification. Disposable containers were stopped after success. Development volumes and existing Passport keys were not modified. The report was finalized after that snapshot; implementation source remains the verified candidate.
 
 No Phase 2 functional, security, build, static-analysis or verification blocker remains. The optional Impeccable diagnostic remains blocked as documented above.
 

@@ -1,6 +1,6 @@
 import { QRCodeSVG } from 'qrcode.react'
 import { AcceptStaffInvitation } from './pages/AcceptStaffInvitation'
-import { AccountWorkspace, VendorDashboardWorkspace, VendorOnboardingWorkspace, Button, Field, PhoneField, StatusMessage } from '@materyalph/web-ui'
+import { AccountWorkspace, Button, Field, PhoneField, StatusMessage } from '@materyalph/web-ui'
 import { ArrowRight } from 'lucide-react'
 import { type FormEvent, type ReactNode, useEffect, useRef, useState } from 'react'
 import { BrowserRouter, Link, Route, Routes, useNavigate, useSearchParams } from 'react-router-dom'
@@ -15,6 +15,7 @@ import { asBotStepUpRequired, asValidationFailure, readableApiError, registerVen
 import { vendorBotEvidence, webCookieBotEvidence } from './lib/recaptcha-enterprise'
 import {
   VendorAuthCallbackPage,
+  VendorDashboardFoundation,
   VendorForgotPasswordPage,
   VendorGoogleRegisterPage,
   VendorMfaPage,
@@ -30,14 +31,14 @@ function App() {
         <Route path="/" element={<VendorLandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
-        <Route path="/onboarding" element={<VendorOnboardingWorkspace portal="vendors" basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} accountPath="/account" dashboardPath="/dashboard" />} /><Route path="/accept-invite" element={<AcceptStaffInvitation />} />
+        <Route path="/accept-invite" element={<AcceptStaffInvitation />} />
         <Route path="/register/google" element={<VendorGoogleRegisterPage />} />
         <Route path="/verify-email" element={<VendorVerifyEmailPage />} />
         <Route path="/forgot-password" element={<VendorForgotPasswordPage />} />
         <Route path="/reset-password" element={<VendorResetPasswordPage />} />
         <Route path="/auth/mfa" element={<VendorMfaPage />} />
         <Route path="/auth/callback" element={<VendorAuthCallbackPage />} />
-        <Route path="/dashboard" element={<VendorDashboardWorkspace basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} loginPath="/login" accountPath="/account" onboardingPath="/onboarding" />} />
+        <Route path="/dashboard" element={<VendorDashboardFoundation />} />
         <Route path="/account" element={<AccountWorkspace portal="vendors" basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} loginPath="/login" renderQr={uri => <QRCodeSVG value={uri} title="Authenticator setup QR code" />} />} />
         <Route path="/fees" element={<InfoPage title="Payments and fees"><FeesContent /></InfoPage>} />
         <Route path="/verification" element={<InfoPage title="Vendor verification"><VerificationContent /></InfoPage>} />

@@ -7,13 +7,6 @@ use App\Domain\Identity\OtpCodeGenerator;
 use App\Domain\Identity\PassportAccessTokenIssuer;
 use App\Domain\Identity\RecaptchaAssessmentGateway;
 use App\Domain\Identity\SecureOtpCodeGenerator;
-use App\Domain\Vendors\CloudinaryPublicMedia;
-use App\Domain\Vendors\FileScanner;
-use App\Domain\Vendors\PublicMediaProvider;
-use App\Domain\Vendors\SimulatedXenditConnection;
-use App\Domain\Vendors\TestConnectionProvider;
-use App\Domain\Vendors\TestFileScanner;
-use App\Domain\Vendors\XenditTestConnection;
 use App\Infrastructure\Identity\GoogleRecaptchaEnterpriseGateway;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -28,9 +21,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->bind(FileScanner::class, TestFileScanner::class);
-        $this->app->bind(PublicMediaProvider::class, CloudinaryPublicMedia::class);
-        $this->app->bind(TestConnectionProvider::class, fn () => config('vendor_onboarding.simulated_connection') ? new SimulatedXenditConnection : new XenditTestConnection);
         $this->app->bind(OtpCodeGenerator::class, SecureOtpCodeGenerator::class);
         $this->app->bind(AccessTokenIssuer::class, PassportAccessTokenIssuer::class);
         $this->app->bind(RecaptchaAssessmentGateway::class, GoogleRecaptchaEnterpriseGateway::class);

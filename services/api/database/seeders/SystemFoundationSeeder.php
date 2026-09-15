@@ -26,7 +26,6 @@ final class SystemFoundationSeeder extends Seeder
             ['TERMS_OF_SERVICE', 'ALL', 'MateryalPH Capstone Terms of Service', '/legal/terms-of-service', 2, true],
             ['PRIVACY_NOTICE', 'ALL', 'MateryalPH Capstone Privacy Notice', '/legal/privacy-notice', 2, true],
             ['VENDOR_CODE_OF_CONDUCT', 'VENDOR', 'Vendor Code of Conduct — Capstone/Test', '/legal/vendor-code-of-conduct', 2, true],
-            ['VENDOR_COMMISSION_TEST', 'VENDOR', 'Vendor 2% Commission Terms — Capstone/Test', '/legal/vendor-commission-terms', 1, false],
         ] as [$code, $audience, $title, $uri, $version, $requiresReacceptance]) {
             $path = resource_path('agreements/'.$code.'/'.$version.'.md');
             $content = is_file($path) ? file_get_contents($path) : false;

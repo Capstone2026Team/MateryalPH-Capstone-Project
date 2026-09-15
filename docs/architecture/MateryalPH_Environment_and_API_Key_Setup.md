@@ -9,9 +9,9 @@ MateryalPH uses three completely isolated environments:
 
 | Environment | Name suffix | Purpose | Allowed payment mode |
 | --- | --- | --- | --- |
-| Development | `DEV` | Local coding and automated tests | Fake gateway or Xendit Test Mode |
-| Staging | `STAGING` | Hosted integration and UAT | Xendit Test Mode only |
-| Production | `PROD` | Approved live users and transactions | Live mode only after all release gates |
+| Development | `DEV` | Local coding and automated tests | No payment integration in current Phase 2 |
+| Staging | `STAGING` | Hosted integration and UAT | No payment integration in current Phase 2 |
+| Production | `PROD` | Approved live users and transactions | Future release only after all release gates |
 
 Use the same variable names in each isolated environment. The file, cloud project, resource, and secret store identify the environment. Do not create error-prone names such as `DEV_DB_PASSWORD`, `STAGING_DB_PASSWORD`, and `PROD_DB_PASSWORD` inside one file.
 
@@ -122,8 +122,6 @@ An environment variable is not automatically secret. Anything placed in a web or
 | Google OAuth client IDs | Clients/API | No | Restrict redirect URI/package/bundle |
 | Google Maps Android/iOS/browser key | Respective client | No | Separate key per platform and environment; restrict it |
 | Google Maps server key | API only | Yes | IP/API restricted where the platform permits |
-| Xendit secret API key | API only | Yes | Never use `VITE_` or Flutter config |
-| Xendit callback token | API only | Yes | Constant-time comparison |
 | Firebase service account | API only | Yes | Used only for server-to-FCM requests |
 | Firebase client configuration | Client | No | Separate project/flavor and restrict where supported |
 | SMTP/API credential | API only | Yes | Use a scoped sending credential |
@@ -204,12 +202,6 @@ RECAPTCHA_VENDOR_WEB_SITE_KEY=
 RECAPTCHA_VENDOR_WEB_ALLOWED_HOSTNAMES=localhost,127.0.0.1
 BOT_STEP_UP_TTL_MINUTES=5
 
-XENDIT_MODE=test
-XENDIT_SECRET_KEY=
-XENDIT_WEBHOOK_TOKEN=
-XENDIT_BASE_URL=
-XENDIT_PLATFORM_ACCOUNT_ID=
-
 FILESYSTEM_DISK=s3
 AWS_ACCESS_KEY_ID=
 AWS_SECRET_ACCESS_KEY=
@@ -257,7 +249,7 @@ VITE_SENTRY_DSN=
 Admin has no reCAPTCHA setting. Its environment contains the API, Reverb, and
 optional Sentry public values only.
 
-Never add Xendit secret keys, Google OAuth client secrets, SMTP passwords, storage secrets, Passport private keys, or Firebase service-account JSON to a Vite variable.
+Never add Google OAuth client secrets, SMTP passwords, storage secrets, Passport private keys, or Firebase service-account JSON to a Vite variable.
 
 ## 6. Flutter Environment Example
 
@@ -387,35 +379,7 @@ Paste locations:
 
 Google documents the server-side authorization-code exchange and ID-token validation in [OpenID Connect](https://developers.google.com/identity/openid-connect/openid-connect).
 
-## 9. Xendit Test Mode Setup
-
-Use Test Mode throughout Development, Staging, demonstrations, and automated integration testing.
-
-1. Create and verify the authorized Xendit account.
-2. Enter the Xendit dashboard and switch clearly to Test Mode.
-3. Open API Keys settings.
-4. Create a Development secret key with only the permissions required for the implemented payment/sub-account/refund endpoints.
-5. Copy the secret once and paste it into `services/api/.env` as `XENDIT_SECRET_KEY`.
-6. Set `XENDIT_MODE=test`.
-7. Configure the local webhook through an approved HTTPS tunnel only for temporary Development testing, or use Staging for stable webhook tests.
-8. In Xendit Webhook settings, register the exact Staging endpoint: `https://<staging-api>/api/v1/webhooks/xendit`.
-9. Copy the callback token and paste it into the backend secret field as `XENDIT_WEBHOOK_TOKEN`.
-10. Never put either value into Flutter, React, OpenAPI examples, Postman collections committed to Git, or screenshots.
-11. Run Xendit's supported success and error simulations and verify duplicate/reordered webhook behavior.
-
-Xendit states that Test Mode transactions do not interact with banking networks and that the secret key is used for API authentication; see [Xendit API quick setup](https://docs.xendit.co/apidocs/quick-setup). Xendit also recommends checking the callback token and matching webhook transaction details; see [integration security](https://docs.xendit.co/docs/integration-security).
-
-For Production, do not simply replace `test` with `live`. First confirm:
-
-- Live account approval.
-- xenPlatform/sub-account capability.
-- Permitted payment channels in the Philippines.
-- Full and partial refund behavior per enabled channel.
-- Fee treatment and contractual permission to pass the disclosed processing amount to the Buyer.
-- Callback endpoints and live callback token.
-- Legal, privacy, tax, and finance approval.
-
-## 10. Firebase Cloud Messaging Setup
+## 9. Firebase Cloud Messaging Setup
 
 Create `MATERYALPH-DEV`, `MATERYALPH-STAGING`, and `MATERYALPH-PROD` Firebase projects or use matching isolated Firebase projects linked to the corresponding Google projects.
 
@@ -432,7 +396,7 @@ Create `MATERYALPH-DEV`, `MATERYALPH-STAGING`, and `MATERYALPH-PROD` Firebase pr
 
 Firebase documents platform permission and foreground/background/terminated behavior in [FCM for Flutter](https://firebase.google.com/docs/cloud-messaging/flutter/receive-messages).
 
-## 11. Email Provider Setup
+## 10. Email Provider Setup
 
 Development uses Mailpit and does not send external email. For Staging and Production:
 
@@ -445,7 +409,7 @@ Development uses Mailpit and does not send external email. For Staging and Produ
 7. Test OTP, recovery, security alert, order, dispute, and compliance templates.
 8. Monitor bounce and delivery failure without logging message secrets or excessive personal data.
 
-## 12. Private Object Storage Setup
+## 11. Private Object Storage Setup
 
 The local Docker environment uses S3-compatible storage. For hosted environments:
 
@@ -458,7 +422,7 @@ The local Docker environment uses S3-compatible storage. For hosted environments
 7. Never expose raw object keys or permanent public URLs.
 8. Test authorized short-lived signed download, cross-Vendor denial, expiry, and deleted/retained state.
 
-## 13. Reverb Setup
+## 12. Reverb Setup
 
 Generate separate random `REVERB_APP_KEY` and `REVERB_APP_SECRET` values per environment. These are MateryalPH-owned values, not a third-party account key.
 
@@ -467,7 +431,7 @@ Generate separate random `REVERB_APP_KEY` and `REVERB_APP_SECRET` values per env
 - Production uses `wss`/HTTPS and exact allowed origins.
 - Never authorize a private channel only by knowing its name.
 
-## 14. reCAPTCHA and Sentry
+## 13. reCAPTCHA and Sentry
 
 reCAPTCHA Enterprise checkbox protection is part of Phase 1 only for Vendor web
 email registration, password login, and password-recovery requests. Buyer,
@@ -507,9 +471,9 @@ Admin, and Google OIDC flows are excluded.
 3. Put DSNs in each app's environment configuration.
 4. Keep source-map/release auth tokens only in protected CI secrets.
 5. Configure personal-data scrubbing before enabling event transmission.
-6. Test that passwords, tokens, OTPs, Xendit payload secrets, private file links, and unnecessary Buyer addresses are not captured.
+6. Test that passwords, tokens, OTPs, provider payload secrets, private file links, and unnecessary Buyer addresses are not captured.
 
-## 15. GitHub Secrets and Environments
+## 14. GitHub Secrets and Environments
 
 1. Create protected GitHub environments named `STAGING` and `PRODUCTION`.
 2. Store only CI-required values there, such as signing credentials, source-map token, and deployment trigger/API values if used.
@@ -520,7 +484,7 @@ Admin, and Google OIDC flows are excluded.
 
 GitHub's official guidance covers repository, organization, and environment secrets and how they are referenced in workflows: [Using secrets in GitHub Actions](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets).
 
-## 16. Render Staging and Production Setup
+## 15. Render Staging and Production Setup
 
 The repository's `render.yaml` defines resources but never real secret values.
 
@@ -541,11 +505,10 @@ The repository's `render.yaml` defines resources but never real secret values.
 6. Create the API, worker, scheduler, Reverb, Vendor static, and Admin static services.
 7. In each service's Environment page, paste only that service's required Staging values.
 8. Mark secret values protected and prevent them from being copied into logs.
-9. Use Xendit Test Mode.
-10. Add exact Staging domains to CORS, cookie, OAuth callback, Google referrer, and Reverb-origin allowlists.
-11. Set auto-deploy to occur only after CI checks pass.
-12. Run migrations through the controlled pre-deploy step.
-13. Run smoke tests and rehearse rollback.
+9. Add exact Staging domains to CORS, cookie, OAuth callback, Google referrer, and Reverb-origin allowlists.
+10. Set auto-deploy to occur only after CI checks pass.
+11. Run migrations through the controlled pre-deploy step.
+12. Run smoke tests and rehearse rollback.
 
 ### Production
 
@@ -553,15 +516,13 @@ Repeat with completely new `MATERYALPH-PROD` resources and credentials only afte
 
 Render documents environment-group/resource configuration in its [Blueprint specification](https://render.com/docs/blueprint-spec), automatic deployment after CI in [Deploys](https://render.com/docs/deploys), and managed HTTPS in [TLS](https://render.com/docs/tls).
 
-## 17. Quarterly Rotation Register
+## 16. Quarterly Rotation Register
 
 Maintain `docs/security/secret-register.example.md` without values. The protected operational copy belongs in an approved private system.
 
 | Secret ID | Environment | Owner | Provider | Created | Rotate by | Last tested | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `APP_KEY` | STAGING | Assigned owner | MateryalPH | Date only | +90 days | Date only | Active |
-| `XENDIT_SECRET_KEY` | STAGING | Assigned owner | Xendit | Date only | +90 days | Date only | Active |
-
 Rotation procedure:
 
 1. Identify all consumers without exposing the value.
@@ -573,7 +534,7 @@ Rotation procedure:
 7. Record date, owner, result, and next rotation date without recording the value.
 8. For signing/encryption keys, use the documented multi-key transition process so active sessions/data are not accidentally broken.
 
-## 18. Exposure Response
+## 17. Exposure Response
 
 If a secret is committed, posted, emailed, shown in chat, logged, or otherwise exposed:
 
@@ -587,7 +548,7 @@ If a secret is committed, posted, emailed, shown in chat, logged, or otherwise e
 
 Deleting `.env` or rewriting the latest commit alone does not restore control over an exposed key.
 
-## 19. Pre-Commit Secret Check
+## 18. Pre-Commit Secret Check
 
 Before every commit:
 
@@ -600,7 +561,7 @@ gitleaks git --staged
 
 If `gitleaks` is not installed, install it through the approved workstation process during Phase 1. CI repeats secret scanning; local review is still required.
 
-## 20. Safe Key-Pasting Checklist
+## 19. Safe Key-Pasting Checklist
 
 When this guide says “paste the key”:
 
@@ -614,21 +575,3 @@ When this guide says “paste the key”:
 8. Never ask Codex to print or repeat the value.
 
 This process satisfies the user's non-negotiable requirement: `.env` is never committed, secrets are strong and environment-specific, example files contain names without values, and Development, Staging, and Production credentials remain isolated.
-
-<<<<<<< HEAD
-Phase 3 provider boundary 
-=======
-### Phase 3 provider boundary — approved resume, 14 September 2026
->>>>>>> 0b3097ee076868e06dfc54b011d8bd50f634ad4c
-
-Public Vendor logo, banner and promotional images use the backend `PublicMediaProvider` / Cloudinary adapter. Set `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY` and `CLOUDINARY_API_SECRET` only in the ignored backend environment. Committed examples contain blank placeholders. Uploads use authenticated Cloudinary delivery while awaiting review; the backend authorizes review previews and serves only approved, unreplaced media for active Vendors through the public API without returning provider credentials. A confirmed upload is recorded before Store Profile linking; failed database linking triggers compensating deletion, and an unconfirmed deletion remains in the scheduled recovery queue. Earlier S3 store-media drafts require re-upload; private registration/tax evidence remains on private S3/MinIO without migration to Cloudinary.
-
-The default Xendit adapter creates TEST xenPlatform accounts through `POST https://api.xendit.co/v3/accounts`. `XENDIT_MODE=test` and a backend `XENDIT_SECRET_KEY` with xenPlatform **Account Write** and **Account Read** permissions are required. An uncertain create result remains blocked until an Owner with recent authentication runs read-only reconciliation through `GET https://api.xendit.co/v2/accounts`; one exact identity match is recovered, no match explicitly permits a later retry, and ambiguous or incomplete results remain blocked. Split Payments is not used. No Buyer collection, transfer, payout, refund or commission deduction is implemented here. A Vendor never supplies a provider key.
-
-The Owner must have recent authentication, verified email and approved business information. Current Xendit TEST restrictions allow Corporation only. The adapter preserves the recorded entity type and rejects unsupported TEST entities instead of relabeling them. Provider status `LIVE` remains stored separately from `environment=TEST`, and the UI says **Xendit TEST Connected**. See the [Xendit v3 account contract](https://docs.xendit.co/apidocs/create-account-v3).
-
-A committed connection attempt precedes the outbound call. Existing account IDs are reused; an uncertain result remains `TEST_RECONCILE_REQUIRED` and cannot automatically create another account. An operator must inspect the provider outcome before an authorized reconciliation/retry. No provider-side smoke test is part of normal CI or this verification run. It requires separate explicit authorization because provider objects persist.
-
-`VENDOR_TEST_SIMULATED_CONNECTION=false` and `VENDOR_TEST_SIMULATED_SCAN=false` are safe defaults. Explicit capstone simulation is labeled separately and never satisfies LIVE readiness. The simulated scanner is not an antivirus engine. `VENDOR_EXPIRY_REMINDER_DAYS=30` is an operational reminder policy, not a statutory deadline. Production scanning and approved legal agreement content remain separate operational inputs.
-
-Cloudinary requests follow its [server-side Upload API](https://cloudinary.com/documentation/image_upload_api_reference). Normal tests bind an in-memory media provider or fake HTTP responses and prevent stray requests; they create no external assets.

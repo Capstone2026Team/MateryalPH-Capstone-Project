@@ -28,9 +28,7 @@ const generations = [
     "--additional-properties", "pubVersion=1.0.0",
   ],
 ];
-const repositoryOwnedDartTests = new Set([
-  "test/vendor_onboarding_deserialization_test.dart",
-]);
+const repositoryOwnedDartTests = new Set();
 
 for (const args of generations) {
   const outputFlag = args.indexOf("-o");

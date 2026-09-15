@@ -268,7 +268,6 @@ final class GoogleOidcService
             'account_status' => 'ACTIVE',
             'onboarding_status' => 'NOT_STARTED',
             'marketplace_status' => 'NOT_ACTIVE',
-            'bulk_order_capable' => false,
             'lock_version' => 1,
             'created_at' => now(),
             'updated_at' => now(),

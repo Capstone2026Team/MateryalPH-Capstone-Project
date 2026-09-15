@@ -22,7 +22,6 @@ Route::get('/health', HealthController::class);
 Route::get('/agreements/current', AgreementController::class);
 
 require __DIR__.'/account.php';
-require __DIR__.'/vendors.php';
 
 Route::prefix('auth')->middleware('auth.transport:WEB')->group(function (): void {
     Route::get('/csrf', CsrfController::class)->middleware('throttle:auth-public');
