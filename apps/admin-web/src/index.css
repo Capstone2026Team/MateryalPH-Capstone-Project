@@ -1,0 +1,31 @@
+@import "tailwindcss";
+@import "../../../packages/design-tokens/web.css";
+@source "../../../packages/web-ui/src";
+
+@layer base {
+  html {
+    font-family: var(--mp-font-sans);
+    color: var(--mp-color-text-strong);
+    background: var(--mp-color-surface-canvas);
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    margin: 0;
+    min-width: 320px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  button, input { font: inherit; }
+  ::selection { background: var(--mp-color-brand-orange-100); color: var(--mp-color-text-strong); }
+  input { caret-color: var(--mp-color-action-primary); }
+  * { scrollbar-color: var(--mp-color-brand-orange-300) var(--mp-color-surface-canvas); scrollbar-width: thin; }
+
+  :focus-visible {
+    outline: 2px solid var(--mp-color-focus-ring);
+    outline-offset: 2px;
+  }
+}
