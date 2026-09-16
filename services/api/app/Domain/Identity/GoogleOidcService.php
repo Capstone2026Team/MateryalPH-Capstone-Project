@@ -265,6 +265,8 @@ final class GoogleOidcService
             'id' => $organizationId,
             'legal_name' => $flow['business_name'],
             'store_name' => $flow['business_name'],
+            'store_email' => $user->email,
+            'store_email_verified_at' => now(),
             'account_status' => 'ACTIVE',
             'onboarding_status' => 'NOT_STARTED',
             'marketplace_status' => 'NOT_ACTIVE',

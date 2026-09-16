@@ -9,9 +9,11 @@ use App\Domain\Authorization\ManageAdminAccount;
 use App\Domain\Authorization\ManageMembership;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Identity\IssueAdminInvitation;
+use App\Domain\Vendors\IssueVendorInvitation;
 use App\Http\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Account\AccountRequest;
+use App\Http\Requests\Vendor\VendorInvitationRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -77,5 +79,10 @@ final class AccountAdministrationController extends Controller
         $invitations->handle($request, $request->validated('email'), $request->validated('role_id'));
 
         return ApiResponse::success(['queued' => true], status: 202);
+    }
+
+    public function inviteVendor(VendorInvitationRequest $request, IssueVendorInvitation $invitations): JsonResponse
+    {
+        return ApiResponse::success($invitations->handle($request, $request->validated()), status: 202);
     }
 }

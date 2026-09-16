@@ -7,7 +7,11 @@ use App\Domain\Identity\OtpCodeGenerator;
 use App\Domain\Identity\PassportAccessTokenIssuer;
 use App\Domain\Identity\RecaptchaAssessmentGateway;
 use App\Domain\Identity\SecureOtpCodeGenerator;
+use App\Domain\Vendors\AddressGeocoder;
+use App\Domain\Vendors\XenditAccountVerificationGateway;
+use App\Infrastructure\Geography\ConfiguredGoogleMapsGeocoder;
 use App\Infrastructure\Identity\GoogleRecaptchaEnterpriseGateway;
+use App\Infrastructure\Payments\ConfiguredXenditAccountVerificationGateway;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -24,6 +28,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(OtpCodeGenerator::class, SecureOtpCodeGenerator::class);
         $this->app->bind(AccessTokenIssuer::class, PassportAccessTokenIssuer::class);
         $this->app->bind(RecaptchaAssessmentGateway::class, GoogleRecaptchaEnterpriseGateway::class);
+        $this->app->bind(AddressGeocoder::class, ConfiguredGoogleMapsGeocoder::class);
+        $this->app->bind(XenditAccountVerificationGateway::class, ConfiguredXenditAccountVerificationGateway::class);
     }
 
     /**

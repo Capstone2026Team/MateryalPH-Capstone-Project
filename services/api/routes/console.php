@@ -11,3 +11,4 @@ Artisan::command('inspire', function () {
 Schedule::command('materyalph:outbox-dispatch')->everyMinute()->withoutOverlapping();
 Schedule::command('materyalph:vendor-evidence-evaluate')->hourly()->withoutOverlapping();
 Schedule::command('materyalph:vendor-media-recover')->everyFifteenMinutes()->withoutOverlapping();
+Schedule::command('materyalph:vendor-expiry-scan')->dailyAt('01:00')->withoutOverlapping();

@@ -1,15 +1,17 @@
 openapi: 3.1.0
 info:
   title: MateryalPH API
-  version: 1.0.0-phase.2
+  version: 1.0.0-phase.3
   description: >-
-    Versioned Phase 1–2 contract. Later-phase commerce foundations do not expose placeholder operations.
+    Versioned Phase 1–3 contract. Vendor onboarding, verification, activation readiness, private evidence, and team invitations are server-authorized.
 servers:
   - url: /api/v1
 tags:
   - name: System
   - name: Agreements
   - name: Authentication
+  - name: Vendor Onboarding
+  - name: Admin Vendor Verification
 paths:
   /health:
     get:
@@ -2271,6 +2273,335 @@ paths:
             }
         }
     }
+  /vendors/onboarding:
+    get:
+      operationId: getVendorOnboarding
+      tags: [ Vendor Onboarding ]
+      security: [ { accessCookie: [] } ]
+      responses:
+        "200":
+          description: Vendor onboarding snapshot with separate Store Verification and Store Setup workstreams.
+          content: { application/json: { schema: { $ref: "#/components/schemas/VendorOnboardingEnvelope" } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+  /vendors/onboarding/verification:
+    patch:
+      operationId: saveVendorVerificationDraft
+      tags: [ Vendor Onboarding ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/VendorVerificationDraft" } } }
+      responses:
+        "200": { description: Draft saved., content: { application/json: { schema: { $ref: "#/components/schemas/VendorOnboardingEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /vendors/onboarding/verification/submit:
+    post:
+      operationId: submitVendorVerification
+      tags: [ Vendor Onboarding ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      parameters:
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/VendorVerificationSubmit" } } }
+      responses:
+        "202": { description: Submission queued for manual Admin review., content: { application/json: { schema: { $ref: "#/components/schemas/VendorOnboardingEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /vendors/onboarding/setup:
+    patch:
+      operationId: saveVendorSetupDraft
+      tags: [ Vendor Onboarding ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/VendorSetupDraft" } } }
+      responses:
+        "200": { description: Setup draft saved., content: { application/json: { schema: { $ref: "#/components/schemas/VendorOnboardingEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /vendors/onboarding/setup/complete:
+    post:
+      operationId: completeVendorSetup
+      tags: [ Vendor Onboarding ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      parameters:
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/VendorSetupComplete" } } }
+      responses:
+        "202": { description: Setup completion recorded., content: { application/json: { schema: { $ref: "#/components/schemas/VendorOnboardingEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /vendors/onboarding/welcome/dismiss:
+    post:
+      operationId: dismissVendorOnboardingWelcome
+      tags: [ Vendor Onboarding ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      responses:
+        "200": { description: Welcome dismissed., content: { application/json: { schema: { $ref: "#/components/schemas/VendorOnboardingEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+  /vendors/onboarding/address/geocode:
+    post:
+      operationId: reverseGeocodeVendorAddress
+      tags: [ Vendor Onboarding ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/VendorAddressGeocode" } } }
+      responses:
+        "200": { description: Provider result or a manual-entry fallback., content: { application/json: { schema: { $ref: "#/components/schemas/VendorAddressGeocodeEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /vendors/onboarding/store-email:
+    post:
+      operationId: requestVendorStoreEmailVerification
+      tags: [ Vendor Onboarding ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/EmailRequest" } } }
+      responses:
+        "202": { description: Short-lived Store Email OTP queued., content: { application/json: { schema: { $ref: "#/components/schemas/VendorStoreEmailEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /vendors/onboarding/store-email/confirm:
+    post:
+      operationId: confirmVendorStoreEmailVerification
+      tags: [ Vendor Onboarding ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/VendorStoreEmailConfirmation" } } }
+      responses:
+        "200": { description: Store Email verified., content: { application/json: { schema: { $ref: "#/components/schemas/VendorOnboardingEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /vendors/onboarding/documents:
+    post:
+      operationId: uploadVendorVerificationDocument
+      tags: [ Vendor Onboarding ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema: { $ref: "#/components/schemas/VendorDocumentUpload" }
+      responses:
+        "201": { description: Private immutable evidence version created., content: { application/json: { schema: { $ref: "#/components/schemas/VendorDocumentEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /vendors/onboarding/media:
+    post:
+      operationId: uploadVendorStoreMedia
+      tags: [ Vendor Onboarding ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema: { $ref: "#/components/schemas/VendorMediaUpload" }
+      responses:
+        "201": { description: Store media uploaded to private storage., content: { application/json: { schema: { $ref: "#/components/schemas/VendorMediaEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /vendors/onboarding/files/{fileId}:
+    get:
+      operationId: getVendorPrivateFileUrl
+      tags: [ Vendor Onboarding ]
+      security: [ { accessCookie: [] } ]
+      parameters:
+        - { name: fileId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: Five-minute authorized signed download URL., content: { application/json: { schema: { $ref: "#/components/schemas/VendorFileEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+  /vendors/onboarding/payment-connection:
+    post:
+      operationId: captureVendorPaymentConnection
+      tags: [ Vendor Onboarding ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      parameters:
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/VendorPaymentConnection" } } }
+      responses:
+        "200": { description: Xendit TEST connection captured as unverified/pending., content: { application/json: { schema: { $ref: "#/components/schemas/VendorOnboardingEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /vendors/onboarding/payment-connection/reconcile:
+    post:
+      operationId: reconcileVendorPaymentConnection
+      tags: [ Vendor Onboarding ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      responses:
+        "200": { description: Provider reconciliation result., content: { application/json: { schema: { $ref: "#/components/schemas/VendorPaymentReconciliationEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+        "503": { $ref: "#/components/responses/ErrorResponse" }
+  /vendors/onboarding/activation:
+    post:
+      operationId: activateVendorStore
+      tags: [ Vendor Onboarding ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      parameters:
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "202": { description: Store Activation recorded; discoverability remains independently gated., content: { application/json: { schema: { $ref: "#/components/schemas/VendorOnboardingEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+  /vendors/account/invitations:
+    post:
+      operationId: inviteVendorTeamMember
+      tags: [ Vendor Onboarding ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      parameters:
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/VendorInvitationRequest" } } }
+      responses:
+        "202": { description: Fixed-role team invitation queued by an authorized Owner or delegated Manager., content: { application/json: { schema: { $ref: "#/components/schemas/VendorInvitationEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /admin/vendor-verification:
+    get:
+      operationId: listVendorVerificationQueue
+      tags: [ Admin Vendor Verification ]
+      security: [ { accessCookie: [] } ]
+      parameters:
+        - { name: status, in: query, required: false, schema: { type: string } }
+        - { name: business_type, in: query, required: false, schema: { type: string } }
+        - { name: page, in: query, required: false, schema: { type: integer, minimum: 1 } }
+      responses:
+        "200": { description: Paginated manual Store Verification queue., content: { application/json: { schema: { $ref: "#/components/schemas/AdminVendorVerificationQueueEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+  /admin/vendor-verification/{organizationId}:
+    get:
+      operationId: getVendorVerificationCase
+      tags: [ Admin Vendor Verification ]
+      security: [ { accessCookie: [] } ]
+      parameters:
+        - { name: organizationId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: Authorized Vendor case detail with private-evidence metadata and immutable review history., content: { application/json: { schema: { $ref: "#/components/schemas/AdminVendorVerificationDetailEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+  /admin/vendor-verification/{organizationId}/requirements/{requirementKey}/decision:
+    post:
+      operationId: decideVendorVerificationRequirement
+      tags: [ Admin Vendor Verification ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      parameters:
+        - { name: organizationId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: requirementKey, in: path, required: true, schema: { type: string } }
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/AdminVendorVerificationDecision" } } }
+      responses:
+        "200": { description: Immutable review decision recorded., content: { application/json: { schema: { $ref: "#/components/schemas/AdminVendorVerificationDetailEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /admin/vendor-verification/files/{fileId}:
+    get:
+      operationId: getAdminVendorEvidenceUrl
+      tags: [ Admin Vendor Verification ]
+      security: [ { accessCookie: [] } ]
+      parameters:
+        - { name: fileId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: Five-minute authorized signed private-evidence URL., content: { application/json: { schema: { $ref: "#/components/schemas/VendorFileEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+  /admin/vendor-verification/{organizationId}/restrict:
+    post:
+      operationId: restrictVendorActivation
+      tags: [ Admin Vendor Verification ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      parameters:
+        - { name: organizationId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/VendorRestriction" } } }
+      responses:
+        "200": { description: Administrative activation restriction recorded., content: { application/json: { schema: { $ref: "#/components/schemas/VendorRestrictionEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+  /admin/vendor-verification/{organizationId}/restore:
+    post:
+      operationId: restoreVendorActivation
+      tags: [ Admin Vendor Verification ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      parameters:
+        - { name: organizationId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/VendorRestriction" } } }
+      responses:
+        "200": { description: Administrative activation restoration recorded., content: { application/json: { schema: { $ref: "#/components/schemas/VendorRestrictionEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+  /vendor-onboarding-files/{fileId}/content:
+    get:
+      operationId: downloadVendorOnboardingFile
+      tags: [ Vendor Onboarding ]
+      security: [ { accessCookie: [] } ]
+      parameters:
+        - { name: fileId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: Authorized private file stream., content: { application/octet-stream: { schema: { type: string, format: binary } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+  /webhooks/xendit/account-verification:
+    post:
+      operationId: receiveXenditAccountVerificationWebhook
+      tags: [ Vendor Onboarding ]
+      parameters:
+        - { name: x-callback-token, in: header, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/XenditAccountVerificationWebhook" } } }
+      responses:
+        "202": { description: Verified and replay-safe provider event accepted., content: { application/json: { schema: { $ref: "#/components/schemas/VendorWebhookEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+        "503": { $ref: "#/components/responses/ErrorResponse" }
+
 components:
   securitySchemes:
     passportBearer: { type: http, scheme: bearer, bearerFormat: JWT }
@@ -3054,6 +3385,325 @@ components:
                 user_id: { type: string, format: uuid }
                 verification_required: { type: boolean }
                 next: { type: string }
+    VendorOnboardingStep:
+      type: object
+      required: [ id, key, label, level, status, lock_version ]
+      properties:
+        id: { type: string, format: uuid }
+        key: { type: string }
+        label: { type: string }
+        level: { type: string, enum: [ REQUIRED, OPTIONAL, CONDITIONALLY_REQUIRED ] }
+        status: { type: string, enum: [ NOT_STARTED, IN_PROGRESS, SUBMITTED, PENDING_VERIFICATION, APPROVED, CHANGES_REQUIRED, REJECTED, EXPIRED, NOT_APPLICABLE, COMPLETED ] }
+        reason: { type: [ string, 'null' ] }
+        lock_version: { type: integer, minimum: 1 }
+        submitted_at: { type: [ string, 'null' ], format: date-time }
+        reviewed_at: { type: [ string, 'null' ], format: date-time }
+    VendorOnboardingSection:
+      type: object
+      required: [ key, label, status, complete, total, progress, steps ]
+      properties:
+        key: { type: string }
+        label: { type: string }
+        status: { type: string }
+        complete: { type: integer, minimum: 0 }
+        total: { type: integer, minimum: 0 }
+        progress: { type: object, additionalProperties: true }
+        steps: { type: array, items: { $ref: "#/components/schemas/VendorOnboardingStep" } }
+    VendorOnboardingSnapshot:
+      type: object
+      required: [ organization, sections, verification, setup, activation, welcome_required, permissions ]
+      properties:
+        organization: { type: object, additionalProperties: true }
+        sections: { type: object, additionalProperties: { $ref: "#/components/schemas/VendorOnboardingSection" } }
+        verification: { type: object, additionalProperties: true }
+        setup: { type: object, additionalProperties: true }
+        activation: { type: object, additionalProperties: true }
+        welcome_required: { type: boolean }
+        permissions: { type: array, items: { type: string } }
+    VendorOnboardingEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { $ref: "#/components/schemas/VendorOnboardingSnapshot" }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    VendorVerificationDraft:
+      type: object
+      required: [ lock_version ]
+      additionalProperties: true
+      properties:
+        lock_version: { type: integer, minimum: 1 }
+        business_type: { type: string, enum: [ SOLE_PROPRIETORSHIP, PARTNERSHIP, CORPORATION, ONE_PERSON_CORPORATION, COOPERATIVE ] }
+        registered_name: { type: string, maxLength: 180 }
+        store_name: { type: string, maxLength: 180 }
+        date_established: { type: string, format: date }
+        store_email: { type: string, format: email }
+        store_phone: { type: string, maxLength: 24 }
+        contacts: { type: array, items: { type: object, additionalProperties: true } }
+        classification: { type: object, additionalProperties: true }
+        address: { type: object, additionalProperties: true }
+        legal_identity:
+          type: object
+          additionalProperties: true
+          properties:
+            same_as_owner: { type: boolean }
+            surname: { type: [ string, 'null' ], maxLength: 120 }
+            first_name: { type: [ string, 'null' ], maxLength: 120 }
+            middle_name: { type: [ string, 'null' ], maxLength: 120 }
+            suffix: { type: [ string, 'null' ], maxLength: 32 }
+            company_registered_name: { type: [ string, 'null' ], maxLength: 180 }
+            id_type: { type: [ string, 'null' ], maxLength: 48 }
+            id_number: { type: [ string, 'null' ], maxLength: 64, writeOnly: true }
+        tax_profile:
+          type: object
+          additionalProperties: true
+          properties:
+            taxpayer_key: { type: string, maxLength: 128, writeOnly: true }
+            tin: { type: string, maxLength: 32, pattern: '^[0-9][0-9\\-\\s]{8,31}$', writeOnly: true }
+            branch_code: { type: [ string, 'null' ], maxLength: 16, pattern: '^[A-Za-z0-9][A-Za-z0-9 \\-]*$' }
+            bir_cor_reference: { type: [ string, 'null' ], maxLength: 160 }
+            entity_class: { type: string, enum: [ INDIVIDUAL, CORPORATION, PARTNERSHIP, COOPERATIVE ] }
+            registration_category: { type: string, maxLength: 32 }
+            vat_category: { type: string, enum: [ VAT, NON_VAT, VAT_ZERO, VAT_EXEMPT ] }
+            fiscal_year_start_month: { type: integer, minimum: 1, maximum: 12 }
+            declaration_type: { type: [ string, 'null' ], maxLength: 64 }
+            threshold_position: { type: [ string, 'null' ], maxLength: 64 }
+            submission_date: { type: [ string, 'null' ], format: date }
+            outside_platform_as_of: { type: [ string, 'null' ], format: date }
+            withholding_scenario: { type: [ string, 'null' ], enum: [ DEMO_PLATFORM_WITHHOLDER, DEMO_PROVIDER_WITHHOLDER ] }
+            tax_relief_claimed: { type: boolean }
+            owner_attested: { type: boolean }
+    VendorVerificationSubmit:
+      type: object
+      required: [ lock_version, privacy_acknowledged ]
+      properties:
+        lock_version: { type: integer, minimum: 1 }
+        privacy_acknowledged: { type: boolean, const: true }
+    VendorSetupDraft:
+      type: object
+      required: [ organization_lock_version ]
+      additionalProperties: true
+      properties:
+        organization_lock_version: { type: integer, minimum: 1 }
+        public_store_name: { type: string, maxLength: 180 }
+        description: { type: [ string, 'null' ], maxLength: 3000 }
+        bulk_capability: { type: boolean }
+        fulfillment_method: { type: string, enum: [ SELF_PICKUP, VENDOR_DELIVERY, BOTH ] }
+        public_email: { type: [ string, 'null' ], format: email }
+        public_phone: { type: [ string, 'null' ], maxLength: 24 }
+        delivery:
+          type: object
+          additionalProperties: true
+          properties:
+            maximum_distance_km: { type: integer, minimum: 1, maximum: 1000 }
+            coverage_notes: { type: [ string, 'null' ], maxLength: 2000 }
+        vehicles:
+          type: array
+          maxItems: 20
+          items:
+            type: object
+            additionalProperties: true
+            properties:
+              id: { type: [ string, 'null' ], format: uuid }
+              vehicle_type: { type: string, maxLength: 64 }
+              name: { type: string, maxLength: 120 }
+              capacity_kg: { type: number, exclusiveMinimum: 0 }
+              number_available: { type: integer, minimum: 1 }
+              cargo_length_m: { type: [ number, 'null' ], minimum: 0 }
+              cargo_width_m: { type: [ number, 'null' ], minimum: 0 }
+              cargo_height_m: { type: [ number, 'null' ], minimum: 0 }
+              heavy_classification: { type: [ string, 'null' ], maxLength: 96 }
+              base_fee_centavos: { type: integer, minimum: 0 }
+              per_km_centavos: { type: integer, minimum: 0 }
+              maximum_distance_km: { type: integer, minimum: 1, maximum: 1000 }
+    VendorSetupComplete:
+      type: object
+      required: [ organization_lock_version, commission_terms_accepted ]
+      properties:
+        organization_lock_version: { type: integer, minimum: 1 }
+        commission_terms_accepted: { type: boolean, const: true }
+    VendorAddressGeocode:
+      type: object
+      required: [ latitude, longitude ]
+      properties:
+        latitude: { type: number, minimum: -90, maximum: 90 }
+        longitude: { type: number, minimum: -180, maximum: 180 }
+    VendorAddressGeocodeEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { type: object, additionalProperties: true }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    VendorStoreEmailEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { type: object, additionalProperties: true }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    VendorStoreEmailConfirmation:
+      type: object
+      required: [ email, code ]
+      properties:
+        email: { type: string, format: email }
+        code: { type: string, pattern: '^[0-9]{6}$' }
+    VendorDocumentUpload:
+      type: object
+      required: [ requirement_key, file ]
+      properties:
+        requirement_key: { type: string, enum: [ business_registration, lgu_permit, bir_cor, identity_evidence, tax_relief_evidence ] }
+        file: { type: string, format: binary }
+        metadata: { type: object, additionalProperties: { type: string } }
+    VendorDocument:
+      type: object
+      required: [ id, requirement_key, version, scan_state ]
+      properties:
+        id: { type: string, format: uuid }
+        requirement_key: { type: string }
+        version: { type: integer, minimum: 1 }
+        scan_state: { type: string, enum: [ PENDING, CLEAN, REJECTED ] }
+    VendorDocumentEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { $ref: "#/components/schemas/VendorDocument" }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    VendorMediaUpload:
+      type: object
+      required: [ kind, file ]
+      properties:
+        kind: { type: string, enum: [ LOGO, BANNER, PROMOTIONAL_IMAGE, PROMOTIONAL_VIDEO ] }
+        file: { type: string, format: binary }
+        alt_text: { type: [ string, 'null' ], maxLength: 160 }
+    VendorMediaEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { type: object, additionalProperties: true }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    VendorFile:
+      type: object
+      required: [ url, expires_at ]
+      properties:
+        url: { type: string, format: uri }
+        expires_at: { type: string, format: date-time }
+    VendorFileEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { $ref: "#/components/schemas/VendorFile" }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    VendorPaymentConnection:
+      type: object
+      required: [ invitation_url, provider_account_id ]
+      properties:
+        invitation_url: { type: string, format: uri, pattern: '^https://' }
+        provider_account_id: { type: string, pattern: '^[A-Za-z0-9_-]{3,128}$' }
+    VendorPaymentReconciliationEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { type: object, additionalProperties: true }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    VendorInvitationRequest:
+      type: object
+      required: [ email, invitee_name, role ]
+      properties:
+        email: { type: string, format: email }
+        invitee_name: { type: string, maxLength: 160 }
+        invitee_mobile: { type: [ string, 'null' ], maxLength: 24 }
+        role: { type: string, enum: [ STORE_MANAGER, STORE_STAFF, CUSTOMER_SERVICE, INVENTORY, FULFILLMENT ] }
+    VendorInvitation:
+      type: object
+      required: [ queued, role ]
+      properties:
+        queued: { type: boolean }
+        invitation_id: { type: string, format: uuid }
+        role: { type: string }
+        expires_at: { type: string, format: date-time }
+    VendorInvitationEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { $ref: "#/components/schemas/VendorInvitation" }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    AdminVendorVerificationQueueItem:
+      type: object
+      required: [ id, store_name, verification_status, progress ]
+      properties:
+        id: { type: string, format: uuid }
+        store_name: { type: string }
+        registered_name: { type: [ string, 'null' ] }
+        business_type: { type: [ string, 'null' ] }
+        verification_status: { type: string }
+        setup_status: { type: string }
+        activation_status: { type: string }
+        submitted_at: { type: [ string, 'null' ], format: date-time }
+        progress: { type: object, additionalProperties: true }
+    AdminVendorVerificationQueueEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/AdminVendorVerificationQueueItem" } }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    AdminVendorVerificationDetailEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { type: object, additionalProperties: true }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    AdminVendorVerificationDecision:
+      type: object
+      required: [ decision ]
+      properties:
+        decision: { type: string, enum: [ APPROVED, CHANGES_REQUIRED, REJECTED ] }
+        lock_version: { type: integer, minimum: 1 }
+        reason: { type: [ string, 'null' ], minLength: 3, maxLength: 2000 }
+        verified_document_number: { type: [ string, 'null' ], maxLength: 180 }
+        verified_issue_date: { type: [ string, 'null' ], format: date }
+        expiration_kind: { type: string, enum: [ DATE, NO_EXPIRATION, UNVERIFIED ] }
+        verified_expiration_date: { type: [ string, 'null' ], format: date }
+        evidence_source: { type: [ string, 'null' ], maxLength: 48 }
+        verified_vat_category: { type: [ string, 'null' ], enum: [ VAT, NON_VAT, VAT_ZERO, VAT_EXEMPT ] }
+        remarks: { type: [ string, 'null' ], maxLength: 2000 }
+    VendorRestriction:
+      type: object
+      required: [ reason ]
+      properties:
+        reason: { type: string, minLength: 3, maxLength: 2000 }
+    VendorRestrictionEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { type: object, additionalProperties: true }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    XenditAccountVerificationWebhook:
+      type: object
+      required: [ id ]
+      additionalProperties: true
+      properties:
+        id: { type: string, maxLength: 191 }
+        for_user_id: { type: string, maxLength: 128 }
+        account_id: { type: string, maxLength: 128 }
+        subaccount_id: { type: string, maxLength: 128 }
+        status: { type: string, maxLength: 48 }
+        verification_status: { type: string, maxLength: 48 }
+    VendorWebhookEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { type: object, additionalProperties: true }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
     FinancialSnapshot:
       type: object
       description: Immutable FIN money snapshot; every amount is integer centavos.

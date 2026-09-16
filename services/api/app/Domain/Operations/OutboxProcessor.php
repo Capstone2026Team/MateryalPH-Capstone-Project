@@ -8,6 +8,7 @@ use App\Mail\AccountSecurityMail;
 use App\Mail\AdminInvitationMail;
 use App\Mail\EmailOtpMail;
 use App\Mail\VendorInvitationMail;
+use App\Mail\VendorOnboardingNoticeMail;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
@@ -74,6 +75,9 @@ final class OutboxProcessor
             )),
             'ADMIN_BOOTSTRAP_INVITATION_REQUESTED', 'ADMIN_INVITATION_REQUESTED' => Mail::to($recipient)->send(new AdminInvitationMail(
                 $this->requiredString($payload, 'invitation_url'),
+            )),
+            'VENDOR_ONBOARDING_NOTICE' => Mail::to($recipient)->send(new VendorOnboardingNoticeMail(
+                $this->requiredString($payload, 'message'),
             )),
             default => throw new RuntimeException('Unsupported outbox event type.'),
         };

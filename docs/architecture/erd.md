@@ -635,7 +635,6 @@ erDiagram
     DISPUTE_CASES ||--|{ DISPUTE_RESPONSES : "dispute_case_id → id"
     EMAIL_OTPS ||--|{ ACCOUNT_EMAIL_CHANGES : "email_otp_id → id"
     EMAIL_OTPS ||--o{ AUTH_SESSIONS : "reauthentication_email_otp_id → id"
-    EMAIL_OTPS ||--o{ VENDOR_ORGANIZATIONS : "pending_store_email_otp_id → id"
     FEE_ADJUSTMENTS ||--o{ FEE_STATEMENT_LINES : "fee_adjustment_id → id"
     FEE_ADJUSTMENTS ||--o{ REFUNDS : "fee_adjustment_id → id"
     FEE_ASSESSMENTS ||--|{ FEE_ADJUSTMENTS : "fee_assessment_id → id"

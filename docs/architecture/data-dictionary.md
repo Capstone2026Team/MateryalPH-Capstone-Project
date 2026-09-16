@@ -5361,8 +5361,6 @@ Vendor organization, access, onboarding, or storefront record.
 
 **Constraints**
 
-- `vendor_vehicle_capacity_check` — CHECK: `CHECK (capacity_kg > 0::numeric)`
-- `vendor_vehicle_count_check` — CHECK: `CHECK (number_available > 0)`
 - `vendor_vehicles_vendor_organization_id_foreign` — FOREIGN KEY: `FOREIGN KEY (vendor_organization_id) REFERENCES vendor_organizations(id) ON DELETE RESTRICT`
 - `vendor_vehicles_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
 
@@ -5502,3 +5500,4 @@ Procurement or immutable commerce record.
 **Indexes**
 
 - `work_packages_pkey` — `CREATE UNIQUE INDEX work_packages_pkey ON public.work_packages USING btree (id)`
+

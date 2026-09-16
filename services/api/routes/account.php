@@ -33,6 +33,7 @@ foreach (['buyers' => ['BUYER', 'MOBILE'], 'vendors' => ['VENDOR', 'WEB'], 'admi
             Route::get('/memberships', [AccountAdministrationController::class, 'memberships']);
             Route::patch('/memberships/{membershipId}/delegation', [AccountAdministrationController::class, 'delegate'])->whereUuid('membershipId');
             Route::patch('/memberships/{membershipId}/status', [AccountAdministrationController::class, 'changeMembership'])->whereUuid('membershipId');
+            Route::post('/invitations', [AccountAdministrationController::class, 'inviteVendor'])->middleware('throttle:account-security');
         }
         if ($portal === 'ADMIN') {
             Route::get('/administrators', [AccountAdministrationController::class, 'administrators']);

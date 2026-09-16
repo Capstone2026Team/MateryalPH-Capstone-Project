@@ -8,7 +8,8 @@
     "generate:typescript": "openapi-generator-cli generate -i openapi.yaml -g typescript-fetch -o generated/typescript --additional-properties npmName=@materyalph/api-client-ts --additional-properties supportsES6=true --additional-properties typescriptThreePlus=true",
     "generate:dart": "openapi-generator-cli generate -i openapi.yaml -g dart-dio -o generated/dart --additional-properties pubName=materyalph_api_client --additional-properties pubVersion=1.0.0",
     "generate": "node scripts/generate-clients.mjs",
-    "test:account-contract": "node scripts/check-account-contract.mjs"
+    "test:account-contract": "node scripts/check-account-contract.mjs",
+    "test:vendor-contract": "node scripts/check-vendor-onboarding-contract.mjs"
   },
   "devDependencies": {
     "@openapitools/openapi-generator-cli": "^2.41.0",

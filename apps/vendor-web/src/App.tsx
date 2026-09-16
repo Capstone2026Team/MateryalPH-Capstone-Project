@@ -15,7 +15,6 @@ import { asBotStepUpRequired, asValidationFailure, readableApiError, registerVen
 import { vendorBotEvidence, webCookieBotEvidence } from './lib/recaptcha-enterprise'
 import {
   VendorAuthCallbackPage,
-  VendorDashboardFoundation,
   VendorForgotPasswordPage,
   VendorGoogleRegisterPage,
   VendorMfaPage,
@@ -23,6 +22,7 @@ import {
   VendorVerifyEmailPage,
 } from './pages/AuthSupportPages'
 import { VendorLandingPage } from './pages/VendorLandingPage'
+import { VendorDashboardPage, VendorSetupPage, VendorTeamPage, VendorVerificationPage, VendorWelcomePage } from './pages/PhaseThreeVendorPages'
 
 function App() {
   return (
@@ -38,7 +38,11 @@ function App() {
         <Route path="/reset-password" element={<VendorResetPasswordPage />} />
         <Route path="/auth/mfa" element={<VendorMfaPage />} />
         <Route path="/auth/callback" element={<VendorAuthCallbackPage />} />
-        <Route path="/dashboard" element={<VendorDashboardFoundation />} />
+        <Route path="/welcome" element={<VendorWelcomePage />} />
+        <Route path="/dashboard" element={<VendorDashboardPage />} />
+        <Route path="/onboarding/verification" element={<VendorVerificationPage />} />
+        <Route path="/onboarding/setup" element={<VendorSetupPage />} />
+        <Route path="/team" element={<VendorTeamPage />} />
         <Route path="/account" element={<AccountWorkspace portal="vendors" basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} loginPath="/login" renderQr={uri => <QRCodeSVG value={uri} title="Authenticator setup QR code" />} />} />
         <Route path="/fees" element={<InfoPage title="Payments and fees"><FeesContent /></InfoPage>} />
         <Route path="/verification" element={<InfoPage title="Vendor verification"><VerificationContent /></InfoPage>} />

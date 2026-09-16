@@ -1,4 +1,4 @@
-# @materyalph/api-client-ts@1.0.0-phase.2
+# @materyalph/api-client-ts@1.0.0-phase.3
 
 A TypeScript SDK client for the localhost API.
 
@@ -22,7 +22,7 @@ import type { AcceptAccountAgreementsRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({
+  const config = new Configuration({ 
     // To configure API key authorization: accessCookie
     apiKey: "YOUR API KEY",
     // Configure HTTP bearer authorization: passportBearer
@@ -60,65 +60,89 @@ All URIs are relative to */api/v1*
 
 | Class | Method | HTTP request | Description
 | ----- | ------ | ------------ | -------------
-*AccountsApi* | [**acceptAccountAgreements**](docs/AccountsApi.md#acceptaccountagreements) | **POST** /{accountPortal}/account/agreements |
-*AccountsApi* | [**acceptVendorStaffInvitation**](docs/AccountsApi.md#acceptvendorstaffinvitation) | **POST** /auth/vendor-invitations/accept |
-*AccountsApi* | [**changeAccountAdministrator**](docs/AccountsApi.md#changeaccountadministrator) | **PATCH** /{accountPortal}/account/administrators/{publicId} |
-*AccountsApi* | [**changeAccountDelegation**](docs/AccountsApi.md#changeaccountdelegation) | **PATCH** /{accountPortal}/account/memberships/{membershipId}/delegation |
-*AccountsApi* | [**changeAccountMembershipStatus**](docs/AccountsApi.md#changeaccountmembershipstatus) | **PATCH** /{accountPortal}/account/memberships/{membershipId}/status |
-*AccountsApi* | [**changeAccountPassword**](docs/AccountsApi.md#changeaccountpassword) | **POST** /{accountPortal}/account/password |
-*AccountsApi* | [**confirmAccountEmailChange**](docs/AccountsApi.md#confirmaccountemailchange) | **POST** /{accountPortal}/account/email/confirm |
-*AccountsApi* | [**confirmAccountFactorReplacement**](docs/AccountsApi.md#confirmaccountfactorreplacement) | **POST** /{accountPortal}/account/factor/confirm |
-*AccountsApi* | [**getAccountProfile**](docs/AccountsApi.md#getaccountprofile) | **GET** /{accountPortal}/account/profile |
-*AccountsApi* | [**getAccountSecurity**](docs/AccountsApi.md#getaccountsecurity) | **GET** /{accountPortal}/account/security |
-*AccountsApi* | [**inviteAccountAdmin**](docs/AccountsApi.md#inviteaccountadmin) | **POST** /{accountPortal}/account/invitations |
-*AccountsApi* | [**listAccountAdminRoles**](docs/AccountsApi.md#listaccountadminroles) | **GET** /{accountPortal}/account/roles |
-*AccountsApi* | [**listAccountAdministrators**](docs/AccountsApi.md#listaccountadministrators) | **GET** /{accountPortal}/account/administrators |
-*AccountsApi* | [**listAccountAgreements**](docs/AccountsApi.md#listaccountagreements) | **GET** /{accountPortal}/account/agreements |
-*AccountsApi* | [**listAccountMemberships**](docs/AccountsApi.md#listaccountmemberships) | **GET** /{accountPortal}/account/memberships |
-*AccountsApi* | [**listAccountSessions**](docs/AccountsApi.md#listaccountsessions) | **GET** /{accountPortal}/account/sessions |
-*AccountsApi* | [**reauthenticateAccount**](docs/AccountsApi.md#reauthenticateaccount) | **POST** /{accountPortal}/account/reauthentication |
-*AccountsApi* | [**replaceAccountRecoveryCodes**](docs/AccountsApi.md#replaceaccountrecoverycodes) | **POST** /{accountPortal}/account/recovery-codes |
-*AccountsApi* | [**revokeAccountSession**](docs/AccountsApi.md#revokeaccountsession) | **DELETE** /{accountPortal}/account/sessions/{sessionId} |
-*AccountsApi* | [**revokeAccountSessions**](docs/AccountsApi.md#revokeaccountsessions) | **POST** /{accountPortal}/account/sessions/revoke |
-*AccountsApi* | [**sendAccountReauthenticationEmail**](docs/AccountsApi.md#sendaccountreauthenticationemail) | **POST** /{accountPortal}/account/reauthentication/email |
-*AccountsApi* | [**startAccountEmailChange**](docs/AccountsApi.md#startaccountemailchange) | **POST** /{accountPortal}/account/email |
-*AccountsApi* | [**startAccountFactorReplacement**](docs/AccountsApi.md#startaccountfactorreplacement) | **POST** /{accountPortal}/account/factor |
-*AccountsApi* | [**updateAccountProfile**](docs/AccountsApi.md#updateaccountprofile) | **PATCH** /{accountPortal}/account/profile |
-*AgreementsApi* | [**listCurrentAgreements**](docs/AgreementsApi.md#listcurrentagreements) | **GET** /agreements/current |
-*AuthenticationApi* | [**acceptAdminInvitation**](docs/AuthenticationApi.md#acceptadmininvitation) | **POST** /auth/admin-invitations/accept |
-*AuthenticationApi* | [**completeGoogleOidc**](docs/AuthenticationApi.md#completegoogleoidc) | **GET** /auth/google/callback |
-*AuthenticationApi* | [**completeMfaChallenge**](docs/AuthenticationApi.md#completemfachallenge) | **POST** /auth/mfa/challenge |
-*AuthenticationApi* | [**confirmMfaEnrollment**](docs/AuthenticationApi.md#confirmmfaenrollment) | **POST** /auth/mfa/enrollment/confirm |
-*AuthenticationApi* | [**exchangeBuyerMobileGoogleCode**](docs/AuthenticationApi.md#exchangebuyermobilegooglecode) | **POST** /mobile/auth/google/exchange |
-*AuthenticationApi* | [**getBuyerMobileSession**](docs/AuthenticationApi.md#getbuyermobilesession) | **GET** /mobile/auth/session |
-*AuthenticationApi* | [**getMfaChallengeStatus**](docs/AuthenticationApi.md#getmfachallengestatus) | **GET** /auth/mfa/status |
-*AuthenticationApi* | [**getSession**](docs/AuthenticationApi.md#getsession) | **GET** /auth/session |
-*AuthenticationApi* | [**issueWebCsrfToken**](docs/AuthenticationApi.md#issuewebcsrftoken) | **GET** /auth/csrf |
-*AuthenticationApi* | [**login**](docs/AuthenticationApi.md#loginoperation) | **POST** /auth/login |
-*AuthenticationApi* | [**loginBuyerMobile**](docs/AuthenticationApi.md#loginbuyermobile) | **POST** /mobile/auth/login |
-*AuthenticationApi* | [**logout**](docs/AuthenticationApi.md#logout) | **POST** /auth/logout |
-*AuthenticationApi* | [**logoutBuyerMobile**](docs/AuthenticationApi.md#logoutbuyermobile) | **POST** /mobile/auth/logout |
-*AuthenticationApi* | [**recoverMfaChallenge**](docs/AuthenticationApi.md#recovermfachallenge) | **POST** /auth/mfa/recovery |
-*AuthenticationApi* | [**refreshBuyerMobileSession**](docs/AuthenticationApi.md#refreshbuyermobilesession) | **POST** /mobile/auth/refresh |
-*AuthenticationApi* | [**refreshSession**](docs/AuthenticationApi.md#refreshsession) | **POST** /auth/refresh |
-*AuthenticationApi* | [**registerAccount**](docs/AuthenticationApi.md#registeraccount) | **POST** /auth/register |
-*AuthenticationApi* | [**registerBuyerMobile**](docs/AuthenticationApi.md#registerbuyermobile) | **POST** /mobile/auth/register |
-*AuthenticationApi* | [**requestBuyerMobilePasswordRecovery**](docs/AuthenticationApi.md#requestbuyermobilepasswordrecovery) | **POST** /mobile/auth/password/forgot |
-*AuthenticationApi* | [**requestPasswordRecovery**](docs/AuthenticationApi.md#requestpasswordrecovery) | **POST** /auth/password/forgot |
-*AuthenticationApi* | [**resendBotChallenge**](docs/AuthenticationApi.md#resendbotchallengeoperation) | **POST** /auth/bot-challenges/{challenge_id}/resend |
-*AuthenticationApi* | [**resendBuyerMobileBotChallenge**](docs/AuthenticationApi.md#resendbuyermobilebotchallenge) | **POST** /mobile/auth/bot-challenges/{challenge_id}/resend |
-*AuthenticationApi* | [**resendBuyerMobileEmailVerification**](docs/AuthenticationApi.md#resendbuyermobileemailverification) | **POST** /mobile/auth/verify-email/resend |
-*AuthenticationApi* | [**resendEmailVerification**](docs/AuthenticationApi.md#resendemailverification) | **POST** /auth/verify-email/resend |
-*AuthenticationApi* | [**resetBuyerMobilePassword**](docs/AuthenticationApi.md#resetbuyermobilepassword) | **POST** /mobile/auth/password/reset |
-*AuthenticationApi* | [**resetPassword**](docs/AuthenticationApi.md#resetpassword) | **POST** /auth/password/reset |
-*AuthenticationApi* | [**startBuyerMobileGoogleOidc**](docs/AuthenticationApi.md#startbuyermobilegoogleoidc) | **POST** /mobile/auth/google/start |
-*AuthenticationApi* | [**startGoogleOidc**](docs/AuthenticationApi.md#startgoogleoidc) | **POST** /auth/google/start |
-*AuthenticationApi* | [**startMfaEnrollment**](docs/AuthenticationApi.md#startmfaenrollment) | **POST** /auth/mfa/enrollment |
-*AuthenticationApi* | [**verifyBotChallenge**](docs/AuthenticationApi.md#verifybotchallengeoperation) | **POST** /auth/bot-challenges/{challenge_id}/verify |
-*AuthenticationApi* | [**verifyBuyerMobileBotChallenge**](docs/AuthenticationApi.md#verifybuyermobilebotchallenge) | **POST** /mobile/auth/bot-challenges/{challenge_id}/verify |
-*AuthenticationApi* | [**verifyBuyerMobileEmail**](docs/AuthenticationApi.md#verifybuyermobileemail) | **POST** /mobile/auth/verify-email |
-*AuthenticationApi* | [**verifyEmail**](docs/AuthenticationApi.md#verifyemailoperation) | **POST** /auth/verify-email |
-*SystemApi* | [**getApiHealth**](docs/SystemApi.md#getapihealth) | **GET** /health |
+*AccountsApi* | [**acceptAccountAgreements**](docs/AccountsApi.md#acceptaccountagreements) | **POST** /{accountPortal}/account/agreements | 
+*AccountsApi* | [**acceptVendorStaffInvitation**](docs/AccountsApi.md#acceptvendorstaffinvitation) | **POST** /auth/vendor-invitations/accept | 
+*AccountsApi* | [**changeAccountAdministrator**](docs/AccountsApi.md#changeaccountadministrator) | **PATCH** /{accountPortal}/account/administrators/{publicId} | 
+*AccountsApi* | [**changeAccountDelegation**](docs/AccountsApi.md#changeaccountdelegation) | **PATCH** /{accountPortal}/account/memberships/{membershipId}/delegation | 
+*AccountsApi* | [**changeAccountMembershipStatus**](docs/AccountsApi.md#changeaccountmembershipstatus) | **PATCH** /{accountPortal}/account/memberships/{membershipId}/status | 
+*AccountsApi* | [**changeAccountPassword**](docs/AccountsApi.md#changeaccountpassword) | **POST** /{accountPortal}/account/password | 
+*AccountsApi* | [**confirmAccountEmailChange**](docs/AccountsApi.md#confirmaccountemailchange) | **POST** /{accountPortal}/account/email/confirm | 
+*AccountsApi* | [**confirmAccountFactorReplacement**](docs/AccountsApi.md#confirmaccountfactorreplacement) | **POST** /{accountPortal}/account/factor/confirm | 
+*AccountsApi* | [**getAccountProfile**](docs/AccountsApi.md#getaccountprofile) | **GET** /{accountPortal}/account/profile | 
+*AccountsApi* | [**getAccountSecurity**](docs/AccountsApi.md#getaccountsecurity) | **GET** /{accountPortal}/account/security | 
+*AccountsApi* | [**inviteAccountAdmin**](docs/AccountsApi.md#inviteaccountadmin) | **POST** /{accountPortal}/account/invitations | 
+*AccountsApi* | [**listAccountAdminRoles**](docs/AccountsApi.md#listaccountadminroles) | **GET** /{accountPortal}/account/roles | 
+*AccountsApi* | [**listAccountAdministrators**](docs/AccountsApi.md#listaccountadministrators) | **GET** /{accountPortal}/account/administrators | 
+*AccountsApi* | [**listAccountAgreements**](docs/AccountsApi.md#listaccountagreements) | **GET** /{accountPortal}/account/agreements | 
+*AccountsApi* | [**listAccountMemberships**](docs/AccountsApi.md#listaccountmemberships) | **GET** /{accountPortal}/account/memberships | 
+*AccountsApi* | [**listAccountSessions**](docs/AccountsApi.md#listaccountsessions) | **GET** /{accountPortal}/account/sessions | 
+*AccountsApi* | [**reauthenticateAccount**](docs/AccountsApi.md#reauthenticateaccount) | **POST** /{accountPortal}/account/reauthentication | 
+*AccountsApi* | [**replaceAccountRecoveryCodes**](docs/AccountsApi.md#replaceaccountrecoverycodes) | **POST** /{accountPortal}/account/recovery-codes | 
+*AccountsApi* | [**revokeAccountSession**](docs/AccountsApi.md#revokeaccountsession) | **DELETE** /{accountPortal}/account/sessions/{sessionId} | 
+*AccountsApi* | [**revokeAccountSessions**](docs/AccountsApi.md#revokeaccountsessions) | **POST** /{accountPortal}/account/sessions/revoke | 
+*AccountsApi* | [**sendAccountReauthenticationEmail**](docs/AccountsApi.md#sendaccountreauthenticationemail) | **POST** /{accountPortal}/account/reauthentication/email | 
+*AccountsApi* | [**startAccountEmailChange**](docs/AccountsApi.md#startaccountemailchange) | **POST** /{accountPortal}/account/email | 
+*AccountsApi* | [**startAccountFactorReplacement**](docs/AccountsApi.md#startaccountfactorreplacement) | **POST** /{accountPortal}/account/factor | 
+*AccountsApi* | [**updateAccountProfile**](docs/AccountsApi.md#updateaccountprofile) | **PATCH** /{accountPortal}/account/profile | 
+*AdminVendorVerificationApi* | [**decideVendorVerificationRequirement**](docs/AdminVendorVerificationApi.md#decidevendorverificationrequirement) | **POST** /admin/vendor-verification/{organizationId}/requirements/{requirementKey}/decision | 
+*AdminVendorVerificationApi* | [**getAdminVendorEvidenceUrl**](docs/AdminVendorVerificationApi.md#getadminvendorevidenceurl) | **GET** /admin/vendor-verification/files/{fileId} | 
+*AdminVendorVerificationApi* | [**getVendorVerificationCase**](docs/AdminVendorVerificationApi.md#getvendorverificationcase) | **GET** /admin/vendor-verification/{organizationId} | 
+*AdminVendorVerificationApi* | [**listVendorVerificationQueue**](docs/AdminVendorVerificationApi.md#listvendorverificationqueue) | **GET** /admin/vendor-verification | 
+*AdminVendorVerificationApi* | [**restoreVendorActivation**](docs/AdminVendorVerificationApi.md#restorevendoractivation) | **POST** /admin/vendor-verification/{organizationId}/restore | 
+*AdminVendorVerificationApi* | [**restrictVendorActivation**](docs/AdminVendorVerificationApi.md#restrictvendoractivation) | **POST** /admin/vendor-verification/{organizationId}/restrict | 
+*AgreementsApi* | [**listCurrentAgreements**](docs/AgreementsApi.md#listcurrentagreements) | **GET** /agreements/current | 
+*AuthenticationApi* | [**acceptAdminInvitation**](docs/AuthenticationApi.md#acceptadmininvitation) | **POST** /auth/admin-invitations/accept | 
+*AuthenticationApi* | [**completeGoogleOidc**](docs/AuthenticationApi.md#completegoogleoidc) | **GET** /auth/google/callback | 
+*AuthenticationApi* | [**completeMfaChallenge**](docs/AuthenticationApi.md#completemfachallenge) | **POST** /auth/mfa/challenge | 
+*AuthenticationApi* | [**confirmMfaEnrollment**](docs/AuthenticationApi.md#confirmmfaenrollment) | **POST** /auth/mfa/enrollment/confirm | 
+*AuthenticationApi* | [**exchangeBuyerMobileGoogleCode**](docs/AuthenticationApi.md#exchangebuyermobilegooglecode) | **POST** /mobile/auth/google/exchange | 
+*AuthenticationApi* | [**getBuyerMobileSession**](docs/AuthenticationApi.md#getbuyermobilesession) | **GET** /mobile/auth/session | 
+*AuthenticationApi* | [**getMfaChallengeStatus**](docs/AuthenticationApi.md#getmfachallengestatus) | **GET** /auth/mfa/status | 
+*AuthenticationApi* | [**getSession**](docs/AuthenticationApi.md#getsession) | **GET** /auth/session | 
+*AuthenticationApi* | [**issueWebCsrfToken**](docs/AuthenticationApi.md#issuewebcsrftoken) | **GET** /auth/csrf | 
+*AuthenticationApi* | [**login**](docs/AuthenticationApi.md#loginoperation) | **POST** /auth/login | 
+*AuthenticationApi* | [**loginBuyerMobile**](docs/AuthenticationApi.md#loginbuyermobile) | **POST** /mobile/auth/login | 
+*AuthenticationApi* | [**logout**](docs/AuthenticationApi.md#logout) | **POST** /auth/logout | 
+*AuthenticationApi* | [**logoutBuyerMobile**](docs/AuthenticationApi.md#logoutbuyermobile) | **POST** /mobile/auth/logout | 
+*AuthenticationApi* | [**recoverMfaChallenge**](docs/AuthenticationApi.md#recovermfachallenge) | **POST** /auth/mfa/recovery | 
+*AuthenticationApi* | [**refreshBuyerMobileSession**](docs/AuthenticationApi.md#refreshbuyermobilesession) | **POST** /mobile/auth/refresh | 
+*AuthenticationApi* | [**refreshSession**](docs/AuthenticationApi.md#refreshsession) | **POST** /auth/refresh | 
+*AuthenticationApi* | [**registerAccount**](docs/AuthenticationApi.md#registeraccount) | **POST** /auth/register | 
+*AuthenticationApi* | [**registerBuyerMobile**](docs/AuthenticationApi.md#registerbuyermobile) | **POST** /mobile/auth/register | 
+*AuthenticationApi* | [**requestBuyerMobilePasswordRecovery**](docs/AuthenticationApi.md#requestbuyermobilepasswordrecovery) | **POST** /mobile/auth/password/forgot | 
+*AuthenticationApi* | [**requestPasswordRecovery**](docs/AuthenticationApi.md#requestpasswordrecovery) | **POST** /auth/password/forgot | 
+*AuthenticationApi* | [**resendBotChallenge**](docs/AuthenticationApi.md#resendbotchallengeoperation) | **POST** /auth/bot-challenges/{challenge_id}/resend | 
+*AuthenticationApi* | [**resendBuyerMobileBotChallenge**](docs/AuthenticationApi.md#resendbuyermobilebotchallenge) | **POST** /mobile/auth/bot-challenges/{challenge_id}/resend | 
+*AuthenticationApi* | [**resendBuyerMobileEmailVerification**](docs/AuthenticationApi.md#resendbuyermobileemailverification) | **POST** /mobile/auth/verify-email/resend | 
+*AuthenticationApi* | [**resendEmailVerification**](docs/AuthenticationApi.md#resendemailverification) | **POST** /auth/verify-email/resend | 
+*AuthenticationApi* | [**resetBuyerMobilePassword**](docs/AuthenticationApi.md#resetbuyermobilepassword) | **POST** /mobile/auth/password/reset | 
+*AuthenticationApi* | [**resetPassword**](docs/AuthenticationApi.md#resetpassword) | **POST** /auth/password/reset | 
+*AuthenticationApi* | [**startBuyerMobileGoogleOidc**](docs/AuthenticationApi.md#startbuyermobilegoogleoidc) | **POST** /mobile/auth/google/start | 
+*AuthenticationApi* | [**startGoogleOidc**](docs/AuthenticationApi.md#startgoogleoidc) | **POST** /auth/google/start | 
+*AuthenticationApi* | [**startMfaEnrollment**](docs/AuthenticationApi.md#startmfaenrollment) | **POST** /auth/mfa/enrollment | 
+*AuthenticationApi* | [**verifyBotChallenge**](docs/AuthenticationApi.md#verifybotchallengeoperation) | **POST** /auth/bot-challenges/{challenge_id}/verify | 
+*AuthenticationApi* | [**verifyBuyerMobileBotChallenge**](docs/AuthenticationApi.md#verifybuyermobilebotchallenge) | **POST** /mobile/auth/bot-challenges/{challenge_id}/verify | 
+*AuthenticationApi* | [**verifyBuyerMobileEmail**](docs/AuthenticationApi.md#verifybuyermobileemail) | **POST** /mobile/auth/verify-email | 
+*AuthenticationApi* | [**verifyEmail**](docs/AuthenticationApi.md#verifyemailoperation) | **POST** /auth/verify-email | 
+*SystemApi* | [**getApiHealth**](docs/SystemApi.md#getapihealth) | **GET** /health | 
+*VendorOnboardingApi* | [**activateVendorStore**](docs/VendorOnboardingApi.md#activatevendorstore) | **POST** /vendors/onboarding/activation | 
+*VendorOnboardingApi* | [**captureVendorPaymentConnection**](docs/VendorOnboardingApi.md#capturevendorpaymentconnection) | **POST** /vendors/onboarding/payment-connection | 
+*VendorOnboardingApi* | [**completeVendorSetup**](docs/VendorOnboardingApi.md#completevendorsetup) | **POST** /vendors/onboarding/setup/complete | 
+*VendorOnboardingApi* | [**confirmVendorStoreEmailVerification**](docs/VendorOnboardingApi.md#confirmvendorstoreemailverification) | **POST** /vendors/onboarding/store-email/confirm | 
+*VendorOnboardingApi* | [**dismissVendorOnboardingWelcome**](docs/VendorOnboardingApi.md#dismissvendoronboardingwelcome) | **POST** /vendors/onboarding/welcome/dismiss | 
+*VendorOnboardingApi* | [**downloadVendorOnboardingFile**](docs/VendorOnboardingApi.md#downloadvendoronboardingfile) | **GET** /vendor-onboarding-files/{fileId}/content | 
+*VendorOnboardingApi* | [**getVendorOnboarding**](docs/VendorOnboardingApi.md#getvendoronboarding) | **GET** /vendors/onboarding | 
+*VendorOnboardingApi* | [**getVendorPrivateFileUrl**](docs/VendorOnboardingApi.md#getvendorprivatefileurl) | **GET** /vendors/onboarding/files/{fileId} | 
+*VendorOnboardingApi* | [**inviteVendorTeamMember**](docs/VendorOnboardingApi.md#invitevendorteammember) | **POST** /vendors/account/invitations | 
+*VendorOnboardingApi* | [**receiveXenditAccountVerificationWebhook**](docs/VendorOnboardingApi.md#receivexenditaccountverificationwebhook) | **POST** /webhooks/xendit/account-verification | 
+*VendorOnboardingApi* | [**reconcileVendorPaymentConnection**](docs/VendorOnboardingApi.md#reconcilevendorpaymentconnection) | **POST** /vendors/onboarding/payment-connection/reconcile | 
+*VendorOnboardingApi* | [**requestVendorStoreEmailVerification**](docs/VendorOnboardingApi.md#requestvendorstoreemailverification) | **POST** /vendors/onboarding/store-email | 
+*VendorOnboardingApi* | [**reverseGeocodeVendorAddress**](docs/VendorOnboardingApi.md#reversegeocodevendoraddress) | **POST** /vendors/onboarding/address/geocode | 
+*VendorOnboardingApi* | [**saveVendorSetupDraft**](docs/VendorOnboardingApi.md#savevendorsetupdraft) | **PATCH** /vendors/onboarding/setup | 
+*VendorOnboardingApi* | [**saveVendorVerificationDraft**](docs/VendorOnboardingApi.md#savevendorverificationdraft) | **PATCH** /vendors/onboarding/verification | 
+*VendorOnboardingApi* | [**submitVendorVerification**](docs/VendorOnboardingApi.md#submitvendorverification) | **POST** /vendors/onboarding/verification/submit | 
+*VendorOnboardingApi* | [**uploadVendorStoreMedia**](docs/VendorOnboardingApi.md#uploadvendorstoremedia) | **POST** /vendors/onboarding/media | 
+*VendorOnboardingApi* | [**uploadVendorVerificationDocument**](docs/VendorOnboardingApi.md#uploadvendorverificationdocument) | **POST** /vendors/onboarding/documents | 
 
 
 ### Models
@@ -158,6 +182,10 @@ All URIs are relative to */api/v1*
 - [AccountSessionRevocation](docs/AccountSessionRevocation.md)
 - [AccountType](docs/AccountType.md)
 - [AdminInvitationRequest](docs/AdminInvitationRequest.md)
+- [AdminVendorVerificationDecision](docs/AdminVendorVerificationDecision.md)
+- [AdminVendorVerificationDetailEnvelope](docs/AdminVendorVerificationDetailEnvelope.md)
+- [AdminVendorVerificationQueueEnvelope](docs/AdminVendorVerificationQueueEnvelope.md)
+- [AdminVendorVerificationQueueItem](docs/AdminVendorVerificationQueueItem.md)
 - [Agreement](docs/Agreement.md)
 - [AgreementListEnvelope](docs/AgreementListEnvelope.md)
 - [ApiError](docs/ApiError.md)
@@ -199,10 +227,40 @@ All URIs are relative to */api/v1*
 - [ResendBotChallengeRequest](docs/ResendBotChallengeRequest.md)
 - [SuccessEnvelope](docs/SuccessEnvelope.md)
 - [UserIdentity](docs/UserIdentity.md)
+- [VendorAddressGeocode](docs/VendorAddressGeocode.md)
+- [VendorAddressGeocodeEnvelope](docs/VendorAddressGeocodeEnvelope.md)
 - [VendorBotProtectionEvidence](docs/VendorBotProtectionEvidence.md)
+- [VendorDocument](docs/VendorDocument.md)
+- [VendorDocumentEnvelope](docs/VendorDocumentEnvelope.md)
+- [VendorFile](docs/VendorFile.md)
+- [VendorFileEnvelope](docs/VendorFileEnvelope.md)
+- [VendorInvitation](docs/VendorInvitation.md)
 - [VendorInvitationAcceptance](docs/VendorInvitationAcceptance.md)
+- [VendorInvitationEnvelope](docs/VendorInvitationEnvelope.md)
+- [VendorInvitationRequest](docs/VendorInvitationRequest.md)
+- [VendorMediaEnvelope](docs/VendorMediaEnvelope.md)
+- [VendorOnboardingEnvelope](docs/VendorOnboardingEnvelope.md)
+- [VendorOnboardingSection](docs/VendorOnboardingSection.md)
+- [VendorOnboardingSnapshot](docs/VendorOnboardingSnapshot.md)
+- [VendorOnboardingStep](docs/VendorOnboardingStep.md)
+- [VendorPaymentConnection](docs/VendorPaymentConnection.md)
+- [VendorPaymentReconciliationEnvelope](docs/VendorPaymentReconciliationEnvelope.md)
+- [VendorRestriction](docs/VendorRestriction.md)
+- [VendorRestrictionEnvelope](docs/VendorRestrictionEnvelope.md)
+- [VendorSetupComplete](docs/VendorSetupComplete.md)
+- [VendorSetupDraft](docs/VendorSetupDraft.md)
+- [VendorSetupDraftDelivery](docs/VendorSetupDraftDelivery.md)
+- [VendorSetupDraftVehiclesInner](docs/VendorSetupDraftVehiclesInner.md)
+- [VendorStoreEmailConfirmation](docs/VendorStoreEmailConfirmation.md)
+- [VendorStoreEmailEnvelope](docs/VendorStoreEmailEnvelope.md)
+- [VendorVerificationDraft](docs/VendorVerificationDraft.md)
+- [VendorVerificationDraftLegalIdentity](docs/VendorVerificationDraftLegalIdentity.md)
+- [VendorVerificationDraftTaxProfile](docs/VendorVerificationDraftTaxProfile.md)
+- [VendorVerificationSubmit](docs/VendorVerificationSubmit.md)
+- [VendorWebhookEnvelope](docs/VendorWebhookEnvelope.md)
 - [VerifyBotChallengeRequest](docs/VerifyBotChallengeRequest.md)
 - [VerifyEmailRequest](docs/VerifyEmailRequest.md)
+- [XenditAccountVerificationWebhook](docs/XenditAccountVerificationWebhook.md)
 
 ### Authorization
 
@@ -219,21 +277,21 @@ Authentication schemes defined for the API:
 
 - **Type**: API key
 - **API key parameter name**: `mp_access`
-- **Location**:
+- **Location**: 
 <a id="mfaChallengeCookie"></a>
 #### mfaChallengeCookie
 
 
 - **Type**: API key
 - **API key parameter name**: `mp_mfa_challenge`
-- **Location**:
+- **Location**: 
 <a id="botProofCookie"></a>
 #### botProofCookie
 
 
 - **Type**: API key
 - **API key parameter name**: `mp_bot_proof`
-- **Location**:
+- **Location**: 
 <a id="webCsrf"></a>
 #### webCsrf
 
@@ -248,8 +306,8 @@ This TypeScript SDK client supports the [Fetch API](https://fetch.spec.whatwg.or
 and is automatically generated by the
 [OpenAPI Generator](https://openapi-generator.tech) project:
 
-- API version: `1.0.0-phase.2`
-- Package version: `1.0.0-phase.2`
+- API version: `1.0.0-phase.3`
+- Package version: `1.0.0-phase.3`
 - Generator version: `7.25.0`
 - Build package: `org.openapitools.codegen.languages.TypeScriptFetchClientCodegen`
 

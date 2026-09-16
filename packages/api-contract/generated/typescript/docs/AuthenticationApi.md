@@ -57,7 +57,7 @@ import type { AcceptAdminInvitationRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({
+  const config = new Configuration({ 
     // To configure API key authorization: webCsrf
     apiKey: "YOUR API KEY",
   });
@@ -202,7 +202,7 @@ import type { CompleteMfaChallengeRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({
+  const config = new Configuration({ 
     // To configure API key authorization: mfaChallengeCookie
     apiKey: "YOUR API KEY",
     // To configure API key authorization: webCsrf
@@ -275,7 +275,7 @@ import type { ConfirmMfaEnrollmentRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({
+  const config = new Configuration({ 
     // To configure API key authorization: mfaChallengeCookie
     apiKey: "YOUR API KEY",
     // To configure API key authorization: webCsrf
@@ -415,7 +415,7 @@ import type { GetBuyerMobileSessionRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({
+  const config = new Configuration({ 
     // Configure HTTP bearer authorization: passportBearer
     accessToken: "YOUR BEARER TOKEN",
   });
@@ -477,7 +477,7 @@ import type { GetMfaChallengeStatusRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({
+  const config = new Configuration({ 
     // To configure API key authorization: mfaChallengeCookie
     apiKey: "YOUR API KEY",
   });
@@ -540,7 +540,7 @@ import type { GetSessionRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({
+  const config = new Configuration({ 
     // To configure API key authorization: accessCookie
     apiKey: "YOUR API KEY",
   });
@@ -659,7 +659,7 @@ import type { LoginOperationRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({
+  const config = new Configuration({ 
     // To configure API key authorization: webCsrf
     apiKey: "YOUR API KEY",
   });
@@ -802,7 +802,7 @@ import type { LogoutRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({
+  const config = new Configuration({ 
     // To configure API key authorization: accessCookie
     apiKey: "YOUR API KEY",
     // To configure API key authorization: webCsrf
@@ -865,7 +865,7 @@ import type { LogoutBuyerMobileRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({
+  const config = new Configuration({ 
     // Configure HTTP bearer authorization: passportBearer
     accessToken: "YOUR BEARER TOKEN",
   });
@@ -926,7 +926,7 @@ import type { RecoverMfaChallengeRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({
+  const config = new Configuration({ 
     // To configure API key authorization: mfaChallengeCookie
     apiKey: "YOUR API KEY",
     // To configure API key authorization: webCsrf
@@ -1066,7 +1066,7 @@ import type { RefreshSessionRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({
+  const config = new Configuration({ 
     // To configure API key authorization: webCsrf
     apiKey: "YOUR API KEY",
   });
@@ -1128,7 +1128,7 @@ import type { RegisterAccountRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({
+  const config = new Configuration({ 
     // To configure API key authorization: webCsrf
     apiKey: "YOUR API KEY",
   });
@@ -1339,7 +1339,7 @@ import type { RequestPasswordRecoveryRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({
+  const config = new Configuration({ 
     // To configure API key authorization: webCsrf
     apiKey: "YOUR API KEY",
   });
@@ -1412,7 +1412,7 @@ import type { ResendBotChallengeOperationRequest } from '@materyalph/api-client-
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({
+  const config = new Configuration({ 
     // To configure API key authorization: webCsrf
     apiKey: "YOUR API KEY",
   });
@@ -1622,7 +1622,7 @@ import type { ResendEmailVerificationRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({
+  const config = new Configuration({ 
     // To configure API key authorization: webCsrf
     apiKey: "YOUR API KEY",
   });
@@ -1758,7 +1758,7 @@ import type { ResetPasswordRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({
+  const config = new Configuration({ 
     // To configure API key authorization: webCsrf
     apiKey: "YOUR API KEY",
   });
@@ -1895,7 +1895,7 @@ import type { StartGoogleOidcRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({
+  const config = new Configuration({ 
     // To configure API key authorization: webCsrf
     apiKey: "YOUR API KEY",
   });
@@ -1965,7 +1965,7 @@ import type { StartMfaEnrollmentRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({
+  const config = new Configuration({ 
     // To configure API key authorization: mfaChallengeCookie
     apiKey: "YOUR API KEY",
     // To configure API key authorization: webCsrf
@@ -2030,7 +2030,7 @@ import type { VerifyBotChallengeOperationRequest } from '@materyalph/api-client-
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({
+  const config = new Configuration({ 
     // To configure API key authorization: webCsrf
     apiKey: "YOUR API KEY",
   });
@@ -2240,7 +2240,7 @@ import type { VerifyEmailOperationRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({
+  const config = new Configuration({ 
     // To configure API key authorization: webCsrf
     apiKey: "YOUR API KEY",
   });
