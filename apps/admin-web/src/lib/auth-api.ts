@@ -1,3 +1,4 @@
+import { rateLimitMessage } from '@materyalph/web-ui'
 import { AccountType, AuthenticationApi, ResponseError } from '@materyalph/api-client-ts'
 import { createWebApiConfiguration } from '@materyalph/web-ui'
 
@@ -51,11 +52,11 @@ export function resetPassword(email: string, code: string, password: string, pas
 
 export async function readableApiError(error: unknown): Promise<string> {
   if (error instanceof ResponseError) {
-    if (error.response.status === 429) return 'Too many requests were sent. Please wait a moment and try again.'
+    if (error.response.status === 429 && error.response.headers.has('Retry-After')) return rateLimitMessage(error.response)
     const payload: unknown = await error.response.clone().json().catch(() => null)
     if (typeof payload === 'object' && payload !== null && 'errors' in payload && Array.isArray(payload.errors)) {
       const first = payload.errors[0] as { code?: unknown; message?: unknown } | undefined
-      if (typeof first?.message === 'string' && (error.response.status !== 401 || ['MFA_CODE_INVALID', 'MFA_RECOVERY_CODE_INVALID', 'UNAUTHENTICATED'].includes(String(first.code)))) return first.message
+      if (typeof first?.message === 'string' && (error.response.status !== 401 || ['INVALID_CREDENTIALS', 'MFA_CODE_INVALID', 'MFA_RECOVERY_CODE_INVALID', 'UNAUTHENTICATED'].includes(String(first.code)))) return first.message
     }
     if (error.response.status === 401) return 'Your session has expired. Sign in again to continue.'
   }

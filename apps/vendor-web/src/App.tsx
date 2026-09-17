@@ -1,11 +1,12 @@
-import { QRCodeSVG } from 'qrcode.react'
 import { AcceptStaffInvitation } from './pages/AcceptStaffInvitation'
-import { AccountWorkspace, Button, Field, PhoneField, StatusMessage } from '@materyalph/web-ui'
+import { Button, Field, PhoneField, StatusMessage } from '@materyalph/web-ui'
 import { ArrowRight } from 'lucide-react'
 import { type FormEvent, type ReactNode, useEffect, useRef, useState } from 'react'
 import { BrowserRouter, Link, Route, Routes, useNavigate, useSearchParams } from 'react-router-dom'
 
 import './App.css'
+import { AuthenticatedPublicPage } from './pages/AuthenticatedPublicPage'
+import { VendorEntryPage } from './pages/VendorEntryPage'
 import { BrandHeader } from './components/BrandHeader'
 import { SiteFooter } from './components/SiteFooter'
 import { RiskOtpPanel } from './components/auth/RiskOtpPanel'
@@ -22,14 +23,14 @@ import {
   VendorVerifyEmailPage,
 } from './pages/AuthSupportPages'
 import { VendorLandingPage } from './pages/VendorLandingPage'
-import { VendorDashboardPage, VendorSetupPage, VendorTeamPage, VendorVerificationPage, VendorWelcomePage } from './pages/PhaseThreeVendorPages'
+import { VendorAccountPage, VendorStoreProfilePage, VendorDashboardPage, VendorSetupPage, VendorTeamPage, VendorVerificationPage, VendorWelcomePage } from './pages/PhaseThreeVendorPages'
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<VendorLandingPage />} />
-        <Route path="/login" element={<LoginPage />} />
+        <Route path="/" element={<AuthenticatedPublicPage><VendorLandingPage /></AuthenticatedPublicPage>} />
+        <Route path="/login" element={<AuthenticatedPublicPage><LoginPage /></AuthenticatedPublicPage>} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/accept-invite" element={<AcceptStaffInvitation />} />
         <Route path="/register/google" element={<VendorGoogleRegisterPage />} />
@@ -38,12 +39,15 @@ function App() {
         <Route path="/reset-password" element={<VendorResetPasswordPage />} />
         <Route path="/auth/mfa" element={<VendorMfaPage />} />
         <Route path="/auth/callback" element={<VendorAuthCallbackPage />} />
+        <Route path="/entry" element={<VendorEntryPage />} />
         <Route path="/welcome" element={<VendorWelcomePage />} />
         <Route path="/dashboard" element={<VendorDashboardPage />} />
         <Route path="/onboarding/verification" element={<VendorVerificationPage />} />
         <Route path="/onboarding/setup" element={<VendorSetupPage />} />
         <Route path="/team" element={<VendorTeamPage />} />
-        <Route path="/account" element={<AccountWorkspace portal="vendors" basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} loginPath="/login" renderQr={uri => <QRCodeSVG value={uri} title="Authenticator setup QR code" />} />} />
+        <Route path="/account" element={<VendorAccountPage />} />
+        <Route path="/settings" element={<VendorAccountPage />} />
+        <Route path="/store-profile" element={<VendorStoreProfilePage />} />
         <Route path="/fees" element={<InfoPage title="Payments and fees"><FeesContent /></InfoPage>} />
         <Route path="/verification" element={<InfoPage title="Vendor verification"><VerificationContent /></InfoPage>} />
         <Route path="/opportunities" element={<InfoPage title="Marketplace opportunities"><OpportunitiesContent /></InfoPage>} />
@@ -78,7 +82,7 @@ function LoginPage() {
       return
     }
 
-    navigate('/dashboard')
+    navigate('/entry')
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {

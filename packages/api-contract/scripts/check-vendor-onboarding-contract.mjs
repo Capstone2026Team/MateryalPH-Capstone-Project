@@ -18,6 +18,8 @@ else {
 const actual = new Map(routes.flatMap(route => route.method.split('|').filter(method => method !== 'HEAD').map(method => [`${method} /${route.uri}`, route])))
 const hasMiddleware = (route, ...names) => names.some(name => route.middleware.includes(name))
 const phaseThreePaths = new Set([
+  '/admin/dashboard',
+  '/admin/dashboard/audit',
   '/vendors/onboarding',
   '/vendors/onboarding/verification',
   '/vendors/onboarding/verification/submit',

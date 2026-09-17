@@ -13,13 +13,9 @@
 
 Authenticated Buyers, Vendor employees and Admins manage their own identity and security. Use the existing Inter typography, semantic tokens and accessible controls. Personal profile, security, sessions and agreements are separate navigable sections; privileged administration appears only after server permission resolution. Read-only role and organization information must remain distinct from editable personal fields. Require confirmation for session revocation and security changes; clear sensitive inputs after submission. Handle loading, offline/retry, validation, expired access, denied access and success without raw JSON. Preserve the Buyer five-destination navigation foundation without fictional marketplace data.
 
-## Diagnostic limitation
+## Design review
 
-IMPECCABLE — BLOCKED (TOOLING / LOCAL SECURITY)
-
-The downloaded engine matched its published SHA-256 checksum, but Windows Security blocked the executable as containing a virus or potentially unwanted software.
-
-This is not an application failure. No security bypass attempted. Do not execute the blocked binary again. Use DESIGN.md, the UI/UX planner, semantic components, accessibility/responsive review and automated checks. Full Impeccable audit remains available for the later designated hardening/polish phase after a security-cleared engine is available. This diagnostic limitation alone does not determine Phase 2 acceptance.
+The optional Impeccable diagnostic was removed from current acceptance gates at the user's request. Continue to use DESIGN.md, the UI planner, semantic components, accessibility and responsive review, and automated tests.
 
 ## Acceptance evidence
 
@@ -89,7 +85,7 @@ No new external provider credentials are required. Approved legal Markdown remai
 
 Android tooling emitted future-support notices for Gradle 8.14, AGP 8.11.1 and Kotlin 2.2.20. The debug build passed without bypass flags or toolchain changes.
 
-Impeccable: BLOCKED — local tooling/security limitation; no bypass attempted. The downloaded engine matched its published SHA-256 checksum, but Windows Security blocked the executable as containing a virus or potentially unwanted software. This is not an application failure. Full Impeccable audit remains available for the later designated hardening/polish phase after a security-cleared engine is available.
+The former optional Impeccable diagnostic is retired and is not a release blocker.
 
 ### Approved authorization clarification
 
@@ -105,6 +101,6 @@ The final commit-free snapshot includes both the Store Staff mutation-grant remo
 
 The final snapshot passed the 6.92 MB source secret scan, live PostgreSQL 16/PostGIS isolation guard, empty migrations, rollback/reapply, schema drift, Passport key handling, SMTP/Mailpit, Pint (177 files), PHPStan (no errors), Phase 2 backend regression (86 tests / 1,096 assertions, 33.51 seconds), OpenAPI validation, TypeScript/Dart regeneration without drift, Dart serializer generation, Dart analysis (no issues), and whitespace verification. Disposable containers were stopped after success. Development volumes and existing Passport keys were not modified. The report was finalized after that snapshot; implementation source remains the verified candidate.
 
-No Phase 2 functional, security, build, static-analysis or verification blocker remains. The optional Impeccable diagnostic remains blocked as documented above.
+No Phase 2 functional, security, build, static-analysis or verification blocker remains. Design review uses the tests and accessibility checks described above.
 
 PHASE 2 — PASS

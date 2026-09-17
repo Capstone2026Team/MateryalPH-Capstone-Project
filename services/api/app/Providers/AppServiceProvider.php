@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Domain\Authorization\AccountAccess;
 use App\Domain\Identity\AccessTokenIssuer;
 use App\Domain\Identity\OtpCodeGenerator;
 use App\Domain\Identity\PassportAccessTokenIssuer;
@@ -39,6 +40,17 @@ class AppServiceProvider extends ServiceProvider
     {
         RateLimiter::for('account', fn (Request $request): Limit => Limit::perMinute(60)->by((string) $request->user()?->getAuthIdentifier()));
         RateLimiter::for('account-security', fn (Request $request): Limit => Limit::perMinutes(15, 5)->by((string) $request->user()?->getAuthIdentifier().'|'.$request->path()));
+        RateLimiter::for('account-upload', function (Request $request): array {
+            $scope = $request->attributes->get('account_scope');
+            if (! is_array($scope)) {
+                $scope = app(AccountAccess::class)->resolve($request->user());
+            }
+
+            return [
+                Limit::perMinute(20)->by('user|'.$request->user()->getAuthIdentifier()),
+                Limit::perMinute(20)->by('organization|'.$scope['organization_id']),
+            ];
+        });
         $keyPath = config('passport.key_path');
         if (is_string($keyPath) && trim($keyPath) !== '') {
             Passport::loadKeysFrom($keyPath);

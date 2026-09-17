@@ -182,7 +182,7 @@ function renderMfa(state?: { mfaMode: 'enrollment' | 'challenge' }, strict = fal
   const tree = <MemoryRouter initialEntries={[{ pathname: '/auth/mfa', state }]}>
     <Routes>
       <Route path="/auth/mfa" element={<VendorMfaPage />} />
-      <Route path="/dashboard" element={<h1>Dashboard reached</h1>} />
+      <Route path="/entry" element={<h1>Dashboard reached</h1>} />
     </Routes>
   </MemoryRouter>
 

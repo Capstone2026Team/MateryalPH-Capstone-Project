@@ -4,6 +4,7 @@ use App\Domain\Identity\AuthenticationException as IdentityAuthenticationExcepti
 use App\Http\ApiResponse;
 use App\Http\Middleware\AuthenticateFromCookie;
 use App\Http\Middleware\CorrelationId;
+use App\Http\Middleware\IsolatePortalCookies;
 use App\Http\Middleware\RequireAccountAccess;
 use App\Http\Middleware\SetAuthTransport;
 use App\Http\Middleware\VerifyWebCsrf;
@@ -28,7 +29,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->redirectGuestsTo(static fn (Request $_request): ?string => null);
-        $middleware->prependToGroup('api', [CorrelationId::class]);
+        $middleware->prependToGroup('api', [CorrelationId::class, IsolatePortalCookies::class]);
         $middleware->prependToPriorityList(AuthenticatesRequests::class, AuthenticateFromCookie::class);
         $middleware->alias([
             'auth.cookie' => AuthenticateFromCookie::class,
@@ -58,7 +59,14 @@ return Application::configure(basePath: dirname(__DIR__))
         });
         $exceptions->render(function (HttpExceptionInterface $exception, $request) {
             if ($request->is('api/*')) {
-                return ApiResponse::error('HTTP_ERROR', $exception->getMessage() ?: 'The request could not be completed.', $exception->getStatusCode());
+                if ($exception->getStatusCode() === 429) {
+                    $seconds = max(1, (int) ($exception->getHeaders()['Retry-After'] ?? 60));
+
+                    return ApiResponse::error('RATE_LIMITED', 'This action is temporarily limited. Please retry after the indicated wait.', 429, ['retry_after_seconds' => $seconds])
+                        ->withHeaders($exception->getHeaders());
+                }
+
+                return ApiResponse::error('HTTP_ERROR', $exception->getMessage() ?: 'The request could not be completed.', $exception->getStatusCode())->withHeaders($exception->getHeaders());
             }
         });
         $exceptions->render(function (BaseThrowable $exception, $request) {

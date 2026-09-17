@@ -7,6 +7,21 @@ type WebApiOptions = {
 const csrfTokens = new Map<string, string>()
 const csrfRequests = new Map<string, Promise<string>>()
 const refreshRequests = new Map<string, Promise<RefreshResult>>()
+const reads = new Map<string, Promise<Response>>()
+const mutations = new Set<string>()
+const cooldowns = new Map<string, { until: number; response: Response }>()
+
+export function rateLimitMessage(response: Response): string {
+  const seconds = retryAfterSeconds(response)
+  return `This action is temporarily limited. Try again in ${seconds} seconds (after ${new Date(Date.now() + seconds * 1000).toLocaleTimeString('en-PH', { timeZone: 'Asia/Manila' })} Asia/Manila). Your session is still active; no automatic retry will be sent.`
+}
+
+function retryAfterSeconds(response: Response): number {
+  const value = response.headers.get('Retry-After')
+  if (value && /^\d+$/.test(value)) return Math.max(1, Number(value))
+  const date = value ? Date.parse(value) : NaN
+  return Number.isFinite(date) ? Math.max(1, Math.ceil((date - Date.now()) / 1000)) : 60
+}
 
 type RefreshResult =
   | { kind: 'refreshed' }
@@ -47,6 +62,8 @@ export function getWebCsrfToken(basePath: string, force = false): Promise<string
 }
 
 export function clearWebSessionTransport(basePath?: string): void {
+  reads.clear()
+  cooldowns.clear()
   if (basePath) {
     const key = normalizedBasePath(basePath)
     csrfTokens.delete(key)
@@ -65,8 +82,39 @@ export function createWebApiConfiguration(basePath: string, options: WebApiOptio
     basePath: key,
     credentials: 'include',
     apiKey: () => getWebCsrfToken(key),
-    fetchApi: (input, init) => webFetch(key, Boolean(options.refreshSession), input, init),
+    fetchApi: (input, init) => coordinatedFetch(key, Boolean(options.refreshSession), input, init),
   })
+}
+
+async function coordinatedFetch(basePath: string, refreshSession: boolean, input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const method = (init?.method ?? (input instanceof Request ? input.method : 'GET')).toUpperCase()
+  const url = input instanceof Request ? input.url : String(input)
+  const key = `${basePath}|${method}|${url}`
+  const cooldown = cooldowns.get(key)
+  if (cooldown && cooldown.until > Date.now()) {
+    const headers = new Headers(cooldown.response.headers)
+    headers.set('Retry-After', String(Math.ceil((cooldown.until - Date.now()) / 1000)))
+    return new Response(await cooldown.response.clone().text(), { status: 429, headers })
+  }
+  cooldowns.delete(key)
+  // Share only simultaneous ordinary GETs; never cache account/permission data.
+  const shareRead = method === 'GET' && !init?.signal && !(input instanceof Request) && !new Headers(init?.headers).has('Authorization')
+  const readKey = `${key}|${refreshSession}|${JSON.stringify(Array.from(new Headers(init?.headers).entries()))}`
+  const current = shareRead ? reads.get(readKey) : undefined
+  if (current) return (await current).clone()
+  const mutation = !isSafeMethod(method)
+  if (mutation && mutations.has(key)) throw new Error('This action is already processing. Please wait for it to finish.')
+  if (mutation) mutations.add(key)
+  const request = webFetch(basePath, refreshSession, input, init).then(response => {
+    if (response.status === 429 && response.headers.has('Retry-After')) {
+      const until = Date.now() + retryAfterSeconds(response) * 1000
+      cooldowns.set(key, { until, response: response.clone() })
+      if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('materyalph:rate-limited', { detail: { until } }))
+    }
+    return response
+  }).finally(() => { if (reads.get(readKey) === request) reads.delete(readKey); if (mutation) mutations.delete(key) })
+  if (shareRead) reads.set(readKey, request)
+  return (await request).clone()
 }
 
 async function webFetch(basePath: string, refreshSession: boolean, input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
@@ -83,7 +131,7 @@ async function webFetch(basePath: string, refreshSession: boolean, input: Reques
 
   const refreshed = await refreshWebSession(basePath)
   if (refreshed.kind === 'invalid') return response
-  if (refreshed.kind === 'response') return refreshed.response
+  if (refreshed.kind === 'response') return refreshed.response.clone()
   return fetch(input, init)
 }
 

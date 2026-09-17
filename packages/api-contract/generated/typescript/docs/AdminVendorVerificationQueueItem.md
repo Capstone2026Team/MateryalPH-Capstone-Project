@@ -9,6 +9,10 @@ Name | Type
 `id` | string
 `storeName` | string
 `registeredName` | string
+`regionCode` | string
+`regionName` | string
+`province` | string
+`cityMunicipality` | string
 `businessType` | string
 `verificationStatus` | string
 `setupStatus` | string
@@ -26,6 +30,10 @@ const example = {
   "id": null,
   "storeName": null,
   "registeredName": null,
+  "regionCode": null,
+  "regionName": null,
+  "province": null,
+  "cityMunicipality": null,
   "businessType": null,
   "verificationStatus": null,
   "setupStatus": null,

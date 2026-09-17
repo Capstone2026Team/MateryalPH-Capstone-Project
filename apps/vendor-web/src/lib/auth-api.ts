@@ -1,3 +1,4 @@
+import { rateLimitMessage } from '@materyalph/web-ui'
 import {
   AccountType,
   AuthenticationApi,
@@ -134,7 +135,7 @@ export async function startGoogleSignIn() {
 
 export async function readableApiError(error: unknown): Promise<string> {
   if (error instanceof ResponseError) {
-    if (error.response.status === 429) return 'Too many requests were sent. Please wait a moment and try again.'
+    if (error.response.status === 429 && error.response.headers.has('Retry-After')) return rateLimitMessage(error.response)
     const payload: unknown = await error.response.clone().json().catch(() => null)
     const first = firstApiError(payload)
     if (error.response.status === 401) {

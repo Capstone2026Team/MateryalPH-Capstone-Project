@@ -16,8 +16,8 @@ Route::prefix('vendors/onboarding')->middleware([
     Route::post('/address/geocode', [VendorOnboardingController::class, 'geocode'])->middleware('throttle:auth-public');
     Route::post('/store-email', [VendorOnboardingController::class, 'requestStoreEmailVerification'])->middleware('throttle:account-security');
     Route::post('/store-email/confirm', [VendorOnboardingController::class, 'confirmStoreEmailVerification'])->middleware('throttle:account-security');
-    Route::post('/documents', [VendorOnboardingController::class, 'uploadDocument'])->middleware('throttle:account-security');
-    Route::post('/media', [VendorOnboardingController::class, 'uploadMedia'])->middleware('throttle:account-security');
+    Route::post('/documents', [VendorOnboardingController::class, 'uploadDocument'])->middleware('throttle:account-upload');
+    Route::post('/media', [VendorOnboardingController::class, 'uploadMedia'])->middleware('throttle:account-upload');
     Route::get('/files/{fileId}', [VendorOnboardingController::class, 'signedFile'])->whereUuid('fileId');
     Route::post('/payment-connection', [VendorOnboardingController::class, 'capturePaymentConnection'])->middleware('throttle:account-security');
     Route::post('/payment-connection/reconcile', [VendorOnboardingController::class, 'reconcilePaymentConnection'])->middleware('throttle:account-security');

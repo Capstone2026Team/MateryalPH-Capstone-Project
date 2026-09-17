@@ -57,7 +57,7 @@ import type { AcceptAdminInvitationRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({ 
+  const config = new Configuration({
     // To configure API key authorization: webCsrf
     apiKey: "YOUR API KEY",
   });
@@ -105,7 +105,7 @@ example().catch(console.error);
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **201** | Admin identity created; MFA enrollment is the next required step. |  -  |
-| **410** | Safe structured error with X-Correlation-ID response header. |  -  |
+| **410** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -202,7 +202,7 @@ import type { CompleteMfaChallengeRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({ 
+  const config = new Configuration({
     // To configure API key authorization: mfaChallengeCookie
     apiKey: "YOUR API KEY",
     // To configure API key authorization: webCsrf
@@ -252,8 +252,8 @@ example().catch(console.error);
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **200** | TOTP verified and Passport session issued. |  -  |
-| **401** | Safe structured error with X-Correlation-ID response header. |  -  |
-| **429** | Safe structured error with X-Correlation-ID response header. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **429** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -275,7 +275,7 @@ import type { ConfirmMfaEnrollmentRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({ 
+  const config = new Configuration({
     // To configure API key authorization: mfaChallengeCookie
     apiKey: "YOUR API KEY",
     // To configure API key authorization: webCsrf
@@ -325,8 +325,8 @@ example().catch(console.error);
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **200** | MFA enrolled, Passport session issued, and replacement recovery codes shown once. |  -  |
-| **401** | Safe structured error with X-Correlation-ID response header. |  -  |
-| **409** | Safe structured error with X-Correlation-ID response header. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **409** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -392,8 +392,8 @@ No authorization required
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **200** | One-time mobile exchange consumed and Passport session returned without browser cookies |  -  |
-| **401** | Safe structured error with X-Correlation-ID response header. |  -  |
-| **422** | Safe structured error with X-Correlation-ID response header. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -415,7 +415,7 @@ import type { GetBuyerMobileSessionRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({ 
+  const config = new Configuration({
     // Configure HTTP bearer authorization: passportBearer
     accessToken: "YOUR BEARER TOKEN",
   });
@@ -455,7 +455,7 @@ This endpoint does not need any parameter.
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **200** | Current Buyer identity from the Bearer token |  -  |
-| **401** | Safe structured error with X-Correlation-ID response header. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -477,7 +477,7 @@ import type { GetMfaChallengeStatusRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({ 
+  const config = new Configuration({
     // To configure API key authorization: mfaChallengeCookie
     apiKey: "YOUR API KEY",
   });
@@ -517,8 +517,8 @@ This endpoint does not need any parameter.
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **200** | Current privileged-login MFA requirement. |  -  |
-| **401** | Safe structured error with X-Correlation-ID response header. |  -  |
-| **429** | Safe structured error with X-Correlation-ID response header. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **429** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -540,7 +540,7 @@ import type { GetSessionRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({ 
+  const config = new Configuration({
     // To configure API key authorization: accessCookie
     apiKey: "YOUR API KEY",
   });
@@ -580,7 +580,7 @@ This endpoint does not need any parameter.
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **200** | Current identity. |  -  |
-| **401** | Safe structured error with X-Correlation-ID response header. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -659,7 +659,7 @@ import type { LoginOperationRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({ 
+  const config = new Configuration({
     // To configure API key authorization: webCsrf
     apiKey: "YOUR API KEY",
   });
@@ -707,11 +707,11 @@ example().catch(console.error);
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **200** | Web receives HttpOnly cookies; privileged web roles receive an MFA challenge cookie before any session is issued. |  -  |
-| **401** | Safe structured error with X-Correlation-ID response header. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 | **403** | The requested auth operation requires a short-lived email risk-verification step. |  -  |
-| **422** | Safe structured error with X-Correlation-ID response header. |  -  |
-| **429** | Safe structured error with X-Correlation-ID response header. |  -  |
-| **503** | Safe structured error with X-Correlation-ID response header. |  -  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **429** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **503** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -777,10 +777,10 @@ No authorization required
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **200** | Native Passport access and refresh tokens returned in the response body; no browser authentication cookie is issued. |  -  |
-| **401** | Safe structured error with X-Correlation-ID response header. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 | **403** | The requested auth operation requires a short-lived email risk-verification step. |  -  |
-| **422** | Safe structured error with X-Correlation-ID response header. |  -  |
-| **429** | Safe structured error with X-Correlation-ID response header. |  -  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **429** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -802,7 +802,7 @@ import type { LogoutRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({ 
+  const config = new Configuration({
     // To configure API key authorization: accessCookie
     apiKey: "YOUR API KEY",
     // To configure API key authorization: webCsrf
@@ -865,7 +865,7 @@ import type { LogoutBuyerMobileRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({ 
+  const config = new Configuration({
     // Configure HTTP bearer authorization: passportBearer
     accessToken: "YOUR BEARER TOKEN",
   });
@@ -926,7 +926,7 @@ import type { RecoverMfaChallengeRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({ 
+  const config = new Configuration({
     // To configure API key authorization: mfaChallengeCookie
     apiKey: "YOUR API KEY",
     // To configure API key authorization: webCsrf
@@ -976,8 +976,8 @@ example().catch(console.error);
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **200** | Single-use recovery code consumed, Passport session issued, and all recovery codes replaced. |  -  |
-| **401** | Safe structured error with X-Correlation-ID response header. |  -  |
-| **429** | Safe structured error with X-Correlation-ID response header. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **429** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -1043,8 +1043,8 @@ No authorization required
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **200** | Native refresh token family rotated and replacement tokens returned in the body |  -  |
-| **401** | Safe structured error with X-Correlation-ID response header. |  -  |
-| **422** | Safe structured error with X-Correlation-ID response header. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -1066,7 +1066,7 @@ import type { RefreshSessionRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({ 
+  const config = new Configuration({
     // To configure API key authorization: webCsrf
     apiKey: "YOUR API KEY",
   });
@@ -1106,7 +1106,7 @@ This endpoint does not need any parameter.
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **200** | Refresh token family rotated. |  -  |
-| **401** | Safe structured error with X-Correlation-ID response header. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -1128,7 +1128,7 @@ import type { RegisterAccountRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({ 
+  const config = new Configuration({
     // To configure API key authorization: webCsrf
     apiKey: "YOUR API KEY",
   });
@@ -1176,11 +1176,11 @@ example().catch(console.error);
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **201** | Restricted account; email verification is required. |  -  |
-| **409** | Safe structured error with X-Correlation-ID response header. |  -  |
+| **409** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 | **403** | The requested auth operation requires a short-lived email risk-verification step. |  -  |
-| **422** | Safe structured error with X-Correlation-ID response header. |  -  |
-| **429** | Safe structured error with X-Correlation-ID response header. |  -  |
-| **503** | Safe structured error with X-Correlation-ID response header. |  -  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **429** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **503** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -1247,9 +1247,9 @@ No authorization required
 |-------------|-------------|------------------|
 | **201** | Restricted Buyer account; email verification is required. |  -  |
 | **403** | The requested auth operation requires a short-lived email risk-verification step. |  -  |
-| **409** | Safe structured error with X-Correlation-ID response header. |  -  |
-| **422** | Safe structured error with X-Correlation-ID response header. |  -  |
-| **429** | Safe structured error with X-Correlation-ID response header. |  -  |
+| **409** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **429** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -1316,8 +1316,8 @@ No authorization required
 |-------------|-------------|------------------|
 | **200** | Generic anti-enumeration response |  -  |
 | **403** | The requested auth operation requires a short-lived email risk-verification step. |  -  |
-| **422** | Safe structured error with X-Correlation-ID response header. |  -  |
-| **429** | Safe structured error with X-Correlation-ID response header. |  -  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **429** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -1339,7 +1339,7 @@ import type { RequestPasswordRecoveryRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({ 
+  const config = new Configuration({
     // To configure API key authorization: webCsrf
     apiKey: "YOUR API KEY",
   });
@@ -1388,9 +1388,9 @@ example().catch(console.error);
 |-------------|-------------|------------------|
 | **200** | Generic anti-enumeration response. |  -  |
 | **403** | The requested auth operation requires a short-lived email risk-verification step. |  -  |
-| **422** | Safe structured error with X-Correlation-ID response header. |  -  |
-| **429** | Safe structured error with X-Correlation-ID response header. |  -  |
-| **503** | Safe structured error with X-Correlation-ID response header. |  -  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **429** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **503** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -1412,7 +1412,7 @@ import type { ResendBotChallengeOperationRequest } from '@materyalph/api-client-
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({ 
+  const config = new Configuration({
     // To configure API key authorization: webCsrf
     apiKey: "YOUR API KEY",
   });
@@ -1463,8 +1463,8 @@ example().catch(console.error);
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **200** | Generic anti-enumeration resend response. |  -  |
-| **422** | Safe structured error with X-Correlation-ID response header. |  -  |
-| **429** | Safe structured error with X-Correlation-ID response header. |  -  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **429** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -1533,8 +1533,8 @@ No authorization required
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **200** | Generic anti-enumeration resend response |  -  |
-| **422** | Safe structured error with X-Correlation-ID response header. |  -  |
-| **429** | Safe structured error with X-Correlation-ID response header. |  -  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **429** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -1600,7 +1600,7 @@ No authorization required
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **200** | Generic anti-enumeration response |  -  |
-| **429** | Safe structured error with X-Correlation-ID response header. |  -  |
+| **429** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -1622,7 +1622,7 @@ import type { ResendEmailVerificationRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({ 
+  const config = new Configuration({
     // To configure API key authorization: webCsrf
     apiKey: "YOUR API KEY",
   });
@@ -1670,7 +1670,7 @@ example().catch(console.error);
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **200** | Generic anti-enumeration response. |  -  |
-| **429** | Safe structured error with X-Correlation-ID response header. |  -  |
+| **429** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -1736,7 +1736,7 @@ No authorization required
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **200** | Buyer password changed and prior sessions revoked |  -  |
-| **422** | Safe structured error with X-Correlation-ID response header. |  -  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -1758,7 +1758,7 @@ import type { ResetPasswordRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({ 
+  const config = new Configuration({
     // To configure API key authorization: webCsrf
     apiKey: "YOUR API KEY",
   });
@@ -1806,7 +1806,7 @@ example().catch(console.error);
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **200** | Password changed and prior sessions revoked. |  -  |
-| **422** | Safe structured error with X-Correlation-ID response header. |  -  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -1872,8 +1872,8 @@ No authorization required
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **200** | Short-lived Buyer authorization URL using PKCE and nonce |  -  |
-| **422** | Safe structured error with X-Correlation-ID response header. |  -  |
-| **503** | Safe structured error with X-Correlation-ID response header. |  -  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **503** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -1895,7 +1895,7 @@ import type { StartGoogleOidcRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({ 
+  const config = new Configuration({
     // To configure API key authorization: webCsrf
     apiKey: "YOUR API KEY",
   });
@@ -1943,7 +1943,7 @@ example().catch(console.error);
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **200** | Short-lived authorization URL using PKCE and nonce. |  -  |
-| **503** | Safe structured error with X-Correlation-ID response header. |  -  |
+| **503** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -1965,7 +1965,7 @@ import type { StartMfaEnrollmentRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({ 
+  const config = new Configuration({
     // To configure API key authorization: mfaChallengeCookie
     apiKey: "YOUR API KEY",
     // To configure API key authorization: webCsrf
@@ -2007,8 +2007,8 @@ This endpoint does not need any parameter.
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **200** | One-time authenticator secret and provisioning URI. The secret is never logged or persisted in plaintext. |  -  |
-| **401** | Safe structured error with X-Correlation-ID response header. |  -  |
-| **409** | Safe structured error with X-Correlation-ID response header. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **409** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -2030,7 +2030,7 @@ import type { VerifyBotChallengeOperationRequest } from '@materyalph/api-client-
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({ 
+  const config = new Configuration({
     // To configure API key authorization: webCsrf
     apiKey: "YOUR API KEY",
   });
@@ -2081,8 +2081,8 @@ example().catch(console.error);
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **200** | Vendor risk OTP verified; the proof is returned only in an HttpOnly cookie. |  -  |
-| **422** | Safe structured error with X-Correlation-ID response header. |  -  |
-| **429** | Safe structured error with X-Correlation-ID response header. |  -  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **429** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -2151,8 +2151,8 @@ No authorization required
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **200** | Buyer email risk OTP verified and one-time proof returned in the response body |  -  |
-| **422** | Safe structured error with X-Correlation-ID response header. |  -  |
-| **429** | Safe structured error with X-Correlation-ID response header. |  -  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **429** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -2218,7 +2218,7 @@ No authorization required
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **200** | Buyer email ownership verified |  -  |
-| **422** | Safe structured error with X-Correlation-ID response header. |  -  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -2240,7 +2240,7 @@ import type { VerifyEmailOperationRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({ 
+  const config = new Configuration({
     // To configure API key authorization: webCsrf
     apiKey: "YOUR API KEY",
   });
@@ -2288,7 +2288,7 @@ example().catch(console.error);
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **200** | Email ownership verified. |  -  |
-| **422** | Safe structured error with X-Correlation-ID response header. |  -  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 

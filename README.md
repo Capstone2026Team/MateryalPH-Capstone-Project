@@ -102,7 +102,6 @@ flutter analyze
 flutter test
 
 # repository root after project-local installation
-npx impeccable detect apps/vendor-web/src apps/admin-web/src
 ```
 
 Real provider credentials belong only in ignored local files. See

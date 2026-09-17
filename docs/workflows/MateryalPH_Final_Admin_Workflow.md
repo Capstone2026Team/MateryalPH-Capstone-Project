@@ -44,9 +44,9 @@ The Admin Dashboard is the platform operations center. It is accessible only to 
 
 **Dashboard Sections**
 
-**1. Platform KPIs:** Active Tier 2 Vendors, active Buyers, order requests awaiting Vendor response, confirmed orders, pending business-document reviews, pending product-compliance reviews, open disputes, appeals, account flags, unresolved invoice requests, failed background jobs, and external-integration health.
+**1. Dashboard:** Active Tier 2 Vendors, active Buyers, order requests awaiting Vendor response, confirmed orders, pending business-document reviews, pending product-compliance reviews, open disputes, appeals, account flags, unresolved invoice requests, failed background jobs, and external-integration health.
 
-**2. Philippine Geographic Marketplace Analytics:**
+**2. Marketplace Analytics:**
 
 The dashboard provides an interactive Philippines map using versioned Philippine Standard Geographic Code identifiers and approved administrative-boundary data. Its hierarchy is `Philippines → Region → Province or Independent/Highly Urbanized City → City or Municipality`, so NCR, independent cities, and municipalities are not omitted. The current geographic-data version and last aggregation time are displayed.
 

@@ -12,10 +12,10 @@
 3. Place the four approved workflow documents under `docs/workflows/`.
 4. Place `MateryalPH_Technical_System_Design.md` under `docs/architecture/` and `MateryalPH_UI_UX_Implementation_Planner.md` under `docs/design/`.
 5. Copy the supplied repository-instructions template to the repository root and rename it `AGENTS.md`.
-6. Install and initialize Impeccable only after reviewing the exact project-local files/hooks it adds, then approve its Codex hook through `/hooks`.
+6. Use the approved design tokens, accessibility checks and browser review; no additional design CLI is required.
 7. Open the Codex sidebar. For a complex phase, use Plan mode first, then allow implementation after reviewing the plan.
 8. Paste only one phase prompt at a time. Do not ask Codex to implement several phases in one request.
-9. Review the diff, UI evidence, Impeccable findings, and test output. Resolve all failures before accepting the phase.
+9. Review the diff, UI evidence, design-review findings, and test output. Resolve all failures before accepting the phase.
 10. Make a Git checkpoint after acceptance. Never include a real `.env` file or credential artifact.
 
 OpenAI's official Codex guidance recommends prompts that clearly state the goal, relevant context, constraints, and definition of done. It also recommends `AGENTS.md` for durable repository rules and testing before accepting changes. See [Codex best practices](https://learn.chatgpt.com/guides/best-practices) and [AGENTS.md guidance](https://learn.chatgpt.com/docs/agent-configuration/agents-md).
@@ -54,7 +54,7 @@ The repository is still small enough to standardize safely. Make one reviewed Gi
 - Adds Tailwind through a shared semantic-token preset rather than raw per-page colors.
 - Corrects README references to Laravel 13 and PHP 8.4.
 - Verifies the intended Passport-versus-current-Sanctum authentication ADR before keeping/removing either package.
-- Installs Impeccable project-locally for Codex, initializes `PRODUCT.md`/`DESIGN.md` from approved documents, adds its official ephemeral-output ignore block, and records the narrow Inter exception.
+- Uses approved PRODUCT.md and DESIGN.md guidance, semantic tokens, accessibility tests and browser review.
 
 Use Git-aware moves and preserve existing files/history. Do not combine this structural checkpoint with business features. Run all existing application tests/startup checks before and after the move.
 
@@ -154,7 +154,7 @@ Use Laravel 13 constrained as ^13.0, PHP 8.4, PostgreSQL 16 with postgis/pg_trgm
 
 Implement email registration and hashed six-digit OTP verification, login, refresh-token rotation and reuse detection, logout, password recovery, Google OIDC Authorization Code with PKCE and server-side ID-token validation using stable sub, risk-based step-up foundations, TOTP and recovery-code foundations for privileged users, secure web cookies, Flutter secure-storage abstraction, rate limiting, correlation IDs, and audit events. Do not use browser localStorage for tokens. Do not implement SMS OTP. Admin has no public registration; add a protected one-time Super Admin invitation command with no default password.
 
-Implement all authentication screens and states in the three clients using the UI planner's Inter typography, semantic construction palette, responsive rules, shared states, and accessible components. Build the Vendor public landing page with truthful marketplace, onboarding, verification, the approved 2% Vendor-paid commission billed monthly on completed materials excluding included Vendor VAT, disclosed third-party processing fees, TEST-only demonstration, and limitation content. Use the Figma file only for visual direction and record intentional corrections. Run the applicable Impeccable shape/critique/harden/audit/polish workflow. Meet WCAG 2.2 AA patterns.
+Implement all authentication screens and states in the three clients using the UI planner's Inter typography, semantic construction palette, responsive rules, shared states, and accessible components. Build the Vendor public landing page with truthful marketplace, onboarding, verification, the approved 2% Vendor-paid commission billed monthly on completed materials excluding included Vendor VAT, disclosed third-party processing fees, TEST-only demonstration, and limitation content. Use the Figma file only for visual direction and record intentional corrections. Review hierarchy, error states, responsiveness and accessibility. Meet WCAG 2.2 AA patterns.
 
 Define/update OpenAPI 3.1, regenerate TypeScript and Dart clients, add unit/feature/component tests, and document local startup. Do not add or reveal real credentials. Do not deploy or commit. Run every available format, lint, static-analysis, migration, API, React, and Flutter test. Phase 1 is done only when an empty-database migration and the complete authentication acceptance gate pass. End with changed files, commands/results, manual Google setup still required, risks, and a suggested commit message.
 ```
@@ -400,7 +400,7 @@ Read the exact map rules and UI planner before coding. Use Figma node 1:17996 fo
 
 Implement zoom-aware clustering and collision-safe individual labels. Tier 2 labels show store name plus VPS or New Vendor; Tier 1 labels show store name plus Directory. A Tier 1 Google rating appears only in Place Details with explicit Google attribution. On Tier 2 selection, synchronize the map/list, safely move the camera, request one driving route from the active selected location, reveal the polyline, display distance/ETA, and open the preview sheet with explicit View Store. On Tier 1 selection, show only policy-permitted Place Details and public contact/map/website/share actions. Tier 1 is informational only: no marketplace message, order, review, payment, VPS, verification, or storefront action.
 
-Use the approved motion tokens: no bounce, no moving delivery vehicle, no implication of live GPS, stale-response protection, and immediate final rendering under Reduce Motion. Implement separate restricted client/server key configuration, minimum Places/Routes field masks, compliant attribution, bounded cache records, quotas/timeouts, and fallbacks. Add an accessible synchronized list, non-color marker semantics, clear loading/denied/offline/provider-error/route-error states, and no weather widget. Run the Impeccable shape, critique, harden, animate, audit, and polish passes without allowing them to change product rules.
+Use the approved motion tokens: no bounce, no moving delivery vehicle, no implication of live GPS, stale-response protection, and immediate final rendering under Reduce Motion. Implement separate restricted client/server key configuration, minimum Places/Routes field masks, compliant attribution, bounded cache records, quotas/timeouts, and fallbacks. Add an accessible synchronized list, non-color marker semantics, clear loading/denied/offline/provider-error/route-error states, and no weather widget. Review hierarchy, failure states, motion, accessibility and token consistency without allowing them to change product rules.
 
 Update OpenAPI, generated clients, PSGC import documentation, and tests for radius edges, denied permission, unresolved PSGC, provider timeout, cache expiry, and Tier 1 restrictions. Never reveal configured keys. Do not deploy or commit.
 ```
@@ -894,7 +894,7 @@ Begin with a concrete threat model and data-flow review for authentication, auth
 
 Implement the approved privacy-request states, retention classes, legal holds, minimization, authorized exports, and auditable deletion/anonymization actions without deleting records that must legally or operationally remain. Do not invent legal retention periods; expose them as reviewed policy configuration with safe defaults marked non-production until approved.
 
-Audit every critical page against WCAG 2.2 AA: labels, errors, keyboard/focus, screen-reader semantics, contrast, reflow, target size, timers, map alternative, and non-color statuses. Run the UI planner's Impeccable critique, harden, animate, audit, and polish workflow on each critical React surface; run deterministic detection on both React source trees and supported rendered previews. Keep the approved narrow Inter exception and document any other exception with a specific reason. Use Flutter semantics, widget/golden tests, device testing, and native accessibility inspection for Buyer; do not claim the web detector proves native Flutter accessibility. Profile API/database queries, add justified indexes/caches, remove N+1 queries, verify pagination, and protect provider quotas. Configure Sentry only through environment values and filter personal/payment data.
+Audit every critical page against WCAG 2.2 AA: labels, errors, keyboard/focus, screen-reader semantics, contrast, reflow, target size, timers, map alternative, and non-color statuses. Review React surfaces for accessibility, responsive layouts and navigation. Use Flutter semantics, widget/golden tests, device testing, and native accessibility inspection for Buyer; do not claim the web detector proves native Flutter accessibility. Profile API/database queries, add justified indexes/caches, remove N+1 queries, verify pagination, and protect provider quotas. Configure Sentry only through environment values and filter personal/payment data.
 
 Produce docs/security/threat-model.md and a traceable findings report. Fix critical/high issues and test regressions. Do not deploy or commit.
 ```

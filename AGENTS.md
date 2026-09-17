@@ -147,16 +147,11 @@ Apply Laravel minor and patch updates only after the full automated test and sec
 - Countdown timers also display an exact date and time.
 - Do not expose private staff contact details, exact Vendor inventory, exact Buyer coordinates in analytics, or private documents.
 
-## Figma and Impeccable Workflow
+## Design Review Workflow
 
 - For a referenced Figma screen, retrieve the exact node's design context before implementation. Reuse hierarchy, spacing, assets, and composition while adapting behavior to the approved workflows and target stack.
 - Do not paste generated React/Tailwind reference code into Flutter. Reimplement it through the Flutter design system and existing platform conventions.
 - Do not use expiring Figma asset URLs in committed code. Export approved assets or use the intended dynamic data source.
-- Run `/impeccable shape` before a new critical surface, then `critique`, `harden`, `animate`, `audit`, and `polish` as appropriate.
-- Run deterministic Impeccable checks on both React portals and supported rendered previews. Use native Flutter semantics/widget/golden/device checks for the Buyer app.
-- Inter is an explicit brand requirement; retain only the narrow documented `overused-font: Inter` detector exception. Do not disable unrelated design rules broadly.
-- Impeccable findings are diagnostics and do not override workflows, security, authorization, provider policy, or accessibility tests.
-- Keep approved shared Impeccable configuration/design/surface/critique artifacts tracked. Keep runtime screenshots, caches, sessions, previews, annotations, and local overrides ignored using the official ignore block.
 
 ## Testing and Definition of Done
 
@@ -179,7 +174,6 @@ cd services/api && php artisan test
 cd apps/vendor-web && npm run lint && npm run test -- --run && npm run build
 cd apps/admin-web && npm run lint && npm run test -- --run && npm run build
 cd apps/buyer-mobile && flutter analyze && flutter test
-npx impeccable detect apps/vendor-web/src apps/admin-web/src
 docker compose config
 gitleaks git --staged
 ```

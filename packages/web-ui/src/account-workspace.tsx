@@ -1,16 +1,16 @@
-import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { AccountsApi, AuthenticationApi, ResponseError, type AccountProfile, type AccountSession, type AccountAgreement, type AccountMembership, type AccountRole, type AccountAdministrator } from '@materyalph/api-client-ts'
 import { Button } from './button'
 import { Field } from './field'
 import { StatusMessage } from './status-message'
-import { clearWebSessionTransport, createWebApiConfiguration } from './web-api-session'
+import { rateLimitMessage, clearWebSessionTransport, createWebApiConfiguration } from './web-api-session'
 
-type Section = 'Profile' | 'Security' | 'Sessions' | 'Agreements' | 'Staff access' | 'Admin invitations' | 'Admin accounts'
-type Props = { portal: 'vendors' | 'admin'; basePath: string; loginPath: string; renderQr: (uri: string) => ReactNode }
+type Section = 'Profile' | 'Account' | 'Security' | 'Sessions' | 'Agreements' | 'Staff access' | 'Admin invitations' | 'Admin accounts'
+type Props = { portal: 'vendors' | 'admin'; basePath: string; loginPath: string; renderQr: (uri: string) => ReactNode; embedded?: boolean }
 
-export function AccountWorkspace({ portal: accountPortal, basePath, loginPath, renderQr }: Props) {
+export function AccountWorkspace({ portal: accountPortal, basePath, loginPath, renderQr, embedded = false }: Props) {
   const [profile, setProfile] = useState<AccountProfile | null>(null)
-  const [section, setSection] = useState<Section>('Profile')
+  const [section, setSection] = useState<Section>(() => ['Profile', 'Account', 'Security', 'Sessions', 'Agreements'].includes(window.location.hash.slice(1)) ? window.location.hash.slice(1) as Section : 'Profile')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<{ error: boolean; text: string } | null>(null)
   const [denied, setDenied] = useState(false)
@@ -26,6 +26,7 @@ export function AccountWorkspace({ portal: accountPortal, basePath, loginPath, r
   const [codes, setCodes] = useState<string[]>([])
   const [signInAfterCodes, setSignInAfterCodes] = useState(false)
   const [invitationKey, setInvitationKey] = useState(() => crypto.randomUUID())
+  const actionLock = useRef(false)
   const [totp, setTotp] = useState(false)
 
   const api = useCallback(() => new AccountsApi(createWebApiConfiguration(basePath, { refreshSession: true })), [basePath])
@@ -34,7 +35,7 @@ export function AccountWorkspace({ portal: accountPortal, basePath, loginPath, r
     let text = 'The request could not finish. Check your connection and retry.'
     if (error instanceof ResponseError) {
       if (error.response.status === 401) { setProfile(null); setDenied(true); text = 'Your session has expired. Sign in again.' }
-      if (error.response.status === 429) text = 'Too many requests were sent. Please wait a moment and try again.'
+      if (error.response.status === 429 && error.response.headers.has('Retry-After')) { setMessage({ error: true, text: rateLimitMessage(error.response) }); return }
       const body: unknown = await error.response.clone().json().catch(() => null)
       if (typeof body === 'object' && body !== null && 'errors' in body && Array.isArray(body.errors)) {
         const first: unknown = body.errors[0]
@@ -52,7 +53,7 @@ export function AccountWorkspace({ portal: accountPortal, basePath, loginPath, r
       if (response.data.accountType !== (accountPortal === 'vendors' ? 'VENDOR' : 'ADMIN')) { setDenied(true); setProfile(null); return }
       setProfile(response.data)
       setDenied(false)
-      const security = await client.getAccountSecurity({ accountPortal }); setTotp(security.data.totpEnrolled)
+      if (section === 'Security') { const security = await client.getAccountSecurity({ accountPortal }); setTotp(security.data.totpEnrolled) }
       if (section === 'Sessions') {
         const result = await client.listAccountSessions({ accountPortal, page }); setSessions(result.data); setLastPage(Number(result.meta.last_page ?? 1))
       }
@@ -70,29 +71,39 @@ export function AccountWorkspace({ portal: accountPortal, basePath, loginPath, r
   }, [accountPortal, api, failure, page, section])
 
   useEffect(() => { void load() }, [load])
+  useEffect(() => {
+    function selectHash() { const next = window.location.hash.slice(1); if (['Profile', 'Account', 'Security', 'Sessions', 'Agreements'].includes(next)) { setSection(next as Section); setPage(1); setFactor(null); setCodes([]) } }
+    window.addEventListener('hashchange', selectHash)
+    // Client-side routers emit popstate for same-page hash navigation.
+    window.addEventListener('popstate', selectHash)
+    return () => { window.removeEventListener('hashchange', selectHash); window.removeEventListener('popstate', selectHash) }
+  }, [])
   async function act(operation: (client: AccountsApi) => Promise<unknown>, text: string, reload = true) {
+    if (actionLock.current) return
+    actionLock.current = true
     setBusy(true); setMessage(null)
     try { await operation(api()); setMessage({ error: false, text }); if (reload) await load() }
     catch (error) { await failure(error) }
-    finally { setBusy(false) }
+    finally { actionLock.current = false; setBusy(false) }
   }
   function submit(event: FormEvent<HTMLFormElement>, action: (data: FormData) => Promise<void>) {
     event.preventDefault(); const form = event.currentTarget; const data = new FormData(form); if (form.querySelector('input[type="password"],input[autocomplete="one-time-code"]')) form.reset(); void action(data)
   }
   const date = (value: string | null) => value ? new Date(value).toLocaleString('en-PH', { timeZone: 'Asia/Manila' }) + ' (Asia/Manila)' : 'Not available'
-  const nav: Section[] = ['Profile', 'Security', 'Sessions', 'Agreements']
+  const nav: Section[] = ['Profile', 'Account', 'Security', 'Sessions', 'Agreements']
   if (profile?.permissions.includes('staff.manage')) nav.push('Staff access')
   if (profile?.permissions.includes('admin.manage_accounts')) nav.push('Admin accounts')
   if (profile?.permissions.includes('admin.invite')) nav.push('Admin invitations')
 
-  return <main className="mx-auto min-h-screen max-w-6xl bg-surface-canvas p-4 text-text-strong sm:p-8">
-    <header className="mb-8 flex flex-wrap items-center justify-between gap-4 border-b border-border-default pb-6"><a href={accountPortal === 'vendors' ? '/' : '/workspace'} aria-label="MateryalPH home"><img className="w-40" src="/brand/materyalph-logo.png" alt="MateryalPH" /></a><span>{accountPortal === 'vendors' ? 'Vendor account' : 'Admin account'}</span><Button variant="secondary" disabled={busy || !profile} onClick={() => window.confirm('Sign out every device, including this one?') && void act(async client => { await client.revokeAccountSessions({ accountPortal, accountSessionRevocation: { scope: 'ALL' } }); window.location.assign(loginPath) }, 'Signed out.', false)}>Sign out all devices</Button></header>
+  return <div className={embedded ? "text-text-strong" : "mx-auto min-h-screen max-w-6xl bg-surface-canvas p-4 text-text-strong sm:p-8"}>
+    {!embedded && <header className="mb-8 flex flex-wrap items-center justify-between gap-4 border-b border-border-default pb-6"><a href={accountPortal === 'vendors' ? '/dashboard' : '/vendor-verification'} aria-label="MateryalPH home"><img className="w-40" src="/brand/materyalph-logo.png" alt="MateryalPH" /></a><span>{accountPortal === 'vendors' ? 'Vendor account' : 'Admin account'}</span><Button variant="secondary" disabled={busy || !profile} onClick={() => window.confirm('Sign out every device, including this one?') && void act(async client => { await client.revokeAccountSessions({ accountPortal, accountSessionRevocation: { scope: 'ALL' } }); window.location.assign(loginPath) }, 'Signed out.', false)}>Sign out all devices</Button></header>}
     {message && <StatusMessage tone={message.error ? 'error' : 'success'}>{message.text}</StatusMessage>}
     {denied ? <section><h1 className="text-2xl font-bold">Sign-in required</h1><a className="inline-flex min-h-12 items-center text-action-primary underline" href={loginPath}>Return to sign in</a></section> : !profile ? <section aria-busy={busy}><h1 className="text-2xl font-bold">{busy ? 'Checking your account…' : 'Account unavailable'}</h1><Button variant="secondary" disabled={busy} onClick={() => void load()}>Retry</Button></section> : <>
-      <h1 className="mb-2 text-3xl font-bold">Your account</h1><p className="mb-8 text-text-secondary">{profile.fullName} · {profile.role.replaceAll('_', ' ')}</p>
-      <div className="grid gap-8 md:grid-cols-[13rem_1fr]"><nav aria-label="Account settings" className="flex flex-wrap content-start gap-2 md:flex-col">{accountPortal === 'vendors' && <a className="min-h-12 px-4 py-3 underline" href="/dashboard">Vendor Dashboard</a>}{nav.map(item => <Button key={item} variant={section === item ? 'primary' : 'secondary'} aria-current={section === item ? 'page' : undefined} onClick={() => { setSection(item); setPage(1); setFactor(null); setCodes([]); setMessage(null) }}>{item}</Button>)}<Button variant="secondary" disabled={busy} onClick={() => void act(async () => { await new AuthenticationApi(createWebApiConfiguration(basePath, { refreshSession: true })).logout(); clearWebSessionTransport(basePath); window.location.assign(loginPath) }, 'Signed out.', false)}>Sign out</Button></nav>
-      <section aria-busy={busy} className="min-w-0 rounded-xl bg-surface-primary p-5 sm:p-8"><h2 className="mb-6 text-2xl font-bold">{section}</h2>
-        {section === 'Profile' && <><form className="grid max-w-xl gap-5" onSubmit={event => submit(event, data => act(client => client.updateAccountProfile({ accountPortal, accountProfileUpdate: { fullName: String(data.get('full_name')), lockVersion: profile.lockVersion } }), 'Profile saved.'))}><Field key={profile.lockVersion} label="Full name" name="full_name" defaultValue={profile.fullName} required maxLength={160} /><Button type="submit" disabled={busy}>Save profile</Button></form><dl className="mt-8 grid gap-4 border-t border-border-default pt-6"><div><dt>Email</dt><dd className="break-all">{profile.email}</dd></div><div><dt>Fixed role</dt><dd>{profile.role.replaceAll('_',' ')}</dd></div>{profile.organizationName && <div><dt>Store membership</dt><dd>{profile.organizationName}</dd></div>}<div><dt>Account created</dt><dd>{date(profile.createdAt)}</dd></div><div><dt>Permissions</dt><dd className="break-words">{profile.permissions.length ? profile.permissions.join(', ') : 'Personal account settings'}</dd></div></dl></>}
+      <h1 className="mb-2 text-3xl font-bold">Settings</h1><p className="mb-8 text-text-secondary">{profile.fullName} · {profile.role.replaceAll('_', ' ')}</p>
+      <div className="grid gap-8 md:grid-cols-[13rem_1fr]"><nav aria-label="Account settings" className="flex h-fit flex-wrap content-start gap-1 rounded-surface border border-border-default bg-surface-primary p-3 md:flex-col">{accountPortal === 'vendors' && <a className="min-h-12 px-4 py-3 underline" href="/dashboard">Vendor Dashboard</a>}{nav.map(item => <Button key={item} className="justify-start" variant={section === item ? 'secondary' : 'quiet'} aria-current={section === item ? 'page' : undefined} onClick={() => { setSection(item); setPage(1); setFactor(null); setCodes([]); setMessage(null) }}>{item === 'Sessions' ? 'Sessions / Devices' : item}</Button>)}<Button variant="secondary" disabled={busy} onClick={() => void act(async () => { await new AuthenticationApi(createWebApiConfiguration(basePath, { refreshSession: true })).logout(); clearWebSessionTransport(basePath); window.location.assign(loginPath) }, 'Signed out.', false)}>Sign out</Button></nav>
+      <section aria-busy={busy} className="min-w-0 rounded-surface border border-border-default bg-surface-primary p-5 sm:p-8"><h2 className="mb-6 text-2xl font-bold">{section}</h2>
+        {section === 'Profile' && <><form className="grid max-w-xl gap-5" onSubmit={event => submit(event, data => act(client => client.updateAccountProfile({ accountPortal, accountProfileUpdate: { fullName: String(data.get('full_name')), lockVersion: profile.lockVersion } }), 'Profile saved.'))}><Field key={profile.lockVersion} label="Full name" name="full_name" defaultValue={profile.fullName} required maxLength={160} /><Button type="submit" disabled={busy}>Save profile</Button></form></>}
+        {section === 'Account' && <dl className="grid gap-6 sm:grid-cols-2"><div><dt>Email</dt><dd className="break-all">{profile.email}</dd></div><div><dt>Fixed role</dt><dd>{profile.role.replaceAll('_',' ')}</dd></div>{profile.organizationName && <div><dt>Store membership</dt><dd>{profile.organizationName}</dd></div>}<div><dt>Account created</dt><dd>{date(profile.createdAt)}</dd></div><div><dt>Permissions</dt><dd className="mt-2 text-sm text-text-secondary"><details><summary className="cursor-pointer">View assigned permissions</summary><ul className="mt-3 grid gap-2">{profile.permissions.map(permission => <li className="break-words" key={permission}>{permission}</li>)}</ul></details></dd></div></dl>}
         {section === 'Security' && <div className="grid max-w-xl gap-8">
           <form className="grid gap-4" onSubmit={event => submit(event, data => act(client => client.reauthenticateAccount({ accountPortal, accountReauthentication: { password: String(data.get('password')), code: String(data.get('code') || '') || null } }), 'Identity verified for 15 minutes.'))}><h3 className="text-lg font-semibold">Verify your identity</h3><p>Verify before changing your password, email, authenticator or access settings.</p><Field label="Current password" name="password" type="password" autoComplete="current-password" required />{totp && <Field label="Authenticator code" name="code" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} autoComplete="one-time-code" required />}<Button type="submit" disabled={busy}>Verify identity</Button></form>
           <form className="grid gap-4" onSubmit={event => submit(event, data => act(client => client.reauthenticateAccount({ accountPortal, accountReauthentication: { emailCode: String(data.get('reauth_email_code')), code: String(data.get('reauth_totp') || '') || null } }), 'Identity verified for 15 minutes.'))}>
@@ -129,7 +140,8 @@ export function AccountWorkspace({ portal: accountPortal, basePath, loginPath, r
         </>}
         {section === 'Admin invitations' && accountPortal === 'admin' && profile.permissions.includes('admin.invite') && <form className="grid max-w-xl gap-5" onChange={() => setInvitationKey(crypto.randomUUID())} onSubmit={event=>submit(event,data=>act(client=>client.inviteAccountAdmin({ accountPortal: 'admin',idempotencyKey:invitationKey,accountAdminInvitation:{email:String(data.get('invite_email')),roleId:String(data.get('role_id'))}}),'Invitation request received. Eligible recipients receive a one-time setup link.'))}><p>Verify your identity in Security first. Invitations expire after 24 hours; TOTP is required before protected access.</p><Field label="Staff email" name="invite_email" type="email" required /><label className="grid gap-2">Fixed Admin role<select className="min-h-12 rounded-control border border-border-default bg-surface-primary px-3" name="role_id" required><option value="">Choose a role</option>{roles.map(role=><option key={role.id} value={role.id}>{role.name}</option>)}</select></label><Button type="submit" disabled={busy}>Send invitation</Button></form>}
         {(section==='Sessions'||section==='Staff access'||section==='Admin accounts')&&lastPage>1&&<div className="mt-6 flex items-center gap-4"><Button variant="secondary" disabled={busy||page<=1} onClick={()=>setPage(page-1)}>Previous</Button><span>Page {page} of {lastPage}</span><Button variant="secondary" disabled={busy||page>=lastPage} onClick={()=>setPage(page+1)}>Next</Button></div>}
+        {embedded && section === 'Sessions' && <Button className="mt-6" variant="secondary" disabled={busy || !profile} onClick={() => window.confirm('Sign out every device, including this one?') && void act(async client => { await client.revokeAccountSessions({ accountPortal, accountSessionRevocation: { scope: 'ALL' } }); clearWebSessionTransport(basePath); window.location.assign(loginPath) }, 'Signed out.', false)}>Sign out all devices</Button>}
         <Button className="mt-6" variant="secondary" disabled={busy} onClick={()=>void load()}>{busy?'Updating…':'Refresh'}</Button>
       </section></div></>}
-  </main>
+  </div>
 }

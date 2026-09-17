@@ -1,8 +1,16 @@
 <?php
 
+use App\Http\Controllers\Api\AdminDashboardController;
 use App\Http\Controllers\Api\AdminVendorVerificationController;
 use App\Http\Middleware\VerifyAccountCsrf;
 use Illuminate\Support\Facades\Route;
+
+Route::prefix('admin/dashboard')->middleware([
+    'auth.transport:WEB', 'auth.cookie', VerifyAccountCsrf::class, 'auth:api', 'account.access:ADMIN', 'throttle:account',
+])->group(function (): void {
+    Route::get('/', [AdminDashboardController::class, 'summary']);
+    Route::get('/audit', [AdminDashboardController::class, 'audit']);
+});
 
 Route::prefix('admin/vendor-verification')->middleware([
     'auth.transport:WEB', 'auth.cookie', VerifyAccountCsrf::class, 'auth:api', 'account.access:ADMIN', 'throttle:account',

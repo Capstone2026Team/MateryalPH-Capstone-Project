@@ -82,7 +82,7 @@ export function VendorMfaPage() {
           : await completeMfaChallenge(String(data.get('code')))
       const codes = response.data.recoveryCodes
       if (codes?.length) setRecoveryCodes(codes)
-      else navigate('/dashboard', { replace: true })
+      else navigate('/entry', { replace: true })
     } catch (error) { setMessage(await readableApiError(error)) }
     finally { setBusy(false) }
   }
@@ -105,7 +105,7 @@ export function VendorMfaPage() {
     </div>
     {copyFeedback && <StatusMessage>{copyFeedback}</StatusMessage>}
     <label className="consent recovery-acknowledgement"><input type="checkbox" checked={savedRecoveryCodes} onChange={(event) => setSavedRecoveryCodes(event.currentTarget.checked)} /><span>I saved these codes securely and offline.</span></label>
-    <Button className="w-full" disabled={!savedRecoveryCodes} onClick={() => navigate('/dashboard', { replace: true })}>Continue to dashboard</Button>
+    <Button className="w-full" disabled={!savedRecoveryCodes} onClick={() => navigate('/entry', { replace: true })}>Continue to dashboard</Button>
   </VendorAuthShell>
 
   if (mode === 'resolving') return <VendorAuthShell title="Checking your security setup" description="MateryalPH is determining the required security step for this sign-in."><StatusMessage tone={message ? 'error' : 'info'}>{message ?? 'Loading your security step…'}</StatusMessage></VendorAuthShell>
@@ -262,7 +262,7 @@ export function VendorAuthCallbackPage() {
     : null
   useEffect(() => {
     if (callbackFailed) return
-    void getSession().then(() => navigate('/dashboard', { replace: true })).catch(() => navigate('/login', { replace: true }))
+    navigate('/entry', { replace: true })
   }, [callbackFailed, navigate])
 
   if (errorMessage) {

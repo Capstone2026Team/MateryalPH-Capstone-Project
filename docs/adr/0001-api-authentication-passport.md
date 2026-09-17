@@ -23,3 +23,11 @@ This repository-alignment checkpoint does not install Passport or remove Sanctum
 - Browser redirects never establish authentication or payment success by themselves.
 - Passport private keys and refresh/access tokens must never be committed, logged, or exposed to web/mobile bundles.
 - Authentication endpoints, database tables, and business behavior are intentionally outside this checkpoint.
+
+## Web portal isolation clarification (2026-09-17)
+
+Vendor and Admin share Passport, but not browser credential cookie names. API middleware selects the portal from the exact configured frontend Origin (or Referer for navigation), including its port. Access, refresh, CSRF, MFA-challenge and bot-proof cookies receive `_vendor` or `_admin` suffixes. Existing controller code consumes the internally normalized names; outgoing cookies retain their security attributes and acquire the portal suffix.
+
+Cookie selection does not grant authorization: Passport scope, active membership, role, MFA and CSRF checks still apply. A recognized portal never falls back to another portal's or a legacy unsuffixed credential. Each portal therefore requires a one-time fresh login after upgrading. Logout clears only that portal's cookies. The Vendor-only Google callback selects the Vendor namespace explicitly. Native mobile transport is unchanged.
+
+The exact origins must match `VENDOR_FRONTEND_URL` and `ADMIN_FRONTEND_URL`; they must be distinct. Requests without a recognized browser origin retain legacy handling for non-browser compatibility, not a role bypass.

@@ -1,5 +1,6 @@
 .gitignore
 .npmignore
+.openapi-generator-ignore
 README.md
 docs/AccountAdminChange.md
 docs/AccountAdminInvitation.md
@@ -36,6 +37,9 @@ docs/AccountSessionListEnvelope.md
 docs/AccountSessionRevocation.md
 docs/AccountType.md
 docs/AccountsApi.md
+docs/AdminDashboardAuditEnvelope.md
+docs/AdminDashboardEnvelope.md
+docs/AdminDashboardSummary.md
 docs/AdminInvitationRequest.md
 docs/AdminVendorVerificationApi.md
 docs/AdminVendorVerificationDecision.md
@@ -164,6 +168,9 @@ src/models/AccountSession.ts
 src/models/AccountSessionListEnvelope.ts
 src/models/AccountSessionRevocation.ts
 src/models/AccountType.ts
+src/models/AdminDashboardAuditEnvelope.ts
+src/models/AdminDashboardEnvelope.ts
+src/models/AdminDashboardSummary.ts
 src/models/AdminInvitationRequest.ts
 src/models/AdminVendorVerificationDecision.ts
 src/models/AdminVendorVerificationDetailEnvelope.ts

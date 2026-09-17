@@ -1,3 +1,4 @@
+import { DateFilter } from '@materyalph/web-ui'
 import {
   AlertCircle,
   ArrowLeft,
@@ -9,12 +10,9 @@ import {
   ExternalLink,
   FileCheck2,
   FileText,
-  LayoutDashboard,
   LockKeyhole,
   RefreshCw,
   ShieldAlert,
-  Store,
-  Users,
 } from 'lucide-react'
 import { type FormEvent, type ReactNode, useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -34,8 +32,8 @@ import {
 type JsonRecord = Record<string, unknown>
 
 const adminNavigation: PortalNavSection[] = [
-  { label: 'Review', items: [{ label: 'Verification queue', href: '/vendor-verification', icon: <ClipboardCheck size={16} aria-hidden="true" /> }, { label: 'Dashboard', href: '/vendor-verification', icon: <LayoutDashboard size={16} aria-hidden="true" /> }] },
-  { label: 'Operations', items: [{ label: 'Accounts', href: '/workspace', icon: <Users size={16} aria-hidden="true" /> }, { label: 'Store policies', href: '/vendor-verification', icon: <Store size={16} aria-hidden="true" /> }] },
+  { label: 'Overview', items: [{ label: 'Dashboard', href: '/dashboard', icon: <BadgeCheck size={16} aria-hidden="true" /> }] },
+  { label: 'Review', items: [{ label: 'Verification queue', href: '/vendor-verification', icon: <ClipboardCheck size={16} aria-hidden="true" /> }] },
 ]
 
 function record(value: unknown): JsonRecord {
@@ -67,12 +65,12 @@ function statusLabel(status: string): string {
 }
 
 function adminDate(): string {
-  return new Intl.DateTimeFormat('en-PH', { dateStyle: 'full' }).format(new Date())
+  return new Intl.DateTimeFormat('en-PH', { dateStyle: 'full', timeZone: 'Asia/Manila' }).format(new Date())
 }
 
 function formatDate(value: unknown): string {
-  if (value instanceof Date && !Number.isNaN(value.valueOf())) return new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium' }).format(value)
-  if (typeof value === 'string' && value) return new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium' }).format(new Date(value))
+  if (value instanceof Date && !Number.isNaN(value.valueOf())) return new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium', timeZone: 'Asia/Manila' }).format(value)
+  if (typeof value === 'string' && value) return new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium', timeZone: 'Asia/Manila' }).format(new Date(value))
   return 'Not recorded'
 }
 
@@ -84,8 +82,9 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
   return <div className="grid gap-4 rounded-surface border border-status-error/30 bg-red-50 p-6 text-sm text-red-900" role="alert"><div className="flex items-start gap-3"><AlertCircle className="mt-0.5 shrink-0" size={20} aria-hidden="true" /><p>{message}</p></div><Button className="w-fit" variant="secondary" onClick={onRetry}><RefreshCw size={16} aria-hidden="true" /> Try again</Button></div>
 }
 
-function AdminShell({ activeHref, children }: { activeHref: string; children: ReactNode }) {
-  return <PortalShell homeHref="/vendor-verification" portalLabel="ADMIN PORTAL" pageTitle="Vendor Verification" dateLabel={adminDate()} sections={adminNavigation} activeHref={activeHref} accountLabel="Admin review team" accountStatus="Audited access">{children}</PortalShell>
+export function AdminShell({ activeHref, children }: { activeHref: string; children: ReactNode }) {
+  const navigate = useNavigate()
+  return <PortalShell apiBasePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} onNavigate={navigate} headerActions={<Link className="inline-flex min-h-11 items-center text-sm font-semibold" to="/workspace">Account settings</Link>} homeHref="/dashboard" portalLabel="ADMIN PORTAL" pageTitle={activeHref === '/dashboard' ? 'Dashboard' : activeHref === '/workspace' ? 'Settings' : activeHref === '/audit' ? 'Audit tracking' : 'Vendor Verification'} dateLabel={adminDate()} sections={adminNavigation} activeHref={activeHref} accountLabel="Admin review team" accountStatus="Audited access">{children}</PortalShell>
 }
 
 function PageHeader({ eyebrow, title, description, actions }: { eyebrow: string; title: string; description: string; actions?: ReactNode }) {
@@ -95,19 +94,35 @@ function PageHeader({ eyebrow, title, description, actions }: { eyebrow: string;
 export function AdminVendorVerificationQueuePage() {
   const [items, setItems] = useState<import('@materyalph/api-client-ts').AdminVendorVerificationQueueItem[]>([])
   const [meta, setMeta] = useState<JsonRecord>({})
-  const [status, setStatus] = useState('PENDING_VERIFICATION')
+  const [filters, setFilters] = useState({ status: 'PENDING_VERIFICATION', regionCode: '', submittedFrom: '', submittedTo: '', sort: 'submitted_desc' })
+  const [applied, setApplied] = useState(filters)
+  const [page, setPage] = useState(1)
+  const [attempt, setAttempt] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-
-  const load = useCallback(async (nextStatus = status) => {
+  useEffect(() => {
+    let active = true
     setLoading(true); setError(null)
-    try { const result = await listVendorVerificationQueue(nextStatus ? { status: nextStatus } : {}); setItems(result.items); setMeta(result.meta) } catch (cause) { setError(await readableVerificationError(cause)) } finally { setLoading(false) }
-  }, [status])
-
-  useEffect(() => { void load() }, [load])
-  const total = numberValue(meta.total, items.length)
-
-  return <AdminShell activeHref="/vendor-verification"><div className="phase3-page space-y-8"><PageHeader eyebrow="Admin review" title="Vendor Verification queue" description="Review submitted Vendor cases in one consistent workspace. Private evidence is available only through an authorized, short-lived URL and every decision becomes immutable review history." actions={<Button variant="secondary" disabled={loading} onClick={() => void load()}><RefreshCw size={16} aria-hidden="true" /> Refresh queue</Button>} /><section className="flex flex-col gap-4 border-b border-border-default pb-6 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-action-primary">Manual review</p><h2 className="mt-2 text-xl font-semibold">{total} case{total === 1 ? '' : 's'} in this view</h2><p className="mt-1 text-sm text-text-secondary">Filter by review status, then open a case for requirement-level decisions.</p></div><label className="grid gap-2 text-sm font-semibold sm:min-w-64" htmlFor="queue-status">Status filter<select className="min-h-12 rounded-control border border-border-default bg-surface-primary px-3 text-base font-normal" id="queue-status" value={status} onChange={(event) => setStatus(event.target.value)}><option value="">All review cases</option><option value="PENDING_VERIFICATION">Pending verification</option><option value="CHANGES_REQUIRED">Changes required</option><option value="REJECTED">Rejected</option><option value="APPROVED">Approved</option></select></label><Button variant="secondary" onClick={() => void load(status)}>Apply</Button></section>{loading ? <LoadingState /> : error ? <ErrorState message={error} onRetry={() => void load()} /> : items.length === 0 ? <EmptyQueue status={status} /> : <section className="overflow-hidden rounded-surface border border-border-default bg-surface-primary" aria-labelledby="queue-table-title"><h2 className="sr-only" id="queue-table-title">Vendor verification cases</h2><div className="overflow-x-auto"><table className="w-full min-w-[760px] border-collapse text-left text-sm"><thead className="bg-surface-canvas text-xs uppercase tracking-[0.12em] text-text-secondary"><tr><th className="px-5 py-4 font-semibold" scope="col">Store</th><th className="px-5 py-4 font-semibold" scope="col">Verification</th><th className="px-5 py-4 font-semibold" scope="col">Setup</th><th className="px-5 py-4 font-semibold" scope="col">Progress</th><th className="px-5 py-4 font-semibold" scope="col">Submitted</th><th className="px-5 py-4" scope="col"><span className="sr-only">Open</span></th></tr></thead><tbody className="divide-y divide-border-default">{items.map((item) => <tr className="hover:bg-brand-orange-50" key={item.id}><td className="px-5 py-5"><Link className="font-semibold text-text-strong underline-offset-4 hover:text-action-primary hover:underline" to={`/vendor-verification/${item.id}`}>{item.storeName}</Link><p className="mt-1 text-xs text-text-secondary">{item.registeredName ?? 'Registered name pending'} · {item.businessType ? statusLabel(item.businessType) : 'Business type pending'}</p></td><td className="px-5 py-5"><StatusBadge label={statusLabel(item.verificationStatus)} tone={statusTone(item.verificationStatus)} /></td><td className="px-5 py-5"><StatusBadge label={statusLabel(item.setupStatus ?? 'NOT_STARTED')} tone={statusTone(item.setupStatus ?? 'NOT_STARTED')} /></td><td className="px-5 py-5"><ProgressText progress={item.progress} /></td><td className="px-5 py-5 text-text-secondary">{formatDate(item.submittedAt)}</td><td className="px-5 py-5 text-right"><Link className="inline-flex min-h-11 items-center gap-2 font-semibold text-action-primary" to={`/vendor-verification/${item.id}`}>Review <ArrowLeft className="rotate-180" size={16} aria-hidden="true" /></Link></td></tr>)}</tbody></table></div></section>}</div></AdminShell>
+    void listVendorVerificationQueue({
+      ...(applied.status ? { status: applied.status } : {}), ...(applied.regionCode ? { regionCode: applied.regionCode } : {}),
+      ...(applied.submittedFrom ? { submittedFrom: new Date(applied.submittedFrom + 'T00:00:00Z') } : {}),
+      ...(applied.submittedTo ? { submittedTo: new Date(applied.submittedTo + 'T00:00:00Z') } : {}),
+      sort: applied.sort as 'submitted_asc' | 'submitted_desc' | 'location', page,
+    }).then(result => { if (active) { setItems(result.items); setMeta(result.meta) } }).catch(async cause => { const message = await readableVerificationError(cause); if (active) setError(message) }).finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
+  }, [applied, page, attempt])
+  const [dateLabel, setDateLabel] = useState('All dates')
+  const controlClass = "min-h-11 rounded-control border border-border-default bg-surface-primary px-3 font-normal"
+  return <AdminShell activeHref="/vendor-verification"><div className="space-y-6">
+    <PageHeader eyebrow="Admin review" title="Vendor Verification" description="Review submitted business requirements. Choose a review status and submission period, then open a case to review its evidence." actions={<Button variant="secondary" disabled={loading} onClick={() => setAttempt(value => value + 1)}>Refresh queue</Button>} />
+    <div className="flex flex-wrap items-end gap-3 rounded-surface border border-border-default bg-surface-primary p-4">
+      <label className="grid gap-2 text-sm font-semibold">Review status<select className={controlClass} value={filters.status} onChange={event => setFilters({ ...filters, status: event.target.value })}><option value="">All review cases</option>{['PENDING_VERIFICATION', 'CHANGES_REQUIRED', 'REJECTED', 'APPROVED', 'EXPIRED'].map(status => <option key={status} value={status}>{statusLabel(status)}</option>)}</select></label>
+      <label className="grid gap-2 text-sm font-semibold">Sort by<select className={controlClass} value={filters.sort} onChange={event => setFilters({ ...filters, sort: event.target.value })}><option value="submitted_desc">Newest submission first</option><option value="submitted_asc">Oldest submission first</option></select></label>
+      <DateFilter title="Submission dates" value={{ label: dateLabel, from: filters.submittedFrom, to: filters.submittedTo }} onChange={range => { setDateLabel(range.label); const next = { ...filters, submittedFrom: range.from, submittedTo: range.to }; setFilters(next); setApplied(next); setPage(1) }} />
+      <div className="flex items-end gap-3"><Button disabled={loading} onClick={() => { setPage(1); setApplied({ ...filters }) }}>Apply filters</Button><Button variant="secondary" disabled={loading} onClick={() => { const cleared = { status: '', regionCode: '', submittedFrom: '', submittedTo: '', sort: 'submitted_desc' }; setDateLabel('All dates'); setFilters(cleared); setApplied(cleared); setPage(1) }}>Reset</Button></div>
+    </div>
+    {loading ? <LoadingState /> : error ? <ErrorState message={error} onRetry={() => setAttempt(value => value + 1)} /> : <><p className="text-sm text-text-secondary">{numberValue(meta.total)} matching cases</p>{items.length === 0 ? <EmptyQueue status={applied.status} /> : <div className="overflow-x-auto"><table className="w-full min-w-[800px] text-left text-sm"><thead><tr>{['Store', 'Location', 'Verification', 'Setup', 'Progress', 'Submitted', 'Action'].map(label => <th className="px-4 py-3" scope="col" key={label}>{label}</th>)}</tr></thead><tbody>{items.map(item => <tr className="border-t border-border-default" key={item.id}><td className="px-4 py-4"><Link className="font-semibold text-action-primary underline" to={`/vendor-verification/${item.id}`}>{item.storeName}</Link><p className="mt-1 text-text-secondary">{item.registeredName ?? 'Registered name pending'}</p></td><td className="px-4 py-4"><p>{item.regionName ?? 'Unassigned region'}</p><p className="mt-1 text-text-secondary">{[item.province, item.cityMunicipality].filter(Boolean).join(' · ') || 'Address not recorded'}</p></td><td className="px-4 py-4"><StatusBadge label={statusLabel(item.verificationStatus)} tone={statusTone(item.verificationStatus)} /></td><td className="px-4 py-4">{statusLabel(item.setupStatus ?? 'NOT_STARTED')}</td><td className="px-4 py-4"><ProgressText progress={item.progress} /></td><td className="px-4 py-4">{formatDate(item.submittedAt)}</td><td className="px-4 py-4"><Link className="inline-flex min-h-11 items-center font-semibold text-action-primary" to={`/vendor-verification/${item.id}`}>Review</Link></td></tr>)}</tbody></table></div>}<div className="flex items-center gap-4"><Button variant="secondary" disabled={page <= 1} onClick={() => setPage(value => value - 1)}>Previous</Button><span>Page {page} of {numberValue(meta.last_page, 1)}</span><Button variant="secondary" disabled={page >= numberValue(meta.last_page, 1)} onClick={() => setPage(value => value + 1)}>Next</Button></div></>}
+  </div></AdminShell>
 }
 
 function ProgressText({ progress }: { progress: { [key: string]: unknown } }) {

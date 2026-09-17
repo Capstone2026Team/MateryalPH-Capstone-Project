@@ -27,18 +27,42 @@ final class AdminVendorVerificationService
     public function queue(Request $request, array $filters): array
     {
         $this->authorize($request, 'vendor_verification.review');
-        $query = DB::table('vendor_organizations')->whereIn('store_verification_status', ['SUBMITTED', 'PENDING_VERIFICATION', 'CHANGES_REQUIRED', 'REJECTED', 'APPROVED', 'EXPIRED']);
+        $submitted = DB::table('vendor_onboarding_steps')->select('vendor_organization_id')->selectRaw('MAX(submitted_at) AS submitted_at')->where('section', 'STORE_VERIFICATION')->where('is_current', true)->groupBy('vendor_organization_id');
+        $regions = new PhilippineRegionDirectory;
+        $query = DB::table('vendor_organizations')
+            ->leftJoinSub($submitted, 'submission', 'submission.vendor_organization_id', '=', 'vendor_organizations.id')
+            ->leftJoin('addresses as address', function ($join): void {
+                $join->on('address.owner_id', '=', 'vendor_organizations.id')->where('address.owner_type', 'VENDOR_ORGANIZATION')->where('address.is_current', true);
+            })
+            ->leftJoinSub($regions->mapping(), 'region', 'region.code', '=', 'address.psgc_code')
+            ->select('vendor_organizations.*', 'submission.submitted_at', 'address.province', 'address.city_municipality', 'region.region_code', 'region.region_name')
+            ->whereIn('store_verification_status', ['SUBMITTED', 'PENDING_VERIFICATION', 'CHANGES_REQUIRED', 'REJECTED', 'APPROVED', 'EXPIRED']);
         if (is_string($filters['status'] ?? null) && $filters['status'] !== '') {
             $query->where('store_verification_status', $filters['status']);
         }
         if (is_string($filters['business_type'] ?? null) && $filters['business_type'] !== '') {
             $query->where('business_type', $filters['business_type']);
         }
-        $rows = $query->orderByDesc('updated_at')->orderBy('id')->paginate(20);
+        if (($filters['region_code'] ?? '') === 'UNASSIGNED') {
+            $query->whereNull('region.region_code');
+        } elseif (! empty($filters['region_code'])) {
+            $query->where('region.region_code', $filters['region_code']);
+        }
+        foreach (['submitted_from' => '>=', 'submitted_to' => '<='] as $key => $operator) {
+            if (! empty($filters[$key])) {
+                $query->whereRaw("(submission.submitted_at AT TIME ZONE 'Asia/Manila')::date $operator ?", [$filters[$key]]);
+            }
+        }
+        $sort = $filters['sort'] ?? 'submitted_desc';
+        if ($sort === 'location') {
+            $query->orderBy('region.region_name')->orderBy('address.province')->orderBy('address.city_municipality');
+        }
+        $query->orderByRaw('submission.submitted_at '.($sort === 'submitted_asc' ? 'ASC' : 'DESC').' NULLS LAST');
+        $rows = $query->orderBy('vendor_organizations.id')->paginate(20);
 
         return [
             'items' => array_map(fn (mixed $row): array => $this->queueItem($row), $rows->items()),
-            'meta' => ['current_page' => $rows->currentPage(), 'last_page' => $rows->lastPage(), 'per_page' => $rows->perPage(), 'total' => $rows->total()],
+            'meta' => ['current_page' => $rows->currentPage(), 'last_page' => $rows->lastPage(), 'per_page' => $rows->perPage(), 'total' => $rows->total(), 'regions' => $regions->options()],
         ];
     }
 
@@ -50,7 +74,7 @@ final class AdminVendorVerificationService
         }
         $steps = DB::table('vendor_onboarding_steps')->where('vendor_organization_id', $value->id)->where('section', 'STORE_VERIFICATION')->where('is_current', true)->get(['status', 'level', 'submitted_at']);
 
-        return ['id' => $value->id, 'store_name' => $value->store_name, 'registered_name' => $value->registered_name, 'business_type' => $value->business_type, 'verification_status' => $value->store_verification_status, 'setup_status' => $value->store_setup_status, 'activation_status' => $value->store_activation_status, 'submitted_at' => $steps->max('submitted_at'), 'progress' => ['complete' => $steps->whereIn('status', ['APPROVED', 'NOT_APPLICABLE'])->count(), 'total' => $steps->where('level', '!=', 'OPTIONAL')->count()]];
+        return ['id' => $value->id, 'store_name' => $value->store_name, 'registered_name' => $value->registered_name, 'business_type' => $value->business_type, 'verification_status' => $value->store_verification_status, 'setup_status' => $value->store_setup_status, 'activation_status' => $value->store_activation_status, 'submitted_at' => $value->submitted_at, 'region_code' => $value->region_code, 'region_name' => $value->region_name, 'province' => $value->province, 'city_municipality' => $value->city_municipality, 'progress' => ['complete' => $steps->whereIn('status', ['APPROVED', 'NOT_APPLICABLE'])->count(), 'total' => $steps->where('level', '!=', 'OPTIONAL')->count()]];
     }
 
     /** @return array<string, mixed> */

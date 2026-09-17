@@ -105,7 +105,7 @@ final class VendorOnboardingService
         $tax = DB::table('vendor_tax_profiles as p')->leftJoin('vendor_tax_profile_versions as v', 'v.id', '=', 'p.current_version_id')->where('p.vendor_organization_id', $organizationId)->first(['p.status', 'p.environment', 'p.lock_version', 'p.attested_at', 'v.version', 'v.entity_class', 'v.registration_category', 'v.vat_category', 'v.vat_verified_category', 'v.tin_branch_code', 'v.bir_cor_reference', 'v.fiscal_year_start_month', 'v.taxpayer_key_last4', 'v.tin_last4', 'v.tax_details', 'v.owner_attested_at']);
         $payment = DB::table('vendor_payment_accounts')->where('vendor_organization_id', $organizationId)->first(['environment', 'provider', 'provider_account_id', 'connection_status', 'provider_status', 'capabilities', 'invitation_url_masked', 'last_reconciled_at', 'last_error_code', 'lock_version']);
         $contacts = DB::table('vendor_contacts')->where('vendor_organization_id', $organizationId)->where('active', true)->orderByDesc('is_primary')->orderBy('id')->get(['id', 'full_name', 'title', 'email', 'phone', 'is_primary', 'is_public', 'is_authorized', 'lock_version']);
-        $media = DB::table('store_media as m')->join('files as f', 'f.id', '=', 'm.file_id')->join('store_profiles as p', 'p.id', '=', 'm.store_profile_id')->where('p.vendor_organization_id', $organizationId)->orderBy('m.sort_order')->get(['m.id', 'm.kind', 'm.alt_text', 'm.status', 'f.original_name', 'f.scan_state']);
+        $media = DB::table('store_media as m')->join('files as f', 'f.id', '=', 'm.file_id')->join('store_profiles as p', 'p.id', '=', 'm.store_profile_id')->where('p.vendor_organization_id', $organizationId)->orderBy('m.sort_order')->orderBy('m.id')->get(['m.id', 'm.file_id', 'm.kind', 'm.alt_text', 'm.status', 'f.original_name', 'f.scan_state']);
         $delivery = DB::table('delivery_service_areas')->where('vendor_organization_id', $organizationId)->first(['area_type', 'maximum_distance_km', 'coverage_notes', 'active', 'version', 'lock_version']);
         $vehicles = $this->vehicles($organizationId);
         $privacyAcknowledged = DB::table('agreement_acceptances as aa')
@@ -160,7 +160,7 @@ final class VendorOnboardingService
                 'marketplace_discoverability_status' => $organization->marketplace_discoverability_status,
                 'readiness' => $readiness,
             ],
-            'welcome_required' => $organization->onboarding_welcome_dismissed_at === null && $organization->store_verification_status === 'NOT_STARTED' && $scope['role'] === 'OWNER',
+            'welcome_required' => $organization->onboarding_welcome_dismissed_at === null && $scope['role'] === 'OWNER',
             'permissions' => $scope['permissions'],
         ];
     }
@@ -298,17 +298,20 @@ final class VendorOnboardingService
     {
         $this->requireVendorPermission($request, 'vendor.onboarding.manage');
         $organizationId = $this->organizationId($request);
+        $this->ensureBlueprint($organizationId);
         DB::transaction(function () use ($request, $input, $organizationId): void {
             $organization = DB::table('vendor_organizations')->where('id', $organizationId)->lockForUpdate()->first();
             $this->assertVersion($organization, $input['organization_lock_version'] ?? null);
             $existing = DB::table('store_profiles')->where('vendor_organization_id', $organizationId)->first();
+            $publicProfileOnly = $existing !== null && $organization->store_setup_status === 'COMPLETED'
+                && array_diff(array_keys($input), ['organization_lock_version', 'public_store_name', 'description', 'public_email', 'public_phone']) === [];
             $profile = [
                 'public_store_name' => trim((string) ($input['public_store_name'] ?? ($existing === null ? $organization->store_name : $existing->public_store_name))),
-                'description' => $input['description'] ?? ($existing === null ? null : $existing->description),
+                'description' => array_key_exists('description', $input) ? $input['description'] : ($existing === null ? null : $existing->description),
                 'bulk_capability' => array_key_exists('bulk_capability', $input) ? (bool) $input['bulk_capability'] : ($existing === null ? null : $existing->bulk_capability),
                 'fulfillment_method' => $input['fulfillment_method'] ?? ($existing === null ? null : $existing->fulfillment_method),
-                'public_email' => $input['public_email'] ?? ($existing === null ? null : $existing->public_email),
-                'public_phone' => $input['public_phone'] ?? ($existing === null ? null : $existing->public_phone),
+                'public_email' => array_key_exists('public_email', $input) ? $input['public_email'] : ($existing === null ? null : $existing->public_email),
+                'public_phone' => array_key_exists('public_phone', $input) ? $input['public_phone'] : ($existing === null ? null : $existing->public_phone),
                 'status' => 'DRAFT',
                 'version' => ($existing === null ? 0 : (int) $existing->version) + 1,
                 'lock_version' => ($existing === null ? 0 : (int) $existing->lock_version) + 1,
@@ -321,6 +324,13 @@ final class VendorOnboardingService
                 DB::table('store_profiles')->insert($profile);
             } else {
                 DB::table('store_profiles')->where('id', $existing->id)->update($profile);
+            }
+            if ($publicProfileOnly) {
+                DB::table('store_profiles')->where('id', $existing->id)->update(['status' => $existing->status]);
+                DB::table('vendor_organizations')->where('id', $organizationId)->update(['lock_version' => (int) $organization->lock_version + 1, 'updated_at' => now()]);
+                $this->audit->account($request, 'VENDOR_PUBLIC_STORE_PROFILE_UPDATED', 'STORE_PROFILE', (string) $existing->id, after: ['fields' => array_keys($input)]);
+
+                return;
             }
             $method = (string) ($profile['fulfillment_method'] ?? '');
             if ($method === 'SELF_PICKUP') {
@@ -337,7 +347,7 @@ final class VendorOnboardingService
             $this->setStep($organizationId, 'STORE_SETUP', 'public_store_profile', $profile['public_store_name'] !== '' ? 'IN_PROGRESS' : 'NOT_STARTED');
             $this->setStep($organizationId, 'STORE_SETUP', 'bulk_capability', $profile['bulk_capability'] === null ? 'NOT_STARTED' : 'IN_PROGRESS');
             $this->setStep($organizationId, 'STORE_SETUP', 'fulfillment_method', $method === '' ? 'NOT_STARTED' : 'IN_PROGRESS');
-            DB::table('vendor_organizations')->where('id', $organizationId)->update(['store_setup_status' => 'IN_PROGRESS', 'updated_at' => now()]);
+            DB::table('vendor_organizations')->where('id', $organizationId)->update(['store_setup_status' => 'IN_PROGRESS', 'lock_version' => (int) $organization->lock_version + 1, 'updated_at' => now()]);
             $this->audit->account($request, 'VENDOR_STORE_SETUP_DRAFT_SAVED', 'STORE_PROFILE', (string) ($existing->id ?? $profile['id']), after: ['fields' => array_keys($input)]);
         });
 
@@ -478,6 +488,7 @@ final class VendorOnboardingService
         }
         $organizationId = $this->organizationId($request);
         $maxKb = (int) config('materyalph.files.max_document_kb', 10240);
+        $this->ensureBlueprint($organizationId);
         if ($file->getSize() > $maxKb * 1024 || ! in_array(mb_strtolower((string) $file->getMimeType()), ['image/jpeg', 'image/png', 'application/pdf'], true)) {
             throw new AuthenticationException('FILE_VALIDATION_FAILED', 'Upload a JPG, PNG, or PDF within the allowed file size.', 422);
         }
@@ -804,6 +815,14 @@ final class VendorOnboardingService
     }
 
     private function ensureBlueprint(string $organizationId): void
+    {
+        DB::transaction(function () use ($organizationId): void {
+            DB::table('vendor_organizations')->where('id', $organizationId)->lockForUpdate()->first();
+            $this->initializeBlueprint($organizationId);
+        });
+    }
+
+    private function initializeBlueprint(string $organizationId): void
     {
         $businessType = DB::table('vendor_organizations')->where('id', $organizationId)->value('business_type');
         $ownerEmail = DB::table('vendor_memberships as m')
@@ -1433,16 +1452,23 @@ final class VendorOnboardingService
     private function authorizedFile(Request $request, string $fileId): object
     {
         $scope = $this->access->resolve($request->user());
-        $query = DB::table('files as f')->join('business_document_versions as v', 'v.file_id', '=', 'f.id')->join('business_documents as d', 'd.id', '=', 'v.business_document_id')->where('f.id', $fileId);
+        $query = DB::table('files as f')->leftJoin('business_document_versions as v', 'v.file_id', '=', 'f.id')->leftJoin('business_documents as d', 'd.id', '=', 'v.business_document_id')->leftJoin('store_media as m', 'm.file_id', '=', 'f.id')->leftJoin('store_profiles as p', 'p.id', '=', 'm.store_profile_id')->where('f.id', $fileId)->where('f.scan_state', 'CLEAN');
         if ($request->user()->account_type === 'VENDOR') {
             if (! in_array('vendor.onboarding.private_documents', $scope['permissions'], true)) {
                 throw new AuthenticationException('PERMISSION_DENIED', 'You cannot access private onboarding evidence.', 403);
             }
-            $query->where('d.vendor_organization_id', $scope['organization_id']);
+            $query->where('f.owner_type', 'VENDOR_ORGANIZATION')->where('f.owner_id', $scope['organization_id'])
+                ->where(function ($owned) use ($scope): void {
+                    $owned->where('d.vendor_organization_id', $scope['organization_id'])
+                        ->orWhere(function ($media) use ($scope): void {
+                            $media->where('p.vendor_organization_id', $scope['organization_id'])->where('f.purpose', 'STORE_MEDIA')->where('m.status', 'READY');
+                        });
+                });
         } elseif ($request->user()->account_type === 'ADMIN') {
             if (! in_array('vendor_verification.view_private_documents', $scope['permissions'], true)) {
                 throw new AuthenticationException('PERMISSION_DENIED', 'You cannot access private Vendor evidence.', 403);
             }
+            $query->whereNotNull('d.id');
         } else {
             throw new AuthenticationException('PERMISSION_DENIED', 'You cannot access private onboarding evidence.', 403);
         }

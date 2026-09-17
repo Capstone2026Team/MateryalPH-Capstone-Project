@@ -1,3 +1,4 @@
+import { rateLimitMessage } from '@materyalph/web-ui'
 import {
   AdminVendorVerificationApi,
   ResponseError,
@@ -14,7 +15,7 @@ function verificationApi(): AdminVendorVerificationApi {
 
 export type VerificationDetail = Record<string, unknown>
 
-export async function listVendorVerificationQueue(filters: { status?: string; businessType?: string; page?: number } = {}): Promise<{ items: AdminVendorVerificationQueueItem[]; meta: Record<string, unknown> }> {
+export async function listVendorVerificationQueue(filters: { status?: string; businessType?: string; page?: number; regionCode?: string; submittedFrom?: Date; submittedTo?: Date; sort?: 'submitted_asc' | 'submitted_desc' | 'location' } = {}): Promise<{ items: AdminVendorVerificationQueueItem[]; meta: Record<string, unknown> }> {
   const response = await verificationApi().listVendorVerificationQueue(filters)
   return { items: response.data, meta: response.meta as Record<string, unknown> }
 }
@@ -46,7 +47,7 @@ export async function restoreVendorActivation(organizationId: string, reason: st
 
 export async function readableVerificationError(error: unknown): Promise<string> {
   if (error instanceof ResponseError) {
-    if (error.response.status === 429) return 'Too many requests were sent. Please wait a moment and try again.'
+    if (error.response.status === 429 && error.response.headers.has('Retry-After')) return rateLimitMessage(error.response)
     const payload: unknown = await error.response.clone().json().catch(() => null)
     const first = firstApiError(payload)
     if (error.response.status === 401) return 'Your session has expired. Sign in again to continue.'

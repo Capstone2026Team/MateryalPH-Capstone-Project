@@ -21,7 +21,7 @@ return [
         'X-Correlation-ID',
         'X-CSRF-Token',
     ],
-    'exposed_headers' => ['X-Correlation-ID'],
+    'exposed_headers' => ['X-Correlation-ID', 'Retry-After', 'X-RateLimit-Limit', 'X-RateLimit-Remaining'],
     'max_age' => 600,
     'supports_credentials' => true,
 ];

@@ -1,3 +1,4 @@
+import { rateLimitMessage } from '@materyalph/web-ui'
 import {
   ResponseError,
   VendorOnboardingApi,
@@ -112,7 +113,7 @@ export async function inviteVendorTeamMember(input: VendorInvitationRequest) {
 
 export async function readableOnboardingError(error: unknown): Promise<string> {
   if (error instanceof ResponseError) {
-    if (error.response.status === 429) return 'Too many requests were sent. Please wait a moment and try again.'
+    if (error.response.status === 429 && error.response.headers.has('Retry-After')) return rateLimitMessage(error.response)
     const payload: unknown = await error.response.clone().json().catch(() => null)
     const first = firstApiError(payload)
     if (error.response.status === 401) return first?.code === 'OTP_INVALID_OR_EXPIRED' ? (first.message ?? 'The code is invalid or expired.') : 'Your session has expired. Sign in again to continue.'

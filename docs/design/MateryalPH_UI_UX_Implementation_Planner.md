@@ -7,8 +7,7 @@
 **Buyer platform:** Flutter mobile  
 **Vendor/Admin platforms:** React 19, TypeScript, Vite 8, and token-driven Tailwind CSS  
 **Design reference:** [Capstone MateryalPH Figma prototype](https://www.figma.com/design/tSnU3YwH6yynbxvfF2jVdT/Capstone_MateryalPH?node-id=0-1)  
-**Code reference:** [Capstone2026Team/MateryalPH](https://github.com/Capstone2026Team/MateryalPH)  
-**Design-quality workflow:** [Impeccable](https://github.com/pbakaus/impeccable)
+**Design-quality workflow:** component tests and browser review
 
 ## 1. Purpose
 
@@ -23,7 +22,7 @@ This planner defines:
 - Tier 1 Directory Supplier and Tier 2 Verified Vendor presentation.
 - Motion, route-line animation, responsive behavior, accessibility, and failure states.
 - Component boundaries and suggested code organization.
-- Figma-to-code and Impeccable review procedures.
+- Figma-to-code and design review procedures.
 - Acceptance criteria that can be tested before a UI phase is accepted.
 
 ## 2. Source Priority and Conflict Resolution
@@ -61,7 +60,7 @@ The following decisions are fixed for implementation:
 | Map alternative | Every map has an equivalent synchronized list, usable without location permission |
 | Repository layout | Standardize the early scaffold into `apps/*`, `services/*`, and `packages/*` before feature development |
 | Web baseline | React 19 + TypeScript + Vite 8 + Tailwind, with shared semantic tokens |
-| Design evaluation | Use Impeccable commands and detector for React surfaces, plus native Flutter accessibility and visual tests |
+| Design evaluation | Use component tests and browser review for React surfaces, plus native Flutter accessibility and visual tests |
 
 ## 4. Prototype and Repository Audit
 
@@ -745,68 +744,9 @@ Migrate the small JSX scaffold to TypeScript before feature growth. Use strict T
 
 Generated files carry a header and are not hand-edited. CI fails when generated token outputs drift from `tokens.json`.
 
-## 20. Impeccable Workflow for Codex
+## 20. Design Review Workflow
 
-Impeccable is a design-quality layer, not the source of MateryalPH product truth. The approved workflows and this planner remain authoritative.
-
-### 20.1 One-time project setup
-
-From the standardized repository root:
-
-```bash
-npx impeccable install --providers=codex --scope=project
-```
-
-Then open Codex, approve the project hook through `/hooks`, and run:
-
-```text
-/impeccable init
-/impeccable document
-```
-
-Review generated `PRODUCT.md`, `DESIGN.md`, `.impeccable/config.json`, and surface briefs before committing. Do not allow generated project truth to contradict the workflows.
-
-Because Inter is an explicit user-approved brand requirement, document the narrow detector exception rather than changing the font or disabling the detector:
-
-```bash
-npx impeccable ignores add-value overused-font Inter --reason "Approved MateryalPH brand typeface"
-```
-
-Keep Impeccable shared configuration/design/surface/critique artifacts tracked. Ignore its screenshots, caches, sessions, previews, annotations, local overrides, and runtime data using the current block from the Impeccable documentation.
-
-### 20.2 Per-surface workflow
-
-Run this sequence for a new or significantly revised page:
-
-1. `/impeccable shape <surface>` — clarify hierarchy and interaction before code.
-2. Implement using this planner, approved Figma assets, existing components, and the target platform.
-3. `/impeccable critique <surface>` — test clarity, trust, hierarchy, and decision load.
-4. `/impeccable harden <surface>` — cover failures, long names, localization, loading, empty/offline, and permission states.
-5. `/impeccable animate <surface>` — add only the motion specified here.
-6. `/impeccable audit <surface>` — accessibility, responsiveness, and performance.
-7. `/impeccable polish <surface>` — final token/component alignment.
-8. Run deterministic detection on React UI code and supported rendered URLs.
-
-Example:
-
-```text
-/impeccable shape Buyer Map Home using docs/design/MateryalPH_UI_UX_Implementation_Planner.md
-/impeccable critique Buyer Map Home marker hierarchy and Tier 1/Tier 2 clarity
-/impeccable harden Buyer Map Home for denied location, route failure, dense labels, and long store names
-/impeccable animate only selected marker, route reveal, and preview sheet
-/impeccable audit Buyer Map Home for WCAG 2.2 AA, reduced motion, and small screens
-/impeccable polish Buyer Map Home without changing approved workflows
-```
-
-Detector examples for the React portals:
-
-```bash
-npx impeccable detect apps/vendor-web/src
-npx impeccable detect apps/admin-web/src
-npx impeccable detect --json apps/vendor-web/src apps/admin-web/src
-```
-
-Treat findings as diagnostics. Resolve them or document a narrow, reasoned exception. A clean detector result does not replace human review, device testing, Flutter semantics tests, or WCAG validation.
+Review hierarchy, navigation, accessibility, responsive layouts, loading and error states using the approved workflows, semantic tokens, component tests, and browser review. Impeccable is no longer required or an acceptance gate.
 
 ## 21. Figma-to-Code Procedure
 
@@ -820,7 +760,7 @@ Treat findings as diagnostics. Resolve them or document a narrow, reasoned excep
 8. Replace raw hex values with semantic tokens.
 9. Implement all non-happy states and responsive behavior absent from the static frame.
 10. Render at target sizes and compare visually.
-11. Run Impeccable and accessibility checks.
+11. Run design review and accessibility checks.
 12. Record deviations with a reason: product correction, accessibility, responsive behavior, performance, provider policy, or component reuse.
 
 Do not use expiring Figma asset URLs in committed production code. Download approved non-sensitive assets into the repository or connect dynamic images to their proper API/storage source.
@@ -875,7 +815,7 @@ Do not use expiring Figma asset URLs in committed production code. Download appr
 
 | Development phase | Required UI/design work |
 | ---: | --- |
-| Repository foundation | Standardize paths; migrate portals to TypeScript; create tokens/web-ui; install/configure Impeccable |
+| Repository foundation | Standardize paths; migrate portals to TypeScript; create tokens/web-ui; document design review |
 | 1 | Theme foundation, auth states for three platforms, Vendor public landing page |
 | 2 | App shells, role-aware navigation, profile/security/session/agreement components |
 | 3 | Vendor onboarding stepper and activation checklist |
@@ -888,7 +828,7 @@ Do not use expiring Figma asset URLs in committed production code. Download appr
 | 10 | Projects, Work Packages, comparison, Project Vendor Map, inquiry attachment |
 | 11–13 | Payment, fulfillment, cancellation, refunds, disputes, invoices |
 | 14–16 | Reviews/scores/badges, notifications/reports, Admin map/analytics |
-| 17 | Full Impeccable audit/polish, WCAG, security/privacy, performance |
+| 17 | Full design review audit/polish, WCAG, security/privacy, performance |
 | 18–20 | E2E/UAT, Staging visual validation, Production release evidence |
 
 ## 25. UI Definition of Done
@@ -904,7 +844,7 @@ A screen is complete only when:
 7. Keyboard, screen reader, text scaling, contrast, target size, focus, and reduced-motion checks pass.
 8. Component/widget tests and golden/visual-regression evidence cover critical variants.
 9. Figma differences are recorded and intentional.
-10. Impeccable critique, harden, animate, audit, polish, and relevant detector checks have been reviewed.
+10. Accessibility, responsive layout, failure states, and navigation checks have been reviewed.
 11. API/client contracts are current and no placeholder provider result is presented as real.
 12. No secret, credential, private document, precise Buyer coordinate, or sensitive payload appears in code, fixtures, logs, screenshots, or design artifacts.
 
@@ -921,7 +861,7 @@ Keep Laravel 13/PHP 8.4. Use React 19, TypeScript, Vite 8, and Tailwind for both
 
 Implement the approved palette and Inter typography from the UI planner. Preserve #F97316 as the brand accent but use the accessible deeper action token for filled buttons with white text. Do not use raw colors in feature components. Do not use nested-card-heavy layouts, bounce/elastic motion, gray text on colored surfaces, or unlabeled icon controls.
 
-Install Impeccable project-locally for Codex only after showing the exact files and commands it will add. Initialize its PRODUCT.md and DESIGN.md from the approved MateryalPH documents, not guesses. Add the narrow Inter detector exception with the reason “Approved MateryalPH brand typeface.” Add the current official Impeccable ephemeral-output ignore block without weakening any existing secret ignore rule. Never ignore shared Impeccable config, design, surface, or critique artifacts.
+Use the approved PRODUCT.md, DESIGN.md, semantic tokens and UI planner for design review.
 
 For Buyer Map Home, use Figma frame 1:17996 as composition reference and the planner as behavioral authority. Implement/test reusable contracts for LocationSelector, RadiusSelector, SupplierMarker, SupplierCluster, RouteOverlay, SupplierPreviewSheet, ScoreBadge, map/list switch, and map async states. Fixed radius options are 5/10/20/30/40/50 km with 5 km default and confirmation before automatic expansion. Cluster overlapping Vendors. Individual Tier 2 labels show store name plus VPS or New Vendor; Tier 1 labels show store name plus Directory. Tier 1 Google ratings appear only in Place Details with attribution and never as VPS.
 
@@ -929,14 +869,13 @@ On Tier 2 selection: mark selected, safely adjust camera, request one driving ro
 
 For Project-Based Procurement Map, use Figma frame 1:18108 as composition reference. The origin is the Project site and candidates are eligible Tier 2 Vendors only. Markers show store name plus VPS/New Vendor; selected details show FMS, material match, budget result, distance/ETA, fulfillment, quote status, Add Note, Message Vendor with attached Work Package, comparison, and View Store. Use the same shared map/route engine as Map Home with a procurement-context flag, not a separate implementation.
 
-Add semantic/widget/component tests, responsive/golden/visual cases, map/provider fakes, stale-response tests, denied-location/manual-location tests, clustering tests, long-label tests, WCAG checks, and reduced-motion tests. Run relevant Flutter, React, token-drift, and Impeccable checks. End with changed files, before/after repository paths, commands and exact results, unresolved provider setup naming variables only, accessibility evidence, Figma deviations, and a suggested conventional commit. Stop and ask before any new material assumption.
+Add semantic/widget/component tests, responsive/golden/visual cases, map/provider fakes, stale-response tests, denied-location/manual-location tests, clustering tests, long-label tests, WCAG checks, and reduced-motion tests. Run relevant Flutter, React, token-drift, and design review checks. End with changed files, before/after repository paths, commands and exact results, unresolved provider setup naming variables only, accessibility evidence, Figma deviations, and a suggested conventional commit. Stop and ask before any new material assumption.
 ```
 
 ## 27. Implementation References
 
 - [MateryalPH Buyer Figma prototype](https://www.figma.com/design/tSnU3YwH6yynbxvfF2jVdT/Capstone_MateryalPH?node-id=0-1)
 - [MateryalPH GitHub repository](https://github.com/Capstone2026Team/MateryalPH)
-- [Impeccable design guidance and detector](https://github.com/pbakaus/impeccable)
 - [Google Maps for Flutter marker clustering](https://developers.google.com/maps/flutter-package/samples/cluster-markers)
 - [Google Maps for Flutter current-location behavior](https://developers.google.com/maps/flutter-package/samples/my-location)
 - [Google Routes API Compute Routes](https://developers.google.com/maps/documentation/routes/reference/rest/v2/TopLevel/computeRoutes)

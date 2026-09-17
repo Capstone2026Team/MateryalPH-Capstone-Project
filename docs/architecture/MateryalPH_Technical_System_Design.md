@@ -33,7 +33,7 @@ Laravel 13 is pinned with Composer's `^13.0` constraint and PHP 8.4 is the refer
 
 Laravel Passport is the reference OAuth2 implementation because the approved workflow explicitly requires short-lived signed access tokens, refresh tokens, revocation, and Authorization Code with PKCE. Passport signing keys must be loaded from protected environment configuration and never committed. The project will use Laravel 13's documented `php artisan install:api --passport` installation path, with explicit API guards, token lifetime limits, rotation/revocation tests, and protected deployment keys. See the official [Laravel 13 Passport documentation](https://laravel.com/docs/13.x/passport).
 
-The approved interface reference is `docs/design/MateryalPH_UI_UX_Implementation_Planner.md`. It reconciles the existing Figma prototype with the final workflows and defines the design tokens, responsive layouts, map interactions, motion, component contracts, Figma-to-code process, and Impeccable quality workflow. Product behavior in the workflows overrides outdated prototype content.
+The approved interface reference is `docs/design/MateryalPH_UI_UX_Implementation_Planner.md`. It reconciles the existing Figma prototype with the final workflows and defines design tokens, responsive layouts, map interactions, motion, component contracts, Figma-to-code process, and accessibility and browser review. Product behavior in the workflows overrides outdated prototype content.
 
 ## 2. Architecture Goals
 
@@ -887,7 +887,7 @@ The UI architecture is governed by `MateryalPH_UI_UX_Implementation_Planner.md` 
 - Project-Based Procurement reuses the same map/route components with the Project site as origin and eligible Tier 2 candidates only. Candidate details add FMS, match, budget, quotation, note, comparison, and Work Package inquiry actions.
 - The route-line animation is a one-time decision aid, not live delivery tracking. Reduced-motion settings render the final state without animation.
 - Every map has a synchronized accessible list and complete denied-location, offline, provider-failure, stale-response, empty, and retry behavior.
-- Impeccable is installed project-locally for design critique, hardening, motion review, audits, polish, and deterministic React checks. It does not override product truth or native Flutter/accessibility tests.
+- Design review uses component tests, browser inspection and accessibility checks. No additional design CLI is required.
 
 For the approved additions, use the detailed Buyer Explore/Materials Analytics/Material Price Details flows, Vendor aggregate-only Materials Analytics and Admin geographic section from the revised workflows. FIN amount/tax/billing states and MAT freshness/suppression states take precedence over older planner screenshots/text. In the implementation checkpoint, align the repository copy of UI planner/AGENTS references to these approved behaviors without altering unrelated security rules. No Figma file or external repository is changed by this document revision.
 

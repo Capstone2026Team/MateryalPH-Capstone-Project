@@ -36,7 +36,7 @@ describe('Account workspace access and security', () => {
 
   test('uses the resolved role and hides ungranted administration', async () => {
     open()
-    expect(await screen.findByRole('heading', { name: 'Your account' })).toBeVisible()
+    expect(await screen.findByRole('heading', { name: 'Settings' })).toBeVisible()
     expect(screen.getByRole('textbox', { name: 'Full name' })).toHaveValue('Support employee')
     expect(screen.queryByRole('button', { name: 'Admin invitations' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Admin accounts' })).not.toBeInTheDocument()
@@ -53,7 +53,7 @@ describe('Account workspace access and security', () => {
 
   test('email verification retains the required authenticator input', async () => {
     open()
-    await screen.findByRole('heading', { name: 'Your account' })
+    await screen.findByRole('heading', { name: 'Settings' })
     fireEvent.click(screen.getByRole('button', { name: 'Security' }))
     const send = await screen.findByRole('button', { name: 'Send email verification instead' })
     await waitFor(() => expect(send).toBeEnabled())
@@ -66,7 +66,7 @@ describe('Account workspace access and security', () => {
   test('canceling revoke-all sends no session mutation', async () => {
     vi.spyOn(window, 'confirm').mockReturnValueOnce(false)
     open()
-    await screen.findByRole('heading', { name: 'Your account' })
+    await screen.findByRole('heading', { name: 'Settings' })
     const revoke = screen.getByRole('button', { name: 'Sign out all devices' })
     await waitFor(() => expect(revoke).toBeEnabled())
     fireEvent.click(revoke)

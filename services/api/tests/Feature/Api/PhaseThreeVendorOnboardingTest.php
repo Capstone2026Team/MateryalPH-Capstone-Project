@@ -6,6 +6,7 @@ namespace Tests\Feature\Api;
 
 use App\Domain\Identity\OtpCodeGenerator;
 use App\Domain\Identity\TokenSessionService;
+use App\Domain\Vendors\PhilippineRegionDirectory;
 use App\Domain\Vendors\VendorExpiryService;
 use App\Domain\Vendors\XenditAccountVerificationGateway;
 use App\Models\AuthSession;
@@ -33,6 +34,23 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
         config()->set('materyalph.files.disk', 'local');
         Storage::fake('local');
         $this->withCredentials()->withUnencryptedCookie('mp_csrf', 'test-csrf')->withHeader('X-CSRF-Token', 'test-csrf');
+    }
+
+    public function test_upload_budget_is_shared_by_organization_and_does_not_block_reads(): void
+    {
+        [$organization, $owner] = $this->vendorFixture('OWNER');
+        [, $manager] = $this->vendorFixture('STORE_MANAGER', $organization);
+        $this->signInVendor($owner);
+        for ($attempt = 0; $attempt < 20; $attempt++) {
+            $this->postJson('/api/v1/vendors/onboarding/documents', [])->assertUnprocessable();
+        }
+        $this->signInVendor($manager);
+        $this->postJson('/api/v1/vendors/onboarding/media', [])
+            ->assertStatus(429)->assertHeader('Retry-After')
+            ->assertJsonPath('errors.0.code', 'RATE_LIMITED');
+        $this->getJson('/api/v1/vendors/onboarding')->assertOk();
+        $this->travel(61)->seconds();
+        $this->postJson('/api/v1/vendors/onboarding/media', [])->assertUnprocessable();
     }
 
     public function test_snapshot_exposes_independent_workstreams_and_setup_can_start_first(): void
@@ -65,6 +83,8 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
         $this->postJson('/api/v1/vendors/onboarding/welcome/dismiss')
             ->assertOk()
             ->assertJsonPath('data.welcome_required', false);
+        $this->signInVendor($owner);
+        $this->getJson('/api/v1/vendors/onboarding')->assertOk()->assertJsonPath('data.welcome_required', false);
     }
 
     public function test_tax_attestation_is_owner_only_and_tax_relief_requires_an_explicit_choice(): void
@@ -242,10 +262,10 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
         ];
         $this->postJson('/api/v1/vendors/onboarding/verification/submit', $payload, ['Idempotency-Key' => $key])
             ->assertStatus(202)
-            ->assertJsonPath('data.organization.store_verification_status', 'PENDING_VERIFICATION');
+            ->assertJsonPath('data.verification.status', 'PENDING_VERIFICATION');
         $this->postJson('/api/v1/vendors/onboarding/verification/submit', $payload, ['Idempotency-Key' => $key])
             ->assertStatus(202)
-            ->assertJsonPath('data.organization.store_verification_status', 'PENDING_VERIFICATION');
+            ->assertJsonPath('data.verification.status', 'PENDING_VERIFICATION');
         $this->assertDatabaseCount('idempotency_records', 1);
 
         $this->postJson('/api/v1/vendors/onboarding/verification/submit', [
@@ -284,6 +304,32 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
         self::assertStringContainsString('signature=', $adminFileUrl);
 
         self::assertSame('ACTIVE', $organization->refresh()->account_status);
+    }
+
+    public function test_store_media_preview_is_private_and_rechecks_ownership_on_download(): void
+    {
+        [, $owner] = $this->vendorFixture('OWNER');
+        $this->signInVendor($owner);
+        $this->patchJson('/api/v1/vendors/onboarding/setup', [
+            'organization_lock_version' => 1,
+            'public_store_name' => 'Preview Supply',
+        ])->assertOk();
+        $image = UploadedFile::fake()->createWithContent('logo.png', base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=', true));
+        $this->post('/api/v1/vendors/onboarding/media', ['file' => $image, 'kind' => 'LOGO'], ['Accept' => 'application/json'])->assertSuccessful();
+        $fileId = $this->getJson('/api/v1/vendors/onboarding')->assertOk()->json('data.setup.media.0.file_id');
+        self::assertIsString($fileId);
+        $url = $this->getJson('/api/v1/vendors/onboarding/files/'.$fileId)->assertOk()->json('data.url');
+        self::assertIsString($url);
+        $this->get($url)->assertOk()->assertHeader('Content-Type', 'image/png');
+
+        [, $otherOwner] = $this->vendorFixture('OWNER');
+        $this->signInVendor($otherOwner);
+        $this->getJson('/api/v1/vendors/onboarding/files/'.$fileId)->assertNotFound();
+        $this->getJson($url)->assertNotFound();
+
+        $this->signInVendor($owner);
+        DB::table('files')->where('id', $fileId)->update(['scan_state' => 'PENDING']);
+        $this->getJson('/api/v1/vendors/onboarding/files/'.$fileId)->assertNotFound();
     }
 
     public function test_admin_queue_requires_clean_evidence_and_records_immutable_decisions(): void
@@ -415,6 +461,7 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
     {
         [$organization, $owner] = $this->vendorFixture('OWNER', null, false, ['store_email' => 'ready@example.test', 'store_email_verified_at' => now()]);
         $this->signInVendor($owner);
+        $this->getJson('/api/v1/vendors/onboarding')->assertOk();
         DB::table('vendor_onboarding_steps')->where('vendor_organization_id', $organization->getKey())->where('section', 'STORE_VERIFICATION')->update(['status' => 'APPROVED']);
         DB::table('vendor_organizations')->where('id', $organization->getKey())->update(['store_verification_status' => 'APPROVED']);
         $this->patchJson('/api/v1/vendors/onboarding/setup', [
@@ -440,6 +487,15 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
             ->assertStatus(202)
             ->assertJsonPath('data.activation.status', 'ACTIVE')
             ->assertJsonPath('data.activation.marketplace_discoverability_status', 'NOT_DISCOVERABLE');
+        $version = $organization->refresh()->lock_version;
+        $this->patchJson('/api/v1/vendors/onboarding/setup', [
+            'organization_lock_version' => $version,
+            'description' => 'Updated public description',
+        ])->assertOk()->assertJsonPath('data.setup.status', 'COMPLETED')->assertJsonPath('data.activation.status', 'ACTIVE');
+        $this->patchJson('/api/v1/vendors/onboarding/setup', [
+            'organization_lock_version' => $version,
+            'description' => 'Stale update',
+        ])->assertConflict();
     }
 
     public function test_expired_approved_evidence_is_notified_once_and_restricts_active_store(): void
@@ -490,6 +546,57 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
         ]);
 
         return [$organization, $user];
+    }
+
+    public function test_dashboard_enforces_least_privilege_and_counts_active_accounts(): void
+    {
+        $this->vendorFixture('OWNER', organizationValues: ['account_status' => 'ACTIVE', 'store_activation_status' => 'ACTIVE']);
+        $this->vendorFixture('OWNER');
+        User::factory()->create(['account_type' => 'BUYER', 'account_status' => 'ACTIVE']);
+        User::factory()->create(['account_type' => 'BUYER', 'account_status' => 'SUSPENDED']);
+        $this->signInAdmin($this->adminFixture('ADMIN_VENDOR_VERIFICATION'));
+        $this->getJson('/api/v1/admin/dashboard')->assertOk()
+            ->assertJsonPath('data.active_vendors', 1)
+            ->assertJsonPath('data.inactive_vendors', 1)
+            ->assertJsonPath('data.active_buyers', null)
+            ->assertJsonPath('data.audit_events', null)
+            ->assertJsonPath('data.can_view_audit', false);
+        $this->getJson('/api/v1/admin/dashboard/audit')->assertForbidden();
+        $this->signInAdmin($this->adminFixture('ADMIN_SUPERADMIN'));
+        $this->getJson('/api/v1/admin/dashboard')->assertOk()
+            ->assertJsonPath('data.active_buyers', 1)
+            ->assertJsonPath('data.can_view_audit', true);
+        $this->getJson('/api/v1/admin/dashboard/audit')->assertOk()
+            ->assertJsonStructure(['data', 'meta' => ['current_page', 'last_page', 'total']]);
+    }
+
+    public function test_queue_validates_filters_and_preserves_unassigned_locations(): void
+    {
+        $this->vendorFixture('OWNER', organizationValues: ['store_verification_status' => 'PENDING_VERIFICATION']);
+        $this->signInAdmin($this->adminFixture('ADMIN_VENDOR_VERIFICATION'));
+        $this->getJson('/api/v1/admin/vendor-verification?region_code=UNASSIGNED&sort=location')->assertOk()
+            ->assertJsonCount(1, 'data')->assertJsonPath('data.0.region_code', null);
+        $this->getJson('/api/v1/admin/vendor-verification?sort=invalid')->assertUnprocessable();
+        $this->getJson('/api/v1/admin/vendor-verification?submitted_to=2026-09-17')->assertOk();
+        $this->getJson('/api/v1/admin/vendor-verification?submitted_from=2026-09-18&submitted_to=2026-09-17')->assertUnprocessable();
+    }
+
+    public function test_region_directory_uses_current_hierarchy_and_excludes_future_versions(): void
+    {
+        $current = (string) Str::uuid7();
+        $future = (string) Str::uuid7();
+        foreach ([$current => now()->subDay(), $future => now()->addYear()] as $id => $date) {
+            DB::table('psgc_versions')->insert(['id' => $id, 'version' => $date->toDateString(), 'effective_on' => $date->toDateString(), 'source_reference' => 'Test fixture']);
+        }
+        $region = (string) Str::uuid7();
+        DB::table('psgc_areas')->insert([
+            ['id' => $region, 'psgc_version_id' => $current, 'code' => 'TEST-REGION', 'name' => 'Test Region', 'level' => 'REGION', 'parent_id' => null],
+            ['id' => (string) Str::uuid7(), 'psgc_version_id' => $current, 'code' => 'TEST-CITY', 'name' => 'Test City', 'level' => 'CITY', 'parent_id' => $region],
+            ['id' => (string) Str::uuid7(), 'psgc_version_id' => $future, 'code' => 'FUTURE-REGION', 'name' => 'Future Region', 'level' => 'REGION', 'parent_id' => null],
+        ]);
+        $directory = new PhilippineRegionDirectory;
+        self::assertSame([['code' => 'TEST-REGION', 'name' => 'Test Region']], $directory->options());
+        self::assertSame('TEST-REGION', $directory->mapping()->where('code', 'TEST-CITY')->value('region_code'));
     }
 
     private function adminFixture(string $role): User

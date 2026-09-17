@@ -4,6 +4,8 @@ info:
   version: 1.0.0-phase.3
   description: >-
     Versioned Phase 1–3 contract. Vendor onboarding, verification, activation readiness, private evidence, and team invitations are server-authorized.
+    Browser credentials are isolated by configured frontend origin using _vendor and _admin suffixes on access, refresh, CSRF, MFA and bot-proof cookies.
+    Existing unsuffixed browser sessions require sign-in again; cookie selection never replaces account authorization. Native Buyer transport is unchanged.
 servers:
   - url: /api/v1
 tags:
@@ -2317,6 +2319,7 @@ paths:
   /vendors/onboarding/setup:
     patch:
       operationId: saveVendorSetupDraft
+      description: Saves version-checked setup progress. Public-name, description and public-contact-only edits preserve completed setup and activation; operational changes reopen setup requirements. Every successful save advances the organization lock version.
       tags: [ Vendor Onboarding ]
       security: [ { accessCookie: [], webCsrf: [] } ]
       requestBody:
@@ -2347,6 +2350,7 @@ paths:
   /vendors/onboarding/welcome/dismiss:
     post:
       operationId: dismissVendorOnboardingWelcome
+      description: Persists the Owner welcome completion across refreshes and sessions. Clients continue to Store Verification after success.
       tags: [ Vendor Onboarding ]
       security: [ { accessCookie: [], webCsrf: [] } ]
       responses:
@@ -2425,6 +2429,7 @@ paths:
   /vendors/onboarding/files/{fileId}:
     get:
       operationId: getVendorPrivateFileUrl
+      description: Returns a five-minute signed URL for clean private verification evidence or ready Store Profile media owned by the current Vendor organization. Download rechecks authentication, permissions, ownership and scan state.
       tags: [ Vendor Onboarding ]
       security: [ { accessCookie: [] } ]
       parameters:
@@ -2488,6 +2493,27 @@ paths:
         "403": { $ref: "#/components/responses/ErrorResponse" }
         "409": { $ref: "#/components/responses/ErrorResponse" }
         "422": { $ref: "#/components/responses/ErrorResponse" }
+  /admin/dashboard:
+    get:
+      operationId: getAdminDashboard
+      tags: [ Admin Vendor Verification ]
+      security: [ { accessCookie: [] } ]
+      responses:
+        "200": { description: Permission-scoped platform counts. Active Buyers means ACTIVE account status; null metrics are outside role scope., content: { application/json: { schema: { $ref: "#/components/schemas/AdminDashboardEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+  /admin/dashboard/audit:
+    get:
+      operationId: listAdminDashboardAudit
+      tags: [ Admin Vendor Verification ]
+      security: [ { accessCookie: [] } ]
+      parameters:
+        - { name: page, in: query, required: false, schema: { type: integer, minimum: 1 } }
+      responses:
+        "200": { description: Super Admin only. Paginated safe audit projection excluding private payloads and contact data., content: { application/json: { schema: { $ref: "#/components/schemas/AdminDashboardAuditEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
   /admin/vendor-verification:
     get:
       operationId: listVendorVerificationQueue
@@ -2496,6 +2522,10 @@ paths:
       parameters:
         - { name: status, in: query, required: false, schema: { type: string } }
         - { name: business_type, in: query, required: false, schema: { type: string } }
+        - { name: region_code, in: query, required: false, description: Current PSGC region code or UNASSIGNED. Region options are included in meta.regions., schema: { type: string } }
+        - { name: submitted_from, in: query, required: false, description: Inclusive Asia/Manila submission date., schema: { type: string, format: date } }
+        - { name: submitted_to, in: query, required: false, description: Inclusive Asia/Manila submission date., schema: { type: string, format: date } }
+        - { name: sort, in: query, required: false, schema: { type: string, enum: [ submitted_asc, submitted_desc, location ], default: submitted_desc } }
         - { name: page, in: query, required: false, schema: { type: integer, minimum: 1 } }
       responses:
         "200": { description: Paginated manual Store Verification queue., content: { application/json: { schema: { $ref: "#/components/schemas/AdminVendorVerificationQueueEnvelope" } } } }
@@ -2620,6 +2650,16 @@ components:
 
     ErrorResponse:
       description: Safe structured error with X-Correlation-ID response header.
+      headers:
+        Retry-After:
+          description: For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged.
+          schema: { type: integer, minimum: 1 }
+        X-RateLimit-Limit:
+          description: Maximum requests in the applicable rate-limit window.
+          schema: { type: integer }
+        X-RateLimit-Remaining:
+          description: Requests remaining in the applicable rate-limit window.
+          schema: { type: integer }
       content:
         application/json:
           schema: { $ref: "#/components/schemas/ErrorEnvelope" }
@@ -3633,6 +3673,31 @@ components:
         data: { $ref: "#/components/schemas/VendorInvitation" }
         meta: { type: object, additionalProperties: true }
         errors: { type: array, items: { type: object, additionalProperties: true } }
+    AdminDashboardEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { $ref: "#/components/schemas/AdminDashboardSummary" }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    AdminDashboardSummary:
+      type: object
+      required: [ generated_at, active_vendors, inactive_vendors, active_buyers, pending_document_reviews, audit_events, can_view_audit ]
+      properties:
+        generated_at: { type: string, format: date-time }
+        active_vendors: { type: [ integer, 'null' ], minimum: 0 }
+        inactive_vendors: { type: [ integer, 'null' ], minimum: 0 }
+        active_buyers: { type: [ integer, 'null' ], minimum: 0 }
+        pending_document_reviews: { type: [ integer, 'null' ], minimum: 0 }
+        audit_events: { type: [ integer, 'null' ], minimum: 0 }
+        can_view_audit: { type: boolean }
+    AdminDashboardAuditEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { type: array, items: { type: object, additionalProperties: true } }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
     AdminVendorVerificationQueueItem:
       type: object
       required: [ id, store_name, verification_status, progress ]
@@ -3640,6 +3705,10 @@ components:
         id: { type: string, format: uuid }
         store_name: { type: string }
         registered_name: { type: [ string, 'null' ] }
+        region_code: { type: [ string, 'null' ] }
+        region_name: { type: [ string, 'null' ] }
+        province: { type: [ string, 'null' ] }
+        city_municipality: { type: [ string, 'null' ] }
         business_type: { type: [ string, 'null' ] }
         verification_status: { type: string }
         setup_status: { type: string }

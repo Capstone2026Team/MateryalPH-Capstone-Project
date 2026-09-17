@@ -12,6 +12,7 @@ use App\Http\Requests\Admin\VendorRestrictionRequest;
 use App\Http\Requests\Admin\VendorVerificationDecisionRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 final class AdminVendorVerificationController extends Controller
 {
@@ -21,6 +22,10 @@ final class AdminVendorVerificationController extends Controller
             'status' => ['sometimes', 'string', 'max:32'],
             'business_type' => ['sometimes', 'string', 'max:32'],
             'page' => ['sometimes', 'integer', 'min:1'],
+            'region_code' => ['sometimes', 'string', 'max:16'],
+            'submitted_from' => ['sometimes', 'date_format:Y-m-d'],
+            'submitted_to' => ['sometimes', 'date_format:Y-m-d', ...($request->filled('submitted_from') ? ['after_or_equal:submitted_from'] : [])],
+            'sort' => ['sometimes', Rule::in(['submitted_asc', 'submitted_desc', 'location'])],
         ]);
         $result = $verification->queue($request, $filters);
 

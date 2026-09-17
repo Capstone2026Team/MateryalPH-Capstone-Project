@@ -50,7 +50,7 @@ import type { AcceptAccountAgreementsRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({ 
+  const config = new Configuration({
     // To configure API key authorization: accessCookie
     apiKey: "YOUR API KEY",
     // Configure HTTP bearer authorization: passportBearer
@@ -134,7 +134,7 @@ import type { AcceptVendorStaffInvitationRequest } from '@materyalph/api-client-
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({ 
+  const config = new Configuration({
     // To configure API key authorization: webCsrf
     apiKey: "YOUR API KEY",
   });
@@ -206,7 +206,7 @@ import type { ChangeAccountAdministratorRequest } from '@materyalph/api-client-t
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({ 
+  const config = new Configuration({
     // To configure API key authorization: accessCookie
     apiKey: "YOUR API KEY",
     // Configure HTTP bearer authorization: passportBearer
@@ -295,7 +295,7 @@ import type { ChangeAccountDelegationRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({ 
+  const config = new Configuration({
     // To configure API key authorization: accessCookie
     apiKey: "YOUR API KEY",
     // Configure HTTP bearer authorization: passportBearer
@@ -384,7 +384,7 @@ import type { ChangeAccountMembershipStatusRequest } from '@materyalph/api-clien
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({ 
+  const config = new Configuration({
     // To configure API key authorization: accessCookie
     apiKey: "YOUR API KEY",
     // Configure HTTP bearer authorization: passportBearer
@@ -473,7 +473,7 @@ import type { ChangeAccountPasswordRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({ 
+  const config = new Configuration({
     // To configure API key authorization: accessCookie
     apiKey: "YOUR API KEY",
     // Configure HTTP bearer authorization: passportBearer
@@ -559,7 +559,7 @@ import type { ConfirmAccountEmailChangeRequest } from '@materyalph/api-client-ts
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({ 
+  const config = new Configuration({
     // To configure API key authorization: accessCookie
     apiKey: "YOUR API KEY",
     // Configure HTTP bearer authorization: passportBearer
@@ -645,7 +645,7 @@ import type { ConfirmAccountFactorReplacementRequest } from '@materyalph/api-cli
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({ 
+  const config = new Configuration({
     // To configure API key authorization: accessCookie
     apiKey: "YOUR API KEY",
     // Configure HTTP bearer authorization: passportBearer
@@ -731,7 +731,7 @@ import type { GetAccountProfileRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({ 
+  const config = new Configuration({
     // To configure API key authorization: accessCookie
     apiKey: "YOUR API KEY",
     // Configure HTTP bearer authorization: passportBearer
@@ -812,7 +812,7 @@ import type { GetAccountSecurityRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({ 
+  const config = new Configuration({
     // To configure API key authorization: accessCookie
     apiKey: "YOUR API KEY",
     // Configure HTTP bearer authorization: passportBearer
@@ -893,7 +893,7 @@ import type { InviteAccountAdminRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({ 
+  const config = new Configuration({
     // To configure API key authorization: accessCookie
     apiKey: "YOUR API KEY",
     // Configure HTTP bearer authorization: passportBearer
@@ -982,7 +982,7 @@ import type { ListAccountAdminRolesRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({ 
+  const config = new Configuration({
     // To configure API key authorization: accessCookie
     apiKey: "YOUR API KEY",
     // Configure HTTP bearer authorization: passportBearer
@@ -1063,7 +1063,7 @@ import type { ListAccountAdministratorsRequest } from '@materyalph/api-client-ts
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({ 
+  const config = new Configuration({
     // To configure API key authorization: accessCookie
     apiKey: "YOUR API KEY",
     // Configure HTTP bearer authorization: passportBearer
@@ -1147,7 +1147,7 @@ import type { ListAccountAgreementsRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({ 
+  const config = new Configuration({
     // To configure API key authorization: accessCookie
     apiKey: "YOUR API KEY",
     // Configure HTTP bearer authorization: passportBearer
@@ -1228,7 +1228,7 @@ import type { ListAccountMembershipsRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({ 
+  const config = new Configuration({
     // To configure API key authorization: accessCookie
     apiKey: "YOUR API KEY",
     // Configure HTTP bearer authorization: passportBearer
@@ -1312,7 +1312,7 @@ import type { ListAccountSessionsRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({ 
+  const config = new Configuration({
     // To configure API key authorization: accessCookie
     apiKey: "YOUR API KEY",
     // Configure HTTP bearer authorization: passportBearer
@@ -1396,7 +1396,7 @@ import type { ReauthenticateAccountRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({ 
+  const config = new Configuration({
     // To configure API key authorization: accessCookie
     apiKey: "YOUR API KEY",
     // Configure HTTP bearer authorization: passportBearer
@@ -1482,7 +1482,7 @@ import type { ReplaceAccountRecoveryCodesRequest } from '@materyalph/api-client-
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({ 
+  const config = new Configuration({
     // To configure API key authorization: accessCookie
     apiKey: "YOUR API KEY",
     // Configure HTTP bearer authorization: passportBearer
@@ -1565,7 +1565,7 @@ import type { RevokeAccountSessionRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({ 
+  const config = new Configuration({
     // To configure API key authorization: accessCookie
     apiKey: "YOUR API KEY",
     // Configure HTTP bearer authorization: passportBearer
@@ -1651,7 +1651,7 @@ import type { RevokeAccountSessionsRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({ 
+  const config = new Configuration({
     // To configure API key authorization: accessCookie
     apiKey: "YOUR API KEY",
     // Configure HTTP bearer authorization: passportBearer
@@ -1737,7 +1737,7 @@ import type { SendAccountReauthenticationEmailRequest } from '@materyalph/api-cl
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({ 
+  const config = new Configuration({
     // To configure API key authorization: accessCookie
     apiKey: "YOUR API KEY",
     // Configure HTTP bearer authorization: passportBearer
@@ -1820,7 +1820,7 @@ import type { StartAccountEmailChangeRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({ 
+  const config = new Configuration({
     // To configure API key authorization: accessCookie
     apiKey: "YOUR API KEY",
     // Configure HTTP bearer authorization: passportBearer
@@ -1906,7 +1906,7 @@ import type { StartAccountFactorReplacementRequest } from '@materyalph/api-clien
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({ 
+  const config = new Configuration({
     // To configure API key authorization: accessCookie
     apiKey: "YOUR API KEY",
     // Configure HTTP bearer authorization: passportBearer
@@ -1989,7 +1989,7 @@ import type { UpdateAccountProfileRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({ 
+  const config = new Configuration({
     // To configure API key authorization: accessCookie
     apiKey: "YOUR API KEY",
     // Configure HTTP bearer authorization: passportBearer
