@@ -3,7 +3,7 @@ import { AccountsApi, AuthenticationApi, type AccountProfile } from '@materyalph
 import { clearWebSessionTransport, createWebApiConfiguration } from './web-api-session'
 import { ChevronDown, FileCheck2, LogOut, MonitorSmartphone, Settings, ShieldCheck, UserRound } from 'lucide-react'
 
-export function PortalAccountMenu({ portal, basePath, onNavigate, onSignOut, avatarUrl }: { portal: 'admin' | 'vendors'; basePath: string; onNavigate?: ((href: string) => void) | undefined; onSignOut?: (() => Promise<void>) | undefined; avatarUrl?: string }) {
+export function PortalAccountMenu({ portal, basePath, onNavigate, onSignOut, avatarUrl, onProfileChange }: { portal: 'admin' | 'vendors'; basePath: string; onNavigate?: ((href: string) => void) | undefined; onSignOut?: (() => Promise<void>) | undefined; avatarUrl?: string; onProfileChange?: (profile: AccountProfile | null) => void }) {
   const [profile, setProfile] = useState<AccountProfile | null>(null)
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -14,11 +14,12 @@ export function PortalAccountMenu({ portal, basePath, onNavigate, onSignOut, ava
   const href = portal === 'admin' ? '/workspace' : '/settings'
   useEffect(() => {
     let active = true
-    const refresh = () => { void new AccountsApi(createWebApiConfiguration(basePath, { refreshSession: true })).getAccountProfile({ accountPortal: portal }).then(result => { if (active) setProfile(result.data) }).catch(() => {}) }
+    onProfileChange?.(null)
+    const refresh = () => { void new AccountsApi(createWebApiConfiguration(basePath, { refreshSession: true })).getAccountProfile({ accountPortal: portal }).then(result => { if (active) { setProfile(result.data); onProfileChange?.(result.data) } }).catch(() => {}) }
     refresh()
     window.addEventListener('materyalph:profile-updated', refresh)
     return () => { active = false; window.removeEventListener('materyalph:profile-updated', refresh) }
-  }, [basePath, portal])
+  }, [basePath, portal, onProfileChange])
   useEffect(() => {
     function outside(event: PointerEvent) { if (!root.current?.contains(event.target as Node)) setOpen(false) }
     document.addEventListener('pointerdown', outside)

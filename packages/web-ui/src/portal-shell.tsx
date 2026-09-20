@@ -1,7 +1,8 @@
 import { RateLimitNotice } from './rate-limit-notice'
 import { PortalAccountMenu } from './portal-account-menu'
-import { useEffect, useState, type MouseEvent, type ReactNode } from 'react'
-import { Menu, X } from 'lucide-react'
+import { useEffect, useState, type FocusEvent, type MouseEvent, type ReactNode } from 'react'
+import { Circle, Menu, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react'
+import type { AccountProfile } from '@materyalph/api-client-ts'
 import './portal-shell.css'
 
 export type PortalNavItem = { label: string; href: string; icon?: ReactNode; disabled?: boolean }
@@ -35,57 +36,96 @@ export function PortalShell({
   homeHref?: string
   onNavigate?: (href: string) => void
 }) {
+  const isAdmin = portalLabel.startsWith('ADMIN')
+  const sidebarPreferenceKey = `materyalph:${isAdmin ? 'admin' : 'vendor'}:sidebar-collapsed`
   const [navigationOpen, setNavigationOpen] = useState(false)
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return window.sessionStorage.getItem(sidebarPreferenceKey) === 'true' } catch { return false }
+  })
+  const [profile, setProfile] = useState<AccountProfile | null>(null)
+  const [tooltip, setTooltip] = useState<{ label: string; top: number; left: number } | null>(null)
+  const storeIdentity = !isAdmin && profile?.role === 'OWNER'
+  const footerName = storeIdentity ? profile.organizationName || accountLabel : profile?.fullName || accountLabel
+  const footerStatus = isAdmin ? profile?.role.replaceAll('_', ' ') || accountStatus : accountStatus
+  const initials = footerName.trim().split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase()
+  function showTooltip(element: HTMLElement, label: string) {
+    const box = element.getBoundingClientRect()
+    setTooltip({ label, top: Math.min(box.top + box.height / 2, window.innerHeight - 24), left: box.right + 12 })
+  }
+  function toggleSidebar() {
+    const next = !collapsed
+    setCollapsed(next)
+    setTooltip(null)
+    // Store only this presentation preference; storage may be unavailable in private contexts.
+    try { window.sessionStorage.setItem(sidebarPreferenceKey, String(next)) } catch { /* The current view still works without persistence. */ }
+  }
   useEffect(() => {
-    const desktop = window.matchMedia?.('(min-width: 1024px) and (min-height: 800px)')
+    const desktop = window.matchMedia?.('(min-width: 1024px)')
     if (!desktop) return
-    const closeDrawer = () => setNavigationOpen(false)
+    const closeDrawer = () => { setNavigationOpen(false); setTooltip(null) }
     desktop.addEventListener('change', closeDrawer)
     return () => desktop.removeEventListener('change', closeDrawer)
   }, [])
 
   function follow(event: MouseEvent<HTMLAnchorElement>, href: string) {
     setNavigationOpen(false)
-    if (onNavigate && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey && event.button === 0) { event.preventDefault(); onNavigate(href) }
+    setTooltip(null)
+    // Account sections on the current page listen for the native hash change.
+    const samePageSection = href.includes('#') && href.split('#')[0] === window.location.pathname
+    if (onNavigate && !samePageSection && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey && event.button === 0) { event.preventDefault(); onNavigate(href) }
   }
 
   return (
-    <div className="portal-layout bg-surface-canvas text-text-strong">
-      <aside className={`portal-sidebar ${navigationOpen ? 'is-open' : ''} bg-surface-primary`} aria-label={`${portalLabel} navigation`} onKeyDown={event => {
-        if (event.key === 'Escape') { setNavigationOpen(false); requestAnimationFrame(() => document.getElementById('portal-navigation-toggle')?.focus()) }
+    <div className={`portal-layout ${collapsed ? 'is-collapsed' : ''} bg-surface-canvas text-text-strong`}>
+      <aside id="portal-sidebar" className={`portal-sidebar ${navigationOpen ? 'is-open' : ''} bg-surface-primary`} aria-label={`${portalLabel} navigation`} onKeyDown={event => {
+        if (event.key === 'Escape') { setTooltip(null); if (!navigationOpen) return; setNavigationOpen(false); requestAnimationFrame(() => document.getElementById('portal-navigation-toggle')?.focus()) }
         if (navigationOpen && event.key === 'Tab') {
-          const targets = event.currentTarget.querySelectorAll<HTMLElement>('a[href], button:not(:disabled)')
-          const first = targets[0], last = targets[targets.length - 1]
+          const targets = event.currentTarget.querySelectorAll<HTMLElement>('a[href], button:not(:disabled), [tabindex="0"]')
+          const visible = [...targets].filter(element => element.getClientRects().length > 0)
+          const first = visible[0], last = visible[visible.length - 1]
           if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus() }
           if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus() }
         }
       }}>
         <div className="portal-sidebar-content">
-          <div className="flex min-h-14 items-center px-5">
-            <a aria-label={`MateryalPH ${portalLabel}`} className="no-underline" href={homeHref} onClick={event => follow(event, homeHref)}><span className="block text-2xl font-bold tracking-tight text-text-strong">Materyal<span className="text-action-primary">PH</span></span><span className="mt-1 block text-[0.625rem] font-semibold tracking-[0.14em] text-text-secondary">{portalLabel}</span></a>
-            <button className="portal-drawer-toggle ml-auto inline-flex min-h-11 min-w-11 items-center justify-center rounded-control text-text-secondary" type="button" aria-label="Close navigation" onClick={() => { setNavigationOpen(false); requestAnimationFrame(() => document.getElementById('portal-navigation-toggle')?.focus()) }}><X size={20} aria-hidden="true" /></button>
+          <div className="portal-sidebar-header">
+            <a aria-label={`MateryalPH ${portalLabel}`} className="portal-wordmark no-underline" href={homeHref} onClick={event => follow(event, homeHref)}>
+              <span className="portal-brand-full"><span className="portal-brand-name">Materyal<span className="text-action-primary">PH</span></span><span className="portal-brand-label">{portalLabel}</span></span>
+              <span className="portal-brand-short" aria-hidden="true">M<span className="text-action-primary">PH</span></span>
+            </a>
+            <button className="portal-collapse-toggle portal-icon-control" type="button" aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} aria-expanded={!collapsed} aria-controls="portal-navigation" title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} onClick={toggleSidebar}>{collapsed ? <PanelLeftOpen size={18} aria-hidden="true" /> : <PanelLeftClose size={18} aria-hidden="true" />}</button>
+            <button className="portal-drawer-toggle portal-icon-control" type="button" aria-label="Close navigation" onClick={() => { setNavigationOpen(false); requestAnimationFrame(() => document.getElementById('portal-navigation-toggle')?.focus()) }}><X size={20} aria-hidden="true" /></button>
           </div>
-          <nav className="portal-nav">
-            {sections.filter(section => section.items.length > 0).map((section) => <section key={section.label} aria-label={section.label}>
+          <nav id="portal-navigation" className="portal-nav" aria-label={`${portalLabel} menu`} onScroll={() => setTooltip(null)}>
+            {sections.filter(section => section.items.length > 0).map(section => <section key={section.label} aria-label={section.label}>
               <h2 className="portal-nav-label">{section.label}</h2>
               <div>
-                {section.items.map((item) => item.disabled ? <span key={item.href} aria-disabled="true" className="portal-nav-row text-text-secondary opacity-60">{item.icon}<span>{item.label}</span><span className="sr-only">Unavailable</span></span> : <a key={item.href} className={`portal-nav-row rounded-control no-underline transition-colors ${item.href === activeHref ? 'bg-brand-orange-50 font-semibold text-action-primary' : 'text-text-secondary hover:bg-surface-canvas hover:text-text-strong'}`} href={item.href} aria-current={item.href === activeHref ? 'page' : undefined} onClick={event => follow(event, item.href)}>{item.icon}<span>{item.label}</span></a>)}
+                {section.items.map(item => {
+                  const content = <><span className="portal-nav-icon" aria-hidden="true">{item.icon ?? <Circle />}</span><span className="portal-nav-text">{item.label}</span></>
+                  const hints = { onMouseEnter: (event: MouseEvent<HTMLElement>) => showTooltip(event.currentTarget, item.label), onMouseLeave: () => setTooltip(null), onFocus: (event: FocusEvent<HTMLElement>) => showTooltip(event.currentTarget, item.label), onBlur: () => setTooltip(null) }
+                  return item.disabled
+                    ? <span key={item.href} role="link" tabIndex={0} aria-label={`${item.label}, unavailable`} aria-disabled="true" className="portal-nav-row" {...hints}>{content}</span>
+                    : <a key={item.href} className="portal-nav-row" href={item.href} aria-label={item.label} aria-current={item.href === activeHref ? 'page' : undefined} onClick={event => follow(event, item.href)} {...hints}>{content}</a>
+                })}
               </div>
             </section>)}
           </nav>
-          <div className="border-t border-border-default px-5 py-2">
-            <p className="truncate text-sm font-semibold">{accountLabel}</p>
-            {accountStatus && <p className="mt-1 text-xs text-text-secondary">{accountStatus}</p>}
+          <div className="portal-sidebar-footer">
+            <a className="portal-footer-account" href={isAdmin ? '/workspace#Profile' : '/settings#Profile'} aria-label={`Account profile: ${footerName}${footerStatus ? `, ${footerStatus}` : ''}`} onClick={event => follow(event, isAdmin ? '/workspace#Profile' : '/settings#Profile')} onMouseEnter={event => showTooltip(event.currentTarget, footerName)} onMouseLeave={() => setTooltip(null)} onFocus={event => showTooltip(event.currentTarget, footerName)} onBlur={() => setTooltip(null)}>
+              <span className="portal-footer-avatar" aria-hidden="true">{initials || '…'}</span>
+              <span className="portal-footer-details"><span className="portal-footer-name" title={footerName}>{footerName}</span>{footerStatus && <span className="portal-footer-status" title={footerStatus}>{footerStatus}</span>}</span>
+            </a>
           </div>
         </div>
       </aside>
+      {tooltip && <span className="portal-nav-tooltip" role="tooltip" style={{ top: tooltip.top, left: tooltip.left }}>{tooltip.label}</span>}
       <div className="portal-workspace min-w-0" inert={navigationOpen}>
         <header className="sticky top-0 z-30 flex min-h-16 items-center justify-between gap-4 border-b border-border-default bg-surface-primary px-4 sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center gap-3">
-            <button id="portal-navigation-toggle" className="portal-drawer-toggle inline-flex min-h-11 min-w-11 items-center justify-center rounded-control text-text-strong" type="button" aria-label="Open navigation" aria-expanded={navigationOpen} onClick={() => { setNavigationOpen(true); requestAnimationFrame(() => document.querySelector<HTMLButtonElement>('[aria-label="Close navigation"]')?.focus()) }}><Menu size={20} aria-hidden="true" /></button>
+            <button id="portal-navigation-toggle" className="portal-drawer-toggle inline-flex min-h-11 min-w-11 items-center justify-center rounded-control text-text-strong" type="button" aria-label="Open navigation" aria-expanded={navigationOpen} aria-controls="portal-sidebar" onClick={() => { setNavigationOpen(true); requestAnimationFrame(() => document.querySelector<HTMLButtonElement>('[aria-label="Close navigation"]')?.focus()) }}><Menu size={20} aria-hidden="true" /></button>
             {dateLabel && <p className="text-xs text-text-secondary" aria-label="System date">{dateLabel}</p>}
           </div>
-          <div className="flex shrink-0 items-center gap-2">{apiBasePath ? <PortalAccountMenu portal={portalLabel.startsWith('ADMIN') ? 'admin' : 'vendors'} basePath={apiBasePath} onNavigate={onNavigate} onSignOut={onSignOut} /> : headerActions}</div>
+          <div className="flex shrink-0 items-center gap-2">{apiBasePath ? <PortalAccountMenu onProfileChange={setProfile} portal={portalLabel.startsWith('ADMIN') ? 'admin' : 'vendors'} basePath={apiBasePath} onNavigate={onNavigate} onSignOut={onSignOut} /> : headerActions}</div>
         </header>
         <main id="main-content" className="mx-auto max-w-[96rem] px-4 py-6 sm:px-6 lg:px-8 lg:py-8"><RateLimitNotice />{children}</main>
       </div>

@@ -1,19 +1,63 @@
-.portal-layout { min-height: 100dvh; }
+.portal-layout { --portal-sidebar-width: 16rem; min-height: 100dvh; }
 .portal-sidebar { display: none; }
-.portal-sidebar.is-open { display: block; position: fixed; inset: 0; z-index: 40; overflow-y: auto; }
-.portal-sidebar-content { display: flex; flex-direction: column; min-height: 100%; }
-.portal-nav { flex: 1; padding: 4px 12px 8px; }
-.portal-nav-label { padding: 6px 10px 2px; font-size: 11px; line-height: 14px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--mp-color-text-secondary); }
-.portal-nav-row { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 5px 10px; font-size: 13px; line-height: 20px; border-left: 2px solid transparent; }
-.portal-nav-row > svg { width: 18px; height: 18px; flex-shrink: 0; stroke-width: 1.75; }
-.portal-nav-row[aria-current="page"] { border-left-color: var(--mp-color-brand-orange-500); }
-/* Dense desktop navigation: 30px rows exceed WCAG's 24px minimum.
-   Short viewports and browser zoom use the 44px drawer instead. */
-@media (min-width: 1024px) and (min-height: 800px) {
-  .portal-layout { display: grid; grid-template-columns: 16rem minmax(0, 1fr); height: 100dvh; overflow: hidden; }
-  .portal-sidebar, .portal-sidebar.is-open { display: block; position: static; overflow: visible; border-right: 1px solid var(--mp-color-border-default); }
-  .portal-sidebar-content { height: 100%; }
-  .portal-nav-row { min-height: 30px; padding-block: 5px; line-height: 20px; }
-  .portal-workspace { overflow-y: auto; }
+.portal-sidebar.is-open { display: block; position: fixed; inset: 0; z-index: 40; height: 100dvh; overflow: hidden; }
+.portal-sidebar-content { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.portal-sidebar-header { display: flex; flex: 0 0 auto; align-items: center; gap: 4px; min-height: 88px; padding: 12px 16px; border-bottom: 1px solid var(--mp-color-border-default); }
+.portal-wordmark { flex: 1; min-width: 0; color: var(--mp-color-text-strong); }
+.portal-brand-name { display: block; font-size: 23px; line-height: 28px; font-weight: 750; letter-spacing: -.9px; white-space: nowrap; }
+.portal-brand-label { display: block; margin-top: 4px; font-size: 10px; line-height: 16px; font-weight: 600; letter-spacing: .1em; }
+.portal-brand-short { display: none; font-size: 16px; font-weight: 750; letter-spacing: -.8px; }
+.portal-icon-control { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 8px; color: var(--mp-color-text-secondary); cursor: pointer; }
+.portal-icon-control:hover { background: var(--mp-color-surface-canvas); color: var(--mp-color-text-strong); }
+.portal-collapse-toggle { display: none; }
+.portal-nav { flex: 1 1 0; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; padding: 8px 12px 16px; scrollbar-width: thin; scrollbar-color: var(--mp-color-border-default) transparent; }
+.portal-nav::-webkit-scrollbar { width: 5px; }
+.portal-nav::-webkit-scrollbar-thumb { background: var(--mp-color-border-default); border-radius: 8px; }
+.portal-nav section + section { margin-top: 14px; }
+.portal-nav-label { padding: 8px 10px 6px; font-size: 10px; line-height: 16px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; transition: opacity 140ms ease; color: var(--mp-color-text-secondary); }
+.portal-nav-row { display: flex; position: relative; align-items: center; gap: 10px; min-height: 44px; padding: 7px 10px; font-size: 13px; line-height: 20px; border-radius: 6px; color: var(--mp-color-text-secondary); text-decoration: none; transition: background-color 140ms ease, color 140ms ease, padding 180ms ease; }
+.portal-nav-icon { display: grid; flex: 0 0 20px; width: 20px; height: 20px; place-items: center; }
+.portal-nav-icon svg { width: 18px; height: 18px; stroke-width: 1.75; }
+.portal-nav-text { min-width: 0; transition: opacity 140ms ease; }
+.portal-nav-row:not([aria-disabled]):hover { background: var(--mp-color-surface-canvas); color: var(--mp-color-text-strong); }
+.portal-nav-row[aria-current="page"], .portal-nav-row[aria-current="page"]:hover { background: var(--mp-color-brand-orange-50); color: var(--mp-color-action-primary); font-weight: 650; }
+.portal-nav-row[aria-current="page"]::before { content: ''; position: absolute; left: 0; top: 9px; bottom: 9px; width: 3px; border-radius: 3px; background: var(--mp-color-brand-orange-500); }
+.portal-nav-row[aria-disabled] { opacity: .55; cursor: not-allowed; }
+.portal-sidebar-footer { flex: 0 0 auto; border-top: 1px solid var(--mp-color-border-default); padding: 16px 12px; padding-bottom: max(16px, env(safe-area-inset-bottom)); }
+.portal-footer-account { display: flex; align-items: center; gap: 10px; min-height: 48px; border-radius: 8px; padding: 4px 8px; text-decoration: none; }
+.portal-footer-account:hover { background: var(--mp-color-surface-canvas); }
+.portal-footer-avatar { display: grid; flex: 0 0 32px; width: 32px; height: 32px; place-items: center; border-radius: 9px; background: var(--mp-color-brand-orange-100); color: var(--mp-color-action-primary); font-size: 12px; font-weight: 700; }
+.portal-footer-details { display: grid; min-width: 0; gap: 3px; transition: opacity 140ms ease; }
+.portal-footer-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; line-height: 18px; font-weight: 650; }
+.portal-footer-status { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; line-height: 16px; color: var(--mp-color-text-secondary); }
+.portal-nav-tooltip { display: none; }
+.portal-sidebar :focus-visible { outline: 2px solid var(--mp-color-focus-ring); outline-offset: -2px; }
+/* 36px desktop rows use the documented dense-navigation exception (WCAG minimum 24px).
+   Touch/tablet drawers retain 44px targets; header/footer remain fixed at every height. */
+@media (min-width: 1024px) {
+  .portal-layout { display: grid; grid-template-columns: var(--portal-sidebar-width) minmax(0, 1fr); height: 100dvh; overflow: hidden; transition: grid-template-columns 180ms ease; }
+  .portal-layout.is-collapsed { --portal-sidebar-width: 4.5rem; }
+  .portal-sidebar, .portal-sidebar.is-open { display: block; position: static; height: 100%; min-height: 0; min-width: 0; overflow: hidden; border-right: 1px solid var(--mp-color-border-default); }
+  .portal-workspace { overflow-y: auto; min-height: 0; }
   .portal-drawer-toggle { display: none; }
+  .portal-collapse-toggle { display: inline-flex; width: 32px; height: 32px; }
+  .portal-nav-row { min-height: 36px; padding-block: 8px; }
+  .portal-nav-text { white-space: nowrap; }
+  .portal-nav-row { overflow: hidden; }
+  .portal-nav-text { overflow: hidden; text-overflow: ellipsis; }
+  .portal-nav-tooltip { display: block; position: fixed; transform: translateY(-50%); z-index: 60; max-width: min(20rem, 60vw); padding: 8px 12px; border: 1px solid var(--mp-color-border-default); border-radius: 6px; background: var(--mp-color-surface-primary); color: var(--mp-color-text-strong); box-shadow: 0 2px 8px var(--mp-color-border-default); font-size: 12px; pointer-events: none; }
+  .is-collapsed .portal-sidebar-header { flex-direction: column; justify-content: center; padding: 8px; gap: 4px; }
+  .is-collapsed .portal-wordmark { flex: 0 0 auto; }
+  .is-collapsed .portal-brand-full { display: none; }
+  .is-collapsed .portal-brand-short { display: block; }
+  .is-collapsed .portal-nav { padding-inline: 10px; }
+  .is-collapsed .portal-nav-label { overflow: hidden; opacity: 0; white-space: nowrap; }
+  .is-collapsed .portal-nav-row { justify-content: center; padding-inline: 0; gap: 0; }
+  .is-collapsed .portal-nav-text { width: 0; opacity: 0; }
+  .is-collapsed .portal-sidebar-footer { padding-inline: 10px; }
+  .is-collapsed .portal-footer-account { justify-content: center; padding-inline: 0; gap: 0; }
+  .is-collapsed .portal-footer-details { width: 0; opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .portal-layout, .portal-nav-row, .portal-nav-text, .portal-nav-label, .portal-footer-details { transition: none; }
 }
