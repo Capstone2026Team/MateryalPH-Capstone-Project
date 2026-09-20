@@ -1,0 +1,19 @@
+.portal-layout { min-height: 100dvh; }
+.portal-sidebar { display: none; }
+.portal-sidebar.is-open { display: block; position: fixed; inset: 0; z-index: 40; overflow-y: auto; }
+.portal-sidebar-content { display: flex; flex-direction: column; min-height: 100%; }
+.portal-nav { flex: 1; padding: 4px 12px 8px; }
+.portal-nav-label { padding: 6px 10px 2px; font-size: 11px; line-height: 14px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--mp-color-text-secondary); }
+.portal-nav-row { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 5px 10px; font-size: 13px; line-height: 20px; border-left: 2px solid transparent; }
+.portal-nav-row > svg { width: 18px; height: 18px; flex-shrink: 0; stroke-width: 1.75; }
+.portal-nav-row[aria-current="page"] { border-left-color: var(--mp-color-brand-orange-500); }
+/* Dense desktop navigation: 30px rows exceed WCAG's 24px minimum.
+   Short viewports and browser zoom use the 44px drawer instead. */
+@media (min-width: 1024px) and (min-height: 800px) {
+  .portal-layout { display: grid; grid-template-columns: 16rem minmax(0, 1fr); height: 100dvh; overflow: hidden; }
+  .portal-sidebar, .portal-sidebar.is-open { display: block; position: static; overflow: visible; border-right: 1px solid var(--mp-color-border-default); }
+  .portal-sidebar-content { height: 100%; }
+  .portal-nav-row { min-height: 30px; padding-block: 5px; line-height: 20px; }
+  .portal-workspace { overflow-y: auto; }
+  .portal-drawer-toggle { display: none; }
+}

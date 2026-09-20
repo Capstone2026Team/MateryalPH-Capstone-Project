@@ -15,6 +15,48 @@ tags:
   - name: Vendor Onboarding
   - name: Admin Vendor Verification
 paths:
+  /{webAccountPortal}/account/photo:
+    parameters:
+      - { name: webAccountPortal, in: path, required: true, schema: { type: string, enum: [vendors, admin] } }
+    post:
+      operationId: uploadAccountPhoto
+      tags: [Accounts]
+      security: [{ accessCookie: [], webCsrf: [] }]
+      description: Owner-only personal photo. Maximum 2 MB JPEG/PNG/WebP and 4096 pixels per dimension. Malware-scanned, re-encoded to 256px PNG, privately stored. Five uploads/minute within the overall account budget. Fails closed if scanning or processing is unavailable.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [photo, lock_version]
+              properties:
+                photo: { type: string, format: binary }
+                lock_version: { type: integer, minimum: 1 }
+      responses:
+        '200': { description: Updated personal profile., content: { application/json: { schema: { $ref: '#/components/schemas/AccountProfileEnvelope' } } } }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '419': { $ref: '#/components/responses/ErrorResponse' }
+        '422': { $ref: '#/components/responses/ErrorResponse' }
+        '429': { $ref: '#/components/responses/ErrorResponse' }
+        '503': { $ref: '#/components/responses/ErrorResponse' }
+    get:
+      operationId: getAccountPhoto
+      tags: [Accounts]
+      security: [{ accessCookie: [] }]
+      description: Use the five-minute signed avatar_url from the profile. Authenticated owner only; private no-store response. No user identifier is accepted.
+      parameters:
+        - { name: expires, in: query, required: true, schema: { type: integer } }
+        - { name: signature, in: query, required: true, schema: { type: string } }
+        - { name: version, in: query, required: true, schema: { type: integer } }
+        - { name: owner, in: query, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Sanitized personal photo., content: { image/png: { schema: { type: string, format: binary } } } }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '404': { $ref: '#/components/responses/ErrorResponse' }
   /health:
     get:
       operationId: getApiHealth
@@ -2695,6 +2737,9 @@ components:
           {
             "id": { "type": "string" },
             "full_name": { "type": "string" },
+            "avatar_url": { "type": ["string", "null"], "description": "Short-lived owner-only personal photo URL; never the store logo." },
+            "mobile_e164": { "type": ["string", "null"], "description": "Authenticated Buyer registered contact number." },
+            "email_masked": { "type": "boolean", "description": "Buyer email stays masked until recent identity verification." },
             "email": { "type": "string" },
             "account_type": { "type": "string" },
             "account_status": { "type": "string" },
@@ -3117,13 +3162,16 @@ components:
         audience: { type: string }
         version: { type: integer, minimum: 1 }
         content_uri: { type: string }
+        content: { type: [string, "null"], description: "Maintained Markdown verified against the stored source hash." }
+        content_hash: { type: string, description: "SHA-256 of source before configured contact substitution." }
         effective_at: { type: string, format: date-time }
     AgreementListEnvelope:
-      allOf:
-        - $ref: "#/components/schemas/SuccessEnvelope"
-        - type: object
-          properties:
-            data: { type: array, items: { $ref: "#/components/schemas/Agreement" } }
+      type: object
+      required: [data, meta, errors]
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/Agreement" } }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
     CsrfEnvelope:
       allOf:
         - $ref: "#/components/schemas/SuccessEnvelope"
@@ -3168,7 +3216,7 @@ components:
       type: object
       description: Buyer-native registration. The BUYER/MOBILE transport is selected by the server route and contains no
         CAPTCHA evidence.
-      required: [ full_name, email, mobile_e164, password, password_confirmation, buyer_type, terms_accepted, privacy_accepted ]
+      required: [ full_name, email, mobile_e164, password, password_confirmation, buyer_type, terms_accepted, privacy_accepted, terms_version_id, terms_content_hash ]
       properties:
         full_name: { type: string, maxLength: 160 }
         email: { type: string, format: email, maxLength: 254 }
@@ -3177,6 +3225,8 @@ components:
         password_confirmation: { type: string, format: password }
         buyer_type: { type: string, maxLength: 32 }
         company_name: { type: [ string, "null" ], maxLength: 180 }
+        terms_version_id: { type: string, format: uuid }
+        terms_content_hash: { type: string, pattern: "^[a-f0-9]{64}$" }
         terms_accepted: { type: boolean, const: true }
         privacy_accepted: { type: boolean, const: true }
         risk_proof_token:
@@ -3343,6 +3393,8 @@ components:
         mobile_e164: { type: [ string, "null" ] }
         buyer_type: { type: [ string, "null" ] }
         company_name: { type: [ string, "null" ], maxLength: 180 }
+        terms_version_id: { type: string, format: uuid, description: "Required for SIGN_UP." }
+        terms_content_hash: { type: string, pattern: "^[a-f0-9]{64}$", description: "Required for SIGN_UP." }
         terms_accepted: { type: boolean }
         privacy_accepted: { type: boolean }
     GoogleMobileExchangeRequest:

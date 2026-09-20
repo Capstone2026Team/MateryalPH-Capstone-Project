@@ -12,6 +12,12 @@ class _$AccountProfile extends AccountProfile {
   @override
   final String fullName;
   @override
+  final String? avatarUrl;
+  @override
+  final String? mobileE164;
+  @override
+  final bool? emailMasked;
+  @override
   final String email;
   @override
   final String accountType;
@@ -44,6 +50,9 @@ class _$AccountProfile extends AccountProfile {
   _$AccountProfile._(
       {required this.id,
       required this.fullName,
+      this.avatarUrl,
+      this.mobileE164,
+      this.emailMasked,
       required this.email,
       required this.accountType,
       required this.accountStatus,
@@ -71,6 +80,9 @@ class _$AccountProfile extends AccountProfile {
     return other is AccountProfile &&
         id == other.id &&
         fullName == other.fullName &&
+        avatarUrl == other.avatarUrl &&
+        mobileE164 == other.mobileE164 &&
+        emailMasked == other.emailMasked &&
         email == other.email &&
         accountType == other.accountType &&
         accountStatus == other.accountStatus &&
@@ -91,6 +103,9 @@ class _$AccountProfile extends AccountProfile {
     var _$hash = 0;
     _$hash = $jc(_$hash, id.hashCode);
     _$hash = $jc(_$hash, fullName.hashCode);
+    _$hash = $jc(_$hash, avatarUrl.hashCode);
+    _$hash = $jc(_$hash, mobileE164.hashCode);
+    _$hash = $jc(_$hash, emailMasked.hashCode);
     _$hash = $jc(_$hash, email.hashCode);
     _$hash = $jc(_$hash, accountType.hashCode);
     _$hash = $jc(_$hash, accountStatus.hashCode);
@@ -113,6 +128,9 @@ class _$AccountProfile extends AccountProfile {
     return (newBuiltValueToStringHelper(r'AccountProfile')
           ..add('id', id)
           ..add('fullName', fullName)
+          ..add('avatarUrl', avatarUrl)
+          ..add('mobileE164', mobileE164)
+          ..add('emailMasked', emailMasked)
           ..add('email', email)
           ..add('accountType', accountType)
           ..add('accountStatus', accountStatus)
@@ -141,6 +159,18 @@ class AccountProfileBuilder
   String? _fullName;
   String? get fullName => _$this._fullName;
   set fullName(String? fullName) => _$this._fullName = fullName;
+
+  String? _avatarUrl;
+  String? get avatarUrl => _$this._avatarUrl;
+  set avatarUrl(String? avatarUrl) => _$this._avatarUrl = avatarUrl;
+
+  String? _mobileE164;
+  String? get mobileE164 => _$this._mobileE164;
+  set mobileE164(String? mobileE164) => _$this._mobileE164 = mobileE164;
+
+  bool? _emailMasked;
+  bool? get emailMasked => _$this._emailMasked;
+  set emailMasked(bool? emailMasked) => _$this._emailMasked = emailMasked;
 
   String? _email;
   String? get email => _$this._email;
@@ -209,6 +239,9 @@ class AccountProfileBuilder
     if ($v != null) {
       _id = $v.id;
       _fullName = $v.fullName;
+      _avatarUrl = $v.avatarUrl;
+      _mobileE164 = $v.mobileE164;
+      _emailMasked = $v.emailMasked;
       _email = $v.email;
       _accountType = $v.accountType;
       _accountStatus = $v.accountStatus;
@@ -249,6 +282,9 @@ class AccountProfileBuilder
                 id, r'AccountProfile', 'id'),
             fullName: BuiltValueNullFieldError.checkNotNull(
                 fullName, r'AccountProfile', 'fullName'),
+            avatarUrl: avatarUrl,
+            mobileE164: mobileE164,
+            emailMasked: emailMasked,
             email: BuiltValueNullFieldError.checkNotNull(
                 email, r'AccountProfile', 'email'),
             accountType: BuiltValueNullFieldError.checkNotNull(

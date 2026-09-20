@@ -49,6 +49,8 @@ class User extends Authenticatable implements OAuthenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'profile_photo_key',
+        'profile_photo_disk',
     ];
 
     /**

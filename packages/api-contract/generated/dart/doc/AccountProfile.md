@@ -10,6 +10,9 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **id** | **String** |  |
 **fullName** | **String** |  |
+**avatarUrl** | **String** | Short-lived owner-only personal photo URL; never the store logo. | [optional]
+**mobileE164** | **String** | Authenticated Buyer registered contact number. | [optional]
+**emailMasked** | **bool** | Buyer email stays masked until recent identity verification. | [optional]
 **email** | **String** |  |
 **accountType** | **String** |  |
 **accountStatus** | **String** |  |

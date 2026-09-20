@@ -71,6 +71,7 @@ npm run dev
 Set-Location apps/buyer-mobile
 flutter pub get
 flutter run
+flutter run -d 110013341G000422 --dart-define-from-file=config/development.json
 ```
 
 adb -s 110013341G000422 reverse tcp:8080 tcp:8080
@@ -104,7 +105,7 @@ flutter test
 # repository root after project-local installation
 ```
 
-Real provider credentials belong only in ignored local files. See
+Real provider credentials belong only n ignored local files. See
 `docs/architecture/MateryalPH_Environment_and_API_Key_Setup.md` for Google OIDC
 and Vendor reCAPTCHA Enterprise setup. Buyer iOS acceptance requires macOS with Xcode.
 

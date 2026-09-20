@@ -131,6 +131,10 @@ class _$BuyerMobileRegisterRequest extends BuyerMobileRegisterRequest {
   @override
   final String? companyName;
   @override
+  final String termsVersionId;
+  @override
+  final String termsContentHash;
+  @override
   final BuyerMobileRegisterRequestTermsAcceptedEnum termsAccepted;
   @override
   final BuyerMobileRegisterRequestPrivacyAcceptedEnum privacyAccepted;
@@ -149,6 +153,8 @@ class _$BuyerMobileRegisterRequest extends BuyerMobileRegisterRequest {
       required this.passwordConfirmation,
       required this.buyerType,
       this.companyName,
+      required this.termsVersionId,
+      required this.termsContentHash,
       required this.termsAccepted,
       required this.privacyAccepted,
       this.riskProofToken})
@@ -173,6 +179,8 @@ class _$BuyerMobileRegisterRequest extends BuyerMobileRegisterRequest {
         passwordConfirmation == other.passwordConfirmation &&
         buyerType == other.buyerType &&
         companyName == other.companyName &&
+        termsVersionId == other.termsVersionId &&
+        termsContentHash == other.termsContentHash &&
         termsAccepted == other.termsAccepted &&
         privacyAccepted == other.privacyAccepted &&
         riskProofToken == other.riskProofToken;
@@ -188,6 +196,8 @@ class _$BuyerMobileRegisterRequest extends BuyerMobileRegisterRequest {
     _$hash = $jc(_$hash, passwordConfirmation.hashCode);
     _$hash = $jc(_$hash, buyerType.hashCode);
     _$hash = $jc(_$hash, companyName.hashCode);
+    _$hash = $jc(_$hash, termsVersionId.hashCode);
+    _$hash = $jc(_$hash, termsContentHash.hashCode);
     _$hash = $jc(_$hash, termsAccepted.hashCode);
     _$hash = $jc(_$hash, privacyAccepted.hashCode);
     _$hash = $jc(_$hash, riskProofToken.hashCode);
@@ -205,6 +215,8 @@ class _$BuyerMobileRegisterRequest extends BuyerMobileRegisterRequest {
           ..add('passwordConfirmation', passwordConfirmation)
           ..add('buyerType', buyerType)
           ..add('companyName', companyName)
+          ..add('termsVersionId', termsVersionId)
+          ..add('termsContentHash', termsContentHash)
           ..add('termsAccepted', termsAccepted)
           ..add('privacyAccepted', privacyAccepted)
           ..add('riskProofToken', riskProofToken))
@@ -246,6 +258,16 @@ class BuyerMobileRegisterRequestBuilder
   String? get companyName => _$this._companyName;
   set companyName(String? companyName) => _$this._companyName = companyName;
 
+  String? _termsVersionId;
+  String? get termsVersionId => _$this._termsVersionId;
+  set termsVersionId(String? termsVersionId) =>
+      _$this._termsVersionId = termsVersionId;
+
+  String? _termsContentHash;
+  String? get termsContentHash => _$this._termsContentHash;
+  set termsContentHash(String? termsContentHash) =>
+      _$this._termsContentHash = termsContentHash;
+
   BuyerMobileRegisterRequestTermsAcceptedEnum? _termsAccepted;
   BuyerMobileRegisterRequestTermsAcceptedEnum? get termsAccepted =>
       _$this._termsAccepted;
@@ -279,6 +301,8 @@ class BuyerMobileRegisterRequestBuilder
       _passwordConfirmation = $v.passwordConfirmation;
       _buyerType = $v.buyerType;
       _companyName = $v.companyName;
+      _termsVersionId = $v.termsVersionId;
+      _termsContentHash = $v.termsContentHash;
       _termsAccepted = $v.termsAccepted;
       _privacyAccepted = $v.privacyAccepted;
       _riskProofToken = $v.riskProofToken;
@@ -318,6 +342,12 @@ class BuyerMobileRegisterRequestBuilder
           buyerType: BuiltValueNullFieldError.checkNotNull(
               buyerType, r'BuyerMobileRegisterRequest', 'buyerType'),
           companyName: companyName,
+          termsVersionId: BuiltValueNullFieldError.checkNotNull(
+              termsVersionId, r'BuyerMobileRegisterRequest', 'termsVersionId'),
+          termsContentHash: BuiltValueNullFieldError.checkNotNull(
+              termsContentHash,
+              r'BuyerMobileRegisterRequest',
+              'termsContentHash'),
           termsAccepted: BuiltValueNullFieldError.checkNotNull(
               termsAccepted, r'BuyerMobileRegisterRequest', 'termsAccepted'),
           privacyAccepted: BuiltValueNullFieldError.checkNotNull(

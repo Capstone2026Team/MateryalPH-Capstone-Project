@@ -1,3 +1,4 @@
+import { VendorPlaceholderPage } from './pages/PhaseThreeVendorPages'
 import { AcceptStaffInvitation } from './pages/AcceptStaffInvitation'
 import { Button, Field, PhoneField, StatusMessage } from '@materyalph/web-ui'
 import { ArrowRight } from 'lucide-react'
@@ -41,11 +42,11 @@ function App() {
         <Route path="/auth/callback" element={<VendorAuthCallbackPage />} />
         <Route path="/entry" element={<VendorEntryPage />} />
         <Route path="/welcome" element={<VendorWelcomePage />} />
+        <Route path="/preview/:module" element={<VendorPlaceholderPage />} />
         <Route path="/dashboard" element={<VendorDashboardPage />} />
         <Route path="/onboarding/verification" element={<VendorVerificationPage />} />
         <Route path="/onboarding/setup" element={<VendorSetupPage />} />
         <Route path="/team" element={<VendorTeamPage />} />
-        <Route path="/account" element={<VendorAccountPage />} />
         <Route path="/settings" element={<VendorAccountPage />} />
         <Route path="/store-profile" element={<VendorStoreProfilePage />} />
         <Route path="/fees" element={<InfoPage title="Payments and fees"><FeesContent /></InfoPage>} />

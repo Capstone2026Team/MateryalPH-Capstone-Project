@@ -37,6 +37,18 @@ void main() {
       // TODO
     });
 
+    // Maintained Markdown verified against the stored source hash.
+    // String content
+    test('to test the property `content`', () async {
+      // TODO
+    });
+
+    // SHA-256 of source before configured contact substitution.
+    // String contentHash
+    test('to test the property `contentHash`', () async {
+      // TODO
+    });
+
     // DateTime effectiveAt
     test('to test the property `effectiveAt`', () async {
       // TODO

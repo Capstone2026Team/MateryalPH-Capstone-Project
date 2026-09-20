@@ -1,3 +1,4 @@
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter/material.dart';
 
 /// Keeps account tasks readable on wide screens and reachable above the keyboard.
@@ -44,7 +45,7 @@ class AuthNotice extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Icon(
-              isError ? Icons.error_outline : Icons.info_outline,
+              isError ? LucideIcons.circleAlert : LucideIcons.info,
               color: isError ? colors.onErrorContainer : colors.onSurface,
               size: 22,
             ),

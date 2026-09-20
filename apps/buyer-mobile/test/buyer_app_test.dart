@@ -1,3 +1,5 @@
+import 'terms_fixtures.dart';
+import 'package:materyalph/screens/terms_screen.dart';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
@@ -53,6 +55,52 @@ void main() {
     }
   }
 
+  for (final fromLogin in [false, true]) {
+    testWidgets(
+      'registration entry via ${fromLogin ? "Login" : "Welcome"} requires Terms and back returns to origin',
+      (tester) async {
+        await tester.pumpWidget(
+          BuyerApp(
+            authRepository: termsRepository(),
+            onboardingRepository: _MemoryOnboardingRepository(complete: true),
+            deepLinkSource: _MemoryDeepLinkSource(),
+          ),
+        );
+        await tester.pumpAndSettle();
+        if (fromLogin) {
+          await tester.ensureVisible(
+            find.text('Already have an account? Sign in'),
+          );
+          await tester.tap(find.text('Already have an account? Sign in'));
+          await tester.pumpAndSettle();
+        }
+        final action = find.text(
+          fromLogin
+              ? 'New to MateryalPH? Create an account'
+              : 'Create buyer account',
+        );
+        await tester.ensureVisible(action);
+        await tester.tap(action);
+        await tester.pumpAndSettle();
+        expect(find.byType(TermsScreen), findsOneWidget);
+        expect(
+          tester
+              .widget<FilledButton>(
+                find.widgetWithText(FilledButton, 'Accept and continue'),
+              )
+              .onPressed,
+          isNull,
+        );
+        await tester.tap(find.byTooltip('Back'));
+        await tester.pumpAndSettle();
+        expect(find.byType(TermsScreen), findsNothing);
+        expect(
+          find.text(fromLogin ? 'Login to your account' : 'Welcome to'),
+          findsOneWidget,
+        );
+      },
+    );
+  }
   test(
     'stored tokens do not create an authenticated session while offline',
     () async {
@@ -208,7 +256,7 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
       BuyerApp(
-        authRepository: AuthRepository(tokenStore: _MemoryTokenStore()),
+        authRepository: termsRepository(),
         onboardingRepository: _MemoryOnboardingRepository(complete: true),
         deepLinkSource: _MemoryDeepLinkSource(),
       ),
@@ -227,8 +275,8 @@ void main() {
     await tester.ensureVisible(find.text('Create buyer account'));
     await tester.tap(find.text('Create buyer account'));
     await tester.pumpAndSettle();
-    expect(find.text('Start sourcing with confidence'), findsOneWidget);
-    expect(find.text('Sign up with Google'), findsOneWidget);
+    expect(find.byType(TermsScreen), findsOneWidget);
+    expect(find.text('Accept and continue'), findsOneWidget);
   });
 
   testWidgets('onboarding reflows on a compact 375 by 667 surface', (

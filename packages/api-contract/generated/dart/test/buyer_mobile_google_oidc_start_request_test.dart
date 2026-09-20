@@ -27,6 +27,18 @@ void main() {
       // TODO
     });
 
+    // Required for SIGN_UP.
+    // String termsVersionId
+    test('to test the property `termsVersionId`', () async {
+      // TODO
+    });
+
+    // Required for SIGN_UP.
+    // String termsContentHash
+    test('to test the property `termsContentHash`', () async {
+      // TODO
+    });
+
     // bool termsAccepted
     test('to test the property `termsAccepted`', () async {
       // TODO

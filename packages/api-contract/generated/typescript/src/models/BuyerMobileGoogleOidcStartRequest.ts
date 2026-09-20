@@ -36,6 +36,14 @@ export interface BuyerMobileGoogleOidcStartRequest {
      */
     companyName?: string | null;
     /**
+     * Required for SIGN_UP.
+     */
+    termsVersionId?: string;
+    /**
+     * Required for SIGN_UP.
+     */
+    termsContentHash?: string;
+    /**
      *
      */
     termsAccepted?: boolean;
@@ -78,6 +86,8 @@ export function BuyerMobileGoogleOidcStartRequestFromJSONTyped(json: any, ignore
         'mobileE164': json['mobile_e164'] === undefined ? undefined : json['mobile_e164'] === null ? null : json['mobile_e164'],
         'buyerType': json['buyer_type'] === undefined ? undefined : json['buyer_type'] === null ? null : json['buyer_type'],
         'companyName': json['company_name'] === undefined ? undefined : json['company_name'] === null ? null : json['company_name'],
+        'termsVersionId': json['terms_version_id'] == null ? undefined : json['terms_version_id'],
+        'termsContentHash': json['terms_content_hash'] == null ? undefined : json['terms_content_hash'],
         'termsAccepted': json['terms_accepted'] == null ? undefined : json['terms_accepted'],
         'privacyAccepted': json['privacy_accepted'] == null ? undefined : json['privacy_accepted'],
     };
@@ -98,6 +108,8 @@ export function BuyerMobileGoogleOidcStartRequestToJSONTyped(value?: BuyerMobile
         'mobile_e164': value['mobileE164'],
         'buyer_type': value['buyerType'],
         'company_name': value['companyName'],
+        'terms_version_id': value['termsVersionId'],
+        'terms_content_hash': value['termsContentHash'],
         'terms_accepted': value['termsAccepted'],
         'privacy_accepted': value['privacyAccepted'],
     };

@@ -14,6 +14,8 @@ Name | Type
 `passwordConfirmation` | string
 `buyerType` | string
 `companyName` | string
+`termsVersionId` | string
+`termsContentHash` | string
 `termsAccepted` | boolean
 `privacyAccepted` | boolean
 `riskProofToken` | string
@@ -32,6 +34,8 @@ const example = {
   "passwordConfirmation": null,
   "buyerType": null,
   "companyName": null,
+  "termsVersionId": null,
+  "termsContentHash": null,
   "termsAccepted": null,
   "privacyAccepted": null,
   "riskProofToken": null,

@@ -1,16 +1,22 @@
+import '../widgets/legal_content.dart';
+import '../widgets/buyer_account_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:materyalph_api_client/materyalph_api_client.dart';
 import '../auth/auth_repository.dart';
 import '../widgets/auth_content.dart';
+import '../design_system/theme.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class BuyerAccountScreen extends StatefulWidget {
   const BuyerAccountScreen({
     super.key,
     required this.repository,
     required this.onSignedOut,
+    this.initialSection = 'Profile',
   });
   final AuthRepository repository;
   final VoidCallback onSignedOut;
+  final String initialSection;
 
   @override
   State<BuyerAccountScreen> createState() => _BuyerAccountScreenState();
@@ -40,6 +46,7 @@ class _BuyerAccountScreenState extends State<BuyerAccountScreen> {
   @override
   void initState() {
     super.initState();
+    _section = widget.initialSection;
     _load();
   }
 
@@ -155,6 +162,11 @@ class _BuyerAccountScreenState extends State<BuyerAccountScreen> {
       await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
+          scrollable: true,
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 24,
+          ),
           title: const Text('Confirm account action'),
           content: Text(message),
           actions: [
@@ -163,6 +175,10 @@ class _BuyerAccountScreenState extends State<BuyerAccountScreen> {
               child: const Text('Cancel'),
             ),
             FilledButton(
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(88, 48),
+                backgroundColor: Theme.of(context).colorScheme.error,
+              ),
               onPressed: () => Navigator.pop(context, true),
               child: const Text('Confirm'),
             ),
@@ -187,26 +203,50 @@ class _BuyerAccountScreenState extends State<BuyerAccountScreen> {
     TextEditingController controller, {
     bool secret = false,
     TextInputType? keyboard,
+    String? helper,
   }) => Padding(
     padding: const EdgeInsets.only(bottom: 16),
     child: TextField(
       controller: controller,
+      enabled: !_busy,
       obscureText: secret,
       keyboardType: keyboard,
       autocorrect: !secret,
       enableSuggestions: !secret,
-      decoration: InputDecoration(labelText: label),
+      decoration: InputDecoration(labelText: label, helperText: helper),
     ),
   );
   Widget _button(String label, VoidCallback action) => Padding(
     padding: const EdgeInsets.only(bottom: 16),
     child: FilledButton(onPressed: _busy ? null : action, child: Text(label)),
   );
+  Widget _secondaryButton(String label, VoidCallback action) => Padding(
+    padding: const EdgeInsets.only(bottom: 16),
+    child: OutlinedButton(onPressed: _busy ? null : action, child: Text(label)),
+  );
+  Widget _dangerButton(String label, VoidCallback action) => Padding(
+    padding: const EdgeInsets.only(bottom: 16),
+    child: OutlinedButton(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: Theme.of(context).colorScheme.error,
+      ),
+      onPressed: _busy ? null : action,
+      child: Text(label),
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(_section)),
+      backgroundColor: Colors.white,
+      appBar: buyerAccountBar(
+        context,
+        _section == 'Profile'
+            ? 'Edit Account Details'
+            : _section == 'Sessions'
+            ? 'Sessions / Devices'
+            : _section,
+      ),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _load,
@@ -219,41 +259,19 @@ class _BuyerAccountScreenState extends State<BuyerAccountScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   child: AuthNotice(message: _message!, isError: _error),
                 ),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: ['Profile', 'Security', 'Sessions', 'Agreements']
-                    .map(
-                      (item) => ChoiceChip(
-                        label: Text(item),
-                        selected: _section == item,
-                        onSelected: _busy
-                            ? null
-                            : (_) {
-                                setState(() {
-                                  _section = item;
-                                  _page = 1;
-                                  _message = null;
-                                });
-                                _load();
-                              },
-                      ),
-                    )
-                    .toList(),
-              ),
-              const SizedBox(height: 24),
               if (_profile == null) ...[
                 const Text('Your account could not be loaded yet.'),
                 _button('Retry', _load),
               ] else if (_section == 'Profile') ...[
                 Text(
                   'Personal information',
-                  style: Theme.of(context).textTheme.headlineSmall,
+                  style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 20),
                 _field('Full name', _name),
                 DropdownButtonFormField<String>(
                   isExpanded: true,
+                  icon: const Icon(LucideIcons.chevronDown),
                   initialValue: _buyerType,
                   decoration: const InputDecoration(labelText: 'Buyer type'),
                   items: const [
@@ -292,7 +310,52 @@ class _BuyerAccountScreenState extends State<BuyerAccountScreen> {
                     );
                   }, 'Profile saved.'),
                 ),
-                Text('Email: ${_profile!.email}'),
+                const Divider(),
+                const BuyerSectionLabel('Registered contact details'),
+                Text('Email', style: Theme.of(context).textTheme.labelLarge),
+                const SizedBox(height: 6),
+                if (_profile!.emailMasked ??
+                    _profile!.email.contains('***')) ...[
+                  const Text(
+                    'Verify your identity to view your full email address.',
+                  ),
+                  TextButton.icon(
+                    icon: const Icon(LucideIcons.shieldCheck),
+                    label: const Text('Verify identity'),
+                    onPressed: _busy
+                        ? null
+                        : () async {
+                            await Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => BuyerAccountScreen(
+                                  repository: widget.repository,
+                                  onSignedOut: widget.onSignedOut,
+                                  initialSection: 'Security',
+                                ),
+                              ),
+                            );
+                            if (mounted) await _load();
+                          },
+                  ),
+                ] else
+                  SelectableText(_profile!.email),
+                const SizedBox(height: 20),
+                Text(
+                  'Phone number',
+                  style: Theme.of(context).textTheme.labelLarge,
+                ),
+                const SizedBox(height: 6),
+                SelectableText(
+                  _profile!.mobileE164?.trim().isNotEmpty == true
+                      ? _profile!.mobileE164!
+                      : 'Phone number not added',
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Email changes are managed securely in Security.',
+                  style: TextStyle(color: BuyerTheme.muted),
+                ),
+                const Divider(),
                 const SizedBox(height: 12),
                 Text('Account created: ${_time(_profile!.createdAt)}'),
               ] else if (_section == 'Security') ...[
@@ -325,7 +388,13 @@ class _BuyerAccountScreenState extends State<BuyerAccountScreen> {
                     reload: false,
                   ),
                 ),
-                _button(
+                const SizedBox(height: 8),
+                const Text(
+                  'Or verify with your current email',
+                  style: TextStyle(color: BuyerTheme.muted),
+                ),
+                const SizedBox(height: 12),
+                _secondaryButton(
                   'Send email verification instead',
                   () => _act(
                     () async {
@@ -343,7 +412,7 @@ class _BuyerAccountScreenState extends State<BuyerAccountScreen> {
                   'Current-email verification code',
                   _reauthenticationCode,
                 ),
-                _button(
+                _secondaryButton(
                   'Verify email code',
                   () => _act(
                     () async {
@@ -369,9 +438,11 @@ class _BuyerAccountScreenState extends State<BuyerAccountScreen> {
                 ),
                 const SizedBox(height: 16),
                 _field(
-                  'New password (at least 14 characters)',
+                  'New password',
                   _newPassword,
                   secret: true,
+                  helper:
+                      'At least 14 characters with upper/lowercase and a number.',
                 ),
                 _field('Confirm new password', _confirmPassword, secret: true),
                 _button(
@@ -497,6 +568,9 @@ class _BuyerAccountScreenState extends State<BuyerAccountScreen> {
                                   reload: !session.current,
                                 );
                               },
+                        style: TextButton.styleFrom(
+                          foregroundColor: Theme.of(context).colorScheme.error,
+                        ),
                         child: const Text('Revoke session'),
                       ),
                       const Divider(),
@@ -504,7 +578,9 @@ class _BuyerAccountScreenState extends State<BuyerAccountScreen> {
                   ),
                 ),
                 if (_lastPage > 1)
-                  Row(
+                  Wrap(
+                    spacing: 12,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       TextButton(
                         onPressed: _page > 1 && !_busy
@@ -515,7 +591,7 @@ class _BuyerAccountScreenState extends State<BuyerAccountScreen> {
                             : null,
                         child: const Text('Previous'),
                       ),
-                      Expanded(child: Text('Page $_page of $_lastPage')),
+                      Text('Page $_page of $_lastPage'),
                       TextButton(
                         onPressed: _page < _lastPage && !_busy
                             ? () {
@@ -527,7 +603,7 @@ class _BuyerAccountScreenState extends State<BuyerAccountScreen> {
                       ),
                     ],
                   ),
-                _button('Sign out other devices', () async {
+                _dangerButton('Sign out other devices', () async {
                   if (!await _confirm('Sign out all other devices?')) return;
                   await _act(() async {
                     await widget.repository.accountOperation(
@@ -541,7 +617,7 @@ class _BuyerAccountScreenState extends State<BuyerAccountScreen> {
                     );
                   }, 'Other devices signed out.');
                 }),
-                _button('Sign out all devices', () async {
+                _dangerButton('Sign out all devices', () async {
                   if (!await _confirm(
                     'Sign out every device, including this one?',
                   )) {
@@ -584,7 +660,7 @@ class _BuyerAccountScreenState extends State<BuyerAccountScreen> {
                             : 'Not yet accepted',
                       ),
                       const SizedBox(height: 12),
-                      Text(
+                      LegalContent(
                         agreement.content ??
                             'Approved text is not available yet. Contact support for the published copy.',
                       ),

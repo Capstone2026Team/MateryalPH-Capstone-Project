@@ -12,6 +12,8 @@ Name | Type | Description | Notes
 **mobileE164** | **String** |  | [optional]
 **buyerType** | **String** |  | [optional]
 **companyName** | **String** |  | [optional]
+**termsVersionId** | **String** | Required for SIGN_UP. | [optional]
+**termsContentHash** | **String** | Required for SIGN_UP. | [optional]
 **termsAccepted** | **bool** |  | [optional]
 **privacyAccepted** | **bool** |  | [optional]
 

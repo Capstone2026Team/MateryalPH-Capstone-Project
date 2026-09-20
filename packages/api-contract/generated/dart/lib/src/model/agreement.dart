@@ -17,6 +17,8 @@ part 'agreement.g.dart';
 /// * [audience]
 /// * [version]
 /// * [contentUri]
+/// * [content] - Maintained Markdown verified against the stored source hash.
+/// * [contentHash] - SHA-256 of source before configured contact substitution.
 /// * [effectiveAt]
 @BuiltValue()
 abstract class Agreement implements Built<Agreement, AgreementBuilder> {
@@ -37,6 +39,14 @@ abstract class Agreement implements Built<Agreement, AgreementBuilder> {
 
   @BuiltValueField(wireName: r'content_uri')
   String get contentUri;
+
+  /// Maintained Markdown verified against the stored source hash.
+  @BuiltValueField(wireName: r'content')
+  String? get content;
+
+  /// SHA-256 of source before configured contact substitution.
+  @BuiltValueField(wireName: r'content_hash')
+  String? get contentHash;
 
   @BuiltValueField(wireName: r'effective_at')
   DateTime get effectiveAt;
@@ -94,6 +104,20 @@ class _$AgreementSerializer implements PrimitiveSerializer<Agreement> {
       object.contentUri,
       specifiedType: const FullType(String),
     );
+    if (object.content != null) {
+      yield r'content';
+      yield serializers.serialize(
+        object.content,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
+    if (object.contentHash != null) {
+      yield r'content_hash';
+      yield serializers.serialize(
+        object.contentHash,
+        specifiedType: const FullType(String),
+      );
+    }
     yield r'effective_at';
     yield serializers.serialize(
       object.effectiveAt,
@@ -163,6 +187,22 @@ class _$AgreementSerializer implements PrimitiveSerializer<Agreement> {
             specifiedType: const FullType(String),
           ) as String;
           result.contentUri = valueDes;
+          break;
+        case r'content':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.content = valueDes;
+          break;
+        case r'content_hash':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.contentHash = valueDes;
           break;
         case r'effective_at':
           final valueDes = serializers.deserialize(

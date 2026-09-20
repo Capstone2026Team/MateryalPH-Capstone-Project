@@ -42,6 +42,16 @@ void main() {
       // TODO
     });
 
+    // String termsVersionId
+    test('to test the property `termsVersionId`', () async {
+      // TODO
+    });
+
+    // String termsContentHash
+    test('to test the property `termsContentHash`', () async {
+      // TODO
+    });
+
     // bool termsAccepted
     test('to test the property `termsAccepted`', () async {
       // TODO

@@ -25,6 +25,8 @@ foreach (['buyers' => ['BUYER', 'MOBILE'], 'vendors' => ['VENDOR', 'WEB'], 'admi
         Route::get('/agreements', [AccountController::class, 'agreements']);
         Route::post('/agreements', [AccountController::class, 'acceptAgreements']);
         if ($portal !== 'BUYER') {
+            Route::post('/photo', [AccountController::class, 'uploadPhoto'])->middleware('throttle:profile-photo');
+            Route::get('/photo', [AccountController::class, 'photo'])->middleware('signed')->name('account.photo.'.strtolower($portal));
             Route::post('/factor', [AccountController::class, 'startFactor'])->middleware('throttle:account-security');
             Route::post('/factor/confirm', [AccountController::class, 'confirmFactor'])->middleware('throttle:account-security');
             Route::post('/recovery-codes', [AccountController::class, 'recoveryCodes'])->middleware('throttle:account-security');

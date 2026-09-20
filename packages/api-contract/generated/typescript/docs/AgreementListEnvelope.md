@@ -8,7 +8,7 @@ Name | Type
 ------------ | -------------
 `data` | [Array&lt;Agreement&gt;](Agreement.md)
 `meta` | { [key: string]: any; }
-`errors` | Array&lt;any&gt;
+`errors` | Array&lt;{ [key: string]: any; }&gt;
 
 ## Example
 

@@ -38,7 +38,7 @@ export interface AgreementListEnvelope {
     /**
      *
      */
-    errors: Array<any>;
+    errors: Array<{ [key: string]: any; }>;
 }
 
 /**

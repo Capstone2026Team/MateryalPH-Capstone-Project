@@ -4,7 +4,9 @@ import '../design_system/theme.dart';
 import '../widgets/brand_lockup.dart';
 import '../widgets/auth_content.dart';
 import '../auth/auth_repository.dart';
-import 'buyer_account_screen.dart';
+import 'buyer_profile_screen.dart';
+import '../widgets/buyer_account_widgets.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class BuyerHomeScreen extends StatefulWidget {
   const BuyerHomeScreen({
@@ -45,13 +47,32 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
     }
   }
 
+  void _sessionEnded() {
+    Navigator.of(context).popUntil((route) => route.isFirst);
+    widget.onSessionEnded?.call();
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_destination == 4 && widget.repository != null) {
       return Scaffold(
-        body: BuyerAccountScreen(
+        body: BuyerProfileScreen(
           repository: widget.repository!,
-          onSignedOut: widget.onSessionEnded ?? () {},
+          onSignedOut: _sessionEnded,
+          onSignOut: widget.onSignOut,
+        ),
+        bottomNavigationBar: _navigation(),
+      );
+    }
+    if (_destination > 0) {
+      const titles = ['Map', 'Explore', 'Projects', 'Message', 'Profile'];
+      return Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(title: Text(titles[_destination]), centerTitle: true),
+        body: SafeArea(
+          child: BuyerUnavailableContent(
+            artwork: _destination == 3 ? 'inbox' : 'not-implemented',
+          ),
         ),
         bottomNavigationBar: _navigation(),
       );
@@ -64,7 +85,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
           IconButton(
             onPressed: _signingOut ? null : _signOut,
             tooltip: 'Sign out',
-            icon: const Icon(Icons.logout),
+            icon: const Icon(LucideIcons.logOut),
           ),
         ],
       ),
@@ -97,7 +118,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Icon(
-                    Icons.verified_user_outlined,
+                    LucideIcons.shieldCheck,
                     color: BuyerTheme.action,
                     size: 36,
                   ),
@@ -122,18 +143,79 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
     );
   }
 
-  Widget _navigation() => NavigationBar(
-    selectedIndex: _destination,
-    onDestinationSelected: (value) => setState(() => _destination = value),
-    destinations: const [
-      NavigationDestination(icon: Icon(Icons.map_outlined), label: 'Map'),
-      NavigationDestination(icon: Icon(Icons.search), label: 'Explore'),
-      NavigationDestination(icon: Icon(Icons.construction), label: 'Projects'),
-      NavigationDestination(
-        icon: Icon(Icons.chat_bubble_outline),
-        label: 'Messages',
+  Widget _navigation() {
+    const items = [
+      (LucideIcons.compass, 'Map'),
+      (LucideIcons.layoutGrid, 'Explore'),
+      (LucideIcons.clipboardList, 'Projects'),
+      (LucideIcons.messageCircle, 'Message'),
+      (LucideIcons.user, 'Profile'),
+    ];
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: BuyerTheme.border)),
       ),
-      NavigationDestination(icon: Icon(Icons.person_outline), label: 'Profile'),
-    ],
-  );
+      child: SafeArea(
+        top: false,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (var index = 0; index < items.length; index++)
+              Expanded(
+                child: Semantics(
+                  selected: index == _destination,
+                  onTap: () => setState(() => _destination = index),
+                  button: true,
+                  label: items[index].$2,
+                  child: ExcludeSemantics(
+                    child: InkWell(
+                      onTap: () => setState(() => _destination = index),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(minHeight: 76),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              height: 3,
+                              width: 28,
+                              color: index == _destination
+                                  ? BuyerTheme.action
+                                  : Colors.transparent,
+                            ),
+                            const SizedBox(height: 12),
+                            Icon(
+                              items[index].$1,
+                              size: 24,
+                              color: index == _destination
+                                  ? BuyerTheme.action
+                                  : BuyerTheme.muted,
+                            ),
+                            const SizedBox(height: 6),
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(2, 0, 2, 10),
+                              child: Text(
+                                items[index].$2,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: index == _destination
+                                      ? BuyerTheme.action
+                                      : BuyerTheme.muted,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 }

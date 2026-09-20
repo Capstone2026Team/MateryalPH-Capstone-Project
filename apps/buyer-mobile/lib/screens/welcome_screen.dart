@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../design_system/theme.dart';
-import '../widgets/brand_lockup.dart';
+import '../widgets/brandwithoutname_lockup.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({
@@ -40,56 +40,88 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
           child: LayoutBuilder(
             builder: (context, constraints) => SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Align(
-                    alignment: Alignment.centerLeft,
-                    child: BrandLockup(compact: true),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: (constraints.maxHeight - 44).clamp(
+                    0,
+                    double.infinity,
                   ),
-                  Image.asset(
-                    'assets/onboarding/source-smart.png',
-                    height: (constraints.maxHeight * .24).clamp(120.0, 200.0),
-                    fit: BoxFit.contain,
-                    excludeFromSemantics: true,
-                    cacheWidth: 960,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Welcome to\nMateryalPH',
-                    style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      height: 1.12,
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.symmetric(
+                        vertical: (constraints.maxHeight * .14).clamp(24, 112),
+                      ),
+                      child: Column(
+                        children: [
+                          const BrandWithoutNameLockup(),
+                          Text.rich(
+                            TextSpan(
+                              children: [
+                                const TextSpan(text: 'Welcome to Materyal'),
+                                TextSpan(
+                                  text: 'PH',
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.primary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.headlineMedium
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(height: 12),
+                          const SizedBox(height: 24),
+                          Text(
+                            'A better start for your next build.',
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'Create your Buyer account to connect with construction-material suppliers.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: BuyerTheme.muted),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'A better start for your next build. Connect with construction-material suppliers and prepare your Buyer account.',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: BuyerTheme.muted,
-                      height: 1.55,
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        FilledButton(
+                          onPressed: _openingGoogle ? null : widget.onRegister,
+                          child: const Text('Create buyer account'),
+                        ),
+                        const SizedBox(height: 12),
+                        OutlinedButton(
+                          onPressed: _openingGoogle ? null : _google,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.g_mobiledata, size: 32),
+                              const SizedBox(width: 8),
+                              Text(
+                                _openingGoogle
+                                    ? 'Opening Google…'
+                                    : 'Continue with Google',
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        TextButton(
+                          onPressed: _openingGoogle ? null : widget.onLogin,
+                          child: const Text('Already have an account? Sign in'),
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: 32),
-                  FilledButton(
-                    onPressed: _openingGoogle ? null : widget.onRegister,
-                    child: const Text('Create buyer account'),
-                  ),
-                  const SizedBox(height: 12),
-                  OutlinedButton(
-                    onPressed: _openingGoogle ? null : _google,
-                    child: Text(
-                      _openingGoogle
-                          ? 'Opening Google…'
-                          : 'Continue with Google',
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextButton(
-                    onPressed: _openingGoogle ? null : widget.onLogin,
-                    child: const Text('Already have an account? Sign in'),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

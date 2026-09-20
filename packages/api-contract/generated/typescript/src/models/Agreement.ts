@@ -44,6 +44,14 @@ export interface Agreement {
      */
     contentUri: string;
     /**
+     * Maintained Markdown verified against the stored source hash.
+     */
+    content?: string | null;
+    /**
+     * SHA-256 of source before configured contact substitution.
+     */
+    contentHash?: string;
+    /**
      *
      */
     effectiveAt: Date;
@@ -79,6 +87,8 @@ export function AgreementFromJSONTyped(json: any, ignoreDiscriminator: boolean):
         'audience': json['audience'],
         'version': json['version'],
         'contentUri': json['content_uri'],
+        'content': json['content'] === undefined ? undefined : json['content'] === null ? null : json['content'],
+        'contentHash': json['content_hash'] == null ? undefined : json['content_hash'],
         'effectiveAt': (json['effective_at'] == null ? json['effective_at'] : parseDateTime(json['effective_at'])),
     };
 }
@@ -100,6 +110,8 @@ export function AgreementToJSONTyped(value?: Agreement | null, ignoreDiscriminat
         'audience': value['audience'],
         'version': value['version'],
         'content_uri': value['contentUri'],
+        'content': value['content'],
+        'content_hash': value['contentHash'],
         'effective_at': value['effectiveAt'] == null ? value['effectiveAt'] : serializeDateTime(value['effectiveAt']),
     };
 }

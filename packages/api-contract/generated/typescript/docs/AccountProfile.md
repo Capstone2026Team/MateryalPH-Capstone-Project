@@ -8,6 +8,9 @@ Name | Type
 ------------ | -------------
 `id` | string
 `fullName` | string
+`avatarUrl` | string
+`mobileE164` | string
+`emailMasked` | boolean
 `email` | string
 `accountType` | string
 `accountStatus` | string
@@ -31,6 +34,9 @@ import type { AccountProfile } from '@materyalph/api-client-ts'
 const example = {
   "id": null,
   "fullName": null,
+  "avatarUrl": null,
+  "mobileE164": null,
+  "emailMasked": null,
   "email": null,
   "accountType": null,
   "accountStatus": null,

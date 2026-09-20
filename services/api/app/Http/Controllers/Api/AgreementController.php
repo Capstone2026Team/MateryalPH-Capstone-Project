@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
+use App\Domain\Agreements\AgreementContent;
 use App\Http\ApiResponse;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
@@ -19,7 +20,7 @@ final class AgreementController extends Controller
             ->where('av.effective_at', '<=', now())
             ->whereIn('ad.code', ['TERMS_OF_SERVICE', 'PRIVACY_NOTICE'])
             ->orderBy('ad.code')
-            ->get(['av.id', 'ad.code', 'ad.title', 'ad.audience', 'av.version', 'av.content_uri', 'av.effective_at'])
+            ->get(['av.id', 'ad.code', 'ad.title', 'ad.audience', 'av.version', 'av.content_uri', 'av.effective_at', 'av.content_hash'])
             ->map(fn ($row): array => [
                 'id' => $row->id,
                 'code' => $row->code,
@@ -28,6 +29,8 @@ final class AgreementController extends Controller
                 'version' => $row->version,
                 'content_uri' => $row->content_uri,
                 'effective_at' => $row->effective_at,
+                'content_hash' => $row->content_hash,
+                'content' => app(AgreementContent::class)->read($row),
             ]);
 
         return ApiResponse::success($agreements);

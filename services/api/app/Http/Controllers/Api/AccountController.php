@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api;
 use App\Domain\Agreements\AccountAgreements;
 use App\Domain\Authorization\RecentAuthentication;
 use App\Domain\Identity\ManageAccount;
+use App\Domain\Identity\ManageProfilePhoto;
 use App\Domain\Identity\ManageSecurityFactor;
 use App\Domain\Identity\TotpService;
 use App\Http\ApiResponse;
@@ -16,9 +17,27 @@ use App\Http\Resources\AccountProfileResource;
 use App\Models\AuthSession;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 final class AccountController extends Controller
 {
+    public function uploadPhoto(Request $request, ManageProfilePhoto $photos): JsonResponse
+    {
+        $input = $request->validate(['photo' => ['required', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048', 'dimensions:max_width=4096,max_height=4096'], 'lock_version' => ['required', 'integer', 'min:1']]);
+        $user = $photos->upload($request, $request->file('photo'), (int) $input['lock_version']);
+
+        return ApiResponse::success((new AccountProfileResource($user))->resolve($request));
+    }
+
+    public function photo(Request $request): mixed
+    {
+        $user = $request->user();
+        abort_unless($user->profile_photo_key && $user->profile_photo_disk, 404);
+        abort_unless($request->query('owner') === $user->public_id && (int) $request->query('version') === (int) $user->lock_version, 404);
+
+        return Storage::disk($user->profile_photo_disk)->response($user->profile_photo_key, 'profile.png', ['Content-Type' => 'image/png', 'Cache-Control' => 'private, no-store', 'X-Content-Type-Options' => 'nosniff'], 'inline');
+    }
+
     public function profile(Request $request): JsonResponse
     {
         return ApiResponse::success((new AccountProfileResource($request->user()))->resolve($request));

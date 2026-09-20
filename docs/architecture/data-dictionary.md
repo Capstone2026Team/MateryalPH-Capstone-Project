@@ -5303,6 +5303,8 @@ Phase 1 platform foundation record.
 | `account_status` | `character varying` | No | `'PENDING_VERIFICATION'::character varying` | Account status. |
 | `last_authenticated_at` | `timestamp with time zone` | Yes | — | Last authenticated at. |
 | `lock_version` | `integer` | No | `1` | Lock version. |
+| `profile_photo_key` | `character varying` | Yes | — | Profile photo key. |
+| `profile_photo_disk` | `character varying` | Yes | — | Profile photo disk. |
 
 **Constraints**
 

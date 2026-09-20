@@ -74,6 +74,7 @@ Class | Method | HTTP request | Description
 [*AccountsApi*](doc/AccountsApi.md) | [**changeAccountPassword**](doc/AccountsApi.md#changeaccountpassword) | **POST** /{accountPortal}/account/password |
 [*AccountsApi*](doc/AccountsApi.md) | [**confirmAccountEmailChange**](doc/AccountsApi.md#confirmaccountemailchange) | **POST** /{accountPortal}/account/email/confirm |
 [*AccountsApi*](doc/AccountsApi.md) | [**confirmAccountFactorReplacement**](doc/AccountsApi.md#confirmaccountfactorreplacement) | **POST** /{accountPortal}/account/factor/confirm |
+[*AccountsApi*](doc/AccountsApi.md) | [**getAccountPhoto**](doc/AccountsApi.md#getaccountphoto) | **GET** /{webAccountPortal}/account/photo |
 [*AccountsApi*](doc/AccountsApi.md) | [**getAccountProfile**](doc/AccountsApi.md#getaccountprofile) | **GET** /{accountPortal}/account/profile |
 [*AccountsApi*](doc/AccountsApi.md) | [**getAccountSecurity**](doc/AccountsApi.md#getaccountsecurity) | **GET** /{accountPortal}/account/security |
 [*AccountsApi*](doc/AccountsApi.md) | [**inviteAccountAdmin**](doc/AccountsApi.md#inviteaccountadmin) | **POST** /{accountPortal}/account/invitations |
@@ -90,6 +91,7 @@ Class | Method | HTTP request | Description
 [*AccountsApi*](doc/AccountsApi.md) | [**startAccountEmailChange**](doc/AccountsApi.md#startaccountemailchange) | **POST** /{accountPortal}/account/email |
 [*AccountsApi*](doc/AccountsApi.md) | [**startAccountFactorReplacement**](doc/AccountsApi.md#startaccountfactorreplacement) | **POST** /{accountPortal}/account/factor |
 [*AccountsApi*](doc/AccountsApi.md) | [**updateAccountProfile**](doc/AccountsApi.md#updateaccountprofile) | **PATCH** /{accountPortal}/account/profile |
+[*AccountsApi*](doc/AccountsApi.md) | [**uploadAccountPhoto**](doc/AccountsApi.md#uploadaccountphoto) | **POST** /{webAccountPortal}/account/photo |
 [*AdminVendorVerificationApi*](doc/AdminVendorVerificationApi.md) | [**decideVendorVerificationRequirement**](doc/AdminVendorVerificationApi.md#decidevendorverificationrequirement) | **POST** /admin/vendor-verification/{organizationId}/requirements/{requirementKey}/decision |
 [*AdminVendorVerificationApi*](doc/AdminVendorVerificationApi.md) | [**getAdminDashboard**](doc/AdminVendorVerificationApi.md#getadmindashboard) | **GET** /admin/dashboard |
 [*AdminVendorVerificationApi*](doc/AdminVendorVerificationApi.md) | [**getAdminVendorEvidenceUrl**](doc/AdminVendorVerificationApi.md#getadminvendorevidenceurl) | **GET** /admin/vendor-verification/files/{fileId} |

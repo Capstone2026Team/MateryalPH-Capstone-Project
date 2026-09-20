@@ -280,7 +280,7 @@ class _$VendorVerificationDraftSerializer implements PrimitiveSerializer<VendorV
             specifiedType: const FullType.nullable(VendorVerificationDraftLegalIdentity),
           ) as VendorVerificationDraftLegalIdentity?;
           if (valueDes == null) continue;
-          result.legalIdentity = valueDes;
+          result.legalIdentity = valueDes.toBuilder();
           break;
         case r'tax_profile':
           final valueDes = serializers.deserialize(
@@ -288,7 +288,7 @@ class _$VendorVerificationDraftSerializer implements PrimitiveSerializer<VendorV
             specifiedType: const FullType.nullable(VendorVerificationDraftTaxProfile),
           ) as VendorVerificationDraftTaxProfile?;
           if (valueDes == null) continue;
-          result.taxProfile = valueDes;
+          result.taxProfile = valueDes.toBuilder();
           break;
         default:
           unhandled.add(key);

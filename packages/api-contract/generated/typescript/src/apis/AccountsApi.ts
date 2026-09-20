@@ -230,6 +230,29 @@ export interface ConfirmAccountFactorReplacementRequest {
     accountCodeConfirmation: AccountCodeConfirmation;
 }
 
+export interface GetAccountPhotoRequest {
+    /**
+     *
+     */
+    expires: number;
+    /**
+     *
+     */
+    signature: string;
+    /**
+     *
+     */
+    version: number;
+    /**
+     *
+     */
+    owner: string;
+    /**
+     *
+     */
+    webAccountPortal: GetAccountPhotoWebAccountPortalEnum;
+}
+
 export interface GetAccountProfileRequest {
     /**
      *
@@ -380,6 +403,21 @@ export interface UpdateAccountProfileRequest {
      *
      */
     accountProfileUpdate: AccountProfileUpdate;
+}
+
+export interface UploadAccountPhotoRequest {
+    /**
+     *
+     */
+    webAccountPortal: UploadAccountPhotoWebAccountPortalEnum;
+    /**
+     *
+     */
+    photo: Blob;
+    /**
+     *
+     */
+    lockVersion: number;
 }
 
 /**
@@ -926,6 +964,95 @@ export class AccountsApi extends runtime.BaseAPI {
      */
     async confirmAccountFactorReplacement(requestParameters: ConfirmAccountFactorReplacementRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AccountRecoveryCodesEnvelope> {
         const response = await this.confirmAccountFactorReplacementRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for getAccountPhoto without sending the request
+     */
+    async getAccountPhotoRequestOpts(requestParameters: GetAccountPhotoRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['expires'] == null) {
+            throw new runtime.RequiredError(
+                'expires',
+                'Required parameter "expires" was null or undefined when calling getAccountPhoto().'
+            );
+        }
+
+        if (requestParameters['signature'] == null) {
+            throw new runtime.RequiredError(
+                'signature',
+                'Required parameter "signature" was null or undefined when calling getAccountPhoto().'
+            );
+        }
+
+        if (requestParameters['version'] == null) {
+            throw new runtime.RequiredError(
+                'version',
+                'Required parameter "version" was null or undefined when calling getAccountPhoto().'
+            );
+        }
+
+        if (requestParameters['owner'] == null) {
+            throw new runtime.RequiredError(
+                'owner',
+                'Required parameter "owner" was null or undefined when calling getAccountPhoto().'
+            );
+        }
+
+        if (requestParameters['webAccountPortal'] == null) {
+            throw new runtime.RequiredError(
+                'webAccountPortal',
+                'Required parameter "webAccountPortal" was null or undefined when calling getAccountPhoto().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['expires'] != null) {
+            queryParameters['expires'] = requestParameters['expires'];
+        }
+
+        if (requestParameters['signature'] != null) {
+            queryParameters['signature'] = requestParameters['signature'];
+        }
+
+        if (requestParameters['version'] != null) {
+            queryParameters['version'] = requestParameters['version'];
+        }
+
+        if (requestParameters['owner'] != null) {
+            queryParameters['owner'] = requestParameters['owner'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/{webAccountPortal}/account/photo`;
+        urlPath = urlPath.replace('{webAccountPortal}', encodeURIComponent(String(requestParameters['webAccountPortal'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Use the five-minute signed avatar_url from the profile. Authenticated owner only; private no-store response. No user identifier is accepted.
+     */
+    async getAccountPhotoRaw(requestParameters: GetAccountPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Blob>> {
+        const requestOptions = await this.getAccountPhotoRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.BlobApiResponse(response);
+    }
+
+    /**
+     * Use the five-minute signed avatar_url from the profile. Authenticated owner only; private no-store response. No user identifier is accepted.
+     */
+    async getAccountPhoto(requestParameters: GetAccountPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Blob> {
+        const response = await this.getAccountPhotoRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -1894,6 +2021,94 @@ export class AccountsApi extends runtime.BaseAPI {
         return await response.value();
     }
 
+    /**
+     * Creates request options for uploadAccountPhoto without sending the request
+     */
+    async uploadAccountPhotoRequestOpts(requestParameters: UploadAccountPhotoRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['webAccountPortal'] == null) {
+            throw new runtime.RequiredError(
+                'webAccountPortal',
+                'Required parameter "webAccountPortal" was null or undefined when calling uploadAccountPhoto().'
+            );
+        }
+
+        if (requestParameters['photo'] == null) {
+            throw new runtime.RequiredError(
+                'photo',
+                'Required parameter "photo" was null or undefined when calling uploadAccountPhoto().'
+            );
+        }
+
+        if (requestParameters['lockVersion'] == null) {
+            throw new runtime.RequiredError(
+                'lockVersion',
+                'Required parameter "lockVersion" was null or undefined when calling uploadAccountPhoto().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+        const consumes: runtime.Consume[] = [
+            { contentType: 'multipart/form-data' },
+        ];
+        // @ts-ignore: canConsumeForm may be unused
+        const canConsumeForm = runtime.canConsumeForm(consumes);
+
+        let formParams: { append(param: string, value: any): any };
+        let useForm = false;
+        // use FormData to transmit files using content-type "multipart/form-data"
+        useForm = canConsumeForm;
+        if (useForm) {
+            formParams = new FormData();
+        } else {
+            formParams = new URLSearchParams();
+        }
+
+        if (requestParameters['photo'] != null) {
+            formParams.append('photo', requestParameters['photo'] as any);
+        }
+
+        if (requestParameters['lockVersion'] != null) {
+            formParams.append('lock_version', requestParameters['lockVersion'] as any);
+        }
+
+
+        let urlPath = `/{webAccountPortal}/account/photo`;
+        urlPath = urlPath.replace('{webAccountPortal}', encodeURIComponent(String(requestParameters['webAccountPortal'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: formParams,
+        };
+    }
+
+    /**
+     * Owner-only personal photo. Maximum 2 MB JPEG/PNG/WebP and 4096 pixels per dimension. Malware-scanned, re-encoded to 256px PNG, privately stored. Five uploads/minute within the overall account budget. Fails closed if scanning or processing is unavailable.
+     */
+    async uploadAccountPhotoRaw(requestParameters: UploadAccountPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AccountProfileEnvelope>> {
+        const requestOptions = await this.uploadAccountPhotoRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => AccountProfileEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * Owner-only personal photo. Maximum 2 MB JPEG/PNG/WebP and 4096 pixels per dimension. Malware-scanned, re-encoded to 256px PNG, privately stored. Five uploads/minute within the overall account budget. Fails closed if scanning or processing is unavailable.
+     */
+    async uploadAccountPhoto(requestParameters: UploadAccountPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AccountProfileEnvelope> {
+        const response = await this.uploadAccountPhotoRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
 }
 
 /**
@@ -1952,6 +2167,14 @@ export const ConfirmAccountFactorReplacementAccountPortalEnum = {
     Admin: 'admin',
 } as const;
 export type ConfirmAccountFactorReplacementAccountPortalEnum = typeof ConfirmAccountFactorReplacementAccountPortalEnum[keyof typeof ConfirmAccountFactorReplacementAccountPortalEnum];
+/**
+ * @export
+ */
+export const GetAccountPhotoWebAccountPortalEnum = {
+    Vendors: 'vendors',
+    Admin: 'admin',
+} as const;
+export type GetAccountPhotoWebAccountPortalEnum = typeof GetAccountPhotoWebAccountPortalEnum[keyof typeof GetAccountPhotoWebAccountPortalEnum];
 /**
  * @export
  */
@@ -2086,3 +2309,11 @@ export const UpdateAccountProfileAccountPortalEnum = {
     Admin: 'admin',
 } as const;
 export type UpdateAccountProfileAccountPortalEnum = typeof UpdateAccountProfileAccountPortalEnum[keyof typeof UpdateAccountProfileAccountPortalEnum];
+/**
+ * @export
+ */
+export const UploadAccountPhotoWebAccountPortalEnum = {
+    Vendors: 'vendors',
+    Admin: 'admin',
+} as const;
+export type UploadAccountPhotoWebAccountPortalEnum = typeof UploadAccountPhotoWebAccountPortalEnum[keyof typeof UploadAccountPhotoWebAccountPortalEnum];

@@ -50,6 +50,14 @@ export interface BuyerMobileRegisterRequest {
     /**
      *
      */
+    termsVersionId: string;
+    /**
+     *
+     */
+    termsContentHash: string;
+    /**
+     *
+     */
     termsAccepted: BuyerMobileRegisterRequestTermsAcceptedEnum;
     /**
      *
@@ -89,6 +97,8 @@ export function instanceOfBuyerMobileRegisterRequest(value: object): value is Bu
     if (!('password' in value) || value['password'] === undefined) return false;
     if ((!('passwordConfirmation' in (value as Record<string, any>)) && !('password_confirmation' in (value as Record<string, any>))) || ((value as Record<string, any>)['passwordConfirmation'] === undefined && (value as Record<string, any>)['password_confirmation'] === undefined)) return false;
     if ((!('buyerType' in (value as Record<string, any>)) && !('buyer_type' in (value as Record<string, any>))) || ((value as Record<string, any>)['buyerType'] === undefined && (value as Record<string, any>)['buyer_type'] === undefined)) return false;
+    if ((!('termsVersionId' in (value as Record<string, any>)) && !('terms_version_id' in (value as Record<string, any>))) || ((value as Record<string, any>)['termsVersionId'] === undefined && (value as Record<string, any>)['terms_version_id'] === undefined)) return false;
+    if ((!('termsContentHash' in (value as Record<string, any>)) && !('terms_content_hash' in (value as Record<string, any>))) || ((value as Record<string, any>)['termsContentHash'] === undefined && (value as Record<string, any>)['terms_content_hash'] === undefined)) return false;
     if ((!('termsAccepted' in (value as Record<string, any>)) && !('terms_accepted' in (value as Record<string, any>))) || ((value as Record<string, any>)['termsAccepted'] === undefined && (value as Record<string, any>)['terms_accepted'] === undefined)) return false;
 
     if ((value as Record<string, any>)['termsAccepted'] !== true && (value as Record<string, any>)['terms_accepted'] !== true) return false;
@@ -115,6 +125,8 @@ export function BuyerMobileRegisterRequestFromJSONTyped(json: any, ignoreDiscrim
         'passwordConfirmation': json['password_confirmation'],
         'buyerType': json['buyer_type'],
         'companyName': json['company_name'] === undefined ? undefined : json['company_name'] === null ? null : json['company_name'],
+        'termsVersionId': json['terms_version_id'],
+        'termsContentHash': json['terms_content_hash'],
         'termsAccepted': json['terms_accepted'],
         'privacyAccepted': json['privacy_accepted'],
         'riskProofToken': json['risk_proof_token'] == null ? undefined : json['risk_proof_token'],
@@ -139,6 +151,8 @@ export function BuyerMobileRegisterRequestToJSONTyped(value?: BuyerMobileRegiste
         'password_confirmation': value['passwordConfirmation'],
         'buyer_type': value['buyerType'],
         'company_name': value['companyName'],
+        'terms_version_id': value['termsVersionId'],
+        'terms_content_hash': value['termsContentHash'],
         'terms_accepted': value['termsAccepted'],
         'privacy_accepted': value['privacyAccepted'],
         'risk_proof_token': value['riskProofToken'],

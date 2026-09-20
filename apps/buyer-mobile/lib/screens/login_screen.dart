@@ -1,3 +1,4 @@
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter/material.dart';
 
 import '../widgets/auth_content.dart';
@@ -78,11 +79,12 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         leading: IconButton(
           onPressed: widget.onBack,
           tooltip: 'Back',
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(LucideIcons.arrowLeft, color: BuyerTheme.action),
         ),
       ),
       body: SafeArea(
@@ -95,11 +97,8 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Align(
-                    alignment: Alignment.centerLeft,
-                    child: BrandLockup(compact: true),
-                  ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 8),
+                  const SizedBox(height: 42),
                   Text(
                     'Login to your account',
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
@@ -108,18 +107,20 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Continue to your Buyer workspace.',
+                    'Continue to your workspace.',
                     style: TextStyle(color: BuyerTheme.muted),
                   ),
                   const SizedBox(height: 28),
                   TextFormField(
                     controller: _email,
+                    enabled: !_submitting,
+                    autocorrect: false,
                     autofillHints: const [AutofillHints.email],
                     keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.next,
                     decoration: const InputDecoration(
                       labelText: 'Email address',
-                      prefixIcon: Icon(Icons.mail_outline),
+                      prefixIcon: Icon(LucideIcons.mail),
                     ),
                     validator: (value) {
                       final email = value?.trim() ?? '';
@@ -132,13 +133,16 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _password,
+                    enabled: !_submitting,
+                    autocorrect: false,
+                    enableSuggestions: false,
                     obscureText: _obscurePassword,
                     autofillHints: const [AutofillHints.password],
                     textInputAction: TextInputAction.done,
                     onFieldSubmitted: (_) => _submitting ? null : _submit(),
                     decoration: InputDecoration(
                       labelText: 'Password',
-                      prefixIcon: const Icon(Icons.lock_outline),
+                      prefixIcon: const Icon(LucideIcons.lock),
                       suffixIcon: IconButton(
                         onPressed: () => setState(
                           () => _obscurePassword = !_obscurePassword,
@@ -148,8 +152,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             : 'Hide password',
                         icon: Icon(
                           _obscurePassword
-                              ? Icons.visibility_outlined
-                              : Icons.visibility_off_outlined,
+                              ? LucideIcons.eye
+                              : LucideIcons.eyeOff,
                         ),
                       ),
                     ),
@@ -160,7 +164,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
-                      onPressed: widget.onForgotPassword,
+                      onPressed: _submitting ? null : widget.onForgotPassword,
                       child: const Text('Forgot password?'),
                     ),
                   ),
@@ -173,7 +177,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: Text(_submitting ? 'Signing in…' : 'Sign in'),
                   ),
                   if (widget.onGoogle != null) ...[
-                    const SizedBox(height: 12),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                      child: Text(
+                        'Or sign in with',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: BuyerTheme.muted),
+                      ),
+                    ),
                     OutlinedButton(
                       onPressed: _submitting
                           ? null
@@ -187,12 +198,19 @@ class _LoginScreenState extends State<LoginScreen> {
                                 }
                               }
                             },
-                      child: const Text('Continue with Google'),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.g_mobiledata, size: 32),
+                          SizedBox(width: 8),
+                          Text('Continue with Google'),
+                        ],
+                      ),
                     ),
                   ],
                   const SizedBox(height: 20),
                   TextButton(
-                    onPressed: widget.onRegister,
+                    onPressed: _submitting ? null : widget.onRegister,
                     child: const Text('New to MateryalPH? Create an account'),
                   ),
                 ],

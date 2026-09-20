@@ -17,6 +17,24 @@ void main() {
       // TODO
     });
 
+    // Short-lived owner-only personal photo URL; never the store logo.
+    // String avatarUrl
+    test('to test the property `avatarUrl`', () async {
+      // TODO
+    });
+
+    // Authenticated Buyer registered contact number.
+    // String mobileE164
+    test('to test the property `mobileE164`', () async {
+      // TODO
+    });
+
+    // Buyer email stays masked until recent identity verification.
+    // bool emailMasked
+    test('to test the property `emailMasked`', () async {
+      // TODO
+    });
+
     // String email
     test('to test the property `email`', () async {
       // TODO

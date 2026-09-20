@@ -1,8 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'generated/color_tokens.dart';
 
 abstract final class BuyerTheme {
+  static const systemUi = SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.dark,
+    statusBarBrightness: Brightness.light,
+    systemNavigationBarColor: Colors.white,
+    systemNavigationBarIconBrightness: Brightness.dark,
+  );
   static const action = Color(MateryalColorTokens.actionPrimary);
   static const actionPressed = Color(MateryalColorTokens.actionPrimaryPressed);
   static const canvas = Color(MateryalColorTokens.surfaceCanvas);
@@ -69,6 +77,7 @@ abstract final class BuyerTheme {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
       appBarTheme: const AppBarTheme(
+        systemOverlayStyle: systemUi,
         backgroundColor: Colors.transparent,
         foregroundColor: ink,
         elevation: 0,

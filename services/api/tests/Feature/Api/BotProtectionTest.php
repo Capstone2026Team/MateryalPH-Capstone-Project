@@ -288,7 +288,12 @@ final class BotProtectionTest extends TestCase
     /** @return array<string, mixed> */
     private function buyerRegistration(): array
     {
+        $terms = DB::table('agreement_versions as v')->join('agreement_documents as d', 'd.id', '=', 'v.agreement_document_id')
+            ->where('d.code', 'TERMS_OF_SERVICE')->whereNull('v.retired_at')->first(['v.id', 'v.content_hash']);
+
         return [
+            'terms_version_id' => $terms->id,
+            'terms_content_hash' => $terms->content_hash,
             'full_name' => 'Buyer Example',
             'email' => 'buyer@example.test',
             'mobile_e164' => '+639171234567',

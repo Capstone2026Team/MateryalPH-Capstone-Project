@@ -54,6 +54,20 @@ if (vendorInvite) {
   const reference = vendorInvite.responses?.['202']?.content?.['application/json']?.schema?.$ref
   assert.ok(reference && spec.components.schemas[reference.split('/').at(-1)], `${vendorInvite.operationId} needs a defined response envelope`)
 }
+for (const portal of ['vendors', 'admin']) {
+  const path = '/{webAccountPortal}/account/photo'
+  for (const method of ['get', 'post']) {
+    assert.ok(spec.paths[path]?.[method]?.operationId)
+    const key = `${method.toUpperCase()} /api/v1/${portal}/account/photo`
+    expected.add(key)
+    const route = actual.get(key)
+    assert.ok(route, `Photo route missing: ${key}`)
+    assert.ok(hasMiddleware(route, 'auth:api', 'Illuminate\\Auth\\Middleware\\Authenticate:api'))
+    assert.ok(hasMiddleware(route, `account.access:${portal === 'admin' ? 'ADMIN' : 'VENDOR'}`, `App\\Http\\Middleware\\RequireAccountAccess:${portal === 'admin' ? 'ADMIN' : 'VENDOR'}`))
+    assert.ok(hasMiddleware(route, 'web.csrf', 'App\\Http\\Middleware\\VerifyAccountCsrf'))
+    if (method === 'get') assert.ok(hasMiddleware(route, 'signed', 'Illuminate\\Routing\\Middleware\\ValidateSignature'))
+  }
+}
 for (const key of actual.keys()) {
   if (/ \/api\/v1\/(buyers|vendors|admin)\/account\//.test(key)) assert.ok(expected.has(key), `Laravel route missing from contract: ${key}`)
 }

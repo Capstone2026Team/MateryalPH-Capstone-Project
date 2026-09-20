@@ -1,5 +1,17 @@
 import { DateFilter } from '@materyalph/web-ui'
 import {
+  Activity,
+  ChartNoAxesCombined,
+  CreditCard,
+  History,
+  LayoutDashboard,
+  ListTree,
+  ReceiptText,
+  Scale,
+  Settings,
+  ShieldCheck,
+  Store,
+  Users,
   AlertCircle,
   ArrowLeft,
   BadgeCheck,
@@ -31,9 +43,12 @@ import {
 
 type JsonRecord = Record<string, unknown>
 
+const adminModuleIcons: Record<string, typeof FileText> = { 'marketplace-analytics': ChartNoAxesCombined, 'buyer-management': Users, taxonomy: ListTree, 'product-compliance': ShieldCheck, disputes: Scale, enforcement: ShieldAlert, scores: BadgeCheck, moderation: ClipboardCheck, transactions: CreditCard, invoices: ReceiptText, 'budget-overrides': History, settings: Settings, privacy: ShieldCheck, integrations: Activity }
 const adminNavigation: PortalNavSection[] = [
-  { label: 'Overview', items: [{ label: 'Dashboard', href: '/dashboard', icon: <BadgeCheck size={16} aria-hidden="true" /> }] },
-  { label: 'Review', items: [{ label: 'Verification queue', href: '/vendor-verification', icon: <ClipboardCheck size={16} aria-hidden="true" /> }] },
+  { label: 'Overview', items: [{ label: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard size={16} aria-hidden="true" /> }] },
+  { label: 'User Management', items: [{ label: 'Vendor Management', href: '/vendor-verification', icon: <Store size={16} aria-hidden="true" /> }] },
+  ...[['Marketplace', [['Marketplace Analytics', 'marketplace-analytics'], ['Buyer Management', 'buyer-management'], ['Taxonomy Management', 'taxonomy']]], ['Compliance & quality', [['Product Compliance Queue', 'product-compliance'], ['Disputes & Appeals', 'disputes'], ['Vendor Enforcement', 'enforcement'], ['Score & Badge Monitoring', 'scores'], ['Review Moderation', 'moderation']]], ['Finance', [['Transaction Log', 'transactions'], ['Invoice Request Log', 'invoices'], ['Budget Override Audit Log', 'budget-overrides']]], ['Platform', [['Platform Settings', 'settings'], ['Privacy Requests', 'privacy'], ['Integration & Job Health', 'integrations']]]].map(([label, entries]) => ({ label: label as string, items: (entries as string[][]).map(([label = '', key = '']) => ({ label, href: `/preview/${key}`, icon: (() => { const Icon = adminModuleIcons[key] ?? FileText; return <Icon size={18} aria-hidden="true" /> })() })) })),
+  { label: 'Tracking', items: [{ label: 'Audit Log', href: '/audit', icon: <History size={16} aria-hidden="true" /> }] },
 ]
 
 function record(value: unknown): JsonRecord {
@@ -84,7 +99,7 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
 
 export function AdminShell({ activeHref, children }: { activeHref: string; children: ReactNode }) {
   const navigate = useNavigate()
-  return <PortalShell apiBasePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} onNavigate={navigate} headerActions={<Link className="inline-flex min-h-11 items-center text-sm font-semibold" to="/workspace">Account settings</Link>} homeHref="/dashboard" portalLabel="ADMIN PORTAL" pageTitle={activeHref === '/dashboard' ? 'Dashboard' : activeHref === '/workspace' ? 'Settings' : activeHref === '/audit' ? 'Audit tracking' : 'Vendor Verification'} dateLabel={adminDate()} sections={adminNavigation} activeHref={activeHref} accountLabel="Admin review team" accountStatus="Audited access">{children}</PortalShell>
+  return <PortalShell apiBasePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} onNavigate={navigate} headerActions={<Link className="inline-flex min-h-11 items-center text-sm font-semibold" to="/workspace">Account settings</Link>} homeHref="/dashboard" portalLabel="ADMIN PORTAL" pageTitle={activeHref === '/dashboard' ? 'Dashboard' : activeHref === '/workspace' ? 'Settings' : activeHref === '/audit' ? 'Audit tracking' : adminNavigation.flatMap(section => section.items).find(item => item.href === activeHref)?.label ?? 'Vendor Management'} dateLabel={adminDate()} sections={adminNavigation} activeHref={activeHref} accountLabel="Admin review team" accountStatus="Audited access">{children}</PortalShell>
 }
 
 function PageHeader({ eyebrow, title, description, actions }: { eyebrow: string; title: string; description: string; actions?: ReactNode }) {

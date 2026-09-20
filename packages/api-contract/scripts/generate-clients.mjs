@@ -86,6 +86,15 @@ for (const args of generations) {
     if (!existsSync(generatedPath)) continue;
     let contents = readFileSync(generatedPath, "utf8");
     if (relativePath.endsWith(".dart") && relativePath.startsWith("lib/")) {
+      // Nullable inline objects use nested built_value builders. dart-dio
+      // currently assigns the deserialized value to the builder field directly.
+      const nestedFields = {
+        "lib/src/model/vendor_setup_draft.dart": ["delivery"],
+        "lib/src/model/vendor_verification_draft.dart": ["legalIdentity", "taxProfile"],
+      }[relativePath] ?? [];
+      for (const field of nestedFields) {
+        contents = contents.replace(`result.${field} = valueDes;`, `result.${field} = valueDes.toBuilder();`);
+      }
       // dart-dio emits imports for error responses and flattened allOf models
       // even when its generated implementation never references those types.
       const body = contents.replace(/^import .*;\r?\n/gmu, "");

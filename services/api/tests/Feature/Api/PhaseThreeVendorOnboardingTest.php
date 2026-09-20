@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
+use App\Domain\Identity\AuthenticationException;
 use App\Domain\Identity\OtpCodeGenerator;
+use App\Domain\Identity\ProfilePhotoScanner;
 use App\Domain\Identity\TokenSessionService;
 use App\Domain\Vendors\PhilippineRegionDirectory;
 use App\Domain\Vendors\VendorExpiryService;
@@ -51,6 +53,50 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
         $this->getJson('/api/v1/vendors/onboarding')->assertOk();
         $this->travel(61)->seconds();
         $this->postJson('/api/v1/vendors/onboarding/media', [])->assertUnprocessable();
+    }
+
+    public function test_personal_photo_is_scanned_private_versioned_and_owner_only(): void
+    {
+        [, $owner] = $this->vendorFixture('OWNER');
+        $this->signInVendor($owner);
+        $scanner = $this->mock(ProfilePhotoScanner::class);
+        $scanner->shouldReceive('assertClean')->twice();
+        $version = (int) $owner->fresh()->lock_version;
+        $result = $this->post('/api/v1/vendors/account/photo', ['photo' => UploadedFile::fake()->image('portrait.png', 64, 64), 'lock_version' => $version])
+            ->assertOk()->assertJsonPath('data.lock_version', $version + 1);
+        $url = $result->json('data.avatar_url');
+        $owner->refresh();
+        $this->get($url)->assertOk()->assertHeader('Content-Type', 'image/png');
+        $this->get('/api/v1/vendors/account/photo')->assertForbidden();
+        $this->post('/api/v1/vendors/account/photo', ['photo' => UploadedFile::fake()->image('replacement.png'), 'lock_version' => $version])->assertConflict();
+        [, $other] = $this->vendorFixture('OWNER');
+        $this->signInVendor($other);
+        $this->get($url)->assertNotFound();
+        $this->post('/api/v1/admin/account/photo', [])->assertForbidden();
+        $this->assertDatabaseHas('audit_logs', ['action' => 'PROFILE_PHOTO_UPDATED', 'actor_user_id' => $owner->getKey()]);
+    }
+
+    public function test_admin_and_vendor_staff_can_upload_their_own_photo(): void
+    {
+        $scanner = $this->mock(ProfilePhotoScanner::class);
+        $scanner->shouldReceive('assertClean')->twice();
+        $admin = $this->adminFixture('ADMIN_SUPERADMIN');
+        $this->signInAdmin($admin);
+        $this->post('/api/v1/admin/account/photo', ['photo' => UploadedFile::fake()->image('admin.png'), 'lock_version' => $admin->fresh()->lock_version])->assertOk();
+        [, $staff] = $this->vendorFixture('STORE_STAFF');
+        $this->signInVendor($staff);
+        $this->post('/api/v1/vendors/account/photo', ['photo' => UploadedFile::fake()->image('staff.png'), 'lock_version' => $staff->fresh()->lock_version])->assertOk();
+    }
+
+    public function test_personal_photo_rejects_invalid_files_and_scanner_failure_preserves_profile(): void
+    {
+        [, $owner] = $this->vendorFixture('OWNER');
+        $this->signInVendor($owner);
+        $this->post('/api/v1/vendors/account/photo', ['photo' => UploadedFile::fake()->create('fake.svg', 1, 'image/svg+xml'), 'lock_version' => 1])->assertUnprocessable();
+        $scanner = $this->mock(ProfilePhotoScanner::class);
+        $scanner->shouldReceive('assertClean')->once()->andThrow(new AuthenticationException('PHOTO_SCANNER_UNAVAILABLE', 'Unavailable.', 503));
+        $this->post('/api/v1/vendors/account/photo', ['photo' => UploadedFile::fake()->image('portrait.png'), 'lock_version' => 1])->assertStatus(503);
+        self::assertNull($owner->refresh()->profile_photo_key);
     }
 
     public function test_snapshot_exposes_independent_workstreams_and_setup_can_start_first(): void

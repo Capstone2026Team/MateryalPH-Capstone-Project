@@ -1,3 +1,4 @@
+import { DashboardHeader, MetricCard, SectionWorkspace, PreviewMetrics } from '@materyalph/web-ui'
 import { useCallback, useEffect, useState } from 'react'
 import { AdminVendorVerificationApi, type AdminDashboardSummary } from '@materyalph/api-client-ts'
 import { Button, StatusMessage, createWebApiConfiguration } from '@materyalph/web-ui'
@@ -5,7 +6,6 @@ import { AdminShell } from './PhaseThreeAdminPages'
 import { readableVerificationError } from '../lib/vendor-verification-api'
 
 const api = new AdminVendorVerificationApi(createWebApiConfiguration(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1', { refreshSession: true }))
-const later = ['Pending product-compliance reviews', 'Open disputes', 'Appeals', 'Account flags', 'Unresolved invoice requests', 'Failed background jobs', 'External-integration health']
 
 export function AdminDashboardPage() {
   const [summary, setSummary] = useState<AdminDashboardSummary | null>(null)
@@ -18,19 +18,19 @@ export function AdminDashboardPage() {
     finally { setBusy(false) }
   }, [])
   useEffect(() => { void load() }, [load])
-  return <AdminShell activeHref="/dashboard"><div className="mx-auto max-w-6xl space-y-8">
-    <header className="flex flex-wrap items-end justify-between gap-4 border-b border-border-default pb-6"><div><p className="text-sm font-semibold text-action-primary">Platform overview</p><h1 className="mt-2 text-3xl font-semibold">Dashboard</h1><p className="mt-3 text-text-secondary">Current account, activation and review counts within your Admin permissions.</p></div><Button variant="secondary" disabled={busy} onClick={() => void load()}>Refresh dashboard</Button></header>
+  return <AdminShell activeHref="/dashboard"><div className="space-y-6">
+    <DashboardHeader eyebrow="Platform overview" description="Current account, activation and review counts within your Admin permissions." actions={<Button variant="secondary" disabled={busy} onClick={() => void load()}>Refresh dashboard</Button>} />
     {error ? <StatusMessage tone="error">{error}</StatusMessage> : busy ? <p role="status">Loading platform metrics…</p> : summary && <>
-      <dl className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{[
+      <SectionWorkspace dateFilter sections={[{ label: 'Overview', content: <><dl className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{[
         ['Active Tier 2 Vendors', summary.activeVendors, 'Active account and activated store.'],
         ['Non-active Vendor stores', summary.inactiveVendors, 'Registered stores not currently active, including onboarding.'],
         ['Active Buyers', summary.activeBuyers, 'Buyer accounts with ACTIVE status.'],
         ['Pending business-document reviews', summary.pendingDocumentReviews, 'Submitted documents awaiting review.'],
-      ].map(([label, value, description]) => <div className="rounded-surface border border-border-default bg-surface-primary p-5 shadow-sm" key={String(label)}><dt className="text-sm font-semibold">{label}</dt><dd className="mt-3 text-4xl font-semibold tabular-nums">{value === null ? '—' : value}</dd><p className="mt-3 text-sm text-text-secondary">{value === null ? 'Outside your role scope.' : description}</p></div>)}</dl>
-      {summary.canViewAudit && <section className="rounded-surface border border-border-default bg-surface-primary p-5 sm:p-6"><AdminAuditPage embedded /></section>}
+      ].map(([label, value, description]) => <MetricCard key={String(label)} label={String(label)} value={value === null ? '—' : value} description={value === null ? 'Outside your role scope.' : String(description)} />)}</dl>
+      </> }, { label: 'Vendor Activity', content: <><p className="mb-4">Pending business-document reviews: {summary.pendingDocumentReviews ?? 'Outside your role scope'}</p><PreviewMetrics labels={['Approved Vendors', 'Changes required', 'Restricted or suspended Vendors']} /></> }, { label: 'Compliance & Moderation', content: <PreviewMetrics labels={['Product compliance', 'Review moderation', 'Flags and restrictions', 'Scores and badges']} /> }, { label: 'Disputes & Appeals', content: <PreviewMetrics labels={['Open disputes', 'Appeals', 'Pending decisions']} /> }, { label: 'Transactions & Finance', content: <PreviewMetrics labels={['Transaction log', 'Invoice requests', 'Budget override audit']} /> }, { label: 'Platform Health', content: <><PreviewMetrics labels={['Integration health', 'Background jobs', 'Privacy requests']} />{summary.canViewAudit && <section className="rounded-surface border border-border-default bg-surface-primary p-5 sm:p-6"><AdminAuditPage embedded /></section>}</> }]} />
       <p className="text-sm text-text-secondary">Updated {new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Manila' }).format(summary.generatedAt)} (Asia/Manila)</p>
     </>}
-    <section><h2 className="text-xl font-semibold">Later-phase monitoring</h2><p className="mt-2 text-sm text-text-secondary">Not implemented yet. A dash means unavailable, not zero.</p><dl className="mt-4 divide-y divide-border-default">{later.map(label => <div className="flex justify-between gap-4 py-3" key={label}><dt>{label}</dt><dd aria-label="Not implemented">—</dd></div>)}</dl></section>
+
   </div></AdminShell>
 }
 

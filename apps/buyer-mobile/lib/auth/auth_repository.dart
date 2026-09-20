@@ -21,6 +21,72 @@ final class AuthRepository {
 
   final TokenStore _tokenStore;
   final MateryalphApiClient _client;
+  Agreement? _registrationTerms;
+  Agreement? _reviewedTerms;
+
+  bool get hasReviewedTerms => _reviewedTerms != null;
+  Agreement? get reviewedTerms => _reviewedTerms;
+
+  void clearTermsReview() {
+    _registrationTerms = null;
+    _reviewedTerms = null;
+  }
+
+  Future<Agreement> loadRegistrationTerms() async {
+    clearTermsReview();
+    try {
+      final response = await _client.getAgreementsApi().listCurrentAgreements();
+      final terms = response.data?.data
+          .where(
+            (item) =>
+                item.code == 'TERMS_OF_SERVICE' &&
+                (item.audience == 'ALL' || item.audience == 'BUYER'),
+          )
+          .toList();
+      if (terms == null ||
+          terms.length != 1 ||
+          (terms.single.content?.trim().isEmpty ?? true) ||
+          !RegExp(r'^[a-f0-9]{64}$').hasMatch(terms.single.contentHash ?? '')) {
+        throw const BuyerAuthException(
+          'The current Terms are unavailable. Please retry later.',
+        );
+      }
+      return _registrationTerms = terms.single;
+    } on DioException catch (error) {
+      throw BuyerAuthException(_messageFrom(error));
+    }
+  }
+
+  // Temporary flow state only. The API validates the version/hash and records
+  // authoritative acceptance in the account-creation transaction.
+  void acceptReviewedTerms(Agreement terms) {
+    if (!identical(terms, _registrationTerms)) {
+      throw const BuyerAuthException('Please review the current Terms again.');
+    }
+    _reviewedTerms = terms;
+  }
+
+  void _invalidateStaleTerms(DioException error) {
+    final data = error.response?.data;
+    if (data is! Map) return;
+    final errors = data['errors'];
+    if (errors is List &&
+        errors.any(
+          (item) => item is Map && item['code'] == 'AGREEMENT_VERSION_CONFLICT',
+        )) {
+      clearTermsReview();
+    }
+  }
+
+  Agreement _requireTermsReview() {
+    final terms = _reviewedTerms;
+    if (terms == null) {
+      throw const BuyerAuthException(
+        'Review and accept the Terms of Service first.',
+      );
+    }
+    return terms;
+  }
 
   AuthenticationApi get _authentication => _client.getAuthenticationApi();
 
@@ -89,10 +155,12 @@ final class AuthRepository {
     required String email,
     required String mobileE164,
     required String password,
+    String? passwordConfirmation,
     required String buyerType,
     String? companyName,
     String? proof,
   }) async {
+    final terms = _requireTermsReview();
     try {
       await _authentication.registerBuyerMobile(
         buyerMobileRegisterRequest: BuyerMobileRegisterRequest(
@@ -102,7 +170,9 @@ final class AuthRepository {
             ..email = email.trim().toLowerCase()
             ..mobileE164 = mobileE164.trim()
             ..password = password
-            ..passwordConfirmation = password
+            ..passwordConfirmation = passwordConfirmation ?? password
+            ..termsVersionId = terms.id
+            ..termsContentHash = terms.contentHash!
             ..buyerType = buyerType
             ..companyName = companyName?.trim()
             ..termsAccepted = BuyerMobileRegisterRequestTermsAcceptedEnum.true_
@@ -111,6 +181,7 @@ final class AuthRepository {
         ),
       );
     } on DioException catch (error) {
+      _invalidateStaleTerms(error);
       throw BuyerAuthException(_messageFrom(error));
     }
   }
@@ -152,6 +223,7 @@ final class AuthRepository {
     bool termsAccepted = false,
     bool privacyAccepted = false,
   }) async {
+    final terms = signUp ? _requireTermsReview() : null;
     try {
       final response = await _authentication.startBuyerMobileGoogleOidc(
         buyerMobileGoogleOidcStartRequest: BuyerMobileGoogleOidcStartRequest(
@@ -163,6 +235,8 @@ final class AuthRepository {
             ..buyerType = buyerType
             ..companyName = companyName?.trim()
             ..termsAccepted = termsAccepted
+            ..termsVersionId = terms?.id
+            ..termsContentHash = terms?.contentHash
             ..privacyAccepted = privacyAccepted,
         ),
       );
@@ -177,6 +251,7 @@ final class AuthRepository {
     } on BuyerAuthException {
       rethrow;
     } on DioException catch (error) {
+      _invalidateStaleTerms(error);
       throw BuyerAuthException(_messageFrom(error, google: true));
     }
   }

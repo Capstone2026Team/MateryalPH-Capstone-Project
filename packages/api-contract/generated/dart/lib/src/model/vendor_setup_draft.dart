@@ -221,7 +221,7 @@ class _$VendorSetupDraftSerializer implements PrimitiveSerializer<VendorSetupDra
             specifiedType: const FullType.nullable(VendorSetupDraftDelivery),
           ) as VendorSetupDraftDelivery?;
           if (valueDes == null) continue;
-          result.delivery = valueDes;
+          result.delivery = valueDes.toBuilder();
           break;
         case r'vehicles':
           final valueDes = serializers.deserialize(

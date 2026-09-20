@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Identity;
 
+use App\Domain\Agreements\BuyerRegistrationTerms;
 use App\Models\User;
 use App\Models\UserProfile;
 use App\Models\VendorMembership;
@@ -20,6 +21,9 @@ final class RegisterAccount
     public function handle(array $input): User
     {
         return DB::transaction(function () use ($input): User {
+            if ($input['account_type'] === 'BUYER') {
+                app(BuyerRegistrationTerms::class)->assertCurrent($input['terms_version_id'] ?? null, $input['terms_content_hash'] ?? null);
+            }
             $email = mb_strtolower(trim((string) $input['email']));
             if (User::query()->whereRaw('LOWER(email) = ?', [$email])->exists()) {
                 throw new AuthenticationException('ACCOUNT_ALREADY_EXISTS', 'An account already exists for this email.', 409);

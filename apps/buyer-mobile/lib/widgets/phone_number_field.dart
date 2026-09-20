@@ -1,3 +1,4 @@
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter/material.dart';
 
 import 'phone_countries.dart';
@@ -79,6 +80,7 @@ class _PhoneNumberFieldState extends State<PhoneNumberField> {
           key: ValueKey(_region),
           initialValue: _region,
           isExpanded: true,
+          icon: const Icon(LucideIcons.chevronDown),
           menuMaxHeight: 360,
           decoration: const InputDecoration(
             labelText: 'Mobile number country code',

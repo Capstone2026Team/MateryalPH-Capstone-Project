@@ -1,3 +1,5 @@
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'terms_screen.dart';
 import 'package:flutter/material.dart';
 
 import '../widgets/auth_content.dart';
@@ -35,7 +37,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _company = TextEditingController();
   final _password = TextEditingController();
   String _buyerType = 'INDIVIDUAL';
-  bool _acceptedTerms = false;
+  final _confirmation = TextEditingController();
+  bool _obscureConfirmation = true;
   bool _acceptedPrivacy = false;
   bool _obscurePassword = true;
   bool _submitting = false;
@@ -47,12 +50,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _email.dispose();
     _company.dispose();
     _password.dispose();
+    _confirmation.dispose();
     super.dispose();
   }
 
   Future<void> _submit({String? proof}) async {
     if (!_formKey.currentState!.validate()) return;
-    if (!_acceptedTerms || !_acceptedPrivacy) {
+    if (!widget.authRepository.hasReviewedTerms || !_acceptedPrivacy) {
       setState(
         () => _error = 'Accept the Terms and Privacy Notice to continue.',
       );
@@ -69,6 +73,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         email: _email.text,
         mobileE164: _mobile,
         password: _password.text,
+        passwordConfirmation: _confirmation.text,
         buyerType: _buyerType,
         companyName: _buyerType == 'BUSINESS' ? _company.text : null,
         proof: proof,
@@ -94,14 +99,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (!widget.authRepository.hasReviewedTerms) {
+      return TermsScreen(
+        repository: widget.authRepository,
+        onAccepted: () => setState(() {}),
+        onBack: widget.onBack,
+      );
+    }
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         leading: IconButton(
           onPressed: widget.onBack,
           tooltip: 'Back',
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(LucideIcons.arrowLeft, color: BuyerTheme.action),
         ),
-        title: const Text('Create buyer account'),
       ),
       body: SafeArea(
         top: false,
@@ -113,8 +125,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  const Text(
+                    'Welcome to MateryalPH',
+                    style: TextStyle(color: BuyerTheme.muted),
+                  ),
+                  const SizedBox(height: 8),
                   Text(
-                    'Start sourcing with confidence',
+                    'Get started now',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.w800,
                     ),
@@ -125,47 +142,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     style: TextStyle(color: BuyerTheme.muted),
                   ),
                   const SizedBox(height: 24),
-                  OutlinedButton.icon(
-                    onPressed: widget.onGoogleRegister,
-                    icon: const Text(
-                      'G',
-                      style: TextStyle(fontWeight: FontWeight.w800),
-                    ),
-                    label: const Text('Sign up with Google'),
-                  ),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 20),
-                    child: Row(
-                      children: [
-                        Expanded(child: Divider()),
-                        Flexible(
-                          child: Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 12),
-                            child: Text(
-                              'or use email',
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        ),
-                        Expanded(child: Divider()),
-                      ],
-                    ),
-                  ),
                   TextFormField(
+                    enabled: !_submitting,
                     controller: _name,
                     autofillHints: const [AutofillHints.name],
                     textInputAction: TextInputAction.next,
-                    decoration: const InputDecoration(labelText: 'Full name'),
+                    decoration: const InputDecoration(
+                      labelText: 'Full name',
+                      prefixIcon: Icon(LucideIcons.user),
+                    ),
                     validator: _required('Enter your full name.'),
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
+                    enabled: !_submitting,
                     controller: _email,
+                    autocorrect: false,
                     autofillHints: const [AutofillHints.email],
                     keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.next,
                     decoration: const InputDecoration(
                       labelText: 'Email address',
+                      prefixIcon: Icon(LucideIcons.mail),
                     ),
                     validator: (value) {
                       final email = value?.trim() ?? '';
@@ -182,6 +180,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
                     isExpanded: true,
+                    icon: const Icon(LucideIcons.chevronDown),
                     initialValue: _buyerType,
                     decoration: const InputDecoration(labelText: 'Buyer type'),
                     items: const [
@@ -200,6 +199,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   if (_buyerType == 'BUSINESS') ...[
                     const SizedBox(height: 16),
                     TextFormField(
+                      enabled: !_submitting,
                       controller: _company,
                       textInputAction: TextInputAction.next,
                       decoration: const InputDecoration(
@@ -210,12 +210,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ],
                   const SizedBox(height: 16),
                   TextFormField(
+                    enabled: !_submitting,
                     controller: _password,
+                    autocorrect: false,
+                    enableSuggestions: false,
                     obscureText: _obscurePassword,
                     autofillHints: const [AutofillHints.newPassword],
                     textInputAction: TextInputAction.done,
                     decoration: InputDecoration(
                       labelText: 'Password',
+                      prefixIcon: const Icon(LucideIcons.lock),
                       helperText:
                           'At least 12 characters with upper/lowercase and a number.',
                       suffixIcon: IconButton(
@@ -227,8 +231,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             : 'Hide password',
                         icon: Icon(
                           _obscurePassword
-                              ? Icons.visibility_outlined
-                              : Icons.visibility_off_outlined,
+                              ? LucideIcons.eye
+                              : LucideIcons.eyeOff,
                         ),
                       ),
                     ),
@@ -244,13 +248,40 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     },
                   ),
                   const SizedBox(height: 16),
-                  CheckboxListTile(
-                    contentPadding: EdgeInsets.zero,
-                    controlAffinity: ListTileControlAffinity.leading,
-                    value: _acceptedTerms,
-                    onChanged: (value) =>
-                        setState(() => _acceptedTerms = value ?? false),
-                    title: const Text('I accept the Terms of Service.'),
+                  TextFormField(
+                    enabled: !_submitting,
+                    controller: _confirmation,
+                    obscureText: _obscureConfirmation,
+                    autocorrect: false,
+                    enableSuggestions: false,
+                    autofillHints: const [AutofillHints.newPassword],
+                    textInputAction: TextInputAction.done,
+                    decoration: InputDecoration(
+                      labelText: 'Confirm password',
+                      prefixIcon: const Icon(LucideIcons.lock),
+                      suffixIcon: IconButton(
+                        tooltip: _obscureConfirmation
+                            ? 'Show confirmation password'
+                            : 'Hide confirmation password',
+                        onPressed: () => setState(
+                          () => _obscureConfirmation = !_obscureConfirmation,
+                        ),
+                        icon: Icon(
+                          _obscureConfirmation
+                              ? LucideIcons.eye
+                              : LucideIcons.eyeOff,
+                        ),
+                      ),
+                    ),
+                    validator: (value) =>
+                        value == _password.text && (value?.isNotEmpty ?? false)
+                        ? null
+                        : 'Passwords must match.',
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Terms of Service · Version ${widget.authRepository.reviewedTerms!.version} reviewed and accepted',
+                    style: const TextStyle(color: BuyerTheme.muted),
                   ),
                   CheckboxListTile(
                     contentPadding: EdgeInsets.zero,
@@ -271,9 +302,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       _submitting ? 'Creating account…' : 'Create account',
                     ),
                   ),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: Text(
+                      'Or sign up with',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: BuyerTheme.muted),
+                    ),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _submitting ? null : widget.onGoogleRegister,
+                    icon: const Icon(Icons.g_mobiledata, size: 32),
+                    label: const Text('Sign up with Google'),
+                  ),
                   const SizedBox(height: 12),
                   TextButton(
-                    onPressed: widget.onLogin,
+                    onPressed: _submitting ? null : widget.onLogin,
                     child: const Text('Already registered? Sign in'),
                   ),
                 ],

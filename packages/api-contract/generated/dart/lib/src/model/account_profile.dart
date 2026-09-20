@@ -14,6 +14,9 @@ part 'account_profile.g.dart';
 /// Properties:
 /// * [id]
 /// * [fullName]
+/// * [avatarUrl] - Short-lived owner-only personal photo URL; never the store logo.
+/// * [mobileE164] - Authenticated Buyer registered contact number.
+/// * [emailMasked] - Buyer email stays masked until recent identity verification.
 /// * [email]
 /// * [accountType]
 /// * [accountStatus]
@@ -34,6 +37,18 @@ abstract class AccountProfile implements Built<AccountProfile, AccountProfileBui
 
   @BuiltValueField(wireName: r'full_name')
   String get fullName;
+
+  /// Short-lived owner-only personal photo URL; never the store logo.
+  @BuiltValueField(wireName: r'avatar_url')
+  String? get avatarUrl;
+
+  /// Authenticated Buyer registered contact number.
+  @BuiltValueField(wireName: r'mobile_e164')
+  String? get mobileE164;
+
+  /// Buyer email stays masked until recent identity verification.
+  @BuiltValueField(wireName: r'email_masked')
+  bool? get emailMasked;
 
   @BuiltValueField(wireName: r'email')
   String get email;
@@ -107,6 +122,27 @@ class _$AccountProfileSerializer implements PrimitiveSerializer<AccountProfile> 
       object.fullName,
       specifiedType: const FullType(String),
     );
+    if (object.avatarUrl != null) {
+      yield r'avatar_url';
+      yield serializers.serialize(
+        object.avatarUrl,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
+    if (object.mobileE164 != null) {
+      yield r'mobile_e164';
+      yield serializers.serialize(
+        object.mobileE164,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
+    if (object.emailMasked != null) {
+      yield r'email_masked';
+      yield serializers.serialize(
+        object.emailMasked,
+        specifiedType: const FullType(bool),
+      );
+    }
     yield r'email';
     yield serializers.serialize(
       object.email,
@@ -208,6 +244,30 @@ class _$AccountProfileSerializer implements PrimitiveSerializer<AccountProfile> 
             specifiedType: const FullType(String),
           ) as String;
           result.fullName = valueDes;
+          break;
+        case r'avatar_url':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.avatarUrl = valueDes;
+          break;
+        case r'mobile_e164':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.mobileE164 = valueDes;
+          break;
+        case r'email_masked':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.emailMasked = valueDes;
           break;
         case r'email':
           final valueDes = serializers.deserialize(

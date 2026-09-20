@@ -7,15 +7,60 @@ namespace Tests\Feature\Api;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Identity\GoogleOidcService;
 use App\Models\User;
+use Database\Seeders\SystemFoundationSeeder;
 use Firebase\JWT\JWT;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 final class GoogleOidcValidationTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_buyer_google_signup_carries_reviewed_terms_and_records_existing_acceptance_evidence(): void
+    {
+        $this->seed(SystemFoundationSeeder::class);
+        $this->configureOidc();
+        config()->set('app.buyer_redirect_uri', 'materyalph://auth/callback');
+        $terms = collect($this->getJson('/api/v1/agreements/current')->json('data'))->firstWhere('code', 'TERMS_OF_SERVICE');
+        $response = $this->postJson('/api/v1/mobile/auth/google/start', [
+            'mode' => 'SIGN_UP', 'mobile_e164' => '+639171234567', 'buyer_type' => 'INDIVIDUAL',
+            'terms_accepted' => true, 'privacy_accepted' => true, 'terms_version_id' => $terms['id'], 'terms_content_hash' => $terms['content_hash'],
+        ])->assertOk();
+        $url = (string) $response->json('data.authorization_url');
+        $flow = $this->flowFromAuthorizationUrl($url);
+        self::assertSame($terms['id'], $flow['terms_version_id']);
+        self::assertSame($terms['content_hash'], $flow['terms_content_hash']);
+        $this->assertDatabaseCount('agreement_acceptances', 0);
+        parse_str((string) parse_url($url, PHP_URL_QUERY), $query);
+        $this->fakeGoogleIdentity($flow['nonce'], 'google-signup@example.test');
+        $result = app(GoogleOidcService::class)->complete($query['state'], 'authorization-code');
+        $this->assertDatabaseHas('agreement_acceptances', ['user_id' => $result->user->getKey(), 'agreement_version_id' => $terms['id'], 'source' => 'GOOGLE_OIDC']);
+    }
+
+    public function test_terms_retired_during_google_signup_cannot_be_silently_replaced(): void
+    {
+        $this->seed(SystemFoundationSeeder::class);
+        $this->configureOidc();
+        config()->set('app.buyer_redirect_uri', 'materyalph://auth/callback');
+        $terms = collect($this->getJson('/api/v1/agreements/current')->json('data'))->firstWhere('code', 'TERMS_OF_SERVICE');
+        $service = app(GoogleOidcService::class);
+        $url = $service->authorizationUrl('BUYER', 'MOBILE', true, true, 'SIGN_UP', '+639171234567', 'INDIVIDUAL', null, null, $terms['id'], $terms['content_hash']);
+        $flow = $this->flowFromAuthorizationUrl($url);
+        parse_str((string) parse_url($url, PHP_URL_QUERY), $query);
+        $this->fakeGoogleIdentity($flow['nonce'], 'stale-google@example.test');
+        DB::table('agreement_versions')->where('id', $terms['id'])->update(['retired_at' => now()]);
+        try {
+            $service->complete($query['state'], 'authorization-code');
+            self::fail('A changed Terms version requires another review.');
+        } catch (AuthenticationException $error) {
+            self::assertSame('AGREEMENT_VERSION_CONFLICT', $error->errorCode);
+        }
+        $this->assertDatabaseMissing('users', ['email' => 'stale-google@example.test']);
+        $this->assertDatabaseCount('agreement_acceptances', 0);
+    }
 
     public function test_web_and_native_google_starts_store_route_owned_transport_context(): void
     {

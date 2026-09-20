@@ -26,17 +26,26 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      expect(find.byType(ChoiceChip), findsNothing);
       await tester.scrollUntilVisible(
-        find.text('Email: b***@example.test'),
+        find.text('Verify your identity to view your full email address.'),
         200,
         scrollable: find.byType(Scrollable).first,
       );
-      expect(find.text('Email: b***@example.test'), findsOneWidget);
+      expect(find.text('b***@example.test'), findsNothing);
       expect(tester.takeException(), isNull);
-      await tester.drag(find.byType(ListView), const Offset(0, 2000));
+      await tester.pumpWidget(
+        MaterialApp(
+          home: BuyerAccountScreen(
+            key: const ValueKey('security'),
+            repository: repository(),
+            onSignedOut: () {},
+            initialSection: 'Security',
+          ),
+        ),
+      );
       await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(ChoiceChip, 'Security'));
-      await tester.pumpAndSettle();
+      expect(find.byType(ChoiceChip), findsNothing);
       await tester.scrollUntilVisible(
         find.text('Send email verification instead'),
         200,
@@ -63,7 +72,12 @@ void main() {
   });
 }
 
-AuthRepository repository({bool expired = false}) {
+AuthRepository repository({
+  bool expired = false,
+  bool verified = false,
+  String? phone = "+639171234567",
+  String name = "Buyer fixture",
+}) {
   final client = MateryalphApiClient(
     dio: Dio(BaseOptions(baseUrl: 'https://api.example.test')),
     interceptors: [
@@ -82,11 +96,15 @@ AuthRepository repository({bool expired = false}) {
             );
             return;
           }
-          final data = options.path.endsWith('/profile')
+          final dynamic data = options.path.endsWith('/profile')
               ? <String, dynamic>{
                   'id': 'buyer-fixture',
-                  'full_name': 'Buyer fixture',
-                  'email': 'b***@example.test',
+                  'full_name': name,
+                  'email': verified
+                      ? 'buyer.with.a.long.email.address@example.test'
+                      : 'b***@example.test',
+                  'email_masked': !verified,
+                  'mobile_e164': phone,
                   'account_type': 'BUYER',
                   'account_status': 'ACTIVE',
                   'lock_version': 1,
@@ -100,6 +118,30 @@ AuthRepository repository({bool expired = false}) {
                   'can_manage_staff': false,
                   'permissions': <String>[],
                 }
+              : options.path.endsWith('/sessions')
+              ? <dynamic>[
+                  {
+                    'id': 'session-fixture',
+                    'description': 'Buyer mobile app',
+                    'current': true,
+                    'created_at': '2026-09-20T00:00:00Z',
+                    'last_active_at': '2026-09-20T00:01:00Z',
+                  },
+                ]
+              : options.path.endsWith('/agreements')
+              ? <dynamic>[
+                  {
+                    'id': 'terms-fixture',
+                    'code': 'TERMS_OF_SERVICE',
+                    'title': 'Terms of Service',
+                    'version': 2,
+                    'content':
+                        '# Terms of Service\n\n## Account security\n\nMaintained test agreement content.',
+                    'content_available': true,
+                    'accepted_at': '2026-09-20T00:00:00Z',
+                    'requires_acceptance': false,
+                  },
+                ]
               : <String, dynamic>{'queued': true};
           handler.resolve(
             Response<dynamic>(
