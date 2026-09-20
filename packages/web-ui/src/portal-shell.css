@@ -42,6 +42,11 @@
   .portal-drawer-toggle { display: none; }
   .portal-collapse-toggle { display: inline-flex; width: 32px; height: 32px; }
   .portal-nav-row { min-height: 36px; padding-block: 8px; }
+  .portal-nav section { position: relative; }
+  .portal-nav section + section { padding-top: 0; transition: margin-top 180ms ease, padding-top 180ms ease; }
+  .portal-nav section + section::before { content: ''; position: absolute; inset: 0 10px auto; height: 1px; background: var(--mp-color-border-default); opacity: 0; transition: opacity 140ms ease; }
+  .portal-nav-label { height: 30px; overflow: hidden; white-space: nowrap; transition: height 180ms ease, padding 180ms ease, opacity 140ms ease; }
+  .portal-brand-full, .portal-brand-short { animation: portal-brand-reveal 140ms ease; }
   .portal-nav-text { white-space: nowrap; }
   .portal-nav-row { overflow: hidden; }
   .portal-nav-text { overflow: hidden; text-overflow: ellipsis; }
@@ -51,13 +56,17 @@
   .is-collapsed .portal-brand-full { display: none; }
   .is-collapsed .portal-brand-short { display: block; }
   .is-collapsed .portal-nav { padding-inline: 10px; }
-  .is-collapsed .portal-nav-label { overflow: hidden; opacity: 0; white-space: nowrap; }
+  .is-collapsed .portal-nav-label { height: 0; padding-block: 0; opacity: 0; }
+  .is-collapsed .portal-nav section + section { margin-top: 4px; padding-top: 5px; }
+  .is-collapsed .portal-nav section + section::before { opacity: 1; }
   .is-collapsed .portal-nav-row { justify-content: center; padding-inline: 0; gap: 0; }
   .is-collapsed .portal-nav-text { width: 0; opacity: 0; }
   .is-collapsed .portal-sidebar-footer { padding-inline: 10px; }
   .is-collapsed .portal-footer-account { justify-content: center; padding-inline: 0; gap: 0; }
   .is-collapsed .portal-footer-details { width: 0; opacity: 0; }
 }
+@keyframes portal-brand-reveal { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) {
-  .portal-layout, .portal-nav-row, .portal-nav-text, .portal-nav-label, .portal-footer-details { transition: none; }
+  .portal-layout, .portal-nav-row, .portal-nav-text, .portal-nav-label, .portal-footer-details, .portal-nav section + section, .portal-nav section + section::before { transition: none; }
+  .portal-brand-full, .portal-brand-short { animation: none; }
 }

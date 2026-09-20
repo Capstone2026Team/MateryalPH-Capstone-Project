@@ -47,9 +47,22 @@ for (const portal of ['vendors', 'admin'] as const) {
     await page.screenshot({ path: testInfo.outputPath(`${portal}-navigation.png`) })
     if (desktop) {
       const expanded = await sidebar.boundingBox()
+      const destinations = await menu.locator('.portal-nav-row').evaluateAll(rows => rows.map(row => row.getAttribute('href')))
       await page.getByRole('button', { name: 'Collapse sidebar' }).click()
       await expect(sidebar).toHaveCSS('width', '72px')
       await expect(page.getByRole('button', { name: 'Expand sidebar' })).toHaveAttribute('aria-expanded', 'false')
+      await expect(menu.locator('.portal-nav-label').first()).toHaveCSS('height', '0px')
+      expect(await menu.locator('.portal-nav-row').evaluateAll(rows => rows.map(row => row.getAttribute('href')))).toEqual(destinations)
+      const geometry = await menu.evaluate(el => ({
+        rows: [...el.querySelectorAll('.portal-nav-row')].map(row => { const box = row.getBoundingClientRect(); return { top: box.top, bottom: box.bottom, height: box.height, width: box.width } }),
+        dividers: [...el.querySelectorAll('section + section')].map(section => { const style = getComputedStyle(section, '::before'); return { height: style.height, opacity: style.opacity } }),
+      }))
+      for (const [index, row] of geometry.rows.entries()) {
+        expect(row.height).toBe(36)
+        expect(row.width).toBeGreaterThanOrEqual(44)
+        if (index > 0) expect(row.top - geometry.rows[index - 1]!.bottom).toBeLessThanOrEqual(10)
+      }
+      for (const divider of geometry.dividers) expect(divider).toEqual({ height: '1px', opacity: '1' })
       const last = sidebar.locator('.portal-nav-row').last()
       await last.focus()
       await expect(page.getByRole('tooltip')).toContainText(await last.getAttribute('aria-label') ?? '')
