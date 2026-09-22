@@ -117,18 +117,34 @@ export async function readableOnboardingError(error: unknown): Promise<string> {
     const payload: unknown = await error.response.clone().json().catch(() => null)
     const first = firstApiError(payload)
     if (error.response.status === 401) return first?.code === 'OTP_INVALID_OR_EXPIRED' ? (first.message ?? 'The code is invalid or expired.') : 'Your session has expired. Sign in again to continue.'
-    if (typeof first?.message === 'string') return first.message
+    if (typeof first?.message === 'string') {
+      const details = first.details
+      if (details && typeof details === 'object') {
+        const values = details as Record<string, unknown>
+        const blockers = Array.isArray(values.blockers) ? values.blockers : []
+        const messages = blockers.flatMap((blocker: unknown) => {
+          if (!blocker || typeof blocker !== 'object') return []
+          const item = blocker as Record<string, unknown>
+          return typeof item.key === 'string' && typeof item.reason === 'string' ? [`${item.key.replace(/[_.]/g, ' ')}: ${item.reason}`] : []
+        })
+        if (messages.length) return `${first.message} ${messages.join(' ')}`
+        const fields = Object.values(values).flatMap(value => Array.isArray(value) ? value.filter((message): message is string => typeof message === 'string') : [])
+        if (fields.length) return `${first.message} ${fields.join(' ')}`
+      }
+      return first.message
+    }
   }
   return error instanceof Error ? error.message : 'The request could not be completed. Check your connection and try again.'
 }
 
-function firstApiError(value: unknown): { code?: string; message?: string } | null {
+function firstApiError(value: unknown): { code?: string; message?: string; details?: unknown } | null {
   if (typeof value !== 'object' || value === null || !('errors' in value) || !Array.isArray(value.errors)) return null
   const first: unknown = value.errors[0]
   if (typeof first !== 'object' || first === null) return null
   const record = first as Record<string, unknown>
-  const result: { code?: string; message?: string } = {}
+  const result: { code?: string; message?: string; details?: unknown } = {}
   if (typeof record.code === 'string') result.code = record.code
   if (typeof record.message === 'string') result.message = record.message
+  result.details = record.details
   return result
 }

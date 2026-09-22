@@ -13,6 +13,13 @@
  */
 
 import { mapValues } from '../runtime';
+import type { OnboardingDraftVersion } from './OnboardingDraftVersion';
+import {
+    OnboardingDraftVersionFromJSON,
+    OnboardingDraftVersionFromJSONTyped,
+    OnboardingDraftVersionToJSON,
+    OnboardingDraftVersionToJSONTyped,
+} from './OnboardingDraftVersion';
 import type { VendorOnboardingSection } from './VendorOnboardingSection';
 import {
     VendorOnboardingSectionFromJSON,
@@ -20,6 +27,27 @@ import {
     VendorOnboardingSectionToJSON,
     VendorOnboardingSectionToJSONTyped,
 } from './VendorOnboardingSection';
+import type { OnboardingRequirement } from './OnboardingRequirement';
+import {
+    OnboardingRequirementFromJSON,
+    OnboardingRequirementFromJSONTyped,
+    OnboardingRequirementToJSON,
+    OnboardingRequirementToJSONTyped,
+} from './OnboardingRequirement';
+import type { OnboardingStepCompletion } from './OnboardingStepCompletion';
+import {
+    OnboardingStepCompletionFromJSON,
+    OnboardingStepCompletionFromJSONTyped,
+    OnboardingStepCompletionToJSON,
+    OnboardingStepCompletionToJSONTyped,
+} from './OnboardingStepCompletion';
+import type { VendorActivationSnapshot } from './VendorActivationSnapshot';
+import {
+    VendorActivationSnapshotFromJSON,
+    VendorActivationSnapshotFromJSONTyped,
+    VendorActivationSnapshotToJSON,
+    VendorActivationSnapshotToJSONTyped,
+} from './VendorActivationSnapshot';
 
 /**
  *
@@ -27,6 +55,22 @@ import {
  * @interface VendorOnboardingSnapshot
  */
 export interface VendorOnboardingSnapshot {
+    /**
+     *
+     */
+    stepCompletion: Array<OnboardingStepCompletion>;
+    /**
+     *
+     */
+    lockVersion: number;
+    /**
+     *
+     */
+    requirements: Array<OnboardingRequirement>;
+    /**
+     *
+     */
+    drafts: Array<OnboardingDraftVersion>;
     /**
      *
      */
@@ -46,7 +90,7 @@ export interface VendorOnboardingSnapshot {
     /**
      *
      */
-    activation: { [key: string]: any; };
+    activation: VendorActivationSnapshot;
     /**
      *
      */
@@ -61,6 +105,10 @@ export interface VendorOnboardingSnapshot {
  * Check if a given object implements the VendorOnboardingSnapshot interface.
  */
 export function instanceOfVendorOnboardingSnapshot(value: object): value is VendorOnboardingSnapshot {
+    if ((!('stepCompletion' in (value as Record<string, any>)) && !('step_completion' in (value as Record<string, any>))) || ((value as Record<string, any>)['stepCompletion'] === undefined && (value as Record<string, any>)['step_completion'] === undefined)) return false;
+    if ((!('lockVersion' in (value as Record<string, any>)) && !('lock_version' in (value as Record<string, any>))) || ((value as Record<string, any>)['lockVersion'] === undefined && (value as Record<string, any>)['lock_version'] === undefined)) return false;
+    if (!('requirements' in value) || value['requirements'] === undefined) return false;
+    if (!('drafts' in value) || value['drafts'] === undefined) return false;
     if (!('organization' in value) || value['organization'] === undefined) return false;
     if (!('sections' in value) || value['sections'] === undefined) return false;
     if (!('verification' in value) || value['verification'] === undefined) return false;
@@ -81,11 +129,15 @@ export function VendorOnboardingSnapshotFromJSONTyped(json: any, ignoreDiscrimin
     }
     return {
 
+        'stepCompletion': ((json['step_completion'] as Array<any>).map(OnboardingStepCompletionFromJSON)),
+        'lockVersion': json['lock_version'],
+        'requirements': ((json['requirements'] as Array<any>).map(OnboardingRequirementFromJSON)),
+        'drafts': ((json['drafts'] as Array<any>).map(OnboardingDraftVersionFromJSON)),
         'organization': json['organization'],
         'sections': (mapValues(json['sections'], VendorOnboardingSectionFromJSON)),
         'verification': json['verification'],
         'setup': json['setup'],
-        'activation': json['activation'],
+        'activation': VendorActivationSnapshotFromJSON(json['activation']),
         'welcomeRequired': json['welcome_required'],
         'permissions': json['permissions'],
     };
@@ -102,11 +154,15 @@ export function VendorOnboardingSnapshotToJSONTyped(value?: VendorOnboardingSnap
 
     return {
 
+        'step_completion': ((value['stepCompletion'] as Array<any>).map(OnboardingStepCompletionToJSON)),
+        'lock_version': value['lockVersion'],
+        'requirements': ((value['requirements'] as Array<any>).map(OnboardingRequirementToJSON)),
+        'drafts': ((value['drafts'] as Array<any>).map(OnboardingDraftVersionToJSON)),
         'organization': value['organization'],
         'sections': (mapValues(value['sections'], VendorOnboardingSectionToJSON)),
         'verification': value['verification'],
         'setup': value['setup'],
-        'activation': value['activation'],
+        'activation': VendorActivationSnapshotToJSON(value['activation']),
         'welcome_required': value['welcomeRequired'],
         'permissions': value['permissions'],
     };

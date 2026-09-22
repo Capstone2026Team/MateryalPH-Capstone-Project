@@ -16,6 +16,9 @@ part 'vendor_verification_draft_tax_profile.g.dart';
 /// * [taxpayerKey]
 /// * [tin]
 /// * [branchCode]
+/// * [branchCodeLength]
+/// * [headOffice]
+/// * [declarationYear]
 /// * [birCorReference]
 /// * [entityClass]
 /// * [registrationCategory]
@@ -38,6 +41,16 @@ abstract class VendorVerificationDraftTaxProfile implements Built<VendorVerifica
 
   @BuiltValueField(wireName: r'branch_code')
   String? get branchCode;
+
+  @BuiltValueField(wireName: r'branch_code_length')
+  VendorVerificationDraftTaxProfileBranchCodeLengthEnum? get branchCodeLength;
+  // enum branchCodeLengthEnum {  3,  5,  };
+
+  @BuiltValueField(wireName: r'head_office')
+  bool? get headOffice;
+
+  @BuiltValueField(wireName: r'declaration_year')
+  int? get declarationYear;
 
   @BuiltValueField(wireName: r'bir_cor_reference')
   String? get birCorReference;
@@ -120,6 +133,27 @@ class _$VendorVerificationDraftTaxProfileSerializer implements PrimitiveSerializ
       yield serializers.serialize(
         object.branchCode,
         specifiedType: const FullType.nullable(String),
+      );
+    }
+    if (object.branchCodeLength != null) {
+      yield r'branch_code_length';
+      yield serializers.serialize(
+        object.branchCodeLength,
+        specifiedType: const FullType(VendorVerificationDraftTaxProfileBranchCodeLengthEnum),
+      );
+    }
+    if (object.headOffice != null) {
+      yield r'head_office';
+      yield serializers.serialize(
+        object.headOffice,
+        specifiedType: const FullType(bool),
+      );
+    }
+    if (object.declarationYear != null) {
+      yield r'declaration_year';
+      yield serializers.serialize(
+        object.declarationYear,
+        specifiedType: const FullType.nullable(int),
       );
     }
     if (object.birCorReference != null) {
@@ -253,6 +287,30 @@ class _$VendorVerificationDraftTaxProfileSerializer implements PrimitiveSerializ
           if (valueDes == null) continue;
           result.branchCode = valueDes;
           break;
+        case r'branch_code_length':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(VendorVerificationDraftTaxProfileBranchCodeLengthEnum),
+          ) as VendorVerificationDraftTaxProfileBranchCodeLengthEnum?;
+          if (valueDes == null) continue;
+          result.branchCodeLength = valueDes;
+          break;
+        case r'head_office':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.headOffice = valueDes;
+          break;
+        case r'declaration_year':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.declarationYear = valueDes;
+          break;
         case r'bir_cor_reference':
           final valueDes = serializers.deserialize(
             value,
@@ -378,6 +436,21 @@ class _$VendorVerificationDraftTaxProfileSerializer implements PrimitiveSerializ
   }
 }
 
+
+class VendorVerificationDraftTaxProfileBranchCodeLengthEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireNumber: 3)
+  static const VendorVerificationDraftTaxProfileBranchCodeLengthEnum number3 = _$vendorVerificationDraftTaxProfileBranchCodeLengthEnum_number3;
+  @BuiltValueEnumConst(wireNumber: 5)
+  static const VendorVerificationDraftTaxProfileBranchCodeLengthEnum number5 = _$vendorVerificationDraftTaxProfileBranchCodeLengthEnum_number5;
+
+  static Serializer<VendorVerificationDraftTaxProfileBranchCodeLengthEnum> get serializer => _$vendorVerificationDraftTaxProfileBranchCodeLengthEnumSerializer;
+
+  const VendorVerificationDraftTaxProfileBranchCodeLengthEnum._(String name): super(name);
+
+  static BuiltSet<VendorVerificationDraftTaxProfileBranchCodeLengthEnum> get values => _$vendorVerificationDraftTaxProfileBranchCodeLengthEnumValues;
+  static VendorVerificationDraftTaxProfileBranchCodeLengthEnum valueOf(String name) => _$vendorVerificationDraftTaxProfileBranchCodeLengthEnumValueOf(name);
+}
 
 class VendorVerificationDraftTaxProfileEntityClassEnum extends EnumClass {
 

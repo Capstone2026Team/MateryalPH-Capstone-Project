@@ -6,6 +6,7 @@
 
 Name | Type
 ------------ | -------------
+`draftLockVersion` | number
 `organizationLockVersion` | number
 `publicStoreName` | string
 `description` | string
@@ -23,6 +24,7 @@ import type { VendorSetupDraft } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "draftLockVersion": null,
   "organizationLockVersion": null,
   "publicStoreName": null,
   "description": null,

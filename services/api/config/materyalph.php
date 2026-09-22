@@ -31,7 +31,7 @@ return [
         ],
     ],
     'files' => [
-        'disk' => env('FILESYSTEM_DISK', 'local'),
+        'disk' => env('VENDOR_PRIVATE_DISK', 'local'),
         'max_document_kb' => (int) env('VENDOR_DOCUMENT_MAX_KB', 10240),
         'max_media_kb' => (int) env('VENDOR_MEDIA_MAX_KB', 20480),
     ],

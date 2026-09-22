@@ -27,6 +27,9 @@ final class VendorVerificationDecisionRequest extends FormRequest
             'verified_expiration_date' => ['sometimes', 'nullable', 'date', 'after_or_equal:verified_issue_date'],
             'verified_vat_category' => ['sometimes', 'nullable', Rule::in(['VAT', 'NON_VAT', 'VAT_ZERO', 'VAT_EXEMPT'])],
             'evidence_source' => ['sometimes', 'nullable', 'string', 'max:48'],
+            'authority_evidence_version_id' => ['sometimes', 'nullable', 'uuid'],
+            'authority_scopes' => ['sometimes', 'array', 'max:3'],
+            'authority_scopes.*' => [Rule::in(['TAX_DECLARATIONS', 'COMMISSION_AGREEMENT', 'PAYMENT_CONFIGURATION'])],
             'remarks' => ['sometimes', 'nullable', 'string', 'max:2000'],
         ];
     }

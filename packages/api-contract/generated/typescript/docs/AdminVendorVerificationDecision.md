@@ -6,6 +6,8 @@
 
 Name | Type
 ------------ | -------------
+`authorityEvidenceVersionId` | string
+`authorityScopes` | Array&lt;string&gt;
 `decision` | string
 `lockVersion` | number
 `reason` | string
@@ -24,6 +26,8 @@ import type { AdminVendorVerificationDecision } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "authorityEvidenceVersionId": null,
+  "authorityScopes": null,
   "decision": null,
   "lockVersion": null,
   "reason": null,

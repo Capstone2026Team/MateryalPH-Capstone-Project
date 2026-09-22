@@ -14,6 +14,7 @@ part 'vendor_setup_draft.g.dart';
 /// VendorSetupDraft
 ///
 /// Properties:
+/// * [draftLockVersion] - Version of this workstream draft; zero for its first save. Stale versions return 409.
 /// * [organizationLockVersion]
 /// * [publicStoreName]
 /// * [description]
@@ -25,6 +26,10 @@ part 'vendor_setup_draft.g.dart';
 /// * [vehicles]
 @BuiltValue()
 abstract class VendorSetupDraft implements Built<VendorSetupDraft, VendorSetupDraftBuilder> {
+  /// Version of this workstream draft; zero for its first save. Stale versions return 409.
+  @BuiltValueField(wireName: r'draft_lock_version')
+  int? get draftLockVersion;
+
   @BuiltValueField(wireName: r'organization_lock_version')
   int get organizationLockVersion;
 
@@ -76,6 +81,13 @@ class _$VendorSetupDraftSerializer implements PrimitiveSerializer<VendorSetupDra
     VendorSetupDraft object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.draftLockVersion != null) {
+      yield r'draft_lock_version';
+      yield serializers.serialize(
+        object.draftLockVersion,
+        specifiedType: const FullType(int),
+      );
+    }
     yield r'organization_lock_version';
     yield serializers.serialize(
       object.organizationLockVersion,
@@ -160,6 +172,14 @@ class _$VendorSetupDraftSerializer implements PrimitiveSerializer<VendorSetupDra
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'draft_lock_version':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.draftLockVersion = valueDes;
+          break;
         case r'organization_lock_version':
           final valueDes = serializers.deserialize(
             value,

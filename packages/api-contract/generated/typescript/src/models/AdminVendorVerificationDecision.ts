@@ -22,6 +22,14 @@ export interface AdminVendorVerificationDecision {
     /**
      *
      */
+    authorityEvidenceVersionId?: string | null;
+    /**
+     *
+     */
+    authorityScopes?: Array<AdminVendorVerificationDecisionAuthorityScopesEnum>;
+    /**
+     *
+     */
     decision: AdminVendorVerificationDecisionDecisionEnum;
     /**
      *
@@ -61,6 +69,16 @@ export interface AdminVendorVerificationDecision {
     remarks?: string | null;
 }
 
+
+/**
+ * @export
+ */
+export const AdminVendorVerificationDecisionAuthorityScopesEnum = {
+    TaxDeclarations: 'TAX_DECLARATIONS',
+    CommissionAgreement: 'COMMISSION_AGREEMENT',
+    PaymentConfiguration: 'PAYMENT_CONFIGURATION',
+} as const;
+export type AdminVendorVerificationDecisionAuthorityScopesEnum = typeof AdminVendorVerificationDecisionAuthorityScopesEnum[keyof typeof AdminVendorVerificationDecisionAuthorityScopesEnum];
 
 /**
  * @export
@@ -112,6 +130,8 @@ export function AdminVendorVerificationDecisionFromJSONTyped(json: any, ignoreDi
     }
     return {
 
+        'authorityEvidenceVersionId': json['authority_evidence_version_id'] === undefined ? undefined : json['authority_evidence_version_id'] === null ? null : json['authority_evidence_version_id'],
+        'authorityScopes': json['authority_scopes'] == null ? undefined : json['authority_scopes'],
         'decision': json['decision'],
         'lockVersion': json['lock_version'] == null ? undefined : json['lock_version'],
         'reason': json['reason'] === undefined ? undefined : json['reason'] === null ? null : json['reason'],
@@ -136,6 +156,8 @@ export function AdminVendorVerificationDecisionToJSONTyped(value?: AdminVendorVe
 
     return {
 
+        'authority_evidence_version_id': value['authorityEvidenceVersionId'],
+        'authority_scopes': value['authorityScopes'],
         'decision': value['decision'],
         'lock_version': value['lockVersion'],
         'reason': value['reason'],

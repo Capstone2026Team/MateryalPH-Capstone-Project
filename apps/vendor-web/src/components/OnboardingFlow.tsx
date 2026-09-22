@@ -19,16 +19,16 @@ export function OnboardingFlow({ steps, current, onStep, section, children, acti
   }, [current])
   return <div className="min-w-0 space-y-5">
     <nav aria-label={`${section.label} steps`} className="min-w-0 rounded-surface border border-border-default bg-surface-primary">
-      <div className="flex flex-wrap justify-between gap-2 px-5 pt-4 text-sm">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-border-default px-5 py-3 text-sm">
         <p className="font-semibold">Step {current + 1} of {steps.length}</p>
         <p className="text-text-secondary">{section.complete} of {section.total} required items complete</p>
       </div>
-      <ol className={`grid auto-rows-fr grid-cols-1 px-3 min-[360px]:grid-cols-2 sm:grid-cols-3 ${steps.length === 5 ? 'lg:grid-cols-5' : 'lg:grid-cols-6'}`} aria-label="Choose a section">
+      <ol className={`grid auto-rows-fr grid-cols-1 gap-1 p-2 min-[360px]:grid-cols-2 ${steps.length === 4 ? 'lg:grid-cols-4' : steps.length === 5 ? 'sm:grid-cols-3 lg:grid-cols-5' : 'sm:grid-cols-3 lg:grid-cols-6'}`} aria-label="Choose a section">
         {steps.map((step, index) => {
           const requirements = section.steps.filter(item => step.requirements.includes(item.key))
           const complete = requirements.length > 0 && requirements.every(item => ['APPROVED', 'COMPLETED', 'NOT_APPLICABLE'].includes(item.status))
-          return <li key={step.label} className="flex min-w-0"><button type="button" disabled={busy} onClick={() => onStep(index)} aria-current={current === index ? 'step' : undefined} className={`flex min-h-20 w-full min-w-0 items-center gap-2 border-b-2 px-2 py-3 text-left text-sm leading-5 disabled:opacity-60 ${current === index ? 'border-action-primary font-semibold text-action-primary' : 'border-transparent text-text-secondary hover:bg-surface-canvas'}`}>
-            <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold ${current === index ? 'border-action-primary bg-action-primary text-white' : complete ? 'border-status-success text-status-success' : 'border-border-default text-text-strong'}`}>{complete ? <><Check size={15} aria-hidden="true" /><span className="sr-only">Completed, </span></> : index + 1}</span>
+          return <li key={step.label} className="flex min-w-0"><button type="button" disabled={busy} onClick={() => onStep(index)} aria-current={current === index ? 'step' : undefined} className={`flex min-h-20 w-full min-w-0 items-center gap-2 rounded-control border-b-2 px-3 py-3 text-left text-sm leading-5 transition-colors motion-reduce:transition-none disabled:opacity-60 ${current === index ? 'border-action-primary bg-brand-orange-50 font-semibold text-action-primary' : 'border-transparent text-text-secondary hover:bg-surface-canvas'}`}>
+            <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-semibold ${current === index ? 'border-action-primary bg-action-primary text-white' : complete ? 'border-status-success text-status-success' : 'border-border-default bg-surface-primary text-text-strong'}`}>{complete ? <><Check size={15} aria-hidden="true" /><span className="sr-only">Completed, </span></> : index + 1}</span>
             <span className="min-w-0 break-words">{step.label}</span>
           </button></li>
         })}

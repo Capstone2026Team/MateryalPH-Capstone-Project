@@ -88,14 +88,20 @@ import 'package:materyalph_api_client/src/model/mfa_enrollment_envelope_all_of_d
 import 'package:materyalph_api_client/src/model/mfa_recovery_request.dart';
 import 'package:materyalph_api_client/src/model/mfa_status_envelope.dart';
 import 'package:materyalph_api_client/src/model/mfa_status_envelope_all_of_data.dart';
+import 'package:materyalph_api_client/src/model/onboarding_draft_version.dart';
+import 'package:materyalph_api_client/src/model/onboarding_requirement.dart';
+import 'package:materyalph_api_client/src/model/onboarding_step_completion.dart';
 import 'package:materyalph_api_client/src/model/password_recovery_request.dart';
 import 'package:materyalph_api_client/src/model/password_reset_request.dart';
 import 'package:materyalph_api_client/src/model/register_request.dart';
 import 'package:materyalph_api_client/src/model/registration_envelope.dart';
 import 'package:materyalph_api_client/src/model/registration_envelope_all_of_data.dart';
 import 'package:materyalph_api_client/src/model/resend_bot_challenge_request.dart';
+import 'package:materyalph_api_client/src/model/store_activation_blocker.dart';
+import 'package:materyalph_api_client/src/model/store_activation_readiness.dart';
 import 'package:materyalph_api_client/src/model/success_envelope.dart';
 import 'package:materyalph_api_client/src/model/user_identity.dart';
+import 'package:materyalph_api_client/src/model/vendor_activation_snapshot.dart';
 import 'package:materyalph_api_client/src/model/vendor_address_geocode.dart';
 import 'package:materyalph_api_client/src/model/vendor_address_geocode_envelope.dart';
 import 'package:materyalph_api_client/src/model/vendor_bot_protection_evidence.dart';
@@ -124,6 +130,7 @@ import 'package:materyalph_api_client/src/model/vendor_store_email_confirmation.
 import 'package:materyalph_api_client/src/model/vendor_store_email_envelope.dart';
 import 'package:materyalph_api_client/src/model/vendor_verification_draft.dart';
 import 'package:materyalph_api_client/src/model/vendor_verification_draft_legal_identity.dart';
+import 'package:materyalph_api_client/src/model/vendor_verification_draft_representative.dart';
 import 'package:materyalph_api_client/src/model/vendor_verification_draft_tax_profile.dart';
 import 'package:materyalph_api_client/src/model/vendor_verification_submit.dart';
 import 'package:materyalph_api_client/src/model/vendor_webhook_envelope.dart';
@@ -209,14 +216,20 @@ part 'serializers.g.dart';
   MfaRecoveryRequest,
   MfaStatusEnvelope,
   MfaStatusEnvelopeAllOfData,
+  OnboardingDraftVersion,
+  OnboardingRequirement,
+  OnboardingStepCompletion,
   PasswordRecoveryRequest,
   PasswordResetRequest,
   RegisterRequest,
   RegistrationEnvelope,
   RegistrationEnvelopeAllOfData,
   ResendBotChallengeRequest,
+  StoreActivationBlocker,
+  StoreActivationReadiness,
   SuccessEnvelope,$SuccessEnvelope,
   UserIdentity,
+  VendorActivationSnapshot,
   VendorAddressGeocode,
   VendorAddressGeocodeEnvelope,
   VendorBotProtectionEvidence,
@@ -245,6 +258,7 @@ part 'serializers.g.dart';
   VendorStoreEmailEnvelope,
   VendorVerificationDraft,
   VendorVerificationDraftLegalIdentity,
+  VendorVerificationDraftRepresentative,
   VendorVerificationDraftTaxProfile,
   VendorVerificationSubmit,
   VendorWebhookEnvelope,
@@ -258,12 +272,24 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<AccountAdministrator>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(OnboardingDraftVersion)]),
+        () => ListBuilder<OnboardingDraftVersion>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(BotStepUpErrorEnvelopeAllOfErrors)]),
         () => ListBuilder<BotStepUpErrorEnvelopeAllOfErrors>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(OnboardingStepCompletion)]),
+        () => ListBuilder<OnboardingStepCompletion>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltList, [FullType.nullable(JsonObject)]),
         () => ListBuilder<JsonObject>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(OnboardingRequirement)]),
+        () => ListBuilder<OnboardingRequirement>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(AccountMembership)]),
@@ -303,7 +329,7 @@ Serializers serializers = (_$serializers.toBuilder()
       )
       ..addBuilderFactory(
         const FullType(BuiltMap, [FullType(String), FullType(BuiltMap)]),
-        () => MapBuilder<String, BuiltMap>(),
+        () => MapBuilder<String, BuiltMap<String, JsonObject>>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(AccountSession)]),
@@ -320,6 +346,10 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(AdminVendorVerificationQueueItem)]),
         () => ListBuilder<AdminVendorVerificationQueueItem>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(StoreActivationBlocker)]),
+        () => ListBuilder<StoreActivationBlocker>(),
       )
       ..add(SuccessEnvelope.serializer)
       ..add(const OneOfSerializer())

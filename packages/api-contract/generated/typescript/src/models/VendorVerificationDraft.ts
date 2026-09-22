@@ -27,6 +27,13 @@ import {
     VendorVerificationDraftTaxProfileToJSON,
     VendorVerificationDraftTaxProfileToJSONTyped,
 } from './VendorVerificationDraftTaxProfile';
+import type { VendorVerificationDraftRepresentative } from './VendorVerificationDraftRepresentative';
+import {
+    VendorVerificationDraftRepresentativeFromJSON,
+    VendorVerificationDraftRepresentativeFromJSONTyped,
+    VendorVerificationDraftRepresentativeToJSON,
+    VendorVerificationDraftRepresentativeToJSONTyped,
+} from './VendorVerificationDraftRepresentative';
 
 /**
  *
@@ -35,6 +42,10 @@ import {
  */
 export interface VendorVerificationDraft {
     [key: string]: any | any;
+    /**
+     * Version of this workstream draft; zero for its first save. Stale versions return 409.
+     */
+    draftLockVersion?: number;
     /**
      *
      */
@@ -78,6 +89,10 @@ export interface VendorVerificationDraft {
     /**
      *
      */
+    representative?: VendorVerificationDraftRepresentative;
+    /**
+     *
+     */
     legalIdentity?: VendorVerificationDraftLegalIdentity;
     /**
      *
@@ -118,6 +133,7 @@ export function VendorVerificationDraftFromJSONTyped(json: any, ignoreDiscrimina
     return {
 
             ...json,
+        'draftLockVersion': json['draft_lock_version'] == null ? undefined : json['draft_lock_version'],
         'lockVersion': json['lock_version'],
         'businessType': json['business_type'] == null ? undefined : json['business_type'],
         'registeredName': json['registered_name'] == null ? undefined : json['registered_name'],
@@ -128,6 +144,7 @@ export function VendorVerificationDraftFromJSONTyped(json: any, ignoreDiscrimina
         'contacts': json['contacts'] == null ? undefined : json['contacts'],
         'classification': json['classification'] == null ? undefined : json['classification'],
         'address': json['address'] == null ? undefined : json['address'],
+        'representative': json['representative'] == null ? undefined : VendorVerificationDraftRepresentativeFromJSON(json['representative']),
         'legalIdentity': json['legal_identity'] == null ? undefined : VendorVerificationDraftLegalIdentityFromJSON(json['legal_identity']),
         'taxProfile': json['tax_profile'] == null ? undefined : VendorVerificationDraftTaxProfileFromJSON(json['tax_profile']),
     };
@@ -145,6 +162,7 @@ export function VendorVerificationDraftToJSONTyped(value?: VendorVerificationDra
     return {
 
             ...value,
+        'draft_lock_version': value['draftLockVersion'],
         'lock_version': value['lockVersion'],
         'business_type': value['businessType'],
         'registered_name': value['registeredName'],
@@ -155,6 +173,7 @@ export function VendorVerificationDraftToJSONTyped(value?: VendorVerificationDra
         'contacts': value['contacts'],
         'classification': value['classification'],
         'address': value['address'],
+        'representative': VendorVerificationDraftRepresentativeToJSON(value['representative']),
         'legal_identity': VendorVerificationDraftLegalIdentityToJSON(value['legalIdentity']),
         'tax_profile': VendorVerificationDraftTaxProfileToJSON(value['taxProfile']),
     };

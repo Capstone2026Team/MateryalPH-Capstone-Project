@@ -39,6 +39,11 @@ void main() {
       // TODO
     });
 
+    //Future<VendorOnboardingEnvelope> getAuthoritativeVendorOnboarding() async
+    test('test getAuthoritativeVendorOnboarding', () async {
+      // TODO
+    });
+
     //Future<VendorOnboardingEnvelope> getVendorOnboarding() async
     test('test getVendorOnboarding', () async {
       // TODO

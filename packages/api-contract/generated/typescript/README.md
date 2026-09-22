@@ -135,6 +135,7 @@ All URIs are relative to */api/v1*
 *VendorOnboardingApi* | [**confirmVendorStoreEmailVerification**](docs/VendorOnboardingApi.md#confirmvendorstoreemailverification) | **POST** /vendors/onboarding/store-email/confirm |
 *VendorOnboardingApi* | [**dismissVendorOnboardingWelcome**](docs/VendorOnboardingApi.md#dismissvendoronboardingwelcome) | **POST** /vendors/onboarding/welcome/dismiss |
 *VendorOnboardingApi* | [**downloadVendorOnboardingFile**](docs/VendorOnboardingApi.md#downloadvendoronboardingfile) | **GET** /vendor-onboarding-files/{fileId}/content |
+*VendorOnboardingApi* | [**getAuthoritativeVendorOnboarding**](docs/VendorOnboardingApi.md#getauthoritativevendoronboarding) | **GET** /vendor/onboarding |
 *VendorOnboardingApi* | [**getVendorOnboarding**](docs/VendorOnboardingApi.md#getvendoronboarding) | **GET** /vendors/onboarding |
 *VendorOnboardingApi* | [**getVendorPrivateFileUrl**](docs/VendorOnboardingApi.md#getvendorprivatefileurl) | **GET** /vendors/onboarding/files/{fileId} |
 *VendorOnboardingApi* | [**inviteVendorTeamMember**](docs/VendorOnboardingApi.md#invitevendorteammember) | **POST** /vendors/account/invitations |
@@ -226,14 +227,20 @@ All URIs are relative to */api/v1*
 - [MfaRecoveryRequest](docs/MfaRecoveryRequest.md)
 - [MfaStatusEnvelope](docs/MfaStatusEnvelope.md)
 - [MfaStatusEnvelopeAllOfData](docs/MfaStatusEnvelopeAllOfData.md)
+- [OnboardingDraftVersion](docs/OnboardingDraftVersion.md)
+- [OnboardingRequirement](docs/OnboardingRequirement.md)
+- [OnboardingStepCompletion](docs/OnboardingStepCompletion.md)
 - [PasswordRecoveryRequest](docs/PasswordRecoveryRequest.md)
 - [PasswordResetRequest](docs/PasswordResetRequest.md)
 - [RegisterRequest](docs/RegisterRequest.md)
 - [RegistrationEnvelope](docs/RegistrationEnvelope.md)
 - [RegistrationEnvelopeAllOfData](docs/RegistrationEnvelopeAllOfData.md)
 - [ResendBotChallengeRequest](docs/ResendBotChallengeRequest.md)
+- [StoreActivationBlocker](docs/StoreActivationBlocker.md)
+- [StoreActivationReadiness](docs/StoreActivationReadiness.md)
 - [SuccessEnvelope](docs/SuccessEnvelope.md)
 - [UserIdentity](docs/UserIdentity.md)
+- [VendorActivationSnapshot](docs/VendorActivationSnapshot.md)
 - [VendorAddressGeocode](docs/VendorAddressGeocode.md)
 - [VendorAddressGeocodeEnvelope](docs/VendorAddressGeocodeEnvelope.md)
 - [VendorBotProtectionEvidence](docs/VendorBotProtectionEvidence.md)
@@ -262,6 +269,7 @@ All URIs are relative to */api/v1*
 - [VendorStoreEmailEnvelope](docs/VendorStoreEmailEnvelope.md)
 - [VendorVerificationDraft](docs/VendorVerificationDraft.md)
 - [VendorVerificationDraftLegalIdentity](docs/VendorVerificationDraftLegalIdentity.md)
+- [VendorVerificationDraftRepresentative](docs/VendorVerificationDraftRepresentative.md)
 - [VendorVerificationDraftTaxProfile](docs/VendorVerificationDraftTaxProfile.md)
 - [VendorVerificationSubmit](docs/VendorVerificationSubmit.md)
 - [VendorWebhookEnvelope](docs/VendorWebhookEnvelope.md)

@@ -7,6 +7,7 @@ import 'package:materyalph_api_client/src/model/vendor_verification_draft_tax_pr
 import 'package:materyalph_api_client/src/model/date.dart';
 import 'package:materyalph_api_client/src/model/vendor_verification_draft_legal_identity.dart';
 import 'package:built_collection/built_collection.dart';
+import 'package:materyalph_api_client/src/model/vendor_verification_draft_representative.dart';
 import 'package:built_value/json_object.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
@@ -16,6 +17,7 @@ part 'vendor_verification_draft.g.dart';
 /// VendorVerificationDraft
 ///
 /// Properties:
+/// * [draftLockVersion] - Version of this workstream draft; zero for its first save. Stale versions return 409.
 /// * [lockVersion]
 /// * [businessType]
 /// * [registeredName]
@@ -26,10 +28,15 @@ part 'vendor_verification_draft.g.dart';
 /// * [contacts]
 /// * [classification]
 /// * [address]
+/// * [representative]
 /// * [legalIdentity]
 /// * [taxProfile]
 @BuiltValue()
 abstract class VendorVerificationDraft implements Built<VendorVerificationDraft, VendorVerificationDraftBuilder> {
+  /// Version of this workstream draft; zero for its first save. Stale versions return 409.
+  @BuiltValueField(wireName: r'draft_lock_version')
+  int? get draftLockVersion;
+
   @BuiltValueField(wireName: r'lock_version')
   int get lockVersion;
 
@@ -61,6 +68,9 @@ abstract class VendorVerificationDraft implements Built<VendorVerificationDraft,
   @BuiltValueField(wireName: r'address')
   BuiltMap<String, JsonObject?>? get address;
 
+  @BuiltValueField(wireName: r'representative')
+  VendorVerificationDraftRepresentative? get representative;
+
   @BuiltValueField(wireName: r'legal_identity')
   VendorVerificationDraftLegalIdentity? get legalIdentity;
 
@@ -90,6 +100,13 @@ class _$VendorVerificationDraftSerializer implements PrimitiveSerializer<VendorV
     VendorVerificationDraft object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.draftLockVersion != null) {
+      yield r'draft_lock_version';
+      yield serializers.serialize(
+        object.draftLockVersion,
+        specifiedType: const FullType(int),
+      );
+    }
     yield r'lock_version';
     yield serializers.serialize(
       object.lockVersion,
@@ -158,6 +175,13 @@ class _$VendorVerificationDraftSerializer implements PrimitiveSerializer<VendorV
         specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
       );
     }
+    if (object.representative != null) {
+      yield r'representative';
+      yield serializers.serialize(
+        object.representative,
+        specifiedType: const FullType(VendorVerificationDraftRepresentative),
+      );
+    }
     if (object.legalIdentity != null) {
       yield r'legal_identity';
       yield serializers.serialize(
@@ -195,6 +219,14 @@ class _$VendorVerificationDraftSerializer implements PrimitiveSerializer<VendorV
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'draft_lock_version':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.draftLockVersion = valueDes;
+          break;
         case r'lock_version':
           final valueDes = serializers.deserialize(
             value,
@@ -273,6 +305,14 @@ class _$VendorVerificationDraftSerializer implements PrimitiveSerializer<VendorV
           ) as BuiltMap<String, JsonObject?>?;
           if (valueDes == null) continue;
           result.address.replace(valueDes);
+          break;
+        case r'representative':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(VendorVerificationDraftRepresentative),
+          ) as VendorVerificationDraftRepresentative?;
+          if (valueDes == null) continue;
+          result.representative.replace(valueDes);
           break;
         case r'legal_identity':
           final valueDes = serializers.deserialize(

@@ -2317,6 +2317,17 @@ paths:
             }
         }
     }
+  /vendor/onboarding:
+    get:
+      operationId: getAuthoritativeVendorOnboarding
+      tags: [ Vendor Onboarding ]
+      security: [ { accessCookie: [] } ]
+      responses:
+        "200":
+          description: Vendor onboarding snapshot with separate Store Verification and Store Setup workstreams.
+          content: { application/json: { schema: { $ref: "#/components/schemas/VendorOnboardingEnvelope" } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
   /vendors/onboarding:
     get:
       operationId: getVendorOnboarding
@@ -3501,15 +3512,68 @@ components:
         total: { type: integer, minimum: 0 }
         progress: { type: object, additionalProperties: true }
         steps: { type: array, items: { $ref: "#/components/schemas/VendorOnboardingStep" } }
+    OnboardingRequirement:
+      type: object
+      required: [ key, workstream, level, status, blocking, blocking_reason, applicability_reason, correction_reason, lock_version ]
+      properties:
+        key: { type: string }
+        workstream: { type: string, enum: [ STORE_VERIFICATION, STORE_SETUP ] }
+        level: { type: string, enum: [ REQUIRED, OPTIONAL, CONDITIONALLY_REQUIRED ] }
+        status: { type: string, enum: [ NOT_STARTED, IN_PROGRESS, SUBMITTED, PENDING_VERIFICATION, APPROVED, COMPLETED, CHANGES_REQUIRED, REJECTED, EXPIRED, NOT_APPLICABLE ] }
+        blocking: { type: boolean }
+        blocking_reason: { type: [ string, 'null' ] }
+        applicability_reason: { type: [ string, 'null' ], description: 'Required nonempty reason for an inapplicable conditional requirement. Never used for REQUIRED items.' }
+        correction_reason: { type: [ string, 'null' ] }
+        lock_version: { type: integer, minimum: 1 }
+    OnboardingDraftVersion:
+      type: object
+      required: [ workstream, lock_version ]
+      properties:
+        workstream: { type: string, enum: [ STORE_VERIFICATION, STORE_SETUP ] }
+        lock_version: { type: integer, minimum: 1 }
+    StoreActivationBlocker:
+      type: object
+      required: [ key, condition, reason ]
+      properties:
+        key: { type: string }
+        condition: { type: integer, minimum: 1, maximum: 10 }
+        reason: { type: string }
+    StoreActivationReadiness:
+      type: object
+      required: [ ready, status, rule_version, blockers ]
+      properties:
+        ready: { type: boolean }
+        status: { type: string, enum: [ READY, NOT_READY ] }
+        rule_version: { type: string }
+        blockers: { type: array, items: { $ref: "#/components/schemas/StoreActivationBlocker" } }
+    VendorActivationSnapshot:
+      type: object
+      required: [ status, marketplace_discoverability_status, readiness ]
+      properties:
+        status: { type: string }
+        marketplace_discoverability_status: { type: string }
+        readiness: { $ref: "#/components/schemas/StoreActivationReadiness" }
+    OnboardingStepCompletion:
+      type: object
+      required: [ key, workstream, complete, required ]
+      properties:
+        key: { type: string, enum: [ V1, V2, V3, V4, S1, S2, S3, S4, S5, S6 ] }
+        workstream: { type: string, enum: [ STORE_VERIFICATION, STORE_SETUP ] }
+        complete: { type: boolean, description: 'All applicable mandatory requirements have their successful final status.' }
+        required: { type: boolean }
     VendorOnboardingSnapshot:
       type: object
-      required: [ organization, sections, verification, setup, activation, welcome_required, permissions ]
+      required: [ organization, sections, verification, setup, activation, welcome_required, permissions, requirements, drafts, lock_version, step_completion ]
       properties:
+        step_completion: { type: array, items: { $ref: "#/components/schemas/OnboardingStepCompletion" } }
+        lock_version: { type: integer, minimum: 1 }
+        requirements: { type: array, items: { $ref: "#/components/schemas/OnboardingRequirement" } }
+        drafts: { type: array, items: { $ref: "#/components/schemas/OnboardingDraftVersion" } }
         organization: { type: object, additionalProperties: true }
         sections: { type: object, additionalProperties: { $ref: "#/components/schemas/VendorOnboardingSection" } }
         verification: { type: object, additionalProperties: true }
         setup: { type: object, additionalProperties: true }
-        activation: { type: object, additionalProperties: true }
+        activation: { $ref: "#/components/schemas/VendorActivationSnapshot" }
         welcome_required: { type: boolean }
         permissions: { type: array, items: { type: string } }
     VendorOnboardingEnvelope:
@@ -3524,6 +3588,7 @@ components:
       required: [ lock_version ]
       additionalProperties: true
       properties:
+        draft_lock_version: { type: integer, minimum: 0, description: 'Version of this workstream draft; zero for its first save. Stale versions return 409.' }
         lock_version: { type: integer, minimum: 1 }
         business_type: { type: string, enum: [ SOLE_PROPRIETORSHIP, PARTNERSHIP, CORPORATION, ONE_PERSON_CORPORATION, COOPERATIVE ] }
         registered_name: { type: string, maxLength: 180 }
@@ -3534,6 +3599,18 @@ components:
         contacts: { type: array, items: { type: object, additionalProperties: true } }
         classification: { type: object, additionalProperties: true }
         address: { type: object, additionalProperties: true }
+        representative:
+          type: object
+          required: [ full_name ]
+          properties:
+            same_as_owner: { type: boolean }
+            full_name: { type: string, maxLength: 180 }
+            position: { type: [ string, 'null' ], maxLength: 120 }
+            email: { type: [ string, 'null' ], format: email }
+            phone: { type: [ string, 'null' ], maxLength: 24 }
+            relationship: { type: [ string, 'null' ], maxLength: 120 }
+            id_type: { type: [ string, 'null' ], enum: [ NATIONAL_ID, DRIVERS_LICENSE, PASSPORT, UMID, OTHER ] }
+            id_number: { type: [ string, 'null' ], maxLength: 64, writeOnly: true }
         legal_identity:
           type: object
           additionalProperties: true
@@ -3551,8 +3628,11 @@ components:
           additionalProperties: true
           properties:
             taxpayer_key: { type: string, maxLength: 128, writeOnly: true }
-            tin: { type: string, maxLength: 32, pattern: '^[0-9][0-9\\-\\s]{8,31}$', writeOnly: true }
-            branch_code: { type: [ string, 'null' ], maxLength: 16, pattern: '^[A-Za-z0-9][A-Za-z0-9 \\-]*$' }
+            tin: { type: string, minLength: 9, maxLength: 9, pattern: '^[0-9]{9}$', writeOnly: true }
+            branch_code: { type: [ string, 'null' ], pattern: '^(?:[0-9]{3}|[0-9]{5})$' }
+            branch_code_length: { type: integer, enum: [ 3, 5 ] }
+            head_office: { type: boolean }
+            declaration_year: { type: [ integer, 'null' ], minimum: 2000, maximum: 2100 }
             bir_cor_reference: { type: [ string, 'null' ], maxLength: 160 }
             entity_class: { type: string, enum: [ INDIVIDUAL, CORPORATION, PARTNERSHIP, COOPERATIVE ] }
             registration_category: { type: string, maxLength: 32 }
@@ -3576,6 +3656,7 @@ components:
       required: [ organization_lock_version ]
       additionalProperties: true
       properties:
+        draft_lock_version: { type: integer, minimum: 0, description: 'Version of this workstream draft; zero for its first save. Stale versions return 409.' }
         organization_lock_version: { type: integer, minimum: 1 }
         public_store_name: { type: string, maxLength: 180 }
         description: { type: [ string, 'null' ], maxLength: 3000 }
@@ -3785,6 +3866,11 @@ components:
       type: object
       required: [ decision ]
       properties:
+        authority_evidence_version_id: { type: [ string, 'null' ], format: uuid }
+        authority_scopes:
+          type: array
+          maxItems: 3
+          items: { type: string, enum: [ TAX_DECLARATIONS, COMMISSION_AGREEMENT, PAYMENT_CONFIGURATION ] }
         decision: { type: string, enum: [ APPROVED, CHANGES_REQUIRED, REJECTED ] }
         lock_version: { type: integer, minimum: 1 }
         reason: { type: [ string, 'null' ], minLength: 3, maxLength: 2000 }

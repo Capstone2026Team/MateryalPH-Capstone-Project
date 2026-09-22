@@ -7,6 +7,12 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(VendorVerificationDraft, () {
+    // Version of this workstream draft; zero for its first save. Stale versions return 409.
+    // int draftLockVersion
+    test('to test the property `draftLockVersion`', () async {
+      // TODO
+    });
+
     // int lockVersion
     test('to test the property `lockVersion`', () async {
       // TODO
@@ -54,6 +60,11 @@ void main() {
 
     // BuiltMap<String, JsonObject> address
     test('to test the property `address`', () async {
+      // TODO
+    });
+
+    // VendorVerificationDraftRepresentative representative
+    test('to test the property `representative`', () async {
       // TODO
     });
 

@@ -1,10 +1,9 @@
 export type OnboardingStep = { label: string; requirements: string[] }
 
 export const verificationSteps: OnboardingStep[] = [
-  { label: 'Business Information', requirements: ['business_type', 'business_information', 'legal_identity', 'business_registration', 'lgu_permit', 'bir_cor', 'identity_evidence', 'tax_relief_evidence'] },
+  { label: 'Business Information', requirements: ['business_type', 'business_information', 'legal_identity', 'business_registration', 'lgu_permit', 'bir_cor', 'identity_evidence', 'identity_back_evidence', 'representative_identity', 'representative_identity_back', 'tax_profile', 'tax_relief_evidence', 'authority_to_act'] },
   { label: 'Registered Business Address', requirements: ['registered_business_address'] },
   { label: 'Supplier Type / Classification', requirements: ['supplier_classification'] },
-  { label: 'Tax Profile', requirements: ['tax_profile'] },
   { label: 'Privacy, Review and Submit', requirements: ['privacy_acknowledgement'] },
 ]
 

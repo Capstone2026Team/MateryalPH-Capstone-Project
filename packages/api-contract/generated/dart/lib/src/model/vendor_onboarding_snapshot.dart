@@ -3,8 +3,12 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:materyalph_api_client/src/model/onboarding_requirement.dart';
 import 'package:materyalph_api_client/src/model/vendor_onboarding_section.dart';
 import 'package:built_collection/built_collection.dart';
+import 'package:materyalph_api_client/src/model/onboarding_step_completion.dart';
+import 'package:materyalph_api_client/src/model/vendor_activation_snapshot.dart';
+import 'package:materyalph_api_client/src/model/onboarding_draft_version.dart';
 import 'package:built_value/json_object.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
@@ -14,6 +18,10 @@ part 'vendor_onboarding_snapshot.g.dart';
 /// VendorOnboardingSnapshot
 ///
 /// Properties:
+/// * [stepCompletion]
+/// * [lockVersion]
+/// * [requirements]
+/// * [drafts]
 /// * [organization]
 /// * [sections]
 /// * [verification]
@@ -23,6 +31,18 @@ part 'vendor_onboarding_snapshot.g.dart';
 /// * [permissions]
 @BuiltValue()
 abstract class VendorOnboardingSnapshot implements Built<VendorOnboardingSnapshot, VendorOnboardingSnapshotBuilder> {
+  @BuiltValueField(wireName: r'step_completion')
+  BuiltList<OnboardingStepCompletion> get stepCompletion;
+
+  @BuiltValueField(wireName: r'lock_version')
+  int get lockVersion;
+
+  @BuiltValueField(wireName: r'requirements')
+  BuiltList<OnboardingRequirement> get requirements;
+
+  @BuiltValueField(wireName: r'drafts')
+  BuiltList<OnboardingDraftVersion> get drafts;
+
   @BuiltValueField(wireName: r'organization')
   BuiltMap<String, JsonObject?> get organization;
 
@@ -36,7 +56,7 @@ abstract class VendorOnboardingSnapshot implements Built<VendorOnboardingSnapsho
   BuiltMap<String, JsonObject?> get setup;
 
   @BuiltValueField(wireName: r'activation')
-  BuiltMap<String, JsonObject?> get activation;
+  VendorActivationSnapshot get activation;
 
   @BuiltValueField(wireName: r'welcome_required')
   bool get welcomeRequired;
@@ -67,6 +87,26 @@ class _$VendorOnboardingSnapshotSerializer implements PrimitiveSerializer<Vendor
     VendorOnboardingSnapshot object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    yield r'step_completion';
+    yield serializers.serialize(
+      object.stepCompletion,
+      specifiedType: const FullType(BuiltList, [FullType(OnboardingStepCompletion)]),
+    );
+    yield r'lock_version';
+    yield serializers.serialize(
+      object.lockVersion,
+      specifiedType: const FullType(int),
+    );
+    yield r'requirements';
+    yield serializers.serialize(
+      object.requirements,
+      specifiedType: const FullType(BuiltList, [FullType(OnboardingRequirement)]),
+    );
+    yield r'drafts';
+    yield serializers.serialize(
+      object.drafts,
+      specifiedType: const FullType(BuiltList, [FullType(OnboardingDraftVersion)]),
+    );
     yield r'organization';
     yield serializers.serialize(
       object.organization,
@@ -90,7 +130,7 @@ class _$VendorOnboardingSnapshotSerializer implements PrimitiveSerializer<Vendor
     yield r'activation';
     yield serializers.serialize(
       object.activation,
-      specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
+      specifiedType: const FullType(VendorActivationSnapshot),
     );
     yield r'welcome_required';
     yield serializers.serialize(
@@ -125,6 +165,34 @@ class _$VendorOnboardingSnapshotSerializer implements PrimitiveSerializer<Vendor
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'step_completion':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(BuiltList, [FullType(OnboardingStepCompletion)]),
+          ) as BuiltList<OnboardingStepCompletion>;
+          result.stepCompletion.replace(valueDes);
+          break;
+        case r'lock_version':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.lockVersion = valueDes;
+          break;
+        case r'requirements':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(BuiltList, [FullType(OnboardingRequirement)]),
+          ) as BuiltList<OnboardingRequirement>;
+          result.requirements.replace(valueDes);
+          break;
+        case r'drafts':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(BuiltList, [FullType(OnboardingDraftVersion)]),
+          ) as BuiltList<OnboardingDraftVersion>;
+          result.drafts.replace(valueDes);
+          break;
         case r'organization':
           final valueDes = serializers.deserialize(
             value,
@@ -156,8 +224,8 @@ class _$VendorOnboardingSnapshotSerializer implements PrimitiveSerializer<Vendor
         case r'activation':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
-          ) as BuiltMap<String, JsonObject?>;
+            specifiedType: const FullType(VendorActivationSnapshot),
+          ) as VendorActivationSnapshot;
           result.activation.replace(valueDes);
           break;
         case r'welcome_required':

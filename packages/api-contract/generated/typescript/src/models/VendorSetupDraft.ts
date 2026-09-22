@@ -36,6 +36,10 @@ import {
 export interface VendorSetupDraft {
     [key: string]: any | any;
     /**
+     * Version of this workstream draft; zero for its first save. Stale versions return 409.
+     */
+    draftLockVersion?: number;
+    /**
      *
      */
     organizationLockVersion: number;
@@ -104,6 +108,7 @@ export function VendorSetupDraftFromJSONTyped(json: any, ignoreDiscriminator: bo
     return {
 
             ...json,
+        'draftLockVersion': json['draft_lock_version'] == null ? undefined : json['draft_lock_version'],
         'organizationLockVersion': json['organization_lock_version'],
         'publicStoreName': json['public_store_name'] == null ? undefined : json['public_store_name'],
         'description': json['description'] === undefined ? undefined : json['description'] === null ? null : json['description'],
@@ -128,6 +133,7 @@ export function VendorSetupDraftToJSONTyped(value?: VendorSetupDraft | null, ign
     return {
 
             ...value,
+        'draft_lock_version': value['draftLockVersion'],
         'organization_lock_version': value['organizationLockVersion'],
         'public_store_name': value['publicStoreName'],
         'description': value['description'],

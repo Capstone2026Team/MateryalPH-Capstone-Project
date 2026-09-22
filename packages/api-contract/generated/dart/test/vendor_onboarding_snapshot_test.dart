@@ -7,6 +7,26 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(VendorOnboardingSnapshot, () {
+    // BuiltList<OnboardingStepCompletion> stepCompletion
+    test('to test the property `stepCompletion`', () async {
+      // TODO
+    });
+
+    // int lockVersion
+    test('to test the property `lockVersion`', () async {
+      // TODO
+    });
+
+    // BuiltList<OnboardingRequirement> requirements
+    test('to test the property `requirements`', () async {
+      // TODO
+    });
+
+    // BuiltList<OnboardingDraftVersion> drafts
+    test('to test the property `drafts`', () async {
+      // TODO
+    });
+
     // BuiltMap<String, JsonObject> organization
     test('to test the property `organization`', () async {
       // TODO
@@ -27,7 +47,7 @@ void main() {
       // TODO
     });
 
-    // BuiltMap<String, JsonObject> activation
+    // VendorActivationSnapshot activation
     test('to test the property `activation`', () async {
       // TODO
     });

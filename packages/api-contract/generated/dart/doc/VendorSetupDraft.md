@@ -8,6 +8,7 @@ import 'package:materyalph_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
+**draftLockVersion** | **int** | Version of this workstream draft; zero for its first save. Stale versions return 409. | [optional]
 **organizationLockVersion** | **int** |  |
 **publicStoreName** | **String** |  | [optional]
 **description** | **String** |  | [optional]

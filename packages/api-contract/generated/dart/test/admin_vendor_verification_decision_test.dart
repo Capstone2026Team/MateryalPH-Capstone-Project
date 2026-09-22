@@ -7,6 +7,16 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(AdminVendorVerificationDecision, () {
+    // String authorityEvidenceVersionId
+    test('to test the property `authorityEvidenceVersionId`', () async {
+      // TODO
+    });
+
+    // BuiltList<String> authorityScopes
+    test('to test the property `authorityScopes`', () async {
+      // TODO
+    });
+
     // String decision
     test('to test the property `decision`', () async {
       // TODO

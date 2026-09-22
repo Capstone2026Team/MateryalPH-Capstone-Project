@@ -6,6 +6,41 @@ part of 'admin_vendor_verification_decision.dart';
 // BuiltValueGenerator
 // **************************************************************************
 
+const AdminVendorVerificationDecisionAuthorityScopesEnum
+    _$adminVendorVerificationDecisionAuthorityScopesEnum_TAX_DECLARATIONS =
+    const AdminVendorVerificationDecisionAuthorityScopesEnum._(
+        'TAX_DECLARATIONS');
+const AdminVendorVerificationDecisionAuthorityScopesEnum
+    _$adminVendorVerificationDecisionAuthorityScopesEnum_COMMISSION_AGREEMENT =
+    const AdminVendorVerificationDecisionAuthorityScopesEnum._(
+        'COMMISSION_AGREEMENT');
+const AdminVendorVerificationDecisionAuthorityScopesEnum
+    _$adminVendorVerificationDecisionAuthorityScopesEnum_PAYMENT_CONFIGURATION =
+    const AdminVendorVerificationDecisionAuthorityScopesEnum._(
+        'PAYMENT_CONFIGURATION');
+
+AdminVendorVerificationDecisionAuthorityScopesEnum
+    _$adminVendorVerificationDecisionAuthorityScopesEnumValueOf(String name) {
+  switch (name) {
+    case 'TAX_DECLARATIONS':
+      return _$adminVendorVerificationDecisionAuthorityScopesEnum_TAX_DECLARATIONS;
+    case 'COMMISSION_AGREEMENT':
+      return _$adminVendorVerificationDecisionAuthorityScopesEnum_COMMISSION_AGREEMENT;
+    case 'PAYMENT_CONFIGURATION':
+      return _$adminVendorVerificationDecisionAuthorityScopesEnum_PAYMENT_CONFIGURATION;
+    default:
+      throw ArgumentError(name);
+  }
+}
+
+final BuiltSet<AdminVendorVerificationDecisionAuthorityScopesEnum>
+    _$adminVendorVerificationDecisionAuthorityScopesEnumValues = BuiltSet<
+        AdminVendorVerificationDecisionAuthorityScopesEnum>(const <AdminVendorVerificationDecisionAuthorityScopesEnum>[
+  _$adminVendorVerificationDecisionAuthorityScopesEnum_TAX_DECLARATIONS,
+  _$adminVendorVerificationDecisionAuthorityScopesEnum_COMMISSION_AGREEMENT,
+  _$adminVendorVerificationDecisionAuthorityScopesEnum_PAYMENT_CONFIGURATION,
+]);
+
 const AdminVendorVerificationDecisionDecisionEnum
     _$adminVendorVerificationDecisionDecisionEnum_APPROVED =
     const AdminVendorVerificationDecisionDecisionEnum._('APPROVED');
@@ -110,6 +145,9 @@ final BuiltSet<AdminVendorVerificationDecisionVerifiedVatCategoryEnum>
   _$adminVendorVerificationDecisionVerifiedVatCategoryEnum_VAT_EXEMPT,
 ]);
 
+Serializer<AdminVendorVerificationDecisionAuthorityScopesEnum>
+    _$adminVendorVerificationDecisionAuthorityScopesEnumSerializer =
+    _$AdminVendorVerificationDecisionAuthorityScopesEnumSerializer();
 Serializer<AdminVendorVerificationDecisionDecisionEnum>
     _$adminVendorVerificationDecisionDecisionEnumSerializer =
     _$AdminVendorVerificationDecisionDecisionEnumSerializer();
@@ -119,6 +157,42 @@ Serializer<AdminVendorVerificationDecisionExpirationKindEnum>
 Serializer<AdminVendorVerificationDecisionVerifiedVatCategoryEnum>
     _$adminVendorVerificationDecisionVerifiedVatCategoryEnumSerializer =
     _$AdminVendorVerificationDecisionVerifiedVatCategoryEnumSerializer();
+
+class _$AdminVendorVerificationDecisionAuthorityScopesEnumSerializer
+    implements
+        PrimitiveSerializer<
+            AdminVendorVerificationDecisionAuthorityScopesEnum> {
+  static const Map<String, Object> _toWire = const <String, Object>{
+    'TAX_DECLARATIONS': 'TAX_DECLARATIONS',
+    'COMMISSION_AGREEMENT': 'COMMISSION_AGREEMENT',
+    'PAYMENT_CONFIGURATION': 'PAYMENT_CONFIGURATION',
+  };
+  static const Map<Object, String> _fromWire = const <Object, String>{
+    'TAX_DECLARATIONS': 'TAX_DECLARATIONS',
+    'COMMISSION_AGREEMENT': 'COMMISSION_AGREEMENT',
+    'PAYMENT_CONFIGURATION': 'PAYMENT_CONFIGURATION',
+  };
+
+  @override
+  final Iterable<Type> types = const <Type>[
+    AdminVendorVerificationDecisionAuthorityScopesEnum
+  ];
+  @override
+  final String wireName = 'AdminVendorVerificationDecisionAuthorityScopesEnum';
+
+  @override
+  Object serialize(Serializers serializers,
+          AdminVendorVerificationDecisionAuthorityScopesEnum object,
+          {FullType specifiedType = FullType.unspecified}) =>
+      _toWire[object.name] ?? object.name;
+
+  @override
+  AdminVendorVerificationDecisionAuthorityScopesEnum deserialize(
+          Serializers serializers, Object serialized,
+          {FullType specifiedType = FullType.unspecified}) =>
+      AdminVendorVerificationDecisionAuthorityScopesEnum.valueOf(
+          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+}
 
 class _$AdminVendorVerificationDecisionDecisionEnumSerializer
     implements
@@ -232,6 +306,11 @@ class _$AdminVendorVerificationDecisionVerifiedVatCategoryEnumSerializer
 class _$AdminVendorVerificationDecision
     extends AdminVendorVerificationDecision {
   @override
+  final String? authorityEvidenceVersionId;
+  @override
+  final BuiltList<AdminVendorVerificationDecisionAuthorityScopesEnum>?
+      authorityScopes;
+  @override
   final AdminVendorVerificationDecisionDecisionEnum decision;
   @override
   final int? lockVersion;
@@ -258,7 +337,9 @@ class _$AdminVendorVerificationDecision
       (AdminVendorVerificationDecisionBuilder()..update(updates))._build();
 
   _$AdminVendorVerificationDecision._(
-      {required this.decision,
+      {this.authorityEvidenceVersionId,
+      this.authorityScopes,
+      required this.decision,
       this.lockVersion,
       this.reason,
       this.verifiedDocumentNumber,
@@ -282,6 +363,8 @@ class _$AdminVendorVerificationDecision
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is AdminVendorVerificationDecision &&
+        authorityEvidenceVersionId == other.authorityEvidenceVersionId &&
+        authorityScopes == other.authorityScopes &&
         decision == other.decision &&
         lockVersion == other.lockVersion &&
         reason == other.reason &&
@@ -297,6 +380,8 @@ class _$AdminVendorVerificationDecision
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, authorityEvidenceVersionId.hashCode);
+    _$hash = $jc(_$hash, authorityScopes.hashCode);
     _$hash = $jc(_$hash, decision.hashCode);
     _$hash = $jc(_$hash, lockVersion.hashCode);
     _$hash = $jc(_$hash, reason.hashCode);
@@ -314,6 +399,8 @@ class _$AdminVendorVerificationDecision
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'AdminVendorVerificationDecision')
+          ..add('authorityEvidenceVersionId', authorityEvidenceVersionId)
+          ..add('authorityScopes', authorityScopes)
           ..add('decision', decision)
           ..add('lockVersion', lockVersion)
           ..add('reason', reason)
@@ -333,6 +420,21 @@ class AdminVendorVerificationDecisionBuilder
         Builder<AdminVendorVerificationDecision,
             AdminVendorVerificationDecisionBuilder> {
   _$AdminVendorVerificationDecision? _$v;
+
+  String? _authorityEvidenceVersionId;
+  String? get authorityEvidenceVersionId => _$this._authorityEvidenceVersionId;
+  set authorityEvidenceVersionId(String? authorityEvidenceVersionId) =>
+      _$this._authorityEvidenceVersionId = authorityEvidenceVersionId;
+
+  ListBuilder<AdminVendorVerificationDecisionAuthorityScopesEnum>?
+      _authorityScopes;
+  ListBuilder<AdminVendorVerificationDecisionAuthorityScopesEnum>
+      get authorityScopes => _$this._authorityScopes ??=
+          ListBuilder<AdminVendorVerificationDecisionAuthorityScopesEnum>();
+  set authorityScopes(
+          ListBuilder<AdminVendorVerificationDecisionAuthorityScopesEnum>?
+              authorityScopes) =>
+      _$this._authorityScopes = authorityScopes;
 
   AdminVendorVerificationDecisionDecisionEnum? _decision;
   AdminVendorVerificationDecisionDecisionEnum? get decision => _$this._decision;
@@ -393,6 +495,8 @@ class AdminVendorVerificationDecisionBuilder
   AdminVendorVerificationDecisionBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _authorityEvidenceVersionId = $v.authorityEvidenceVersionId;
+      _authorityScopes = $v.authorityScopes?.toBuilder();
       _decision = $v.decision;
       _lockVersion = $v.lockVersion;
       _reason = $v.reason;
@@ -422,20 +526,35 @@ class AdminVendorVerificationDecisionBuilder
   AdminVendorVerificationDecision build() => _build();
 
   _$AdminVendorVerificationDecision _build() {
-    final _$result = _$v ??
-        _$AdminVendorVerificationDecision._(
-          decision: BuiltValueNullFieldError.checkNotNull(
-              decision, r'AdminVendorVerificationDecision', 'decision'),
-          lockVersion: lockVersion,
-          reason: reason,
-          verifiedDocumentNumber: verifiedDocumentNumber,
-          verifiedIssueDate: verifiedIssueDate,
-          expirationKind: expirationKind,
-          verifiedExpirationDate: verifiedExpirationDate,
-          evidenceSource: evidenceSource,
-          verifiedVatCategory: verifiedVatCategory,
-          remarks: remarks,
-        );
+    _$AdminVendorVerificationDecision _$result;
+    try {
+      _$result = _$v ??
+          _$AdminVendorVerificationDecision._(
+            authorityEvidenceVersionId: authorityEvidenceVersionId,
+            authorityScopes: _authorityScopes?.build(),
+            decision: BuiltValueNullFieldError.checkNotNull(
+                decision, r'AdminVendorVerificationDecision', 'decision'),
+            lockVersion: lockVersion,
+            reason: reason,
+            verifiedDocumentNumber: verifiedDocumentNumber,
+            verifiedIssueDate: verifiedIssueDate,
+            expirationKind: expirationKind,
+            verifiedExpirationDate: verifiedExpirationDate,
+            evidenceSource: evidenceSource,
+            verifiedVatCategory: verifiedVatCategory,
+            remarks: remarks,
+          );
+    } catch (_) {
+      late String _$failedField;
+      try {
+        _$failedField = 'authorityScopes';
+        _authorityScopes?.build();
+      } catch (e) {
+        throw BuiltValueNestedFieldError(
+            r'AdminVendorVerificationDecision', _$failedField, e.toString());
+      }
+      rethrow;
+    }
     replace(_$result);
     return _$result;
   }

@@ -13,6 +13,8 @@ part 'admin_vendor_verification_decision.g.dart';
 /// AdminVendorVerificationDecision
 ///
 /// Properties:
+/// * [authorityEvidenceVersionId]
+/// * [authorityScopes]
 /// * [decision]
 /// * [lockVersion]
 /// * [reason]
@@ -25,6 +27,13 @@ part 'admin_vendor_verification_decision.g.dart';
 /// * [remarks]
 @BuiltValue()
 abstract class AdminVendorVerificationDecision implements Built<AdminVendorVerificationDecision, AdminVendorVerificationDecisionBuilder> {
+  @BuiltValueField(wireName: r'authority_evidence_version_id')
+  String? get authorityEvidenceVersionId;
+
+  @BuiltValueField(wireName: r'authority_scopes')
+  BuiltList<AdminVendorVerificationDecisionAuthorityScopesEnum>? get authorityScopes;
+  // enum authorityScopesEnum {  TAX_DECLARATIONS,  COMMISSION_AGREEMENT,  PAYMENT_CONFIGURATION,  };
+
   @BuiltValueField(wireName: r'decision')
   AdminVendorVerificationDecisionDecisionEnum get decision;
   // enum decisionEnum {  APPROVED,  CHANGES_REQUIRED,  REJECTED,  };
@@ -81,6 +90,20 @@ class _$AdminVendorVerificationDecisionSerializer implements PrimitiveSerializer
     AdminVendorVerificationDecision object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.authorityEvidenceVersionId != null) {
+      yield r'authority_evidence_version_id';
+      yield serializers.serialize(
+        object.authorityEvidenceVersionId,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
+    if (object.authorityScopes != null) {
+      yield r'authority_scopes';
+      yield serializers.serialize(
+        object.authorityScopes,
+        specifiedType: const FullType(BuiltList, [FullType(AdminVendorVerificationDecisionAuthorityScopesEnum)]),
+      );
+    }
     yield r'decision';
     yield serializers.serialize(
       object.decision,
@@ -172,6 +195,22 @@ class _$AdminVendorVerificationDecisionSerializer implements PrimitiveSerializer
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'authority_evidence_version_id':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.authorityEvidenceVersionId = valueDes;
+          break;
+        case r'authority_scopes':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltList, [FullType(AdminVendorVerificationDecisionAuthorityScopesEnum)]),
+          ) as BuiltList<AdminVendorVerificationDecisionAuthorityScopesEnum>?;
+          if (valueDes == null) continue;
+          result.authorityScopes.replace(valueDes);
+          break;
         case r'decision':
           final valueDes = serializers.deserialize(
             value,
@@ -280,6 +319,23 @@ class _$AdminVendorVerificationDecisionSerializer implements PrimitiveSerializer
   }
 }
 
+
+class AdminVendorVerificationDecisionAuthorityScopesEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'TAX_DECLARATIONS')
+  static const AdminVendorVerificationDecisionAuthorityScopesEnum TAX_DECLARATIONS = _$adminVendorVerificationDecisionAuthorityScopesEnum_TAX_DECLARATIONS;
+  @BuiltValueEnumConst(wireName: r'COMMISSION_AGREEMENT')
+  static const AdminVendorVerificationDecisionAuthorityScopesEnum COMMISSION_AGREEMENT = _$adminVendorVerificationDecisionAuthorityScopesEnum_COMMISSION_AGREEMENT;
+  @BuiltValueEnumConst(wireName: r'PAYMENT_CONFIGURATION')
+  static const AdminVendorVerificationDecisionAuthorityScopesEnum PAYMENT_CONFIGURATION = _$adminVendorVerificationDecisionAuthorityScopesEnum_PAYMENT_CONFIGURATION;
+
+  static Serializer<AdminVendorVerificationDecisionAuthorityScopesEnum> get serializer => _$adminVendorVerificationDecisionAuthorityScopesEnumSerializer;
+
+  const AdminVendorVerificationDecisionAuthorityScopesEnum._(String name): super(name);
+
+  static BuiltSet<AdminVendorVerificationDecisionAuthorityScopesEnum> get values => _$adminVendorVerificationDecisionAuthorityScopesEnumValues;
+  static AdminVendorVerificationDecisionAuthorityScopesEnum valueOf(String name) => _$adminVendorVerificationDecisionAuthorityScopesEnumValueOf(name);
+}
 
 class AdminVendorVerificationDecisionDecisionEnum extends EnumClass {
 

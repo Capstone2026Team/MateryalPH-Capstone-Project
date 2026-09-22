@@ -564,6 +564,41 @@ export class VendorOnboardingApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates request options for getAuthoritativeVendorOnboarding without sending the request
+     */
+    async getAuthoritativeVendorOnboardingRequestOpts(): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/vendor/onboarding`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     */
+    async getAuthoritativeVendorOnboardingRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorOnboardingEnvelope>> {
+        const requestOptions = await this.getAuthoritativeVendorOnboardingRequestOpts();
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => VendorOnboardingEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async getAuthoritativeVendorOnboarding(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorOnboardingEnvelope> {
+        const response = await this.getAuthoritativeVendorOnboardingRaw(initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Creates request options for getVendorOnboarding without sending the request
      */
     async getVendorOnboardingRequestOpts(): Promise<runtime.RequestOpts> {

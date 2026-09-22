@@ -6,11 +6,15 @@
 
 Name | Type
 ------------ | -------------
+`stepCompletion` | [Array&lt;OnboardingStepCompletion&gt;](OnboardingStepCompletion.md)
+`lockVersion` | number
+`requirements` | [Array&lt;OnboardingRequirement&gt;](OnboardingRequirement.md)
+`drafts` | [Array&lt;OnboardingDraftVersion&gt;](OnboardingDraftVersion.md)
 `organization` | { [key: string]: any; }
 `sections` | [{ [key: string]: VendorOnboardingSection; }](VendorOnboardingSection.md)
 `verification` | { [key: string]: any; }
 `setup` | { [key: string]: any; }
-`activation` | { [key: string]: any; }
+`activation` | [VendorActivationSnapshot](VendorActivationSnapshot.md)
 `welcomeRequired` | boolean
 `permissions` | Array&lt;string&gt;
 
@@ -21,6 +25,10 @@ import type { VendorOnboardingSnapshot } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "stepCompletion": null,
+  "lockVersion": null,
+  "requirements": null,
+  "drafts": null,
   "organization": null,
   "sections": null,
   "verification": null,

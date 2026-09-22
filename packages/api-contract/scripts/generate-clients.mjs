@@ -95,11 +95,14 @@ for (const args of generations) {
       for (const field of nestedFields) {
         contents = contents.replace(`result.${field} = valueDes;`, `result.${field} = valueDes.toBuilder();`);
       }
+      // The generator leaves raw nested maps in serializer builder factories.
+      contents = contents.replaceAll('MapBuilder<String, BuiltMap>()', 'MapBuilder<String, BuiltMap<String, JsonObject>>()');
       // dart-dio emits imports for error responses and flattened allOf models
       // even when its generated implementation never references those types.
       const body = contents.replace(/^import .*;\r?\n/gmu, "");
       contents = contents.replace(/^import '([^']+)';\r?\n/gmu, (line, uri) => {
         let symbol;
+        if (uri === "package:built_collection/built_collection.dart" && !/\b(?:BuiltList|BuiltMap|BuiltSet|BuiltListMultimap|BuiltSetMultimap|ListBuilder|MapBuilder|SetBuilder)\b/u.test(body)) return "";
         if (uri === "package:built_value/json_object.dart") symbol = "JsonObject";
         if (uri.startsWith("package:materyalph_api_client/src/model/")) {
           const importedPath = join(output, "lib", uri.slice("package:materyalph_api_client/".length));

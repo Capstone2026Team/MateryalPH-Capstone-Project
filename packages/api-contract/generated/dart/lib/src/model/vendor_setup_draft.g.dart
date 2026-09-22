@@ -78,6 +78,8 @@ class _$VendorSetupDraftFulfillmentMethodEnumSerializer
 
 class _$VendorSetupDraft extends VendorSetupDraft {
   @override
+  final int? draftLockVersion;
+  @override
   final int organizationLockVersion;
   @override
   final String? publicStoreName;
@@ -101,7 +103,8 @@ class _$VendorSetupDraft extends VendorSetupDraft {
       (VendorSetupDraftBuilder()..update(updates))._build();
 
   _$VendorSetupDraft._(
-      {required this.organizationLockVersion,
+      {this.draftLockVersion,
+      required this.organizationLockVersion,
       this.publicStoreName,
       this.description,
       this.bulkCapability,
@@ -123,6 +126,7 @@ class _$VendorSetupDraft extends VendorSetupDraft {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is VendorSetupDraft &&
+        draftLockVersion == other.draftLockVersion &&
         organizationLockVersion == other.organizationLockVersion &&
         publicStoreName == other.publicStoreName &&
         description == other.description &&
@@ -137,6 +141,7 @@ class _$VendorSetupDraft extends VendorSetupDraft {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, draftLockVersion.hashCode);
     _$hash = $jc(_$hash, organizationLockVersion.hashCode);
     _$hash = $jc(_$hash, publicStoreName.hashCode);
     _$hash = $jc(_$hash, description.hashCode);
@@ -153,6 +158,7 @@ class _$VendorSetupDraft extends VendorSetupDraft {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'VendorSetupDraft')
+          ..add('draftLockVersion', draftLockVersion)
           ..add('organizationLockVersion', organizationLockVersion)
           ..add('publicStoreName', publicStoreName)
           ..add('description', description)
@@ -169,6 +175,11 @@ class _$VendorSetupDraft extends VendorSetupDraft {
 class VendorSetupDraftBuilder
     implements Builder<VendorSetupDraft, VendorSetupDraftBuilder> {
   _$VendorSetupDraft? _$v;
+
+  int? _draftLockVersion;
+  int? get draftLockVersion => _$this._draftLockVersion;
+  set draftLockVersion(int? draftLockVersion) =>
+      _$this._draftLockVersion = draftLockVersion;
 
   int? _organizationLockVersion;
   int? get organizationLockVersion => _$this._organizationLockVersion;
@@ -223,6 +234,7 @@ class VendorSetupDraftBuilder
   VendorSetupDraftBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _draftLockVersion = $v.draftLockVersion;
       _organizationLockVersion = $v.organizationLockVersion;
       _publicStoreName = $v.publicStoreName;
       _description = $v.description;
@@ -255,6 +267,7 @@ class VendorSetupDraftBuilder
     try {
       _$result = _$v ??
           _$VendorSetupDraft._(
+            draftLockVersion: draftLockVersion,
             organizationLockVersion: BuiltValueNullFieldError.checkNotNull(
                 organizationLockVersion,
                 r'VendorSetupDraft',

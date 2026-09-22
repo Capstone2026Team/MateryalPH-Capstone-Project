@@ -9,6 +9,9 @@ Name | Type
 `taxpayerKey` | string
 `tin` | string
 `branchCode` | string
+`branchCodeLength` | number
+`headOffice` | boolean
+`declarationYear` | number
 `birCorReference` | string
 `entityClass` | string
 `registrationCategory` | string
@@ -32,6 +35,9 @@ const example = {
   "taxpayerKey": null,
   "tin": null,
   "branchCode": null,
+  "branchCodeLength": null,
+  "headOffice": null,
+  "declarationYear": null,
   "birCorReference": null,
   "entityClass": null,
   "registrationCategory": null,

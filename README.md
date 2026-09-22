@@ -102,8 +102,6 @@ npm run build
 flutter analyze
 flutter test
 
-# repository root after project-local installation
-```
 
 Real provider credentials belong only n ignored local files. See
 `docs/architecture/MateryalPH_Environment_and_API_Key_Setup.md` for Google OIDC

@@ -18,6 +18,7 @@ final class VendorSetupDraftRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'draft_lock_version' => ['sometimes', 'integer', 'min:0'],
             'organization_lock_version' => ['required', 'integer', 'min:1'],
             'public_store_name' => ['sometimes', 'string', 'max:180'],
             'description' => ['sometimes', 'nullable', 'string', 'max:3000'],

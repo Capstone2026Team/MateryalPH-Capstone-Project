@@ -8,6 +8,8 @@ import 'package:materyalph_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
+**authorityEvidenceVersionId** | **String** |  | [optional]
+**authorityScopes** | **BuiltList&lt;String&gt;** |  | [optional]
 **decision** | **String** |  |
 **lockVersion** | **int** |  | [optional]
 **reason** | **String** |  | [optional]

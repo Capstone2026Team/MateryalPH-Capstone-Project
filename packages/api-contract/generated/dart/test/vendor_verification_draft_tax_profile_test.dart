@@ -22,6 +22,21 @@ void main() {
       // TODO
     });
 
+    // int branchCodeLength
+    test('to test the property `branchCodeLength`', () async {
+      // TODO
+    });
+
+    // bool headOffice
+    test('to test the property `headOffice`', () async {
+      // TODO
+    });
+
+    // int declarationYear
+    test('to test the property `declarationYear`', () async {
+      // TODO
+    });
+
     // String birCorReference
     test('to test the property `birCorReference`', () async {
       // TODO

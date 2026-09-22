@@ -7,6 +7,12 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(VendorSetupDraft, () {
+    // Version of this workstream draft; zero for its first save. Stale versions return 409.
+    // int draftLockVersion
+    test('to test the property `draftLockVersion`', () async {
+      // TODO
+    });
+
     // int organizationLockVersion
     test('to test the property `organizationLockVersion`', () async {
       // TODO

@@ -23,3 +23,7 @@ Route::prefix('vendors/onboarding')->middleware([
     Route::post('/payment-connection/reconcile', [VendorOnboardingController::class, 'reconcilePaymentConnection'])->middleware('throttle:account-security');
     Route::post('/activation', [VendorOnboardingController::class, 'activate'])->middleware('throttle:account-security');
 });
+
+Route::get('vendor/onboarding', [VendorOnboardingController::class, 'snapshot'])->middleware([
+    'auth.transport:WEB', 'auth.cookie', VerifyAccountCsrf::class, 'auth:api', 'account.access:VENDOR', 'throttle:account',
+]);

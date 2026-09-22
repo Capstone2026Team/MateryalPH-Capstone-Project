@@ -6,6 +6,7 @@
 
 Name | Type
 ------------ | -------------
+`draftLockVersion` | number
 `lockVersion` | number
 `businessType` | string
 `registeredName` | string
@@ -16,6 +17,7 @@ Name | Type
 `contacts` | Array&lt;{ [key: string]: any; }&gt;
 `classification` | { [key: string]: any; }
 `address` | { [key: string]: any; }
+`representative` | [VendorVerificationDraftRepresentative](VendorVerificationDraftRepresentative.md)
 `legalIdentity` | [VendorVerificationDraftLegalIdentity](VendorVerificationDraftLegalIdentity.md)
 `taxProfile` | [VendorVerificationDraftTaxProfile](VendorVerificationDraftTaxProfile.md)
 
@@ -26,6 +28,7 @@ import type { VendorVerificationDraft } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "draftLockVersion": null,
   "lockVersion": null,
   "businessType": null,
   "registeredName": null,
@@ -36,6 +39,7 @@ const example = {
   "contacts": null,
   "classification": null,
   "address": null,
+  "representative": null,
   "legalIdentity": null,
   "taxProfile": null,
 } satisfies VendorVerificationDraft

@@ -94,6 +94,8 @@ class _$VendorVerificationDraftBusinessTypeEnumSerializer
 
 class _$VendorVerificationDraft extends VendorVerificationDraft {
   @override
+  final int? draftLockVersion;
+  @override
   final int lockVersion;
   @override
   final VendorVerificationDraftBusinessTypeEnum? businessType;
@@ -114,6 +116,8 @@ class _$VendorVerificationDraft extends VendorVerificationDraft {
   @override
   final BuiltMap<String, JsonObject?>? address;
   @override
+  final VendorVerificationDraftRepresentative? representative;
+  @override
   final VendorVerificationDraftLegalIdentity? legalIdentity;
   @override
   final VendorVerificationDraftTaxProfile? taxProfile;
@@ -123,7 +127,8 @@ class _$VendorVerificationDraft extends VendorVerificationDraft {
       (VendorVerificationDraftBuilder()..update(updates))._build();
 
   _$VendorVerificationDraft._(
-      {required this.lockVersion,
+      {this.draftLockVersion,
+      required this.lockVersion,
       this.businessType,
       this.registeredName,
       this.storeName,
@@ -133,6 +138,7 @@ class _$VendorVerificationDraft extends VendorVerificationDraft {
       this.contacts,
       this.classification,
       this.address,
+      this.representative,
       this.legalIdentity,
       this.taxProfile})
       : super._();
@@ -149,6 +155,7 @@ class _$VendorVerificationDraft extends VendorVerificationDraft {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is VendorVerificationDraft &&
+        draftLockVersion == other.draftLockVersion &&
         lockVersion == other.lockVersion &&
         businessType == other.businessType &&
         registeredName == other.registeredName &&
@@ -159,6 +166,7 @@ class _$VendorVerificationDraft extends VendorVerificationDraft {
         contacts == other.contacts &&
         classification == other.classification &&
         address == other.address &&
+        representative == other.representative &&
         legalIdentity == other.legalIdentity &&
         taxProfile == other.taxProfile;
   }
@@ -166,6 +174,7 @@ class _$VendorVerificationDraft extends VendorVerificationDraft {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, draftLockVersion.hashCode);
     _$hash = $jc(_$hash, lockVersion.hashCode);
     _$hash = $jc(_$hash, businessType.hashCode);
     _$hash = $jc(_$hash, registeredName.hashCode);
@@ -176,6 +185,7 @@ class _$VendorVerificationDraft extends VendorVerificationDraft {
     _$hash = $jc(_$hash, contacts.hashCode);
     _$hash = $jc(_$hash, classification.hashCode);
     _$hash = $jc(_$hash, address.hashCode);
+    _$hash = $jc(_$hash, representative.hashCode);
     _$hash = $jc(_$hash, legalIdentity.hashCode);
     _$hash = $jc(_$hash, taxProfile.hashCode);
     _$hash = $jf(_$hash);
@@ -185,6 +195,7 @@ class _$VendorVerificationDraft extends VendorVerificationDraft {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'VendorVerificationDraft')
+          ..add('draftLockVersion', draftLockVersion)
           ..add('lockVersion', lockVersion)
           ..add('businessType', businessType)
           ..add('registeredName', registeredName)
@@ -195,6 +206,7 @@ class _$VendorVerificationDraft extends VendorVerificationDraft {
           ..add('contacts', contacts)
           ..add('classification', classification)
           ..add('address', address)
+          ..add('representative', representative)
           ..add('legalIdentity', legalIdentity)
           ..add('taxProfile', taxProfile))
         .toString();
@@ -205,6 +217,11 @@ class VendorVerificationDraftBuilder
     implements
         Builder<VendorVerificationDraft, VendorVerificationDraftBuilder> {
   _$VendorVerificationDraft? _$v;
+
+  int? _draftLockVersion;
+  int? get draftLockVersion => _$this._draftLockVersion;
+  set draftLockVersion(int? draftLockVersion) =>
+      _$this._draftLockVersion = draftLockVersion;
 
   int? _lockVersion;
   int? get lockVersion => _$this._lockVersion;
@@ -256,6 +273,13 @@ class VendorVerificationDraftBuilder
   set address(MapBuilder<String, JsonObject?>? address) =>
       _$this._address = address;
 
+  VendorVerificationDraftRepresentativeBuilder? _representative;
+  VendorVerificationDraftRepresentativeBuilder get representative =>
+      _$this._representative ??= VendorVerificationDraftRepresentativeBuilder();
+  set representative(
+          VendorVerificationDraftRepresentativeBuilder? representative) =>
+      _$this._representative = representative;
+
   VendorVerificationDraftLegalIdentityBuilder? _legalIdentity;
   VendorVerificationDraftLegalIdentityBuilder get legalIdentity =>
       _$this._legalIdentity ??= VendorVerificationDraftLegalIdentityBuilder();
@@ -276,6 +300,7 @@ class VendorVerificationDraftBuilder
   VendorVerificationDraftBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _draftLockVersion = $v.draftLockVersion;
       _lockVersion = $v.lockVersion;
       _businessType = $v.businessType;
       _registeredName = $v.registeredName;
@@ -286,6 +311,7 @@ class VendorVerificationDraftBuilder
       _contacts = $v.contacts?.toBuilder();
       _classification = $v.classification?.toBuilder();
       _address = $v.address?.toBuilder();
+      _representative = $v.representative?.toBuilder();
       _legalIdentity = $v.legalIdentity?.toBuilder();
       _taxProfile = $v.taxProfile?.toBuilder();
       _$v = null;
@@ -311,6 +337,7 @@ class VendorVerificationDraftBuilder
     try {
       _$result = _$v ??
           _$VendorVerificationDraft._(
+            draftLockVersion: draftLockVersion,
             lockVersion: BuiltValueNullFieldError.checkNotNull(
                 lockVersion, r'VendorVerificationDraft', 'lockVersion'),
             businessType: businessType,
@@ -322,6 +349,7 @@ class VendorVerificationDraftBuilder
             contacts: _contacts?.build(),
             classification: _classification?.build(),
             address: _address?.build(),
+            representative: _representative?.build(),
             legalIdentity: _legalIdentity?.build(),
             taxProfile: _taxProfile?.build(),
           );
@@ -334,6 +362,8 @@ class VendorVerificationDraftBuilder
         _classification?.build();
         _$failedField = 'address';
         _address?.build();
+        _$failedField = 'representative';
+        _representative?.build();
         _$failedField = 'legalIdentity';
         _legalIdentity?.build();
         _$failedField = 'taxProfile';

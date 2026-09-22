@@ -8,6 +8,14 @@ part of 'vendor_onboarding_snapshot.dart';
 
 class _$VendorOnboardingSnapshot extends VendorOnboardingSnapshot {
   @override
+  final BuiltList<OnboardingStepCompletion> stepCompletion;
+  @override
+  final int lockVersion;
+  @override
+  final BuiltList<OnboardingRequirement> requirements;
+  @override
+  final BuiltList<OnboardingDraftVersion> drafts;
+  @override
   final BuiltMap<String, JsonObject?> organization;
   @override
   final BuiltMap<String, VendorOnboardingSection> sections;
@@ -16,7 +24,7 @@ class _$VendorOnboardingSnapshot extends VendorOnboardingSnapshot {
   @override
   final BuiltMap<String, JsonObject?> setup;
   @override
-  final BuiltMap<String, JsonObject?> activation;
+  final VendorActivationSnapshot activation;
   @override
   final bool welcomeRequired;
   @override
@@ -27,7 +35,11 @@ class _$VendorOnboardingSnapshot extends VendorOnboardingSnapshot {
       (VendorOnboardingSnapshotBuilder()..update(updates))._build();
 
   _$VendorOnboardingSnapshot._(
-      {required this.organization,
+      {required this.stepCompletion,
+      required this.lockVersion,
+      required this.requirements,
+      required this.drafts,
+      required this.organization,
       required this.sections,
       required this.verification,
       required this.setup,
@@ -48,6 +60,10 @@ class _$VendorOnboardingSnapshot extends VendorOnboardingSnapshot {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is VendorOnboardingSnapshot &&
+        stepCompletion == other.stepCompletion &&
+        lockVersion == other.lockVersion &&
+        requirements == other.requirements &&
+        drafts == other.drafts &&
         organization == other.organization &&
         sections == other.sections &&
         verification == other.verification &&
@@ -60,6 +76,10 @@ class _$VendorOnboardingSnapshot extends VendorOnboardingSnapshot {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, stepCompletion.hashCode);
+    _$hash = $jc(_$hash, lockVersion.hashCode);
+    _$hash = $jc(_$hash, requirements.hashCode);
+    _$hash = $jc(_$hash, drafts.hashCode);
     _$hash = $jc(_$hash, organization.hashCode);
     _$hash = $jc(_$hash, sections.hashCode);
     _$hash = $jc(_$hash, verification.hashCode);
@@ -74,6 +94,10 @@ class _$VendorOnboardingSnapshot extends VendorOnboardingSnapshot {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'VendorOnboardingSnapshot')
+          ..add('stepCompletion', stepCompletion)
+          ..add('lockVersion', lockVersion)
+          ..add('requirements', requirements)
+          ..add('drafts', drafts)
           ..add('organization', organization)
           ..add('sections', sections)
           ..add('verification', verification)
@@ -89,6 +113,28 @@ class VendorOnboardingSnapshotBuilder
     implements
         Builder<VendorOnboardingSnapshot, VendorOnboardingSnapshotBuilder> {
   _$VendorOnboardingSnapshot? _$v;
+
+  ListBuilder<OnboardingStepCompletion>? _stepCompletion;
+  ListBuilder<OnboardingStepCompletion> get stepCompletion =>
+      _$this._stepCompletion ??= ListBuilder<OnboardingStepCompletion>();
+  set stepCompletion(ListBuilder<OnboardingStepCompletion>? stepCompletion) =>
+      _$this._stepCompletion = stepCompletion;
+
+  int? _lockVersion;
+  int? get lockVersion => _$this._lockVersion;
+  set lockVersion(int? lockVersion) => _$this._lockVersion = lockVersion;
+
+  ListBuilder<OnboardingRequirement>? _requirements;
+  ListBuilder<OnboardingRequirement> get requirements =>
+      _$this._requirements ??= ListBuilder<OnboardingRequirement>();
+  set requirements(ListBuilder<OnboardingRequirement>? requirements) =>
+      _$this._requirements = requirements;
+
+  ListBuilder<OnboardingDraftVersion>? _drafts;
+  ListBuilder<OnboardingDraftVersion> get drafts =>
+      _$this._drafts ??= ListBuilder<OnboardingDraftVersion>();
+  set drafts(ListBuilder<OnboardingDraftVersion>? drafts) =>
+      _$this._drafts = drafts;
 
   MapBuilder<String, JsonObject?>? _organization;
   MapBuilder<String, JsonObject?> get organization =>
@@ -113,10 +159,10 @@ class VendorOnboardingSnapshotBuilder
       _$this._setup ??= MapBuilder<String, JsonObject?>();
   set setup(MapBuilder<String, JsonObject?>? setup) => _$this._setup = setup;
 
-  MapBuilder<String, JsonObject?>? _activation;
-  MapBuilder<String, JsonObject?> get activation =>
-      _$this._activation ??= MapBuilder<String, JsonObject?>();
-  set activation(MapBuilder<String, JsonObject?>? activation) =>
+  VendorActivationSnapshotBuilder? _activation;
+  VendorActivationSnapshotBuilder get activation =>
+      _$this._activation ??= VendorActivationSnapshotBuilder();
+  set activation(VendorActivationSnapshotBuilder? activation) =>
       _$this._activation = activation;
 
   bool? _welcomeRequired;
@@ -137,6 +183,10 @@ class VendorOnboardingSnapshotBuilder
   VendorOnboardingSnapshotBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _stepCompletion = $v.stepCompletion.toBuilder();
+      _lockVersion = $v.lockVersion;
+      _requirements = $v.requirements.toBuilder();
+      _drafts = $v.drafts.toBuilder();
       _organization = $v.organization.toBuilder();
       _sections = $v.sections.toBuilder();
       _verification = $v.verification.toBuilder();
@@ -167,6 +217,11 @@ class VendorOnboardingSnapshotBuilder
     try {
       _$result = _$v ??
           _$VendorOnboardingSnapshot._(
+            stepCompletion: stepCompletion.build(),
+            lockVersion: BuiltValueNullFieldError.checkNotNull(
+                lockVersion, r'VendorOnboardingSnapshot', 'lockVersion'),
+            requirements: requirements.build(),
+            drafts: drafts.build(),
             organization: organization.build(),
             sections: sections.build(),
             verification: verification.build(),
@@ -181,6 +236,13 @@ class VendorOnboardingSnapshotBuilder
     } catch (_) {
       late String _$failedField;
       try {
+        _$failedField = 'stepCompletion';
+        stepCompletion.build();
+
+        _$failedField = 'requirements';
+        requirements.build();
+        _$failedField = 'drafts';
+        drafts.build();
         _$failedField = 'organization';
         organization.build();
         _$failedField = 'sections';

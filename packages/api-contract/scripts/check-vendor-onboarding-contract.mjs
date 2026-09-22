@@ -20,6 +20,7 @@ const hasMiddleware = (route, ...names) => names.some(name => route.middleware.i
 const phaseThreePaths = new Set([
   '/admin/dashboard',
   '/admin/dashboard/audit',
+  '/vendor/onboarding',
   '/vendors/onboarding',
   '/vendors/onboarding/verification',
   '/vendors/onboarding/verification/submit',
@@ -82,7 +83,7 @@ for (const path of phaseThreePaths) {
 }
 
 for (const key of actual.keys()) {
-  if (/ \/api\/v1\/(vendors\/onboarding|admin\/vendor-verification|vendor-onboarding-files|webhooks\/xendit\/account-verification)/.test(key)) {
+  if (/ \/api\/v1\/(vendor\/onboarding|vendors\/onboarding|admin\/vendor-verification|vendor-onboarding-files|webhooks\/xendit\/account-verification)/.test(key)) {
     assert.ok(expected.has(key), `Laravel Phase 3 route missing from OpenAPI: ${key}`)
   }
 }
@@ -101,4 +102,16 @@ for (const path of [
   assert.ok(operation.parameters?.some(parameter => parameter.name === 'Idempotency-Key' && parameter.required), `${path} must require Idempotency-Key`)
 }
 
-console.log(`Phase 3 contract passed: ${expected.size} Vendor/Admin onboarding, verification, file, invitation, payment, and webhook operations match Laravel routes.`)
+const draft = spec.components.schemas.VendorVerificationDraft.properties
+const tax = draft.tax_profile.properties
+assert.equal(tax.tin.pattern, '^[0-9]{9}$')
+assert.equal(tax.tin.writeOnly, true)
+assert.equal(tax.branch_code.pattern, '^(?:[0-9]{3}|[0-9]{5})$')
+assert.deepEqual(tax.branch_code_length.enum, [3, 5])
+assert.equal(draft.representative.properties.id_number.writeOnly, true)
+assert.deepEqual(spec.components.schemas.AdminVendorVerificationDecision.properties.authority_scopes.items.enum, ['TAX_DECLARATIONS', 'COMMISSION_AGREEMENT', 'PAYMENT_CONFIGURATION'])
+
+console.log(`Phase 3 contract passed: ${expected.size} Vendor/Admin operations match Laravel routes; private tax, representative, and authority schemas verified.`)
+
+for (const field of ['requirements', 'drafts', 'lock_version']) assert.ok(spec.components.schemas.VendorOnboardingSnapshot.required.includes(field), `Authoritative snapshot is missing ${field}`)
+assert.deepEqual(spec.components.schemas.StoreActivationBlocker.required, ['key', 'condition', 'reason'])

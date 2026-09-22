@@ -6,6 +6,33 @@ part of 'vendor_verification_draft_tax_profile.dart';
 // BuiltValueGenerator
 // **************************************************************************
 
+const VendorVerificationDraftTaxProfileBranchCodeLengthEnum
+    _$vendorVerificationDraftTaxProfileBranchCodeLengthEnum_number3 =
+    const VendorVerificationDraftTaxProfileBranchCodeLengthEnum._('number3');
+const VendorVerificationDraftTaxProfileBranchCodeLengthEnum
+    _$vendorVerificationDraftTaxProfileBranchCodeLengthEnum_number5 =
+    const VendorVerificationDraftTaxProfileBranchCodeLengthEnum._('number5');
+
+VendorVerificationDraftTaxProfileBranchCodeLengthEnum
+    _$vendorVerificationDraftTaxProfileBranchCodeLengthEnumValueOf(
+        String name) {
+  switch (name) {
+    case 'number3':
+      return _$vendorVerificationDraftTaxProfileBranchCodeLengthEnum_number3;
+    case 'number5':
+      return _$vendorVerificationDraftTaxProfileBranchCodeLengthEnum_number5;
+    default:
+      throw ArgumentError(name);
+  }
+}
+
+final BuiltSet<VendorVerificationDraftTaxProfileBranchCodeLengthEnum>
+    _$vendorVerificationDraftTaxProfileBranchCodeLengthEnumValues = BuiltSet<
+        VendorVerificationDraftTaxProfileBranchCodeLengthEnum>(const <VendorVerificationDraftTaxProfileBranchCodeLengthEnum>[
+  _$vendorVerificationDraftTaxProfileBranchCodeLengthEnum_number3,
+  _$vendorVerificationDraftTaxProfileBranchCodeLengthEnum_number5,
+]);
+
 const VendorVerificationDraftTaxProfileEntityClassEnum
     _$vendorVerificationDraftTaxProfileEntityClassEnum_INDIVIDUAL =
     const VendorVerificationDraftTaxProfileEntityClassEnum._('INDIVIDUAL');
@@ -111,6 +138,9 @@ final BuiltSet<VendorVerificationDraftTaxProfileWithholdingScenarioEnum>
   _$vendorVerificationDraftTaxProfileWithholdingScenarioEnum_DEMO_PROVIDER_WITHHOLDER,
 ]);
 
+Serializer<VendorVerificationDraftTaxProfileBranchCodeLengthEnum>
+    _$vendorVerificationDraftTaxProfileBranchCodeLengthEnumSerializer =
+    _$VendorVerificationDraftTaxProfileBranchCodeLengthEnumSerializer();
 Serializer<VendorVerificationDraftTaxProfileEntityClassEnum>
     _$vendorVerificationDraftTaxProfileEntityClassEnumSerializer =
     _$VendorVerificationDraftTaxProfileEntityClassEnumSerializer();
@@ -120,6 +150,41 @@ Serializer<VendorVerificationDraftTaxProfileVatCategoryEnum>
 Serializer<VendorVerificationDraftTaxProfileWithholdingScenarioEnum>
     _$vendorVerificationDraftTaxProfileWithholdingScenarioEnumSerializer =
     _$VendorVerificationDraftTaxProfileWithholdingScenarioEnumSerializer();
+
+class _$VendorVerificationDraftTaxProfileBranchCodeLengthEnumSerializer
+    implements
+        PrimitiveSerializer<
+            VendorVerificationDraftTaxProfileBranchCodeLengthEnum> {
+  static const Map<String, Object> _toWire = const <String, Object>{
+    'number3': 3,
+    'number5': 5,
+  };
+  static const Map<Object, String> _fromWire = const <Object, String>{
+    3: 'number3',
+    5: 'number5',
+  };
+
+  @override
+  final Iterable<Type> types = const <Type>[
+    VendorVerificationDraftTaxProfileBranchCodeLengthEnum
+  ];
+  @override
+  final String wireName =
+      'VendorVerificationDraftTaxProfileBranchCodeLengthEnum';
+
+  @override
+  Object serialize(Serializers serializers,
+          VendorVerificationDraftTaxProfileBranchCodeLengthEnum object,
+          {FullType specifiedType = FullType.unspecified}) =>
+      _toWire[object.name] ?? object.name;
+
+  @override
+  VendorVerificationDraftTaxProfileBranchCodeLengthEnum deserialize(
+          Serializers serializers, Object serialized,
+          {FullType specifiedType = FullType.unspecified}) =>
+      VendorVerificationDraftTaxProfileBranchCodeLengthEnum.valueOf(
+          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+}
 
 class _$VendorVerificationDraftTaxProfileEntityClassEnumSerializer
     implements
@@ -239,6 +304,12 @@ class _$VendorVerificationDraftTaxProfile
   @override
   final String? branchCode;
   @override
+  final VendorVerificationDraftTaxProfileBranchCodeLengthEnum? branchCodeLength;
+  @override
+  final bool? headOffice;
+  @override
+  final int? declarationYear;
+  @override
   final String? birCorReference;
   @override
   final VendorVerificationDraftTaxProfileEntityClassEnum? entityClass;
@@ -272,6 +343,9 @@ class _$VendorVerificationDraftTaxProfile
       {this.taxpayerKey,
       this.tin,
       this.branchCode,
+      this.branchCodeLength,
+      this.headOffice,
+      this.declarationYear,
       this.birCorReference,
       this.entityClass,
       this.registrationCategory,
@@ -301,6 +375,9 @@ class _$VendorVerificationDraftTaxProfile
         taxpayerKey == other.taxpayerKey &&
         tin == other.tin &&
         branchCode == other.branchCode &&
+        branchCodeLength == other.branchCodeLength &&
+        headOffice == other.headOffice &&
+        declarationYear == other.declarationYear &&
         birCorReference == other.birCorReference &&
         entityClass == other.entityClass &&
         registrationCategory == other.registrationCategory &&
@@ -321,6 +398,9 @@ class _$VendorVerificationDraftTaxProfile
     _$hash = $jc(_$hash, taxpayerKey.hashCode);
     _$hash = $jc(_$hash, tin.hashCode);
     _$hash = $jc(_$hash, branchCode.hashCode);
+    _$hash = $jc(_$hash, branchCodeLength.hashCode);
+    _$hash = $jc(_$hash, headOffice.hashCode);
+    _$hash = $jc(_$hash, declarationYear.hashCode);
     _$hash = $jc(_$hash, birCorReference.hashCode);
     _$hash = $jc(_$hash, entityClass.hashCode);
     _$hash = $jc(_$hash, registrationCategory.hashCode);
@@ -343,6 +423,9 @@ class _$VendorVerificationDraftTaxProfile
           ..add('taxpayerKey', taxpayerKey)
           ..add('tin', tin)
           ..add('branchCode', branchCode)
+          ..add('branchCodeLength', branchCodeLength)
+          ..add('headOffice', headOffice)
+          ..add('declarationYear', declarationYear)
           ..add('birCorReference', birCorReference)
           ..add('entityClass', entityClass)
           ..add('registrationCategory', registrationCategory)
@@ -376,6 +459,23 @@ class VendorVerificationDraftTaxProfileBuilder
   String? _branchCode;
   String? get branchCode => _$this._branchCode;
   set branchCode(String? branchCode) => _$this._branchCode = branchCode;
+
+  VendorVerificationDraftTaxProfileBranchCodeLengthEnum? _branchCodeLength;
+  VendorVerificationDraftTaxProfileBranchCodeLengthEnum? get branchCodeLength =>
+      _$this._branchCodeLength;
+  set branchCodeLength(
+          VendorVerificationDraftTaxProfileBranchCodeLengthEnum?
+              branchCodeLength) =>
+      _$this._branchCodeLength = branchCodeLength;
+
+  bool? _headOffice;
+  bool? get headOffice => _$this._headOffice;
+  set headOffice(bool? headOffice) => _$this._headOffice = headOffice;
+
+  int? _declarationYear;
+  int? get declarationYear => _$this._declarationYear;
+  set declarationYear(int? declarationYear) =>
+      _$this._declarationYear = declarationYear;
 
   String? _birCorReference;
   String? get birCorReference => _$this._birCorReference;
@@ -455,6 +555,9 @@ class VendorVerificationDraftTaxProfileBuilder
       _taxpayerKey = $v.taxpayerKey;
       _tin = $v.tin;
       _branchCode = $v.branchCode;
+      _branchCodeLength = $v.branchCodeLength;
+      _headOffice = $v.headOffice;
+      _declarationYear = $v.declarationYear;
       _birCorReference = $v.birCorReference;
       _entityClass = $v.entityClass;
       _registrationCategory = $v.registrationCategory;
@@ -492,6 +595,9 @@ class VendorVerificationDraftTaxProfileBuilder
           taxpayerKey: taxpayerKey,
           tin: tin,
           branchCode: branchCode,
+          branchCodeLength: branchCodeLength,
+          headOffice: headOffice,
+          declarationYear: declarationYear,
           birCorReference: birCorReference,
           entityClass: entityClass,
           registrationCategory: registrationCategory,

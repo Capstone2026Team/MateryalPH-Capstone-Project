@@ -1,5 +1,37 @@
 # Store onboarding section layout — 20 September 2026
 
+## Single Store Email field — 21 September 2026
+
+This refinement supersedes the earlier Business Information arrangement below. Registered Business Name and Date Established share the first row; Store Name spans the second. A subtle divider introduces Store Contact Information, with equal-width, equal-height Store Email and Store Phone inputs on the same desktop/tablet row and stacked mobile fields.
+
+There is exactly one named `store_email` input. It starts read-only with Change. Change makes that same input editable and replaces the action with Send Code in a fixed-width area. The existing request/confirm endpoints use this value. Successful confirmation refreshes the authoritative snapshot, clears the code, returns the field to read-only and restores Change. Verified is shown only when the displayed normalized address matches the server-confirmed Store Email. Pending/replacement addresses never inherit the previous address's verification. Editing after requesting a code clears the old challenge UI; failed requests and confirmations remain recoverable. Store Phone remains an ordinary contact field.
+
+Changed `PhaseThreeVendorPages.tsx`, `VendorNavigation.test.tsx`, `e2e/onboarding-steps.spec.ts`, this report and Business Information screenshot evidence. No migrations, API contracts, generated clients, backend authorization or activation rules changed. The server still preserves the existing verified email until a replacement passes OTP confirmation. No new setup or keys are needed.
+
+Validation: Vendor typecheck, lint and build passed; 62 tests in 9 files passed; 16 browser checks passed in 18.1 seconds across 320–1920px. Regression coverage includes initial read-only state, a single email field, change/confirm/re-change, matching-address badges, pending replacements, cleared challenges, request/confirmation failures and draft payloads. Browser checks verify field ordering, matching contact input dimensions and stable widths/heights between Change and Send Code. Desktop/mobile screenshots were reviewed. Source/E2E secret scans and `git diff --check` passed; no staged content was present. Live email delivery/OTP services were not exercised; the existing bundle-size advisory remains.
+
+Suggested commit: `fix(vendor): unify store email verification and align business fields`
+
+## Business information spacing — 21 September 2026
+
+Balanced the two business-name fields in one row and grouped date established, store phone and store email in a second desktop row, with more width for email. Tablet and mobile layouts reflow without an empty half-row or horizontal overflow. The email-verification area now pairs the status, current verified address and explanatory text with a bounded email/OTP action column. Inputs and action buttons share a 48px height. Existing email fields, required flags, send/confirm handlers, OTP validation, draft builders and authorization remain unchanged. The verified-address label distinguishes the saved address from a replacement awaiting verification.
+
+Changed the Business Information and EmailVerificationPanel markup in `PhaseThreeVendorPages.tsx`, the existing onboarding browser spec, this report and screenshot evidence. No migrations, API changes, setup or new keys. Vendor typecheck/lint/build passed, all 59 component tests passed, and all 16 browser checks passed in 20.3 seconds. Browser checks additionally verify desktop field-row alignment and matching input/button geometry. Source/E2E secret scans and diff whitespace checks passed. Desktop/mobile section screenshots were reviewed; live email delivery and OTP services were not retested. The existing bundle-size advisory remains.
+
+Suggested commit: `style(vendor): balance business information and email verification layout`
+
+## Header and stepper polish — 21 September 2026
+
+Refined the supplied header and Tax Profile stepper reference. Back to dashboard now precedes the title as a quiet navigation link. The title, status and description share a consistent left alignment; the two onboarding-area buttons form a compact paired control on the right at desktop widths, and reflow together below the title on smaller screens. This removes the isolated dashboard link beneath the area buttons and the extra header divider.
+
+The stepper separates progress metadata with a subtle divider, uses evenly padded equal-height steps and 32px number circles, and highlights the current step with a pale orange surface and underline. Labels remain 14px, wrap naturally, and never require horizontal scrolling. Completed states remain server-derived. No fields, requirements, handlers, authorization, API contracts or migrations changed.
+
+Changed files for this refinement: `PhaseThreeVendorPages.tsx`, `OnboardingFlow.tsx`, `e2e/onboarding-steps.spec.ts`, this report and the onboarding screenshot evidence. The browser fixture now shows realistic requirement totals and captures the Tax Profile header/stepper.
+
+Validation rerun: Vendor typecheck, lint and production build passed; 59 tests in 9 files passed; 16 browser checks passed in 23.9 seconds at the eight viewport widths listed below. Source and E2E secret scans and `git diff --check` passed. The staged scan found no staged content. Desktop and mobile screenshots were reviewed. The existing >500 kB build advisory remains; live providers were not retested. No new setup or API keys are required.
+
+Suggested commit for this refinement: `style(vendor): refine onboarding header and step navigation`
+
 ## Outcome
 
 Store Verification has five steps and Store Setup has six. The stepper uses equal-width desktop columns, readable 14px labels with natural wrapping, and responsive rows on smaller screens. It has no horizontal scrolling, scrollbar or scrolling arrows. Compact button-style Store Verification / Store Setup controls beside the header replace the former full-width workstream strip. Each uses the same numbered horizontal navigation, orange active state, server-confirmed completion indicators, current step count, and consistent bottom action area. Only the selected section is visible or keyboard-accessible. The requirement checklist is available in the final review step rather than occupying a permanent side column.
