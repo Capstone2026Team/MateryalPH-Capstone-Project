@@ -27,6 +27,13 @@ import {
     VendorVerificationDraftTaxProfileToJSON,
     VendorVerificationDraftTaxProfileToJSONTyped,
 } from './VendorVerificationDraftTaxProfile';
+import type { VendorVerificationDraftClassification } from './VendorVerificationDraftClassification';
+import {
+    VendorVerificationDraftClassificationFromJSON,
+    VendorVerificationDraftClassificationFromJSONTyped,
+    VendorVerificationDraftClassificationToJSON,
+    VendorVerificationDraftClassificationToJSONTyped,
+} from './VendorVerificationDraftClassification';
 import type { VendorVerificationDraftRepresentative } from './VendorVerificationDraftRepresentative';
 import {
     VendorVerificationDraftRepresentativeFromJSON,
@@ -36,14 +43,18 @@ import {
 } from './VendorVerificationDraftRepresentative';
 
 /**
- *
+ * Store contact information uses store_email and store_phone. The retired contacts field is rejected and is not returned in current Vendor or Admin snapshots.
  * @export
  * @interface VendorVerificationDraft
  */
 export interface VendorVerificationDraft {
     [key: string]: any | any;
     /**
-     * Version of this workstream draft; zero for its first save. Stale versions return 409.
+     * Encrypted unvalidated form progress as a JSON object of field names to string arrays. Saving progress does not submit or update review records. Sensitive identity numbers are omitted on read and merged server-side on final validation.
+     */
+    formState?: string;
+    /**
+     * Workstream draft version; zero on first save. Send together with the required organization guard. Omission retains legacy behavior without draft-level comparison. A stale draft returns 409 STALE_VERSION; a stale organization returns 409 RESOURCE_VERSION_CONFLICT.
      */
     draftLockVersion?: number;
     /**
@@ -56,8 +67,13 @@ export interface VendorVerificationDraft {
     businessType?: VendorVerificationDraftBusinessTypeEnum;
     /**
      *
+     * @deprecated
      */
     registeredName?: string;
+    /**
+     *
+     */
+    legalBusinessName?: string;
     /**
      *
      */
@@ -77,13 +93,9 @@ export interface VendorVerificationDraft {
     /**
      *
      */
-    contacts?: Array<{ [key: string]: any; }>;
+    classification?: VendorVerificationDraftClassification;
     /**
-     *
-     */
-    classification?: { [key: string]: any; };
-    /**
-     *
+     * New or changed addresses require province_code, city_code, psgc_code, street (2–200 characters), four-digit postal_code and canonical display names. source MANUAL is sufficient without geocoding or a token and stores null coordinates. Otherwise resolution_token from resolveVendorAddress is required. Client latitude and longitude are prohibited. Omit address to retain an existing record.
      */
     address?: { [key: string]: any; };
     /**
@@ -133,16 +145,17 @@ export function VendorVerificationDraftFromJSONTyped(json: any, ignoreDiscrimina
     return {
 
             ...json,
+        'formState': json['form_state'] == null ? undefined : json['form_state'],
         'draftLockVersion': json['draft_lock_version'] == null ? undefined : json['draft_lock_version'],
         'lockVersion': json['lock_version'],
         'businessType': json['business_type'] == null ? undefined : json['business_type'],
         'registeredName': json['registered_name'] == null ? undefined : json['registered_name'],
+        'legalBusinessName': json['legal_business_name'] == null ? undefined : json['legal_business_name'],
         'storeName': json['store_name'] == null ? undefined : json['store_name'],
         'dateEstablished': json['date_established'] == null ? undefined : (parseDate(json['date_established'])),
         'storeEmail': json['store_email'] == null ? undefined : json['store_email'],
         'storePhone': json['store_phone'] == null ? undefined : json['store_phone'],
-        'contacts': json['contacts'] == null ? undefined : json['contacts'],
-        'classification': json['classification'] == null ? undefined : json['classification'],
+        'classification': json['classification'] == null ? undefined : VendorVerificationDraftClassificationFromJSON(json['classification']),
         'address': json['address'] == null ? undefined : json['address'],
         'representative': json['representative'] == null ? undefined : VendorVerificationDraftRepresentativeFromJSON(json['representative']),
         'legalIdentity': json['legal_identity'] == null ? undefined : VendorVerificationDraftLegalIdentityFromJSON(json['legal_identity']),
@@ -162,16 +175,17 @@ export function VendorVerificationDraftToJSONTyped(value?: VendorVerificationDra
     return {
 
             ...value,
+        'form_state': value['formState'],
         'draft_lock_version': value['draftLockVersion'],
         'lock_version': value['lockVersion'],
         'business_type': value['businessType'],
         'registered_name': value['registeredName'],
+        'legal_business_name': value['legalBusinessName'],
         'store_name': value['storeName'],
         'date_established': value['dateEstablished'] == null ? value['dateEstablished'] : serializeDate(value['dateEstablished']),
         'store_email': value['storeEmail'],
         'store_phone': value['storePhone'],
-        'contacts': value['contacts'],
-        'classification': value['classification'],
+        'classification': VendorVerificationDraftClassificationToJSON(value['classification']),
         'address': value['address'],
         'representative': VendorVerificationDraftRepresentativeToJSON(value['representative']),
         'legal_identity': VendorVerificationDraftLegalIdentityToJSON(value['legalIdentity']),

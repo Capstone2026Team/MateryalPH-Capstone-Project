@@ -44,7 +44,7 @@ final class StoreActivationGate
             $block(3, 'store_verification', 'Mandatory Store Verification requirements must be approved.');
         }
         foreach ($verification as $requirement) {
-            if (! $this->satisfied($requirement, 'APPROVED')) {
+            if (! $this->satisfied($requirement, $requirement->requirement_key === 'commission_terms' ? 'COMPLETED' : 'APPROVED')) {
                 $block(3, $requirement->requirement_key, 'Approval is required for '.$requirement->requirement_key.'.');
             }
         }
@@ -62,7 +62,7 @@ final class StoreActivationGate
             }
         }
         // Check evidence itself: a stale checklist approval never bypasses quarantine or replacement.
-        $documents = DB::table('vendor_documents as d')->leftJoin('vendor_document_versions as v', 'v.id', '=', 'd.current_version_id')->leftJoin('files as f', 'f.id', '=', 'v.file_id')->where('d.vendor_organization_id', $organizationId)->get(['d.requirement_key', 'd.status', 'v.scan_state', 'v.content_validation_state', 'f.scan_state as file_scan_state']);
+        $documents = DB::table('vendor_documents as d')->leftJoin('vendor_document_versions as v', 'v.id', '=', 'd.current_version_id')->leftJoin('files as f', 'f.id', '=', 'v.file_id')->whereNull('d.superseded_at')->where('d.vendor_organization_id', $organizationId)->get(['d.requirement_key', 'd.status', 'v.scan_state', 'v.content_validation_state', 'f.scan_state as file_scan_state']);
         foreach ($verification as $requirement) {
             if ($requirement->status === 'NOT_APPLICABLE' || ! isset(VendorOnboardingService::DOCUMENTS[$requirement->requirement_key])) {
                 continue;
@@ -105,7 +105,7 @@ final class StoreActivationGate
         if ($payment === null || ! in_array($payment->environment, ['TEST', 'DEMO'], true) || $payment->connection_status !== 'CONNECTED' || empty($payment->provider_account_id) || ($capabilities['account_verification'] ?? false) !== true) {
             $block(8, 'payment_connection', 'A confirmed Xendit TEST/DEMO account and capability are required.');
         }
-        if ($owner === null || ! $this->accepted($organizationId, (int) $owner->id, 'VENDOR_COMMISSION_TEST', true)) {
+        if ($owner === null || ! $this->commissionAccepted($organizationId, (int) $owner->id)) {
             $block(9, 'commission_terms', 'The Owner must accept the current versioned 2% commission agreement.');
         }
         if ($organization === null || $organization->account_status !== 'ACTIVE' || $organization->activation_hold_code !== null || in_array($organization->store_activation_status, ['RESTRICTED', 'SUSPENDED'], true)) {
@@ -118,6 +118,14 @@ final class StoreActivationGate
     private function satisfied(object $requirement, string $success): bool
     {
         return $requirement->status === $success || ($requirement->status === 'NOT_APPLICABLE' && $requirement->level === 'CONDITIONALLY_REQUIRED' && trim((string) $requirement->applicability_reason) !== '');
+    }
+
+    public function commissionAccepted(string $organizationId, int $ownerId): bool
+    {
+        $authority = app(VendorAuthorityService::class);
+
+        return $this->accepted($organizationId, $ownerId, 'VENDOR_COMMISSION_TEST', true)
+            && (! $authority->required($organizationId) || $authority->hasCurrentApproval($organizationId, 'COMMISSION_AGREEMENT', $ownerId));
     }
 
     private function accepted(string $organizationId, int $ownerId, string $code, bool $organizationRequired = false): bool

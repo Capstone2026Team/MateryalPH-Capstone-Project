@@ -12,23 +12,9 @@ void main() {
       // TODO
     });
 
+    // Combined 9-digit TIN and 3 to 5 digit branch code; use 000 when no branch code applies.
     // String tin
     test('to test the property `tin`', () async {
-      // TODO
-    });
-
-    // String branchCode
-    test('to test the property `branchCode`', () async {
-      // TODO
-    });
-
-    // int branchCodeLength
-    test('to test the property `branchCodeLength`', () async {
-      // TODO
-    });
-
-    // bool headOffice
-    test('to test the property `headOffice`', () async {
       // TODO
     });
 

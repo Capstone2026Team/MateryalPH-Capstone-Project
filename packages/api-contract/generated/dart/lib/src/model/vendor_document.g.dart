@@ -6,6 +6,23 @@ part of 'vendor_document.dart';
 // BuiltValueGenerator
 // **************************************************************************
 
+const VendorDocumentStatusEnum _$vendorDocumentStatusEnum_PENDING_SUBMISSION =
+    const VendorDocumentStatusEnum._('PENDING_SUBMISSION');
+
+VendorDocumentStatusEnum _$vendorDocumentStatusEnumValueOf(String name) {
+  switch (name) {
+    case 'PENDING_SUBMISSION':
+      return _$vendorDocumentStatusEnum_PENDING_SUBMISSION;
+    default:
+      throw ArgumentError(name);
+  }
+}
+
+final BuiltSet<VendorDocumentStatusEnum> _$vendorDocumentStatusEnumValues =
+    BuiltSet<VendorDocumentStatusEnum>(const <VendorDocumentStatusEnum>[
+  _$vendorDocumentStatusEnum_PENDING_SUBMISSION,
+]);
+
 const VendorDocumentScanStateEnum _$vendorDocumentScanStateEnum_PENDING =
     const VendorDocumentScanStateEnum._('PENDING');
 const VendorDocumentScanStateEnum _$vendorDocumentScanStateEnum_CLEAN =
@@ -34,9 +51,38 @@ final BuiltSet<VendorDocumentScanStateEnum>
   _$vendorDocumentScanStateEnum_REJECTED,
 ]);
 
+Serializer<VendorDocumentStatusEnum> _$vendorDocumentStatusEnumSerializer =
+    _$VendorDocumentStatusEnumSerializer();
 Serializer<VendorDocumentScanStateEnum>
     _$vendorDocumentScanStateEnumSerializer =
     _$VendorDocumentScanStateEnumSerializer();
+
+class _$VendorDocumentStatusEnumSerializer
+    implements PrimitiveSerializer<VendorDocumentStatusEnum> {
+  static const Map<String, Object> _toWire = const <String, Object>{
+    'PENDING_SUBMISSION': 'PENDING_SUBMISSION',
+  };
+  static const Map<Object, String> _fromWire = const <Object, String>{
+    'PENDING_SUBMISSION': 'PENDING_SUBMISSION',
+  };
+
+  @override
+  final Iterable<Type> types = const <Type>[VendorDocumentStatusEnum];
+  @override
+  final String wireName = 'VendorDocumentStatusEnum';
+
+  @override
+  Object serialize(Serializers serializers, VendorDocumentStatusEnum object,
+          {FullType specifiedType = FullType.unspecified}) =>
+      _toWire[object.name] ?? object.name;
+
+  @override
+  VendorDocumentStatusEnum deserialize(
+          Serializers serializers, Object serialized,
+          {FullType specifiedType = FullType.unspecified}) =>
+      VendorDocumentStatusEnum.valueOf(
+          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+}
 
 class _$VendorDocumentScanStateEnumSerializer
     implements PrimitiveSerializer<VendorDocumentScanStateEnum> {
@@ -77,6 +123,8 @@ class _$VendorDocument extends VendorDocument {
   @override
   final int version;
   @override
+  final VendorDocumentStatusEnum status;
+  @override
   final VendorDocumentScanStateEnum scanState;
 
   factory _$VendorDocument([void Function(VendorDocumentBuilder)? updates]) =>
@@ -86,6 +134,7 @@ class _$VendorDocument extends VendorDocument {
       {required this.id,
       required this.requirementKey,
       required this.version,
+      required this.status,
       required this.scanState})
       : super._();
   @override
@@ -102,6 +151,7 @@ class _$VendorDocument extends VendorDocument {
         id == other.id &&
         requirementKey == other.requirementKey &&
         version == other.version &&
+        status == other.status &&
         scanState == other.scanState;
   }
 
@@ -111,6 +161,7 @@ class _$VendorDocument extends VendorDocument {
     _$hash = $jc(_$hash, id.hashCode);
     _$hash = $jc(_$hash, requirementKey.hashCode);
     _$hash = $jc(_$hash, version.hashCode);
+    _$hash = $jc(_$hash, status.hashCode);
     _$hash = $jc(_$hash, scanState.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
@@ -122,6 +173,7 @@ class _$VendorDocument extends VendorDocument {
           ..add('id', id)
           ..add('requirementKey', requirementKey)
           ..add('version', version)
+          ..add('status', status)
           ..add('scanState', scanState))
         .toString();
   }
@@ -144,6 +196,10 @@ class VendorDocumentBuilder
   int? get version => _$this._version;
   set version(int? version) => _$this._version = version;
 
+  VendorDocumentStatusEnum? _status;
+  VendorDocumentStatusEnum? get status => _$this._status;
+  set status(VendorDocumentStatusEnum? status) => _$this._status = status;
+
   VendorDocumentScanStateEnum? _scanState;
   VendorDocumentScanStateEnum? get scanState => _$this._scanState;
   set scanState(VendorDocumentScanStateEnum? scanState) =>
@@ -159,6 +215,7 @@ class VendorDocumentBuilder
       _id = $v.id;
       _requirementKey = $v.requirementKey;
       _version = $v.version;
+      _status = $v.status;
       _scanState = $v.scanState;
       _$v = null;
     }
@@ -187,6 +244,8 @@ class VendorDocumentBuilder
               requirementKey, r'VendorDocument', 'requirementKey'),
           version: BuiltValueNullFieldError.checkNotNull(
               version, r'VendorDocument', 'version'),
+          status: BuiltValueNullFieldError.checkNotNull(
+              status, r'VendorDocument', 'status'),
           scanState: BuiltValueNullFieldError.checkNotNull(
               scanState, r'VendorDocument', 'scanState'),
         );

@@ -22,15 +22,21 @@ const phaseThreePaths = new Set([
   '/admin/dashboard/audit',
   '/vendor/onboarding',
   '/vendors/onboarding',
+  '/vendors/onboarding/requirements',
   '/vendors/onboarding/verification',
   '/vendors/onboarding/verification/submit',
+  '/vendors/onboarding/verification/commission',
   '/vendors/onboarding/setup',
   '/vendors/onboarding/setup/complete',
   '/vendors/onboarding/welcome/dismiss',
   '/vendors/onboarding/address/geocode',
+  '/vendors/onboarding/address/areas',
+  '/vendors/onboarding/address/resolve',
+  '/vendors/onboarding/address/pin',
   '/vendors/onboarding/store-email',
   '/vendors/onboarding/store-email/confirm',
   '/vendors/onboarding/documents',
+  '/vendors/onboarding/documents/pending/{requirementKey}',
   '/vendors/onboarding/media',
   '/vendors/onboarding/files/{fileId}',
   '/vendors/onboarding/payment-connection',
@@ -52,7 +58,7 @@ for (const path of phaseThreePaths) {
   const item = spec.paths[path]
   assert.ok(item, `Phase 3 path missing from OpenAPI: ${path}`)
   for (const [method, operation] of Object.entries(item)) {
-    if (! ['get', 'post', 'patch'].includes(method)) continue
+    if (! ['get', 'post', 'patch', 'delete'].includes(method)) continue
     const key = `${method.toUpperCase()} /api/v1${path}`
     expected.add(key)
     const route = actual.get(key)
@@ -90,6 +96,7 @@ for (const key of actual.keys()) {
 
 for (const path of [
   '/vendors/onboarding/verification/submit',
+  '/vendors/onboarding/verification/commission',
   '/vendors/onboarding/setup/complete',
   '/vendors/onboarding/payment-connection',
   '/vendors/onboarding/activation',
@@ -104,10 +111,11 @@ for (const path of [
 
 const draft = spec.components.schemas.VendorVerificationDraft.properties
 const tax = draft.tax_profile.properties
-assert.equal(tax.tin.pattern, '^[0-9]{9}$')
+assert.equal(tax.tin.pattern, '^(?:[0-9]{12,14}|[0-9]{3}-[0-9]{3}-[0-9]{3}-[0-9]{3,5})$')
 assert.equal(tax.tin.writeOnly, true)
-assert.equal(tax.branch_code.pattern, '^(?:[0-9]{3}|[0-9]{5})$')
-assert.deepEqual(tax.branch_code_length.enum, [3, 5])
+assert.equal(tax.branch_code, undefined)
+assert.equal(tax.branch_code_length, undefined)
+assert.equal(tax.head_office, undefined)
 assert.equal(draft.representative.properties.id_number.writeOnly, true)
 assert.deepEqual(spec.components.schemas.AdminVendorVerificationDecision.properties.authority_scopes.items.enum, ['TAX_DECLARATIONS', 'COMMISSION_AGREEMENT', 'PAYMENT_CONFIGURATION'])
 
@@ -115,3 +123,24 @@ console.log(`Phase 3 contract passed: ${expected.size} Vendor/Admin operations m
 
 for (const field of ['requirements', 'drafts', 'lock_version']) assert.ok(spec.components.schemas.VendorOnboardingSnapshot.required.includes(field), `Authoritative snapshot is missing ${field}`)
 assert.deepEqual(spec.components.schemas.StoreActivationBlocker.required, ['key', 'condition', 'reason'])
+
+assert.equal(spec.paths['/vendors/onboarding/address/areas'].get.operationId, 'searchVendorAddressAreas')
+assert.equal(spec.paths['/vendors/onboarding/address/pin'].post.operationId, 'resolveVendorAddressPin')
+assert.deepEqual(spec.components.schemas.VendorAddressSelection.required, ['province_code', 'city_code', 'psgc_code'])
+assert.ok(spec.components.schemas.VendorAddressSelection.properties.pin_token)
+
+assert.equal(draft.classification.properties.custom_labels.items.maxLength, 60)
+assert.equal(draft.classification.properties.custom_labels.type, 'array')
+
+assert.equal(Object.hasOwn(draft, 'contacts'), false, 'Retired primary contacts must not be exposed')
+
+assert.equal(spec.components.schemas.VendorDocument.properties.status.enum[0], 'PENDING_SUBMISSION')
+assert.equal(spec.components.schemas.VendorDocument.properties.version.minimum, 0)
+assert.ok(draft.form_state)
+
+assert.equal(draft.classification.properties.custom_labels.items.minLength, 2)
+assert.match(draft.address.description, /source MANUAL.*null coordinates/)
+
+assert.deepEqual(spec.components.schemas.VendorCommissionAcceptance.required, ['organization_lock_version', 'agreement_version_id', 'accepted'])
+assert.deepEqual(spec.components.schemas.VendorSetupComplete.required, ['organization_lock_version'])
+assert.equal(spec.components.schemas.VendorSetupComplete.properties.commission_terms_accepted, undefined)

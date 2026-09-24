@@ -1,21 +1,23 @@
 
 # VendorVerificationDraft
 
+Store contact information uses store_email and store_phone. The retired contacts field is rejected and is not returned in current Vendor or Admin snapshots.
 
 ## Properties
 
 Name | Type
 ------------ | -------------
+`formState` | string
 `draftLockVersion` | number
 `lockVersion` | number
 `businessType` | string
 `registeredName` | string
+`legalBusinessName` | string
 `storeName` | string
 `dateEstablished` | Date
 `storeEmail` | string
 `storePhone` | string
-`contacts` | Array&lt;{ [key: string]: any; }&gt;
-`classification` | { [key: string]: any; }
+`classification` | [VendorVerificationDraftClassification](VendorVerificationDraftClassification.md)
 `address` | { [key: string]: any; }
 `representative` | [VendorVerificationDraftRepresentative](VendorVerificationDraftRepresentative.md)
 `legalIdentity` | [VendorVerificationDraftLegalIdentity](VendorVerificationDraftLegalIdentity.md)
@@ -28,15 +30,16 @@ import type { VendorVerificationDraft } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "formState": null,
   "draftLockVersion": null,
   "lockVersion": null,
   "businessType": null,
   "registeredName": null,
+  "legalBusinessName": null,
   "storeName": null,
   "dateEstablished": null,
   "storeEmail": null,
   "storePhone": null,
-  "contacts": null,
   "classification": null,
   "address": null,
   "representative": null,

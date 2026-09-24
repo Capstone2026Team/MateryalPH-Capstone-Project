@@ -8,9 +8,13 @@ use App\Domain\Identity\AuthenticationException;
 use App\Domain\Identity\OtpCodeGenerator;
 use App\Domain\Identity\ProfilePhotoScanner;
 use App\Domain\Identity\TokenSessionService;
+use App\Domain\Vendors\AddressGeocoder;
+use App\Domain\Vendors\OnboardingDrafts;
 use App\Domain\Vendors\OnboardingRequirementResolver;
 use App\Domain\Vendors\PhilippineRegionDirectory;
+use App\Domain\Vendors\PsgcProvider;
 use App\Domain\Vendors\StoreActivationGate;
+use App\Domain\Vendors\VendorAddressResolver;
 use App\Domain\Vendors\VendorExpiryService;
 use App\Domain\Vendors\VendorFileScanner;
 use App\Domain\Vendors\VendorOnboardingService;
@@ -25,6 +29,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Laravel\Passport\AccessToken;
@@ -43,6 +48,59 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
         config()->set('services.cloudinary.cloud_name', '');
         $this->mock(VendorFileScanner::class)->shouldReceive('assertClean')->andReturnNull();
         $this->withCredentials()->withUnencryptedCookie('mp_csrf', 'test-csrf')->withHeader('X-CSRF-Token', 'test-csrf');
+    }
+
+    public function test_commission_acceptance_is_versioned_explicit_and_owned_by_verification(): void
+    {
+        [$organization, $owner] = $this->vendorFixture('OWNER', null, false, ['business_type' => 'SOLE_PROPRIETORSHIP']);
+        $this->signInVendor($owner);
+        $snapshot = $this->getJson('/api/v1/vendors/onboarding')->assertOk()->json('data');
+        self::assertTrue($snapshot['verification']['commission_terms']['can_accept']);
+        self::assertFalse($snapshot['verification']['commission_terms']['accepted']);
+        self::assertSame('STORE_VERIFICATION', collect($snapshot['requirements'])->firstWhere('key', 'commission_terms')['workstream']);
+        self::assertCount(9, $snapshot['step_completion']);
+        $version = $snapshot['verification']['commission_terms']['agreement']['id'];
+        $input = ['organization_lock_version' => $snapshot['organization']['lock_version'], 'agreement_version_id' => $version, 'accepted' => true];
+        $this->withHeader('Idempotency-Key', (string) Str::uuid7());
+        $this->postJson('/api/v1/vendors/onboarding/verification/commission', $input)->assertOk()->assertJsonPath('data.verification.commission_terms.accepted', true);
+        $this->postJson('/api/v1/vendors/onboarding/verification/commission', $input)->assertOk();
+        self::assertSame(1, DB::table('agreement_acceptances')->where('vendor_organization_id', $organization->id)->where('agreement_version_id', $version)->count());
+        $this->assertDatabaseHas('vendor_onboarding_requirements', ['vendor_organization_id' => $organization->id, 'section' => 'STORE_VERIFICATION', 'requirement_key' => 'commission_terms', 'status' => 'COMPLETED', 'submitted_at' => null]);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'VENDOR_COMMISSION_TERMS_ACCEPTED', 'actor_user_id' => $owner->id]);
+        $this->withHeader('Idempotency-Key', (string) Str::uuid7())->postJson('/api/v1/vendors/onboarding/verification/commission', $input)->assertConflict();
+        $input['organization_lock_version'] = $organization->fresh()->lock_version;
+        $input['agreement_version_id'] = (string) Str::uuid7();
+        $this->withHeader('Idempotency-Key', (string) Str::uuid7())->postJson('/api/v1/vendors/onboarding/verification/commission', $input)->assertConflict()->assertJsonPath('errors.0.code', 'AGREEMENT_VERSION_CONFLICT');
+    }
+
+    public function test_commission_acceptance_rejects_missing_consent_and_unapproved_authority_or_staff(): void
+    {
+        [$organization, $owner] = $this->vendorFixture('OWNER', null, false, ['business_type' => 'CORPORATION']);
+        $this->signInVendor($owner);
+        $snapshot = $this->getJson('/api/v1/vendors/onboarding')->assertOk()->json('data');
+        self::assertFalse($snapshot['verification']['commission_terms']['can_accept']);
+        $input = ['organization_lock_version' => $snapshot['organization']['lock_version'], 'agreement_version_id' => $snapshot['verification']['commission_terms']['agreement']['id'], 'accepted' => false];
+        $this->withHeader('Idempotency-Key', (string) Str::uuid7())->postJson('/api/v1/vendors/onboarding/verification/commission', $input)->assertUnprocessable();
+        $this->postJson('/api/v1/vendors/account/agreements', ['version_ids' => [$input['agreement_version_id']]])->assertUnprocessable()->assertJsonPath('errors.0.code', 'COMMISSION_VERIFICATION_REQUIRED');
+        $input['accepted'] = true;
+        $this->postJson('/api/v1/vendors/onboarding/verification/commission', $input)->assertUnprocessable()->assertJsonPath('errors.0.code', 'AUTHORITY_REQUIRED');
+        [, $manager] = $this->vendorFixture('STORE_MANAGER', $organization);
+        $this->signInVendor($manager);
+        $this->postJson('/api/v1/vendors/onboarding/verification/commission', $input)->assertForbidden();
+        self::assertSame(0, DB::table('agreement_acceptances')->where('vendor_organization_id', $organization->id)->count());
+    }
+
+    public function test_setup_completion_does_not_record_commission_consent(): void
+    {
+        [$organization, $owner] = $this->vendorFixture('OWNER', null, false, ['business_type' => 'SOLE_PROPRIETORSHIP']);
+        $this->signInVendor($owner);
+        $this->getJson('/api/v1/vendors/onboarding')->assertOk();
+        DB::table('store_profiles')->insert(['id' => (string) Str::uuid7(), 'vendor_organization_id' => $organization->id, 'public_store_name' => 'Setup test store', 'fulfillment_method' => 'SELF_PICKUP', 'bulk_capability' => true, 'status' => 'IN_PROGRESS', 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('vendor_payment_accounts')->insert(['id' => (string) Str::uuid7(), 'vendor_organization_id' => $organization->id, 'connection_status' => 'CONNECTED', 'provider_account_id' => 'acct_test_commission', 'capabilities' => json_encode(['account_verification' => true]), 'created_at' => now(), 'updated_at' => now()]);
+        $result = $this->withHeader('Idempotency-Key', (string) Str::uuid7())->postJson('/api/v1/vendors/onboarding/setup/complete', ['organization_lock_version' => $organization->fresh()->lock_version])->assertAccepted();
+        $result->assertJsonPath('data.setup.status', 'COMPLETED')->assertJsonPath('data.verification.commission_terms.accepted', false);
+        self::assertSame(0, DB::table('agreement_acceptances')->where('vendor_organization_id', $organization->id)->count());
+        self::assertTrue(collect($result->json('data.activation.readiness.blockers'))->contains('key', 'commission_terms'));
     }
 
     public function test_upload_budget_is_shared_by_organization_and_does_not_block_reads(): void
@@ -119,8 +177,8 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
             ->assertJsonPath('data.sections.STORE_SETUP.key', 'STORE_SETUP')
             ->assertJsonPath('data.sections.STORE_SETUP.label', 'Store Setup');
 
-        self::assertSame(14, $snapshot->json('data.sections.STORE_VERIFICATION.total'));
-        self::assertSame(6, $snapshot->json('data.sections.STORE_SETUP.total'));
+        self::assertSame(15, $snapshot->json('data.sections.STORE_VERIFICATION.total'));
+        self::assertSame(5, $snapshot->json('data.sections.STORE_SETUP.total'));
 
         $this->patchJson('/api/v1/vendors/onboarding/setup', [
             'organization_lock_version' => 1,
@@ -150,7 +208,7 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
             'lock_version' => 1,
             'tax_profile' => [
                 'taxpayer_key' => 'TEST-TAXPAYER-001',
-                'tin' => '123456789', 'branch_code' => '00000',
+                'tin' => '12345678900000',
                 'owner_attested' => true,
                 'tax_relief_claimed' => false,
             ],
@@ -161,7 +219,7 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
             'lock_version' => 1,
             'tax_profile' => [
                 'taxpayer_key' => 'TEST-TAXPAYER-001',
-                'tin' => '123456789', 'branch_code' => '00000',
+                'tin' => '12345678900000',
                 'entity_class' => 'CORPORATION',
                 'registration_category' => 'DOMESTIC',
                 'vat_category' => 'VAT',
@@ -210,7 +268,7 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
             'business_type' => 'CORPORATION',
         ])->assertOk();
 
-        $this->uploadEvidence('business_registration', 'sec-registration.pdf');
+        $this->submittedEvidenceFixture('business_registration', 'sec-registration.pdf');
         $this->assertDatabaseHas('business_documents', [
             'vendor_organization_id' => $organization->getKey(),
             'requirement_key' => 'business_registration',
@@ -218,7 +276,35 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
         ]);
     }
 
-    public function test_tax_relief_upload_creates_versioned_tax_evidence(): void
+    public function test_document_upload_accepts_generated_client_json_metadata_parts(): void
+    {
+        [, $owner] = $this->vendorFixture('OWNER');
+        $this->signInVendor($owner);
+
+        foreach (['{}', '{"document_number":"TEST-REGISTRATION"}'] as $json) {
+            $this->post('/api/v1/vendors/onboarding/documents', [
+                'requirement_key' => 'business_registration',
+                'metadata' => UploadedFile::fake()->createWithContent('blob', $json),
+                'file' => $this->pdf('registration.pdf'),
+            ])->assertCreated();
+        }
+    }
+
+    public function test_document_upload_rejects_invalid_json_metadata_parts(): void
+    {
+        [, $owner] = $this->vendorFixture('OWNER');
+        $this->signInVendor($owner);
+
+        foreach (['invalid', '[]', '{"nested":{"value":"invalid"}}', '{"value":"'.str_repeat('a', 256).'"}', str_repeat('a', 65537)] as $json) {
+            $this->post('/api/v1/vendors/onboarding/documents', [
+                'requirement_key' => 'business_registration',
+                'metadata' => UploadedFile::fake()->createWithContent('blob', $json),
+                'file' => $this->pdf('registration.pdf'),
+            ], ['Accept' => 'application/json'])->assertUnprocessable();
+        }
+    }
+
+    public function test_tax_relief_selection_does_not_create_review_evidence(): void
     {
         [$organization, $owner] = $this->vendorFixture('OWNER');
         $this->signInVendor($owner);
@@ -226,9 +312,9 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
             'lock_version' => $organization->refresh()->lock_version,
             'tax_profile' => [
                 'taxpayer_key' => 'TEST-TAXPAYER-RELIEF',
-                'tin' => '123456789', 'branch_code' => '00000',
+                'tin' => '12345678900000',
                 'owner_attested' => true,
-                'tax_relief_claimed' => true,
+                'tax_relief_claimed' => true, 'declaration_year' => 2026,
             ],
         ])->assertOk();
 
@@ -237,13 +323,8 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
             'metadata' => ['valid_from' => '2026-01-01', 'valid_until' => '2026-12-31'],
             'file' => $this->pdf('tax-relief.pdf'),
         ])->assertCreated()->json('data.id');
-        $fileId = DB::table('business_document_versions')->where('id', $versionId)->value('file_id');
-        $this->assertDatabaseHas('tax_evidence', [
-            'file_id' => $fileId,
-            'evidence_type' => 'TAX_RELIEF_DECLARATION',
-            'origin' => 'VENDOR_UPLOAD',
-            'review_state' => 'PENDING',
-        ]);
+        $this->assertDatabaseHas('vendor_pending_documents', ['file_id' => $versionId, 'requirement_key' => 'tax_relief_evidence']);
+        $this->assertDatabaseMissing('tax_evidence', ['file_id' => $versionId]);
     }
 
     public function test_submission_requires_an_explicit_tax_relief_declaration(): void
@@ -255,7 +336,7 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
             'lock_version' => 1,
             'tax_profile' => [
                 'taxpayer_key' => 'TEST-TAXPAYER-002',
-                'tin' => '987654321', 'branch_code' => '00000',
+                'tin' => '98765432100000',
                 'owner_attested' => true,
             ],
         ])->assertOk();
@@ -306,7 +387,7 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
     {
         [$organization, $owner] = $this->vendorFixture('OWNER', null, false, ['store_email' => 'owner@example.test', 'store_email_verified_at' => now()]);
         $this->signInVendor($owner);
-        $this->saveVerificationDraft($organization);
+        $this->saveVerificationDraft($organization, false);
 
         $key = (string) Str::uuid7();
         $payload = [
@@ -331,7 +412,7 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
     {
         [$organization, $owner] = $this->vendorFixture('OWNER');
         $this->signInVendor($owner);
-        $versionId = $this->uploadEvidence('business_registration', 'registration.pdf');
+        $versionId = $this->submittedEvidenceFixture('business_registration', 'registration.pdf');
         $fileId = (string) DB::table('business_document_versions')->where('id', $versionId)->value('file_id');
 
         $vendorFileUrl = $this->getJson('/api/v1/vendors/onboarding/files/'.$fileId)->assertOk()->json('data.url');
@@ -398,7 +479,7 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
     {
         [$organization, $owner] = $this->vendorFixture('OWNER');
         $this->signInVendor($owner);
-        $versionId = $this->uploadEvidence('business_registration', 'registration.pdf');
+        $versionId = $this->submittedEvidenceFixture('business_registration', 'registration.pdf');
         DB::table('vendor_organizations')->where('id', $organization->getKey())->update(['store_verification_status' => 'PENDING_VERIFICATION']);
 
         $reviewer = $this->adminFixture('ADMIN_VENDOR_VERIFICATION');
@@ -414,7 +495,7 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
             'decision' => 'APPROVED',
         ], ['Idempotency-Key' => (string) Str::uuid7()])
             ->assertUnprocessable()
-            ->assertJsonPath('errors.0.code', 'EVIDENCE_NOT_CLEAN');
+            ->assertJsonPath('errors.0.code', 'REQUIREMENT_NOT_SUBMITTED');
 
         $this->postJson('/api/v1/admin/vendor-verification/'.$organization->getKey().'/requirements/business_registration/decision', [
             'decision' => 'CHANGES_REQUIRED',
@@ -573,6 +654,9 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
         $gate = app(StoreActivationGate::class);
         foreach (DB::table('vendor_onboarding_requirements')->where('vendor_organization_id', $organization->id)->where('level', '!=', 'OPTIONAL')->where('status', '!=', 'NOT_APPLICABLE')->get() as $requirement) {
             DB::beginTransaction();
+            if ($requirement->requirement_key === 'commission_terms') {
+                DB::table('agreement_versions')->whereIn('agreement_document_id', DB::table('agreement_documents')->where('code', 'VENDOR_COMMISSION_TEST')->select('id'))->update(['retired_at' => now()]);
+            }
             DB::table('vendor_onboarding_requirements')->where('id', $requirement->id)->update(['status' => 'IN_PROGRESS']);
             $result = $gate->evaluate($organization->id);
             self::assertFalse($result['ready'], $requirement->requirement_key);
@@ -644,8 +728,8 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
             ->assertStatus(503)->assertJsonPath('errors.0.code', 'PRIVATE_STORAGE_UNAVAILABLE');
         $this->assertDatabaseCount('vendor_document_versions', 0);
         config()->set('materyalph.files.disk', 'local');
-        $first = $this->uploadEvidence('business_registration', 'first.pdf');
-        $second = $this->uploadEvidence('business_registration', 'second.pdf');
+        $first = $this->submittedEvidenceFixture('business_registration', 'first.pdf');
+        $second = $this->submittedEvidenceFixture('business_registration', 'second.pdf');
         $this->assertDatabaseHas('vendor_document_supersessions', ['version_id' => $first, 'superseded_by_version_id' => $second]);
         $this->assertDatabaseHas('vendor_documents', ['vendor_organization_id' => $organization->id, 'current_version_id' => $second]);
         try {
@@ -681,9 +765,9 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
         [$organization, $owner] = $this->vendorFixture('OWNER', null, false, ['business_type' => 'SOLE_PROPRIETORSHIP', 'store_email' => 'ready@example.test', 'store_email_verified_at' => now()]);
         $this->signInVendor($owner);
         $this->getJson('/api/v1/vendor/onboarding')->assertOk();
-        $this->patchJson('/api/v1/vendors/onboarding/verification', ['lock_version' => 1, 'tax_profile' => ['taxpayer_key' => 'TEST-READY', 'tin' => '123456789', 'branch_code' => '00000', 'vat_category' => 'NON_VAT', 'owner_attested' => true, 'tax_relief_claimed' => false]])->assertOk();
+        $this->patchJson('/api/v1/vendors/onboarding/verification', ['lock_version' => 1, 'tax_profile' => ['taxpayer_key' => 'TEST-READY', 'tin' => '12345678900000', 'vat_category' => 'NON_VAT', 'owner_attested' => true, 'tax_relief_claimed' => false]])->assertOk();
         foreach (['business_registration', 'lgu_permit', 'bir_cor', 'identity_evidence'] as $key) {
-            $this->uploadEvidence($key, $key.'.pdf');
+            $this->submittedEvidenceFixture($key, $key.'.pdf');
         }
         DB::table('store_profiles')->insert(['id' => (string) Str::uuid7(), 'vendor_organization_id' => $organization->id, 'public_store_name' => 'Ready store', 'fulfillment_method' => 'SELF_PICKUP', 'bulk_capability' => true, 'description' => 'Test store', 'status' => 'COMPLETED', 'created_at' => now(), 'updated_at' => now()]);
         app(OnboardingRequirementResolver::class)->synchronize($organization->id);
@@ -712,7 +796,7 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
     {
         [$organization, $owner] = $this->vendorFixture('OWNER');
         $this->signInVendor($owner);
-        $versionId = $this->uploadEvidence('business_registration', 'expiring-registration.pdf');
+        $versionId = $this->submittedEvidenceFixture('business_registration', 'expiring-registration.pdf');
         DB::table('vendor_organizations')->where('id', $organization->getKey())->update(['store_verification_status' => 'PENDING_VERIFICATION']);
         $reviewer = $this->adminFixture('ADMIN_VENDOR_VERIFICATION');
         $this->signInAdmin($reviewer);
@@ -872,7 +956,7 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
         $publicFile = DB::table('files')->where('purpose', 'STORE_MEDIA')->first();
         self::assertSame('PUBLIC', $publicFile->visibility);
         $this->getJson('/api/v1/vendors/onboarding/files/'.$publicFile->id)->assertOk()->assertJsonPath('data.url', 'https://res.cloudinary.com/test-store-media/image/upload/'.$publicFile->object_key.'.png');
-        $this->uploadEvidence('business_registration', 'private-registration.pdf');
+        $this->submittedEvidenceFixture('business_registration', 'private-registration.pdf');
         $privateFile = DB::table('files')->where('purpose', 'BUSINESS_DOCUMENT')->first();
         self::assertSame('PRIVATE', $privateFile->visibility);
         Storage::disk('local')->assertExists($privateFile->object_key);
@@ -890,17 +974,24 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
         self::assertSame(0, DB::table('store_media')->count());
     }
 
-    public function test_core_tin_and_branch_code_reject_malformed_values(): void
+    public function test_combined_tin_validates_encrypts_and_preserves_taxpayer_identity(): void
     {
         [$organization, $owner] = $this->vendorFixture('OWNER');
         $this->signInVendor($owner);
-        foreach (['12345678', '1234567890', '123-456-789', '12345678A', '123456789000'] as $tin) {
+        foreach (['123456789', '12345678900', '123456789000000', '123-456-789-AB1', '123 456 789 000'] as $tin) {
             $this->patchJson('/api/v1/vendors/onboarding/verification', ['lock_version' => $organization->refresh()->lock_version, 'tax_profile' => ['tin' => $tin]])->assertUnprocessable();
         }
-        foreach (['AB1', '0000', '000001', '00-00'] as $branch) {
-            $this->patchJson('/api/v1/vendors/onboarding/verification', ['lock_version' => $organization->refresh()->lock_version, 'tax_profile' => ['tin' => '123456789', 'branch_code' => $branch]])->assertUnprocessable();
+        foreach (['000', '1234', '12345'] as $branch) {
+            $response = $this->patchJson('/api/v1/vendors/onboarding/verification', ['lock_version' => $organization->refresh()->lock_version, 'tax_profile' => ['tin' => '123-456-789-'.$branch]]);
+            $response->assertOk()->assertJsonMissing(['tin' => '123-456-789-'.$branch]);
+            $version = DB::table('vendor_tax_profiles as p')->join('vendor_tax_profile_versions as v', 'v.id', '=', 'p.current_version_id')->where('p.vendor_organization_id', $organization->id)->first();
+            self::assertSame('123456789'.$branch, Crypt::decryptString($version->tin_encrypted));
+            self::assertSame(hash_hmac('sha256', '123456789', (string) config('app.key')), $version->tin_hash);
+            self::assertSame(hash_hmac('sha256', 'TEST|123456789', (string) config('app.key')), $version->taxpayer_key_hash);
         }
-        $this->patchJson('/api/v1/vendors/onboarding/verification', ['lock_version' => $organization->refresh()->lock_version, 'tax_profile' => ['tin' => '123456789', 'head_office' => true, 'branch_code_length' => 5]])->assertOk()->assertJsonPath('data.verification.tax_profile.tin_branch_code', '*****')->assertJsonMissing(['tin' => '123456789']);
+        foreach (['head_office' => true, 'branch_code' => '000', 'branch_code_length' => 3] as $key => $value) {
+            $this->patchJson('/api/v1/vendors/onboarding/verification', ['lock_version' => $organization->refresh()->lock_version, 'tax_profile' => [$key => $value]])->assertUnprocessable();
+        }
     }
 
     public function test_public_name_and_unchanged_draft_preserve_unrelated_approvals(): void
@@ -941,9 +1032,9 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
     {
         [$organization, $owner] = $this->vendorFixture('OWNER');
         $this->signInVendor($owner);
-        $this->uploadEvidence('business_registration', 'original.pdf');
+        $this->submittedEvidenceFixture('business_registration', 'original.pdf');
         $oldLock = DB::table('vendor_onboarding_steps')->where('vendor_organization_id', $organization->getKey())->where('requirement_key', 'business_registration')->value('lock_version');
-        $this->uploadEvidence('business_registration', 'replacement.pdf');
+        $this->submittedEvidenceFixture('business_registration', 'replacement.pdf');
         $this->signInAdmin($this->adminFixture('ADMIN_VENDOR_VERIFICATION'));
         $this->postJson('/api/v1/admin/vendor-verification/'.$organization->getKey().'/requirements/business_registration/decision', ['decision' => 'APPROVED', 'lock_version' => $oldLock, 'expiration_kind' => 'NO_EXPIRATION'], ['Idempotency-Key' => (string) Str::uuid7()])->assertConflict();
         self::assertSame(0, DB::table('business_document_reviews')->count());
@@ -957,54 +1048,363 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
         $this->patchJson('/api/v1/vendors/onboarding/verification', ['lock_version' => $organization->refresh()->lock_version, 'classification' => ['supplier_type' => 'SPECIALIZED_SUPPLIER', 'niches' => VendorOnboardingService::SUPPLIER_NICHES, 'custom_label' => 'Specialty building supplies']])->assertOk();
     }
 
+    public function test_primary_business_contacts_are_retired_from_schema_and_api(): void
+    {
+        [$organization, $owner] = $this->vendorFixture('OWNER');
+        $this->signInVendor($owner);
+        $migration = require database_path('migrations/2026_09_23_000002_remove_vendor_primary_business_contacts.php');
+        $migration->down();
+        DB::table('vendor_contacts')->insert(['id' => (string) Str::uuid7(), 'vendor_organization_id' => $organization->id, 'full_name' => 'Retired contact', 'created_at' => now(), 'updated_at' => now()]);
+        app(OnboardingDrafts::class)->save($organization->id, 'STORE_VERIFICATION', ['store_phone' => '+639170000000'], (int) $owner->id, null);
+        $draft = DB::table('vendor_onboarding_drafts')->where('vendor_organization_id', $organization->id)->first();
+        DB::table('vendor_onboarding_drafts')->where('id', $draft->id)->update(['payload_encrypted' => Crypt::encryptString(json_encode(['store_phone' => '+639170000000', 'contacts' => [['full_name' => 'Retired contact']]], JSON_THROW_ON_ERROR))]);
+        $migration->up();
+        $this->assertFalse(Schema::hasTable('vendor_contacts'));
+        $payload = json_decode(Crypt::decryptString(DB::table('vendor_onboarding_drafts')->where('id', $draft->id)->value('payload_encrypted')), true);
+        $this->assertArrayNotHasKey('contacts', $payload);
+        $this->assertSame('+639170000000', $payload['store_phone']);
+        $response = $this->getJson('/api/v1/vendors/onboarding')->assertOk();
+        $this->assertArrayNotHasKey('contacts', $response->json('data.verification'));
+        $this->patchJson('/api/v1/vendors/onboarding/verification', ['lock_version' => $organization->refresh()->lock_version, 'contacts' => []])->assertUnprocessable();
+        $this->saveVerificationDraft($organization);
+    }
+
+    public function test_custom_classification_labels_persist_and_validate_every_label(): void
+    {
+        [$organization, $owner] = $this->vendorFixture('OWNER');
+        $this->signInVendor($owner);
+        $classification = ['supplier_type' => 'SPECIALIZED_SUPPLIER', 'niches' => ['Other Category'], 'custom_labels' => ['Acoustic panels', 'Reclaimed bricks']];
+        $this->patchJson('/api/v1/vendors/onboarding/verification', ['lock_version' => $organization->refresh()->lock_version, 'classification' => $classification])->assertOk();
+        $saved = DB::table('vendor_classifications')->where('vendor_organization_id', $organization->id)->first();
+        $this->assertSame($classification['custom_labels'], json_decode($saved->custom_labels, true));
+        $this->assertSame('Acoustic panels', $saved->custom_label);
+        foreach ([[], ['Acoustic panels', 'EQUIPMENT-RENTAL'], ['Bricks', 'bricks']] as $labels) {
+            $classification['custom_labels'] = $labels;
+            $this->patchJson('/api/v1/vendors/onboarding/verification', ['lock_version' => $organization->refresh()->lock_version, 'classification' => $classification])->assertUnprocessable();
+        }
+        $classification['niches'] = ['Construction Materials'];
+        $classification['custom_labels'] = [];
+        $this->patchJson('/api/v1/vendors/onboarding/verification', ['lock_version' => $organization->refresh()->lock_version, 'classification' => $classification])->assertOk();
+        $this->assertSame('[]', DB::table('vendor_classifications')->where('vendor_organization_id', $organization->id)->value('custom_labels'));
+    }
+
     public function test_authority_evidence_cannot_be_reused_for_a_replacement_representative(): void
     {
         [$organization, $owner] = $this->vendorFixture('OWNER');
         $this->signInVendor($owner);
         $this->saveVerificationDraft($organization);
-        $oldEvidence = $this->uploadEvidence('authority_to_act', 'authority.pdf');
+        $oldEvidence = $this->submittedEvidenceFixture('authority_to_act', 'authority.pdf');
         $this->patchJson('/api/v1/vendors/onboarding/verification', ['lock_version' => $organization->refresh()->lock_version, 'representative' => ['full_name' => 'Replacement Representative', 'id_number' => 'TEST-REPLACEMENT-ID', 'same_as_owner' => false]])->assertOk();
-        $this->uploadEvidence('representative_identity', 'replacement-passport.pdf');
+        $this->submittedEvidenceFixture('representative_identity', 'replacement-passport.pdf');
         $this->signInAdmin($this->adminFixture('ADMIN_VENDOR_VERIFICATION'));
-        $this->postJson('/api/v1/admin/vendor-verification/'.$organization->getKey().'/requirements/authority_to_act/decision', ['decision' => 'APPROVED', 'authority_evidence_version_id' => $oldEvidence, 'authority_scopes' => ['TAX_DECLARATIONS']], ['Idempotency-Key' => (string) Str::uuid7()])->assertUnprocessable()->assertJsonPath('errors.0.code', 'AUTHORITY_EVIDENCE_REQUIRED');
+        $this->postJson('/api/v1/admin/vendor-verification/'.$organization->getKey().'/requirements/authority_to_act/decision', ['decision' => 'APPROVED', 'authority_evidence_version_id' => $oldEvidence, 'authority_scopes' => ['TAX_DECLARATIONS']], ['Idempotency-Key' => (string) Str::uuid7()])->assertUnprocessable()->assertJsonPath('errors.0.code', 'REQUIREMENT_NOT_SUBMITTED');
     }
 
-    private function saveVerificationDraft(VendorOrganization $organization): void
+    public function test_business_information_keeps_names_separate_and_returns_both_conflict_codes(): void
     {
+        [$organization, $owner] = $this->vendorFixture('OWNER');
+        $this->signInVendor($owner);
+        $first = $this->patchJson('/api/v1/vendors/onboarding/verification', [
+            'lock_version' => 1, 'draft_lock_version' => 0, 'business_type' => 'SOLE_PROPRIETORSHIP',
+            'business_type' => 'CORPORATION', 'legal_business_name' => 'Registered Trading Business', 'store_name' => 'Public Supply',
+            'legal_identity' => ['surname' => 'Example', 'first_name' => 'Owner'],
+        ])->assertOk();
+        $version = $first->json('data.organization.lock_version');
+        $this->assertDatabaseHas('vendor_organizations', ['id' => $organization->id, 'legal_business_name' => 'Registered Trading Business', 'store_name' => 'Public Supply']);
+        $this->patchJson('/api/v1/vendors/onboarding/verification', ['lock_version' => 1, 'draft_lock_version' => 1, 'store_name' => 'Stale'])->assertConflict()->assertJsonPath('errors.0.code', 'RESOURCE_VERSION_CONFLICT');
+        $this->patchJson('/api/v1/vendors/onboarding/verification', ['lock_version' => $version, 'draft_lock_version' => 0, 'store_name' => 'Stale'])->assertConflict()->assertJsonPath('errors.0.code', 'STALE_VERSION');
+        $this->patchJson('/api/v1/vendors/onboarding/verification', ['draft_lock_version' => 1])->assertUnprocessable();
+        $this->patchJson('/api/v1/vendors/onboarding/verification', ['lock_version' => $version, 'draft_lock_version' => 1, 'store_name' => 'Changed Public Supply'])->assertOk();
+        $this->assertDatabaseHas('vendor_organizations', ['id' => $organization->id, 'legal_business_name' => 'Registered Trading Business', 'store_name' => 'Changed Public Supply']);
+    }
+
+    public function test_requirement_preview_is_read_only_and_resolves_all_business_types_and_authority_roles(): void
+    {
+        [$organization, $owner] = $this->vendorFixture('OWNER');
+        $this->signInVendor($owner);
+        foreach (VendorOnboardingService::BUSINESS_TYPES as $type) {
+            $this->getJson('/api/v1/vendors/onboarding/requirements?business_type='.$type.'&representative_role=PROPRIETOR')
+                ->assertOk()->assertJsonPath('data.authority_to_act.applicable', $type !== 'SOLE_PROPRIETORSHIP');
+        }
+        foreach (['EMPLOYEE', 'ACCOUNTANT', 'AUTHORIZED_REPRESENTATIVE', 'OTHER'] as $role) {
+            $this->getJson('/api/v1/vendors/onboarding/requirements?business_type=CORPORATION&representative_role='.$role)
+                ->assertOk()->assertJsonPath('data.authority_to_act.level', 'REQUIRED');
+        }
+        self::assertSame(1, $organization->refresh()->lock_version);
+        self::assertSame(0, DB::table('vendor_onboarding_drafts')->where('vendor_organization_id', $organization->id)->count());
+    }
+
+    public function test_business_type_change_supersedes_evidence_and_preserves_versions(): void
+    {
+        [$organization, $owner] = $this->vendorFixture('OWNER');
+        $this->signInVendor($owner);
+        $this->saveVerificationDraft($organization);
+        $document = DB::table('vendor_documents')->where('vendor_organization_id', $organization->id)->where('requirement_key', 'business_registration')->first();
+        DB::table('vendor_onboarding_requirements')->where('vendor_organization_id', $organization->id)->where('requirement_key', 'business_registration')->update(['status' => 'APPROVED']);
+        $this->patchJson('/api/v1/vendors/onboarding/verification', ['lock_version' => $organization->refresh()->lock_version, 'business_type' => 'COOPERATIVE'])->assertOk();
+        self::assertNotNull(DB::table('vendor_documents')->where('id', $document->id)->value('superseded_at'));
+        $this->assertDatabaseHas('vendor_document_versions', ['id' => $document->current_version_id]);
+        $this->assertDatabaseHas('vendor_onboarding_requirements', ['vendor_organization_id' => $organization->id, 'requirement_key' => 'business_registration', 'status' => 'IN_PROGRESS']);
+    }
+
+    public function test_authority_selection_requires_accepted_own_evidence_and_creates_a_new_representative_version(): void
+    {
+        [$organization, $owner] = $this->vendorFixture('OWNER');
+        $this->signInVendor($owner);
+        $this->saveVerificationDraft($organization);
+        $registration = DB::table('vendor_documents')->where('vendor_organization_id', $organization->id)->where('requirement_key', 'business_registration')->first();
+        DB::table('vendor_documents')->where('id', $registration->id)->update(['status' => 'IN_PROGRESS']);
+        $representative = ['full_name' => 'Phase Three Owner', 'relationship' => 'OFFICER', 'authority_evidence_source' => 'EXISTING_REGISTRATION_EVIDENCE', 'authority_evidence_version_id' => $registration->current_version_id, 'authority_scopes' => ['TAX_DECLARATIONS']];
+        $this->patchJson('/api/v1/vendors/onboarding/verification', ['lock_version' => $organization->refresh()->lock_version, 'representative' => $representative])->assertUnprocessable();
+        DB::table('vendor_documents')->where('id', $registration->id)->update(['status' => 'APPROVED']);
+        $this->patchJson('/api/v1/vendors/onboarding/verification', ['lock_version' => $organization->refresh()->lock_version, 'representative' => $representative])->assertOk();
+        self::assertSame(2, DB::table('vendor_representative_versions')->where('vendor_organization_id', $organization->id)->count());
+        $this->assertDatabaseHas('vendor_onboarding_requirements', ['vendor_organization_id' => $organization->id, 'requirement_key' => 'authority_to_act', 'level' => 'CONDITIONALLY_REQUIRED', 'status' => 'IN_PROGRESS']);
+        $this->patchJson('/api/v1/vendors/onboarding/verification', ['lock_version' => $organization->refresh()->lock_version, 'tax_profile' => ['owner_attested' => true]])->assertUnprocessable()->assertJsonPath('errors.0.code', 'AUTHORITY_REQUIRED');
+        $representative['relationship'] = 'EMPLOYEE';
+        $this->patchJson('/api/v1/vendors/onboarding/verification', ['lock_version' => $organization->refresh()->lock_version, 'representative' => $representative])->assertUnprocessable();
+        $representative['relationship'] = 'OFFICER';
+        $representative['authority_evidence_version_id'] = (string) Str::uuid7();
+        $this->patchJson('/api/v1/vendors/onboarding/verification', ['lock_version' => $organization->refresh()->lock_version, 'representative' => $representative])->assertUnprocessable();
+    }
+
+    private function stubAddressProviders(): void
+    {
+        $this->mock(PsgcProvider::class)->shouldReceive('list')->andReturnUsing(fn (string $path): array => match ($path) {
+            'regions' => [['code' => '1300000000', 'name' => 'National Capital Region (NCR)']],
+            'provinces' => [['code' => '1208000000', 'name' => 'Sarangani']],
+            'cities-municipalities' => [['code' => '1381300000', 'name' => 'Quezon City', 'province' => 'Sarangani']],
+            'cities-municipalities/1381300000/barangays' => [['code' => '1381300001', 'name' => 'Alicia']],
+            default => [],
+        });
+        $geocoder = $this->mock(AddressGeocoder::class);
+        $geocoder->shouldReceive('forward')->andReturn(['latitude' => 14.65, 'longitude' => 121.02, 'formatted_address' => '100 Test Street, Alicia, Quezon City', 'place_id' => 'test-place']);
+        $geocoder->shouldReceive('reverse')->andReturn(['street' => '100 Test Street', 'unit' => '', 'barangay' => 'Alicia', 'city_municipality' => 'Quezon City', 'province' => 'Metro Manila', 'postal_code' => '1100', 'formatted_address' => '100 Test Street, Alicia, Quezon City', 'place_id' => 'test-place']);
+    }
+
+    /** @return array<string, mixed> */
+    private function resolvedAddressInput(VendorOrganization $organization): array
+    {
+        $this->stubAddressProviders();
+        $selection = ['street' => '100 Test Street', 'unit' => '', 'postal_code' => '1100', 'province_code' => '1300000000', 'city_code' => '1381300000', 'psgc_code' => '1381300001'];
+        $result = app(VendorAddressResolver::class)->resolve((string) $organization->getKey(), $selection);
+
+        return $selection + ['province' => 'National Capital Region (NCR)', 'city_municipality' => 'Quezon City', 'barangay' => 'Alicia', 'resolution_token' => $result['resolution_token']];
+    }
+
+    public function test_address_search_pin_and_save_validate_hierarchy_and_store_system_coordinates(): void
+    {
+        [$organization, $owner] = $this->vendorFixture('OWNER');
+        $this->signInVendor($owner);
+        $input = $this->resolvedAddressInput($organization);
+        $this->getJson('/api/v1/vendors/onboarding/address/areas?level=CITY&parent_code=1300000000&q=Quez')->assertOk()->assertJsonPath('data.items.0.code', '1381300000');
+        $this->getJson('/api/v1/vendors/onboarding/address/areas?level=CITY&parent_code=1208000000')->assertOk()->assertJsonCount(0, 'data.items');
+        $pin = $this->postJson('/api/v1/vendors/onboarding/address/pin', ['latitude' => 14.651, 'longitude' => 121.021])->assertOk()->assertJsonPath('data.address.psgc_code', '1381300001')->json('data.pin_token');
+        $resolved = $this->postJson('/api/v1/vendors/onboarding/address/resolve', $input + ['pin_token' => $pin])->assertOk()->json('data');
+        $input['resolution_token'] = $resolved['resolution_token'];
+        $this->patchJson('/api/v1/vendors/onboarding/verification', ['lock_version' => $organization->refresh()->lock_version, 'address' => $input])->assertOk();
+        $this->assertDatabaseHas('addresses', ['owner_id' => $organization->getKey(), 'latitude' => 14.651, 'longitude' => 121.021, 'psgc_code' => '1381300001', 'city_code' => '1381300000', 'province_code' => '1300000000', 'is_current' => true]);
+        $this->assertDatabaseHas('vendor_address_versions', ['psgc_code' => '1381300001', 'psgc_source' => 'PSGC_CLOUD_V2']);
+        $this->patchJson('/api/v1/vendors/onboarding/verification', ['lock_version' => $organization->refresh()->lock_version, 'address' => $input + ['latitude' => 0, 'longitude' => 0]])->assertUnprocessable();
+        $input['street'] = 'Changed address';
+        $this->patchJson('/api/v1/vendors/onboarding/verification', ['lock_version' => $organization->refresh()->lock_version, 'address' => $input])->assertUnprocessable();
+    }
+
+    public function test_address_resolution_requires_manage_permission(): void
+    {
+        [, $staff] = $this->vendorFixture('STORE_STAFF');
+        $this->signInVendor($staff);
+        $this->getJson('/api/v1/vendors/onboarding/address/areas?level=PROVINCE')->assertForbidden();
+        $this->postJson('/api/v1/vendors/onboarding/address/pin', ['latitude' => 14.6, 'longitude' => 121])->assertForbidden();
+    }
+
+    public function test_authorized_tax_attestation_completes_without_resubmitting_documents(): void
+    {
+        [$organization, $owner] = $this->vendorFixture('OWNER');
+        $this->signInVendor($owner);
+        $this->saveVerificationDraft($organization);
+        $this->assertDatabaseCount('vendor_document_versions', 5);
+        $this->assertDatabaseCount('vendor_tax_profile_versions', 1);
+        $this->assertDatabaseHas('vendor_organizations', ['id' => $organization->id, 'store_verification_status' => 'PENDING_VERIFICATION']);
+        $this->assertDatabaseHas('vendor_onboarding_steps', ['vendor_organization_id' => $organization->id, 'requirement_key' => 'tax_profile', 'status' => 'PENDING_VERIFICATION']);
+        self::assertNotNull(DB::table('vendor_tax_profiles')->where('vendor_organization_id', $organization->id)->value('attested_at'));
+    }
+
+    public function test_document_transport_requires_a_file_without_creating_pending_or_review_records(): void
+    {
+        [, $owner] = $this->vendorFixture('OWNER');
+        $this->signInVendor($owner);
+        $this->postJson('/api/v1/vendors/onboarding/documents', ['requirement_key' => 'identity_evidence'])->assertUnprocessable();
+        $this->assertDatabaseCount('vendor_pending_documents', 0);
+        $this->assertDatabaseCount('vendor_document_versions', 0);
+    }
+
+    public function test_pending_files_are_private_replaceable_removable_and_never_review_records(): void
+    {
+        [$organization, $owner] = $this->vendorFixture('OWNER');
+        $this->signInVendor($owner);
+        $first = $this->post('/api/v1/vendors/onboarding/documents', ['requirement_key' => 'business_registration', 'file' => $this->pdf('first.pdf')])->assertCreated()->assertJsonPath('data.status', 'PENDING_SUBMISSION')->json('data.id');
+        $this->assertDatabaseCount('vendor_document_versions', 0);
+        $this->getJson('/api/v1/vendors/onboarding/files/'.$first)->assertOk();
+        $this->signInAdmin($this->adminFixture('ADMIN_VENDOR_VERIFICATION'));
+        $this->getJson('/api/v1/admin/vendor-verification/files/'.$first)->assertNotFound();
+        $this->postJson('/api/v1/admin/vendor-verification/'.$organization->id.'/requirements/business_registration/decision', ['decision' => 'CHANGES_REQUIRED', 'reason' => 'Not submitted'], ['Idempotency-Key' => (string) Str::uuid7()])->assertUnprocessable()->assertJsonPath('errors.0.code', 'REQUIREMENT_NOT_SUBMITTED');
+        $this->signInVendor($owner);
+        $second = $this->post('/api/v1/vendors/onboarding/documents', ['requirement_key' => 'business_registration', 'file' => $this->pdf('second.pdf')])->assertCreated()->json('data.id');
+        $this->assertDatabaseMissing('files', ['id' => $first]);
+        $this->assertDatabaseCount('vendor_pending_documents', 1);
+        $this->assertDatabaseCount('vendor_document_versions', 0);
+        $this->deleteJson('/api/v1/vendors/onboarding/documents/pending/business_registration')->assertOk();
+        $this->assertDatabaseMissing('files', ['id' => $second]);
+        $this->assertDatabaseCount('vendor_pending_documents', 0);
+        $this->assertDatabaseCount('vendor_documents', 0);
+    }
+
+    public function test_submission_promotes_multiple_files_and_only_replacement_reopens_review(): void
+    {
+        [$organization, $owner] = $this->vendorFixture('OWNER');
+        $this->signInVendor($owner);
+        $this->saveVerificationDraft($organization, false);
+        $this->assertDatabaseCount('vendor_document_versions', 0);
+        $this->assertDatabaseCount('vendor_pending_documents', 5);
+        $this->postJson('/api/v1/vendors/onboarding/verification/submit', ['lock_version' => $organization->refresh()->lock_version, 'privacy_acknowledged' => true, 'draft' => ['store_name' => 'Latest form values']], ['Idempotency-Key' => (string) Str::uuid7()])->assertStatus(202);
+        $this->assertDatabaseHas('vendor_organizations', ['id' => $organization->id, 'store_name' => 'Latest form values']);
+        $this->assertDatabaseCount('vendor_document_versions', 5);
+        $this->assertDatabaseCount('vendor_pending_documents', 0);
+        $original = DB::table('vendor_documents')->where('vendor_organization_id', $organization->id)->where('requirement_key', 'lgu_permit')->value('current_version_id');
+        $this->signInAdmin($this->adminFixture('ADMIN_VENDOR_VERIFICATION'));
+        $this->postJson('/api/v1/admin/vendor-verification/'.$organization->id.'/requirements/bir_cor/decision', ['decision' => 'APPROVED', 'expiration_kind' => 'NO_EXPIRATION'], ['Idempotency-Key' => (string) Str::uuid7()])->assertOk();
+        $this->postJson('/api/v1/admin/vendor-verification/'.$organization->id.'/requirements/lgu_permit/decision', ['decision' => 'CHANGES_REQUIRED', 'reason' => 'Provide the complete permit.'], ['Idempotency-Key' => (string) Str::uuid7()])->assertOk();
+        $this->signInVendor($owner);
+        $this->getJson('/api/v1/vendors/onboarding')->assertOk()->assertJsonFragment(['reason' => 'Provide the complete permit.']);
+        $this->post('/api/v1/vendors/onboarding/documents', ['requirement_key' => 'lgu_permit', 'file' => $this->pdf('replacement.pdf')])->assertCreated();
+        $this->assertDatabaseHas('vendor_documents', ['requirement_key' => 'lgu_permit', 'current_version_id' => $original, 'status' => 'CHANGES_REQUIRED']);
+        $this->postJson('/api/v1/vendors/onboarding/verification/submit', ['lock_version' => $organization->refresh()->lock_version, 'privacy_acknowledged' => true], ['Idempotency-Key' => (string) Str::uuid7()])->assertStatus(202);
+        $this->assertDatabaseHas('vendor_document_versions', ['supersedes_version_id' => $original, 'version' => 2]);
+        $this->assertDatabaseHas('vendor_document_versions', ['id' => $original]);
+        $this->assertDatabaseHas('vendor_documents', ['requirement_key' => 'bir_cor', 'status' => 'APPROVED']);
+        $this->assertDatabaseHas('vendor_onboarding_steps', ['vendor_organization_id' => $organization->id, 'requirement_key' => 'lgu_permit', 'status' => 'PENDING_VERIFICATION']);
+    }
+
+    public function test_failed_submission_rolls_back_promotions_and_returns_field_blockers(): void
+    {
+        [$organization, $owner] = $this->vendorFixture('OWNER');
+        $this->signInVendor($owner);
+        $this->post('/api/v1/vendors/onboarding/documents', ['requirement_key' => 'business_registration', 'file' => $this->pdf('registration.pdf')])->assertCreated();
+        $before = $organization->refresh()->store_name;
+        $response = $this->postJson('/api/v1/vendors/onboarding/verification/submit', ['lock_version' => $organization->lock_version, 'privacy_acknowledged' => true, 'draft' => ['store_name' => 'Atomic submission name']], ['Idempotency-Key' => (string) Str::uuid7()])->assertUnprocessable();
+        self::assertSame($before, $organization->refresh()->store_name);
+        self::assertGreaterThan(1, count($response->json('errors.0.details.blockers')));
+        $this->assertDatabaseCount('vendor_document_versions', 0);
+        $this->assertDatabaseCount('vendor_pending_documents', 1);
+    }
+
+    public function test_automatic_partial_progress_is_private_and_sole_proprietor_name_is_not_required(): void
+    {
+        [$organization, $owner] = $this->vendorFixture('OWNER');
+        $this->signInVendor($owner);
+        $state = ['business_type' => ['SOLE_PROPRIETORSHIP'], 'individual_first_name' => ['Partial'], 'tin' => ['123']];
+        $response = $this->patchJson('/api/v1/vendors/onboarding/verification', ['lock_version' => $organization->refresh()->lock_version, 'form_state' => json_encode($state)])->assertOk();
+        $response->assertJsonPath('data.verification.form_state.individual_first_name.0', 'Partial')->assertJsonMissingPath('data.verification.form_state.tin');
+        $this->assertDatabaseCount('vendor_document_versions', 0);
+        $this->getJson('/api/v1/vendors/onboarding')->assertOk()->assertJsonPath('data.verification.form_state.individual_first_name.0', 'Partial');
+        $this->patchJson('/api/v1/vendors/onboarding/verification', ['lock_version' => $organization->refresh()->lock_version, 'business_type' => 'SOLE_PROPRIETORSHIP', 'legal_business_name' => ''])->assertOk();
+        $response = $this->postJson('/api/v1/vendors/onboarding/verification/submit', ['lock_version' => $organization->refresh()->lock_version, 'privacy_acknowledged' => true], ['Idempotency-Key' => (string) Str::uuid7()])->assertUnprocessable();
+        $keys = array_column($response->json('errors.0.details.blockers'), 'key');
+        self::assertNotContains('legal_business_name', $keys);
+        self::assertNotContains('registered_name', $keys);
+    }
+
+    public function test_manual_address_submits_without_geocoder_and_records_privacy_context(): void
+    {
+        [$organization, $owner] = $this->vendorFixture('OWNER');
+        $this->signInVendor($owner);
+        $this->saveVerificationDraft($organization, false);
+        $this->mock(AddressGeocoder::class)->shouldNotReceive('forward', 'reverse');
+        $address = ['source' => 'MANUAL', 'street' => '12 Manual Street', 'postal_code' => '1100', 'province_code' => '1300000000', 'city_code' => '1381300000', 'psgc_code' => '1381300001', 'province' => 'NCR', 'city_municipality' => 'Quezon City', 'barangay' => 'Alicia'];
+        $this->postJson('/api/v1/vendors/onboarding/verification/submit', ['lock_version' => $organization->refresh()->lock_version, 'privacy_acknowledged' => true, 'draft' => ['address' => $address]], ['Idempotency-Key' => (string) Str::uuid7()])->assertStatus(202)->assertJsonPath('data.verification.status', 'PENDING_VERIFICATION');
+        $this->assertDatabaseHas('addresses', ['owner_id' => $organization->id, 'source' => 'MANUAL', 'street' => '12 Manual Street', 'latitude' => null, 'longitude' => null, 'location' => null, 'is_current' => true]);
+        $this->assertDatabaseHas('vendor_address_versions', ['street' => '12 Manual Street', 'source' => 'MANUAL', 'latitude' => null, 'location' => null]);
+        $ack = DB::table('privacy_acknowledgments')->where('vendor_organization_id', $organization->id)->first();
+        $this->assertSame((int) $owner->id, (int) $ack->user_id);
+        $this->assertSame('STORE_VERIFICATION', $ack->processing_activity);
+        $this->assertSame('VENDOR_WEB', $ack->source);
+        $this->assertNotNull($ack->acknowledged_at);
+        $this->assertDatabaseMissing('agreement_acceptances', ['vendor_organization_id' => $organization->id, 'agreement_version_id' => $ack->agreement_version_id]);
+    }
+
+    public function test_manual_address_correction_versions_history_and_reopens_review(): void
+    {
+        [$organization, $owner] = $this->vendorFixture('OWNER');
+        $this->signInVendor($owner);
+        $this->saveVerificationDraft($organization);
+        $previous = DB::table('addresses')->where('owner_id', $organization->id)->where('is_current', true)->first();
+        DB::table('vendor_onboarding_steps')->where('vendor_organization_id', $organization->id)->where('requirement_key', 'registered_business_address')->update(['status' => 'APPROVED']);
+        $address = ['source' => 'MANUAL', 'street' => '12 Changed Street', 'postal_code' => '1100', 'province_code' => '1300000000', 'city_code' => '1381300000', 'psgc_code' => '1381300001', 'province' => 'NCR', 'city_municipality' => 'Quezon City', 'barangay' => 'Alicia'];
+        $this->patchJson('/api/v1/vendors/onboarding/verification', ['lock_version' => $organization->refresh()->lock_version, 'address' => $address])->assertOk();
+        $this->assertDatabaseHas('addresses', ['id' => $previous->id, 'street' => $previous->street, 'is_current' => false]);
+        $this->assertDatabaseHas('addresses', ['owner_id' => $organization->id, 'version' => 2, 'street' => '12 Changed Street', 'is_current' => true]);
+        $this->assertDatabaseHas('vendor_onboarding_steps', ['vendor_organization_id' => $organization->id, 'requirement_key' => 'registered_business_address', 'status' => 'IN_PROGRESS']);
+        foreach ([['postal_code' => '12ab'], ['street' => 'a'], ['latitude' => 14.6], ['city_code' => 'invalid']] as $invalid) {
+            $this->patchJson('/api/v1/vendors/onboarding/verification', ['lock_version' => $organization->refresh()->lock_version, 'address' => array_replace($address, $invalid)])->assertUnprocessable();
+        }
+    }
+
+    public function test_submission_names_missing_address_classification_and_store_fields(): void
+    {
+        [$organization, $owner] = $this->vendorFixture('OWNER');
+        $this->signInVendor($owner);
+        DB::table('vendor_organizations')->where('id', $organization->id)->update(['store_name' => '']);
+        $response = $this->postJson('/api/v1/vendors/onboarding/verification/submit', ['lock_version' => $organization->refresh()->lock_version, 'privacy_acknowledged' => true], ['Idempotency-Key' => (string) Str::uuid7()])->assertUnprocessable();
+        $keys = array_column($response->json('errors.0.details.blockers'), 'key');
+        foreach (['store_name', 'registered_business_address.street', 'registered_business_address.barangay', 'registered_business_address.city_municipality', 'registered_business_address.province', 'registered_business_address.postal_code', 'classification.supplier_type', 'classification.niches', 'business_registration', 'lgu_permit', 'bir_cor'] as $key) {
+            $this->assertContains($key, $keys);
+        }
+    }
+
+    public function test_privacy_acknowledgment_and_published_notice_are_required(): void
+    {
+        [$organization, $owner] = $this->vendorFixture('OWNER');
+        $this->signInVendor($owner);
+        $this->saveVerificationDraft($organization, false);
+        $this->postJson('/api/v1/vendors/onboarding/verification/submit', ['lock_version' => $organization->refresh()->lock_version, 'privacy_acknowledged' => false], ['Idempotency-Key' => (string) Str::uuid7()])->assertUnprocessable();
+        DB::table('agreement_versions')->whereIn('agreement_document_id', DB::table('agreement_documents')->where('code', 'PRIVACY_NOTICE')->select('id'))->update(['retired_at' => now()]);
+        $this->postJson('/api/v1/vendors/onboarding/verification/submit', ['lock_version' => $organization->refresh()->lock_version, 'privacy_acknowledged' => true], ['Idempotency-Key' => (string) Str::uuid7()])->assertStatus(503)->assertJsonPath('errors.0.code', 'PRIVACY_NOTICE_UNAVAILABLE');
+        $this->assertDatabaseCount('privacy_acknowledgments', 0);
+    }
+
+    public function test_classification_normalizes_rental_variants_and_names_the_offending_label(): void
+    {
+        [$organization, $owner] = $this->vendorFixture('OWNER');
+        $this->signInVendor($owner);
+        foreach (['  Equipment   RENTAL ', 'Construction-vehicle-rental', 'EquipmentRental', 'R.E.N.T.A.L', 'Equipment for hire', 'Vehicle leasing'] as $label) {
+            $response = $this->patchJson('/api/v1/vendors/onboarding/verification', ['lock_version' => $organization->refresh()->lock_version, 'classification' => ['supplier_type' => 'SPECIALIZED_SUPPLIER', 'niches' => ['Tools and Equipment', 'Other Category'], 'custom_labels' => ['Acoustic panels', $label]]])->assertUnprocessable()->assertJsonPath('errors.0.code', 'CLASSIFICATION_UNSUPPORTED');
+            $this->assertStringContainsString(trim((string) preg_replace('/\s+/u', ' ', $label)), $response->json('errors.0.details.blockers.0.reason'));
+        }
+        foreach (['a', str_repeat('a', 61)] as $label) {
+            $this->patchJson('/api/v1/vendors/onboarding/verification', ['lock_version' => $organization->refresh()->lock_version, 'classification' => ['supplier_type' => 'SPECIALIZED_SUPPLIER', 'niches' => ['Other Category'], 'custom_labels' => [$label]]])->assertUnprocessable();
+        }
+        $this->assertDatabaseCount('vendor_classifications', 0);
+    }
+
+    private function saveVerificationDraft(VendorOrganization $organization, bool $review = true): void
+    {
+        DB::table('vendor_organizations')->where('id', $organization->id)->update(['store_email_verified_at' => now()]);
         $this->patchJson('/api/v1/vendors/onboarding/verification', [
             'lock_version' => $organization->refresh()->lock_version,
             'business_type' => 'CORPORATION',
             'registered_name' => 'Phase Three Registered Corporation',
-            'representative' => ['full_name' => 'Phase Three Owner', 'same_as_owner' => true, 'position' => 'Director', 'email' => 'owner@example.test', 'phone' => '+639171234567', 'relationship' => 'Officer', 'id_type' => 'PASSPORT', 'id_number' => 'TEST-REPRESENTATIVE-001'],
+            'representative' => ['full_name' => 'Phase Three Owner', 'same_as_owner' => true, 'position' => 'Director', 'email' => 'owner@example.test', 'phone' => '+639171234567', 'relationship' => 'OFFICER', 'authority_evidence_source' => 'SEPARATE_AUTHORITY_DOCUMENT', 'authority_document_type' => 'BOARD_RESOLUTION', 'authority_document_date' => '2026-01-01', 'authority_scopes' => ['TAX_DECLARATIONS', 'COMMISSION_AGREEMENT', 'PAYMENT_CONFIGURATION'], 'id_type' => 'PASSPORT', 'id_number' => 'TEST-REPRESENTATIVE-001'],
             'date_established' => '2020-01-15',
             'store_phone' => '+639171234567',
-            'contacts' => [[
-                'full_name' => 'Phase Three Owner',
-                'title' => 'Owner',
-                'email' => 'owner@example.test',
-                'phone' => '+639171234567',
-                'is_primary' => true,
-                'is_authorized' => true,
-            ]],
             'classification' => [
                 'supplier_type' => 'WHOLESALER_DISTRIBUTOR',
                 'niches' => ['Cement and Concrete', 'Steel and Reinforcement'],
             ],
-            'address' => [
-                'street' => '100 Test Street',
-                'unit' => 'Unit 1',
-                'barangay' => 'Barangay Test',
-                'city_municipality' => 'Manila',
-                'province' => 'Metro Manila',
-                'postal_code' => '1000',
-                'formatted_address' => '100 Test Street, Manila, Metro Manila 1000',
-                'latitude' => 14.5995,
-                'longitude' => 120.9842,
-                'source' => 'MANUAL',
-            ],
+            'address' => $this->resolvedAddressInput($organization),
             'tax_profile' => [
                 'taxpayer_key' => 'TEST-TAXPAYER-READY',
-                'tin' => '123456789', 'branch_code' => '00000',
+                'tin' => '12345678900000',
                 'entity_class' => 'CORPORATION',
                 'registration_category' => 'DOMESTIC',
                 'vat_category' => 'VAT',
@@ -1018,13 +1418,19 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
             'lgu_permit' => 'lgu-permit.pdf',
             'bir_cor' => 'bir-cor.pdf',
             'representative_identity' => 'representative-passport.pdf',
+            'authority_to_act' => 'authority.pdf',
         ] as $requirementKey => $fileName) {
-            $this->uploadEvidence($requirementKey, $fileName);
+            $this->post('/api/v1/vendors/onboarding/documents', ['requirement_key' => $requirementKey, 'file' => $this->pdf($fileName)])->assertCreated();
         }
+        if (! $review) {
+            return;
+        }
+        $this->postJson('/api/v1/vendors/onboarding/verification/submit', ['lock_version' => $organization->refresh()->lock_version, 'privacy_acknowledged' => true], ['Idempotency-Key' => (string) Str::uuid7()])->assertStatus(202);
         $owner = User::query()->findOrFail(DB::table('vendor_memberships')->where('vendor_organization_id', $organization->getKey())->where('role', 'OWNER')->value('user_id'));
         $this->signInAdmin($this->adminFixture('ADMIN_VENDOR_VERIFICATION'));
-        $evidenceId = DB::table('business_documents')->where('vendor_organization_id', $organization->getKey())->where('requirement_key', 'business_registration')->value('current_version_id');
-        $this->postJson('/api/v1/admin/vendor-verification/'.$organization->getKey().'/requirements/authority_to_act/decision', ['decision' => 'APPROVED', 'authority_evidence_version_id' => $evidenceId, 'authority_scopes' => ['TAX_DECLARATIONS', 'COMMISSION_AGREEMENT', 'PAYMENT_CONFIGURATION']], ['Idempotency-Key' => (string) Str::uuid7()])->assertOk();
+        $evidenceId = DB::table('business_documents')->where('vendor_organization_id', $organization->getKey())->where('requirement_key', 'authority_to_act')->value('current_version_id');
+        $this->postJson('/api/v1/admin/vendor-verification/'.$organization->getKey().'/requirements/business_registration/decision', ['decision' => 'APPROVED', 'expiration_kind' => 'NO_EXPIRATION'], ['Idempotency-Key' => (string) Str::uuid7()])->assertOk();
+        $this->postJson('/api/v1/admin/vendor-verification/'.$organization->getKey().'/requirements/authority_to_act/decision', ['decision' => 'APPROVED', 'expiration_kind' => 'NO_EXPIRATION', 'authority_evidence_version_id' => $evidenceId, 'authority_scopes' => ['TAX_DECLARATIONS', 'COMMISSION_AGREEMENT', 'PAYMENT_CONFIGURATION']], ['Idempotency-Key' => (string) Str::uuid7()])->assertOk();
         $this->signInVendor($owner);
         $this->patchJson('/api/v1/vendors/onboarding/verification', ['lock_version' => $organization->refresh()->lock_version, 'tax_profile' => ['owner_attested' => true]])->assertOk();
     }
@@ -1036,11 +1442,19 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
         return UploadedFile::fake()->createWithContent($name, $content);
     }
 
-    private function uploadEvidence(string $requirementKey, string $fileName): string
+    // Seed a formally submitted version for review, expiry and immutable-history
+    // tests. The complete user submission path is exercised separately above.
+    private function submittedEvidenceFixture(string $requirementKey, string $fileName): string
     {
-        return (string) $this->post('/api/v1/vendors/onboarding/documents', [
+        $fileId = $this->post('/api/v1/vendors/onboarding/documents', [
             'requirement_key' => $requirementKey,
             'file' => $this->pdf($fileName),
         ])->assertCreated()->json('data.id');
+        $pending = DB::table('vendor_pending_documents')->where('file_id', $fileId)->first();
+        DB::table('vendor_onboarding_steps')->where('vendor_organization_id', $pending->vendor_organization_id)->where('requirement_key', $requirementKey)->where('is_current', true)->update(['status' => 'IN_PROGRESS']);
+        $request = app('request');
+        DB::transaction(fn () => (new \ReflectionMethod(VendorOnboardingService::class, 'submitPendingDocuments'))->invoke(app(VendorOnboardingService::class), $request, $pending->vendor_organization_id));
+
+        return (string) DB::table('vendor_document_versions')->where('file_id', $fileId)->value('id');
     }
 }

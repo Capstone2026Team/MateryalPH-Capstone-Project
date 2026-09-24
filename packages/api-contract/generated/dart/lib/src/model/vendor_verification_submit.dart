@@ -4,6 +4,7 @@
 
 // ignore_for_file: unused_element
 import 'package:built_collection/built_collection.dart';
+import 'package:materyalph_api_client/src/model/vendor_verification_draft.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -12,10 +13,14 @@ part 'vendor_verification_submit.g.dart';
 /// VendorVerificationSubmit
 ///
 /// Properties:
+/// * [draft]
 /// * [lockVersion]
 /// * [privacyAcknowledged]
 @BuiltValue()
 abstract class VendorVerificationSubmit implements Built<VendorVerificationSubmit, VendorVerificationSubmitBuilder> {
+  @BuiltValueField(wireName: r'draft')
+  VendorVerificationDraft? get draft;
+
   @BuiltValueField(wireName: r'lock_version')
   int get lockVersion;
 
@@ -46,6 +51,13 @@ class _$VendorVerificationSubmitSerializer implements PrimitiveSerializer<Vendor
     VendorVerificationSubmit object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.draft != null) {
+      yield r'draft';
+      yield serializers.serialize(
+        object.draft,
+        specifiedType: const FullType(VendorVerificationDraft),
+      );
+    }
     yield r'lock_version';
     yield serializers.serialize(
       object.lockVersion,
@@ -79,6 +91,14 @@ class _$VendorVerificationSubmitSerializer implements PrimitiveSerializer<Vendor
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'draft':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(VendorVerificationDraft),
+          ) as VendorVerificationDraft?;
+          if (valueDes == null) continue;
+          result.draft = valueDes.toBuilder();
+          break;
         case r'lock_version':
           final valueDes = serializers.deserialize(
             value,

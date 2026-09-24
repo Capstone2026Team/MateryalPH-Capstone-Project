@@ -69,6 +69,7 @@ docs/EmailRequest.md
 docs/ErrorEnvelope.md
 docs/FeeAssessment.md
 docs/FinancialSnapshot.md
+docs/GenericDataEnvelope.md
 docs/GoogleMobileExchangeRequest.md
 docs/GoogleOidcStartRequest.md
 docs/HealthEnvelope.md
@@ -86,6 +87,9 @@ docs/OnboardingRequirement.md
 docs/OnboardingStepCompletion.md
 docs/PasswordRecoveryRequest.md
 docs/PasswordResetRequest.md
+docs/PsgcArea.md
+docs/PsgcSearchEnvelope.md
+docs/PsgcSearchEnvelopeData.md
 docs/RegisterRequest.md
 docs/RegistrationEnvelope.md
 docs/RegistrationEnvelopeAllOfData.md
@@ -98,7 +102,9 @@ docs/UserIdentity.md
 docs/VendorActivationSnapshot.md
 docs/VendorAddressGeocode.md
 docs/VendorAddressGeocodeEnvelope.md
+docs/VendorAddressSelection.md
 docs/VendorBotProtectionEvidence.md
+docs/VendorCommissionAcceptance.md
 docs/VendorDocument.md
 docs/VendorDocumentEnvelope.md
 docs/VendorFile.md
@@ -124,6 +130,7 @@ docs/VendorSetupDraftVehiclesInner.md
 docs/VendorStoreEmailConfirmation.md
 docs/VendorStoreEmailEnvelope.md
 docs/VendorVerificationDraft.md
+docs/VendorVerificationDraftClassification.md
 docs/VendorVerificationDraftLegalIdentity.md
 docs/VendorVerificationDraftRepresentative.md
 docs/VendorVerificationDraftTaxProfile.md
@@ -204,6 +211,7 @@ src/models/EmailRequest.ts
 src/models/ErrorEnvelope.ts
 src/models/FeeAssessment.ts
 src/models/FinancialSnapshot.ts
+src/models/GenericDataEnvelope.ts
 src/models/GoogleMobileExchangeRequest.ts
 src/models/GoogleOidcStartRequest.ts
 src/models/HealthEnvelope.ts
@@ -221,6 +229,9 @@ src/models/OnboardingRequirement.ts
 src/models/OnboardingStepCompletion.ts
 src/models/PasswordRecoveryRequest.ts
 src/models/PasswordResetRequest.ts
+src/models/PsgcArea.ts
+src/models/PsgcSearchEnvelope.ts
+src/models/PsgcSearchEnvelopeData.ts
 src/models/RegisterRequest.ts
 src/models/RegistrationEnvelope.ts
 src/models/RegistrationEnvelopeAllOfData.ts
@@ -232,7 +243,9 @@ src/models/UserIdentity.ts
 src/models/VendorActivationSnapshot.ts
 src/models/VendorAddressGeocode.ts
 src/models/VendorAddressGeocodeEnvelope.ts
+src/models/VendorAddressSelection.ts
 src/models/VendorBotProtectionEvidence.ts
+src/models/VendorCommissionAcceptance.ts
 src/models/VendorDocument.ts
 src/models/VendorDocumentEnvelope.ts
 src/models/VendorFile.ts
@@ -257,6 +270,7 @@ src/models/VendorSetupDraftVehiclesInner.ts
 src/models/VendorStoreEmailConfirmation.ts
 src/models/VendorStoreEmailEnvelope.ts
 src/models/VendorVerificationDraft.ts
+src/models/VendorVerificationDraftClassification.ts
 src/models/VendorVerificationDraftLegalIdentity.ts
 src/models/VendorVerificationDraftRepresentative.ts
 src/models/VendorVerificationDraftTaxProfile.ts

@@ -44,7 +44,7 @@ export interface MaterialPriceObservation {
      */
     listingVariantId: string;
     /**
-     *
+     * Reference provider identifier.
      */
     comparableGroupVersionId: string;
     /**

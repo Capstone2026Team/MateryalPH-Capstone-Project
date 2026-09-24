@@ -19,7 +19,7 @@ part 'buyer_mobile_register_request.g.dart';
 /// * [passwordConfirmation]
 /// * [buyerType]
 /// * [companyName]
-/// * [termsVersionId]
+/// * [termsVersionId] - Reference provider identifier.
 /// * [termsContentHash]
 /// * [termsAccepted]
 /// * [privacyAccepted]
@@ -47,6 +47,7 @@ abstract class BuyerMobileRegisterRequest implements Built<BuyerMobileRegisterRe
   @BuiltValueField(wireName: r'company_name')
   String? get companyName;
 
+  /// Reference provider identifier.
   @BuiltValueField(wireName: r'terms_version_id')
   String get termsVersionId;
 

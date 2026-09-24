@@ -4,6 +4,7 @@ All URIs are relative to */api/v1*
 
 | Method | HTTP request | Description |
 |------------- | ------------- | -------------|
+| [**acceptVendorCommission**](VendorOnboardingApi.md#acceptvendorcommission) | **POST** /vendors/onboarding/verification/commission |  |
 | [**activateVendorStore**](VendorOnboardingApi.md#activatevendorstore) | **POST** /vendors/onboarding/activation |  |
 | [**captureVendorPaymentConnection**](VendorOnboardingApi.md#capturevendorpaymentconnection) | **POST** /vendors/onboarding/payment-connection |  |
 | [**completeVendorSetup**](VendorOnboardingApi.md#completevendorsetup) | **POST** /vendors/onboarding/setup/complete |  |
@@ -14,16 +15,102 @@ All URIs are relative to */api/v1*
 | [**getVendorOnboarding**](VendorOnboardingApi.md#getvendoronboarding) | **GET** /vendors/onboarding |  |
 | [**getVendorPrivateFileUrl**](VendorOnboardingApi.md#getvendorprivatefileurl) | **GET** /vendors/onboarding/files/{fileId} |  |
 | [**inviteVendorTeamMember**](VendorOnboardingApi.md#invitevendorteammember) | **POST** /vendors/account/invitations |  |
+| [**previewVendorRequirements**](VendorOnboardingApi.md#previewvendorrequirements) | **GET** /vendors/onboarding/requirements |  |
 | [**receiveXenditAccountVerificationWebhook**](VendorOnboardingApi.md#receivexenditaccountverificationwebhook) | **POST** /webhooks/xendit/account-verification |  |
 | [**reconcileVendorPaymentConnection**](VendorOnboardingApi.md#reconcilevendorpaymentconnection) | **POST** /vendors/onboarding/payment-connection/reconcile |  |
+| [**removePendingVendorDocument**](VendorOnboardingApi.md#removependingvendordocument) | **DELETE** /vendors/onboarding/documents/pending/{requirementKey} |  |
 | [**requestVendorStoreEmailVerification**](VendorOnboardingApi.md#requestvendorstoreemailverification) | **POST** /vendors/onboarding/store-email |  |
+| [**resolveVendorAddress**](VendorOnboardingApi.md#resolvevendoraddress) | **POST** /vendors/onboarding/address/resolve |  |
+| [**resolveVendorAddressPin**](VendorOnboardingApi.md#resolvevendoraddresspin) | **POST** /vendors/onboarding/address/pin |  |
 | [**reverseGeocodeVendorAddress**](VendorOnboardingApi.md#reversegeocodevendoraddress) | **POST** /vendors/onboarding/address/geocode |  |
 | [**saveVendorSetupDraft**](VendorOnboardingApi.md#savevendorsetupdraft) | **PATCH** /vendors/onboarding/setup |  |
 | [**saveVendorVerificationDraft**](VendorOnboardingApi.md#savevendorverificationdraft) | **PATCH** /vendors/onboarding/verification |  |
+| [**searchVendorAddressAreas**](VendorOnboardingApi.md#searchvendoraddressareas) | **GET** /vendors/onboarding/address/areas |  |
 | [**submitVendorVerification**](VendorOnboardingApi.md#submitvendorverification) | **POST** /vendors/onboarding/verification/submit |  |
 | [**uploadVendorStoreMedia**](VendorOnboardingApi.md#uploadvendorstoremedia) | **POST** /vendors/onboarding/media |  |
 | [**uploadVendorVerificationDocument**](VendorOnboardingApi.md#uploadvendorverificationdocument) | **POST** /vendors/onboarding/documents |  |
 
+
+
+## acceptVendorCommission
+
+> VendorOnboardingEnvelope acceptVendorCommission(idempotencyKey, vendorCommissionAcceptance)
+
+
+
+Explicit version-bound acceptance in Store Verification. Owner only; applicable current representative authority requires the COMMISSION_AGREEMENT scope. Autosaving or submitting evidence never implies consent. Initial evidence submission remains available while authority approval is pending.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  VendorOnboardingApi,
+} from '@materyalph/api-client-ts';
+import type { AcceptVendorCommissionRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // To configure API key authorization: accessCookie
+    apiKey: "YOUR API KEY",
+    // To configure API key authorization: webCsrf
+    apiKey: "YOUR API KEY",
+  });
+  const api = new VendorOnboardingApi(config);
+
+  const body = {
+    // string
+    idempotencyKey: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // VendorCommissionAcceptance
+    vendorCommissionAcceptance: ...,
+  } satisfies AcceptVendorCommissionRequest;
+
+  try {
+    const data = await api.acceptVendorCommission(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **idempotencyKey** | `string` |  | [Defaults to `undefined`] |
+| **vendorCommissionAcceptance** | [VendorCommissionAcceptance](VendorCommissionAcceptance.md) |  | |
+
+### Return type
+
+[**VendorOnboardingEnvelope**](VendorOnboardingEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Commission acceptance recorded; verification.commission_terms contains the current agreement, can_accept and accepted. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **409** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **503** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
 ## activateVendorStore
@@ -746,6 +833,93 @@ example().catch(console.error);
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
+## previewVendorRequirements
+
+> GenericDataEnvelope previewVendorRequirements(businessType, representativeRole, identityIdType, representativeIdType, authorityEvidenceVersionId, declarationClaim)
+
+
+
+### Example
+
+```ts
+import {
+  Configuration,
+  VendorOnboardingApi,
+} from '@materyalph/api-client-ts';
+import type { PreviewVendorRequirementsRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // To configure API key authorization: accessCookie
+    apiKey: "YOUR API KEY",
+  });
+  const api = new VendorOnboardingApi(config);
+
+  const body = {
+    // 'SOLE_PROPRIETORSHIP' | 'PARTNERSHIP' | 'CORPORATION' | 'ONE_PERSON_CORPORATION' | 'COOPERATIVE'
+    businessType: businessType_example,
+    // string (optional)
+    representativeRole: representativeRole_example,
+    // string (optional)
+    identityIdType: identityIdType_example,
+    // string (optional)
+    representativeIdType: representativeIdType_example,
+    // string (optional)
+    authorityEvidenceVersionId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // 0 | 1 (optional)
+    declarationClaim: 56,
+  } satisfies PreviewVendorRequirementsRequest;
+
+  try {
+    const data = await api.previewVendorRequirements(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **businessType** | `SOLE_PROPRIETORSHIP`, `PARTNERSHIP`, `CORPORATION`, `ONE_PERSON_CORPORATION`, `COOPERATIVE` |  | [Defaults to `undefined`] [Enum: SOLE_PROPRIETORSHIP, PARTNERSHIP, CORPORATION, ONE_PERSON_CORPORATION, COOPERATIVE] |
+| **representativeRole** | `string` |  | [Optional] [Defaults to `undefined`] |
+| **identityIdType** | `string` |  | [Optional] [Defaults to `undefined`] |
+| **representativeIdType** | `string` |  | [Optional] [Defaults to `undefined`] |
+| **authorityEvidenceVersionId** | `string` |  | [Optional] [Defaults to `undefined`] |
+| **declarationClaim** | `0`, `1` |  | [Optional] [Defaults to `undefined`] [Enum: 0, 1] |
+
+### Return type
+
+[**GenericDataEnvelope**](GenericDataEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Read-only requirement resolution for unsaved verification inputs; no approvals or draft writes. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
 ## receiveXenditAccountVerificationWebhook
 
 > VendorWebhookEnvelope receiveXenditAccountVerificationWebhook(xCallbackToken, xenditAccountVerificationWebhook)
@@ -884,6 +1058,78 @@ This endpoint does not need any parameter.
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
+## removePendingVendorDocument
+
+> VendorOnboardingEnvelope removePendingVendorDocument(requirementKey)
+
+
+
+### Example
+
+```ts
+import {
+  Configuration,
+  VendorOnboardingApi,
+} from '@materyalph/api-client-ts';
+import type { RemovePendingVendorDocumentRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // To configure API key authorization: accessCookie
+    apiKey: "YOUR API KEY",
+    // To configure API key authorization: webCsrf
+    apiKey: "YOUR API KEY",
+  });
+  const api = new VendorOnboardingApi(config);
+
+  const body = {
+    // string
+    requirementKey: requirementKey_example,
+  } satisfies RemovePendingVendorDocumentRequest;
+
+  try {
+    const data = await api.removePendingVendorDocument(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **requirementKey** | `string` |  | [Defaults to `undefined`] |
+
+### Return type
+
+[**VendorOnboardingEnvelope**](VendorOnboardingEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Pending attachment removed without changing submitted history. |  -  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
 ## requestVendorStoreEmailVerification
 
 > VendorStoreEmailEnvelope requestVendorStoreEmailVerification(emailRequest)
@@ -951,6 +1197,152 @@ example().catch(console.error);
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **202** | Short-lived Store Email OTP queued. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## resolveVendorAddress
+
+> GenericDataEnvelope resolveVendorAddress(vendorAddressSelection)
+
+
+
+### Example
+
+```ts
+import {
+  Configuration,
+  VendorOnboardingApi,
+} from '@materyalph/api-client-ts';
+import type { ResolveVendorAddressRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // To configure API key authorization: accessCookie
+    apiKey: "YOUR API KEY",
+    // To configure API key authorization: webCsrf
+    apiKey: "YOUR API KEY",
+  });
+  const api = new VendorOnboardingApi(config);
+
+  const body = {
+    // VendorAddressSelection
+    vendorAddressSelection: ...,
+  } satisfies ResolveVendorAddressRequest;
+
+  try {
+    const data = await api.resolveVendorAddress(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **vendorAddressSelection** | [VendorAddressSelection](VendorAddressSelection.md) |  | |
+
+### Return type
+
+[**GenericDataEnvelope**](GenericDataEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Canonical address with server-generated coordinates and an organization-bound resolution token valid for 30 minutes. |  -  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## resolveVendorAddressPin
+
+> GenericDataEnvelope resolveVendorAddressPin(vendorAddressGeocode)
+
+
+
+### Example
+
+```ts
+import {
+  Configuration,
+  VendorOnboardingApi,
+} from '@materyalph/api-client-ts';
+import type { ResolveVendorAddressPinRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // To configure API key authorization: accessCookie
+    apiKey: "YOUR API KEY",
+    // To configure API key authorization: webCsrf
+    apiKey: "YOUR API KEY",
+  });
+  const api = new VendorOnboardingApi(config);
+
+  const body = {
+    // VendorAddressGeocode
+    vendorAddressGeocode: ...,
+  } satisfies ResolveVendorAddressPinRequest;
+
+  try {
+    const data = await api.resolveVendorAddressPin(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **vendorAddressGeocode** | [VendorAddressGeocode](VendorAddressGeocode.md) |  | |
+
+### Return type
+
+[**GenericDataEnvelope**](GenericDataEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Reverse-geocoded Philippine map pin with uniquely matched PSGC codes and a short-lived organization-bound pin token. Unmatched fields require a PSGC selection. |  -  |
 | **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 | **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 | **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
@@ -1184,6 +1576,87 @@ example().catch(console.error);
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
+## searchVendorAddressAreas
+
+> PsgcSearchEnvelope searchVendorAddressAreas(level, parentCode, q, page)
+
+
+
+### Example
+
+```ts
+import {
+  Configuration,
+  VendorOnboardingApi,
+} from '@materyalph/api-client-ts';
+import type { SearchVendorAddressAreasRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // To configure API key authorization: accessCookie
+    apiKey: "YOUR API KEY",
+    // To configure API key authorization: webCsrf
+    apiKey: "YOUR API KEY",
+  });
+  const api = new VendorOnboardingApi(config);
+
+  const body = {
+    // 'PROVINCE' | 'CITY' | 'BARANGAY'
+    level: level_example,
+    // string (optional)
+    parentCode: parentCode_example,
+    // string (optional)
+    q: q_example,
+    // number (optional)
+    page: 56,
+  } satisfies SearchVendorAddressAreasRequest;
+
+  try {
+    const data = await api.searchVendorAddressAreas(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **level** | `PROVINCE`, `CITY`, `BARANGAY` |  | [Defaults to `undefined`] [Enum: PROVINCE, CITY, BARANGAY] |
+| **parentCode** | `string` |  | [Optional] [Defaults to `undefined`] |
+| **q** | `string` |  | [Optional] [Defaults to `undefined`] |
+| **page** | `number` |  | [Optional] [Defaults to `1`] |
+
+### Return type
+
+[**PsgcSearchEnvelope**](PsgcSearchEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Paginated official PSGC matches. PROVINCE includes region groupings for cities without a province parent. |  -  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
 ## submitVendorVerification
 
 > VendorOnboardingEnvelope submitVendorVerification(idempotencyKey, vendorVerificationSubmit)
@@ -1393,7 +1866,7 @@ example().catch(console.error);
 
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
-| **requirementKey** | `business_registration`, `lgu_permit`, `bir_cor`, `identity_evidence`, `tax_relief_evidence` |  | [Defaults to `undefined`] [Enum: business_registration, lgu_permit, bir_cor, identity_evidence, tax_relief_evidence] |
+| **requirementKey** | `business_registration`, `lgu_permit`, `bir_cor`, `identity_evidence`, `identity_back_evidence`, `representative_identity`, `representative_identity_back`, `authority_to_act`, `tax_relief_evidence`, `optional_certification` |  | [Defaults to `undefined`] [Enum: business_registration, lgu_permit, bir_cor, identity_evidence, identity_back_evidence, representative_identity, representative_identity_back, authority_to_act, tax_relief_evidence, optional_certification] |
 | **file** | `Blob` |  | [Defaults to `undefined`] |
 | **metadata** | `{ [key: string]: string; }` |  | [Optional] |
 
@@ -1414,7 +1887,7 @@ example().catch(console.error);
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **201** | Private immutable evidence version created. |  -  |
+| **201** | Private pending attachment saved. No review record is created until explicit verification submission. |  -  |
 | **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 | **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 | **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |

@@ -7,7 +7,6 @@
 Name | Type
 ------------ | -------------
 `organizationLockVersion` | number
-`commissionTermsAccepted` | boolean
 
 ## Example
 
@@ -17,7 +16,6 @@ import type { VendorSetupComplete } from '@materyalph/api-client-ts'
 // TODO: Update the object below with actual values
 const example = {
   "organizationLockVersion": null,
-  "commissionTermsAccepted": null,
 } satisfies VendorSetupComplete
 
 console.log(example)

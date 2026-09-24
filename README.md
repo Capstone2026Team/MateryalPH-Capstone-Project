@@ -44,7 +44,7 @@ queued: the API, queue worker, and scheduler must all remain running.
 ```powershell
 Set-Location services/api
 composer install
-php artisan serve --host=127.0.0.1 --port=8080
+php -d upload_max_filesize=10M -d post_max_size=12M -S 127.0.0.1:8080 -t public vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php
 ```
 
 The scaffold API is exposed under `http://127.0.0.1:8080/api/v1`.

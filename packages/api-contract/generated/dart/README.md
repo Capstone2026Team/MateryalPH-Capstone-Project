@@ -135,6 +135,7 @@ Class | Method | HTTP request | Description
 [*AuthenticationApi*](doc/AuthenticationApi.md) | [**verifyBuyerMobileEmail**](doc/AuthenticationApi.md#verifybuyermobileemail) | **POST** /mobile/auth/verify-email |
 [*AuthenticationApi*](doc/AuthenticationApi.md) | [**verifyEmail**](doc/AuthenticationApi.md#verifyemail) | **POST** /auth/verify-email |
 [*SystemApi*](doc/SystemApi.md) | [**getApiHealth**](doc/SystemApi.md#getapihealth) | **GET** /health |
+[*VendorOnboardingApi*](doc/VendorOnboardingApi.md) | [**acceptVendorCommission**](doc/VendorOnboardingApi.md#acceptvendorcommission) | **POST** /vendors/onboarding/verification/commission |
 [*VendorOnboardingApi*](doc/VendorOnboardingApi.md) | [**activateVendorStore**](doc/VendorOnboardingApi.md#activatevendorstore) | **POST** /vendors/onboarding/activation |
 [*VendorOnboardingApi*](doc/VendorOnboardingApi.md) | [**captureVendorPaymentConnection**](doc/VendorOnboardingApi.md#capturevendorpaymentconnection) | **POST** /vendors/onboarding/payment-connection |
 [*VendorOnboardingApi*](doc/VendorOnboardingApi.md) | [**completeVendorSetup**](doc/VendorOnboardingApi.md#completevendorsetup) | **POST** /vendors/onboarding/setup/complete |
@@ -145,12 +146,17 @@ Class | Method | HTTP request | Description
 [*VendorOnboardingApi*](doc/VendorOnboardingApi.md) | [**getVendorOnboarding**](doc/VendorOnboardingApi.md#getvendoronboarding) | **GET** /vendors/onboarding |
 [*VendorOnboardingApi*](doc/VendorOnboardingApi.md) | [**getVendorPrivateFileUrl**](doc/VendorOnboardingApi.md#getvendorprivatefileurl) | **GET** /vendors/onboarding/files/{fileId} |
 [*VendorOnboardingApi*](doc/VendorOnboardingApi.md) | [**inviteVendorTeamMember**](doc/VendorOnboardingApi.md#invitevendorteammember) | **POST** /vendors/account/invitations |
+[*VendorOnboardingApi*](doc/VendorOnboardingApi.md) | [**previewVendorRequirements**](doc/VendorOnboardingApi.md#previewvendorrequirements) | **GET** /vendors/onboarding/requirements |
 [*VendorOnboardingApi*](doc/VendorOnboardingApi.md) | [**receiveXenditAccountVerificationWebhook**](doc/VendorOnboardingApi.md#receivexenditaccountverificationwebhook) | **POST** /webhooks/xendit/account-verification |
 [*VendorOnboardingApi*](doc/VendorOnboardingApi.md) | [**reconcileVendorPaymentConnection**](doc/VendorOnboardingApi.md#reconcilevendorpaymentconnection) | **POST** /vendors/onboarding/payment-connection/reconcile |
+[*VendorOnboardingApi*](doc/VendorOnboardingApi.md) | [**removePendingVendorDocument**](doc/VendorOnboardingApi.md#removependingvendordocument) | **DELETE** /vendors/onboarding/documents/pending/{requirementKey} |
 [*VendorOnboardingApi*](doc/VendorOnboardingApi.md) | [**requestVendorStoreEmailVerification**](doc/VendorOnboardingApi.md#requestvendorstoreemailverification) | **POST** /vendors/onboarding/store-email |
+[*VendorOnboardingApi*](doc/VendorOnboardingApi.md) | [**resolveVendorAddress**](doc/VendorOnboardingApi.md#resolvevendoraddress) | **POST** /vendors/onboarding/address/resolve |
+[*VendorOnboardingApi*](doc/VendorOnboardingApi.md) | [**resolveVendorAddressPin**](doc/VendorOnboardingApi.md#resolvevendoraddresspin) | **POST** /vendors/onboarding/address/pin |
 [*VendorOnboardingApi*](doc/VendorOnboardingApi.md) | [**reverseGeocodeVendorAddress**](doc/VendorOnboardingApi.md#reversegeocodevendoraddress) | **POST** /vendors/onboarding/address/geocode |
 [*VendorOnboardingApi*](doc/VendorOnboardingApi.md) | [**saveVendorSetupDraft**](doc/VendorOnboardingApi.md#savevendorsetupdraft) | **PATCH** /vendors/onboarding/setup |
 [*VendorOnboardingApi*](doc/VendorOnboardingApi.md) | [**saveVendorVerificationDraft**](doc/VendorOnboardingApi.md#savevendorverificationdraft) | **PATCH** /vendors/onboarding/verification |
+[*VendorOnboardingApi*](doc/VendorOnboardingApi.md) | [**searchVendorAddressAreas**](doc/VendorOnboardingApi.md#searchvendoraddressareas) | **GET** /vendors/onboarding/address/areas |
 [*VendorOnboardingApi*](doc/VendorOnboardingApi.md) | [**submitVendorVerification**](doc/VendorOnboardingApi.md#submitvendorverification) | **POST** /vendors/onboarding/verification/submit |
 [*VendorOnboardingApi*](doc/VendorOnboardingApi.md) | [**uploadVendorStoreMedia**](doc/VendorOnboardingApi.md#uploadvendorstoremedia) | **POST** /vendors/onboarding/media |
 [*VendorOnboardingApi*](doc/VendorOnboardingApi.md) | [**uploadVendorVerificationDocument**](doc/VendorOnboardingApi.md#uploadvendorverificationdocument) | **POST** /vendors/onboarding/documents |
@@ -221,6 +227,7 @@ Class | Method | HTTP request | Description
  - [ErrorEnvelope](doc/ErrorEnvelope.md)
  - [FeeAssessment](doc/FeeAssessment.md)
  - [FinancialSnapshot](doc/FinancialSnapshot.md)
+ - [GenericDataEnvelope](doc/GenericDataEnvelope.md)
  - [GoogleMobileExchangeRequest](doc/GoogleMobileExchangeRequest.md)
  - [GoogleOidcStartRequest](doc/GoogleOidcStartRequest.md)
  - [HealthEnvelope](doc/HealthEnvelope.md)
@@ -238,6 +245,9 @@ Class | Method | HTTP request | Description
  - [OnboardingStepCompletion](doc/OnboardingStepCompletion.md)
  - [PasswordRecoveryRequest](doc/PasswordRecoveryRequest.md)
  - [PasswordResetRequest](doc/PasswordResetRequest.md)
+ - [PsgcArea](doc/PsgcArea.md)
+ - [PsgcSearchEnvelope](doc/PsgcSearchEnvelope.md)
+ - [PsgcSearchEnvelopeData](doc/PsgcSearchEnvelopeData.md)
  - [RegisterRequest](doc/RegisterRequest.md)
  - [RegistrationEnvelope](doc/RegistrationEnvelope.md)
  - [RegistrationEnvelopeAllOfData](doc/RegistrationEnvelopeAllOfData.md)
@@ -249,7 +259,9 @@ Class | Method | HTTP request | Description
  - [VendorActivationSnapshot](doc/VendorActivationSnapshot.md)
  - [VendorAddressGeocode](doc/VendorAddressGeocode.md)
  - [VendorAddressGeocodeEnvelope](doc/VendorAddressGeocodeEnvelope.md)
+ - [VendorAddressSelection](doc/VendorAddressSelection.md)
  - [VendorBotProtectionEvidence](doc/VendorBotProtectionEvidence.md)
+ - [VendorCommissionAcceptance](doc/VendorCommissionAcceptance.md)
  - [VendorDocument](doc/VendorDocument.md)
  - [VendorDocumentEnvelope](doc/VendorDocumentEnvelope.md)
  - [VendorFile](doc/VendorFile.md)
@@ -274,6 +286,7 @@ Class | Method | HTTP request | Description
  - [VendorStoreEmailConfirmation](doc/VendorStoreEmailConfirmation.md)
  - [VendorStoreEmailEnvelope](doc/VendorStoreEmailEnvelope.md)
  - [VendorVerificationDraft](doc/VendorVerificationDraft.md)
+ - [VendorVerificationDraftClassification](doc/VendorVerificationDraftClassification.md)
  - [VendorVerificationDraftLegalIdentity](doc/VendorVerificationDraftLegalIdentity.md)
  - [VendorVerificationDraftRepresentative](doc/VendorVerificationDraftRepresentative.md)
  - [VendorVerificationDraftTaxProfile](doc/VendorVerificationDraftTaxProfile.md)

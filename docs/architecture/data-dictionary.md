@@ -5458,37 +5458,9 @@ Vendor organization, access, onboarding, or storefront record.
 
 - `vendor_confirmations_pkey` — `CREATE UNIQUE INDEX vendor_confirmations_pkey ON public.vendor_confirmations USING btree (id)`
 
-## `vendor_contacts`
+## Retired primary business contacts
 
-Vendor organization, access, onboarding, or storefront record.
-
-| Column | Database type | Null | Default | Key / meaning |
-| --- | --- | --- | --- | --- |
-| `id` | `uuid` | No | — | Primary key. Id. |
-| `vendor_organization_id` | `uuid` | No | — | Vendor organization id. |
-| `full_name` | `character varying` | No | — | Full name. |
-| `title` | `character varying` | Yes | — | Title. |
-| `email` | `character varying` | Yes | — | Email. |
-| `phone` | `character varying` | Yes | — | Phone. |
-| `is_primary` | `boolean` | No | `false` | Is primary. |
-| `is_public` | `boolean` | No | `false` | Is public. |
-| `is_authorized` | `boolean` | No | `false` | Is authorized. |
-| `active` | `boolean` | No | `true` | Active. |
-| `lock_version` | `integer` | No | `1` | Lock version. |
-| `created_at` | `timestamp with time zone` | Yes | — | Created at. |
-| `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
-
-**Constraints**
-
-- `vendor_contact_primary_check` — CHECK: `CHECK (is_primary = false OR active = true)`
-- `vendor_contacts_vendor_organization_id_foreign` — FOREIGN KEY: `FOREIGN KEY (vendor_organization_id) REFERENCES vendor_organizations(id) ON DELETE RESTRICT`
-- `vendor_contacts_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
-
-**Indexes**
-
-- `vendor_contacts_pkey` — `CREATE UNIQUE INDEX vendor_contacts_pkey ON public.vendor_contacts USING btree (id)`
-- `vendor_contacts_vendor_organization_id_active_index` — `CREATE INDEX vendor_contacts_vendor_organization_id_active_index ON public.vendor_contacts USING btree (vendor_organization_id, active)`
-- `vendor_one_primary_contact_unique` — `CREATE UNIQUE INDEX vendor_one_primary_contact_unique ON public.vendor_contacts USING btree (vendor_organization_id) WHERE ((is_primary = true) AND (active = true))`
+The `vendor_contacts` table is removed by `2026_09_23_000002_remove_vendor_primary_business_contacts.php`. Business communication uses `vendor_organizations.store_email` and `store_phone`. Existing audit and compliance history remains immutable. Rolling back recreates an empty table, not the removed records.
 
 ## `vendor_document_expiry_notices`
 
@@ -5996,3 +5968,7 @@ Procurement or immutable commerce record.
 
 - `work_packages_pkey` — `CREATE UNIQUE INDEX work_packages_pkey ON public.work_packages USING btree (id)`
 
+
+### Combined Vendor TIN (2026-09-23)
+
+`vendor_tax_profile_versions.tin_encrypted` stores the full canonical 9-digit TIN plus 3–5 digit branch suffix. `tin_hash` and `tin_last4` remain derived from the 9-digit taxpayer identity. Migration `2026_09_23_000003` combines existing ciphertext values and drops `tin_branch_code` and `branch_code_encrypted`. Editable onboarding drafts remove `head_office`, `branch_code_length` and `branch_code`; historical tax version metadata and content hashes remain intact.

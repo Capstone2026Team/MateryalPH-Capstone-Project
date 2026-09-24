@@ -63,6 +63,8 @@ class _$VendorVerificationSubmitPrivacyAcknowledgedEnumSerializer
 
 class _$VendorVerificationSubmit extends VendorVerificationSubmit {
   @override
+  final VendorVerificationDraft? draft;
+  @override
   final int lockVersion;
   @override
   final VendorVerificationSubmitPrivacyAcknowledgedEnum privacyAcknowledged;
@@ -72,7 +74,9 @@ class _$VendorVerificationSubmit extends VendorVerificationSubmit {
       (VendorVerificationSubmitBuilder()..update(updates))._build();
 
   _$VendorVerificationSubmit._(
-      {required this.lockVersion, required this.privacyAcknowledged})
+      {this.draft,
+      required this.lockVersion,
+      required this.privacyAcknowledged})
       : super._();
   @override
   VendorVerificationSubmit rebuild(
@@ -87,6 +91,7 @@ class _$VendorVerificationSubmit extends VendorVerificationSubmit {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is VendorVerificationSubmit &&
+        draft == other.draft &&
         lockVersion == other.lockVersion &&
         privacyAcknowledged == other.privacyAcknowledged;
   }
@@ -94,6 +99,7 @@ class _$VendorVerificationSubmit extends VendorVerificationSubmit {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, draft.hashCode);
     _$hash = $jc(_$hash, lockVersion.hashCode);
     _$hash = $jc(_$hash, privacyAcknowledged.hashCode);
     _$hash = $jf(_$hash);
@@ -103,6 +109,7 @@ class _$VendorVerificationSubmit extends VendorVerificationSubmit {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'VendorVerificationSubmit')
+          ..add('draft', draft)
           ..add('lockVersion', lockVersion)
           ..add('privacyAcknowledged', privacyAcknowledged))
         .toString();
@@ -113,6 +120,11 @@ class VendorVerificationSubmitBuilder
     implements
         Builder<VendorVerificationSubmit, VendorVerificationSubmitBuilder> {
   _$VendorVerificationSubmit? _$v;
+
+  VendorVerificationDraftBuilder? _draft;
+  VendorVerificationDraftBuilder get draft =>
+      _$this._draft ??= VendorVerificationDraftBuilder();
+  set draft(VendorVerificationDraftBuilder? draft) => _$this._draft = draft;
 
   int? _lockVersion;
   int? get lockVersion => _$this._lockVersion;
@@ -133,6 +145,7 @@ class VendorVerificationSubmitBuilder
   VendorVerificationSubmitBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _draft = $v.draft?.toBuilder();
       _lockVersion = $v.lockVersion;
       _privacyAcknowledged = $v.privacyAcknowledged;
       _$v = null;
@@ -154,15 +167,29 @@ class VendorVerificationSubmitBuilder
   VendorVerificationSubmit build() => _build();
 
   _$VendorVerificationSubmit _build() {
-    final _$result = _$v ??
-        _$VendorVerificationSubmit._(
-          lockVersion: BuiltValueNullFieldError.checkNotNull(
-              lockVersion, r'VendorVerificationSubmit', 'lockVersion'),
-          privacyAcknowledged: BuiltValueNullFieldError.checkNotNull(
-              privacyAcknowledged,
-              r'VendorVerificationSubmit',
-              'privacyAcknowledged'),
-        );
+    _$VendorVerificationSubmit _$result;
+    try {
+      _$result = _$v ??
+          _$VendorVerificationSubmit._(
+            draft: _draft?.build(),
+            lockVersion: BuiltValueNullFieldError.checkNotNull(
+                lockVersion, r'VendorVerificationSubmit', 'lockVersion'),
+            privacyAcknowledged: BuiltValueNullFieldError.checkNotNull(
+                privacyAcknowledged,
+                r'VendorVerificationSubmit',
+                'privacyAcknowledged'),
+          );
+    } catch (_) {
+      late String _$failedField;
+      try {
+        _$failedField = 'draft';
+        _draft?.build();
+      } catch (e) {
+        throw BuiltValueNestedFieldError(
+            r'VendorVerificationSubmit', _$failedField, e.toString());
+      }
+      rethrow;
+    }
     replace(_$result);
     return _$result;
   }

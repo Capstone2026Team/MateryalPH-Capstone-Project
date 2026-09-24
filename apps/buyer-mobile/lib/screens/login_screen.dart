@@ -5,7 +5,6 @@ import '../widgets/auth_content.dart';
 
 import '../auth/auth_repository.dart';
 import '../design_system/theme.dart';
-import '../widgets/brand_lockup.dart';
 import 'risk_otp_screen.dart';
 
 class LoginScreen extends StatefulWidget {

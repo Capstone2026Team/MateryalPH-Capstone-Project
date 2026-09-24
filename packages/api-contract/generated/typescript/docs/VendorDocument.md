@@ -9,6 +9,7 @@ Name | Type
 `id` | string
 `requirementKey` | string
 `version` | number
+`status` | string
 `scanState` | string
 
 ## Example
@@ -21,6 +22,7 @@ const example = {
   "id": null,
   "requirementKey": null,
   "version": null,
+  "status": null,
   "scanState": null,
 } satisfies VendorDocument
 

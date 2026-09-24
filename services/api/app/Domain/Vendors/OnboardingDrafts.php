@@ -23,6 +23,12 @@ final class OnboardingDrafts
                 throw new AuthenticationException('STALE_VERSION', 'This draft changed. Reload before saving.', 409);
             }
             $previous = $row === null ? [] : json_decode(Crypt::decryptString($row->payload_encrypted), true, flags: JSON_THROW_ON_ERROR);
+            if ($workstream === 'STORE_VERIFICATION') {
+                unset($previous['contacts'], $payload['contacts']);
+                foreach (['branch_code', 'branch_code_length', 'head_office'] as $retired) {
+                    unset($previous['tax_profile'][$retired], $payload['tax_profile'][$retired]);
+                }
+            }
             unset($payload['lock_version'], $payload['organization_lock_version'], $payload['draft_lock_version']);
             foreach ($payload as $key => $value) {
                 $previous[$key] = is_array($value) && ! array_is_list($value)

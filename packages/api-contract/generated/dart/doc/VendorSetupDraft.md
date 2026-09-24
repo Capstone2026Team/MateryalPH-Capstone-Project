@@ -8,7 +8,7 @@ import 'package:materyalph_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**draftLockVersion** | **int** | Version of this workstream draft; zero for its first save. Stale versions return 409. | [optional]
+**draftLockVersion** | **int** | Workstream draft version; zero on first save. Send together with the required organization guard. Omission retains legacy behavior without draft-level comparison. A stale draft returns 409 STALE_VERSION; a stale organization returns 409 RESOURCE_VERSION_CONFLICT. | [optional]
 **organizationLockVersion** | **int** |  |
 **publicStoreName** | **String** |  | [optional]
 **description** | **String** |  | [optional]

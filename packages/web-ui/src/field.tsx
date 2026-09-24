@@ -1,4 +1,6 @@
-import { forwardRef, useId, useState, type InputHTMLAttributes, type ReactNode } from 'react'
+import { createContext, useContext, forwardRef, useId, useState, type InputHTMLAttributes, type ReactNode } from 'react'
+
+export const FormErrors = createContext<Record<string, string>>({})
 
 export interface FieldProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string
@@ -8,6 +10,8 @@ export interface FieldProps extends InputHTMLAttributes<HTMLInputElement> {
 
 export const Field = forwardRef<HTMLInputElement, FieldProps>(
   ({ className = '', error, hint, id, label, required, type, ...props }, ref) => {
+    const errors = useContext(FormErrors)
+    error = error || errors[props.name ?? '']
     const generatedId = useId()
     const [visible, setVisible] = useState(false)
     const fieldId = id ?? props.name ?? generatedId

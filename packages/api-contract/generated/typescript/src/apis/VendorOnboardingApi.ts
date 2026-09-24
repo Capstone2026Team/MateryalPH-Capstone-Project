@@ -24,6 +24,16 @@ import {
     ErrorEnvelopeToJSON,
 } from '../models/ErrorEnvelope';
 import {
+    type GenericDataEnvelope,
+    GenericDataEnvelopeFromJSON,
+    GenericDataEnvelopeToJSON,
+} from '../models/GenericDataEnvelope';
+import {
+    type PsgcSearchEnvelope,
+    PsgcSearchEnvelopeFromJSON,
+    PsgcSearchEnvelopeToJSON,
+} from '../models/PsgcSearchEnvelope';
+import {
     type VendorAddressGeocode,
     VendorAddressGeocodeFromJSON,
     VendorAddressGeocodeToJSON,
@@ -33,6 +43,16 @@ import {
     VendorAddressGeocodeEnvelopeFromJSON,
     VendorAddressGeocodeEnvelopeToJSON,
 } from '../models/VendorAddressGeocodeEnvelope';
+import {
+    type VendorAddressSelection,
+    VendorAddressSelectionFromJSON,
+    VendorAddressSelectionToJSON,
+} from '../models/VendorAddressSelection';
+import {
+    type VendorCommissionAcceptance,
+    VendorCommissionAcceptanceFromJSON,
+    VendorCommissionAcceptanceToJSON,
+} from '../models/VendorCommissionAcceptance';
 import {
     type VendorDocumentEnvelope,
     VendorDocumentEnvelopeFromJSON,
@@ -114,6 +134,17 @@ import {
     XenditAccountVerificationWebhookToJSON,
 } from '../models/XenditAccountVerificationWebhook';
 
+export interface AcceptVendorCommissionRequest {
+    /**
+     *
+     */
+    idempotencyKey: string;
+    /**
+     *
+     */
+    vendorCommissionAcceptance: VendorCommissionAcceptance;
+}
+
 export interface ActivateVendorStoreRequest {
     /**
      *
@@ -175,6 +206,33 @@ export interface InviteVendorTeamMemberRequest {
     vendorInvitationRequest: VendorInvitationRequest;
 }
 
+export interface PreviewVendorRequirementsRequest {
+    /**
+     *
+     */
+    businessType: PreviewVendorRequirementsBusinessTypeEnum;
+    /**
+     *
+     */
+    representativeRole?: string;
+    /**
+     *
+     */
+    identityIdType?: string;
+    /**
+     *
+     */
+    representativeIdType?: string;
+    /**
+     *
+     */
+    authorityEvidenceVersionId?: string;
+    /**
+     *
+     */
+    declarationClaim?: PreviewVendorRequirementsDeclarationClaimEnum;
+}
+
 export interface ReceiveXenditAccountVerificationWebhookRequest {
     /**
      *
@@ -186,11 +244,32 @@ export interface ReceiveXenditAccountVerificationWebhookRequest {
     xenditAccountVerificationWebhook: XenditAccountVerificationWebhook;
 }
 
+export interface RemovePendingVendorDocumentRequest {
+    /**
+     *
+     */
+    requirementKey: string;
+}
+
 export interface RequestVendorStoreEmailVerificationRequest {
     /**
      *
      */
     emailRequest: EmailRequest;
+}
+
+export interface ResolveVendorAddressRequest {
+    /**
+     *
+     */
+    vendorAddressSelection: VendorAddressSelection;
+}
+
+export interface ResolveVendorAddressPinRequest {
+    /**
+     *
+     */
+    vendorAddressGeocode: VendorAddressGeocode;
 }
 
 export interface ReverseGeocodeVendorAddressRequest {
@@ -212,6 +291,25 @@ export interface SaveVendorVerificationDraftRequest {
      *
      */
     vendorVerificationDraft: VendorVerificationDraft;
+}
+
+export interface SearchVendorAddressAreasRequest {
+    /**
+     *
+     */
+    level: SearchVendorAddressAreasLevelEnum;
+    /**
+     *
+     */
+    parentCode?: string;
+    /**
+     *
+     */
+    q?: string;
+    /**
+     *
+     */
+    page?: number;
 }
 
 export interface SubmitVendorVerificationRequest {
@@ -259,6 +357,68 @@ export interface UploadVendorVerificationDocumentRequest {
  *
  */
 export class VendorOnboardingApi extends runtime.BaseAPI {
+
+    /**
+     * Creates request options for acceptVendorCommission without sending the request
+     */
+    async acceptVendorCommissionRequestOpts(requestParameters: AcceptVendorCommissionRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['idempotencyKey'] == null) {
+            throw new runtime.RequiredError(
+                'idempotencyKey',
+                'Required parameter "idempotencyKey" was null or undefined when calling acceptVendorCommission().'
+            );
+        }
+
+        if (requestParameters['vendorCommissionAcceptance'] == null) {
+            throw new runtime.RequiredError(
+                'vendorCommissionAcceptance',
+                'Required parameter "vendorCommissionAcceptance" was null or undefined when calling acceptVendorCommission().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (requestParameters['idempotencyKey'] != null) {
+            headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
+        }
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/vendors/onboarding/verification/commission`;
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: VendorCommissionAcceptanceToJSON(requestParameters['vendorCommissionAcceptance']),
+        };
+    }
+
+    /**
+     * Explicit version-bound acceptance in Store Verification. Owner only; applicable current representative authority requires the COMMISSION_AGREEMENT scope. Autosaving or submitting evidence never implies consent. Initial evidence submission remains available while authority approval is pending.
+     */
+    async acceptVendorCommissionRaw(requestParameters: AcceptVendorCommissionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorOnboardingEnvelope>> {
+        const requestOptions = await this.acceptVendorCommissionRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => VendorOnboardingEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * Explicit version-bound acceptance in Store Verification. Owner only; applicable current representative authority requires the COMMISSION_AGREEMENT scope. Autosaving or submitting evidence never implies consent. Initial evidence submission remains available while authority approval is pending.
+     */
+    async acceptVendorCommission(requestParameters: AcceptVendorCommissionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorOnboardingEnvelope> {
+        const response = await this.acceptVendorCommissionRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
 
     /**
      * Creates request options for activateVendorStore without sending the request
@@ -739,6 +899,72 @@ export class VendorOnboardingApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates request options for previewVendorRequirements without sending the request
+     */
+    async previewVendorRequirementsRequestOpts(requestParameters: PreviewVendorRequirementsRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['businessType'] == null) {
+            throw new runtime.RequiredError(
+                'businessType',
+                'Required parameter "businessType" was null or undefined when calling previewVendorRequirements().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['businessType'] != null) {
+            queryParameters['business_type'] = requestParameters['businessType'];
+        }
+
+        if (requestParameters['representativeRole'] != null) {
+            queryParameters['representative_role'] = requestParameters['representativeRole'];
+        }
+
+        if (requestParameters['identityIdType'] != null) {
+            queryParameters['identity_id_type'] = requestParameters['identityIdType'];
+        }
+
+        if (requestParameters['representativeIdType'] != null) {
+            queryParameters['representative_id_type'] = requestParameters['representativeIdType'];
+        }
+
+        if (requestParameters['authorityEvidenceVersionId'] != null) {
+            queryParameters['authority_evidence_version_id'] = requestParameters['authorityEvidenceVersionId'];
+        }
+
+        if (requestParameters['declarationClaim'] != null) {
+            queryParameters['declaration_claim'] = requestParameters['declarationClaim'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/vendors/onboarding/requirements`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     */
+    async previewVendorRequirementsRaw(requestParameters: PreviewVendorRequirementsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<GenericDataEnvelope>> {
+        const requestOptions = await this.previewVendorRequirementsRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => GenericDataEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async previewVendorRequirements(requestParameters: PreviewVendorRequirementsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<GenericDataEnvelope> {
+        const response = await this.previewVendorRequirementsRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Creates request options for receiveXenditAccountVerificationWebhook without sending the request
      */
     async receiveXenditAccountVerificationWebhookRequestOpts(requestParameters: ReceiveXenditAccountVerificationWebhookRequest): Promise<runtime.RequestOpts> {
@@ -834,6 +1060,53 @@ export class VendorOnboardingApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates request options for removePendingVendorDocument without sending the request
+     */
+    async removePendingVendorDocumentRequestOpts(requestParameters: RemovePendingVendorDocumentRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['requirementKey'] == null) {
+            throw new runtime.RequiredError(
+                'requirementKey',
+                'Required parameter "requirementKey" was null or undefined when calling removePendingVendorDocument().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/vendors/onboarding/documents/pending/{requirementKey}`;
+        urlPath = urlPath.replace('{requirementKey}', encodeURIComponent(String(requestParameters['requirementKey'])));
+
+        return {
+            path: urlPath,
+            method: 'DELETE',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     */
+    async removePendingVendorDocumentRaw(requestParameters: RemovePendingVendorDocumentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorOnboardingEnvelope>> {
+        const requestOptions = await this.removePendingVendorDocumentRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => VendorOnboardingEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async removePendingVendorDocument(requestParameters: RemovePendingVendorDocumentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorOnboardingEnvelope> {
+        const response = await this.removePendingVendorDocumentRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Creates request options for requestVendorStoreEmailVerification without sending the request
      */
     async requestVendorStoreEmailVerificationRequestOpts(requestParameters: RequestVendorStoreEmailVerificationRequest): Promise<runtime.RequestOpts> {
@@ -879,6 +1152,104 @@ export class VendorOnboardingApi extends runtime.BaseAPI {
      */
     async requestVendorStoreEmailVerification(requestParameters: RequestVendorStoreEmailVerificationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorStoreEmailEnvelope> {
         const response = await this.requestVendorStoreEmailVerificationRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for resolveVendorAddress without sending the request
+     */
+    async resolveVendorAddressRequestOpts(requestParameters: ResolveVendorAddressRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['vendorAddressSelection'] == null) {
+            throw new runtime.RequiredError(
+                'vendorAddressSelection',
+                'Required parameter "vendorAddressSelection" was null or undefined when calling resolveVendorAddress().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/vendors/onboarding/address/resolve`;
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: VendorAddressSelectionToJSON(requestParameters['vendorAddressSelection']),
+        };
+    }
+
+    /**
+     */
+    async resolveVendorAddressRaw(requestParameters: ResolveVendorAddressRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<GenericDataEnvelope>> {
+        const requestOptions = await this.resolveVendorAddressRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => GenericDataEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async resolveVendorAddress(requestParameters: ResolveVendorAddressRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<GenericDataEnvelope> {
+        const response = await this.resolveVendorAddressRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for resolveVendorAddressPin without sending the request
+     */
+    async resolveVendorAddressPinRequestOpts(requestParameters: ResolveVendorAddressPinRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['vendorAddressGeocode'] == null) {
+            throw new runtime.RequiredError(
+                'vendorAddressGeocode',
+                'Required parameter "vendorAddressGeocode" was null or undefined when calling resolveVendorAddressPin().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/vendors/onboarding/address/pin`;
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: VendorAddressGeocodeToJSON(requestParameters['vendorAddressGeocode']),
+        };
+    }
+
+    /**
+     */
+    async resolveVendorAddressPinRaw(requestParameters: ResolveVendorAddressPinRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<GenericDataEnvelope>> {
+        const requestOptions = await this.resolveVendorAddressPinRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => GenericDataEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async resolveVendorAddressPin(requestParameters: ResolveVendorAddressPinRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<GenericDataEnvelope> {
+        const response = await this.resolveVendorAddressPinRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -1028,6 +1399,68 @@ export class VendorOnboardingApi extends runtime.BaseAPI {
      */
     async saveVendorVerificationDraft(requestParameters: SaveVendorVerificationDraftRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorOnboardingEnvelope> {
         const response = await this.saveVendorVerificationDraftRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for searchVendorAddressAreas without sending the request
+     */
+    async searchVendorAddressAreasRequestOpts(requestParameters: SearchVendorAddressAreasRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['level'] == null) {
+            throw new runtime.RequiredError(
+                'level',
+                'Required parameter "level" was null or undefined when calling searchVendorAddressAreas().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['level'] != null) {
+            queryParameters['level'] = requestParameters['level'];
+        }
+
+        if (requestParameters['parentCode'] != null) {
+            queryParameters['parent_code'] = requestParameters['parentCode'];
+        }
+
+        if (requestParameters['q'] != null) {
+            queryParameters['q'] = requestParameters['q'];
+        }
+
+        if (requestParameters['page'] != null) {
+            queryParameters['page'] = requestParameters['page'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/vendors/onboarding/address/areas`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     */
+    async searchVendorAddressAreasRaw(requestParameters: SearchVendorAddressAreasRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PsgcSearchEnvelope>> {
+        const requestOptions = await this.searchVendorAddressAreasRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => PsgcSearchEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async searchVendorAddressAreas(requestParameters: SearchVendorAddressAreasRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PsgcSearchEnvelope> {
+        const response = await this.searchVendorAddressAreasRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -1260,6 +1693,34 @@ export class VendorOnboardingApi extends runtime.BaseAPI {
 /**
  * @export
  */
+export const PreviewVendorRequirementsBusinessTypeEnum = {
+    SoleProprietorship: 'SOLE_PROPRIETORSHIP',
+    Partnership: 'PARTNERSHIP',
+    Corporation: 'CORPORATION',
+    OnePersonCorporation: 'ONE_PERSON_CORPORATION',
+    Cooperative: 'COOPERATIVE',
+} as const;
+export type PreviewVendorRequirementsBusinessTypeEnum = typeof PreviewVendorRequirementsBusinessTypeEnum[keyof typeof PreviewVendorRequirementsBusinessTypeEnum];
+/**
+ * @export
+ */
+export const PreviewVendorRequirementsDeclarationClaimEnum = {
+    NUMBER_0: 0,
+    NUMBER_1: 1,
+} as const;
+export type PreviewVendorRequirementsDeclarationClaimEnum = typeof PreviewVendorRequirementsDeclarationClaimEnum[keyof typeof PreviewVendorRequirementsDeclarationClaimEnum];
+/**
+ * @export
+ */
+export const SearchVendorAddressAreasLevelEnum = {
+    Province: 'PROVINCE',
+    City: 'CITY',
+    Barangay: 'BARANGAY',
+} as const;
+export type SearchVendorAddressAreasLevelEnum = typeof SearchVendorAddressAreasLevelEnum[keyof typeof SearchVendorAddressAreasLevelEnum];
+/**
+ * @export
+ */
 export const UploadVendorStoreMediaKindEnum = {
     Logo: 'LOGO',
     Banner: 'BANNER',
@@ -1275,6 +1736,11 @@ export const UploadVendorVerificationDocumentRequirementKeyEnum = {
     LguPermit: 'lgu_permit',
     BirCor: 'bir_cor',
     IdentityEvidence: 'identity_evidence',
+    IdentityBackEvidence: 'identity_back_evidence',
+    RepresentativeIdentity: 'representative_identity',
+    RepresentativeIdentityBack: 'representative_identity_back',
+    AuthorityToAct: 'authority_to_act',
     TaxReliefEvidence: 'tax_relief_evidence',
+    OptionalCertification: 'optional_certification',
 } as const;
 export type UploadVendorVerificationDocumentRequirementKeyEnum = typeof UploadVendorVerificationDocumentRequirementKeyEnum[keyof typeof UploadVendorVerificationDocumentRequirementKeyEnum];

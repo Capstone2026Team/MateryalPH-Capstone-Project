@@ -10,6 +10,7 @@ use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Identity\EmailOtpService;
 use App\Domain\Operations\OutboxPublisher;
+use App\Http\Requests\Vendor\VendorVerificationDraftRequest;
 use App\Policies\VendorEvidencePolicy;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -62,6 +63,7 @@ final class VendorOnboardingService
             'bir_cor' => ['label' => 'BIR COR evidence', 'level' => 'REQUIRED'],
             'tax_profile' => ['label' => 'Tax profile', 'level' => 'REQUIRED'],
             'tax_relief_evidence' => ['label' => 'Tax relief evidence', 'level' => 'CONDITIONALLY_REQUIRED'],
+            'commission_terms' => ['label' => '2% commission terms', 'level' => 'REQUIRED'],
             'privacy_acknowledgement' => ['label' => 'Privacy acknowledgement', 'level' => 'REQUIRED'],
         ],
         'STORE_SETUP' => [
@@ -71,7 +73,6 @@ final class VendorOnboardingService
             'fulfillment_method' => ['label' => 'Fulfillment method', 'level' => 'REQUIRED'],
             'delivery_configuration' => ['label' => 'Delivery configuration', 'level' => 'CONDITIONALLY_REQUIRED'],
             'payment_connection' => ['label' => 'Xendit TEST connection', 'level' => 'REQUIRED'],
-            'commission_terms' => ['label' => '2% commission terms', 'level' => 'REQUIRED'],
             'team' => ['label' => 'Team accounts', 'level' => 'OPTIONAL'],
         ],
     ];
@@ -129,9 +130,8 @@ final class VendorOnboardingService
         $profile = DB::table('store_profiles')->where('vendor_organization_id', $organizationId)->first();
         $classification = DB::table('vendor_classifications')->where('vendor_organization_id', $organizationId)->first();
         $address = DB::table('addresses')->where('owner_type', 'VENDOR_ORGANIZATION')->where('owner_id', $organizationId)->where('is_current', true)->first();
-        $tax = DB::table('vendor_tax_profiles as p')->leftJoin('vendor_tax_profile_versions as v', 'v.id', '=', 'p.current_version_id')->where('p.vendor_organization_id', $organizationId)->first(['p.status', 'p.environment', 'p.lock_version', 'p.attested_at', 'v.version', 'v.entity_class', 'v.registration_category', 'v.vat_category', 'v.vat_verified_category', 'v.tin_branch_code', 'v.branch_code_encrypted', 'v.declaration_claim', 'v.taxable_year', 'v.bir_cor_reference', 'v.fiscal_year_start_month', 'v.taxpayer_key_last4', 'v.tin_last4', 'v.tax_details', 'v.owner_attested_at']);
+        $tax = DB::table('vendor_tax_profiles as p')->leftJoin('vendor_tax_profile_versions as v', 'v.id', '=', 'p.current_version_id')->where('p.vendor_organization_id', $organizationId)->first(['p.status', 'p.environment', 'p.lock_version', 'p.attested_at', 'v.version', 'v.entity_class', 'v.registration_category', 'v.vat_category', 'v.vat_verified_category', 'v.tin_encrypted', 'v.declaration_claim', 'v.taxable_year', 'v.bir_cor_reference', 'v.fiscal_year_start_month', 'v.taxpayer_key_last4', 'v.tin_last4', 'v.tax_details', 'v.owner_attested_at']);
         $payment = DB::table('vendor_payment_accounts')->where('vendor_organization_id', $organizationId)->first(['environment', 'provider', 'provider_account_id', 'connection_status', 'provider_status', 'capabilities', 'invitation_url_masked', 'last_reconciled_at', 'last_error_code', 'lock_version']);
-        $contacts = DB::table('vendor_contacts')->where('vendor_organization_id', $organizationId)->where('active', true)->orderByDesc('is_primary')->orderBy('id')->get(['id', 'full_name', 'title', 'email', 'phone', 'is_primary', 'is_public', 'is_authorized', 'lock_version']);
         $media = DB::table('store_media as m')->join('files as f', 'f.id', '=', 'm.file_id')->join('store_profiles as p', 'p.id', '=', 'm.store_profile_id')->where('p.vendor_organization_id', $organizationId)->orderBy('m.sort_order')->orderBy('m.id')->get(['m.id', 'm.file_id', 'm.kind', 'm.alt_text', 'm.status', 'f.original_name', 'f.scan_state']);
         $delivery = DB::table('delivery_service_areas')->where('vendor_organization_id', $organizationId)->first(['area_type', 'maximum_distance_km', 'coverage_notes', 'active', 'version', 'lock_version']);
         $vehicles = $this->vehicles($organizationId);
@@ -150,6 +150,7 @@ final class VendorOnboardingService
                 'id' => (string) $organization->id,
                 'legal_name' => $organization->legal_name,
                 'registered_name' => $organization->registered_name,
+                'legal_business_name' => $organization->legal_business_name,
                 'store_name' => $organization->store_name,
                 'business_type' => $organization->business_type,
                 'date_established' => $organization->date_established,
@@ -168,13 +169,21 @@ final class VendorOnboardingService
             'verification' => [
                 'status' => $organization->store_verification_status,
                 'privacy_acknowledged' => $privacyAcknowledged,
-                'documents' => $canReadPrivate ? DB::table('vendor_documents as d')->join('vendor_document_versions as v', 'v.id', '=', 'd.current_version_id')->join('files as f', 'f.id', '=', 'v.file_id')->where('d.vendor_organization_id', $organizationId)->get(['d.requirement_key', 'd.status', 'v.id', 'v.file_id', 'v.version', 'v.scan_state', 'v.content_validation_state', 'v.content_hash', 'v.mime_type', 'v.byte_size', 'v.supersedes_version_id', 'f.original_name'])->map(fn (object $row): array => (array) $row)->all() : [],
+                'documents' => $canReadPrivate ? DB::table('vendor_documents as d')->where('d.review_submitted', true)->join('vendor_document_versions as v', 'v.id', '=', 'd.current_version_id')->join('files as f', 'f.id', '=', 'v.file_id')->where('d.vendor_organization_id', $organizationId)->get(['d.requirement_key', 'd.document_type', 'd.status', 'd.superseded_at', 'v.id', 'v.business_document_id', 'v.file_id', 'v.version', 'v.scan_state', 'v.content_validation_state', 'v.content_hash', 'v.mime_type', 'v.byte_size', 'v.supersedes_version_id', 'f.original_name'])->map(function (object $row): array {
+                    $versions = DB::table('vendor_document_versions as v')->join('files as f', 'f.id', '=', 'v.file_id')->where('v.business_document_id', $row->business_document_id)->orderByDesc('v.version')->limit(5)->get(['v.id', 'v.file_id', 'v.version', 'v.scan_state', 'f.original_name'])->map(fn (object $version): array => (array) $version)->all();
+                    unset($row->business_document_id);
+
+                    return (array) $row + ['recent_versions' => $versions];
+                })->all() : [],
+                'form_state' => $canReadPrivate ? $this->verificationFormState($organizationId, true) : [],
+                'pending_documents' => $canReadPrivate ? DB::table('vendor_pending_documents as p')->join('files as f', 'f.id', '=', 'p.file_id')->where('p.vendor_organization_id', $organizationId)->get(['p.requirement_key', 'p.file_id', 'f.original_name', 'f.byte_size', 'f.content_type'])->map(fn (object $row): array => (array) $row + ['status' => 'PENDING_SUBMISSION'])->all() : [],
+                'commission_terms' => $this->commissionTerms($request, $organizationId),
                 'privacy_notice' => collect($this->agreements->current($request))->firstWhere('code', 'PRIVACY_NOTICE'),
                 'legal_identity' => $canReadPrivate ? $this->legalIdentity($organization) : null,
                 'representative' => $canReadPrivate ? $this->authority->snapshot($organizationId) : null,
+                'authority_review' => $canReadPrivate ? DB::table('vendor_authority_reviews')->where('representative_version_id', $this->authority->current($organizationId)?->id)->orderByDesc('reviewed_at')->first(['decision', 'scope', 'reason', 'reviewed_at']) : null,
                 'owner' => $canReadPrivate ? $this->ownerInformation($organizationId) : null,
-                'contacts' => $contacts->filter(fn (object $contact): bool => $canReadPrivate || (bool) $contact->is_public)->values()->map(fn (object $contact): array => (array) $contact)->all(),
-                'classification' => $classification === null ? null : ['supplier_type' => $classification->supplier_type, 'niches' => $this->jsonArray($classification->niches), 'custom_label' => $classification->custom_label, 'version' => (int) $classification->version, 'lock_version' => (int) $classification->lock_version],
+                'classification' => $classification === null ? null : ['supplier_type' => $classification->supplier_type, 'niches' => $this->jsonArray($classification->niches), 'custom_label' => $classification->custom_label, 'custom_labels' => $this->jsonArray($classification->custom_labels), 'version' => (int) $classification->version, 'lock_version' => (int) $classification->lock_version],
                 'address' => $address === null ? null : $this->address($address),
                 'tax_profile' => ! $canReadPrivate || $tax === null ? null : $this->tax($tax),
             ],
@@ -200,15 +209,82 @@ final class VendorOnboardingService
      * @param  array<string, mixed>  $input
      * @return array<string, mixed>
      */
-    public function draftVerification(Request $request, array $input): array
+    public function previewRequirements(Request $request, array $input): array
     {
         $this->requireVendorPermission($request, 'vendor.onboarding.manage');
         $organizationId = $this->organizationId($request);
+        if (array_key_exists('declaration_claim', $input)) {
+            $input['declaration_claim'] = (bool) $input['declaration_claim'];
+        }
+        $input['authority_from_registration'] = $this->authority->registrationCanEstablishAuthority($organizationId, [
+            'relationship' => $input['representative_role'] ?? null,
+            'authority_evidence_version_id' => $input['authority_evidence_version_id'] ?? null,
+        ]);
+
+        return $this->requirements->resolve($input);
+    }
+
+    /** @param array<string, mixed> $input
+     * @return array<string, mixed>
+     */
+    public function draftVerification(Request $request, array $input): array
+    {
+        return $this->saveVerificationProgress($request, $input);
+    }
+
+    /** @param array<string, mixed> $input
+     * @param  array<string, mixed>|null  $resolvedAddress
+     * @return array<string, mixed>
+     */
+    private function saveVerificationProgress(Request $request, array $input, ?array $resolvedAddress = null): array
+    {
+        $this->requireVendorPermission($request, 'vendor.onboarding.manage');
+        $organizationId = $this->organizationId($request);
+        if (isset($input['form_state'])) {
+            $this->requireVendorPermission($request, 'vendor.onboarding.private_documents');
+            DB::transaction(function () use ($request, $input, $organizationId): void {
+                $organization = DB::table('vendor_organizations')->where('id', $organizationId)->lockForUpdate()->first();
+                $this->assertVersion($organization, $input['lock_version'] ?? null);
+                $state = json_decode($input['form_state'], true, flags: JSON_THROW_ON_ERROR);
+                $previous = $this->verificationFormState($organizationId);
+                foreach (['tin', 'identity_id_number', 'representative_id_number'] as $field) {
+                    if (empty($state[$field][0]) && ! empty($previous[$field][0])) {
+                        $state[$field] = $previous[$field];
+                    }
+                }
+                $this->drafts->save($organizationId, 'STORE_VERIFICATION', ['form_state' => json_encode($state, JSON_THROW_ON_ERROR)], (int) $request->user()->getKey(), $input['draft_lock_version'] ?? null);
+                DB::table('vendor_organizations')->where('id', $organizationId)->update(['lock_version' => DB::raw('lock_version + 1'), 'updated_at' => now()]);
+            });
+
+            return $this->snapshot($request);
+        }
+        if (($input['business_type'] ?? DB::table('vendor_organizations')->where('id', $organizationId)->value('business_type')) === 'SOLE_PROPRIETORSHIP') {
+            unset($input['legal_business_name'], $input['registered_name']);
+        }
+        $savedState = $this->verificationFormState($organizationId);
+        foreach (['tin' => ['tax_profile', 'tin'], 'identity_id_number' => ['legal_identity', 'id_number'], 'representative_id_number' => ['representative', 'id_number']] as $field => [$group, $key]) {
+            if (isset($input[$group]) && empty($input[$group][$key]) && ! empty($savedState[$field][0])) {
+                $input[$group][$key] = $savedState[$field][0];
+            }
+        }
+        validator($input, (new VendorVerificationDraftRequest)->rules())->validate();
+        if (is_array($input['address'] ?? null)) {
+            $input['address'] = $resolvedAddress ?? app(VendorAddressResolver::class)->validated($organizationId, $input['address']);
+        }
         DB::transaction(function () use ($request, $input, $organizationId): void {
             $organization = DB::table('vendor_organizations')->where('id', $organizationId)->lockForUpdate()->first();
             $this->assertVersion($organization, $input['lock_version'] ?? null);
             $before = $this->reviewFingerprints($organizationId);
-            $update = array_intersect_key($input, array_flip(['business_type', 'registered_name', 'date_established', 'store_phone']));
+            if (isset($input['business_type']) && $organization->business_type !== $input['business_type']) {
+                DB::table('vendor_documents')->where('vendor_organization_id', $organizationId)->whereIn('requirement_key', ['business_registration', 'lgu_permit', 'bir_cor', 'identity_evidence', 'identity_back_evidence', 'representative_identity', 'representative_identity_back', 'authority_to_act'])->update(['superseded_at' => now(), 'status' => 'IN_PROGRESS', 'updated_at' => now()]);
+            }
+            $update = array_intersect_key($input, array_flip(['business_type', 'registered_name', 'legal_business_name', 'date_established', 'store_phone']));
+            if (isset($input['registered_name']) && ! isset($input['legal_business_name'])) {
+                $update['legal_business_name'] = $input['registered_name'];
+            }
+            if (isset($input['legal_business_name'])) {
+                $update['registered_name'] = $input['legal_business_name'];
+            }
             if (array_key_exists('store_email', $input)) {
                 $candidateEmail = mb_strtolower(trim((string) $input['store_email']));
                 if ($candidateEmail !== '' && $candidateEmail !== (string) $organization->store_email) {
@@ -229,9 +305,6 @@ final class VendorOnboardingService
             }
             if (is_array($input['representative'] ?? null)) {
                 $this->authority->save($request, $organizationId, $input['representative']);
-            }
-            if (array_key_exists('contacts', $input)) {
-                $this->saveContacts($organizationId, is_array($input['contacts']) ? $input['contacts'] : []);
             }
             if (is_array($input['classification'] ?? null)) {
                 $this->saveClassification($organizationId, $input['classification']);
@@ -284,16 +357,29 @@ final class VendorOnboardingService
         $organizationId = $this->organizationId($request);
         $key = $this->requireIdempotencyKey($request);
 
-        DB::transaction(function () use ($request, $input, $organizationId, $key): void {
+        // Provider-backed address validation happens before taking database locks.
+        $resolvedAddress = is_array($input['draft']['address'] ?? null)
+            ? app(VendorAddressResolver::class)->validated($organizationId, $input['draft']['address']) : null;
+
+        DB::transaction(function () use ($request, $input, $organizationId, $key, $resolvedAddress): void {
             $organization = DB::table('vendor_organizations')->where('id', $organizationId)->lockForUpdate()->first();
             if ($this->idempotent($request, 'VENDOR_VERIFICATION_SUBMIT', $key, $organizationId)) {
                 return;
             }
             $this->assertVersion($organization, $input['lock_version'] ?? null);
+            if ($organization->store_verification_status === 'PENDING_VERIFICATION') {
+                throw new AuthenticationException('VERIFICATION_ALREADY_SUBMITTED', 'Your verification is already awaiting Admin review.', 409);
+            }
+            if (is_array($input['draft'] ?? null)) {
+                $this->saveVerificationProgress($request, array_replace($input['draft'], ['lock_version' => (int) $organization->lock_version]), $resolvedAddress);
+                $organization = DB::table('vendor_organizations')->where('id', $organizationId)->first();
+            }
+            $this->submitPendingDocuments($request, $organizationId);
             $this->requireVerificationCompleteness($request, $organizationId, (bool) ($input['privacy_acknowledged'] ?? false));
             $this->acceptPrivacyNotice($request, $organizationId);
+            $this->drafts->save($organizationId, 'STORE_VERIFICATION', ['form_state' => '{}'], (int) $request->user()->getKey(), null);
             $now = now();
-            DB::table('vendor_onboarding_steps')->where('vendor_organization_id', $organizationId)->where('section', 'STORE_VERIFICATION')->where('is_current', true)->whereIn('status', ['IN_PROGRESS', 'NOT_STARTED', 'COMPLETED'])->update(['status' => 'PENDING_VERIFICATION', 'submitted_by_user_id' => $request->user()->getKey(), 'submitted_at' => $now, 'updated_at' => $now]);
+            DB::table('vendor_onboarding_steps')->where('vendor_organization_id', $organizationId)->where('section', 'STORE_VERIFICATION')->where('is_current', true)->where('requirement_key', '!=', 'commission_terms')->whereIn('status', ['IN_PROGRESS', 'NOT_STARTED', 'COMPLETED', 'CHANGES_REQUIRED', 'REJECTED', 'EXPIRED'])->update(['status' => 'PENDING_VERIFICATION', 'submitted_by_user_id' => $request->user()->getKey(), 'submitted_at' => $now, 'updated_at' => $now]);
             $documentIds = DB::table('vendor_documents')->where('vendor_organization_id', $organizationId)->whereIn('requirement_key', array_keys(self::DOCUMENTS))->whereIn('status', ['IN_PROGRESS', 'CHANGES_REQUIRED', 'REJECTED'])->pluck('id');
             if ($documentIds->isNotEmpty()) {
                 DB::table('vendor_documents')->whereIn('id', $documentIds)->update(['status' => 'SUBMITTED', 'updated_at' => $now]);
@@ -408,15 +494,10 @@ final class VendorOnboardingService
             if ($payment === null || $payment->environment !== 'TEST' || $payment->connection_status !== 'CONNECTED') {
                 throw new AuthenticationException('PAYMENT_CONNECTION_REQUIRED', 'Reconcile the Xendit TEST connection before finishing Store Setup.', 422);
             }
-            if (! (bool) ($input['commission_terms_accepted'] ?? false)) {
-                throw new AuthenticationException('COMMISSION_TERMS_REQUIRED', 'Review and accept the current 2% Vendor commission terms.', 422);
-            }
-            $this->acceptCommissionTerms($request, $organizationId);
             $this->setStep($organizationId, 'STORE_SETUP', 'public_store_profile', 'COMPLETED');
             $this->setStep($organizationId, 'STORE_SETUP', 'bulk_capability', 'COMPLETED');
             $this->setStep($organizationId, 'STORE_SETUP', 'fulfillment_method', 'COMPLETED');
             $this->setStep($organizationId, 'STORE_SETUP', 'payment_connection', 'COMPLETED');
-            $this->setStep($organizationId, 'STORE_SETUP', 'commission_terms', 'COMPLETED');
             if ($profile->fulfillment_method === 'SELF_PICKUP') {
                 $this->setStep($organizationId, 'STORE_SETUP', 'delivery_configuration', 'NOT_APPLICABLE', 'Vendor selected Self-Pickup only.');
             } else {
@@ -443,6 +524,35 @@ final class VendorOnboardingService
         $this->audit->account($request, 'VENDOR_ONBOARDING_WELCOME_DISMISSED', 'VENDOR_ORGANIZATION', $organizationId);
 
         return $this->snapshot($request);
+    }
+
+    /** @return array<string, mixed> */
+    /** @param array<string, mixed> $input
+     * @return array<string, mixed>
+     */
+    public function resolveAddress(Request $request, array $input): array
+    {
+        $this->requireVendorPermission($request, 'vendor.onboarding.manage');
+
+        return app(VendorAddressResolver::class)->resolve($this->organizationId($request), $input);
+    }
+
+    /** @return array<string, mixed> */
+    public function resolvePin(Request $request, float $latitude, float $longitude): array
+    {
+        $this->requireVendorPermission($request, 'vendor.onboarding.manage');
+
+        return app(VendorAddressResolver::class)->pin($this->organizationId($request), $latitude, $longitude);
+    }
+
+    /** @param array<string, mixed> $input
+     * @return array<string, mixed>
+     */
+    public function searchAddresses(Request $request, array $input): array
+    {
+        $this->requireVendorPermission($request, 'vendor.onboarding.manage');
+
+        return app(PsgcDirectory::class)->search($input['level'], $input['parent_code'] ?? null, $input['q'] ?? '', (int) ($input['page'] ?? 1));
     }
 
     /** @return array<string, mixed> */
@@ -521,66 +631,118 @@ final class VendorOnboardingService
         $fileId = $this->storeUploadedFile($request, $file, $organizationId, 'BUSINESS_DOCUMENT');
 
         try {
-            return DB::transaction(function () use ($request, $file, $fileId, $requirementKey, $metadata, $organizationId): array {
+            $previousFile = DB::transaction(function () use ($organizationId, $requirementKey, $fileId, $metadata): ?string {
                 DB::table('vendor_organizations')->where('id', $organizationId)->lockForUpdate()->first();
-                $step = DB::table('vendor_onboarding_steps')->where('vendor_organization_id', $organizationId)->where('section', 'STORE_VERIFICATION')->where('requirement_key', $requirementKey)->where('is_current', true)->first();
-                if ($step === null || $step->status === 'NOT_APPLICABLE') {
-                    throw new AuthenticationException('DOCUMENT_TYPE_UNAVAILABLE', 'This evidence requirement is unavailable.', 422);
+                $query = DB::table('vendor_pending_documents')->where('vendor_organization_id', $organizationId)->where('requirement_key', $requirementKey);
+                $previous = $query->first();
+                $values = ['file_id' => $fileId, 'metadata' => json_encode($this->safeMetadata($metadata), JSON_THROW_ON_ERROR), 'updated_at' => now()];
+                if ($previous === null) {
+                    $query->insert($values + ['id' => (string) Str::uuid7(), 'vendor_organization_id' => $organizationId, 'requirement_key' => $requirementKey, 'created_at' => now()]);
+                } else {
+                    $query->update($values);
                 }
-                $organization = DB::table('vendor_organizations')->where('id', $organizationId)->first(['business_type']);
-                $taxVersionId = null;
-                if ($requirementKey === 'tax_relief_evidence') {
-                    $taxProfile = DB::table('vendor_tax_profiles as p')
-                        ->join('vendor_tax_profile_versions as v', 'v.id', '=', 'p.current_version_id')
-                        ->where('p.vendor_organization_id', $organizationId)
-                        ->first(['v.id as version_id', 'v.tax_details']);
-                    $taxDetails = $taxProfile === null ? [] : (is_string($taxProfile->tax_details) ? (json_decode($taxProfile->tax_details, true) ?: []) : (is_array($taxProfile->tax_details) ? $taxProfile->tax_details : []));
-                    if ($taxProfile === null || ! is_string($taxProfile->version_id) || ($taxDetails['tax_relief_claimed'] ?? null) !== true) {
-                        throw new AuthenticationException('TAX_RELIEF_NOT_DECLARED', 'Declare the tax relief claim before uploading supporting evidence.', 422);
-                    }
-                    $taxVersionId = $taxProfile->version_id;
-                }
-                if (str_starts_with($requirementKey, 'representative_identity') || $requirementKey === 'authority_to_act') {
-                    $representative = $this->authority->current($organizationId);
-                    if ($representative === null) {
-                        throw new AuthenticationException('REPRESENTATIVE_REQUIRED', 'Save the representative information before uploading their evidence.', 422);
-                    }
-                    $metadata['representative_version_id'] = (string) $representative->id;
-                }
-                $document = DB::table('vendor_documents')->where('vendor_organization_id', $organizationId)->where('requirement_key', $requirementKey)->first();
-                $documentId = $document === null ? (string) Str::uuid7() : (string) $document->id;
-                $previous = $document === null ? null : DB::table('vendor_document_versions')->where('id', $document->current_version_id)->first();
-                $documentType = $requirementKey === 'business_registration'
-                    ? $this->registrationEvidenceType($organization === null ? null : $organization->business_type)
-                    : ($requirementKey === 'identity_evidence' ? 'GOVERNMENT_ID' : $requirementKey);
-                if ($document === null) {
-                    DB::table('vendor_documents')->insert(['id' => $documentId, 'vendor_organization_id' => $organizationId, 'onboarding_step_id' => $step->id, 'requirement_key' => $requirementKey, 'document_type' => $documentType, 'status' => 'IN_PROGRESS', 'lock_version' => 1, 'created_at' => now(), 'updated_at' => now()]);
-                }
-                $versionId = (string) Str::uuid7();
-                $version = ($previous === null ? 0 : (int) $previous->version) + 1;
-                $checksum = hash_file('sha256', $file->getRealPath());
-                DB::table('vendor_document_versions')->insert(['id' => $versionId, 'business_document_id' => $documentId, 'file_id' => $fileId, 'version' => $version, 'uploaded_by_user_id' => $request->user()->getKey(), 'content_hash' => $checksum, 'mime_type' => $file->getMimeType(), 'byte_size' => $file->getSize(), 'content_validation_state' => 'VALID', 'scan_state' => 'CLEAN', 'vendor_metadata' => $metadata === [] ? null : json_encode($this->safeMetadata($metadata), JSON_THROW_ON_ERROR), 'supersedes_version_id' => $previous === null ? null : $previous->id, 'submitted_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
-                DB::table('vendor_documents')->where('id', $documentId)->update(['document_type' => $documentType, 'current_version_id' => $versionId, 'status' => 'IN_PROGRESS', 'lock_version' => DB::raw('lock_version + 1'), 'updated_at' => now()]);
-                if ($requirementKey === 'tax_relief_evidence') {
-                    $safeMetadata = $this->safeMetadata($metadata);
-                    DB::table('tax_evidence')->insert(['id' => (string) Str::uuid7(), 'vendor_tax_profile_version_id' => $taxVersionId, 'file_id' => $fileId, 'evidence_type' => 'TAX_RELIEF_DECLARATION', 'origin' => 'VENDOR_UPLOAD', 'document_hash' => $checksum, 'valid_from' => $this->metadataDate($safeMetadata['valid_from'] ?? null), 'valid_until' => $this->metadataDate($safeMetadata['valid_until'] ?? null), 'review_state' => 'PENDING', 'created_at' => now(), 'updated_at' => now()]);
-                }
-                $this->setStep($organizationId, 'STORE_VERIFICATION', $requirementKey, 'IN_PROGRESS');
-                if ($this->authority->required($organizationId) && in_array($requirementKey, ['business_registration', 'authority_to_act', 'representative_identity', 'representative_identity_back'], true)) {
-                    $this->setStep($organizationId, 'STORE_VERIFICATION', 'authority_to_act', 'IN_PROGRESS');
-                }
-                DB::table('vendor_organizations')->where('id', $organizationId)->update(['store_verification_status' => 'IN_PROGRESS', 'lock_version' => DB::raw('lock_version + 1'), 'updated_at' => now()]);
-                $this->audit->account($request, 'VENDOR_EVIDENCE_UPLOADED', 'BUSINESS_DOCUMENT_VERSION', $versionId, after: ['requirement_key' => $requirementKey, 'version' => $version, 'scan_state' => 'CLEAN']);
 
-                return ['id' => $versionId, 'requirement_key' => $requirementKey, 'version' => $version, 'scan_state' => 'CLEAN'];
+                return $previous?->file_id;
             });
         } catch (\Throwable $exception) {
-            $stored = DB::table('files')->where('id', $fileId)->first();
-            if ($stored !== null && ! DB::table('vendor_document_versions')->where('file_id', $fileId)->exists()) {
-                Storage::disk($this->disk())->delete($stored->object_key);
+            $this->discardPendingFile($fileId);
+            throw $exception;
+        }
+        if ($previousFile !== null) {
+            $this->discardPendingFile($previousFile);
+        }
+
+        return ['id' => $fileId, 'requirement_key' => $requirementKey, 'version' => 0, 'scan_state' => 'CLEAN', 'status' => 'PENDING_SUBMISSION'];
+    }
+
+    /** @return array<string, mixed> */
+    public function removePendingDocument(Request $request, string $requirementKey): array
+    {
+        $this->requireVendorPermission($request, 'vendor.onboarding.private_documents');
+        $organizationId = $this->organizationId($request);
+        $fileId = DB::transaction(function () use ($organizationId, $requirementKey): ?string {
+            DB::table('vendor_organizations')->where('id', $organizationId)->lockForUpdate()->first();
+            $query = DB::table('vendor_pending_documents')->where('vendor_organization_id', $organizationId)->where('requirement_key', $requirementKey);
+            $fileId = $query->value('file_id');
+            $query->delete();
+
+            return $fileId;
+        });
+        if (is_string($fileId)) {
+            $this->discardPendingFile($fileId);
+        }
+
+        return $this->snapshot($request);
+    }
+
+    private function discardPendingFile(string $fileId): void
+    {
+        $file = DB::table('files')->where('id', $fileId)->first();
+        if ($file !== null && ! DB::table('vendor_document_versions')->where('file_id', $fileId)->exists() && ! DB::table('vendor_pending_documents')->where('file_id', $fileId)->exists()) {
+            if (Storage::disk($this->disk())->delete($file->object_key)) {
                 DB::table('files')->where('id', $fileId)->delete();
             }
-            throw $exception;
+        }
+    }
+
+    private function submitPendingDocuments(Request $request, string $organizationId): void
+    {
+        foreach (DB::table('vendor_pending_documents')->where('vendor_organization_id', $organizationId)->orderBy('requirement_key')->get() as $pending) {
+            $requirementKey = $pending->requirement_key;
+            $fileId = $pending->file_id;
+            $file = DB::table('files')->where('id', $fileId)->first();
+            if ($file === null || $file->scan_state !== 'CLEAN') {
+                throw new AuthenticationException('FILE_VALIDATION_FAILED', 'The selected file must pass security checks.', 422, ['blockers' => [['key' => $requirementKey, 'reason' => 'Select a file that passes security checks.']]]);
+            }
+            $metadata = json_decode($pending->metadata ?? '{}', true, flags: JSON_THROW_ON_ERROR);
+            $step = DB::table('vendor_onboarding_steps')->where('vendor_organization_id', $organizationId)->where('section', 'STORE_VERIFICATION')->where('requirement_key', $requirementKey)->where('is_current', true)->first();
+            if ($step === null || $step->status === 'NOT_APPLICABLE') {
+                continue;
+            }
+            if (in_array($step->status, ['PENDING_VERIFICATION', 'SUBMITTED', 'APPROVED'], true)) {
+                throw new AuthenticationException('DOCUMENT_NOT_EDITABLE', 'This requirement has not been returned for correction.', 422, ['blockers' => [['key' => $requirementKey, 'reason' => 'This document is already submitted.']]]);
+            }
+            $organization = DB::table('vendor_organizations')->where('id', $organizationId)->first(['business_type']);
+            $taxVersionId = null;
+            if ($requirementKey === 'tax_relief_evidence') {
+                $taxProfile = DB::table('vendor_tax_profiles as p')
+                    ->join('vendor_tax_profile_versions as v', 'v.id', '=', 'p.current_version_id')
+                    ->where('p.vendor_organization_id', $organizationId)
+                    ->first(['v.id as version_id', 'v.tax_details']);
+                $taxDetails = $taxProfile === null ? [] : (is_string($taxProfile->tax_details) ? (json_decode($taxProfile->tax_details, true) ?: []) : (is_array($taxProfile->tax_details) ? $taxProfile->tax_details : []));
+                if ($taxProfile === null || ! is_string($taxProfile->version_id) || ($taxDetails['tax_relief_claimed'] ?? null) !== true || empty($taxDetails['declaration_year'])) {
+                    throw new AuthenticationException('TAX_RELIEF_NOT_DECLARED', 'Declare the Sworn Declaration claim and taxable year before uploading the BIR-received PDF.', 422);
+                }
+                $taxVersionId = $taxProfile->version_id;
+            }
+            if (str_starts_with($requirementKey, 'representative_identity') || $requirementKey === 'authority_to_act') {
+                $representative = $this->authority->current($organizationId);
+                if ($representative === null) {
+                    throw new AuthenticationException('REPRESENTATIVE_REQUIRED', 'Save the representative information before uploading their evidence.', 422);
+                }
+                $metadata['representative_version_id'] = (string) $representative->id;
+            }
+            $document = DB::table('vendor_documents')->where('vendor_organization_id', $organizationId)->where('requirement_key', $requirementKey)->first();
+            $documentId = $document === null ? (string) Str::uuid7() : (string) $document->id;
+            $previous = $document === null ? null : DB::table('vendor_document_versions')->where('id', $document->current_version_id)->first();
+            $documentType = $requirementKey === 'business_registration'
+                ? $this->registrationEvidenceType($organization === null ? null : $organization->business_type)
+                : ($requirementKey === 'identity_evidence' ? 'GOVERNMENT_ID' : $requirementKey);
+            if ($document === null) {
+                DB::table('vendor_documents')->insert(['id' => $documentId, 'vendor_organization_id' => $organizationId, 'onboarding_step_id' => $step->id, 'requirement_key' => $requirementKey, 'document_type' => $documentType, 'status' => 'SUBMITTED', 'lock_version' => 1, 'created_at' => now(), 'updated_at' => now()]);
+            }
+            $versionId = (string) Str::uuid7();
+            $version = ($previous === null ? 0 : (int) $previous->version) + 1;
+            $checksum = $file->checksum_sha256;
+            DB::table('vendor_document_versions')->insert(['id' => $versionId, 'business_document_id' => $documentId, 'file_id' => $fileId, 'version' => $version, 'uploaded_by_user_id' => $request->user()->getKey(), 'content_hash' => $checksum, 'mime_type' => $file->content_type, 'byte_size' => $file->byte_size, 'content_validation_state' => 'VALID', 'scan_state' => 'CLEAN', 'vendor_metadata' => $metadata === [] ? null : json_encode($this->safeMetadata($metadata), JSON_THROW_ON_ERROR), 'supersedes_version_id' => $previous === null ? null : $previous->id, 'submitted_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
+            DB::table('vendor_documents')->where('id', $documentId)->update(['review_submitted' => true, 'superseded_at' => null, 'document_type' => $documentType, 'current_version_id' => $versionId, 'status' => 'SUBMITTED', 'lock_version' => DB::raw('lock_version + 1'), 'updated_at' => now()]);
+            if ($requirementKey === 'tax_relief_evidence') {
+                $safeMetadata = $this->safeMetadata($metadata);
+                DB::table('tax_evidence')->insert(['id' => (string) Str::uuid7(), 'vendor_tax_profile_version_id' => $taxVersionId, 'file_id' => $fileId, 'evidence_type' => 'TAX_RELIEF_DECLARATION', 'origin' => 'VENDOR_UPLOAD', 'document_hash' => $checksum, 'valid_from' => $this->metadataDate($safeMetadata['valid_from'] ?? null), 'valid_until' => $this->metadataDate($safeMetadata['valid_until'] ?? null), 'review_state' => 'PENDING', 'created_at' => now(), 'updated_at' => now()]);
+            }
+            $this->setStep($organizationId, 'STORE_VERIFICATION', $requirementKey, 'PENDING_VERIFICATION');
+            $this->audit->account($request, 'VENDOR_EVIDENCE_SUBMITTED', 'BUSINESS_DOCUMENT_VERSION', $versionId, after: ['requirement_key' => $requirementKey, 'version' => $version]);
+            DB::table('vendor_pending_documents')->where('id', $pending->id)->delete();
         }
     }
 
@@ -870,18 +1032,6 @@ final class VendorOnboardingService
                 ->whereNull('pending_store_email')
                 ->update(['store_email' => mb_strtolower(trim($ownerEmail)), 'store_email_verified_at' => now(), 'updated_at' => now()]);
         }
-        if (! DB::table('vendor_contacts')->where('vendor_organization_id', $organizationId)->where('active', true)->exists()) {
-            $owner = DB::table('vendor_memberships as m')
-                ->join('users as u', 'u.id', '=', 'm.user_id')
-                ->leftJoin('user_profiles as p', 'p.user_id', '=', 'u.id')
-                ->where('m.vendor_organization_id', $organizationId)
-                ->where('m.role', 'OWNER')
-                ->where('m.status', 'ACTIVE')
-                ->first(['u.name', 'u.email', 'p.mobile_e164']);
-            if ($owner !== null) {
-                DB::table('vendor_contacts')->insert(['id' => (string) Str::uuid7(), 'vendor_organization_id' => $organizationId, 'full_name' => (string) $owner->name, 'title' => 'Owner', 'email' => mb_strtolower((string) $owner->email), 'phone' => $owner->mobile_e164, 'is_primary' => true, 'is_public' => false, 'is_authorized' => true, 'active' => true, 'lock_version' => 1, 'created_at' => now(), 'updated_at' => now()]);
-            }
-        }
         $this->requirements->synchronize($organizationId);
         if (! DB::table('vendor_tax_profiles')->where('vendor_organization_id', $organizationId)->exists()) {
             DB::table('vendor_tax_profiles')->insert(['id' => (string) Str::uuid7(), 'vendor_organization_id' => $organizationId, 'environment' => 'TEST', 'status' => 'INCOMPLETE', 'lock_version' => 1, 'created_at' => now(), 'updated_at' => now()]);
@@ -899,15 +1049,14 @@ final class VendorOnboardingService
                 'V1' => ['business_type', 'business_information', 'legal_identity', 'identity_evidence', 'identity_back_evidence', 'authority_to_act', 'representative_identity', 'representative_identity_back', 'business_registration', 'lgu_permit', 'bir_cor', 'tax_profile', 'tax_relief_evidence'],
                 'V2' => ['registered_business_address'],
                 'V3' => ['supplier_classification'],
-                'V4' => ['privacy_acknowledgement'],
+                'V4' => ['commission_terms', 'privacy_acknowledgement'],
             ],
             'STORE_SETUP' => [
                 'S1' => ['public_store_profile'],
                 'S2' => ['bulk_capability', 'fulfillment_method', 'delivery_configuration'],
                 'S3' => ['payment_connection'],
-                'S4' => ['commission_terms'],
-                'S5' => [],
-                'S6' => ['public_store_profile', 'bulk_capability', 'fulfillment_method', 'delivery_configuration', 'payment_connection', 'commission_terms'],
+                'S4' => [],
+                'S5' => ['public_store_profile', 'bulk_capability', 'fulfillment_method', 'delivery_configuration', 'payment_connection'],
             ],
         ];
         $result = [];
@@ -919,7 +1068,7 @@ final class VendorOnboardingService
                         return false;
                     }
 
-                    return $requirement !== null && ($requirement->status === ($workstream === 'STORE_VERIFICATION' ? 'APPROVED' : 'COMPLETED')
+                    return $requirement !== null && ($requirement->status === ($workstream === 'STORE_VERIFICATION' && $requirementKey !== 'commission_terms' ? 'APPROVED' : 'COMPLETED')
                         || ($requirement->status === 'NOT_APPLICABLE' && $requirement->level === 'CONDITIONALLY_REQUIRED' && trim((string) $requirement->applicability_reason) !== ''));
                 });
                 $result[] = ['key' => $key, 'workstream' => $workstream, 'complete' => $complete, 'required' => $keys !== []];
@@ -943,15 +1092,14 @@ final class VendorOnboardingService
         $org = DB::table('vendor_organizations')->where('id', $organizationId)->first();
         $identity = $this->legalIdentity($org);
         $identity['id_hash'] = empty($org->identity_id_number_encrypted) ? null : hash_hmac('sha256', Crypt::decryptString($org->identity_id_number_encrypted), (string) config('app.key'));
-        $contacts = DB::table('vendor_contacts')->where('vendor_organization_id', $organizationId)->where('active', true)->orderBy('full_name')->get(['full_name', 'title', 'email', 'phone', 'is_primary', 'is_public'])->toArray();
         $tax = DB::table('vendor_tax_profiles')->where('vendor_organization_id', $organizationId)->value('current_version_id');
-        $classification = DB::table('vendor_classifications')->where('vendor_organization_id', $organizationId)->first(['supplier_type', 'niches', 'custom_label']);
+        $classification = DB::table('vendor_classifications')->where('vendor_organization_id', $organizationId)->first(['supplier_type', 'niches', 'custom_label', 'custom_labels']);
         $representative = $this->authority->current($organizationId)?->id;
         $address = DB::table('addresses')->where('owner_type', 'VENDOR_ORGANIZATION')->where('owner_id', $organizationId)->where('is_current', true)->value('id');
 
         return [
             'business_type' => $org->business_type,
-            'business_information' => json_encode([$org->registered_name, $org->date_established, $org->store_phone, $contacts], JSON_THROW_ON_ERROR),
+            'business_information' => json_encode([$org->registered_name, $org->date_established, $org->store_phone], JSON_THROW_ON_ERROR),
             'legal_identity' => json_encode([$org->business_type, $identity], JSON_THROW_ON_ERROR),
             'business_registration' => json_encode([$org->business_type, $org->registered_name], JSON_THROW_ON_ERROR),
             'lgu_permit' => json_encode([$org->business_type, $org->registered_name, $address], JSON_THROW_ON_ERROR),
@@ -1011,9 +1159,10 @@ final class VendorOnboardingService
         }
         $legalName = in_array($organization->business_type, ['PARTNERSHIP', 'CORPORATION', 'ONE_PERSON_CORPORATION', 'COOPERATIVE'], true)
             ? (string) $values['company_registered_name'] : trim(implode(' ', array_filter([$firstName, $middleName, $surname, $suffix])));
-        if ($legalName !== '') {
+        if ($legalName !== '' && empty($organization->legal_business_name)) {
             $values['registered_name'] = $legalName;
             $values['legal_name'] = $legalName;
+            $values['legal_business_name'] = $legalName;
         }
         DB::table('vendor_organizations')->where('id', $organizationId)->update($values + ['lock_version' => DB::raw('lock_version + 1')]);
         $this->requirements->synchronize($organizationId);
@@ -1096,22 +1245,6 @@ final class VendorOnboardingService
         return ['key' => $key, 'label' => $label, 'status' => $rows === [] ? 'NOT_STARTED' : (count($applicable) > 0 && $done >= count($applicable) ? 'COMPLETE' : 'IN_PROGRESS'), 'complete' => min($done, count($applicable)), 'total' => count($applicable), 'progress' => ['complete' => min($done, count($applicable)), 'total' => count($applicable)], 'steps' => $rows];
     }
 
-    /** @param array<string, mixed> $contacts */
-    private function saveContacts(string $organizationId, array $contacts): void
-    {
-        $primary = count(array_filter($contacts, fn ($contact): bool => is_array($contact) && (bool) ($contact['is_primary'] ?? false)));
-        if ($contacts !== [] && $primary !== 1) {
-            throw new AuthenticationException('PRIMARY_CONTACT_REQUIRED', 'Choose exactly one primary Vendor contact.', 422);
-        }
-        DB::table('vendor_contacts')->where('vendor_organization_id', $organizationId)->update(['active' => false, 'is_primary' => false, 'updated_at' => now()]);
-        foreach ($contacts as $contact) {
-            if (! is_array($contact)) {
-                continue;
-            }
-            DB::table('vendor_contacts')->insert(['id' => (string) Str::uuid7(), 'vendor_organization_id' => $organizationId, 'full_name' => trim((string) ($contact['full_name'] ?? '')), 'title' => $contact['title'] ?? null, 'email' => isset($contact['email']) ? mb_strtolower(trim((string) $contact['email'])) : null, 'phone' => $contact['phone'] ?? null, 'is_primary' => (bool) ($contact['is_primary'] ?? false), 'is_public' => (bool) ($contact['is_public'] ?? false), 'is_authorized' => (bool) ($contact['is_authorized'] ?? false), 'active' => true, 'lock_version' => 1, 'created_at' => now(), 'updated_at' => now()]);
-        }
-    }
-
     /** @param array<string, mixed> $classification */
     private function saveClassification(string $organizationId, array $classification): void
     {
@@ -1119,23 +1252,39 @@ final class VendorOnboardingService
         if (! in_array($type, self::SUPPLIER_TYPES, true)) {
             throw new AuthenticationException('CLASSIFICATION_INVALID', 'Choose an approved supplier type.', 422);
         }
-        $niches = array_values(array_filter($classification['niches'] ?? [], 'is_string'));
+        $niches = array_values(array_unique(array_filter($classification['niches'] ?? [], 'is_string')));
         if (count($niches) > count(self::SUPPLIER_NICHES)) {
             throw new AuthenticationException('CLASSIFICATION_INVALID', 'Choose only the available supplier niches.', 422);
         }
-        $labels = array_merge($niches, [$classification['custom_label'] ?? null]);
-        $normalizedLabels = preg_replace('/[^a-z0-9]+/i', ' ', implode(' ', array_filter($labels, 'is_string')));
-        if (is_string($normalizedLabels) && preg_match('/\b(?:rent|rental|rentals|for hire)\b/i', $normalizedLabels) === 1) {
-            throw new AuthenticationException('CLASSIFICATION_UNSUPPORTED', 'Vehicle and equipment rental services are not currently supported by MateryalPH.', 422);
+        $customLabels = $classification['custom_labels'] ?? array_filter([$classification['custom_label'] ?? null]);
+        $customLabels = array_values(array_map(static fn (string $label): string => trim((string) preg_replace('/\s+/u', ' ', $label)), $customLabels));
+        if (collect($customLabels)->contains(fn (string $label): bool => mb_strlen($label) < 2 || mb_strlen($label) > 60)
+            || count(array_unique(array_map('mb_strtolower', $customLabels))) !== count($customLabels)) {
+            throw new AuthenticationException('CLASSIFICATION_INVALID', 'Use distinct custom labels of 2–60 characters.', 422, ['blockers' => [['key' => 'classification.custom_labels', 'reason' => 'Use distinct custom labels of 2–60 characters.']]]);
+        }
+        $labels = array_merge($niches, $customLabels);
+        foreach ($labels as $label) {
+            $normalized = trim((string) preg_replace('/[^a-z0-9]+/i', ' ', Str::ascii($label)));
+            $compact = str_replace(' ', '', strtolower($normalized));
+            if (preg_match('/\b(?:rent(?:al|als|ing|ed)?|for hire|hire|leasing|lease)\b/i', $normalized) === 1 || preg_match('/^(?:(?:construction)?(?:vehicles?|equipment|tools?|machinery))?(?:rentals?|forhire|hire|leasing)(?:services?)?$/', $compact) === 1) {
+                $message = 'Vehicle and equipment rental services are not currently supported by MateryalPH. The marketplace currently supports construction materials, supplies, tools, equipment offered as supported products, and other approved procurement categories.';
+                throw new AuthenticationException('CLASSIFICATION_UNSUPPORTED', $message, 422, ['blockers' => [['key' => 'classification.custom_labels', 'reason' => '“'.$label.'”: '.$message]]]);
+            }
         }
         if (array_diff($niches, self::SUPPLIER_NICHES) !== []) {
             throw new AuthenticationException('CLASSIFICATION_INVALID', 'Choose canonical Supplier Niches; use Other Category for a separate custom label.', 422);
         }
-        if (in_array('Other Category', $niches, true) && trim((string) ($classification['custom_label'] ?? '')) === '') {
-            throw new AuthenticationException('CLASSIFICATION_INVALID', 'Specify the custom category when selecting Other Category.', 422);
+        if (in_array('Other Category', $niches, true) && $customLabels === []) {
+            throw new AuthenticationException('CLASSIFICATION_INVALID', 'Specify the custom category when selecting Other Category.', 422, ['blockers' => [['key' => 'classification.custom_labels', 'reason' => 'Add at least one custom label for Other Category.']]]);
+        }
+        if (! in_array('Other Category', $niches, true)) {
+            $customLabels = [];
         }
         $existing = DB::table('vendor_classifications')->where('vendor_organization_id', $organizationId)->first();
-        $values = ['supplier_type' => $type, 'niches' => json_encode($niches, JSON_THROW_ON_ERROR), 'custom_label' => trim((string) ($classification['custom_label'] ?? '')) ?: null, 'version' => ($existing === null ? 0 : (int) $existing->version) + 1, 'lock_version' => ($existing === null ? 0 : (int) $existing->lock_version) + 1, 'updated_at' => now()];
+        if ($existing !== null && $existing->supplier_type === $type && $this->jsonArray($existing->niches) === $niches && $this->jsonArray($existing->custom_labels) === $customLabels) {
+            return;
+        }
+        $values = ['supplier_type' => $type, 'niches' => json_encode($niches, JSON_THROW_ON_ERROR), 'custom_label' => $customLabels[0] ?? null, 'custom_labels' => json_encode($customLabels, JSON_THROW_ON_ERROR), 'version' => ($existing === null ? 0 : (int) $existing->version) + 1, 'lock_version' => ($existing === null ? 0 : (int) $existing->lock_version) + 1, 'updated_at' => now()];
         if ($existing === null) {
             DB::table('vendor_classifications')->insert($values + ['id' => (string) Str::uuid7(), 'vendor_organization_id' => $organizationId, 'created_at' => now()]);
         } else {
@@ -1147,8 +1296,9 @@ final class VendorOnboardingService
     private function saveAddress(string $organizationId, array $address): void
     {
         $values = ['street' => trim((string) ($address['street'] ?? '')), 'unit' => $address['unit'] ?? null, 'barangay' => trim((string) ($address['barangay'] ?? '')), 'city_municipality' => trim((string) ($address['city_municipality'] ?? '')), 'province' => trim((string) ($address['province'] ?? '')), 'postal_code' => trim((string) ($address['postal_code'] ?? '')), 'formatted_address' => trim((string) ($address['formatted_address'] ?? '')), 'latitude' => $address['latitude'] ?? null, 'longitude' => $address['longitude'] ?? null, 'psgc_code' => $address['psgc_code'] ?? null, 'provider_place_id' => $address['provider_place_id'] ?? null, 'source' => $address['source'] ?? 'MANUAL', 'provider' => $address['provider'] ?? null, 'review_state' => 'PENDING_REVIEW', 'verified' => false];
+        $values += array_intersect_key($address, array_flip(['psgc_source', 'province_code', 'city_code']));
         $current = DB::table('addresses')->where('owner_type', 'VENDOR_ORGANIZATION')->where('owner_id', $organizationId)->where('is_current', true)->first();
-        $same = $current !== null && collect(['street', 'unit', 'barangay', 'city_municipality', 'province', 'postal_code', 'formatted_address', 'latitude', 'longitude', 'provider_place_id'])->every(fn (string $key): bool => (string) ($current->{$key} ?? '') === (string) ($values[$key] ?? ''));
+        $same = $current !== null && collect(['street', 'unit', 'barangay', 'city_municipality', 'province', 'postal_code', 'formatted_address', 'latitude', 'longitude', 'provider_place_id', 'psgc_code', 'psgc_source', 'province_code', 'city_code'])->every(fn (string $key): bool => (string) ($current->{$key} ?? '') === (string) ($values[$key] ?? ''));
         if ($same) {
             return;
         }
@@ -1165,7 +1315,7 @@ final class VendorOnboardingService
         if ($aggregate === null) {
             DB::table('vendor_addresses')->insert(['id' => $addressId, 'vendor_organization_id' => $organizationId, 'created_at' => now(), 'updated_at' => now()]);
         }
-        $versionValues = array_intersect_key($values, array_flip(['street', 'unit', 'barangay', 'city_municipality', 'province', 'postal_code', 'psgc_code', 'formatted_address', 'latitude', 'longitude', 'source']));
+        $versionValues = array_intersect_key($values, array_flip(['street', 'unit', 'barangay', 'city_municipality', 'province', 'postal_code', 'psgc_code', 'psgc_source', 'province_code', 'city_code', 'formatted_address', 'latitude', 'longitude', 'source']));
         $versionValues['location'] = $values['latitude'] === null || $values['longitude'] === null ? null : DB::raw('ST_SetSRID(ST_MakePoint('.(float) $values['longitude'].','.(float) $values['latitude'].'),4326)::geography');
         DB::table('vendor_address_versions')->insert($versionValues + ['id' => $id, 'vendor_address_id' => $addressId, 'version' => (int) ($current->version ?? 0) + 1, 'created_at' => now()]);
         DB::table('vendor_addresses')->where('id', $addressId)->update(['current_version_id' => $id, 'lock_version' => DB::raw('lock_version + 1'), 'updated_at' => now()]);
@@ -1193,27 +1343,22 @@ final class VendorOnboardingService
         $previousTinLast4 = $current === null ? null : $current->tin_last4;
         $previousKey = empty($current->taxpayer_key_encrypted) ? '' : Crypt::decryptString($current->taxpayer_key_encrypted);
         if ($key === '' && ($current === null || (isset($tax['tin']) && str_starts_with($previousKey, 'TEST|')))) {
-            $key = 'TEST|'.trim((string) ($tax['tin'] ?? $organizationId));
+            $key = 'TEST|'.(isset($tax['tin']) ? substr(str_replace('-', '', $tax['tin']), 0, 9) : $organizationId);
         }
         $keyHash = $key === '' ? (string) ($current->taxpayer_key_hash ?? '') : hash_hmac('sha256', $key, (string) config('app.key'));
         $tin = trim((string) ($tax['tin'] ?? ''));
-        $tinDigits = preg_replace('/\D+/', '', $tin) ?: '';
-        if ($tin !== '' && preg_match('/^[0-9]{9}$/D', $tin) !== 1) {
-            throw new AuthenticationException('TIN_INVALID', 'Enter exactly 9 numeric digits for the Core TIN, separately from the Branch Code.', 422);
+        if ($tin !== '' && preg_match('/^(?:[0-9]{12,14}|[0-9]{3}-[0-9]{3}-[0-9]{3}-[0-9]{3,5})$/D', $tin) !== 1) {
+            throw new AuthenticationException('TIN_INVALID', 'Enter your 9-digit TIN followed by a 3- to 5-digit branch code.', 422);
         }
-        $tinHash = $tin === '' ? (string) ($current->tin_hash ?? '') : hash_hmac('sha256', $tinDigits, (string) config('app.key'));
-        $tinEncrypted = $tin === '' ? ($current->tin_encrypted ?? null) : Crypt::encryptString($tin);
-        $branchCode = trim((string) ($tax['branch_code'] ?? (empty($current->branch_code_encrypted) ? '' : Crypt::decryptString($current->branch_code_encrypted))));
-        $branchLength = (int) ($tax['branch_code_length'] ?? (in_array(strlen($branchCode), [3, 5], true) ? strlen($branchCode) : 5));
-        if (($tax['head_office'] ?? false) === true) {
-            $branchCode = str_repeat('0', $branchLength);
-        }
-        if ($branchCode !== '' && (preg_match('/^(?:[0-9]{3}|[0-9]{5})$/D', $branchCode) !== 1 || strlen($branchCode) !== $branchLength)) {
-            throw new AuthenticationException('BRANCH_CODE_INVALID', 'Enter the configured 3- or 5-digit numeric Branch Code.', 422);
-        }
+        $tinDigits = str_replace('-', '', $tin);
+        $coreTin = substr($tinDigits, 0, 9);
+        $tinHash = $tin === '' ? (string) ($current->tin_hash ?? '') : hash_hmac('sha256', $coreTin, (string) config('app.key'));
+        $tinEncrypted = $tin === '' ? ($current->tin_encrypted ?? null) : Crypt::encryptString($tinDigits);
+        $combinedTin = $tin === '' ? (empty($tinEncrypted) ? '' : Crypt::decryptString($tinEncrypted)) : $tinDigits;
         $birCorReference = trim((string) ($tax['bir_cor_reference'] ?? ($current->bir_cor_reference ?? '')));
         $currentDetails = $current === null ? [] : (is_string($current->tax_details) ? (json_decode($current->tax_details, true) ?: []) : (is_array($current->tax_details) ? $current->tax_details : []));
         $details = array_merge($currentDetails, $this->taxDetails($tax));
+        unset($details['head_office'], $details['branch_code_length']);
         $details['vat_declared'] = array_key_exists('vat_category', $tax) || ($currentDetails['vat_declared'] ?? $current !== null);
         $businessType = DB::table('vendor_organizations')->where('id', $organizationId)->value('business_type');
         $details['business_type'] = $businessType;
@@ -1231,8 +1376,20 @@ final class VendorOnboardingService
             throw new AuthenticationException('WITHHOLDING_SCENARIO_INVALID', 'Choose an approved DEMO withholding scenario.', 422);
         }
         $details['withholding_scenario'] = $withholdingScenario;
-        $content = json_encode(['key_hash' => $keyHash, 'tin_hash' => $tinHash, 'tin_branch_code' => $branchCode, 'bir_cor_reference' => $birCorReference, 'entity_class' => $entityClass, 'registration_category' => $registrationCategory, 'vat_category' => $vatCategory, 'fiscal_year_start_month' => $fiscalYearStartMonth, 'details' => $details], JSON_THROW_ON_ERROR);
-        if ($current !== null && hash_equals((string) $current->content_hash, hash('sha256', $content))) {
+        $content = json_encode(['key_hash' => $keyHash, 'tin_hash' => $tinHash, 'tin' => $combinedTin, 'bir_cor_reference' => $birCorReference, 'entity_class' => $entityClass, 'registration_category' => $registrationCategory, 'vat_category' => $vatCategory, 'fiscal_year_start_month' => $fiscalYearStartMonth, 'details' => $details], JSON_THROW_ON_ERROR);
+        // PostgreSQL JSONB reorders object keys. Compare stored business values,
+        // not serialization order, so attestation does not reopen unchanged evidence.
+        $unchanged = $current !== null
+            && $keyHash === (string) $current->taxpayer_key_hash
+            && $tinHash === (string) $current->tin_hash
+            && $combinedTin === (empty($current->tin_encrypted) ? '' : Crypt::decryptString($current->tin_encrypted))
+            && $birCorReference === (string) ($current->bir_cor_reference ?? '')
+            && $entityClass === $current->entity_class
+            && $registrationCategory === $current->registration_category
+            && $vatCategory === $current->vat_category
+            && $fiscalYearStartMonth === (int) $current->fiscal_year_start_month
+            && $details == $currentDetails;
+        if ($current !== null && $unchanged) {
             if ($ownerAttested && $current->owner_attested_at === null) {
                 $attestedAt = now();
                 DB::table('vendor_tax_profile_versions')->where('id', $current->id)->update(['owner_attested_at' => $attestedAt, 'representative_version_id' => $representativeVersionId, 'owner_attested_by_user_id' => $request->user()->getKey(), 'updated_at' => $attestedAt]);
@@ -1244,7 +1401,7 @@ final class VendorOnboardingService
         $version = ($current === null ? 0 : (int) $current->version) + 1;
         $versionId = (string) Str::uuid7();
         $attestedAt = $ownerAttested ? now() : null;
-        DB::table('vendor_tax_profile_versions')->insert(['id' => $versionId, 'vendor_tax_profile_id' => $profileId, 'version' => $version, 'representative_version_id' => $representativeVersionId, 'taxpayer_key_hash' => $keyHash, 'taxpayer_key_encrypted' => $key === '' ? ($current->taxpayer_key_encrypted ?? null) : Crypt::encryptString($key), 'entity_class' => $entityClass, 'registration_category' => $registrationCategory, 'vat_category' => $vatCategory, 'tin_encrypted' => $tinEncrypted, 'tin_hash' => $tinHash !== '' ? $tinHash : null, 'tin_branch_code' => null, 'branch_code_encrypted' => $branchCode !== '' ? Crypt::encryptString($branchCode) : null, 'declaration_claim' => $details['tax_relief_claimed'] ?? null, 'taxable_year' => $details['declaration_year'] ?? null, 'bir_cor_reference' => $birCorReference !== '' ? $birCorReference : null, 'vat_verified_category' => null, 'fiscal_year_start_month' => $fiscalYearStartMonth, 'effective_from' => now(), 'submitted_by_user_id' => $request->user()->getKey(), 'content_hash' => hash('sha256', $content), 'taxpayer_key_last4' => $key !== '' ? substr($key, -4) : $previousTaxpayerKeyLast4, 'tin_last4' => $tin !== '' ? substr($tinDigits, -4) : $previousTinLast4, 'tax_details' => json_encode($details, JSON_THROW_ON_ERROR), 'drafted_by_user_id' => $request->user()->getKey(), 'owner_attested_at' => $attestedAt, 'owner_attested_by_user_id' => $ownerAttested ? $request->user()->getKey() : null, 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('vendor_tax_profile_versions')->insert(['id' => $versionId, 'vendor_tax_profile_id' => $profileId, 'version' => $version, 'representative_version_id' => $representativeVersionId, 'taxpayer_key_hash' => $keyHash, 'taxpayer_key_encrypted' => $key === '' ? ($current->taxpayer_key_encrypted ?? null) : Crypt::encryptString($key), 'entity_class' => $entityClass, 'registration_category' => $registrationCategory, 'vat_category' => $vatCategory, 'tin_encrypted' => $tinEncrypted, 'tin_hash' => $tinHash !== '' ? $tinHash : null, 'declaration_claim' => $details['tax_relief_claimed'] ?? null, 'taxable_year' => $details['declaration_year'] ?? null, 'bir_cor_reference' => $birCorReference !== '' ? $birCorReference : null, 'vat_verified_category' => null, 'fiscal_year_start_month' => $fiscalYearStartMonth, 'effective_from' => now(), 'submitted_by_user_id' => $request->user()->getKey(), 'content_hash' => hash('sha256', $content), 'taxpayer_key_last4' => $key !== '' ? substr($key, -4) : $previousTaxpayerKeyLast4, 'tin_last4' => $tin !== '' ? substr($coreTin, -4) : $previousTinLast4, 'tax_details' => json_encode($details, JSON_THROW_ON_ERROR), 'drafted_by_user_id' => $request->user()->getKey(), 'owner_attested_at' => $attestedAt, 'owner_attested_by_user_id' => $ownerAttested ? $request->user()->getKey() : null, 'created_at' => now(), 'updated_at' => now()]);
         $rule = DB::table('tax_rule_versions')->where('environment', 'DEMO')->where('code', $withholdingScenario)->where('version', 1)->first(['id', 'rules']);
         if ($rule === null) {
             throw new AuthenticationException('WITHHOLDING_RULE_UNAVAILABLE', 'The approved DEMO withholding fixture is unavailable.', 503);
@@ -1264,7 +1421,7 @@ final class VendorOnboardingService
      */
     private function taxDetails(array $tax): array
     {
-        $allowed = ['head_office', 'branch_code_length', 'vat_declared', 'vat_verified', 'fiscal_year', 'taxable_year_start', 'taxable_year_end', 'prior_year_amount_centavos', 'declaration', 'declaration_type', 'threshold_position', 'submission_date', 'declaration_year', 'receipt_reference', 'valid_from', 'valid_until', 'outside_platform_amount_centavos', 'outside_platform_period', 'outside_platform_as_of', 'outside_platform_overlap', 'withholding_scenario', 'tax_relief_claimed'];
+        $allowed = ['vat_declared', 'vat_verified', 'fiscal_year', 'taxable_year_start', 'taxable_year_end', 'prior_year_amount_centavos', 'declaration', 'declaration_type', 'threshold_position', 'submission_date', 'declaration_year', 'receipt_reference', 'valid_from', 'valid_until', 'outside_platform_amount_centavos', 'outside_platform_period', 'outside_platform_as_of', 'outside_platform_overlap', 'withholding_scenario', 'tax_relief_claimed'];
         $details = array_intersect_key($tax, array_flip($allowed));
         foreach (['prior_year_amount_centavos', 'outside_platform_amount_centavos'] as $key) {
             if (array_key_exists($key, $details)) {
@@ -1314,7 +1471,7 @@ final class VendorOnboardingService
         if ($organization !== null && $organization->business_type !== null) {
             $this->markUnreviewedStep($organizationId, 'STORE_VERIFICATION', 'business_type', 'IN_PROGRESS');
         }
-        if ($organization !== null && $organization->registered_name !== null && $organization->date_established !== null && $organization->store_email !== null && $organization->store_phone !== null) {
+        if ($organization !== null && ($organization->business_type === 'SOLE_PROPRIETORSHIP' || $organization->registered_name !== null) && $organization->date_established !== null && $organization->store_email !== null && $organization->store_phone !== null) {
             $this->markUnreviewedStep($organizationId, 'STORE_VERIFICATION', 'business_information', 'IN_PROGRESS');
         }
         if (DB::table('addresses')->where('owner_type', 'VENDOR_ORGANIZATION')->where('owner_id', $organizationId)->where('is_current', true)->exists()) {
@@ -1338,6 +1495,22 @@ final class VendorOnboardingService
         }
     }
 
+    /** @return array<string, mixed> */
+    private function verificationFormState(string $organizationId, bool $masked = false): array
+    {
+        $payload = DB::table('vendor_onboarding_drafts')->where('vendor_organization_id', $organizationId)->where('workstream', 'STORE_VERIFICATION')->value('payload_encrypted');
+        $draft = is_string($payload) ? json_decode(Crypt::decryptString($payload), true, flags: JSON_THROW_ON_ERROR) : [];
+        $state = json_decode($draft['form_state'] ?? '{}', true, flags: JSON_THROW_ON_ERROR);
+        if (! is_array($state)) {
+            return [];
+        }
+        if ($masked) {
+            unset($state['tin'], $state['identity_id_number'], $state['representative_id_number']);
+        }
+
+        return $state;
+    }
+
     private function requireVerificationCompleteness(Request $request, string $organizationId, bool $privacyAcknowledged): void
     {
         $organization = DB::table('vendor_organizations')->where('id', $organizationId)->first();
@@ -1352,7 +1525,11 @@ final class VendorOnboardingService
         if (! $privacyAcknowledged && ! $this->privacyNoticeAccepted($request, $organizationId)) {
             $blockers[] = ['key' => 'privacy_acknowledgement', 'reason' => 'Acknowledge the Privacy Notice before submission.'];
         }
-        foreach (['business_type' => $organization->business_type, 'registered_name' => $organization->registered_name, 'date_established' => $organization->date_established, 'store_email' => $organization->store_email, 'store_email_verified_at' => $organization->store_email_verified_at, 'store_phone' => $organization->store_phone] as $key => $value) {
+        foreach (['business_type' => $organization->business_type, 'store_name' => $organization->store_name, 'registered_name' => $organization->registered_name,
+            'legal_business_name' => $organization->legal_business_name, 'date_established' => $organization->date_established, 'store_email' => $organization->store_email, 'store_email_verified_at' => $organization->store_email_verified_at, 'store_phone' => $organization->store_phone] as $key => $value) {
+            if (in_array($key, ['registered_name', 'legal_business_name'], true) && $organization->business_type === 'SOLE_PROPRIETORSHIP') {
+                continue;
+            }
             if ($value === null || $value === '') {
                 $blockers[] = ['key' => $key, 'reason' => 'Complete this required business-information field.'];
             }
@@ -1361,17 +1538,21 @@ final class VendorOnboardingService
             $blockers[] = ['key' => 'date_established', 'reason' => 'The establishment date cannot be in the future.'];
         }
         $address = DB::table('addresses')->where('owner_type', 'VENDOR_ORGANIZATION')->where('owner_id', $organizationId)->where('is_current', true)->first();
-        foreach (['street', 'barangay', 'city_municipality', 'province', 'postal_code', 'latitude', 'longitude'] as $key) {
+        $addressFields = ['street', 'barangay', 'city_municipality', 'province', 'postal_code'];
+        if ($address !== null && $address->source !== 'MANUAL') {
+            $addressFields = array_merge($addressFields, ['latitude', 'longitude']);
+        }
+        foreach ($addressFields as $key) {
             if ($address === null || $address->{$key} === null || $address->{$key} === '') {
-                $blockers[] = ['key' => 'registered_business_address.'.$key, 'reason' => 'Complete the structured address and map coordinates.'];
+                $blockers[] = ['key' => 'registered_business_address.'.$key, 'reason' => 'Complete the structured address using manual entry or a resolved map location.'];
             }
         }
-        if (! DB::table('vendor_contacts')->where('vendor_organization_id', $organizationId)->where('active', true)->where('is_primary', true)->exists()) {
-            $blockers[] = ['key' => 'contacts', 'reason' => 'Add exactly one primary Vendor contact.'];
-        }
         $classification = DB::table('vendor_classifications')->where('vendor_organization_id', $organizationId)->first();
+        if ($classification === null || ! in_array($classification->supplier_type, self::SUPPLIER_TYPES, true)) {
+            $blockers[] = ['key' => 'classification.supplier_type', 'reason' => 'Choose a Supplier Type.'];
+        }
         if ($classification === null || $this->jsonArray($classification->niches) === []) {
-            $blockers[] = ['key' => 'supplier_classification', 'reason' => 'Choose an approved supplier classification.'];
+            $blockers[] = ['key' => 'classification.niches', 'reason' => 'Choose at least one Supplier Niche.'];
         }
         if ($this->individualIdentityRequired((string) $organization->business_type)) {
             foreach (['individual_registered_surname' => $organization->individual_registered_surname, 'individual_registered_first_name' => $organization->individual_registered_first_name, 'identity_id_type' => $organization->identity_id_type, 'identity_id_number_last4' => $organization->identity_id_number_last4] as $key => $value) {
@@ -1386,14 +1567,14 @@ final class VendorOnboardingService
         }
         $tax = DB::table('vendor_tax_profiles as p')->join('vendor_tax_profile_versions as v', 'v.id', '=', 'p.current_version_id')->where('p.vendor_organization_id', $organizationId)->first();
         $taxDetails = $tax === null ? [] : (is_string($tax->tax_details) ? (json_decode($tax->tax_details, true) ?: []) : (is_array($tax->tax_details) ? $tax->tax_details : []));
-        if ($tax === null || ! is_string($tax->taxpayer_key_hash) || trim($tax->taxpayer_key_hash) === '' || $tax->tin_last4 === null || $tax->tin_last4 === '' || ($tax->owner_attested_at === null && ! $this->authority->required($organizationId))) {
-            $blockers[] = ['key' => 'tax_profile', 'reason' => 'Complete the private tax registration information and applicable Owner attestation.'];
+        if ($tax === null || ! is_string($tax->taxpayer_key_hash) || trim($tax->taxpayer_key_hash) === '' || $tax->tin_last4 === null || $tax->tin_last4 === '') {
+            $blockers[] = ['key' => 'tax_profile', 'reason' => 'Complete the private tax registration information.'];
         }
-        if ($tax !== null && (! is_string($tax->tin_encrypted) || preg_match('/^[0-9]{9}$/D', Crypt::decryptString($tax->tin_encrypted)) !== 1)) {
-            $blockers[] = ['key' => 'tax_profile.tin', 'reason' => 'Enter the nine-digit Core TIN separately from the Branch Code.'];
+        if (($tax->owner_attested_at ?? null) === null && ! $this->authority->required($organizationId)) {
+            $blockers[] = ['key' => 'owner_attested', 'reason' => 'Confirm the tax information declaration.'];
         }
-        if ($tax !== null && (empty($tax->branch_code_encrypted) || preg_match('/^(?:[0-9]{3}|[0-9]{5})$/D', Crypt::decryptString($tax->branch_code_encrypted)) !== 1)) {
-            $blockers[] = ['key' => 'tax_profile.branch_code', 'reason' => 'Provide the numeric Branch Code from the BIR registration record.'];
+        if ($tax !== null && (! is_string($tax->tin_encrypted) || preg_match('/^[0-9]{12,14}$/D', Crypt::decryptString($tax->tin_encrypted)) !== 1)) {
+            $blockers[] = ['key' => 'tax_profile.tin', 'reason' => 'Enter the 9-digit TIN followed by a 3- to 5-digit branch code.'];
         }
         if ($this->authority->required($organizationId)) {
             $representative = $this->authority->snapshot($organizationId);
@@ -1413,6 +1594,9 @@ final class VendorOnboardingService
             $blockers[] = ['key' => 'tax_profile.declaration_year', 'reason' => 'Record the Sworn Declaration taxable year.'];
         }
         $requiredDocuments = ['business_registration', 'lgu_permit', 'bir_cor'];
+        if (($this->authority->snapshot($organizationId)['authority_evidence_source'] ?? null) === 'SEPARATE_AUTHORITY_DOCUMENT' && $this->authority->required($organizationId)) {
+            $requiredDocuments[] = 'authority_to_act';
+        }
         if ($this->individualIdentityRequired((string) $organization->business_type)) {
             $requiredDocuments[] = 'identity_evidence';
         }
@@ -1422,12 +1606,12 @@ final class VendorOnboardingService
         $additional = DB::table('vendor_onboarding_steps')->where('vendor_organization_id', $organizationId)->where('is_current', true)->whereIn('requirement_key', ['identity_back_evidence', 'representative_identity', 'representative_identity_back'])->where('status', '!=', 'NOT_APPLICABLE')->pluck('requirement_key')->all();
         $requiredDocuments = array_merge($requiredDocuments, $additional);
         foreach ($requiredDocuments as $key) {
-            $document = DB::table('vendor_documents as d')->join('vendor_document_versions as v', 'v.id', '=', 'd.current_version_id')->where('d.vendor_organization_id', $organizationId)->where('d.requirement_key', $key)->first(['d.document_type', 'v.scan_state', 'v.content_validation_state', 'v.vendor_metadata']);
+            $document = DB::table('vendor_documents as d')->join('vendor_document_versions as v', 'v.id', '=', 'd.current_version_id')->where('d.vendor_organization_id', $organizationId)->where('d.requirement_key', $key)->whereNull('d.superseded_at')->first(['d.document_type', 'd.status', 'v.scan_state', 'v.content_validation_state', 'v.vendor_metadata']);
             $registrationTypeMatches = $key !== 'business_registration' || ($document !== null && $document->document_type === $this->registrationEvidenceType($organization->business_type));
             $metadata = $document === null || ! is_string($document->vendor_metadata) ? [] : json_decode($document->vendor_metadata, true);
-            $subjectMatches = ! str_starts_with($key, 'representative_identity') || ($metadata['representative_version_id'] ?? null) === $this->authority->current($organizationId)?->id;
-            if ($document === null || $document->scan_state !== 'CLEAN' || $document->content_validation_state !== 'VALID' || ! $registrationTypeMatches || ! $subjectMatches) {
-                $blockers[] = ['key' => $key, 'reason' => 'Upload a validated, clean evidence file.'];
+            $subjectMatches = (! str_starts_with($key, 'representative_identity') && $key !== 'authority_to_act') || ($metadata['representative_version_id'] ?? null) === $this->authority->current($organizationId)?->id;
+            if ($document === null || in_array($document->status, ['CHANGES_REQUIRED', 'REJECTED', 'EXPIRED'], true) || $document->scan_state !== 'CLEAN' || $document->content_validation_state !== 'VALID' || ! $registrationTypeMatches || ! $subjectMatches) {
+                $blockers[] = ['key' => $key, 'reason' => 'Please select a document for this requirement.'];
             }
         }
         if ($blockers !== []) {
@@ -1435,10 +1619,56 @@ final class VendorOnboardingService
         }
     }
 
-    private function acceptCommissionTerms(Request $request, string $organizationId): void
+    /** @return array<string, mixed> */
+    private function commissionTerms(Request $request, string $organizationId): array
+    {
+        $agreement = collect($this->agreements->current($request))->firstWhere('code', 'VENDOR_COMMISSION_TEST');
+        $eligible = $this->vendorScope($request)['role'] === 'OWNER' && DB::table('vendor_organizations')->where('id', $organizationId)->whereNotNull('business_type')->exists()
+            && (! $this->authority->required($organizationId) || $this->authority->hasCurrentApproval($organizationId, 'COMMISSION_AGREEMENT', (int) $request->user()->getKey()));
+
+        return ['agreement' => $agreement, 'can_accept' => $eligible, 'accepted' => $eligible && ($agreement['accepted_at'] ?? null) !== null];
+    }
+
+    /** @param array<string, mixed> $input
+     * @return array<string, mixed>
+     */
+    public function acceptVerificationCommission(Request $request, array $input): array
+    {
+        $this->requireVendorPermission($request, 'vendor.onboarding.submit');
+        if ($this->vendorScope($request)['role'] !== 'OWNER') {
+            throw new AuthenticationException('PERMISSION_DENIED', 'Only the Vendor Owner or the approved Owner-linked signatory can accept commission terms.', 403);
+        }
+        $organizationId = $this->organizationId($request);
+        $key = $this->requireIdempotencyKey($request);
+        DB::transaction(function () use ($request, $input, $organizationId, $key): void {
+            $organization = DB::table('vendor_organizations')->where('id', $organizationId)->lockForUpdate()->first();
+            if ($this->idempotent($request, 'VENDOR_COMMISSION_ACCEPT', $key, $organizationId)) {
+                return;
+            }
+            $this->assertVersion($organization, $input['organization_lock_version']);
+            if ($organization->business_type === null) {
+                throw new AuthenticationException('BUSINESS_TYPE_REQUIRED', 'Complete Business Information before accepting commission terms.', 422);
+            }
+            $state = $this->commissionTerms($request, $organizationId);
+            if (($state['agreement']['id'] ?? null) !== $input['agreement_version_id']) {
+                throw new AuthenticationException('AGREEMENT_VERSION_CONFLICT', 'The commission terms changed. Reload and review the current version.', 409);
+            }
+            if (! ($state['agreement']['content_available'] ?? false)) {
+                throw new AuthenticationException('AGREEMENT_CONTENT_UNAVAILABLE', 'The current commission terms are unavailable. Try again later.', 503);
+            }
+            $this->acceptCommissionTerms($request, $organizationId, (string) $input['agreement_version_id']);
+            $this->setStep($organizationId, 'STORE_VERIFICATION', 'commission_terms', 'COMPLETED');
+            DB::table('vendor_organizations')->where('id', $organizationId)->increment('lock_version');
+            $this->claimIdempotency($request, 'VENDOR_COMMISSION_ACCEPT', $key, $organizationId, 200);
+        });
+
+        return $this->snapshot($request);
+    }
+
+    private function acceptCommissionTerms(Request $request, string $organizationId, string $versionId): void
     {
         $representativeVersionId = $this->authority->assertAttestation($request, $organizationId, 'COMMISSION_AGREEMENT');
-        $row = DB::table('agreement_versions as v')->join('agreement_documents as d', 'd.id', '=', 'v.agreement_document_id')->where('d.code', 'VENDOR_COMMISSION_TEST')->whereNull('v.retired_at')->where('v.effective_at', '<=', now())->orderByDesc('v.version')->first(['v.id', 'v.version', 'v.content_hash']);
+        $row = DB::table('agreement_versions as v')->join('agreement_documents as d', 'd.id', '=', 'v.agreement_document_id')->where('v.id', $versionId)->where('d.code', 'VENDOR_COMMISSION_TEST')->whereNull('v.retired_at')->where('v.effective_at', '<=', now())->orderByDesc('v.version')->first(['v.id', 'v.version', 'v.content_hash']);
         if ($row === null) {
             throw new AuthenticationException('AGREEMENT_CONTENT_UNAVAILABLE', 'The current commission terms are unavailable.', 503);
         }
@@ -1473,6 +1703,8 @@ final class VendorOnboardingService
             'agreement_version_id' => $agreement->id,
             'vendor_organization_id' => $organizationId,
             'acknowledged_at' => now(),
+            'processing_activity' => 'STORE_VERIFICATION',
+            'source' => 'VENDOR_WEB',
         ]);
         if ($inserted === 1) {
             $this->audit->account($request, 'VENDOR_PRIVACY_NOTICE_ACKNOWLEDGED', 'AGREEMENT_VERSION', (string) $agreement->id, after: ['code' => 'PRIVACY_NOTICE', 'version' => (int) $agreement->version]);
@@ -1614,7 +1846,8 @@ final class VendorOnboardingService
             }
             $query->where('f.owner_type', 'VENDOR_ORGANIZATION')->where('f.owner_id', $scope['organization_id'])
                 ->where(function ($owned) use ($scope): void {
-                    $owned->where('d.vendor_organization_id', $scope['organization_id'])
+                    $owned->where(fn ($submitted) => $submitted->where('d.vendor_organization_id', $scope['organization_id'])->where('d.review_submitted', true))
+                        ->orWhereIn('f.id', DB::table('vendor_pending_documents')->where('vendor_organization_id', $scope['organization_id'])->select('file_id'))
                         ->orWhere(function ($media) use ($scope): void {
                             $media->where('p.vendor_organization_id', $scope['organization_id'])->where('f.purpose', 'STORE_MEDIA')->where('m.status', 'READY');
                         });
@@ -1623,7 +1856,7 @@ final class VendorOnboardingService
             if (! in_array('vendor_verification.view_private_documents', $scope['permissions'], true)) {
                 throw new AuthenticationException('PERMISSION_DENIED', 'You cannot access private Vendor evidence.', 403);
             }
-            $query->whereNotNull('d.id');
+            $query->whereNotNull('d.id')->where('d.review_submitted', true)->whereNotNull('v.submitted_at');
         } else {
             throw new AuthenticationException('PERMISSION_DENIED', 'You cannot access private onboarding evidence.', 403);
         }
@@ -1772,13 +2005,13 @@ final class VendorOnboardingService
     /** @return array<string, mixed> */
     private function address(object $address): array
     {
-        return ['id' => $address->id, 'street' => $address->street, 'unit' => $address->unit, 'barangay' => $address->barangay, 'city_municipality' => $address->city_municipality, 'province' => $address->province, 'postal_code' => $address->postal_code, 'formatted_address' => $address->formatted_address, 'latitude' => $address->latitude === null ? null : (float) $address->latitude, 'longitude' => $address->longitude === null ? null : (float) $address->longitude, 'source' => $address->source, 'provider' => $address->provider, 'provider_place_id' => $address->provider_place_id, 'review_state' => $address->review_state, 'version' => (int) $address->version];
+        return ['id' => $address->id, 'street' => $address->street, 'unit' => $address->unit, 'barangay' => $address->barangay, 'city_municipality' => $address->city_municipality, 'province' => $address->province, 'postal_code' => $address->postal_code, 'formatted_address' => $address->formatted_address, 'latitude' => $address->latitude === null ? null : (float) $address->latitude, 'longitude' => $address->longitude === null ? null : (float) $address->longitude, 'psgc_code' => $address->psgc_code, 'province_code' => $address->province_code ?? null, 'city_code' => $address->city_code ?? null, 'psgc_source' => $address->psgc_source ?? null, 'source' => $address->source, 'provider' => $address->provider, 'provider_place_id' => $address->provider_place_id, 'review_state' => $address->review_state, 'version' => (int) $address->version];
     }
 
     /** @return array<string, mixed> */
     private function tax(object $tax): array
     {
-        return ['status' => $tax->status, 'environment' => $tax->environment, 'version' => $tax->version === null ? null : (int) $tax->version, 'entity_class' => $tax->entity_class, 'registration_category' => $tax->registration_category, 'vat_category' => $tax->vat_category, 'vat_verified_category' => $tax->vat_verified_category, 'tin_branch_code' => empty($tax->branch_code_encrypted) ? null : str_repeat('*', strlen(Crypt::decryptString($tax->branch_code_encrypted))), 'declaration_claim' => $tax->declaration_claim, 'taxable_year' => $tax->taxable_year, 'bir_cor_reference' => $tax->bir_cor_reference, 'fiscal_year_start_month' => $tax->fiscal_year_start_month === null ? null : (int) $tax->fiscal_year_start_month, 'taxpayer_key_last4' => $tax->taxpayer_key_last4, 'tin_last4' => $tax->tin_last4, 'details' => is_string($tax->tax_details) ? (json_decode($tax->tax_details, true) ?: []) : (is_array($tax->tax_details) ? $tax->tax_details : []), 'owner_attested' => $tax->owner_attested_at !== null];
+        return ['status' => $tax->status, 'environment' => $tax->environment, 'version' => $tax->version === null ? null : (int) $tax->version, 'entity_class' => $tax->entity_class, 'registration_category' => $tax->registration_category, 'vat_category' => $tax->vat_category, 'vat_verified_category' => $tax->vat_verified_category, 'declaration_claim' => $tax->declaration_claim, 'taxable_year' => $tax->taxable_year, 'bir_cor_reference' => $tax->bir_cor_reference, 'fiscal_year_start_month' => $tax->fiscal_year_start_month === null ? null : (int) $tax->fiscal_year_start_month, 'taxpayer_key_last4' => $tax->taxpayer_key_last4, 'tin_last4' => $tax->tin_last4, 'details' => array_diff_key(is_string($tax->tax_details) ? (json_decode($tax->tax_details, true) ?: []) : (is_array($tax->tax_details) ? $tax->tax_details : []), array_flip(['head_office', 'branch_code_length'])), 'owner_attested' => $tax->owner_attested_at !== null];
     }
 
     /** @return array<string, mixed> */

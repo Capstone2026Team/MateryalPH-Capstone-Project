@@ -7,6 +7,11 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(VendorVerificationSubmit, () {
+    // VendorVerificationDraft draft
+    test('to test the property `draft`', () async {
+      // TODO
+    });
+
     // int lockVersion
     test('to test the property `lockVersion`', () async {
       // TODO

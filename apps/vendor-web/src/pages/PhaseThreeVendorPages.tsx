@@ -1,5 +1,5 @@
 import { useParams } from 'react-router-dom'
-import { DashboardHeader, SectionWorkspace, PreviewMetrics } from '@materyalph/web-ui'
+import { DashboardHeader, SectionWorkspace, PreviewMetrics, CustomLabelInput, OnboardingReview, ChecklistPanel, verificationChecklist, checklistProgress, PrivateEvidenceButton } from '@materyalph/web-ui'
 import {
   Activity,
   Bell,
@@ -13,13 +13,11 @@ import {
   ArrowRight,
   ArrowLeft,
   CheckCircle2,
-  Clock3,
   CreditCard,
   FileCheck2,
   FileText,
   ImagePlus,
   LayoutDashboard,
-  MapPin,
   Package,
   RefreshCw,
   Send,
@@ -28,13 +26,14 @@ import {
   UploadCloud,
   Users,
 } from 'lucide-react'
-import { type FormEvent, type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
+import { type FormEvent, type ReactNode, createContext, useContext, useCallback, useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 
 import {
-  AccountWorkspace,
+  AccountWorkspace, VersionedAgreementPanel,
+  FieldRow, OnboardingFormSection, EmailVerificationPanel, AuthorityScopePanel, DocumentUploadField,
   Button,
-  Field,
+  Field, FormErrors,
   PortalShell,
   PortalAccountMenu,
   ProgressBar,
@@ -49,19 +48,19 @@ import { vendorLoginDestination } from '../lib/vendor-destination'
 import type { VendorOnboardingSection } from '@materyalph/api-client-ts'
 import { OnboardingFlow, OnboardingStepContent } from '../components/OnboardingFlow'
 import { verificationSteps, setupSteps } from '../lib/onboarding-steps'
-import { VendorAddressMapSelector } from '../components/VendorAddressMapSelector'
+import { VendorBusinessAddress } from '../components/VendorBusinessAddress'
 import {
-  activateVendorStore,
+  activateVendorStore, acceptVendorCommission,
   captureVendorPaymentConnection,
   completeVendorSetup,
   confirmStoreEmailVerification,
   dismissVendorWelcome,
   getVendorOnboarding,
+  previewVendorRequirements,
   getVendorPrivateFileUrl,
   inviteVendorTeamMember,
-  readableOnboardingError,
+  readableOnboardingError, onboardingFieldErrors, removePendingVendorDocument,
   requestStoreEmailVerification,
-  reverseGeocodeVendorAddress,
   saveVendorSetupDraft,
   saveVendorVerificationDraft,
   submitVendorVerification,
@@ -170,17 +169,13 @@ function PageHeader({ eyebrow, title, description, status, actions }: { eyebrow:
   return <div className="flex flex-col gap-5 border-b border-border-default pb-7 lg:flex-row lg:items-end lg:justify-between"><div className="max-w-3xl"><p className="text-xs font-semibold uppercase tracking-[0.14em] text-action-primary">{eyebrow}</p><div className="mt-3 flex flex-wrap items-center gap-3"><h1 className="text-3xl font-semibold tracking-tight text-text-strong sm:text-4xl">{title}</h1>{status && <StatusBadge label={statusLabel(status)} tone={statusTone(status)} />}</div><p className="mt-3 max-w-2xl text-base leading-7 text-text-secondary">{description}</p></div>{actions && <div className="flex shrink-0 flex-wrap gap-3">{actions}</div>}</div>
 }
 
-function Checklist({ title, section, compact = false }: { title: string; section: ReturnType<typeof sectionFor>; compact?: boolean }) {
-  const steps = section?.steps ?? []
-  return <section className={`grid gap-4 ${compact ? '' : 'rounded-surface border border-border-default bg-surface-primary p-5 sm:p-6'}`} aria-labelledby={`${section.key}-checklist`}><div className="flex flex-wrap items-end justify-between gap-3"><div><h2 id={`${section.key}-checklist`} className="text-lg font-semibold">{title}</h2><p className="mt-1 text-sm text-text-secondary">{section.complete} of {section.total} required items complete.</p></div><StatusBadge label={statusLabel(section.status)} tone={statusTone(section.status)} /></div><ProgressBar value={section.total > 0 ? (section.complete / section.total) * 100 : 0} label={`${section.complete} of ${section.total} complete`} /><div className="divide-y divide-border-default border-y border-border-default">{steps.map((step) => <div className="flex flex-wrap items-center justify-between gap-3 py-3" key={step.key}><div className="flex min-w-0 items-start gap-3"><StepIcon status={step.status} /><div className="min-w-0"><p className="font-semibold">{step.label}</p>{step.reason && <p className="mt-1 text-sm text-text-secondary">{step.reason}</p>}</div></div><div className="flex items-center gap-2"><span className="text-xs font-semibold uppercase tracking-wide text-text-secondary">{step.level === 'OPTIONAL' ? 'Optional' : step.level === 'CONDITIONALLY_REQUIRED' ? 'Conditional' : 'Required'}</span><StatusBadge label={statusLabel(step.status)} tone={statusTone(step.status)} /></div></div>)}</div></section>
+function Checklist({ title, section }: { title: string; section: ReturnType<typeof sectionFor> }) {
+  const steps = section.steps.filter(item => item.status !== 'NOT_APPLICABLE')
+  const items = section.key === 'STORE_VERIFICATION' ? verificationChecklist(steps) : steps.map(item => ({ ...item, requirements: [item] }))
+  const { complete } = checklistProgress(section)
+  return <ChecklistPanel title={title} items={items}><p className="mt-2 text-sm text-text-secondary">{complete} of {items.length} checklist items complete.</p><div className="mt-3"><ProgressBar value={items.length ? complete / items.length * 100 : 0} label={`${complete} of ${items.length} complete`} /></div></ChecklistPanel>
 }
 
-function StepIcon({ status }: { status: string }) {
-  if (['APPROVED', 'COMPLETED', 'NOT_APPLICABLE'].includes(status)) return <CheckCircle2 className="mt-0.5 shrink-0 text-status-success" size={20} aria-hidden="true" />
-  if (['CHANGES_REQUIRED', 'REJECTED', 'EXPIRED'].includes(status)) return <AlertCircle className="mt-0.5 shrink-0 text-status-error" size={20} aria-hidden="true" />
-  if (['PENDING_VERIFICATION', 'SUBMITTED'].includes(status)) return <Clock3 className="mt-0.5 shrink-0 text-status-warning" size={20} aria-hidden="true" />
-  return <div className="mt-1 h-4 w-4 shrink-0 rounded-full border-2 border-border-default" aria-hidden="true" />
-}
 
 export function VendorShell({ activeHref, accountLabel, accountStatus, children, navigationData, refreshError }: { refreshError?: string | null; navigationData?: VendorOnboardingSnapshot | null; activeHref: string; accountLabel: string; accountStatus?: string; children: ReactNode }) {
   const navigate = useNavigate()
@@ -307,7 +302,7 @@ function VendorOnboardingPage({ initialSection }: { initialSection: OnboardingSe
   const setupSection = sectionFor(snapshot, 'STORE_SETUP')
   const activeHref = activeSection === 'STORE_SETUP' ? '/onboarding/setup' : '/onboarding/verification'
 
-  return <VendorShell refreshError={error} navigationData={snapshot} activeHref={activeHref} accountLabel={accountLabel} accountStatus="Onboarding in progress"><div className="phase3-page space-y-8"><header className="space-y-4">
+  return <VendorShell refreshError={error} navigationData={snapshot} activeHref={activeHref} accountLabel={accountLabel} accountStatus="Onboarding in progress"><div className="phase3-page mx-auto max-w-[1120px] space-y-8"><header className="space-y-4">
         <Link className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-text-secondary hover:text-action-primary" to="/dashboard"><ArrowLeft size={16} aria-hidden="true" />Back to dashboard</Link>
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-10">
           <div className="min-w-0">
@@ -321,8 +316,8 @@ function VendorOnboardingPage({ initialSection }: { initialSection: OnboardingSe
           <div className="min-w-0 space-y-2">
             <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Onboarding area</p>
             <nav aria-label="Onboarding area" className="grid grid-cols-2 gap-1 rounded-surface border border-border-default bg-surface-primary p-1">
-              <SectionTab active={activeSection === 'STORE_VERIFICATION'} href="/onboarding/verification" label="Store Verification" description={`${verificationSection.complete}/${verificationSection.total} required complete`} />
-              <SectionTab active={activeSection === 'STORE_SETUP'} href="/onboarding/setup" label="Store Setup" description={`${setupSection.complete}/${setupSection.total} required complete`} />
+              <SectionTab active={activeSection === 'STORE_VERIFICATION'} href="/onboarding/verification" label="Store Verification" description={`${checklistProgress(verificationSection).complete}/${checklistProgress(verificationSection).total} checklist items complete`} />
+              <SectionTab active={activeSection === 'STORE_SETUP'} href="/onboarding/setup" label="Store Setup" description={`${checklistProgress(setupSection).complete}/${checklistProgress(setupSection).total} checklist items complete`} />
             </nav>
           </div>
         </div>
@@ -335,44 +330,188 @@ function SectionTab({ active, href, label, description }: { active: boolean; hre
 
 function VerificationWorkspace({ snapshot, onSaved, onRefresh }: { snapshot: VendorOnboardingSnapshot; onSaved: (snapshot: VendorOnboardingSnapshot) => void; onRefresh: () => Promise<void> }) {
   const [reviewing, setReviewing] = useState(false)
-  if (record(snapshot.verification).status === 'PENDING_VERIFICATION' && !reviewing) return <section className="mx-auto max-w-2xl space-y-6 border-y border-border-default py-10 text-center"><CheckCircle2 className="mx-auto text-status-success" size={40} aria-hidden="true" /><h2 className="text-2xl font-semibold">Business information and documentation successfully submitted.</h2><p className="text-text-secondary">Your Store Verification is awaiting Admin review. You may start Store Setup now; Store Activation remains subject to all required approvals.</p><div className="flex flex-wrap justify-center gap-4"><Link className="inline-flex min-h-11 items-center rounded-control bg-action-primary px-5 font-semibold text-white" to="/onboarding/setup">Proceed to Store Setup</Link><Button variant="secondary" onClick={() => setReviewing(true)}>Review submitted information</Button></div></section>
-  return <VerificationForm snapshot={snapshot} onSaved={onSaved} onRefresh={onRefresh} />
+  if (record(snapshot.verification).status === 'PENDING_VERIFICATION' && !reviewing) return <section className="mx-auto max-w-2xl space-y-6 border-y border-border-default py-10 text-center"><CheckCircle2 className="mx-auto text-status-success" size={40} aria-hidden="true" /><h2 className="text-2xl font-semibold">Business information and documentation successfully submitted.</h2><p className="text-text-secondary">Your Store Verification is awaiting Admin review. You may start Store Setup now; Store Activation remains subject to all required approvals.</p><PendingTaxAttestation snapshot={snapshot} onSaved={onSaved} /><div className="flex flex-wrap justify-center gap-4"><Link className="inline-flex min-h-11 items-center rounded-control bg-action-primary px-5 font-semibold text-white" to="/onboarding/setup">Proceed to Store Setup</Link><Button variant="secondary" onClick={() => setReviewing(true)}>Review submitted information</Button></div></section>
+  return <VerificationForm key={['PENDING_VERIFICATION', 'APPROVED'].includes(stringValue(record(snapshot.verification).status)) ? 'submitted' : 'editable'} snapshot={snapshot} onSaved={onSaved} onRefresh={onRefresh} />
+}
+
+function PendingTaxAttestation({ snapshot, onSaved }: { snapshot: VendorOnboardingSnapshot; onSaved: (snapshot: VendorOnboardingSnapshot) => void }) {
+  const verification = record(snapshot.verification)
+  const review = record(verification.authorityReview)
+  const tax = record(verification.taxProfile)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const approved = sectionFor(snapshot, 'STORE_VERIFICATION').steps.some(step => step.key === 'authority_to_act' && step.status === 'APPROVED')
+  if (tax.ownerAttested || !snapshot.permissions.includes('vendor.onboarding.submit') || !record(verification.representative).sameAsOwner || !approved || review.decision !== 'APPROVED' || !stringValue(review.scope).split(',').includes('TAX_DECLARATIONS')) return null
+  async function attest() {
+    setBusy(true); setError('')
+    try { onSaved(await saveVendorVerificationDraft({ lockVersion: numberValue(record(snapshot.organization).lockVersion, 1), taxProfile: { ownerAttested: true } })) }
+    catch (cause) { setError(await readableOnboardingError(cause)) }
+    finally { setBusy(false) }
+  }
+  return <div className="grid gap-3 rounded-control border border-border-default p-4 text-left"><p>Admin approved your Authority to Act. Confirm that the submitted tax information is accurate to complete your declaration.</p><Button type="button" disabled={busy} onClick={() => void attest()}>{busy ? 'Confirming…' : 'Confirm tax declaration'}</Button>{error && <p role="alert" className="text-sm text-status-error">{error}</p>}</div>
 }
 
 function InformationRail({ title, text, icon }: { title: string; text: string; icon: ReactNode }) {
   return <section className="border-t border-border-default pt-4"><div className="flex items-center gap-2 text-action-primary">{icon}<h2 className="font-semibold text-text-strong">{title}</h2></div><p className="mt-2 text-sm leading-6 text-text-secondary">{text}</p></section>
 }
 
+type PendingDocumentContext = { files: Record<string, File>; pending: JsonRecord[]; errors: Record<string, string>; busy: boolean; select: (key: string, file: File | null) => void }
+const PendingDocuments = createContext<PendingDocumentContext>({ files: {}, pending: [], errors: {}, busy: false, select: () => {} })
+
+function InlineError({ name }: { name: string }) {
+  const errors = useContext(FormErrors)
+  return errors[name] ? <p id={`${name}-error`} role="alert" className="text-sm text-status-error">{errors[name]}</p> : null
+}
+
+function verificationErrorName(key: string): string {
+  const aliases: Record<string, string> = {
+    'legal_identity.individual_registered_surname': 'individual_surname', 'legal_identity.surname': 'individual_surname',
+    'legal_identity.individual_registered_first_name': 'individual_first_name', 'legal_identity.first_name': 'individual_first_name',
+    'legal_identity.identity_id_type': 'identity_id_type', 'legal_identity.id_type': 'identity_id_type',
+    'legal_identity.identity_id_number_last4': 'identity_id_number', 'legal_identity.id_number': 'identity_id_number',
+    'legal_identity.company_registered_name': 'company_registered_name', 'representative.full_name': 'representative_name',
+    'representative.relationship': 'representative_relationship', 'representative.id_number_last4': 'representative_id_number',
+    'store_email_verified_at': 'store_email', 'tax_profile': 'tin', 'supplier_classification': 'supplier_type',
+    'privacy_acknowledgement': 'privacy_acknowledged', 'registered_name': 'legal_business_name',
+  }
+  return aliases[key] ?? (key.startsWith('tax_profile.') ? key.slice(12) : key.startsWith('representative.') ? key.replace('representative.', 'representative_') : key.startsWith('address.') || key.startsWith('registered_business_address.') ? 'address_payload' : key.startsWith('classification.custom') ? 'custom_labels' : key === 'classification.niches' ? 'niches' : key.startsWith('classification.') ? 'supplier_type' : key)
+}
+
 function VerificationForm({ snapshot, onSaved, onRefresh }: { snapshot: VendorOnboardingSnapshot; onSaved: (snapshot: VendorOnboardingSnapshot) => void; onRefresh: () => Promise<void> }) {
+  const initialState = useRef(record(record(snapshot.verification).formState)).current
+  const savedValue = (name: string, fallback = '') => Array.isArray(initialState[name]) ? String(initialState[name][0] ?? fallback) : fallback
   const org = record(snapshot.organization)
   const verification = record(snapshot.verification)
-  const classification = record(verification.classification)
-  const address = record(verification.address)
+  const classification = { ...record(verification.classification), supplierType: savedValue('supplier_type', stringValue(record(verification.classification).supplierType)), ...(Array.isArray(initialState.niches) ? { niches: initialState.niches } : {}), ...(Array.isArray(initialState.custom_labels) ? { customLabels: initialState.custom_labels } : {}) }
+  const address = savedValue('address_payload') ? record(JSON.parse(savedValue('address_payload'))) : record(verification.address)
+  const currentAddressDraft = record(verification.formState).address_payload
+  const reviewAddress = Array.isArray(currentAddressDraft) && currentAddressDraft[0] ? record(JSON.parse(String(currentAddressDraft[0]))) : address
   const tax = record(verification.taxProfile)
-  const details = record(tax.details)
-  const contacts = arrayValue(verification.contacts)
-  const primaryContact = contacts[0] ?? {}
+  const details = { ...record(tax.details), ...(savedValue('tax_relief_claimed') ? { taxReliefClaimed: savedValue('tax_relief_claimed') === 'yes' } : {}) }
   const legalIdentity = record(verification.legalIdentity)
-  const [selectedBusinessType, setSelectedBusinessType] = useState(stringValue(org.businessType))
+  const [selectedBusinessType, setSelectedBusinessType] = useState(savedValue('business_type', stringValue(org.businessType)))
+  const [representativeRole, setRepresentativeRole] = useState(savedValue('representative_relationship', stringValue(record(verification.representative).relationship, 'PROPRIETOR')))
+  const [identityType, setIdentityType] = useState(savedValue('identity_id_type', stringValue(legalIdentity.idType)))
+  const [representativeIdType, setRepresentativeIdType] = useState(savedValue('representative_id_type', stringValue(record(verification.representative).idType)))
+  const [preview, setPreview] = useState<JsonRecord>({})
+  const [previewError, setPreviewError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const [previewPending, setPreviewPending] = useState(false)
+  const [previewRetry, setPreviewRetry] = useState(0)
+  const [declarationClaim, setDeclarationClaim] = useState(booleanValue(details.taxReliefClaimed))
+  useEffect(() => {
+    if (!selectedBusinessType) return
+    let current = true
+    setPreview({}); setPreviewError(''); setPreviewPending(true)
+    void previewVendorRequirements(selectedBusinessType, representativeRole, identityType, representativeIdType).then(result => { if (current) setPreview(record(result)) }).catch(() => { if (current) setPreviewError('Requirements could not be refreshed. Retry before saving.') }).finally(() => { if (current) setPreviewPending(false) })
+    return () => { current = false }
+  }, [selectedBusinessType, representativeRole, identityType, representativeIdType, previewRetry])
   const [step, setStep] = useState(0)
   const [privacyAcknowledged, setPrivacyAcknowledged] = useState(false)
   const [dirty, setDirty] = useState(false)
+  const [editedFields, setEditedFields] = useState<string[]>([])
   const companyIdentityRequired = ['PARTNERSHIP', 'CORPORATION', 'ONE_PERSON_CORPORATION', 'COOPERATIVE'].includes(selectedBusinessType)
   const individualIdentityRequired = ['SOLE_PROPRIETORSHIP', 'ONE_PERSON_CORPORATION'].includes(selectedBusinessType)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<{ tone: 'success' | 'error'; text: string } | null>(null)
-  const [mapMessage, setMapMessage] = useState<string | null>(null)
   const navigate = useNavigate()
   const formRef = useRef<HTMLFormElement>(null)
-  const geocodeSequence = useRef(0)
 
-  async function save(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); setBusy(true); setMessage(null)
-    const continueLater = (event.nativeEvent as SubmitEvent).submitter?.getAttribute('data-continue-later') === 'true'
-    const data = new FormData(event.currentTarget)
-    const draft: import('@materyalph/api-client-ts').VendorVerificationDraft = { lockVersion: numberValue(org.lockVersion, 1) }
+  const [files, setFiles] = useState<Record<string, File>>({})
+  const [removedFiles, setRemovedFiles] = useState<Set<string>>(new Set())
+  const latest = useRef(snapshot)
+  latest.current = snapshot
+  const staged = useRef<Record<string, File>>({})
+  const working = useRef(false)
+  const restored = useRef(false)
+  useEffect(() => {
+    if (restored.current || !formRef.current) return
+    restored.current = true
+    for (const field of Array.from(formRef.current.elements)) {
+      if (!(field instanceof HTMLInputElement || field instanceof HTMLSelectElement) || field.type === 'file') continue
+      const values = initialState[field.name]
+      if (!Array.isArray(values)) continue
+      if (field instanceof HTMLInputElement && ['radio', 'checkbox'].includes(field.type)) field.checked = values.includes(field.value)
+      else field.value = String(values[0] ?? '')
+    }
+  }, [initialState])
+  useEffect(() => {
+    if (!['PENDING_VERIFICATION', 'APPROVED'].includes(stringValue(verification.status)) || !formRef.current) return
+    // Keep submitted fields read-only while allowing authorized document previews.
+    for (const field of Array.from(formRef.current.elements)) {
+      if (field instanceof HTMLInputElement || field instanceof HTMLSelectElement || (field instanceof HTMLButtonElement && !field.hasAttribute('data-review-action'))) field.disabled = true
+    }
+  }, [snapshot, verification.status])
+  function publish(updated: VendorOnboardingSnapshot) { latest.current = updated; onSaved(updated) }
+  async function showError(cause: unknown, documentKey?: string) {
+    const fields = await onboardingFieldErrors(cause)
+    const mapped = Object.fromEntries(Object.entries(fields).map(([key, value]) => [documentKey ?? verificationErrorName(key.replace(/^draft\./, '')), value]))
+    if (documentKey && !Object.keys(mapped).length) mapped[documentKey] = await readableOnboardingError(cause)
+    setFieldErrors(mapped)
+    setMessage({ tone: 'error', text: Object.keys(mapped).length ? 'Please correct the highlighted fields.' : await readableOnboardingError(cause) })
+    const first = Object.keys(mapped)[0]
+    if (first) {
+      setStep(first === 'address_payload' ? 1 : ['supplier_type', 'niches', 'custom_labels'].includes(first) ? 2 : first === 'privacy_acknowledged' ? 3 : 0)
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        const field = document.getElementById(first) ?? document.querySelector<HTMLElement>(`[name="${first}"]`)
+        field?.focus(); field?.scrollIntoView({ block: 'center' })
+      }))
+    }
+  }
+  async function persistFiles() {
+    for (const [key, file] of Object.entries(files)) {
+      if (staged.current[key] === file) continue
+      try { await uploadVendorDocument(key, file); staged.current[key] = file }
+      catch (cause) { await showError(cause, key); return false }
+    }
+    publish(await getVendorOnboarding())
+    return true
+  }
+  async function saveProgress(): Promise<boolean> {
+    if (['PENDING_VERIFICATION', 'APPROVED'].includes(stringValue(verification.status))) return true
+    if (working.current || !formRef.current) return false
+    working.current = true; setBusy(true); setMessage(null)
+    try {
+      const data = new FormData(formRef.current)
+      const state: Record<string, string[]> = {}
+      for (const field of Array.from(formRef.current.elements)) {
+        if ((field instanceof HTMLInputElement || field instanceof HTMLSelectElement) && field.name && field.type !== 'file') state[field.name] = data.getAll(field.name).filter((value): value is string => typeof value === 'string')
+      }
+      state.representative_relationship = [representativeRole]
+      const current = latest.current
+      publish(await saveVendorVerificationDraft({ lockVersion: numberValue(record(current.organization).lockVersion, 1), draftLockVersion: numberValue(arrayValue(current.drafts).find(item => item.workstream === 'STORE_VERIFICATION')?.lockVersion, 0), formState: JSON.stringify(state) }))
+      if (!await persistFiles()) return false
+      setDirty(false); setEditedFields([])
+      return true
+    } catch (cause) { await showError(cause); return false }
+    finally { working.current = false; setBusy(false) }
+  }
+  const leave = useRef(saveProgress)
+  leave.current = saveProgress
+  useEffect(() => {
+    const click = (event: MouseEvent) => {
+      const link = event.target instanceof Element ? event.target.closest('a[href]') : null
+      if (!(link instanceof HTMLAnchorElement) || link.origin !== location.origin || link.pathname === location.pathname || event.ctrlKey || event.metaKey || event.shiftKey || event.button !== 0) return
+      event.preventDefault(); event.stopPropagation()
+      void leave.current().then(saved => { if (saved) navigate(link.pathname + link.search) })
+    }
+    document.addEventListener('click', click, true)
+    return () => document.removeEventListener('click', click, true)
+  }, [navigate])
+  useEffect(() => {
+    const warn = (event: BeforeUnloadEvent) => { if (dirty || Object.entries(files).some(([key, file]) => staged.current[key] !== file)) event.preventDefault() }
+    window.addEventListener('beforeunload', warn)
+    return () => window.removeEventListener('beforeunload', warn)
+  }, [dirty, files])
+  async function save() {
+    if (!formRef.current || working.current) return
+    if (!await saveProgress()) return
+    if (previewPending || previewError) { setMessage({ tone: 'error', text: 'Wait for the applicable requirements to refresh, or retry.' }); return }
+    working.current = true; setBusy(true); setMessage(null); setFieldErrors({})
+    const data = new FormData(formRef.current)
+    const draft: import('@materyalph/api-client-ts').VendorVerificationDraft = { lockVersion: numberValue(record(latest.current.organization).lockVersion, 1), draftLockVersion: numberValue(arrayValue(latest.current.drafts).find(item => item.workstream === 'STORE_VERIFICATION')?.lockVersion, 0) }
     const businessType = stringValue(data.get('business_type'))
-    const registeredName = stringValue(data.get('registered_name')).trim()
+    const registeredName = stringValue(data.get('legal_business_name')).trim()
     const storeName = stringValue(data.get('store_name')).trim()
     const established = stringValue(data.get('date_established'))
     const storePhone = stringValue(data.get('store_phone')).trim()
@@ -380,28 +519,38 @@ function VerificationForm({ snapshot, onSaved, onRefresh }: { snapshot: VendorOn
     const companyIdentityRequired = ['PARTNERSHIP', 'CORPORATION', 'ONE_PERSON_CORPORATION', 'COOPERATIVE'].includes(businessType)
     const individualIdentityRequired = ['SOLE_PROPRIETORSHIP', 'ONE_PERSON_CORPORATION'].includes(businessType)
     if (businessType) draft.businessType = businessType as NonNullable<import('@materyalph/api-client-ts').VendorVerificationDraft['businessType']>
-    if (registeredName && !companyIdentityRequired && !individualIdentityRequired) draft.registeredName = registeredName
+    if (companyIdentityRequired && registeredName) draft.legalBusinessName = registeredName
     if (storeName) draft.storeName = storeName
     if (established) draft.dateEstablished = new Date(`${established}T00:00:00Z`)
     if (candidateEmail) draft.storeEmail = candidateEmail
     if (storePhone) draft.storePhone = storePhone
-    const fullName = stringValue(data.get('contact_name')).trim()
-    if (fullName) draft.contacts = [{ full_name: fullName, title: stringValue(data.get('contact_title')).trim() || null, email: stringValue(data.get('contact_email')).trim().toLowerCase() || null, phone: stringValue(data.get('contact_phone')).trim() || null, is_primary: true, is_public: data.get('contact_public') === 'on', is_authorized: false }]
     if (companyIdentityRequired || individualIdentityRequired) draft.legalIdentity = { sameAsOwner: data.get('same_as_owner') === 'on', surname: stringValue(data.get('individual_surname')).trim() || null, firstName: stringValue(data.get('individual_first_name')).trim() || null, middleName: stringValue(data.get('individual_middle_name')).trim() || null, suffix: stringValue(data.get('individual_suffix')).trim() || null, companyRegisteredName: stringValue(data.get('company_registered_name')).trim() || null, idType: stringValue(data.get('identity_id_type')).trim() || null, ...(stringValue(data.get('identity_id_number')).trim() ? { idNumber: stringValue(data.get('identity_id_number')).trim() } : {}) }
     const representativeName = stringValue(data.get('representative_name')).trim()
-    if (companyIdentityRequired && representativeName) draft.representative = { fullName: representativeName, sameAsOwner: data.get('representative_same_as_owner') === 'on', position: stringValue(data.get('representative_position')).trim() || null, email: stringValue(data.get('representative_email')).trim() || null, phone: stringValue(data.get('representative_phone')).trim() || null, relationship: stringValue(data.get('representative_relationship')).trim() || null, idType: stringValue(data.get('representative_id_type')) as NonNullable<import('@materyalph/api-client-ts').VendorVerificationDraftRepresentative['idType']>, ...(data.get('representative_id_number') ? { idNumber: stringValue(data.get('representative_id_number')) } : {}) }
+    if ((companyIdentityRequired || representativeRole !== 'PROPRIETOR') && representativeName) draft.representative = { fullName: representativeName, sameAsOwner: data.get('representative_same_as_owner') === 'on', position: stringValue(data.get('representative_position')).trim() || null, email: stringValue(data.get('representative_email')).trim() || null, phone: stringValue(data.get('representative_phone')).trim() || null, relationship: stringValue(data.get('representative_relationship')).trim() || null,
+      relationshipOther: stringValue(data.get('representative_relationship_other')) || null,
+      authorityEvidenceSource: stringValue(data.get('authority_evidence_source'), 'SEPARATE_AUTHORITY_DOCUMENT') as NonNullable<import('@materyalph/api-client-ts').VendorVerificationDraftRepresentative['authorityEvidenceSource']>,
+      authorityEvidenceVersionId: stringValue(data.get('authority_evidence_version_id')) || null,
+      authorityDocumentType: (stringValue(data.get('authority_document_type')) || null) as Exclude<import('@materyalph/api-client-ts').VendorVerificationDraftRepresentative['authorityDocumentType'], undefined>,
+      authorityDocumentDate: data.get('authority_document_date') ? new Date(`${data.get('authority_document_date')}T00:00:00Z`) : null,
+      authorityScopes: new Set(data.getAll('authority_scopes').map(String) as import('@materyalph/api-client-ts').VendorVerificationDraftRepresentativeAuthorityScopesEnum[]), idType: stringValue(data.get('representative_id_type')) as NonNullable<import('@materyalph/api-client-ts').VendorVerificationDraftRepresentative['idType']>, ...(data.get('representative_id_number') ? { idNumber: stringValue(data.get('representative_id_number')) } : {}) }
+    if (businessType === 'SOLE_PROPRIETORSHIP' && representativeRole === 'PROPRIETOR' && record(verification.representative).id) draft.representative = { fullName: stringValue(record(verification.owner).fullName, stringValue(record(verification.representative).fullName)), sameAsOwner: true, relationship: 'PROPRIETOR' }
     const supplierType = stringValue(data.get('supplier_type'))
-    if (supplierType) draft.classification = { supplier_type: supplierType, niches: data.getAll('niches').map(String), custom_label: stringValue(data.get('custom_label')).trim() || null }
-    const street = stringValue(data.get('street')).trim()
-    if (street) draft.address = { street, unit: stringValue(data.get('unit')).trim() || null, barangay: stringValue(data.get('barangay')).trim(), city_municipality: stringValue(data.get('city_municipality')).trim(), province: stringValue(data.get('province')).trim(), postal_code: stringValue(data.get('postal_code')).trim(), formatted_address: stringValue(data.get('formatted_address')).trim() || null, latitude: Number(data.get('latitude')), longitude: Number(data.get('longitude')), source: stringValue(data.get('address_source')) || 'MANUAL', provider: stringValue(data.get('provider')).trim() || null, provider_place_id: stringValue(data.get('provider_place_id')).trim() || null }
+    if (supplierType) draft.classification = { supplierType: supplierType, niches: data.getAll('niches').map(String), customLabels: new Set(data.getAll('custom_labels').map(String)) }
+    const addressPayload = stringValue(data.get('address_payload'))
+    if (addressPayload) {
+      const selected = JSON.parse(addressPayload) as Record<string, string>
+      if (!selected.province_code || !selected.city_code || !selected.psgc_code || !selected.street?.trim() || !selected.postal_code?.trim() || (selected.source !== 'MANUAL' && !selected.resolution_token)) {
+        setFieldErrors({ address_payload: 'Complete the structured address. For map selection, wait for resolution or choose Manual Address Entry.' }); setStep(1); setBusy(false); working.current = false; return
+      }
+      draft.address = selected
+    }
     const taxpayerKey = stringValue(data.get('taxpayer_key')).trim()
     const tin = stringValue(data.get('tin')).trim()
     const declarationChoice = stringValue(data.get('tax_relief_claimed'))
     const taxReliefClaimed = declarationChoice === 'yes'
     const ownerAttested = data.get('owner_attested') === 'on'
-    const taxFieldsPresent = taxpayerKey || tin || stringValue(data.get('vat_category')) || declarationChoice || stringValue(data.get('branch_code')).trim() || stringValue(data.get('bir_cor_reference')).trim() || stringValue(data.get('declaration_type')).trim() || stringValue(data.get('threshold_position')).trim() || stringValue(data.get('submission_date')) || stringValue(data.get('outside_platform_as_of')) || taxReliefClaimed || ownerAttested || numberValue(tax.version, 0) > 0
+    const taxFieldsPresent = taxpayerKey || tin || stringValue(data.get('vat_category')) || declarationChoice || stringValue(data.get('bir_cor_reference')).trim() || stringValue(data.get('declaration_type')).trim() || stringValue(data.get('threshold_position')).trim() || stringValue(data.get('submission_date')) || stringValue(data.get('outside_platform_as_of')) || taxReliefClaimed || ownerAttested || numberValue(tax.version, 0) > 0
     if (taxFieldsPresent) {
-      const branchCode = stringValue(data.get('branch_code')).trim()
       const birCorReference = stringValue(data.get('bir_cor_reference')).trim()
       const entityClass = businessType === 'SOLE_PROPRIETORSHIP' ? 'INDIVIDUAL' : businessType === 'ONE_PERSON_CORPORATION' ? 'CORPORATION' : businessType
       const registrationCategory = stringValue(data.get('registration_category')).trim()
@@ -415,7 +564,6 @@ function VerificationForm({ snapshot, onSaved, onRefresh }: { snapshot: VendorOn
       draft.taxProfile = {
         ...(taxpayerKey ? { taxpayerKey } : {}),
         ...(tin ? { tin } : {}),
-        ...(branchCode ? { branchCode } : {}),
         ...(birCorReference ? { birCorReference } : {}),
         ...(entityClass ? { entityClass: entityClass as NonNullable<import('@materyalph/api-client-ts').VendorVerificationDraftTaxProfile['entityClass']> } : {}),
         ...(registrationCategory ? { registrationCategory } : {}),
@@ -427,227 +575,241 @@ function VerificationForm({ snapshot, onSaved, onRefresh }: { snapshot: VendorOn
         outsidePlatformAsOf: outsidePlatformAsOf ? new Date(`${outsidePlatformAsOf}T00:00:00Z`) : null,
         ...(withholdingScenario ? { withholdingScenario: withholdingScenario as NonNullable<import('@materyalph/api-client-ts').VendorVerificationDraftTaxProfile['withholdingScenario']> } : {}),
         ...(declarationChoice ? { taxReliefClaimed } : {}),
-        branchCodeLength: Number(data.get('branch_code_length')) as 3 | 5,
-        ...(data.get('tax_location') ? { headOffice: data.get('tax_location') === 'HEAD_OFFICE' } : {}),
         declarationYear: data.get('declaration_year') ? Number(data.get('declaration_year')) : null,
         ownerAttested,
       }
     }
-    try { onSaved(await saveVendorVerificationDraft(draft)); setDirty(false); if (continueLater) navigate('/dashboard'); setMessage({ tone: 'success', text: 'Verification draft saved. You can continue from this point later.' }) } catch (cause) { setMessage({ tone: 'error', text: await readableOnboardingError(cause) }) } finally { setBusy(false) }
-  }
-
-  async function geocode() {
-    const form = formRef.current
-    if (!form) return
-    const data = new FormData(form)
-    const latitude = data.get('latitude') ? Number(data.get('latitude')) : Number.NaN
-    const longitude = data.get('longitude') ? Number(data.get('longitude')) : Number.NaN
-    await resolveAddress(latitude, longitude)
-  }
-
-  async function resolveAddress(latitude: number, longitude: number) {
-    const form = formRef.current
-    if (!form) return
-    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) { setMapMessage('Enter latitude and longitude first, or complete the structured address manually.'); return }
-    setDirty(true)
-    const sequence = ++geocodeSequence.current
-    setMapMessage('Looking up the address…')
-    try {
-      const result = record(await reverseGeocodeVendorAddress({ latitude, longitude }))
-      if (sequence !== geocodeSequence.current) return
-      const returnedAddress = record(result.address)
-      if (booleanValue(result.available)) {
-        const resolvedFields: Record<string, string> = { street: stringValue(returnedAddress.street), unit: stringValue(returnedAddress.unit), barangay: stringValue(returnedAddress.barangay), city_municipality: stringValue(returnedAddress.cityMunicipality, stringValue(returnedAddress.city_municipality)), province: stringValue(returnedAddress.province), postal_code: stringValue(returnedAddress.postalCode, stringValue(returnedAddress.postal_code)), formatted_address: stringValue(returnedAddress.formattedAddress, stringValue(returnedAddress.formatted_address)), provider: stringValue(returnedAddress.provider), provider_place_id: stringValue(returnedAddress.providerPlaceId, stringValue(returnedAddress.provider_place_id)) }
-        Object.entries(resolvedFields).forEach(([name, value]) => { const field = form.elements.namedItem(name); if (field instanceof HTMLInputElement && value) field.value = value }); const sourceField = form.elements.namedItem('address_source'); if (sourceField instanceof HTMLInputElement) sourceField.value = 'MAP'
-        setMapMessage(`Map result available: ${stringValue(returnedAddress.formattedAddress, stringValue(returnedAddress.formatted_address, 'Review the returned address and save the structured fields.'))}`)
-      }
-      else setMapMessage(stringValue(result.message, 'Map lookup is unavailable. Complete the structured address manually.'))
-    } catch (cause) {
-      if (sequence === geocodeSequence.current) setMapMessage(await readableOnboardingError(cause))
+    const invalidFields: Record<string, string> = {}
+    for (const field of Array.from(formRef.current.elements)) {
+      if (!(field instanceof HTMLInputElement || field instanceof HTMLSelectElement) || !field.name || field.type === 'file' || field.disabled || field.checkValidity()) continue
+      invalidFields[field.name] = field.name === 'tin' ? 'Enter your 9-digit TIN followed by a 3- to 5-digit branch code (for example, 123-456-789-000).' : field.validity.valueMissing ? 'Please complete this field.' : 'Check this value.'
     }
+    if (!privacyAcknowledged) invalidFields.privacy_acknowledged = 'Acknowledge the Privacy Notice.'
+    if (Object.keys(invalidFields).length || !privacyAcknowledged) {
+      setFieldErrors(invalidFields); setMessage({ tone: 'error', text: 'Please correct the highlighted fields.' }); setBusy(false); working.current = false
+      const name = Object.keys(invalidFields)[0]!
+      setStep(name === 'privacy_acknowledged' ? 3 : ['street', 'postal_code'].includes(name) ? 1 : ['supplier_type', 'niches', 'custom_labels'].includes(name) ? 2 : 0)
+      requestAnimationFrame(() => { const field = document.getElementById(name); field?.focus(); field?.scrollIntoView({ block: 'center' }) })
+      return
+    }
+    try {
+      publish(await submitVendorVerification({ lockVersion: numberValue(record(latest.current.organization).lockVersion, 1), privacyAcknowledged, draft }))
+      setDirty(false)
+    } catch (cause) { await showError(cause) } finally { setBusy(false); working.current = false }
+
   }
 
-  function selectMapCoordinates({ latitude, longitude }: { latitude: number; longitude: number }) {
-    const form = formRef.current
-    if (!form) return
-    const latitudeField = form.elements.namedItem('latitude')
-    const longitudeField = form.elements.namedItem('longitude')
-    if (latitudeField instanceof HTMLInputElement) latitudeField.value = latitude.toFixed(6)
-    if (longitudeField instanceof HTMLInputElement) longitudeField.value = longitude.toFixed(6)
-    void resolveAddress(latitude, longitude)
-  }
+  return <FormErrors.Provider value={fieldErrors}><PendingDocuments.Provider value={{ files, pending: arrayValue(record(snapshot.verification).pendingDocuments).filter(doc => !removedFiles.has(stringValue(doc.requirementKey))), errors: fieldErrors, busy, select: (key, file) => {
+    setFieldErrors(current => { const next = { ...current }; delete next[key]; return next })
+    setFiles(current => { const next = { ...current }; if (file) next[key] = file; else delete next[key]; return next }); setDirty(true)
+    if (file) setRemovedFiles(current => { const next = new Set(current); next.delete(key); return next })
+    else {
+      const saved = Boolean(staged.current[key]) || arrayValue(record(latest.current.verification).pendingDocuments).some(doc => doc.requirementKey === key)
+      delete staged.current[key]
+      setRemovedFiles(current => new Set(current).add(key))
+      if (!saved) return
+      working.current = true; setBusy(true)
+      void removePendingVendorDocument(key).then(publish).catch(cause => {
+        setRemovedFiles(current => { const next = new Set(current); next.delete(key); return next })
+        return showError(cause, key)
+      }).finally(() => { working.current = false; setBusy(false) })
+    }
+  } }}><OnboardingFlow autosave steps={verificationSteps} current={step} onStep={next => { void saveProgress().then(saved => { if (saved) setStep(next) }) }} section={sectionFor(snapshot, 'STORE_VERIFICATION')} busy={busy} actions={<>
+      <Button type="button" variant="secondary" disabled={busy} onClick={() => { void saveProgress().then(saved => { if (saved) navigate('/dashboard') }) }}>Finish Later</Button>
+      {step === 3 && <Button type="button" disabled={busy || ['PENDING_VERIFICATION', 'APPROVED'].includes(stringValue(verification.status))} onClick={() => void save()}>{busy ? 'Submitting…' : 'Submit for Admin Review'}</Button>}</>}>
+    {message && <p role={message.tone === 'error' ? 'alert' : 'status'} className={`mb-4 text-sm ${message.tone === 'error' ? 'text-status-error' : 'text-text-secondary'}`}>{message.text}{message.text.startsWith('This draft changed') && <Button type="button" variant="quiet" onClick={() => { void getVendorOnboarding().then(publish).catch(showError) }}>Reload latest version</Button>}</p>}
+    <form id="verification-draft" noValidate ref={formRef} onChange={(event) => { if (event.target instanceof HTMLInputElement && event.target.type === 'file') return; setDirty(true); if (event.target instanceof HTMLSelectElement || event.target instanceof HTMLInputElement) {
+      const title = event.target.labels?.[0]?.textContent?.trim() || statusLabel(event.target.name)
+      if (title) setEditedFields(fields => [...new Set([...fields, title])])
+      if (event.target.name === 'business_type') setSelectedBusinessType(event.target.value)
+      if (event.target.name === 'tax_relief_claimed') setDeclarationClaim(event.target.value === 'yes')
+      if (event.target.name === 'representative_relationship') setRepresentativeRole(event.target.value)
+      if (event.target.name === 'identity_id_type') setIdentityType(event.target.value)
+      if (event.target.name === 'representative_id_type') setRepresentativeIdType(event.target.value)
+    } }} onSubmit={event => { event.preventDefault(); void save() }}><fieldset className="min-w-0">
+      <OnboardingStepContent active={step === 0}><div className="grid min-w-0 gap-6">
+        <FormSection panel title="Business Type" description="Choose the legal structure shown on your registration evidence."><div className="grid gap-2 sm:grid-cols-2">{['SOLE_PROPRIETORSHIP', 'PARTNERSHIP', 'CORPORATION', 'ONE_PERSON_CORPORATION', 'COOPERATIVE'].map(type => <label key={type} className="flex min-h-11 items-center gap-3 text-sm"><input type="radio" name="business_type" value={type} checked={selectedBusinessType === type} onChange={() => setSelectedBusinessType(type)} aria-invalid={Boolean(fieldErrors.business_type)} className="h-5 w-5 accent-action-primary" />{type === 'ONE_PERSON_CORPORATION' ? 'One Person Corporation (OPC)' : statusLabel(type)}</label>)}</div><InlineError name="business_type" /></FormSection>
+        {previewPending && <p role="status">Updating applicable requirements…</p>}{previewError && <StatusMessage tone="error">{previewError} <Button type="button" variant="secondary" onClick={() => setPreviewRetry(value => value + 1)}>Retry requirements</Button></StatusMessage>}
+        {(individualIdentityRequired || companyIdentityRequired) && <FormSection panel title="Registered Legal Identity" description="Review these names against the applicable government identification and registration records. Prefill does not verify your identity.">
+          {individualIdentityRequired && <><label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" name="same_as_owner" defaultChecked={booleanValue(legalIdentity.sameAsOwner)} onChange={event => { if (event.target.checked) { const owner = stringValue(record(verification.owner).fullName).trim().split(/\s+/); const surname = owner.pop() ?? ''; for (const [name, value] of [['individual_surname', surname], ['individual_first_name', owner.join(' ')]] as const) { const field = event.target.form?.elements.namedItem(name); if (field instanceof HTMLInputElement) field.value = value } } }} />Same as Vendor Owner’s full legal name</label><FieldRow><Field label="Surname" name="individual_surname" required maxLength={100} defaultValue={stringValue(legalIdentity.surname)} /><Field label="First name" name="individual_first_name" required maxLength={100} defaultValue={stringValue(legalIdentity.firstName)} /></FieldRow><FieldRow><Field label="Middle name" name="individual_middle_name" maxLength={100} defaultValue={stringValue(legalIdentity.middleName)} /><Field label="Suffix" name="individual_suffix" maxLength={10} defaultValue={stringValue(legalIdentity.suffix)} /></FieldRow></>}
+          {companyIdentityRequired && <Field label="Company registered name" name="company_registered_name" required maxLength={200} defaultValue={stringValue(legalIdentity.companyRegisteredName)} hint="The official legal name recorded by the government registration authority." />}
+          {individualIdentityRequired && <FormSection title="Government-Issued Identification" description="Private identification must correspond to the legally relevant person named in this application.">
+          {individualIdentityRequired && <><FieldRow><SelectField label="Government ID type" name="identity_id_type" defaultValue={identityType} options={['NATIONAL_ID', 'DRIVERS_LICENSE', 'PASSPORT', 'UMID', 'OTHER']} />{identityType && <Field placeholder={`Enter your ${statusLabel(identityType).toLowerCase()} number`} label="Government ID number" name="identity_id_number" type="password" autoComplete="off" hint={stringValue(legalIdentity.idNumberLast4) ? `Current ID ends in ${legalIdentity.idNumberLast4}. Leave blank to retain it.` : 'Stored encrypted and masked on read.'} />}</FieldRow>{!identityType && <p className="text-sm text-text-secondary">Select your Government ID type to enter its number and upload the required sides.</p>}{identityType && <DocumentChecklist key={identityType} identityLayout embedded keys={['identity_evidence', ...(identityType !== 'PASSPORT' ? ['identity_back_evidence'] : [])]} snapshot={snapshot} onRefresh={onRefresh} preview={preview} pendingChanges={selectedBusinessType !== stringValue(org.businessType)} />}</>}
+          </FormSection>}
+        </FormSection>}
+        {selectedBusinessType === 'SOLE_PROPRIETORSHIP' && <FormSection panel title="Authorized Representative and Authority to Act" description="A proprietor representing their own business does not need separate Authority Evidence."><label className="flex min-h-11 items-center gap-3"><input type="checkbox" checked={representativeRole !== 'PROPRIETOR'} onChange={event => setRepresentativeRole(event.target.checked ? 'AUTHORIZED_REPRESENTATIVE' : 'PROPRIETOR')} />Someone other than the proprietor represents the business</label>{representativeRole === 'PROPRIETOR' && <p>Not applicable — the sole proprietor is the representative.</p>}{representativeRole !== 'PROPRIETOR' && <RepresentativeInformation embedded representative={{ ...record(verification.representative), ...(savedValue('authority_document_type') ? { authorityDocumentType: savedValue('authority_document_type') } : {}) }} owner={record(verification.owner)} documents={arrayValue(verification.documents)} review={record(verification.authorityReview)} role={representativeRole} idType={representativeIdType} authorityEvidence={<DocumentChecklist embedded reviewUploads keys={['authority_to_act']} snapshot={snapshot} onRefresh={onRefresh} preview={preview} pendingChanges={selectedBusinessType !== stringValue(org.businessType)} />} identityEvidence={representativeIdType ? <DocumentChecklist key={representativeIdType} identityLayout embedded keys={['representative_identity', ...(representativeIdType !== 'PASSPORT' ? ['representative_identity_back'] : [])]} snapshot={snapshot} onRefresh={onRefresh} preview={preview} pendingChanges={dirty || busy || selectedBusinessType !== stringValue(org.businessType)} /> : null} />}</FormSection>}
+        {companyIdentityRequired && <RepresentativeInformation representative={{ ...record(verification.representative), ...(savedValue('authority_document_type') ? { authorityDocumentType: savedValue('authority_document_type') } : {}) }} owner={record(verification.owner)} documents={arrayValue(verification.documents)} review={record(verification.authorityReview)} role={representativeRole} idType={representativeIdType} authorityEvidence={<DocumentChecklist embedded reviewUploads keys={['authority_to_act']} snapshot={snapshot} onRefresh={onRefresh} preview={preview} pendingChanges={selectedBusinessType !== stringValue(org.businessType)} />} identityEvidence={representativeIdType ? <DocumentChecklist key={representativeIdType} identityLayout embedded keys={['representative_identity', ...(representativeIdType !== 'PASSPORT' ? ['representative_identity_back'] : [])]} snapshot={snapshot} onRefresh={onRefresh} preview={preview} pendingChanges={dirty || busy || selectedBusinessType !== stringValue(org.businessType)} /> : null} />}
+        <FormSection panel title="Business identity" description="The registered business name and public Store name are separate values."><FieldRow>{companyIdentityRequired && <Field label="Registered Business Name" name="legal_business_name" required maxLength={200} defaultValue={stringValue(org.legalBusinessName, stringValue(org.registeredName))} />}<Field label="Date established" name="date_established" required type="date" max={new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Asia/Manila' }).format(new Date())} defaultValue={dateInput(org.dateEstablished)} /></FieldRow><Field label="Public Store Name" name="store_name" required maxLength={100} defaultValue={stringValue(org.storeName)} /></FormSection>
+        <StoreContactInformation snapshot={snapshot} onSaved={onSaved} initialEmail={savedValue('store_email', stringValue(org.storeEmail))} />
+        <BusinessTaxInformation tax={tax} details={details} businessType={selectedBusinessType} canAttest={(selectedBusinessType === 'SOLE_PROPRIETORSHIP' && representativeRole === 'PROPRIETOR') || (record(verification.authorityReview).decision === 'APPROVED' && stringValue(record(verification.authorityReview).scope).split(',').includes('TAX_DECLARATIONS'))} errors={fieldErrors} evidence={<DocumentChecklist embedded reviewUploads keys={['bir_cor']} declarationClaim={declarationClaim} snapshot={snapshot} onRefresh={onRefresh} preview={preview} pendingChanges={selectedBusinessType !== stringValue(org.businessType)} />} declarationEvidence={<DocumentChecklist embedded reviewUploads keys={['tax_relief_evidence']} declarationClaim={declarationClaim} snapshot={snapshot} onRefresh={onRefresh} preview={preview} pendingChanges={selectedBusinessType !== stringValue(org.businessType)} />} />
+        <FormSection panel title="Business and Compliance Evidence" description="Select the required documents. They stay pending until you submit for Admin Review."><DocumentChecklist embedded reviewUploads keys={['business_registration', 'lgu_permit']} snapshot={snapshot} onRefresh={onRefresh} preview={preview} pendingChanges={selectedBusinessType !== stringValue(org.businessType)} /></FormSection>
+      </div></OnboardingStepContent>
+      <OnboardingStepContent active={step === 1}><div className="grid gap-5"><p className="text-sm text-text-secondary">Select your official Philippine address, then add the street and building details. Use Manual Address Entry or review a resolved map location before submitting.</p><InlineError name="address_payload" /><VendorBusinessAddress initial={address} restoreDraft={Boolean(savedValue('address_payload'))} active={step === 1} onDirty={() => setDirty(true)} /></div></OnboardingStepContent>
+      <OnboardingStepContent active={step === 2}><SupplierClassification classification={classification} onDirty={() => setDirty(true)} /></OnboardingStepContent>
 
-  return <OnboardingFlow steps={verificationSteps} current={step} onStep={setStep} section={sectionFor(snapshot, 'STORE_VERIFICATION')} busy={busy} actions={<><Button type="submit" form="verification-draft" variant="secondary" formNoValidate data-continue-later="true" disabled={busy}>Finish Later</Button>
-      <Button type="submit" form="verification-draft" variant="secondary" disabled={busy}>{busy ? 'Saving draft…' : 'Save verification draft'}</Button>
-      {step === 3 && <VerificationSubmit snapshot={snapshot} onSaved={onSaved} privacyAcknowledged={privacyAcknowledged} dirty={dirty || busy} />}</>}>
-    {message && <div className="mb-5"><StatusMessage tone={message.tone}>{message.text}</StatusMessage></div>}
-    <form id="verification-draft" noValidate ref={formRef} onChange={(event) => { setDirty(true); if (event.target instanceof HTMLSelectElement && event.target.name === 'business_type') setSelectedBusinessType(event.target.value) }} onSubmit={(event) => void save(event)}>
-      <OnboardingStepContent active={step === 0}><div className="mb-8 max-w-xl"><p className="mb-5 text-sm leading-6 text-text-secondary">Choose your legal business structure. This determines the legal identity and evidence required for Admin review.</p><SelectField label="Business type" name="business_type" defaultValue={stringValue(org.businessType)} options={['SOLE_PROPRIETORSHIP', 'PARTNERSHIP', 'CORPORATION', 'ONE_PERSON_CORPORATION', 'COOPERATIVE']} /></div></OnboardingStepContent>
-      <OnboardingStepContent active={step === 0}><div className="grid gap-8"><FormSection title="Business information" description="Use the legal name and establishment date shown on your business evidence.">
-        <div className="grid min-w-0 gap-5 sm:grid-cols-2">{companyIdentityRequired ? <Field label="Company registered name" name="company_registered_name" defaultValue={stringValue(legalIdentity.companyRegisteredName, stringValue(org.registeredName))} required /> : <p className="self-center text-sm text-text-secondary">{individualIdentityRequired ? "Your Individual Registered Name below is used as your legal business identity." : "Select a business type to enter the registered legal identity."}</p>}<Field label="Date established" name="date_established" type="date" max={portalDate()} defaultValue={dateInput(org.dateEstablished)} required /><div className="min-w-0 sm:col-span-2"><Field label="Public Store Name" name="store_name" defaultValue={stringValue(org.storeName)} required /></div></div>
-        <StoreContactInformation snapshot={snapshot} onSaved={onSaved} />
-      </FormSection>{individualIdentityRequired && <FormSection title="Individual Registered Name" description="Individual Registered Name is your complete legal name as shown on government-issued identification and registration records. Review and correct any Owner-name suggestions before saving. Identity evidence remains private."><div className="grid gap-5 sm:grid-cols-2">{individualIdentityRequired && <><label className="flex min-h-11 items-center gap-3 text-sm text-text-secondary sm:col-span-2"><input className="h-5 w-5 accent-action-primary" type="checkbox" name="same_as_owner" defaultChecked={booleanValue(legalIdentity.sameAsOwner)} onChange={event => { if (!event.target.checked) return; const parts = stringValue(record(verification.owner).fullName).trim().split(/\s+/); const surname = parts.pop() ?? ''; for (const [name, value] of [['individual_surname', surname], ['individual_first_name', parts.join(' ')]] as const) { const field = formRef.current?.elements.namedItem(name); if (field instanceof HTMLInputElement) field.value = value } }} /> Same as Vendor Owner’s full legal name</label><Field label="Surname" name="individual_surname" defaultValue={stringValue(legalIdentity.surname)} required /><Field label="First name" name="individual_first_name" defaultValue={stringValue(legalIdentity.firstName)} required /><Field label="Middle name" name="individual_middle_name" defaultValue={stringValue(legalIdentity.middleName)} /><Field label="Suffix" name="individual_suffix" defaultValue={stringValue(legalIdentity.suffix)} /><SelectField label="Government ID type" name="identity_id_type" defaultValue={stringValue(legalIdentity.idType)} options={['NATIONAL_ID', 'DRIVERS_LICENSE', 'PASSPORT', 'UMID', 'OTHER']} /><Field label="Government ID number" name="identity_id_number" type="password" autoComplete="off" hint={stringValue(legalIdentity.idNumberLast4) ? `Current ID ends in ${stringValue(legalIdentity.idNumberLast4)}. Re-enter only to replace it.` : 'Stored privately; only the last four digits are shown after saving.'} required /></>}</div></FormSection>}<FormSection title="Primary Business Contact" description="Exactly one active primary contact is required for review. Staff roles cannot replace the Vendor Owner’s attestation."><div className="grid gap-5 sm:grid-cols-2"><Field label="Full name" name="contact_name" defaultValue={stringValue(primaryContact.fullName)} required /><Field label="Title" name="contact_title" defaultValue={stringValue(primaryContact.title)} /><Field label="Contact email" name="contact_email" type="email" defaultValue={stringValue(primaryContact.email)} /><Field label="Contact phone" name="contact_phone" defaultValue={stringValue(primaryContact.phone)} inputMode="tel" /></div><label className="flex min-h-11 items-center gap-3 text-sm text-text-secondary"><input className="h-5 w-5 accent-action-primary" type="checkbox" name="contact_public" defaultChecked={booleanValue(primaryContact.isPublic)} /> Show this contact in the approved public store profile</label></FormSection></div></OnboardingStepContent>
-      <OnboardingStepContent active={step === 0}>{companyIdentityRequired && <RepresentativeInformation representative={record(verification.representative)} owner={record(verification.owner)} />}</OnboardingStepContent>
-      <OnboardingStepContent active={step === 1}><FormSection title="Registered business address" description="Use the interactive map when configured, or complete the labeled address fields manually. Review the result before saving for Admin review."><div className="grid gap-5 sm:grid-cols-2"><Field className="sm:col-span-2" label="Street" name="street" defaultValue={stringValue(address.street)} required /><Field label="Unit or building" name="unit" defaultValue={stringValue(address.unit)} /><Field label="Barangay" name="barangay" defaultValue={stringValue(address.barangay)} required /><Field label="City or municipality" name="city_municipality" defaultValue={stringValue(address.cityMunicipality)} required /><Field label="Province" name="province" defaultValue={stringValue(address.province)} required /><Field label="Postal code" name="postal_code" defaultValue={stringValue(address.postalCode)} required /><Field label="Latitude" name="latitude" type="number" step="any" defaultValue={stringValue(address.latitude)} required /><Field label="Longitude" name="longitude" type="number" step="any" defaultValue={stringValue(address.longitude)} required /></div><input type="hidden" name="formatted_address" defaultValue={stringValue(address.formattedAddress)} /><input type="hidden" name="address_source" defaultValue={stringValue(address.source, 'MANUAL')} /><input type="hidden" name="provider" defaultValue={stringValue(address.provider)} /><input type="hidden" name="provider_place_id" defaultValue={stringValue(address.providerPlaceId, stringValue(address.provider_place_id))} /><div className="mt-5 flex flex-wrap items-center gap-3"><Button type="button" variant="secondary" onClick={() => void geocode()}><MapPin size={16} aria-hidden="true" /> Use map lookup</Button><span className="text-sm text-text-secondary">Coordinates do not imply live GPS tracking.</span></div>{step === 1 && <VendorAddressMapSelector latitude={numberValue(address.latitude, Number.NaN)} longitude={numberValue(address.longitude, Number.NaN)} onCoordinatesChange={selectMapCoordinates} />}{mapMessage && <p className="mt-3 text-sm text-text-secondary" role="status">{mapMessage}</p>}</FormSection></OnboardingStepContent>
-      <OnboardingStepContent active={step === 2}><SupplierClassification classification={classification} /></OnboardingStepContent>
-      <OnboardingStepContent active={step === 0}><BusinessTaxInformation tax={tax} details={details} businessType={selectedBusinessType} /></OnboardingStepContent>
-    </form>
-    <OnboardingStepContent active={step === 0}><p className="mb-5 mt-8 text-sm text-text-secondary">Save your business type and tax profile before uploading their applicable evidence.</p><DocumentChecklist embedded snapshot={snapshot} onRefresh={onRefresh} /></OnboardingStepContent>
-    <OnboardingStepContent active={step === 3}><PrivacyNotice notice={record(verification.privacyNotice)} /><p className="max-w-2xl text-sm leading-6 text-text-secondary">Your business details and evidence remain private during review. This acknowledgement is recorded when you submit Store Verification.</p><label className="mt-5 flex min-h-11 max-w-2xl items-start gap-3 text-sm leading-6"><input className="mt-1 h-5 w-5 shrink-0 accent-action-primary" type="checkbox" disabled={!stringValue(record(verification.privacyNotice).content)} checked={privacyAcknowledged} onChange={event => setPrivacyAcknowledged(event.target.checked)} /><span>I acknowledge the current Privacy Notice and authorize MateryalPH to review these Vendor business details and private evidence.</span></label></OnboardingStepContent>
-    <OnboardingStepContent active={step === 3}><p className="mb-5 mt-6 text-sm leading-6 text-text-secondary">Review your saved requirements before submitting. Submission sends the current evidence for manual Admin review and does not activate your store.</p>{dirty && <StatusMessage tone="info">You have unsaved changes. Save your verification draft before submitting.</StatusMessage>}<ReviewDetails items={[["Registered business name", stringValue(org.registeredName, stringValue(org.legalName))], ["Business type", statusLabel(stringValue(org.businessType))], ["Registered location", [address.street, address.cityMunicipality, address.province].filter(Boolean).join(', ')], ["Privacy acknowledgement", privacyAcknowledged ? 'Acknowledged for this submission' : 'Not acknowledged']]} /><Checklist title="Verification checklist" section={sectionFor(snapshot, 'STORE_VERIFICATION')} compact /></OnboardingStepContent>
-  </OnboardingFlow>
+    </fieldset></form>
+
+    <OnboardingStepContent active={step === 3}><p className="mb-5 mt-6 text-sm leading-6 text-text-secondary">Review your information and selected documents before submitting. Submission sends the current evidence for manual Admin review and does not activate your store.</p><ReviewDetails items={[["Public Store Name", stringValue((record(verification.formState).store_name as string[] | undefined)?.[0], stringValue(org.storeName))], ["Business type", statusLabel(selectedBusinessType)], ["Registered location", [reviewAddress.street, reviewAddress.cityMunicipality ?? reviewAddress.city_municipality, reviewAddress.province].filter(Boolean).join(', ')], ["Privacy acknowledgement", privacyAcknowledged ? 'Acknowledged for this submission' : 'Not acknowledged']]} /><OnboardingReview groups={verificationSteps.map((group, index) => ({ label: group.label, items: sectionFor(snapshot, 'STORE_VERIFICATION').steps.filter(item => group.requirements.includes(item.key) || (index === 0 && !verificationSteps.some(step => step.requirements.includes(item.key)))).map(item => { const requirement = arrayValue(snapshot.requirements).find(value => value.key === item.key); return { ...item, reason: stringValue(requirement?.correctionReason) || stringValue(requirement?.applicabilityReason) || stringValue(requirement?.blockingReason) || item.reason || null } }) }))} busy={busy} onJump={next => { void saveProgress().then(saved => { if (saved) setStep(next) }) }} unsaved={dirty ? (editedFields.length ? editedFields : ['Current form or document selections']) : []} pending={[...(Object.keys(record(verification.formState)).length ? ['Verification form details'] : []), ...arrayValue(verification.pendingDocuments).map(doc => statusLabel(stringValue(doc.requirementKey)))]} /></OnboardingStepContent>
+    <OnboardingStepContent active={step === 3}>
+      <div className="mt-8 grid gap-6">
+        <CommissionTerms snapshot={snapshot} onSaved={publish} disabled={busy || dirty} />
+        <PrivacyNotice notice={record(verification.privacyNotice)}>
+          <div className="grid gap-5 border-t border-border-default pt-5">
+            <p className="max-w-2xl text-sm leading-6 text-text-secondary">Your business details and evidence remain private during review. This acknowledgement is recorded when you submit Store Verification.</p>
+            <label className="flex min-h-11 max-w-2xl items-start gap-3 text-sm leading-6"><input id="privacy_acknowledged" className="mt-1 h-5 w-5 shrink-0 accent-action-primary" type="checkbox" disabled={!stringValue(record(verification.privacyNotice).content)} checked={privacyAcknowledged} onChange={event => { setPrivacyAcknowledged(event.target.checked); setFieldErrors(current => { const next = { ...current }; delete next.privacy_acknowledged; return next }); if (Object.keys(fieldErrors).every(key => key === 'privacy_acknowledged')) setMessage(null) }} /><span>I acknowledge the current Privacy Notice and authorize MateryalPH to review these Vendor business details and private evidence.</span></label><InlineError name="privacy_acknowledged" />
+          </div>
+        </PrivacyNotice>
+      </div>
+    </OnboardingStepContent>
+  </OnboardingFlow></PendingDocuments.Provider></FormErrors.Provider>
 }
 
-function PrivacyNotice({ notice }: { notice: JsonRecord }) {
-  return <section className="mb-6 border-b border-border-default pb-6" aria-label="Privacy Notice"><h3 className="text-lg font-semibold">Privacy Notice {notice.version ? `— version ${numberValue(notice.version)}` : ''}</h3>{stringValue(notice.content) ? <div className="mt-4 max-h-96 overflow-y-auto whitespace-pre-wrap text-sm leading-6" tabIndex={0}>{stringValue(notice.content)}</div> : <p className="mt-3 text-sm text-text-secondary">The current Privacy Notice could not be loaded. Refresh this page before acknowledging and submitting.</p>}</section>
+function CommissionTerms({ snapshot, onSaved, disabled }: { snapshot: VendorOnboardingSnapshot; onSaved: (snapshot: VendorOnboardingSnapshot) => void; disabled: boolean }) {
+  const terms = record(record(snapshot.verification).commissionTerms)
+  const agreement = record(terms.agreement)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  async function accept() {
+    setBusy(true); setError('')
+    try { onSaved(await acceptVendorCommission({ organizationLockVersion: numberValue(record(snapshot.organization).lockVersion, 1), agreementVersionId: stringValue(agreement.id), accepted: true })) }
+    catch (cause) { setError(await readableOnboardingError(cause)) }
+    finally { setBusy(false) }
+  }
+  return <VersionedAgreementPanel key={stringValue(agreement.id)} title="2% Commission Terms" version={numberValue(agreement.version)} content={stringValue(agreement.content)} accepted={terms.accepted === true} eligible={terms.canAccept === true} busy={busy || disabled} error={error} onAccept={() => void accept()}>
+    <p className="max-w-3xl text-sm leading-6 text-text-secondary">A versioned agreement for the Vendor-paid commission on completed materials. Review the full terms before accepting for your organization.</p>
+    <dl className="grid gap-4 sm:grid-cols-2">
+      {[["Commission base", "2% of completed materials after Vendor discounts, excluding included materials VAT."], ["Monthly collection", "Collected monthly, with VAT-inclusive commission fee treatment where applicable."], ["Credits and disputes", "Cancellation and partial-refund credits, statement due dates, and the dispute process follow the versioned terms."], ["Authorized acceptance", "The Vendor Owner or an Admin-approved Owner-linked representative with the COMMISSION_AGREEMENT scope."]].map(([label, detail]) => <div key={label} className="rounded-control border border-border-default p-4"><dt className="text-sm font-semibold">{label}</dt><dd className="mt-2 text-sm leading-6 text-text-secondary">{detail}</dd></div>)}
+    </dl>
+    <p className="rounded-control bg-surface-canvas p-4 text-sm leading-6">Changing settings never adds a fee to an already accepted order.</p>
+  </VersionedAgreementPanel>
+}
+
+function PrivacyNotice({ notice, children }: { notice: JsonRecord; children?: ReactNode }) {
+  return <FormSection panel region title="Privacy Notice" description={notice.version ? `Version ${numberValue(notice.version)}` : ''}>
+    {stringValue(notice.content) ? <div className="max-h-96 overflow-y-auto whitespace-pre-wrap break-words text-sm leading-6" tabIndex={0}>{stringValue(notice.content)}</div> : <p className="text-sm text-text-secondary">The current Privacy Notice could not be loaded. Refresh this page before acknowledging and submitting.</p>}
+    {children}
+  </FormSection>
 }
 
 const supplierNiches = ['Construction Materials', 'Electrical Supplies', 'Plumbing and Sanitary', 'Tools and Equipment', 'Finishing Materials', 'Fasteners and Hardware', 'Cement and Concrete', 'Roofing Materials', 'Formworks and Scaffolding', 'Wood and Lumber', 'Landscaping and Exterior', 'Steel and Reinforcement', 'Tools and Accessories', 'Masonry', 'Insulation and Waterproofing', 'Aggregates', 'Drainage and Septic Materials', 'Construction Chemicals', 'Flooring Materials', 'Wall and Ceiling Materials', 'HVAC Materials', 'Sanitary Fixtures', 'Fire Protection Materials', 'Paints and Finishes', 'Adhesives and Sealants', 'Doors, Windows, and Glass', 'Other Category']
 
-function SupplierClassification({ classification }: { classification: JsonRecord }) {
+const supplierNicheDescriptions = ["General building and construction supplies.", "Wiring, switches, outlets and electrical components.", "Pipes, fittings and water-system supplies.", "Tools and equipment sold as products; rental services are excluded.", "Materials for finished interior and exterior surfaces.", "Screws, bolts, hinges and general hardware.", "Cement, concrete mixes and related products.", "Roof sheets, tiles, flashing and accessories.", "Formwork and scaffolding products.", "Timber, lumber and wood-based products.", "Outdoor, garden and landscape materials.", "Rebar, steel sections and reinforcement products.", "Tool attachments, consumables and accessories.", "Blocks, bricks and masonry supplies.", "Thermal insulation and moisture protection.", "Sand, gravel and crushed stone.", "Drainage pipes, channels and septic materials.", "Admixtures, treatments and construction chemicals.", "Tiles, boards and other floor finishes.", "Wall panels, ceiling boards and framing.", "Heating, ventilation and air-conditioning materials.", "Toilets, basins, faucets and fixtures.", "Fire-protection system materials and components.", "Paints, coatings and surface finishes.", "Bonding, joint-filling and sealing products.", "Doors, windows, glazing and related fittings.", "Describe another supported construction-material niche."]
+
+function SupplierClassification({ classification, onDirty }: { classification: JsonRecord; onDirty: () => void }) {
   const [selected, setSelected] = useState<string[]>(Array.isArray(classification.niches) ? classification.niches.filter((item): item is string => typeof item === 'string') : [])
-  return <FormSection title="Supplier classification" description="Select your supplier type and one or more construction-material niches. Vehicle and equipment rental services are not supported."><SelectField label="Supplier type" name="supplier_type" defaultValue={stringValue(classification.supplierType)} options={['WHOLESALER_DISTRIBUTOR', 'RETAIL_HARDWARE_STORE', 'SPECIALIZED_SUPPLIER']} /><fieldset><legend className="mb-3 font-semibold">Supplier Niches</legend><div className="grid gap-x-5 gap-y-1 sm:grid-cols-2">{supplierNiches.map(niche => <label key={niche} className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" className="h-5 w-5 shrink-0 accent-action-primary" name="niches" value={niche} checked={selected.includes(niche)} onChange={event => setSelected(event.target.checked ? [...selected, niche] : selected.filter(item => item !== niche))} />{niche}</label>)}</div></fieldset>{selected.includes('Other Category') && <Field label="Others — Specify Category" name="custom_label" defaultValue={stringValue(classification.customLabel)} hint="Saved as your custom label. This does not create a canonical marketplace category." />}</FormSection>
+  const [customLabels, setCustomLabels] = useState<string[]>(() => Array.isArray(classification.customLabels) ? classification.customLabels.filter((item): item is string => typeof item === 'string') : stringValue(classification.customLabel) ? [stringValue(classification.customLabel)] : [])
+  return <div className="grid min-w-0 gap-6">
+    <p className="max-w-3xl text-sm leading-6 text-text-secondary">Select your supplier type and one or more construction-material niches. Vehicle and equipment rental services are not supported.</p>
+    <fieldset className="min-w-0" aria-describedby="supplier_type-error"><legend className="mb-2 font-semibold">Supplier type</legend><div className="grid gap-3 sm:grid-cols-3">{[['WHOLESALER_DISTRIBUTOR', 'Wholesaler or Distributor'], ['RETAIL_HARDWARE_STORE', 'Retail Hardware Store'], ['SPECIALIZED_SUPPLIER', 'Specialized Supplier']].map(([value, label]) => <label key={value} className="flex min-h-11 items-center gap-3 rounded-control border border-border-default p-3 text-sm"><input type="radio" name="supplier_type" value={value} defaultChecked={classification.supplierType === value} required />{label}</label>)}</div><InlineError name="supplier_type" /></fieldset>
+    <fieldset className="min-w-0"><legend className="mb-3 font-semibold">Supplier Niches</legend><div className="grid gap-2 sm:grid-cols-2">{supplierNiches.map(niche => <label key={niche} className={`flex min-h-11 cursor-pointer items-center gap-3 rounded-control border px-3 py-2 text-sm ${selected.includes(niche) ? 'border-action-primary bg-brand-orange-50' : 'border-border-default hover:bg-surface-canvas'}`}><input type="checkbox" className="h-5 w-5 shrink-0 accent-action-primary" name="niches" value={niche} checked={selected.includes(niche)} onChange={event => { setSelected(event.target.checked ? [...selected, niche] : selected.filter(item => item !== niche)); onDirty() }} /><span><span className="block font-medium">{niche}</span><span className="mt-1 block text-xs text-text-secondary">{supplierNicheDescriptions[supplierNiches.indexOf(niche)]}</span></span></label>)}</div><InlineError name="niches" /></fieldset>
+    {selected.includes('Other Category') && <div><CustomLabelInput values={customLabels} onChange={labels => { setCustomLabels(labels); onDirty() }} /><InlineError name="custom_labels" /></div>}
+  </div>
 }
 
-function RepresentativeInformation({ representative, owner }: { representative: JsonRecord; owner: JsonRecord }) {
+function RepresentativeInformation({ representative, owner, documents, role, review, idType, identityEvidence, authorityEvidence, embedded = false }: { representative: JsonRecord; owner: JsonRecord; documents: JsonRecord[]; role: string; review: JsonRecord; idType: string; identityEvidence: ReactNode; authorityEvidence: ReactNode; embedded?: boolean }) {
+  const [documentType, setDocumentType] = useState(stringValue(representative.authorityDocumentType))
+  const [source, setSource] = useState(stringValue(representative.authorityEvidenceSource, 'SEPARATE_AUTHORITY_DOCUMENT'))
+  const accepted = documents.filter(doc => doc.requirementKey === 'business_registration' && !doc.supersededAt && doc.status === 'APPROVED')
+  const existingAllowed = role === 'OFFICER' && accepted.length > 0
   function fillOwner(event: React.ChangeEvent<HTMLInputElement>) {
     if (!event.target.checked) return
-    for (const [name, value] of [['representative_name', owner.fullName], ['representative_email', owner.email], ['representative_phone', owner.phone]] as const) {
-      const field = event.target.form?.elements.namedItem(name)
-      if (field instanceof HTMLInputElement) field.value = stringValue(value)
-    }
+    for (const [name, value] of [['representative_name', owner.fullName], ['representative_email', owner.email], ['representative_phone', owner.phone]]) { const field = event.target.form?.elements.namedItem(String(name)); if (field instanceof HTMLInputElement) field.value = stringValue(value) }
   }
-  return <div className="mt-8"><FormSection title="Authorized Representative / Authorized Signatory" description="The Vendor Owner account and legal authority are separate. An Admin must approve the representative, supporting evidence, and supported scopes of authority. Changes create a new version and require review."><label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" name="representative_same_as_owner" defaultChecked={booleanValue(representative.sameAsOwner)} onChange={fillOwner} className="h-5 w-5 accent-action-primary" />This representative is the Vendor Owner account holder</label><div className="grid gap-5 sm:grid-cols-2"><Field label="Representative full legal name" name="representative_name" defaultValue={stringValue(representative.fullName)} /><Field label="Position / Title" name="representative_position" defaultValue={stringValue(representative.position)} /><Field label="Representative email" name="representative_email" type="email" defaultValue={stringValue(representative.email)} /><Field label="Representative phone" name="representative_phone" inputMode="tel" defaultValue={stringValue(representative.phone)} /><Field label="Relationship to the business" name="representative_relationship" defaultValue={stringValue(representative.relationship)} /><SelectField label="Representative government ID type" name="representative_id_type" defaultValue={stringValue(representative.idType)} options={['NATIONAL_ID', 'DRIVERS_LICENSE', 'PASSPORT', 'UMID', 'OTHER']} /><Field label="Representative government ID number" name="representative_id_number" type="password" autoComplete="off" hint={stringValue(representative.idNumberLast4) ? `Current ID ends in ${stringValue(representative.idNumberLast4)}. Re-enter when the representative changes.` : 'Private verification information.'} /></div><p className="text-sm text-text-secondary">Required — Authority to Act. Upload the representative’s identity and, where needed, authority evidence below. Only the approved representative’s linked Owner account can make formal tax attestations in the current permission model.</p></FormSection></div>
+  return <FormSection panel={!embedded} title="Authorized Representative / Authorized Signatory" description="The Vendor Owner account and legal authority are separate. Changes create a new version and reopen Admin review.">
+    <label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" name="representative_same_as_owner" defaultChecked={booleanValue(representative.sameAsOwner)} onChange={fillOwner} />This representative is the Vendor Owner account holder</label>
+    <FieldRow><Field label="Representative full legal name" name="representative_name" required defaultValue={stringValue(representative.fullName)} maxLength={150} /><Field label="Position / Title" name="representative_position" required defaultValue={stringValue(representative.position)} maxLength={100} /></FieldRow>
+    <FieldRow><Field label="Representative email" name="representative_email" required type="email" defaultValue={stringValue(representative.email)} /><Field label="Representative phone" name="representative_phone" required inputMode="tel" defaultValue={stringValue(representative.phone)} /></FieldRow>
+    <SelectField label="Relationship to the business" name="representative_relationship" defaultValue={role === 'PROPRIETOR' ? '' : role} options={['OFFICER', 'EMPLOYEE', 'ACCOUNTANT', 'AUTHORIZED_REPRESENTATIVE', 'CORPORATE_REPRESENTATIVE', 'COOPERATIVE_REPRESENTATIVE', 'OTHER']} />
+    {role === 'OTHER' && <Field label="Other relationship" name="representative_relationship_other" defaultValue={stringValue(representative.relationshipOther)} />}
+    <FieldRow><SelectField label="Representative government ID type" name="representative_id_type" defaultValue={idType} options={['NATIONAL_ID', 'DRIVERS_LICENSE', 'PASSPORT', 'UMID', 'OTHER']} />{idType && <Field placeholder={`Enter your ${statusLabel(idType).toLowerCase()} number`} label="Representative government ID number" name="representative_id_number" type="password" autoComplete="off" hint={representative.idNumberLast4 ? `Current ID ends in ${representative.idNumberLast4}. Leave blank to retain it.` : 'Private verification information.'} />}</FieldRow>
+    {!idType && <p className="text-sm text-text-secondary">Select the representative’s Government ID type to enter its number and upload the required sides.</p>}
+    {identityEvidence}
+    <fieldset className="grid gap-5 border-t border-border-default pt-5" onChange={event => { const target = event.target; if (target instanceof HTMLSelectElement && target.name === 'authority_document_type') setDocumentType(target.value) }}><legend className="font-semibold">Authority to Act for the Organization</legend>
+      {existingAllowed && <label className="flex min-h-11 items-center gap-3"><input type="checkbox" checked={source === 'EXISTING_REGISTRATION_EVIDENCE'} onChange={event => setSource(event.target.checked ? 'EXISTING_REGISTRATION_EVIDENCE' : 'SEPARATE_AUTHORITY_DOCUMENT')} />Use accepted registration evidence for this officer</label>}
+      <input type="hidden" name="authority_evidence_source" value={existingAllowed ? source : 'SEPARATE_AUTHORITY_DOCUMENT'} />
+      {existingAllowed && source === 'EXISTING_REGISTRATION_EVIDENCE' ? <label className="grid gap-2">Accepted registration evidence<select name="authority_evidence_version_id" defaultValue={stringValue(representative.authorityEvidenceVersionId)} className="min-h-12 border border-border-default rounded-control px-3"><option value="">Select evidence</option>{accepted.map(doc => <option key={stringValue(doc.id)} value={stringValue(doc.id)}>{stringValue(doc.originalName)} · Version {numberValue(doc.version)}</option>)}</select><span className="text-sm">The Admin must confirm these records establish this officer’s authority.</span></label> : <><p className="text-sm">Required — upload separate Authority Evidence for an employee, accountant or representative whose authority is not established.</p><FieldRow><SelectField label="Authority document type" name="authority_document_type" defaultValue={documentType} options={['SECRETARYS_CERTIFICATE', 'BOARD_RESOLUTION', 'SPECIAL_POWER_OF_ATTORNEY', 'PARTNERSHIP_AUTHORIZATION', 'COOPERATIVE_BOARD_RESOLUTION', 'OTHER_APPROVED']} />{documentType && <Field label="Authority document date" name="authority_document_date" type="date" max={new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Asia/Manila' }).format(new Date())} defaultValue={dateInput(representative.authorityDocumentDate)} />}</FieldRow>{!documentType && <p className="text-sm text-text-secondary">Select an Authority document type to add its date, request authority scopes and upload evidence for review.</p>}</>}
+      {((existingAllowed && source === 'EXISTING_REGISTRATION_EVIDENCE') || documentType) && <AuthorityScopePanel selected={Array.isArray(representative.authorityScopes) ? representative.authorityScopes.map(String) : []} />}
+      {!(existingAllowed && source === 'EXISTING_REGISTRATION_EVIDENCE') && documentType && <div key={documentType}>{authorityEvidence}</div>}
+    </fieldset>
+    <p role="status" className="text-sm">Admin authority decision: {statusLabel(stringValue(review.decision, 'PENDING_VERIFICATION'))}{review.scope ? ` · ${String(review.scope).replaceAll('_', ' ')}` : ''}</p>{review.reason && <p className="text-sm text-status-error">{String(review.reason)}</p>}
+    <p className="text-sm">Final attestation requires the current Owner-linked representative and explicit Admin approval for the applicable scope.</p>
+  </FormSection>
 }
 
-function BusinessTaxInformation({ tax, details, businessType }: { tax: JsonRecord; details: JsonRecord; businessType: string }) {
-  const [branchLength, setBranchLength] = useState(stringValue(details.branchCodeLength, stringValue(tax.tinBranchCode).length === 3 ? '3' : '5'))
-  const [location, setLocation] = useState(typeof details.headOffice === 'boolean' ? (details.headOffice ? 'HEAD_OFFICE' : 'BRANCH') : '')
-  const [branch, setBranch] = useState(stringValue(tax.tinBranchCode))
+function BusinessTaxInformation({ tax, details, businessType, canAttest, errors, evidence, declarationEvidence }: { tax: JsonRecord; details: JsonRecord; businessType: string; canAttest: boolean; errors: Record<string, string>; evidence: ReactNode; declarationEvidence: ReactNode }) {
   const [declaration, setDeclaration] = useState(typeof details.taxReliefClaimed === 'boolean' ? (details.taxReliefClaimed ? 'yes' : 'no') : '')
-  return <div className="mt-8"><FormSection title="Tax Information" description="Your tax information is reviewed with Business Information. Payment Configuration references this Tax Profile; you will not need to enter it again. Only masked TIN values are returned after saving.">
-    <div className="grid gap-5 sm:grid-cols-2">
-      <Field label="Core TIN" name="tin" type="password" inputMode="numeric" pattern="[0-9]{9}" minLength={9} maxLength={9} autoComplete="off" hint={stringValue(tax.tinLast4) ? `Current TIN ends in ${stringValue(tax.tinLast4)}. Leave blank to retain it.` : 'Enter exactly 9 numeric digits from your BIR registration record.'} />
-      <SelectField label="VAT registration status" name="vat_category" defaultValue={stringValue(tax.vatCategory)} options={['VAT', 'NON_VAT']} />
-      <label className="grid gap-2 text-sm font-semibold">Taxpayer location<select name="tax_location" className="min-h-12 rounded-control border border-border-default bg-surface-primary px-3 font-normal" value={location} onChange={event => setLocation(event.target.value)}><option value="">Select Head Office or Branch</option><option value="HEAD_OFFICE">Head Office (HO)</option><option value="BRANCH">Branch</option></select></label>
-      <label className="grid gap-2 text-sm font-semibold">Branch code representation<select name="branch_code_length" className="min-h-12 rounded-control border border-border-default bg-surface-primary px-3 font-normal" value={branchLength} onChange={event => setBranchLength(event.target.value)}><option value="5">5 digits</option><option value="3">3 digits (legacy/eFPS)</option></select></label>
-      <Field label="Branch Code" name="branch_code" inputMode="numeric" pattern={`[0-9]{${branchLength}}`} minLength={Number(branchLength)} maxLength={Number(branchLength)} value={location === 'HEAD_OFFICE' ? '0'.repeat(Number(branchLength)) : branch} readOnly={location === 'HEAD_OFFICE'} onChange={event => setBranch(event.target.value)} hint="Use the branch code shown on your BIR registration record. Head Office is filled automatically only when selected." />
-      <Field label="BIR COR reference" name="bir_cor_reference" defaultValue={stringValue(tax.birCorReference)} />
-      <Field label="Fiscal year start month" name="fiscal_year_start_month" type="number" min="1" max="12" defaultValue={String(numberValue(tax.fiscalYearStartMonth, 1))} />
+  return <><FormSection panel title="Tax Information" description="Your tax information is reviewed with Business Information. Payment Configuration references this Tax Profile; you will not need to enter it again. Only masked TIN values are returned after saving.">
+    <FormSection title="Tax Identity" description="Use the identifiers shown on your BIR registration record.">
+      <div className="grid min-w-0 items-start gap-6 lg:grid-cols-2">
+      <Field label="Taxpayer Identification Number (TIN)" name="tin" id="tin" error={errors.tin ?? ''} type="password" inputMode="numeric" pattern="([0-9]{12,14}|[0-9]{3}-[0-9]{3}-[0-9]{3}-[0-9]{3,5})" minLength={12} maxLength={17} autoComplete="off" placeholder="123-456-789-000" hint={`Your 9-digit TIN and 3 to 5 digit branch code. Please use “000” as your branch code if you don’t have one (e.g. 999-999-999-000).${tax.tinLast4 ? ' A TIN is saved. Leave blank to retain it.' : ''}`} />
+      <fieldset><legend className="text-sm font-semibold">Value Added Tax Registration Status</legend><div className="flex flex-wrap gap-6">{[['VAT', 'VAT Registered'], ['NON_VAT', 'Non-VAT Registered']].map(([value, label]) => <label key={value} className="flex min-h-11 items-center gap-3 text-sm"><input type="radio" aria-describedby="vat_category-error" name="vat_category" value={value} defaultChecked={tax.vatCategory === value} className="h-5 w-5 accent-action-primary" />{label}</label>)}</div><InlineError name="vat_category" /></fieldset>
+      </div>
+    </FormSection>
+    <div className="grid min-w-0 items-start gap-6 lg:grid-cols-2">
+    <div className="min-w-0">{evidence}</div>
+    <FormSection title="Verification & References" description="Provide the supporting registration reference and fiscal year details.">
+      <div className="grid max-w-xl gap-5">
+      <Field label="BIR Certificate of Registration (BIR Form 2303) reference" name="bir_cor_reference" defaultValue={stringValue(tax.birCorReference)} />
+      <Field label="Fiscal year start month" name="fiscal_year_start_month" type="number" min="1" max="12" hint="Month number from 1 (January) to 12 (December)." defaultValue={String(numberValue(tax.fiscalYearStartMonth, 1))} />
+      </div>
+    </FormSection>
     </div>
-    <p className="text-sm text-text-secondary">Declared VAT status remains pending Admin verification against your BIR Certificate of Registration.</p>
-    <fieldset className="grid gap-3 border-t border-border-default pt-5"><legend className="font-semibold">Sworn Declaration</legend><p className="text-sm leading-6 text-text-secondary">A BIR-received Sworn Declaration may be submitted when applicable annual gross remittances are expected not to exceed ₱500,000.00. It is subject to review and applicable BIR rules. Selecting Yes does not grant tax relief. Standard withholding uses 1% of one-half of applicable gross remittances, subject to the configured rules.</p><p className="font-medium">Will you submit the applicable BIR-received Sworn Declaration?</p><div className="flex flex-wrap gap-6">{([['yes', 'Yes'], ['no', 'No — use applicable standard withholding']] as const).map(([value, label]) => <label key={value} className="flex min-h-11 items-center gap-3 text-sm"><input type="radio" name="tax_relief_claimed" value={value} checked={declaration === value} onChange={() => setDeclaration(value)} className="h-5 w-5 accent-action-primary" />{label}</label>)}</div>{declaration === 'yes' && <><Field label="Declaration taxable year" name="declaration_year" type="number" min="2000" max="2100" defaultValue={stringValue(details.declarationYear, String(new Date().getFullYear()))} /><p className="text-sm text-text-secondary">Save your draft, then upload the BIR-received / BIR-stamped PDF in Private evidence below. Admin review is required.</p></>}</fieldset>
-    <label className="flex min-h-11 items-start gap-3 text-sm leading-6"><input className="mt-1 h-5 w-5 accent-action-primary" type="checkbox" name="owner_attested" defaultChecked={false} />I am the Vendor Owner and attest that this tax information is accurate.</label>{booleanValue(tax.ownerAttested) && <p className="text-sm text-text-secondary">Your saved tax version is already attested. A correction creates a new version and requires a new attestation.</p>}
-    {businessType && businessType !== 'SOLE_PROPRIETORSHIP' && <p className="text-sm text-text-secondary">Organizational tax attestation requires Admin-approved Authority to Act for the current representative. You can save draft information and submit evidence for review first.</p>}
-  </FormSection></div>
+    <FormSection panel title="Sworn Declaration">
+      <StatusMessage tone="info" dismissLabel="Dismiss Sworn Declaration guidance"><ul className="list-disc space-y-2 pl-5"><li>A BIR-received declaration may be submitted when applicable annual gross remittances are expected not to exceed ₱500,000.00.</li><li>Admin review and applicable BIR rules apply. Selecting Yes does not grant tax relief.</li><li>Standard withholding is 1% of one-half of applicable gross remittances (equivalent to 0.5%), subject to configured rules.</li></ul></StatusMessage>
+      <p className="font-medium">Will you submit the applicable BIR-received Sworn Declaration?</p>
+      <div className="flex flex-wrap gap-6">{([['yes', 'Yes'], ['no', 'No — use applicable standard withholding']] as const).map(([value, label]) => <label key={value} className="flex min-h-11 items-center gap-3 text-sm"><input type="radio" name="tax_relief_claimed" value={value} checked={declaration === value} onChange={() => setDeclaration(value)} className="h-5 w-5 accent-action-primary" />{label}</label>)}</div>
+      <InlineError name="tax_relief_claimed" />
+      {declaration === 'yes' && <><div className="max-w-xl"><Field label="Declaration taxable year" name="declaration_year" type="number" min="2000" max="2100" defaultValue={stringValue(details.declarationYear, String(new Date().getFullYear()))} /></div><p className="text-sm text-text-secondary">Select the BIR-received / BIR-stamped PDF to include with your submission.</p>{declarationEvidence}</>}
+    </FormSection>
+    <label className="flex min-h-11 items-start gap-3 text-sm leading-6"><input disabled={!canAttest} className="mt-1 h-5 w-5 accent-action-primary" type="checkbox" id="owner_attested" aria-invalid={Boolean(errors.owner_attested)} name="owner_attested" defaultChecked={false} />I am the Vendor Owner and attest that this tax information is accurate.</label><InlineError name="owner_attested" />{booleanValue(tax.ownerAttested) && <p className="text-sm text-text-secondary">Your saved tax version is already attested. A correction creates a new version and requires a new attestation.</p>}
+    {businessType && !canAttest && <p className="text-sm text-text-secondary">Organizational tax attestation requires Admin-approved Authority to Act for the current representative. You can save draft information and submit evidence for review first.</p>}
+  </FormSection>
+      <StatusMessage tone="info"><div className="grid gap-2"><span className="font-semibold">Verified VAT status: {statusLabel(stringValue(tax.vatVerifiedCategory, 'PENDING_VERIFICATION'))}</span><p>Admin reviews your declared VAT status against your BIR Certificate of Registration. Uploading a COR does not verify this Tax Profile. Expiration may be Not Applicable.</p></div></StatusMessage>
+    <StatusMessage tone="info" dismissLabel="Dismiss withholding information"><p className="font-semibold">Withholding information · FIN-04A</p><ul className="mt-2 list-disc space-y-2 pl-5"><li>Cumulative gross remittances reaching ₱500,000.01 in a taxable year make the entire crossing remittance and every later remittance that year subject to withholding.</li><li>This applies regardless of an uploaded declaration. Uploading a declaration grants no exemption, reduced withholding or threshold relief.</li></ul></StatusMessage>
+  </>
 }
 
-function FormSection({ title, description, children }: { title: string; description: string; children: ReactNode }) {
-  return <fieldset className="grid gap-5 border-t border-border-default pt-6"><legend className="text-lg font-semibold">{title}</legend><p className="-mt-2 max-w-2xl text-sm leading-6 text-text-secondary">{description}</p>{children}</fieldset>
-}
+const FormSection = OnboardingFormSection
 
 function SelectField({ label, name, defaultValue, options }: { label: string; name: string; defaultValue: string; options: string[] }) {
-  return <div className="grid gap-2 text-sm font-semibold"><label htmlFor={name}>{label}</label><select className="min-h-12 w-full rounded-control border border-border-default bg-surface-primary px-3 text-base font-normal text-text-strong" id={name} name={name} defaultValue={defaultValue}><option value="">Select an option</option>{options.map((option) => <option key={option} value={option}>{statusLabel(option)}</option>)}</select></div>
+  const errors = useContext(FormErrors)
+  return <div className="grid gap-2 text-sm font-semibold"><label htmlFor={name}>{label}</label><select aria-invalid={Boolean(errors[name])} aria-describedby={errors[name] ? `${name}-error` : undefined} className="min-h-12 w-full rounded-control border border-border-default aria-invalid:border-status-error bg-surface-primary px-3 text-base font-normal text-text-strong" id={name} name={name} defaultValue={defaultValue}><option value="">Select an option</option>{options.map((option) => <option key={option} value={option}>{statusLabel(option)}</option>)}</select><InlineError name={name} /></div>
 }
 
-function StoreContactInformation({ snapshot, onSaved }: { snapshot: VendorOnboardingSnapshot; onSaved: (snapshot: VendorOnboardingSnapshot) => void }) {
+function StoreContactInformation({ snapshot, onSaved, initialEmail }: { snapshot: VendorOnboardingSnapshot; onSaved: (snapshot: VendorOnboardingSnapshot) => void; initialEmail: string }) {
   const org = record(snapshot.organization)
-  const [email, setEmail] = useState(stringValue(org.storeEmail))
-  const [editing, setEditing] = useState(false)
-  const [code, setCode] = useState('')
-  const [sentTo, setSentTo] = useState<string | null>(null)
-  const [busy, setBusy] = useState<'send' | 'confirm' | null>(null)
-  const [message, setMessage] = useState<{ tone: 'success' | 'error'; text: string } | null>(null)
-  const emailRef = useRef<HTMLInputElement>(null)
-  const normalizedEmail = email.trim().toLowerCase()
-  const verified = booleanValue(org.storeEmailVerified) && normalizedEmail !== '' && normalizedEmail === stringValue(org.storeEmail).trim().toLowerCase()
-  const canChange = snapshot.permissions.includes('vendor.onboarding.manage')
-
-  function changeEmail() {
-    setEditing(true); setMessage(null)
-    emailRef.current?.focus()
-  }
-
-  async function send() {
-    if (!emailRef.current?.reportValidity()) return
-    setBusy('send'); setMessage(null); setSentTo(null); setCode('')
-    try {
-      const result = record(await requestStoreEmailVerification(normalizedEmail))
-      setSentTo(normalizedEmail)
-      setMessage({ tone: 'success', text: `Verification code sent. It expires at ${stringValue(result.expiresAt, 'the displayed expiry time')}.` })
-    } catch (cause) { setMessage({ tone: 'error', text: await readableOnboardingError(cause) }) }
-    finally { setBusy(null) }
-  }
-
-  async function confirm() {
-    if (!sentTo || sentTo !== normalizedEmail) return
-    if (!/^\d{6}$/.test(code)) { setMessage({ tone: 'error', text: 'Enter the six-digit code from the email.' }); return }
-    setBusy('confirm'); setMessage(null)
-    try {
-      const updated = await confirmStoreEmailVerification({ email: normalizedEmail, code })
-      const updatedOrg = record(updated.organization)
-      onSaved(updated)
-      setEmail(stringValue(updatedOrg.storeEmail)); setEditing(false); setSentTo(null); setCode('')
-      setMessage({ tone: 'success', text: 'Store email verified.' })
-    } catch (cause) { setMessage({ tone: 'error', text: await readableOnboardingError(cause) }) }
-    finally { setBusy(null) }
-  }
-
-  return <section className="grid min-w-0 gap-5 border-t border-border-default pt-6" aria-labelledby="store-contact-title">
-    <h3 id="store-contact-title" className="font-semibold">Store contact information</h3>
-    <div className="grid min-w-0 items-start gap-5 sm:grid-cols-2">
-      <div className="relative min-w-0">
-        <Field ref={emailRef} label="Store email" name="store_email" type="email" required value={email} readOnly={!editing || busy !== null} className="pr-28" aria-describedby="store-email-help" onChange={event => { setEmail(event.target.value); setSentTo(null); setCode(''); setMessage(null) }} />
-        {verified && <span className="absolute -top-1 right-0"><StatusBadge label="Verified" tone="success" /></span>}
-        {canChange && <button type="button" className="absolute right-0 top-7 min-h-12 w-28 rounded-r-control border-l border-border-default px-3 text-sm font-semibold text-action-primary hover:bg-brand-orange-50 disabled:opacity-50" disabled={busy !== null} onClick={() => editing ? void send() : changeEmail()}>{busy === 'send' ? 'Sending…' : editing ? 'Send Code' : 'Change'}</button>}
-      </div>
-      <div className="min-w-0"><Field label="Store phone" name="store_phone" defaultValue={stringValue(org.storePhone)} inputMode="tel" /><label className="mt-2 flex min-h-11 items-center gap-3 text-sm"><input className="h-5 w-5 accent-action-primary" type="checkbox" onChange={event => { if (event.target.checked) { const field = event.target.form?.elements.namedItem('store_phone'); if (field instanceof HTMLInputElement) field.value = stringValue(record(record(snapshot.verification).owner).phone) } }} />Same as Vendor Owner phone number</label></div>
-    </div>
-    <p id="store-email-help" className="max-w-2xl text-sm leading-6 text-text-secondary">This email is used for store communications. A different address must be verified before it replaces the current Store Email.</p>
-    {sentTo === normalizedEmail && <div className="grid max-w-xl min-w-0 items-end gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
-      <Field label="Six-digit code" id="verification_code" className="tracking-[0.18em]" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} disabled={busy !== null} onChange={event => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))} />
-      <Button type="button" className="min-h-12" disabled={busy !== null} onClick={() => void confirm()}>{busy === 'confirm' ? 'Checking…' : 'Confirm email'} <CheckCircle2 size={16} aria-hidden="true" /></Button>
-    </div>}
-    {message && <StatusMessage tone={message.tone}>{message.text}</StatusMessage>}
-  </section>
+  return <EmailVerificationPanel panel initialEmail={initialEmail} email={stringValue(org.storeEmail)} verified={booleanValue(org.storeEmailVerified)} canChange={snapshot.permissions.includes('vendor.onboarding.manage')} explainError={readableOnboardingError}
+    requestCode={async email => { const result = record(await requestStoreEmailVerification(email)); return result.expiresAt ? `Expires at ${String(result.expiresAt)}.` : '' }}
+    confirmCode={async (email, code) => { const updated = await confirmStoreEmailVerification({ email, code }); onSaved(updated); return stringValue(record(updated.organization).storeEmail) }}
+    phone={<div className="min-w-0"><Field label="Store phone" name="store_phone" required defaultValue={stringValue(org.storePhone)} inputMode="tel" /><label className="mt-2 flex min-h-11 items-center gap-3 text-sm"><input className="h-5 w-5 accent-action-primary" type="checkbox" onChange={event => { if (event.target.checked) { const field = event.target.form?.elements.namedItem('store_phone'); if (field instanceof HTMLInputElement) field.value = stringValue(record(record(snapshot.verification).owner).phone) } }} />Same as Vendor Owner phone number</label></div>} />
 }
 
-function DocumentChecklist({ snapshot, onRefresh, embedded = false }: { snapshot: VendorOnboardingSnapshot; onRefresh: () => Promise<void>; embedded?: boolean }) {
+function DocumentChecklist({ snapshot, embedded = false, keys, preview = {}, declarationClaim, identityLayout = false }: { snapshot: VendorOnboardingSnapshot; onRefresh: () => Promise<void>; embedded?: boolean; keys?: string[]; preview?: JsonRecord; pendingChanges?: boolean; declarationClaim?: boolean; identityLayout?: boolean; reviewUploads?: boolean }) {
+  const context = useContext(PendingDocuments)
   const section = sectionFor(snapshot, 'STORE_VERIFICATION')
   const documents = arrayValue(record(snapshot.verification).documents)
-  const documentKeys = ['business_registration', 'lgu_permit', 'bir_cor', 'tax_relief_evidence', 'authority_to_act', 'representative_identity', 'representative_identity_back', 'identity_back_evidence', 'optional_certification']
-  const businessType = stringValue(record(snapshot.organization).businessType)
-  if (['SOLE_PROPRIETORSHIP', 'ONE_PERSON_CORPORATION'].includes(businessType)) documentKeys.push('identity_evidence')
-  const tax = record(record(snapshot.verification).taxProfile)
-  const taxDetails = record(tax.details)
-  const steps = section.steps.filter((step) => documentKeys.includes(step.key) && step.status !== 'NOT_APPLICABLE' && (step.key !== 'tax_relief_evidence' || booleanValue(taxDetails.taxReliefClaimed)))
-  const [busyKey, setBusyKey] = useState<string | null>(null)
-  const [message, setMessage] = useState<string | null>(null)
-
-  async function openEvidence(fileId: string) {
-    try { const file = await getVendorPrivateFileUrl(fileId); window.open(file.url, '_blank', 'noopener,noreferrer') } catch (cause) { setMessage(await readableOnboardingError(cause)) }
-  }
-
-  async function upload(key: string, file: File | undefined, input: HTMLInputElement) {
-    if (!file) return
-    setBusyKey(key); setMessage(null)
-    try { await uploadVendorDocument(key, file, { source: 'VENDOR_PORTAL' }); await onRefresh(); setMessage(`${statusLabel(key)} uploaded and queued for review.`) } catch (cause) { setMessage(await readableOnboardingError(cause)) } finally { setBusyKey(null); input.value = '' }
-  }
-
-  return <section className={embedded ? '' : 'rounded-surface border border-border-default bg-surface-primary p-5 sm:p-7'} aria-labelledby="evidence-title"><div className="flex items-start gap-3"><FileText className="mt-1 shrink-0 text-action-primary" size={22} aria-hidden="true" /><div><h2 id="evidence-title" className="text-2xl font-semibold">Private evidence</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-text-secondary">Upload the current evidence for each required item. A replacement creates a new immutable version; Admin approval never edits the old version.</p></div></div>{message && <div className="mt-5"><StatusMessage tone={message.includes('uploaded') ? 'success' : 'error'}>{message}</StatusMessage></div>}<div className="mt-6 grid gap-4">{steps.map((step) => <div className="flex flex-col gap-4 border-t border-border-default pt-4 sm:flex-row sm:items-center sm:justify-between" key={step.key}><div className="flex min-w-0 items-start gap-3"><StepIcon status={step.status} /><div><p className="font-semibold">{step.label}</p><p className="mt-1 text-sm">{statusLabel(step.status)}</p>{stringValue(record(step).reason) && <p className="mt-1 text-sm text-status-error">{stringValue(record(step).reason)}</p>}{documents.filter(doc => doc.requirementKey === step.key).map(doc => <div key={stringValue(doc.id)} className="mt-2"><p className="break-all text-sm text-text-secondary">{stringValue(doc.originalName)} · Version {numberValue(doc.version)}</p><Button type="button" variant="secondary" onClick={() => void openEvidence(stringValue(doc.fileId))}>View uploaded evidence</Button></div>)}<p className="mt-1 text-sm text-text-secondary">{step.key === 'tax_relief_evidence' ? 'BIR-received / BIR-stamped PDF only. Uploading does not grant tax relief.' : step.key === 'authority_to_act' ? 'Use an applicable Secretary’s Certificate, resolution, SPA, partnership/cooperative authorization, or approved equivalent. Admin may instead accept registration evidence.' : step.key === 'optional_certification' ? 'Optional supporting certification; does not block activation.' : 'JPG, PNG, or PDF, up to 10 MB. Private and scanned before review.'}</p></div></div><label className="inline-flex min-h-11 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-control border border-border-default px-4 text-sm font-semibold text-text-strong hover:bg-brand-orange-50"><UploadCloud size={16} aria-hidden="true" />{busyKey === step.key ? 'Uploading…' : 'Upload evidence'}<input className="sr-only" type="file" accept={step.key === 'tax_relief_evidence' ? 'application/pdf' : 'image/jpeg,image/png,application/pdf'} aria-label={`Upload ${step.label}`} disabled={busyKey !== null} onChange={(event) => void upload(step.key, event.target.files?.[0], event.currentTarget)} /></label></div>)}</div></section>
-}
-
-function VerificationSubmit({ snapshot, onSaved, privacyAcknowledged, dirty }: { snapshot: VendorOnboardingSnapshot; onSaved: (snapshot: VendorOnboardingSnapshot) => void; privacyAcknowledged: boolean; dirty: boolean }) {
-  const [busy, setBusy] = useState(false)
-  const [message, setMessage] = useState<string | null>(null)
-  const verification = record(snapshot.verification)
-  const status = stringValue(verification.status, 'NOT_STARTED')
-  async function submit() {
-    if (!privacyAcknowledged) { setMessage('Acknowledge the Privacy Notice before submitting.'); return }
-    setBusy(true); setMessage(null)
-    try { onSaved(await submitVendorVerification({ lockVersion: numberValue(record(snapshot.organization).lockVersion, 1), privacyAcknowledged: true })); setMessage('Store Verification submitted. Admin review is now pending.') } catch (cause) { setMessage(await readableOnboardingError(cause)) } finally { setBusy(false) }
-  }
-  return <>{message && <div className="w-full"><StatusMessage tone={message.includes('submitted') ? 'success' : 'error'}>{message}</StatusMessage></div>}<Button disabled={busy || dirty || ['PENDING_VERIFICATION', 'APPROVED'].includes(status)} onClick={() => void submit()}>{busy ? 'Submitting…' : status === 'PENDING_VERIFICATION' ? 'Awaiting Admin review' : status === 'APPROVED' ? 'Verification approved' : 'Submit Store Verification'} <Send size={16} aria-hidden="true" /></Button>{['PENDING_VERIFICATION', 'APPROVED'].includes(status) && <Link className="inline-flex min-h-11 items-center font-semibold text-action-primary underline" to="/onboarding/setup">Proceed to Store Setup</Link>}</>
+  return <section className={`grid min-w-0 items-start gap-6 ${identityLayout ? 'md:grid-cols-2' : ''}`} aria-label={embedded ? 'Required evidence' : 'Documents'}>
+    {(keys ?? ['business_registration', 'lgu_permit']).map(key => {
+      const requirement = section.steps.find(item => item.key === key)
+      const resolved = record(preview[key])
+      if (key === 'tax_relief_evidence' ? !declarationClaim : resolved.applicable === false || (!Object.keys(resolved).length && requirement?.status === 'NOT_APPLICABLE')) return null
+      const label = key === 'bir_cor' ? 'BIR Certificate of Registration (BIR Form 2303)' : identityLayout ? `${key.startsWith('representative_identity') ? 'Representative government ID' : 'Government ID'} — ${key.includes('back') ? 'back' : 'front'}` : stringValue(resolved.label, requirement?.label ?? statusLabel(key))
+      const current = documents.find(doc => doc.requirementKey === key && !doc.supersededAt)
+      const pending = context.pending.find(doc => doc.requirementKey === key)
+      const correction = ['CHANGES_REQUIRED', 'REJECTED', 'EXPIRED'].includes(stringValue(current?.status, requirement?.status))
+      const locked = ['SUBMITTED', 'PENDING_VERIFICATION', 'APPROVED'].includes(stringValue(current?.status, requirement?.status))
+      const error = context.errors[key]
+      return <div key={key} className={`grid min-w-0 content-start gap-3 border-t pt-4 ${error || correction ? 'border-status-error' : 'border-border-default'}`}>
+        <h3 className="font-semibold">{label}</h3>
+        <p className="text-sm">{statusLabel(stringValue(resolved.level, requirement?.level ?? 'REQUIRED'))} · {pending || context.files[key] ? 'Pending Submission' : correction ? 'Correction Required' : current ? statusLabel(stringValue(current.status)) : 'Not selected'}</p>
+        {correction && requirement?.reason && <p className="text-sm text-status-error">Admin reason: {requirement.reason}</p>}
+        <p className="text-sm text-text-secondary">Private {key === 'tax_relief_evidence' ? 'PDF' : 'JPG, JPEG, PNG or PDF'}, up to 10 MB. Admin checks the document after submission.</p>
+        {current && <div className="grid min-w-0 gap-2 text-sm"><p className="break-all">{stringValue(current.originalName)} · {correction ? 'Previous submitted version' : 'Version'} {numberValue(current.version)}</p><PrivateEvidenceButton apiBasePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} loadUrl={() => getVendorPrivateFileUrl(stringValue(current.fileId))}>View submitted document</PrivateEvidenceButton></div>}
+        {!locked && <><DocumentUploadField label={label} name={key} file={context.files[key] ?? null} savedFile={pending ? { name: stringValue(pending.originalName), size: numberValue(pending.byteSize) } : undefined} pdfOnly={key === 'tax_relief_evidence'} busy={context.busy} error={error} onChange={file => context.select(key, file)} />{pending && <PrivateEvidenceButton apiBasePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} loadUrl={() => getVendorPrivateFileUrl(stringValue(pending.fileId))}>View saved document</PrivateEvidenceButton>}{correction && (pending || context.files[key]) && <p className="text-sm">Replacement for version {numberValue(current?.version)}. Submit for Admin Review to send the new version.</p>}</>}
+        {locked && error && <p role="alert" className="text-sm text-status-error">{error}</p>}
+      </div>
+    })}
+  </section>
 }
 
 function SetupWorkspace({ snapshot, onSaved, onRefresh }: { snapshot: VendorOnboardingSnapshot; onSaved: (snapshot: VendorOnboardingSnapshot) => void; onRefresh: () => Promise<void> }) {
@@ -662,7 +824,6 @@ function SetupForm({ snapshot, onSaved, onRefresh }: { snapshot: VendorOnboardin
   const vehicle = arrayValue(setup.vehicles)[0] ?? {}
   const payment = record(setup.payment)
   const [step, setStep] = useState(0)
-  const [accepted, setAccepted] = useState(false)
   const [dirty, setDirty] = useState(false)
   const [preview, setPreview] = useState({ name: stringValue(profile.publicStoreName, stringValue(org.storeName)), description: stringValue(profile.description), email: stringValue(profile.publicEmail), phone: stringValue(profile.publicPhone) })
   const [busy, setBusy] = useState(false)
@@ -676,7 +837,7 @@ function SetupForm({ snapshot, onSaved, onRefresh }: { snapshot: VendorOnboardin
     const data = new FormData(event.currentTarget)
     const continueLater = (event.nativeEvent as SubmitEvent).submitter?.getAttribute('data-continue-later') === 'true'
     const fulfillment = stringValue(data.get('fulfillment_method'))
-    const draft: import('@materyalph/api-client-ts').VendorSetupDraft = { organizationLockVersion: numberValue(org.lockVersion, 1), publicStoreName: stringValue(data.get('public_store_name')).trim(), description: stringValue(data.get('description')).trim() || null, bulkCapability: data.get('bulk_capability') === 'yes', fulfillmentMethod: fulfillment as NonNullable<import('@materyalph/api-client-ts').VendorSetupDraft['fulfillmentMethod']>, publicEmail: stringValue(data.get('public_email')).trim().toLowerCase() || null, publicPhone: stringValue(data.get('public_phone')).trim() || null }
+    const draft: import('@materyalph/api-client-ts').VendorSetupDraft = { organizationLockVersion: numberValue(org.lockVersion, 1), draftLockVersion: numberValue(arrayValue(snapshot.drafts).find(item => item.workstream === 'STORE_SETUP')?.lockVersion, 0), publicStoreName: stringValue(data.get('public_store_name')).trim(), description: stringValue(data.get('description')).trim() || null, bulkCapability: data.get('bulk_capability') === 'yes', fulfillmentMethod: fulfillment as NonNullable<import('@materyalph/api-client-ts').VendorSetupDraft['fulfillmentMethod']>, publicEmail: stringValue(data.get('public_email')).trim().toLowerCase() || null, publicPhone: stringValue(data.get('public_phone')).trim() || null }
     if (!draft.publicStoreName) delete draft.publicStoreName
     if (!fulfillment) delete draft.fulfillmentMethod
     if (!data.has('bulk_capability')) delete draft.bulkCapability
@@ -699,19 +860,18 @@ function SetupForm({ snapshot, onSaved, onRefresh }: { snapshot: VendorOnboardin
 
   return <OnboardingFlow steps={setupSteps} current={step} onStep={setStep} section={sectionFor(snapshot, 'STORE_SETUP')} busy={busy || paymentBusy} actions={<><Button type="submit" form="setup-draft" variant="secondary" formNoValidate data-continue-later="true" disabled={busy || paymentBusy}>Finish Later</Button>
       <Button type="submit" form="setup-draft" variant="secondary" disabled={busy || paymentBusy}>{busy ? 'Saving draft…' : 'Save setup draft'}</Button>
-      {step === 5 && <SetupCompletion snapshot={snapshot} onSaved={onSaved} accepted={accepted} dirty={dirty || busy || paymentBusy} />}</>}>
+      {step === 4 && <SetupCompletion snapshot={snapshot} onSaved={onSaved} dirty={dirty || busy || paymentBusy} />}</>}>
     {message && <div className="mb-5"><StatusMessage tone={message.tone}>{message.text}</StatusMessage></div>}
     <form id="setup-draft" noValidate onChange={event => { if (event.target instanceof HTMLInputElement && event.target.type === 'file') return; setDirty(true); const data = new FormData(event.currentTarget); setPreview({ name: stringValue(data.get('public_store_name')), description: stringValue(data.get('description')), email: stringValue(data.get('public_email')), phone: stringValue(data.get('public_phone')) }) }} onSubmit={event => void save(event)}>
-      <OnboardingStepContent active={step === 0}><div className="grid items-start gap-8 lg:grid-cols-2"><div><FormSection title="Store information" description="Write the clear, customer-facing description that will appear after activation is approved."><div className="grid gap-5 sm:grid-cols-2"><Field className="sm:col-span-2" label="Public store name" name="public_store_name" defaultValue={stringValue(profile.publicStoreName, stringValue(org.storeName))} required /><div className="grid gap-2 text-sm font-semibold sm:col-span-2"><label htmlFor="description">Store description</label><textarea className="min-h-32 w-full rounded-control border border-border-default bg-surface-primary px-3 py-3 text-base font-normal" id="description" name="description" defaultValue={stringValue(profile.description)} /></div><Field label="Public email" name="public_email" type="email" defaultValue={stringValue(profile.publicEmail)} /><Field label="Public phone" name="public_phone" defaultValue={stringValue(profile.publicPhone)} inputMode="tel" /></div></FormSection><div className="mt-8"><MediaUploader embedded snapshot={snapshot} onRefresh={onRefresh} /></div></div><StoreProfilePreview snapshot={snapshot} profile={preview} /></div></OnboardingStepContent>
+      <OnboardingStepContent active={step === 0}><div className="grid items-start gap-8 lg:grid-cols-2"><div><FormSection panel title="Store information" description="Write the clear, customer-facing description that will appear after activation is approved."><div className="grid gap-5 sm:grid-cols-2"><Field className="sm:col-span-2" label="Public store name" name="public_store_name" defaultValue={stringValue(profile.publicStoreName, stringValue(org.storeName))} required /><div className="grid gap-2 text-sm font-semibold sm:col-span-2"><label htmlFor="description">Store description</label><textarea className="min-h-32 w-full rounded-control border border-border-default bg-surface-primary px-3 py-3 text-base font-normal" id="description" name="description" defaultValue={stringValue(profile.description)} /></div><Field label="Public email" name="public_email" type="email" defaultValue={stringValue(profile.publicEmail)} /><Field label="Public phone" name="public_phone" defaultValue={stringValue(profile.publicPhone)} inputMode="tel" /></div></FormSection><div className="mt-8"><MediaUploader embedded snapshot={snapshot} onRefresh={onRefresh} /></div></div><StoreProfilePreview snapshot={snapshot} profile={preview} /></div></OnboardingStepContent>
       <OnboardingStepContent active={step === 1}><div className="mb-8 max-w-xl"><p className="mb-5 text-sm leading-6 text-text-secondary">Declare whether your store supports larger material orders.</p><fieldset className="grid gap-2 text-sm font-semibold"><legend>Bulk capability</legend><label className="flex min-h-11 items-center gap-3 font-normal"><input className="h-5 w-5 accent-action-primary" type="radio" name="bulk_capability" value="yes" defaultChecked={profile.bulkCapability === true} required /> Yes, we support bulk orders</label><label className="flex min-h-11 items-center gap-3 font-normal"><input className="h-5 w-5 accent-action-primary" type="radio" name="bulk_capability" value="no" defaultChecked={profile.bulkCapability === false} /> Not currently</label></fieldset></div></OnboardingStepContent>
       <OnboardingStepContent active={step === 1}><div className="mb-8 max-w-xl"><p className="mb-5 text-sm leading-6 text-text-secondary">Choose how orders can be fulfilled. Vendor Delivery or Both requires delivery configuration.</p><SelectField label="Fulfillment method" name="fulfillment_method" defaultValue={stringValue(profile.fulfillmentMethod)} options={['SELF_PICKUP', 'VENDOR_DELIVERY', 'BOTH']} /></div></OnboardingStepContent>
-      <OnboardingStepContent active={step === 1}><div className="grid gap-8"><FormSection title="Delivery coverage" description="Required for Vendor Delivery or Both. Self Pickup does not require delivery configuration."><div className="grid gap-5 sm:grid-cols-2"><Field label="Delivery radius (km)" name="maximum_distance_km" type="number" min="1" max="1000" defaultValue={String(numberValue(delivery.maximumDistanceKm, 1))} hint="Required for Vendor Delivery or Both." /><Field label="Coverage notes" name="coverage_notes" defaultValue={stringValue(delivery.coverageNotes)} hint="Describe practical coverage limits." /></div></FormSection><FormSection title="Fulfillment vehicle readiness" description="Record each vehicle you legitimately operate or control. A Vendor Delivery setup needs at least one active vehicle with a current rate version."><div className="grid gap-5 sm:grid-cols-2"><Field label="Vehicle name" name="vehicle_name" defaultValue={stringValue(vehicle.name)} hint="Required when Vendor Delivery or Both is selected." /><Field label="Vehicle type" name="vehicle_type" defaultValue={stringValue(vehicle.vehicleType, 'DELIVERY_VEHICLE')} /><Field label="Capacity (kg)" name="capacity_kg" type="number" min="1" defaultValue={String(numberValue(vehicle.capacityKg, 1))} /><Field label="Number available" name="number_available" type="number" min="1" defaultValue={String(numberValue(vehicle.numberAvailable, 1))} /><Field label="Cargo length (m)" name="cargo_length_m" type="number" min="0" step="any" defaultValue={numberInputValue(vehicle.cargoLengthM)} /><Field label="Cargo width (m)" name="cargo_width_m" type="number" min="0" step="any" defaultValue={numberInputValue(vehicle.cargoWidthM)} /><Field label="Cargo height (m)" name="cargo_height_m" type="number" min="0" step="any" defaultValue={numberInputValue(vehicle.cargoHeightM)} /><Field label="Heavy classification" name="heavy_classification" defaultValue={stringValue(vehicle.heavyClassification)} /><Field label="Base fee (centavos)" name="base_fee_centavos" type="number" min="0" defaultValue={numberInputValue(vehicle.baseFeeCentavos)} hint="Stored as integer centavos for later delivery quotes." /><Field label="Per-kilometer rate (centavos)" name="per_km_centavos" type="number" min="0" defaultValue={numberInputValue(vehicle.perKmCentavos)} /><Field label="Vehicle maximum distance (km)" name="vehicle_maximum_distance_km" type="number" min="1" max="1000" defaultValue={numberInputValue(vehicle.maximumDistanceKm, String(numberValue(delivery.maximumDistanceKm, 1)))} /></div></FormSection></div></OnboardingStepContent>
+      <OnboardingStepContent active={step === 1}><div className="grid gap-8"><FormSection panel title="Delivery coverage" description="Required for Vendor Delivery or Both. Self Pickup does not require delivery configuration."><div className="grid gap-5 sm:grid-cols-2"><Field label="Delivery radius (km)" name="maximum_distance_km" type="number" min="1" max="1000" defaultValue={String(numberValue(delivery.maximumDistanceKm, 1))} hint="Required for Vendor Delivery or Both." /><Field label="Coverage notes" name="coverage_notes" defaultValue={stringValue(delivery.coverageNotes)} hint="Describe practical coverage limits." /></div></FormSection><FormSection panel title="Fulfillment vehicle readiness" description="Record each vehicle you legitimately operate or control. A Vendor Delivery setup needs at least one active vehicle with a current rate version."><div className="grid gap-5 sm:grid-cols-2"><Field label="Vehicle name" name="vehicle_name" defaultValue={stringValue(vehicle.name)} hint="Required when Vendor Delivery or Both is selected." /><Field label="Vehicle type" name="vehicle_type" defaultValue={stringValue(vehicle.vehicleType, 'DELIVERY_VEHICLE')} /><Field label="Capacity (kg)" name="capacity_kg" type="number" min="1" defaultValue={String(numberValue(vehicle.capacityKg, 1))} /><Field label="Number available" name="number_available" type="number" min="1" defaultValue={String(numberValue(vehicle.numberAvailable, 1))} /><Field label="Cargo length (m)" name="cargo_length_m" type="number" min="0" step="any" defaultValue={numberInputValue(vehicle.cargoLengthM)} /><Field label="Cargo width (m)" name="cargo_width_m" type="number" min="0" step="any" defaultValue={numberInputValue(vehicle.cargoWidthM)} /><Field label="Cargo height (m)" name="cargo_height_m" type="number" min="0" step="any" defaultValue={numberInputValue(vehicle.cargoHeightM)} /><Field label="Heavy classification" name="heavy_classification" defaultValue={stringValue(vehicle.heavyClassification)} /><Field label="Base fee (centavos)" name="base_fee_centavos" type="number" min="0" defaultValue={numberInputValue(vehicle.baseFeeCentavos)} hint="Stored as integer centavos for later delivery quotes." /><Field label="Per-kilometer rate (centavos)" name="per_km_centavos" type="number" min="0" defaultValue={numberInputValue(vehicle.perKmCentavos)} /><Field label="Vehicle maximum distance (km)" name="vehicle_maximum_distance_km" type="number" min="1" max="1000" defaultValue={numberInputValue(vehicle.maximumDistanceKm, String(numberValue(delivery.maximumDistanceKm, 1)))} /></div></FormSection></div></OnboardingStepContent>
     </form>
 
     <OnboardingStepContent active={step === 2}><section aria-labelledby="payment-title"><div className="flex items-start gap-3"><CreditCard className="mt-1 shrink-0 text-action-primary" size={22} aria-hidden="true" /><div><h2 id="payment-title" className="text-2xl font-semibold">Xendit TEST connection</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-text-secondary">Capture the exact invitation URL and TEST sub-account identifier. A captured link is not proof of payment readiness until the provider account is reconciled.</p></div></div><form className="mt-6 grid gap-5 sm:grid-cols-2" onSubmit={(event) => void capturePayment(event)}><Field className="sm:col-span-2" label="Exact HTTPS invitation URL" name="invitation_url" type="url" defaultValue="" placeholder="https://…" required /><Field label="TEST sub-account ID" name="provider_account_id" defaultValue={stringValue(payment.providerAccountId)} required /><div className="flex items-end"><Button type="submit" disabled={paymentBusy}>{paymentBusy ? 'Capturing…' : 'Capture TEST connection'} <CreditCard size={16} aria-hidden="true" /></Button></div></form><div className="mt-5 flex flex-wrap items-center gap-3 border-t border-border-default pt-5"><StatusBadge label={statusLabel(stringValue(payment.connectionStatus, 'UNVERIFIED'))} tone={statusTone(stringValue(payment.connectionStatus, 'UNVERIFIED'))} />{payment.providerStatus && <span className="text-sm text-text-secondary">Provider: {stringValue(payment.providerStatus)}</span>}<Button type="button" variant="secondary" disabled={paymentBusy || !payment.providerAccountId} onClick={() => void reconcile()}><RefreshCw size={16} aria-hidden="true" /> Reconcile TEST account</Button></div>{paymentMessage && <p className="mt-4 text-sm leading-6 text-text-secondary" role="status">{paymentMessage}</p>}</section></OnboardingStepContent>
-    <OnboardingStepContent active={step === 3}><div className="max-w-2xl"><p className="text-sm leading-6 text-text-secondary">The TEST agreement is a Vendor-paid 2% platform commission assessed after Vendor discounts and excluding included Vendor VAT. Buyer totals and provider fees remain separate records.</p><Link className="mt-4 inline-flex min-h-11 items-center font-semibold text-action-primary underline" to="/legal/vendor-commission-test">Read the TEST commission terms</Link><label className="mt-5 flex min-h-11 items-start gap-3 text-sm leading-6"><input className="mt-1 h-5 w-5 shrink-0 accent-action-primary" type="checkbox" checked={accepted} onChange={event => setAccepted(event.target.checked)} /><span>I accept the current version of the TEST Vendor commission terms for this organization.</span></label><p className="mt-3 text-sm text-text-secondary">Acceptance is recorded when you complete Store Setup.</p></div></OnboardingStepContent>
-    <OnboardingStepContent active={step === 4}><div className="max-w-2xl"><StatusBadge label="Optional" /><p className="mt-4 text-sm leading-6 text-text-secondary">Team Accounts do not block Store Activation. Once Store Setup is complete, authorized users can invite individual team members with fixed roles from Team Accounts.</p>{snapshot.setup.status === 'COMPLETED' && snapshot.permissions.includes('staff.manage') && <Link className="mt-4 inline-flex min-h-11 items-center font-semibold text-action-primary underline" to="/team">Manage Team Accounts</Link>}</div></OnboardingStepContent>
-    <OnboardingStepContent active={step === 5}><p className="mb-5 text-sm leading-6 text-text-secondary">Review the saved setup below. Completion requires the confirmed TEST payment connection and accepted commission terms. Store Activation remains a separate gate.</p>{dirty && <StatusMessage tone="info">You have unsaved changes. Save your setup draft before completing Store Setup.</StatusMessage>}<ReviewDetails items={[["Public store name", stringValue(profile.publicStoreName)], ["Fulfillment method", statusLabel(stringValue(profile.fulfillmentMethod))], ["Bulk orders", profile.bulkCapability === true ? 'Supported' : profile.bulkCapability === false ? 'Not currently' : 'Not configured'], ["TEST payment connection", statusLabel(stringValue(payment.connectionStatus, 'UNVERIFIED'))], ["Commission terms", accepted ? 'Accepted for this completion' : 'Not accepted']]} /><Checklist title="Setup checklist" section={sectionFor(snapshot, 'STORE_SETUP')} compact /></OnboardingStepContent>
+    <OnboardingStepContent active={step === 3}><div className="max-w-2xl"><StatusBadge label="Optional" /><p className="mt-4 text-sm leading-6 text-text-secondary">Team Accounts do not block Store Activation. Once Store Setup is complete, authorized users can invite individual team members with fixed roles from Team Accounts.</p>{snapshot.setup.status === 'COMPLETED' && snapshot.permissions.includes('staff.manage') && <Link className="mt-4 inline-flex min-h-11 items-center font-semibold text-action-primary underline" to="/team">Manage Team Accounts</Link>}</div></OnboardingStepContent>
+    <OnboardingStepContent active={step === 4}><p className="mb-5 text-sm leading-6 text-text-secondary">Review the saved setup below. Completion requires the confirmed TEST payment connection. Store Activation remains a separate gate.</p>{dirty && <StatusMessage tone="info">You have unsaved changes. Save your setup draft before completing Store Setup.</StatusMessage>}<ReviewDetails items={[["Public store name", stringValue(profile.publicStoreName)], ["Fulfillment method", statusLabel(stringValue(profile.fulfillmentMethod))], ["Bulk orders", profile.bulkCapability === true ? 'Supported' : profile.bulkCapability === false ? 'Not currently' : 'Not configured'], ["TEST payment connection", statusLabel(stringValue(payment.connectionStatus, 'UNVERIFIED'))]]} /><Checklist title="Setup checklist" section={sectionFor(snapshot, 'STORE_SETUP')} /></OnboardingStepContent>
   </OnboardingFlow>
 }
 
@@ -728,16 +888,15 @@ function MediaUploader({ snapshot, onRefresh, embedded = false }: { snapshot: Ve
   return <section className={embedded ? '' : 'rounded-surface border border-border-default bg-surface-primary p-5 sm:p-7'} aria-labelledby="media-title"><div className="flex items-start gap-3"><ImagePlus className="mt-1 shrink-0 text-action-primary" size={22} aria-hidden="true" /><div><h2 id="media-title" className="text-2xl font-semibold">Store media</h2><p className="mt-2 text-sm leading-6 text-text-secondary">Save your public store profile draft first, then upload your optional logo and banner. These images also appear in your Store Profile Preview.</p></div></div><div className="mt-6 grid gap-4 sm:grid-cols-2">{(['LOGO', 'BANNER'] as const).map((kind) => <div className="border-t border-border-default pt-4" key={kind}><p className="font-semibold">{statusLabel(kind)}</p><StoreMediaPreview media={media.filter(item => stringValue(item.kind) === kind).at(-1)} kind={kind} /><p className="mt-1 text-sm text-text-secondary">{media.filter((item) => stringValue(item.kind) === kind).length > 0 ? 'Asset uploaded' : 'No asset uploaded'}</p><label className="mt-4 inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-control border border-border-default px-4 text-sm font-semibold hover:bg-brand-orange-50"><UploadCloud size={16} aria-hidden="true" />{busy ? 'Uploading…' : 'Upload image'}<input className="sr-only" type="file" accept="image/jpeg,image/png,image/webp" disabled={busy} onChange={(event) => void upload(kind, event.target.files?.[0], event.currentTarget)} /></label></div>)}</div>{message && <p className="mt-4 text-sm text-text-secondary" role="status">{message}</p>}</section>
 }
 
-function SetupCompletion({ snapshot, onSaved, accepted, dirty }: { snapshot: VendorOnboardingSnapshot; onSaved: (snapshot: VendorOnboardingSnapshot) => void; accepted: boolean; dirty: boolean }) {
+function SetupCompletion({ snapshot, onSaved, dirty }: { snapshot: VendorOnboardingSnapshot; onSaved: (snapshot: VendorOnboardingSnapshot) => void; dirty: boolean }) {
   const navigate = useNavigate()
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const setup = record(snapshot.setup)
   const status = stringValue(setup.status, 'NOT_STARTED')
   async function complete() {
-    if (!accepted) { setMessage('Review and accept the current TEST commission terms before completing setup.'); return }
     setBusy(true); setMessage(null)
-    try { onSaved(await completeVendorSetup({ organizationLockVersion: numberValue(record(snapshot.organization).lockVersion, 1), commissionTermsAccepted: true })); setMessage('Store Setup completed. Activation remains a separate gate.'); navigate('/dashboard') } catch (cause) { setMessage(await readableOnboardingError(cause)) } finally { setBusy(false) }
+    try { onSaved(await completeVendorSetup({ organizationLockVersion: numberValue(record(snapshot.organization).lockVersion, 1) })); setMessage('Store Setup completed. Activation remains a separate gate.'); navigate('/dashboard') } catch (cause) { setMessage(await readableOnboardingError(cause)) } finally { setBusy(false) }
   }
   return <>{message && <div className="w-full"><StatusMessage tone={message.includes('completed') ? 'success' : 'error'}>{message}</StatusMessage></div>}<Button disabled={busy || dirty || status === 'COMPLETED'} onClick={() => void complete()}>{busy ? 'Completing…' : status === 'COMPLETED' ? 'Setup completed' : 'Complete Store Setup'} <ArrowRight size={16} aria-hidden="true" /></Button></>
 }
@@ -792,7 +951,7 @@ function PublicStoreProfileEditor({ snapshot, onSaved }: { snapshot: VendorOnboa
     const data = new FormData(event.currentTarget)
     setBusy(true); setMessage(null)
     try {
-      onSaved(await saveVendorSetupDraft({ organizationLockVersion: numberValue(org.lockVersion, 1), publicStoreName: String(data.get('public_store_name')).trim(), description: String(data.get('description')).trim() || null, publicEmail: String(data.get('public_email')).trim() || null, publicPhone: String(data.get('public_phone')).trim() || null }))
+      onSaved(await saveVendorSetupDraft({ organizationLockVersion: numberValue(org.lockVersion, 1), draftLockVersion: numberValue(arrayValue(snapshot.drafts).find(item => item.workstream === 'STORE_SETUP')?.lockVersion, 0), publicStoreName: String(data.get('public_store_name')).trim(), description: String(data.get('description')).trim() || null, publicEmail: String(data.get('public_email')).trim() || null, publicPhone: String(data.get('public_phone')).trim() || null }))
       setMessage({ tone: 'success', text: 'Store Profile saved.' })
     } catch (cause) { setMessage({ tone: 'error', text: await readableOnboardingError(cause) }) }
     finally { setBusy(false) }

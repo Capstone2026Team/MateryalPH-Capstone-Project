@@ -6,6 +6,130 @@ part of 'vendor_verification_draft_representative.dart';
 // BuiltValueGenerator
 // **************************************************************************
 
+const VendorVerificationDraftRepresentativeAuthorityEvidenceSourceEnum
+    _$vendorVerificationDraftRepresentativeAuthorityEvidenceSourceEnum_EXISTING_REGISTRATION_EVIDENCE =
+    const VendorVerificationDraftRepresentativeAuthorityEvidenceSourceEnum._(
+        'EXISTING_REGISTRATION_EVIDENCE');
+const VendorVerificationDraftRepresentativeAuthorityEvidenceSourceEnum
+    _$vendorVerificationDraftRepresentativeAuthorityEvidenceSourceEnum_SEPARATE_AUTHORITY_DOCUMENT =
+    const VendorVerificationDraftRepresentativeAuthorityEvidenceSourceEnum._(
+        'SEPARATE_AUTHORITY_DOCUMENT');
+
+VendorVerificationDraftRepresentativeAuthorityEvidenceSourceEnum
+    _$vendorVerificationDraftRepresentativeAuthorityEvidenceSourceEnumValueOf(
+        String name) {
+  switch (name) {
+    case 'EXISTING_REGISTRATION_EVIDENCE':
+      return _$vendorVerificationDraftRepresentativeAuthorityEvidenceSourceEnum_EXISTING_REGISTRATION_EVIDENCE;
+    case 'SEPARATE_AUTHORITY_DOCUMENT':
+      return _$vendorVerificationDraftRepresentativeAuthorityEvidenceSourceEnum_SEPARATE_AUTHORITY_DOCUMENT;
+    default:
+      throw ArgumentError(name);
+  }
+}
+
+final BuiltSet<VendorVerificationDraftRepresentativeAuthorityEvidenceSourceEnum>
+    _$vendorVerificationDraftRepresentativeAuthorityEvidenceSourceEnumValues =
+    BuiltSet<
+        VendorVerificationDraftRepresentativeAuthorityEvidenceSourceEnum>(const <VendorVerificationDraftRepresentativeAuthorityEvidenceSourceEnum>[
+  _$vendorVerificationDraftRepresentativeAuthorityEvidenceSourceEnum_EXISTING_REGISTRATION_EVIDENCE,
+  _$vendorVerificationDraftRepresentativeAuthorityEvidenceSourceEnum_SEPARATE_AUTHORITY_DOCUMENT,
+]);
+
+const VendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum
+    _$vendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum_SECRETARYS_CERTIFICATE =
+    const VendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum._(
+        'SECRETARYS_CERTIFICATE');
+const VendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum
+    _$vendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum_BOARD_RESOLUTION =
+    const VendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum._(
+        'BOARD_RESOLUTION');
+const VendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum
+    _$vendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum_SPECIAL_POWER_OF_ATTORNEY =
+    const VendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum._(
+        'SPECIAL_POWER_OF_ATTORNEY');
+const VendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum
+    _$vendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum_PARTNERSHIP_AUTHORIZATION =
+    const VendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum._(
+        'PARTNERSHIP_AUTHORIZATION');
+const VendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum
+    _$vendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum_COOPERATIVE_BOARD_RESOLUTION =
+    const VendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum._(
+        'COOPERATIVE_BOARD_RESOLUTION');
+const VendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum
+    _$vendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum_OTHER_APPROVED =
+    const VendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum._(
+        'OTHER_APPROVED');
+
+VendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum
+    _$vendorVerificationDraftRepresentativeAuthorityDocumentTypeEnumValueOf(
+        String name) {
+  switch (name) {
+    case 'SECRETARYS_CERTIFICATE':
+      return _$vendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum_SECRETARYS_CERTIFICATE;
+    case 'BOARD_RESOLUTION':
+      return _$vendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum_BOARD_RESOLUTION;
+    case 'SPECIAL_POWER_OF_ATTORNEY':
+      return _$vendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum_SPECIAL_POWER_OF_ATTORNEY;
+    case 'PARTNERSHIP_AUTHORIZATION':
+      return _$vendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum_PARTNERSHIP_AUTHORIZATION;
+    case 'COOPERATIVE_BOARD_RESOLUTION':
+      return _$vendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum_COOPERATIVE_BOARD_RESOLUTION;
+    case 'OTHER_APPROVED':
+      return _$vendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum_OTHER_APPROVED;
+    default:
+      throw ArgumentError(name);
+  }
+}
+
+final BuiltSet<VendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum>
+    _$vendorVerificationDraftRepresentativeAuthorityDocumentTypeEnumValues =
+    BuiltSet<
+        VendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum>(const <VendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum>[
+  _$vendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum_SECRETARYS_CERTIFICATE,
+  _$vendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum_BOARD_RESOLUTION,
+  _$vendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum_SPECIAL_POWER_OF_ATTORNEY,
+  _$vendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum_PARTNERSHIP_AUTHORIZATION,
+  _$vendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum_COOPERATIVE_BOARD_RESOLUTION,
+  _$vendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum_OTHER_APPROVED,
+]);
+
+const VendorVerificationDraftRepresentativeAuthorityScopesEnum
+    _$vendorVerificationDraftRepresentativeAuthorityScopesEnum_TAX_DECLARATIONS =
+    const VendorVerificationDraftRepresentativeAuthorityScopesEnum._(
+        'TAX_DECLARATIONS');
+const VendorVerificationDraftRepresentativeAuthorityScopesEnum
+    _$vendorVerificationDraftRepresentativeAuthorityScopesEnum_COMMISSION_AGREEMENT =
+    const VendorVerificationDraftRepresentativeAuthorityScopesEnum._(
+        'COMMISSION_AGREEMENT');
+const VendorVerificationDraftRepresentativeAuthorityScopesEnum
+    _$vendorVerificationDraftRepresentativeAuthorityScopesEnum_PAYMENT_CONFIGURATION =
+    const VendorVerificationDraftRepresentativeAuthorityScopesEnum._(
+        'PAYMENT_CONFIGURATION');
+
+VendorVerificationDraftRepresentativeAuthorityScopesEnum
+    _$vendorVerificationDraftRepresentativeAuthorityScopesEnumValueOf(
+        String name) {
+  switch (name) {
+    case 'TAX_DECLARATIONS':
+      return _$vendorVerificationDraftRepresentativeAuthorityScopesEnum_TAX_DECLARATIONS;
+    case 'COMMISSION_AGREEMENT':
+      return _$vendorVerificationDraftRepresentativeAuthorityScopesEnum_COMMISSION_AGREEMENT;
+    case 'PAYMENT_CONFIGURATION':
+      return _$vendorVerificationDraftRepresentativeAuthorityScopesEnum_PAYMENT_CONFIGURATION;
+    default:
+      throw ArgumentError(name);
+  }
+}
+
+final BuiltSet<VendorVerificationDraftRepresentativeAuthorityScopesEnum>
+    _$vendorVerificationDraftRepresentativeAuthorityScopesEnumValues = BuiltSet<
+        VendorVerificationDraftRepresentativeAuthorityScopesEnum>(const <VendorVerificationDraftRepresentativeAuthorityScopesEnum>[
+  _$vendorVerificationDraftRepresentativeAuthorityScopesEnum_TAX_DECLARATIONS,
+  _$vendorVerificationDraftRepresentativeAuthorityScopesEnum_COMMISSION_AGREEMENT,
+  _$vendorVerificationDraftRepresentativeAuthorityScopesEnum_PAYMENT_CONFIGURATION,
+]);
+
 const VendorVerificationDraftRepresentativeIdTypeEnum
     _$vendorVerificationDraftRepresentativeIdTypeEnum_NATIONAL_ID =
     const VendorVerificationDraftRepresentativeIdTypeEnum._('NATIONAL_ID');
@@ -50,9 +174,135 @@ final BuiltSet<VendorVerificationDraftRepresentativeIdTypeEnum>
   _$vendorVerificationDraftRepresentativeIdTypeEnum_OTHER,
 ]);
 
+Serializer<VendorVerificationDraftRepresentativeAuthorityEvidenceSourceEnum>
+    _$vendorVerificationDraftRepresentativeAuthorityEvidenceSourceEnumSerializer =
+    _$VendorVerificationDraftRepresentativeAuthorityEvidenceSourceEnumSerializer();
+Serializer<VendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum>
+    _$vendorVerificationDraftRepresentativeAuthorityDocumentTypeEnumSerializer =
+    _$VendorVerificationDraftRepresentativeAuthorityDocumentTypeEnumSerializer();
+Serializer<VendorVerificationDraftRepresentativeAuthorityScopesEnum>
+    _$vendorVerificationDraftRepresentativeAuthorityScopesEnumSerializer =
+    _$VendorVerificationDraftRepresentativeAuthorityScopesEnumSerializer();
 Serializer<VendorVerificationDraftRepresentativeIdTypeEnum>
     _$vendorVerificationDraftRepresentativeIdTypeEnumSerializer =
     _$VendorVerificationDraftRepresentativeIdTypeEnumSerializer();
+
+class _$VendorVerificationDraftRepresentativeAuthorityEvidenceSourceEnumSerializer
+    implements
+        PrimitiveSerializer<
+            VendorVerificationDraftRepresentativeAuthorityEvidenceSourceEnum> {
+  static const Map<String, Object> _toWire = const <String, Object>{
+    'EXISTING_REGISTRATION_EVIDENCE': 'EXISTING_REGISTRATION_EVIDENCE',
+    'SEPARATE_AUTHORITY_DOCUMENT': 'SEPARATE_AUTHORITY_DOCUMENT',
+  };
+  static const Map<Object, String> _fromWire = const <Object, String>{
+    'EXISTING_REGISTRATION_EVIDENCE': 'EXISTING_REGISTRATION_EVIDENCE',
+    'SEPARATE_AUTHORITY_DOCUMENT': 'SEPARATE_AUTHORITY_DOCUMENT',
+  };
+
+  @override
+  final Iterable<Type> types = const <Type>[
+    VendorVerificationDraftRepresentativeAuthorityEvidenceSourceEnum
+  ];
+  @override
+  final String wireName =
+      'VendorVerificationDraftRepresentativeAuthorityEvidenceSourceEnum';
+
+  @override
+  Object serialize(
+          Serializers serializers,
+          VendorVerificationDraftRepresentativeAuthorityEvidenceSourceEnum
+              object,
+          {FullType specifiedType = FullType.unspecified}) =>
+      _toWire[object.name] ?? object.name;
+
+  @override
+  VendorVerificationDraftRepresentativeAuthorityEvidenceSourceEnum deserialize(
+          Serializers serializers, Object serialized,
+          {FullType specifiedType = FullType.unspecified}) =>
+      VendorVerificationDraftRepresentativeAuthorityEvidenceSourceEnum.valueOf(
+          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+}
+
+class _$VendorVerificationDraftRepresentativeAuthorityDocumentTypeEnumSerializer
+    implements
+        PrimitiveSerializer<
+            VendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum> {
+  static const Map<String, Object> _toWire = const <String, Object>{
+    'SECRETARYS_CERTIFICATE': 'SECRETARYS_CERTIFICATE',
+    'BOARD_RESOLUTION': 'BOARD_RESOLUTION',
+    'SPECIAL_POWER_OF_ATTORNEY': 'SPECIAL_POWER_OF_ATTORNEY',
+    'PARTNERSHIP_AUTHORIZATION': 'PARTNERSHIP_AUTHORIZATION',
+    'COOPERATIVE_BOARD_RESOLUTION': 'COOPERATIVE_BOARD_RESOLUTION',
+    'OTHER_APPROVED': 'OTHER_APPROVED',
+  };
+  static const Map<Object, String> _fromWire = const <Object, String>{
+    'SECRETARYS_CERTIFICATE': 'SECRETARYS_CERTIFICATE',
+    'BOARD_RESOLUTION': 'BOARD_RESOLUTION',
+    'SPECIAL_POWER_OF_ATTORNEY': 'SPECIAL_POWER_OF_ATTORNEY',
+    'PARTNERSHIP_AUTHORIZATION': 'PARTNERSHIP_AUTHORIZATION',
+    'COOPERATIVE_BOARD_RESOLUTION': 'COOPERATIVE_BOARD_RESOLUTION',
+    'OTHER_APPROVED': 'OTHER_APPROVED',
+  };
+
+  @override
+  final Iterable<Type> types = const <Type>[
+    VendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum
+  ];
+  @override
+  final String wireName =
+      'VendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum';
+
+  @override
+  Object serialize(Serializers serializers,
+          VendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum object,
+          {FullType specifiedType = FullType.unspecified}) =>
+      _toWire[object.name] ?? object.name;
+
+  @override
+  VendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum deserialize(
+          Serializers serializers, Object serialized,
+          {FullType specifiedType = FullType.unspecified}) =>
+      VendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum.valueOf(
+          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+}
+
+class _$VendorVerificationDraftRepresentativeAuthorityScopesEnumSerializer
+    implements
+        PrimitiveSerializer<
+            VendorVerificationDraftRepresentativeAuthorityScopesEnum> {
+  static const Map<String, Object> _toWire = const <String, Object>{
+    'TAX_DECLARATIONS': 'TAX_DECLARATIONS',
+    'COMMISSION_AGREEMENT': 'COMMISSION_AGREEMENT',
+    'PAYMENT_CONFIGURATION': 'PAYMENT_CONFIGURATION',
+  };
+  static const Map<Object, String> _fromWire = const <Object, String>{
+    'TAX_DECLARATIONS': 'TAX_DECLARATIONS',
+    'COMMISSION_AGREEMENT': 'COMMISSION_AGREEMENT',
+    'PAYMENT_CONFIGURATION': 'PAYMENT_CONFIGURATION',
+  };
+
+  @override
+  final Iterable<Type> types = const <Type>[
+    VendorVerificationDraftRepresentativeAuthorityScopesEnum
+  ];
+  @override
+  final String wireName =
+      'VendorVerificationDraftRepresentativeAuthorityScopesEnum';
+
+  @override
+  Object serialize(Serializers serializers,
+          VendorVerificationDraftRepresentativeAuthorityScopesEnum object,
+          {FullType specifiedType = FullType.unspecified}) =>
+      _toWire[object.name] ?? object.name;
+
+  @override
+  VendorVerificationDraftRepresentativeAuthorityScopesEnum deserialize(
+          Serializers serializers, Object serialized,
+          {FullType specifiedType = FullType.unspecified}) =>
+      VendorVerificationDraftRepresentativeAuthorityScopesEnum.valueOf(
+          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+}
 
 class _$VendorVerificationDraftRepresentativeIdTypeEnumSerializer
     implements
@@ -108,6 +358,21 @@ class _$VendorVerificationDraftRepresentative
   @override
   final String? relationship;
   @override
+  final String? relationshipOther;
+  @override
+  final VendorVerificationDraftRepresentativeAuthorityEvidenceSourceEnum?
+      authorityEvidenceSource;
+  @override
+  final String? authorityEvidenceVersionId;
+  @override
+  final VendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum?
+      authorityDocumentType;
+  @override
+  final Date? authorityDocumentDate;
+  @override
+  final BuiltSet<VendorVerificationDraftRepresentativeAuthorityScopesEnum>?
+      authorityScopes;
+  @override
   final VendorVerificationDraftRepresentativeIdTypeEnum? idType;
   @override
   final String? idNumber;
@@ -125,6 +390,12 @@ class _$VendorVerificationDraftRepresentative
       this.email,
       this.phone,
       this.relationship,
+      this.relationshipOther,
+      this.authorityEvidenceSource,
+      this.authorityEvidenceVersionId,
+      this.authorityDocumentType,
+      this.authorityDocumentDate,
+      this.authorityScopes,
       this.idType,
       this.idNumber})
       : super._();
@@ -148,6 +419,12 @@ class _$VendorVerificationDraftRepresentative
         email == other.email &&
         phone == other.phone &&
         relationship == other.relationship &&
+        relationshipOther == other.relationshipOther &&
+        authorityEvidenceSource == other.authorityEvidenceSource &&
+        authorityEvidenceVersionId == other.authorityEvidenceVersionId &&
+        authorityDocumentType == other.authorityDocumentType &&
+        authorityDocumentDate == other.authorityDocumentDate &&
+        authorityScopes == other.authorityScopes &&
         idType == other.idType &&
         idNumber == other.idNumber;
   }
@@ -161,6 +438,12 @@ class _$VendorVerificationDraftRepresentative
     _$hash = $jc(_$hash, email.hashCode);
     _$hash = $jc(_$hash, phone.hashCode);
     _$hash = $jc(_$hash, relationship.hashCode);
+    _$hash = $jc(_$hash, relationshipOther.hashCode);
+    _$hash = $jc(_$hash, authorityEvidenceSource.hashCode);
+    _$hash = $jc(_$hash, authorityEvidenceVersionId.hashCode);
+    _$hash = $jc(_$hash, authorityDocumentType.hashCode);
+    _$hash = $jc(_$hash, authorityDocumentDate.hashCode);
+    _$hash = $jc(_$hash, authorityScopes.hashCode);
     _$hash = $jc(_$hash, idType.hashCode);
     _$hash = $jc(_$hash, idNumber.hashCode);
     _$hash = $jf(_$hash);
@@ -177,6 +460,12 @@ class _$VendorVerificationDraftRepresentative
           ..add('email', email)
           ..add('phone', phone)
           ..add('relationship', relationship)
+          ..add('relationshipOther', relationshipOther)
+          ..add('authorityEvidenceSource', authorityEvidenceSource)
+          ..add('authorityEvidenceVersionId', authorityEvidenceVersionId)
+          ..add('authorityDocumentType', authorityDocumentType)
+          ..add('authorityDocumentDate', authorityDocumentDate)
+          ..add('authorityScopes', authorityScopes)
           ..add('idType', idType)
           ..add('idNumber', idNumber))
         .toString();
@@ -213,6 +502,49 @@ class VendorVerificationDraftRepresentativeBuilder
   String? get relationship => _$this._relationship;
   set relationship(String? relationship) => _$this._relationship = relationship;
 
+  String? _relationshipOther;
+  String? get relationshipOther => _$this._relationshipOther;
+  set relationshipOther(String? relationshipOther) =>
+      _$this._relationshipOther = relationshipOther;
+
+  VendorVerificationDraftRepresentativeAuthorityEvidenceSourceEnum?
+      _authorityEvidenceSource;
+  VendorVerificationDraftRepresentativeAuthorityEvidenceSourceEnum?
+      get authorityEvidenceSource => _$this._authorityEvidenceSource;
+  set authorityEvidenceSource(
+          VendorVerificationDraftRepresentativeAuthorityEvidenceSourceEnum?
+              authorityEvidenceSource) =>
+      _$this._authorityEvidenceSource = authorityEvidenceSource;
+
+  String? _authorityEvidenceVersionId;
+  String? get authorityEvidenceVersionId => _$this._authorityEvidenceVersionId;
+  set authorityEvidenceVersionId(String? authorityEvidenceVersionId) =>
+      _$this._authorityEvidenceVersionId = authorityEvidenceVersionId;
+
+  VendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum?
+      _authorityDocumentType;
+  VendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum?
+      get authorityDocumentType => _$this._authorityDocumentType;
+  set authorityDocumentType(
+          VendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum?
+              authorityDocumentType) =>
+      _$this._authorityDocumentType = authorityDocumentType;
+
+  Date? _authorityDocumentDate;
+  Date? get authorityDocumentDate => _$this._authorityDocumentDate;
+  set authorityDocumentDate(Date? authorityDocumentDate) =>
+      _$this._authorityDocumentDate = authorityDocumentDate;
+
+  SetBuilder<VendorVerificationDraftRepresentativeAuthorityScopesEnum>?
+      _authorityScopes;
+  SetBuilder<VendorVerificationDraftRepresentativeAuthorityScopesEnum>
+      get authorityScopes => _$this._authorityScopes ??= SetBuilder<
+          VendorVerificationDraftRepresentativeAuthorityScopesEnum>();
+  set authorityScopes(
+          SetBuilder<VendorVerificationDraftRepresentativeAuthorityScopesEnum>?
+              authorityScopes) =>
+      _$this._authorityScopes = authorityScopes;
+
   VendorVerificationDraftRepresentativeIdTypeEnum? _idType;
   VendorVerificationDraftRepresentativeIdTypeEnum? get idType => _$this._idType;
   set idType(VendorVerificationDraftRepresentativeIdTypeEnum? idType) =>
@@ -235,6 +567,12 @@ class VendorVerificationDraftRepresentativeBuilder
       _email = $v.email;
       _phone = $v.phone;
       _relationship = $v.relationship;
+      _relationshipOther = $v.relationshipOther;
+      _authorityEvidenceSource = $v.authorityEvidenceSource;
+      _authorityEvidenceVersionId = $v.authorityEvidenceVersionId;
+      _authorityDocumentType = $v.authorityDocumentType;
+      _authorityDocumentDate = $v.authorityDocumentDate;
+      _authorityScopes = $v.authorityScopes?.toBuilder();
       _idType = $v.idType;
       _idNumber = $v.idNumber;
       _$v = null;
@@ -257,18 +595,39 @@ class VendorVerificationDraftRepresentativeBuilder
   VendorVerificationDraftRepresentative build() => _build();
 
   _$VendorVerificationDraftRepresentative _build() {
-    final _$result = _$v ??
-        _$VendorVerificationDraftRepresentative._(
-          sameAsOwner: sameAsOwner,
-          fullName: BuiltValueNullFieldError.checkNotNull(
-              fullName, r'VendorVerificationDraftRepresentative', 'fullName'),
-          position: position,
-          email: email,
-          phone: phone,
-          relationship: relationship,
-          idType: idType,
-          idNumber: idNumber,
-        );
+    _$VendorVerificationDraftRepresentative _$result;
+    try {
+      _$result = _$v ??
+          _$VendorVerificationDraftRepresentative._(
+            sameAsOwner: sameAsOwner,
+            fullName: BuiltValueNullFieldError.checkNotNull(
+                fullName, r'VendorVerificationDraftRepresentative', 'fullName'),
+            position: position,
+            email: email,
+            phone: phone,
+            relationship: relationship,
+            relationshipOther: relationshipOther,
+            authorityEvidenceSource: authorityEvidenceSource,
+            authorityEvidenceVersionId: authorityEvidenceVersionId,
+            authorityDocumentType: authorityDocumentType,
+            authorityDocumentDate: authorityDocumentDate,
+            authorityScopes: _authorityScopes?.build(),
+            idType: idType,
+            idNumber: idNumber,
+          );
+    } catch (_) {
+      late String _$failedField;
+      try {
+        _$failedField = 'authorityScopes';
+        _authorityScopes?.build();
+      } catch (e) {
+        throw BuiltValueNestedFieldError(
+            r'VendorVerificationDraftRepresentative',
+            _$failedField,
+            e.toString());
+      }
+      rethrow;
+    }
     replace(_$result);
     return _$result;
   }

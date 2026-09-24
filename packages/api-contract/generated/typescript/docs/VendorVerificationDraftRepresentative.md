@@ -12,6 +12,12 @@ Name | Type
 `email` | string
 `phone` | string
 `relationship` | string
+`relationshipOther` | string
+`authorityEvidenceSource` | string
+`authorityEvidenceVersionId` | string
+`authorityDocumentType` | string
+`authorityDocumentDate` | Date
+`authorityScopes` | Set&lt;string&gt;
 `idType` | string
 `idNumber` | string
 
@@ -28,6 +34,12 @@ const example = {
   "email": null,
   "phone": null,
   "relationship": null,
+  "relationshipOther": null,
+  "authorityEvidenceSource": null,
+  "authorityEvidenceVersionId": null,
+  "authorityDocumentType": null,
+  "authorityDocumentDate": null,
+  "authorityScopes": null,
   "idType": null,
   "idNumber": null,
 } satisfies VendorVerificationDraftRepresentative

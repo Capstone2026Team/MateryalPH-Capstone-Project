@@ -2,6 +2,7 @@ import { Configuration, ResponseError } from '@materyalph/api-client-ts'
 
 type WebApiOptions = {
   refreshSession?: boolean
+  readOnlyPostPaths?: readonly string[]
 }
 
 const csrfTokens = new Map<string, string>()
@@ -82,11 +83,11 @@ export function createWebApiConfiguration(basePath: string, options: WebApiOptio
     basePath: key,
     credentials: 'include',
     apiKey: () => getWebCsrfToken(key),
-    fetchApi: (input, init) => coordinatedFetch(key, Boolean(options.refreshSession), input, init),
+    fetchApi: (input, init) => coordinatedFetch(key, Boolean(options.refreshSession), input, init, options.readOnlyPostPaths),
   })
 }
 
-async function coordinatedFetch(basePath: string, refreshSession: boolean, input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+async function coordinatedFetch(basePath: string, refreshSession: boolean, input: RequestInfo | URL, init?: RequestInit, readOnlyPostPaths: readonly string[] = []): Promise<Response> {
   const method = (init?.method ?? (input instanceof Request ? input.method : 'GET')).toUpperCase()
   const url = input instanceof Request ? input.url : String(input)
   const key = `${basePath}|${method}|${url}`
@@ -102,7 +103,10 @@ async function coordinatedFetch(basePath: string, refreshSession: boolean, input
   const readKey = `${key}|${refreshSession}|${JSON.stringify(Array.from(new Headers(init?.headers).entries()))}`
   const current = shareRead ? reads.get(readKey) : undefined
   if (current) return (await current).clone()
-  const mutation = !isSafeMethod(method)
+  // Lookup POSTs still use CSRF and authentication, but newer lookups must be
+  // allowed to finish before stale responses. Actual mutations remain guarded.
+  const readOnlyPost = method === 'POST' && readOnlyPostPaths.some(path => url === `${basePath}${path}`)
+  const mutation = !isSafeMethod(method) && !readOnlyPost
   if (mutation && mutations.has(key)) throw new Error('This action is already processing. Please wait for it to finish.')
   if (mutation) mutations.add(key)
   const request = webFetch(basePath, refreshSession, input, init).then(response => {
@@ -187,4 +191,24 @@ function csrfTokenFrom(payload: unknown): string | null {
   const data = payload.data
   if (typeof data !== 'object' || data === null || !('csrf_token' in data)) return null
   return typeof data.csrf_token === 'string' && data.csrf_token.length >= 8 ? data.csrf_token : null
+}
+
+
+// Fetch within the portal so Origin/Referer selects its isolated HttpOnly cookies.
+// Never navigate to the signed endpoint or send credentials to another origin.
+export async function readWebPrivateFile(basePath: string, signedUrl: string): Promise<Blob> {
+  const base = new URL(basePath, window.location.origin)
+  const url = new URL(signedUrl, base)
+  if (url.origin !== base.origin || !url.pathname.startsWith(`${base.pathname.replace(/\/$/, '')}/vendor-onboarding-files/`) || !url.pathname.endsWith('/content')) {
+    throw new Error('The private evidence URL is invalid. Refresh and try again.')
+  }
+  const response = await coordinatedFetch(normalizedBasePath(base.href), true, url, {
+    credentials: 'include', cache: 'no-store', referrerPolicy: 'origin', headers: { Accept: 'application/pdf,image/jpeg,image/png' },
+  })
+  if (!response.ok) throw new ResponseError(response)
+  const blob = await response.blob()
+  if (!['application/pdf', 'image/jpeg', 'image/png'].includes(blob.type.split(';')[0] ?? '')) {
+    throw new Error('This file type cannot be previewed.')
+  }
+  return blob
 }

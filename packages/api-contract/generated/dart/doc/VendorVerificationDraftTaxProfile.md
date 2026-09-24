@@ -9,10 +9,7 @@ import 'package:materyalph_api_client/api.dart';
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **taxpayerKey** | **String** |  | [optional]
-**tin** | **String** |  | [optional]
-**branchCode** | **String** |  | [optional]
-**branchCodeLength** | **int** |  | [optional]
-**headOffice** | **bool** |  | [optional]
+**tin** | **String** | Combined 9-digit TIN and 3 to 5 digit branch code; use 000 when no branch code applies. | [optional]
 **declarationYear** | **int** |  | [optional]
 **birCorReference** | **String** |  | [optional]
 **entityClass** | **String** |  | [optional]

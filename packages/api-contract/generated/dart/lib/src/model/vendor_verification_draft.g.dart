@@ -94,6 +94,8 @@ class _$VendorVerificationDraftBusinessTypeEnumSerializer
 
 class _$VendorVerificationDraft extends VendorVerificationDraft {
   @override
+  final String? formState;
+  @override
   final int? draftLockVersion;
   @override
   final int lockVersion;
@@ -101,6 +103,8 @@ class _$VendorVerificationDraft extends VendorVerificationDraft {
   final VendorVerificationDraftBusinessTypeEnum? businessType;
   @override
   final String? registeredName;
+  @override
+  final String? legalBusinessName;
   @override
   final String? storeName;
   @override
@@ -110,9 +114,7 @@ class _$VendorVerificationDraft extends VendorVerificationDraft {
   @override
   final String? storePhone;
   @override
-  final BuiltList<BuiltMap<String, JsonObject?>>? contacts;
-  @override
-  final BuiltMap<String, JsonObject?>? classification;
+  final VendorVerificationDraftClassification? classification;
   @override
   final BuiltMap<String, JsonObject?>? address;
   @override
@@ -127,15 +129,16 @@ class _$VendorVerificationDraft extends VendorVerificationDraft {
       (VendorVerificationDraftBuilder()..update(updates))._build();
 
   _$VendorVerificationDraft._(
-      {this.draftLockVersion,
+      {this.formState,
+      this.draftLockVersion,
       required this.lockVersion,
       this.businessType,
       this.registeredName,
+      this.legalBusinessName,
       this.storeName,
       this.dateEstablished,
       this.storeEmail,
       this.storePhone,
-      this.contacts,
       this.classification,
       this.address,
       this.representative,
@@ -155,15 +158,16 @@ class _$VendorVerificationDraft extends VendorVerificationDraft {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is VendorVerificationDraft &&
+        formState == other.formState &&
         draftLockVersion == other.draftLockVersion &&
         lockVersion == other.lockVersion &&
         businessType == other.businessType &&
         registeredName == other.registeredName &&
+        legalBusinessName == other.legalBusinessName &&
         storeName == other.storeName &&
         dateEstablished == other.dateEstablished &&
         storeEmail == other.storeEmail &&
         storePhone == other.storePhone &&
-        contacts == other.contacts &&
         classification == other.classification &&
         address == other.address &&
         representative == other.representative &&
@@ -174,15 +178,16 @@ class _$VendorVerificationDraft extends VendorVerificationDraft {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, formState.hashCode);
     _$hash = $jc(_$hash, draftLockVersion.hashCode);
     _$hash = $jc(_$hash, lockVersion.hashCode);
     _$hash = $jc(_$hash, businessType.hashCode);
     _$hash = $jc(_$hash, registeredName.hashCode);
+    _$hash = $jc(_$hash, legalBusinessName.hashCode);
     _$hash = $jc(_$hash, storeName.hashCode);
     _$hash = $jc(_$hash, dateEstablished.hashCode);
     _$hash = $jc(_$hash, storeEmail.hashCode);
     _$hash = $jc(_$hash, storePhone.hashCode);
-    _$hash = $jc(_$hash, contacts.hashCode);
     _$hash = $jc(_$hash, classification.hashCode);
     _$hash = $jc(_$hash, address.hashCode);
     _$hash = $jc(_$hash, representative.hashCode);
@@ -195,15 +200,16 @@ class _$VendorVerificationDraft extends VendorVerificationDraft {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'VendorVerificationDraft')
+          ..add('formState', formState)
           ..add('draftLockVersion', draftLockVersion)
           ..add('lockVersion', lockVersion)
           ..add('businessType', businessType)
           ..add('registeredName', registeredName)
+          ..add('legalBusinessName', legalBusinessName)
           ..add('storeName', storeName)
           ..add('dateEstablished', dateEstablished)
           ..add('storeEmail', storeEmail)
           ..add('storePhone', storePhone)
-          ..add('contacts', contacts)
           ..add('classification', classification)
           ..add('address', address)
           ..add('representative', representative)
@@ -217,6 +223,10 @@ class VendorVerificationDraftBuilder
     implements
         Builder<VendorVerificationDraft, VendorVerificationDraftBuilder> {
   _$VendorVerificationDraft? _$v;
+
+  String? _formState;
+  String? get formState => _$this._formState;
+  set formState(String? formState) => _$this._formState = formState;
 
   int? _draftLockVersion;
   int? get draftLockVersion => _$this._draftLockVersion;
@@ -238,6 +248,11 @@ class VendorVerificationDraftBuilder
   set registeredName(String? registeredName) =>
       _$this._registeredName = registeredName;
 
+  String? _legalBusinessName;
+  String? get legalBusinessName => _$this._legalBusinessName;
+  set legalBusinessName(String? legalBusinessName) =>
+      _$this._legalBusinessName = legalBusinessName;
+
   String? _storeName;
   String? get storeName => _$this._storeName;
   set storeName(String? storeName) => _$this._storeName = storeName;
@@ -255,16 +270,11 @@ class VendorVerificationDraftBuilder
   String? get storePhone => _$this._storePhone;
   set storePhone(String? storePhone) => _$this._storePhone = storePhone;
 
-  ListBuilder<BuiltMap<String, JsonObject?>>? _contacts;
-  ListBuilder<BuiltMap<String, JsonObject?>> get contacts =>
-      _$this._contacts ??= ListBuilder<BuiltMap<String, JsonObject?>>();
-  set contacts(ListBuilder<BuiltMap<String, JsonObject?>>? contacts) =>
-      _$this._contacts = contacts;
-
-  MapBuilder<String, JsonObject?>? _classification;
-  MapBuilder<String, JsonObject?> get classification =>
-      _$this._classification ??= MapBuilder<String, JsonObject?>();
-  set classification(MapBuilder<String, JsonObject?>? classification) =>
+  VendorVerificationDraftClassificationBuilder? _classification;
+  VendorVerificationDraftClassificationBuilder get classification =>
+      _$this._classification ??= VendorVerificationDraftClassificationBuilder();
+  set classification(
+          VendorVerificationDraftClassificationBuilder? classification) =>
       _$this._classification = classification;
 
   MapBuilder<String, JsonObject?>? _address;
@@ -300,15 +310,16 @@ class VendorVerificationDraftBuilder
   VendorVerificationDraftBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _formState = $v.formState;
       _draftLockVersion = $v.draftLockVersion;
       _lockVersion = $v.lockVersion;
       _businessType = $v.businessType;
       _registeredName = $v.registeredName;
+      _legalBusinessName = $v.legalBusinessName;
       _storeName = $v.storeName;
       _dateEstablished = $v.dateEstablished;
       _storeEmail = $v.storeEmail;
       _storePhone = $v.storePhone;
-      _contacts = $v.contacts?.toBuilder();
       _classification = $v.classification?.toBuilder();
       _address = $v.address?.toBuilder();
       _representative = $v.representative?.toBuilder();
@@ -337,16 +348,17 @@ class VendorVerificationDraftBuilder
     try {
       _$result = _$v ??
           _$VendorVerificationDraft._(
+            formState: formState,
             draftLockVersion: draftLockVersion,
             lockVersion: BuiltValueNullFieldError.checkNotNull(
                 lockVersion, r'VendorVerificationDraft', 'lockVersion'),
             businessType: businessType,
             registeredName: registeredName,
+            legalBusinessName: legalBusinessName,
             storeName: storeName,
             dateEstablished: dateEstablished,
             storeEmail: storeEmail,
             storePhone: storePhone,
-            contacts: _contacts?.build(),
             classification: _classification?.build(),
             address: _address?.build(),
             representative: _representative?.build(),
@@ -356,8 +368,6 @@ class VendorVerificationDraftBuilder
     } catch (_) {
       late String _$failedField;
       try {
-        _$failedField = 'contacts';
-        _contacts?.build();
         _$failedField = 'classification';
         _classification?.build();
         _$failedField = 'address';

@@ -15,7 +15,7 @@ Name | Type | Description | Notes
 **passwordConfirmation** | **String** |  |
 **buyerType** | **String** |  |
 **companyName** | **String** |  | [optional]
-**termsVersionId** | **String** |  |
+**termsVersionId** | **String** | Reference provider identifier. |
 **termsContentHash** | **String** |  |
 **termsAccepted** | **bool** |  |
 **privacyAccepted** | **bool** |  |

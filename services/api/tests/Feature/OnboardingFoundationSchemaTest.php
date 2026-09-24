@@ -43,6 +43,8 @@ final class OnboardingFoundationSchemaTest extends TestCase
         $organization = VendorOrganization::query()->create(['legal_name' => 'Migration fixture', 'store_name' => 'Migration fixture']);
         app(OnboardingRequirementResolver::class)->synchronize($organization->id);
         $before = DB::table('vendor_onboarding_requirements')->where('vendor_organization_id', $organization->id)->orderBy('id')->get(['id', 'status'])->toArray();
+        $combined = require database_path('migrations/2026_09_23_000003_combine_vendor_tax_identification.php');
+        $combined->down();
         $migration = require database_path('migrations/2026_09_21_010000_complete_onboarding_domain_foundation.php');
         $migration->down();
         self::assertFalse(Schema::hasTable('vendor_onboarding_drafts'));
@@ -67,6 +69,32 @@ final class OnboardingFoundationSchemaTest extends TestCase
         $this->assertDatabaseHas('vendor_addresses', ['vendor_organization_id' => $organization->id, 'current_version_id' => $addressId]);
         $migration->down();
         self::assertSame('00000', DB::table('vendor_tax_profile_versions')->where('id', $taxVersionId)->value('tin_branch_code'));
+        $migration->up();
+        $draftId = (string) Str::uuid7();
+        DB::table('vendor_onboarding_drafts')->insert(['id' => $draftId, 'vendor_organization_id' => $organization->id, 'workstream' => 'STORE_VERIFICATION', 'lock_version' => 1, 'payload_encrypted' => Crypt::encryptString(json_encode(['tax_profile' => ['tin' => '123456789', 'branch_code' => '000', 'head_office' => true, 'branch_code_length' => 3, 'vat_category' => 'NON_VAT']], JSON_THROW_ON_ERROR)), 'updated_by_user_id' => $actor->id, 'created_at' => now(), 'updated_at' => now()]);
+        $combined->up();
+        $draft = DB::table('vendor_onboarding_drafts')->where('id', $draftId)->first();
+        $payload = json_decode(Crypt::decryptString($draft->payload_encrypted), true, flags: JSON_THROW_ON_ERROR);
+        self::assertSame(['tin' => '123456789000', 'vat_category' => 'NON_VAT'], $payload['tax_profile']);
+        self::assertSame(2, (int) $draft->lock_version);
+        self::assertFalse(Schema::hasColumn('vendor_tax_profile_versions', 'branch_code_encrypted'));
+        self::assertFalse(Schema::hasColumn('vendor_tax_profile_versions', 'tin_branch_code'));
+        self::assertSame('12345678900000', Crypt::decryptString(DB::table('vendor_tax_profile_versions')->where('id', $taxVersionId)->value('tin_encrypted')));
+        self::assertSame(hash('sha256', 'synthetic tax version'), DB::table('vendor_tax_profile_versions')->where('id', $taxVersionId)->value('content_hash'));
+
+    }
+
+    public function test_business_information_migration_backfills_and_rolls_back_without_changing_public_identity(): void
+    {
+        $migration = require database_path('migrations/2026_09_22_000000_add_vendor_legal_business_name.php');
+        $migration->down();
+        $organization = VendorOrganization::query()->create(['legal_name' => 'Registered fixture', 'store_name' => 'Public fixture']);
+        $migration->up();
+        $this->assertDatabaseHas('vendor_organizations', ['id' => $organization->id, 'legal_business_name' => 'Registered fixture', 'store_name' => 'Public fixture']);
+        self::assertTrue(Schema::hasColumn('vendor_documents', 'superseded_at'));
+        $migration->down();
+        self::assertFalse(Schema::hasColumn('vendor_organizations', 'legal_business_name'));
+        $this->assertDatabaseHas('vendor_organizations', ['id' => $organization->id, 'legal_name' => 'Registered fixture', 'store_name' => 'Public fixture']);
         $migration->up();
     }
 

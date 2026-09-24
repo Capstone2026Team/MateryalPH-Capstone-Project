@@ -64,6 +64,9 @@ final class AccountAgreements
                 if (! $agreement['content_available']) {
                     throw new AuthenticationException('AGREEMENT_CONTENT_UNAVAILABLE', 'The approved agreement text is not available yet.', 503);
                 }
+                if ($agreement['code'] === 'VENDOR_COMMISSION_TEST') {
+                    throw new AuthenticationException('COMMISSION_VERIFICATION_REQUIRED', 'Review and accept commission terms in Store Verification.', 422);
+                }
                 if ($agreement['accepted_at'] !== null) {
                     continue;
                 }

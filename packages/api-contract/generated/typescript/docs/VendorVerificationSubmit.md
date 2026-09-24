@@ -6,6 +6,7 @@
 
 Name | Type
 ------------ | -------------
+`draft` | [VendorVerificationDraft](VendorVerificationDraft.md)
 `lockVersion` | number
 `privacyAcknowledged` | boolean
 
@@ -16,6 +17,7 @@ import type { VendorVerificationSubmit } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "draft": null,
   "lockVersion": null,
   "privacyAcknowledged": null,
 } satisfies VendorVerificationSubmit

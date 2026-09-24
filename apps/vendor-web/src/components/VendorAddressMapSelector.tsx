@@ -38,6 +38,8 @@ type GoogleMapsApi = {
 
 type GoogleWindow = Window & {
   google?: GoogleMapsApi
+  materyalMapsReady?: () => void
+  gm_authFailure?: (() => void) | undefined
 }
 
 const DEFAULT_CENTER = { lat: 14.5995, lng: 120.9842 }
@@ -48,29 +50,35 @@ function configuredGoogleMaps(): GoogleMapsApi | undefined {
   return google?.maps ? google : undefined
 }
 
+let mapsLoading: Promise<GoogleMapsApi> | undefined
+
 function loadGoogleMaps(browserKey: string): Promise<GoogleMapsApi> {
   const configured = configuredGoogleMaps()
-  if (configured) return Promise.resolve(configured)
-
-  return new Promise((resolve, reject) => {
-    const existing = document.getElementById(SCRIPT_ID)
-    const script = existing instanceof HTMLScriptElement ? existing : document.createElement('script')
-    const finish = () => {
+  if (configured?.maps.Map) return Promise.resolve(configured)
+  if (mapsLoading) return mapsLoading
+  mapsLoading = new Promise((resolve, reject) => {
+    document.getElementById(SCRIPT_ID)?.remove()
+    const script = document.createElement('script')
+    const fail = () => {
+      window.clearTimeout(timeout)
+      script.remove()
+      mapsLoading = undefined
+      reject(new Error('Google Maps could not initialize.'))
+    }
+    const timeout = window.setTimeout(fail, 15000)
+    ;(window as GoogleWindow).materyalMapsReady = () => {
       const google = configuredGoogleMaps()
-      if (google) resolve(google)
-      else reject(new Error('Google Maps did not initialize.'))
+      if (!google?.maps.Map) { fail(); return }
+      window.clearTimeout(timeout)
+      resolve(google)
     }
-
-    script.addEventListener('load', finish, { once: true })
-    script.addEventListener('error', () => reject(new Error('Google Maps could not be loaded.')), { once: true })
-    if (!existing) {
-      script.id = SCRIPT_ID
-      script.async = true
-      script.defer = true
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(browserKey)}&v=weekly`
-      document.head.appendChild(script)
-    }
+    script.id = SCRIPT_ID
+    script.async = true
+    script.onerror = fail
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(browserKey)}&v=weekly&loading=async&callback=materyalMapsReady`
+    document.head.appendChild(script)
   })
+  return mapsLoading
 }
 
 function validCoordinates(latitude: number | undefined, longitude: number | undefined): VendorAddressCoordinates | null {
@@ -79,9 +87,12 @@ function validCoordinates(latitude: number | undefined, longitude: number | unde
   return { latitude, longitude }
 }
 
-export function VendorAddressMapSelector({ latitude, longitude, onCoordinatesChange }: { latitude?: number; longitude?: number; onCoordinatesChange: (coordinates: VendorAddressCoordinates) => void }) {
+export function VendorAddressMapSelector({ latitude, longitude, onCoordinatesChange }: { latitude?: number | undefined; longitude?: number | undefined; onCoordinatesChange?: (coordinates: VendorAddressCoordinates) => void }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const callbackRef = useRef(onCoordinatesChange)
+  const mapRef = useRef<GoogleMap | null>(null)
+  const markerRef = useRef<GoogleMarker | null>(null)
+  const [attempt, setAttempt] = useState(0)
   const [state, setState] = useState<'loading' | 'ready' | 'unavailable'>('loading')
   const [error, setError] = useState<string | null>(null)
 
@@ -96,6 +107,12 @@ export function VendorAddressMapSelector({ latitude, longitude, onCoordinatesCha
       return
     }
 
+    setState('loading')
+    setError(null)
+    const googleWindow = window as GoogleWindow
+    const previousAuthFailure = googleWindow.gm_authFailure
+    const authFailure = () => { setState('unavailable'); setError('Google Maps authorization failed. Check the browser key, enabled Maps JavaScript API, billing, and allowed website restrictions.'); previousAuthFailure?.() }
+    googleWindow.gm_authFailure = authFailure
     let mounted = true
     let map: GoogleMap | undefined
     let marker: GoogleMarker | undefined
@@ -106,15 +123,17 @@ export function VendorAddressMapSelector({ latitude, longitude, onCoordinatesCha
     void loadGoogleMaps(browserKey).then((google) => {
       if (!mounted || !containerRef.current) return
       map = new google.maps.Map(containerRef.current, { center, zoom: 15, gestureHandling: 'cooperative' })
-      marker = new google.maps.Marker({ map, position: center, draggable: true })
+      marker = new google.maps.Marker({ map, position: center, draggable: Boolean(callbackRef.current) })
+      mapRef.current = map
+      markerRef.current = marker
       const select = (coordinates: VendorAddressCoordinates) => {
         marker?.setPosition({ lat: coordinates.latitude, lng: coordinates.longitude })
         map?.setCenter({ lat: coordinates.latitude, lng: coordinates.longitude })
         map?.setZoom(15)
-        callbackRef.current(coordinates)
+        callbackRef.current?.(coordinates)
       }
       listeners.push(google.maps.event.addListener(map, 'click', (event) => {
-        if (event.latLng) select({ latitude: event.latLng.lat(), longitude: event.latLng.lng() })
+        if (callbackRef.current && event.latLng) select({ latitude: event.latLng.lat(), longitude: event.latLng.lng() })
       }))
       listeners.push(google.maps.event.addListener(marker, 'dragend', () => {
         const position = marker?.getPosition()
@@ -125,15 +144,35 @@ export function VendorAddressMapSelector({ latitude, longitude, onCoordinatesCha
     }).catch(() => {
       if (mounted) {
         setState('unavailable')
-        setError('Interactive map is unavailable. Complete the labeled address fields manually.')
+        setError('Interactive map is unavailable. Check your connection and retry. You can still select your structured address fields.')
       }
     })
 
     return () => {
       mounted = false
+      mapRef.current = null
+      markerRef.current = null
+      if (googleWindow.gm_authFailure === authFailure) googleWindow.gm_authFailure = previousAuthFailure
       listeners.forEach((listener) => listener.remove?.())
     }
-  }, [latitude, longitude])
+  // Coordinates update the existing map in the effect below.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [attempt])
 
-  return <div className="grid gap-3" aria-describedby="address-map-help"><div className="flex flex-wrap items-center justify-between gap-3"><p className="text-sm font-semibold">Map selection</p><span className="text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary">{state === 'ready' ? 'Interactive' : state === 'loading' ? 'Loading' : 'Manual fallback'}</span></div>{state === 'ready' ? <div ref={containerRef} className="min-h-64 w-full overflow-hidden rounded-control border border-border-default" aria-label="Interactive business address map" /> : <div ref={containerRef} className="grid min-h-24 place-items-center rounded-control border border-dashed border-border-default bg-surface-canvas px-5 py-6 text-center text-sm leading-6 text-text-secondary" role="status">{error ?? 'Interactive Google Maps is not configured for this environment.'}</div>}<p id="address-map-help" className="text-sm leading-6 text-text-secondary">{state === 'ready' ? 'Click the map or drag the pin. The coordinates and assistive address result will be copied into the labeled fields above for review before saving.' : 'The labeled address fields above remain the complete non-map alternative. Coordinates are stored separately from the human-readable address.'}</p></div>
+  useEffect(() => {
+    const position = validCoordinates(latitude, longitude)
+    if (position && state === 'ready') {
+      const center = { lat: position.latitude, lng: position.longitude }
+      mapRef.current?.setCenter(center)
+      markerRef.current?.setPosition(center)
+    }
+  }, [latitude, longitude, state])
+
+  return <div className="grid gap-3" aria-describedby="address-map-help">
+    <p className="text-sm font-semibold">Map</p>
+    <div ref={containerRef} style={state === 'unavailable' ? { height: 0 } : undefined} className="h-96 w-full overflow-hidden rounded-control border border-border-default sm:h-[480px] lg:h-[560px]" aria-label="Interactive business address map" />
+    {state !== 'ready' && <div role="status" className="text-sm text-text-secondary">{state === 'loading' ? 'Loading Google Maps…' : error ?? 'Interactive map is unavailable. Complete the structured fields using Manual Address Entry or retry the map.'}</div>}
+    {state === 'unavailable' && <button type="button" className="min-h-11 text-action-primary underline" onClick={() => setAttempt(value => value + 1)}>Retry map</button>}
+    <p id="address-map-help" className="text-sm text-text-secondary">Manual Address Entry needs no map interaction. Click the map or drag the pin to fill the address automatically. Review matched locations and select any missing PSGC fields. Coordinates are managed by the system.</p>
+  </div>
 }

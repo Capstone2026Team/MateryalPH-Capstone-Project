@@ -229,16 +229,9 @@ Public Store Name and Legal Business Name remain separate data fields. The Store
 
 **Store Phone Number** is the primary store contact. **Same as Vendor Owner phone number** pre-fills the Owner's registered number. It remains a contact field and is not treated as SMS-verified because the capstone does not use an SMS provider.
 
-### Primary Business Contact
+### Business communication
 
-The Vendor Owner is displayed as the initial Primary Business Contact. The Owner may add multiple contacts. Each contact records full name, position or title, professional or personal email, and mobile or telephone number, together with applicable authorization flags such as:
-
-- Authorized for business-verification communication.
-- Authorized for account-administration communication.
-- Authorized for general administrative communication.
-- Authorized-representative designation, where applicable.
-
-Exactly one contact is designated **Primary Business Contact** at a time. Changing that designation creates an audit event. An authorized-representative designation does not create a Vendor Portal account or staff permission; a separate Vendor Team Account invitation is required for system access.
+Store Contact Information (verified Store Email and Store Phone) is the single source for business communication. The separate Primary Business Contact collection, API, database table and submission requirement were removed by the approved 23 September 2026 change. Owner identity, Authorized Representative / Authority to Act and Vendor Team permissions remain independent. Existing audit and compliance history is retained.
 
 ### Registered Business Address
 
@@ -304,7 +297,7 @@ Each Admin-reviewed requirement uses `APPROVED`, `CHANGES_REQUIRED`, or `REJECTE
 
 ### Submission Validation
 
-Before Store Verification can be submitted, the system validates the applicable Business Type, legal-name and identity fields, business/store name, establishment date, verified Store Email, Store Phone Number, contacts, registered address and coordinates where required, Supplier Type and niches, registration evidence, LGU and BIR information, TIN, VAT/Non-VAT declaration, Vendor Tax Profile fields, applicable declarations, document numbers, supported file type and size, malware/file-safety state, acknowledgments, and other conditional requirements.
+Before Store Verification can be submitted, the system validates the applicable Business Type, legal-name and identity fields, business/store name, establishment date, verified Store Email, Store Phone Number, registered address and coordinates where required, Supplier Type and niches, registration evidence, LGU and BIR information, TIN, VAT/Non-VAT declaration, Vendor Tax Profile fields, applicable declarations, document numbers, supported file type and size, malware/file-safety state, acknowledgments, and other conditional requirements.
 
 If a required item is missing or invalid, submission is blocked and the exact requirement is identified. A conditionally required item that does not apply is recorded at level `CONDITIONALLY_REQUIRED` and status `NOT_APPLICABLE` with its applicability reason. Submission does not mean verification.
 
@@ -350,7 +343,6 @@ The Business Store Profile is a draft marketplace profile until Store Activation
 - Store Description.
 - Promotional images and optional promotional video.
 - Approved public business contact information.
-- Public operating information.
 
 Legal-business fields remain separate and cannot be changed through the public Store Profile editor. Media is validated for supported type, maximum size, safety, appropriate content, intellectual-property requirements, accessibility metadata, and other configured rules. Government ID, TIN, business-verification documents, private tax records, payout credentials, authentication information, and private employee information never appear publicly.
 
@@ -440,7 +432,7 @@ A Vendor is eligible for **Store Activation** only when every applicable mandato
 
 1. The Vendor Owner account is active, the Owner email is verified, and the required Vendor Terms of Service and Vendor Code of Conduct are accepted.
 2. Store Verification has been submitted.
-3. All applicable mandatory Store Verification requirements are `APPROVED`, including required legal identity, Business Information, contacts, registered business address, Supplier Type/niches, Business Type-specific DTI/SEC/CDA evidence, LGU permit, BIR/TIN and applicable regulatory evidence.
+3. All applicable mandatory Store Verification requirements are `APPROVED`, including required legal identity, Business Information, Store Contact Information, registered business address, Supplier Type/niches, Business Type-specific DTI/SEC/CDA evidence, LGU permit, BIR/TIN and applicable regulatory evidence.
 4. No blocking Store Verification requirement remains `PENDING_VERIFICATION` or `CHANGES_REQUIRED`, and no mandatory item is `REJECTED` or `EXPIRED`.
 5. The Vendor Tax Profile is in the applicable successful state under FIN-01 through FIN-12. TEST/DEMO evidence is never live registration or production approval.
 6. All mandatory Store Setup requirements are `COMPLETED`, including Business Store Profile, Supplier and Bulk Order capability, fulfillment method, and other required operational configuration.

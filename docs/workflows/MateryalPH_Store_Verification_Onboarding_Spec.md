@@ -55,7 +55,7 @@ Non-reviewed Store Setup items go `NOT_STARTED → IN_PROGRESS → COMPLETED`.
 
 | # | Step | Contains |
 | --- | --- | --- |
-| V1 | Business Information | Business Type · Registered Legal Identity · Government ID · Authorized Representative and Authority to Act · Public Store Name · Legal Business Name · Date of Establishment · Store Email · Store Phone · Primary Business Contact · Tax Information (TIN, VAT, BIR COR, Sworn Declaration) · Business and Compliance Evidence |
+| V1 | Business Information | Business Type · Registered Legal Identity · Government ID · Authorized Representative and Authority to Act · Public Store Name · Legal Business Name · Date of Establishment · Store Email · Store Phone · Tax Information (TIN, VAT, BIR COR, Sworn Declaration) · Business and Compliance Evidence |
 | V2 | Registered Business Address | Manual structured entry · interactive map selection · coordinates · review before save |
 | V3 | Supplier Type / Classification | Supplier Type · canonical niches · custom Other labels · rental prohibition |
 | V4 | Privacy, Review and Submit | Privacy Notice acknowledgment · full requirement summary · unsaved-change detection · submit |
@@ -206,10 +206,8 @@ Collected where an individual proprietor, incorporator, authorized representativ
 | --- | --- | --- | --- | --- | --- |
 | ID Type | `identity_document_type` | Select | Yes when B3 applies | Configured list | PRV |
 | ID Number | `identity_document_number` | Text | Conditional on type | Type-specific mask; stored encrypted | PRV |
-| Front image | `identity_document_front` | Upload | Yes | JPG/JPEG/PNG/PDF, configured max size, MIME and content validation, malware scan | PRV |
-| Back image | `identity_document_back` | Upload | Conditional | Required when the selected document carries relevant information on both sides | PRV |
-
-The document must correspond to the individual named in the applicable legal-identity section. Required fields and files are validated before Store Verification can be submitted.
+| Front image & Back image | `identity_document_front` | Upload | Yes | JPG/JPEG/PNG/PDF, configured max size, MIME and content validation, malware scan | PRV |
+| Back image | `identity_document_back` | Upload | yes except passport| Required when the selected document carries relevant information on both sides | PRV |
 
 Government ID never appears on the public Store Profile, in Buyer search, in public Vendor listings, in product listings, to other Vendors, or to Vendor staff without the required permission. Access is limited to authorized users and authorized Admin reviewers under the approved permission model, always through authenticated short-lived URLs.
 
@@ -318,18 +316,9 @@ Helper text: "This email will be used for store-related communication. A differe
 
 Store Phone is an ordinary contact field. It is never presented as SMS-verified and **no OTP is added to it in this implementation**.
 
-### 5.7 B7 — Primary Business Contact
+### 5.7 B7 — Retired duplicate contact collection
 
-The principal person responsible for administrative and business communication with MateryalPH. The Vendor Owner's information is shown as the initial default.
-
-| Field | Key | Required | Validation | Privacy |
-| --- | --- | --- | --- | --- |
-| Contact full name | `primary_contact_name` | Yes | 2–150 | INT |
-| Position or title | `primary_contact_position` | Yes | 2–100 | INT |
-| Email address | `primary_contact_email` | Yes | RFC-valid, normalized; verified through the approved email-verification process where verification is required | INT |
-| Mobile or telephone | `primary_contact_phone` | Yes | E.164 or PH national format | INT |
-
-Where the entered contact email is already an approved verified email belonging to the same authorized person, reuse the existing verification rather than forcing a duplicate ownership challenge. The Primary Business Contact stays distinct from public Store contact information when the Vendor chooses different public-facing details.
+As approved on 23 September 2026, Store Contact Information (verified Store Email and Store Phone) is the single source for business communication. Do not collect, store, expose, or require a separate Primary Business Contact. Owner identity and Authorized Representative / Authority to Act remain separate requirements. Existing audit and compliance history is retained.
 
 ### 5.8 B8 — Tax Information
 
@@ -339,14 +328,11 @@ Tax information is collected **once, here**. Payment Configuration in Store Setu
 
 | Field | Key | Control | Required | Validation | Privacy |
 | --- | --- | --- | --- | --- | --- |
-| Core TIN | `tin_core` | Text, numeric | Yes | Exactly 9 numeric digits. Accept digits only; reject letters, reject symbols other than interface-handled formatting, reject any length other than 9. Display formatting is normalized separately from the stored canonical value | TAX |
-| Registration scope | `tin_branch_scope` | Radio | Yes | `HEAD_OFFICE` or `BRANCH` | TAX |
-| Branch Code | `tin_branch_code` | Text, numeric | Yes | 3 or 5 numeric digits per the configured BIR branch-code format. Digits only; reject letters and unsupported symbols; stored separately from the Core TIN. No arbitrary alphanumeric values | TAX |
+| Taxpayer Identification Number (TIN) | `tin` | Text, numeric with optional hyphens | Yes | One field: 9-digit taxpayer number followed by a 3 to 5 digit branch code. Accept 12–14 digits or `999-999-999-000` formatting. Use `000` when no branch code applies. No separate office selection or branch format control | TAX |
 
-When `HEAD_OFFICE` is selected, prefill the Head Office branch code from the configured format — `000` for the 3-digit representation, `00000` for the 5-digit representation — and label it **Head Office (HO)**. Do not make the Vendor type it. Never assume every location is the Head Office: selecting `BRANCH` requires the registered branch code shown on the BIR records.
+Guidance: "Your 9-digit TIN and 3 to 5 digit branch code. Please use 000 as your branch code if you don't have one (e.g. 999-999-999-000)."
 
-Guidance: "Enter the 9-digit TIN and applicable Branch Code exactly as shown on your BIR registration records."
-Head Office helper: "The Head Office Branch Code is automatically assigned using the BIR format configured for this verification flow."
+The combined canonical digits are encrypted in `tin_encrypted`. Taxpayer matching and withholding aggregation continue to use the first nine digits. Existing historical versions keep their IDs, decisions and hashes; storage migration combines their encrypted identifiers without creating a tax correction. Legacy office metadata is retained only in historical versions, excluded from responses and new versions. Editable drafts remove the retired keys.
 
 TIN and Branch Code are stored as private business-tax information, encrypted at rest, masked on read, associated with the Vendor Tax Profile and marked pending verification until an Admin reviews them against the BIR Certificate of Registration. The complete TIN and Branch Code never appear on public Store Profiles, Buyer search, Vendor maps, public product listings, public analytics, other Vendors' interfaces or any other public marketplace surface. Authorized interfaces may show masked values.
 
@@ -405,11 +391,9 @@ Only the applicable requirements render. Changing Business Type recalculates the
 | --- | --- | --- | --- |
 | Primary registration document | `primary_registration_document` | REQUIRED | Per the table above |
 | LGU Business Permit | `lgu_business_permit` | REQUIRED | Issued by the local government unit |
-| Optional certifications | `optional_certifications[]` | OPTIONAL | ISO certifications, industry-specific licenses, professional or regulatory certifications, other business credentials |
 
-Optional certifications never block Store Activation unless a specific marketplace function, regulated product, law, selected Vendor capability or approved rule makes one mandatory. The system may cap the number of optional files, individual file size, total upload size and supported file types to prevent collecting unrelated information.
 
-**Document metadata.** For every uploaded business or compliance document, store: document type, document number, upload date and time, uploading user, organization, file reference, submission status, verification status, Admin reviewer, Admin remarks, verified issue date, verified expiration date, Not Applicable expiration status, replacement or superseded-document reference and audit reference. The Vendor may enter supporting metadata at submission; **Vendor-entered metadata is never automatically treated as verified information**.
+**Document metadata.** For every uploaded business or compliance document, store: document type, document number, upload date and time, uploading user, organization, file reference, submission status, verification status, Admin reviewer, Admin remarks, verified issue date, verified expiration date, Not Applicable expiration status, replacement or superseded-document reference and audit reference.
 
 ---
 
@@ -424,14 +408,13 @@ The registered or principal operating address applicable to the marketplace acco
 | City or Municipality | `city_municipality` | Yes | Structured PH field | INT |
 | Province or independent-city classification | `province` | Yes | Structured PH field; independent and highly urbanized cities classified correctly | INT |
 | Postal code | `postal_code` | Yes | 4 digits | INT |
-| Latitude | `latitude` | Yes | −90..90, 7 decimals | INT |
-| Longitude | `longitude` | Yes | −180..180, 7 decimals | INT |
+
 
 Use structured Philippine address fields, not a single unvalidated text blob. Coordinates are stored **separately** from the human-readable structured address: coordinates support geospatial computation; the structured address supports presentation, administrative classification, verification, filtering and reporting.
 
 **Map behavior.** The map uses the approved Google Maps integration for the configured environment. Provider credentials stay in protected server or environment configuration and are never committed or unnecessarily exposed to the client; the browser key and the server key are separate restricted keys. The map initializes only when V2 is the selected step.
 
-The Vendor places or moves a pin. The system attempts to resolve the coordinates into structured address components and may prefill street/building, barangay, city/municipality, province or administrative area, postal code, latitude and longitude. Latitude and longitude are **displayed** in their designated fields whenever a map location is selected.
+The Vendor places or moves a pin. The system attempts to resolve the coordinates into structured address components and may prefill street/building, barangay, city/municipality, province or administrative area, postal code, latitude and longitude. The map appears below the structured address fields at full content width. Latitude and longitude remain system-managed and are not displayed as form fields.
 
 Hard rules:
 
@@ -480,9 +463,9 @@ The Vendor must acknowledge it before completing submission. The system records 
 
 Privacy acknowledgment is stored **separately** from Terms of Service, the Vendor Code of Conduct, the Commission Agreement, payment agreements and other commercial agreements. Acknowledging the Privacy Notice never implies acceptance of unrelated commercial terms or optional processing.
 
-**Review summary.** Grouped by step, showing each requirement with its level, status, blocking reason where applicable, and a jump link. Unsaved edits are listed explicitly and must be saved before submission.
+**Review summary.** Grouped by step, showing each requirement with its level, status, blocking reason where applicable, and a jump link. Unsaved edits are listed explicitly. Progress saves automatically on step changes and Finish Later; final submission saves the latest form and promotes pending evidence atomically. No manual Save Verification Draft prerequisite applies. Saved pending documents remain separate from Admin submissions.
 
-**Submission validation.** The server validates, and the UI mirrors: Business Type · required legal-identity information · required legal-name information · required government-issued identity evidence · Legal Business Name · Public Store Name · Date of Establishment · verified Store Email · required Store Phone Number · required Primary Business Contact · Registered Business Address · required geolocation/address information · Supplier Type · Supplier Niches · required primary registration evidence · required LGU documentation · required BIR registration information · required Tax Profile fields · applicable declaration information · supported file types · maximum file sizes · required document numbers · required acknowledgments · other applicable conditional requirements · Privacy Notice acknowledgment.
+**Submission validation.** The server validates, and the UI mirrors: Business Type · required legal-identity information · required legal-name information · required government-issued identity evidence · Legal Business Name · Public Store Name · Date of Establishment · verified Store Email · required Store Phone Number · Registered Business Address · required geolocation/address information · Supplier Type · Supplier Niches · required primary registration evidence · required LGU documentation · required BIR registration information · required Tax Profile fields · applicable declaration information · supported file types · maximum file sizes · required document numbers · required acknowledgments · other applicable conditional requirements · Privacy Notice acknowledgment.
 
 A missing or invalid item blocks submission and the response identifies the **exact** requirement to complete or correct — never a generic failure.
 
@@ -496,15 +479,805 @@ A missing or invalid item blocks submission and the response identifies the **ex
 
 Independent checklist. May begin after Store Verification is submitted.
 
-**S1 Public Store Profile.** Editable form plus a marketplace-style preview with banner, overlapping logo, name, description, public contact details and city/province summary. Text changes appear immediately. Store Media is a subsection beside the editor and preview; a successful upload refreshes the preview without discarding unsaved fields. Missing media shows structured placeholders; a failed preview offers retry. Legal fields cannot be edited here. Private staff contacts, tax data and evidence are excluded from the profile and the preview. Media is validated for supported type, maximum size, safety, appropriate content, intellectual-property requirements and accessibility metadata. Operating hours and additional gallery media are not implemented by the current surface and must not be fabricated in the preview.
+**S1 Public Store Profile.** Editable form plus a marketplace-style preview with banner, overlapping logo, name, description, Text changes appear immediately. Store Media is a subsection beside the editor and preview; a successful upload refreshes the preview without discarding unsaved fields. Missing media shows structured placeholders; a failed preview offers retry. Legal fields cannot be edited here. Private staff contacts, tax data and evidence are excluded from the profile and the preview. Media is validated for supported type, maximum size, safety, appropriate content, intellectual-property requirements and accessibility metadata. Operating hours and additional gallery media are not implemented by the current surface and must not be fabricated in the preview.
 
-**S2 Fulfillment Configuration.** Bulk Order Capability — Yes enables Item-Based and Project-Based eligibility, No enables Item-Based only; it creates no competitive RFQ bidding queue and never rewrites accepted orders. Services Capability — Self-Pickup, Vendor Delivery or Both. Self-Pickup only sets Delivery Configuration to `CONDITIONALLY_REQUIRED` / `NOT_APPLICABLE`. Vendor Delivery or Both makes Delivery Configuration conditionally required before activation, with vehicle category, count, capacity (kg), cargo length/width/height (m), heavy-vehicle classification, base fee, per-kilometer rate and maximum delivery distance. Unconfigured vehicles never appear as fulfillment options. Editing a vehicle later never changes an accepted order's delivery snapshot.
+**S2 Fulfillment Configuration.** Bulk Order Capability — **Yes** enables both Item-Based and Project-Based procurement eligibility; **No** enables Item-Based procurement only. Enabling Bulk Order Capability does not create a competitive RFQ bidding queue, auction, or automatic vendor competition mechanism, and changing this setting later must never modify, cancel, or rewrite an already accepted order.
 
-**S3 Xendit TEST Connection.** xenPlatform sub-account onboarding is mandatory for every Vendor seeking Store Activation, regardless of Business Type. The Vendor creates the sub-account and Authorized Representative invitation through the Xendit Dashboard. MateryalPH may guide the Vendor to the provider flow and capture the resulting exact HTTPS link, but never constructs an undocumented Dashboard URL and never silently creates the account. Capture the provider sub-account ID and reconcile it through permitted backend-only API/webhook mechanisms — a saved link alone never proves connection. Invitation links are sensitive: restrict access, mask in the UI where possible, redact from logs. TEST/DEMO only; TEST capability is not live payment processing, production KYC, BIR registration, statutory withholding responsibility or government approval. If the provider cannot support the required link or reconciliation operation in the configured environment, keep the connection unverified and report the provider limitation rather than fabricating success.
+Services Capability — **Self-Pickup, Vendor Delivery, or Both**. **Delivery Configuration is conditionally required.** When the Vendor selects **Self-Pickup only**, Delivery Configuration is marked `NOT_APPLICABLE`; this hides the Delivery Configuration. When the Vendor selects **Vendor Delivery** or **Both**, Delivery Configuration is displayed and becomes required before Store Activation.
 
-**S4 2% Commission Terms.** Versioned agreement covering the 2% Vendor-paid commission, its exclusive-materials base, monthly collection, VAT-inclusive fee treatment where applicable, cancellation and partial-refund credits, the statement due-date rule and the dispute process. Accepted by the Vendor Owner or an Admin-approved representative holding the `COMMISSION_AGREEMENT` scope. Changing settings never adds a fee to an already accepted order.
+For Vendor Delivery, the Vendor may add and configure **as many delivery vehicles as needed**. Each configured vehicle must include:
 
-**S5 Team Accounts.** Optional; never blocks activation. Explains the existing post-setup invitation route. Fixed roles: Store Manager, Store Staff, Customer Service Staff, Inventory Staff, Fulfillment Staff. One fixed role per membership. Store Manager staff-management delegation is off by default, cannot reach another Store Manager, ownership, payout credentials or audit records, and notifies the Owner on every delegated action.
+| **Field**                             | **Description**                                                                                  |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Vehicle Category                      | Identifies the general class of vehicle                                                          |
+| Vehicle Type, where applicable        | Identifies the specific vehicle type under the selected category                                 |
+| Vehicle Name                          | Vendor-defined name used to identify the vehicle or vehicle configuration                        |
+| Vehicle Brand                         | Brand or manufacturer of the vehicle, where applicable                                           |
+| Vehicle Image                         | Vendor-uploaded image of the vehicle shown where relevant                                        |
+| Number of Vehicles                    | Positive integer representing the number of usable vehicles under the configuration              |
+| Maximum Weight Capacity (kg)          | Maximum supported cargo payload                                                                  |
+| Mixer Capacity (m³), where applicable | Maximum ready-mixed concrete volume supported by a Concrete Mixer Truck / Transit Mixer          |
+| Cargo Length (m)                      | Usable cargo-space length                                                                        |
+| Cargo Width (m)                       | Usable cargo-space width                                                                         |
+| Cargo Height (m)                      | Usable cargo-space height                                                                        |
+| Heavy Vehicle Classification          | Indicates whether the vehicle is subject to applicable heavy-vehicle or site-access restrictions |
+| Base Fee (₱)                          | Fixed delivery amount applied per applicable trip                                                |
+| Per-Kilometer Rate (₱/km)             | Distance-based delivery charge                                                                   |
+| Maximum Delivery Distance (km)        | Maximum supported delivery service distance                                                      |
+
+For **Maximum Delivery Distance**, MateryalPH provides a **map interface with a visual delivery-radius overlay** centered on the Vendor's configured store or fulfillment location. When the Vendor enters or changes the maximum delivery distance, the map updates the radius to visually represent the approximate geographic coverage of that vehicle configuration.
+
+The displayed radius represents the configured delivery coverage and does not guarantee that every destination inside the radius is accessible. Actual fulfillment eligibility may still depend on road accessibility, heavy-vehicle restrictions, routing conditions, site-access restrictions, and other applicable delivery constraints.
+
+Supported vehicle categories include:
+
+* Motorcycle
+* Pickup
+* Van
+* Truck
+
+### Truck Types
+
+**Truck types** may include:
+
+* Box Truck
+* Wing Truck
+* Flatbed Truck
+* Concrete Mixer Truck / Transit Mixer
+* Custom Vehicle Type
+
+A **Concrete Mixer Truck / Transit Mixer** is a specialized vehicle intended specifically for transporting **ready-mixed concrete** from the batching or supply location to the delivery or construction site.
+
+When **Concrete Mixer Truck / Transit Mixer** is selected, the standard vehicle-identification and operational fields remain applicable, including:
+
+* Vehicle Category
+* Vehicle Type
+* Vehicle Name
+* Vehicle Brand
+* Vehicle Image
+* Number of Vehicles
+* Maximum Weight Capacity (kg)
+* Mixer Capacity (m³)
+* Heavy Vehicle Classification
+* Base Fee (₱)
+* Per-Kilometer Rate (₱/km)
+* Maximum Delivery Distance (km)
+
+Because a concrete mixer does not use a conventional cargo compartment in the same way as a general cargo truck, the following fields are marked `NOT_APPLICABLE` and hidden for this vehicle type:
+
+* Cargo Length (m)
+* Cargo Width (m)
+* Cargo Height (m)
+
+For a Concrete Mixer Truck / Transit Mixer, **Mixer Capacity (m³)** becomes the primary specialized capacity field used to determine how much ready-mixed concrete the vehicle can transport per trip.
+
+### Van Types
+
+**Van types** may include:
+
+* Compact / Mini Panel Van
+* Mid-Size Cargo Van
+* Full-Size Cargo Van
+* Custom Vehicle Type
+
+### Pickup Types
+
+**Pickup types** may include:
+
+1. Compact Pickup
+2. Mid-Size Pickup
+3. Heavy-Duty Pickup
+4. Custom Vehicle Type
+
+### Custom Vehicle Type
+
+**Custom Vehicle Type** — a Vendor may configure a custom vehicle type when the available predefined vehicle types do not appropriately represent the vehicle being used.
+
+To help Vendors make an appropriate selection, MateryalPH must provide a short and understandable description for every predefined Vehicle Category and Vehicle Type.
+
+When **Custom Vehicle Type** is selected, the Vendor must provide the custom vehicle type name and all applicable operational information required by the fulfillment recommendation logic, including capacity, cargo dimensions or specialized capacity, delivery fees, maximum delivery distance, heavy-vehicle classification, and other applicable constraints.
+
+The exact **Vehicle Category** and **Vehicle Type** must remain distinguishable. For example, **Truck** may be the Vehicle Category while **Flatbed Truck** or **Concrete Mixer Truck / Transit Mixer** is the corresponding Vehicle Type.
+
+---
+
+### Fulfillment Recommendation Logic
+
+The configured vehicle information is used by MateryalPH to recommend an appropriate delivery vehicle for an order. The system automatically determines the **most suitable configured and available vehicle offered by the Vendor** by evaluating the physical and operational requirements of the order.
+
+For normal cargo vehicles, the recommendation may use the product or combined order's actual weight and cargo dimensions, including length, width, and height, together with a **volumetric or dimensional weight calculation** where applicable.
+
+The vehicle recommendation may consider:
+
+* Actual Order Weight
+* Volumetric / Dimensional Weight
+* Cargo Length, Width, and Height
+* Required Material Volume (`m³`), where applicable
+* Mixer Capacity (`m³`), where applicable
+* Vendor Vehicle Weight Capacity
+* Vendor Vehicle Cargo Dimensions
+* Delivery Distance
+* Vehicle Availability
+* Site-Access Restrictions
+* Number of Required Vehicles
+* Number of Required Trips
+* Heavy-Vehicle Restrictions
+* Other approved fulfillment constraints
+
+### Ready-Mixed Concrete and Mixer-Truck Logic
+
+The **Concrete Mixer Truck / Transit Mixer recommendation logic applies specifically to ready-mixed concrete products**.
+
+When an order contains ready-mixed concrete that requires mixer-truck delivery, MateryalPH does not rely on normal cargo length, width, and height calculations for vehicle suitability. Instead, the system evaluates the required quantity of ready-mixed concrete in cubic meters (`m³`) against the configured **Mixer Capacity (`m³`)** of the Vendor's available Concrete Mixer Trucks / Transit Mixers.
+
+The recommendation may additionally consider:
+
+* Required ready-mixed concrete volume (`m³`)
+* Mixer Capacity (`m³`) per vehicle
+* Number of available mixer trucks
+* Number of required trips
+* Maximum Weight Capacity
+* Delivery Distance
+* Maximum Delivery Distance
+* Vehicle Availability
+* Heavy-Vehicle Classification
+* Site-Access Restrictions
+* Applicable delivery fees
+
+For example, if an order requires more ready-mixed concrete than one configured mixer truck can transport in a single trip, MateryalPH may identify that the order requires **multiple mixer trucks, multiple trips, or a combination of both**.
+
+This specialized mixer-truck calculation must not automatically be applied to ordinary cement products such as **bagged cement**. Bagged cement and other conventional construction materials continue to use the normal cargo weight, dimensions, capacity, and vehicle-suitability logic.
+
+### Volumetric / Dimensional Weight
+
+Where volumetric or dimensional weight is applicable, MateryalPH uses the product or combined shipment dimensions to estimate the cargo space required by the order.
+
+The calculation is used together with:
+
+* Actual physical weight
+* Cargo dimensions
+* Vehicle maximum weight capacity
+* Vehicle usable cargo dimensions
+
+The resulting calculation is used only as part of the vehicle-suitability and fulfillment-recommendation logic. It does not by itself automatically determine or finalize the Vendor's delivery arrangement.
+
+### Heavy-Vehicle Restrictions and Alternative Drop-Off Zone
+
+During ordering, the Buyer may indicate whether the delivery destination is subject to a known **Heavy-Vehicle Restriction** using **Yes** or **No**.
+
+If the Buyer selects **Yes**, the Buyer must specify an **alternative drop-off zone** where the applicable delivery vehicle can reasonably unload the materials without entering the restricted area.
+
+The system must retain both:
+
+* The Buyer's intended delivery or project location
+* The alternative drop-off zone
+
+The alternative drop-off zone becomes the applicable vehicle delivery point for fulfillment and delivery-distance calculations when the restriction applies.
+
+If the Buyer selects **No**, the Buyer's specified delivery location is used as the intended drop-off point, subject to normal routing, accessibility, Vendor confirmation, and other applicable fulfillment validation.
+
+The Buyer's Heavy-Vehicle Restriction response assists the recommendation process but must not be treated as a guarantee that the selected road or site is legally or physically accessible. The Vendor remains responsible for confirming the practical delivery arrangement before finalization.
+
+### Vehicle Eligibility
+
+An unconfigured, incomplete, unavailable, disabled, or otherwise ineligible vehicle must never appear as a valid fulfillment recommendation. The system must evaluate only the vehicles currently configured and available from the Vendor fulfilling the applicable order.
+
+The configured vehicle information is used by MateryalPH to recommend an appropriate delivery vehicle for an order. The system automatically determines the most suitable configured and available vehicle offered by the vendor by evaluating the order's physical delivery requirements. The recommendation may use the product or combined order's weight and cargo dimensions, including width, length, and height, together with a volumetric or dimensional weight calculation where applicable.
+
+The vehicle recommendation may consider:
+Actual Order Weight
+Volumetric / Dimensional Weight
+Cargo Length, Width, and Height
+Vendor Vehicle Weight Capacity
+Vendor Vehicle Cargo Dimensions
+Delivery Distance
+Vehicle Availability
+Site-Access Restrictions
+Number of Required Vehicles or Trips
+Heavy-Vehicle Restrictions 
+
+### Vendor Confirmation
+
+MateryalPH **does not automatically dispatch a vehicle or assign the recommended vehicle as final**.
+
+The system's vehicle recommendation remains advisory until confirmed by the Vendor.
+
+The Vendor must review the recommended vehicle and may:
+
+* Confirm the recommended vehicle
+* Select another eligible configured vehicle
+* Use multiple vehicles
+* Configure multiple trips where applicable
+
+before finalizing the delivery arrangement.
+
+Where the order cannot be fulfilled by a single suitable vehicle, or where multiple vehicles or multiple delivery trips are required, MateryalPH may identify the capacity limitation and assist the Vendor in determining an appropriate arrangement.
+
+The Vendor must confirm:
+
+* Selected vehicle or vehicles
+* Number of vehicles
+* Number of trips
+* Applicable delivery arrangement
+* Final applicable delivery charge
+
+before the Buyer is presented with and pays the finalized delivery charge.
+
+### Accepted-Order Delivery Snapshot
+
+Once an order and its delivery arrangement are accepted, MateryalPH stores an immutable **delivery snapshot** containing the fulfillment information applicable to that order, including where relevant:
+
+* Vehicle Category
+* Vehicle Type
+* Vehicle Name
+* Vehicle Brand
+* Vehicle capacity
+* Cargo dimensions
+* Mixer Capacity (`m³`), where applicable
+* Number of vehicles
+* Number of trips
+* Heavy-Vehicle Classification
+* Applicable drop-off location
+* Base Fee
+* Per-Kilometer Rate
+* Applicable delivery distance
+* Final delivery charge
+* Other relevant fulfillment details
+
+Editing, replacing, disabling, or deleting a vehicle configuration later must **never modify the delivery snapshot, delivery charge, vehicle arrangement, or fulfillment terms of an already accepted order**. Any subsequent vehicle configuration changes apply only to future fulfillment recommendations and future orders.
+
+**S3 Xendit TEST Connection.** xenPlatform TEST sub-account connection is mandatory for every Vendor seeking Store Activation, regardless of the Vendor's MateryalPH Business Type. The Vendor initiates the connection from MateryalPH through an explicit **Connect Xendit** action; no manual copying or pasting of Xendit URLs is required. After the Vendor confirms the action, MateryalPH's backend uses the official Xendit API with server-side TEST credentials to create the Vendor's TEST sub-account under the MateryalPH xenPlatform master account. MateryalPH captures and securely stores the provider-issued sub-account ID and automatically reconciles the account through permitted backend-only Xendit API mechanisms before marking the connection as **Connected — TEST**. A locally stored identifier or URL alone must never be treated as proof of a successful connection.
+
+Because Xendit TEST mode imposes provider-specific restrictions, MateryalPH must not represent the TEST sub-account as proof of the Vendor's actual legal entity classification, production KYC verification, or live account activation. Where the configured Xendit TEST API requires a fixed test entity type or prevents Authorized Representative invitations, MateryalPH must comply with those TEST restrictions while retaining the Vendor's actual Business Type and verification information separately within MateryalPH. The TEST connection represents only successful technical provisioning and reconciliation of a Xendit TEST sub-account.
+
+All Xendit API credentials must remain backend-only and must never be exposed to the Buyer application, Vendor web application, Admin web application, client-side source code, logs, or public configuration. TEST/DEMO capability does not constitute live payment processing, production KYC, BIR registration, statutory withholding compliance, or government approval. If Xendit does not support a required provisioning or reconciliation operation in the configured TEST environment, MateryalPH must keep the Xendit connection unverified and report the provider limitation rather than fabricating or manually overriding a successful connection.
+
+
+**S4 Team Accounts.** Vendor Team setup is **optional** and does not block Store Activation. The Vendor Owner may create Team Accounts before or after Store Activation.
+
+A Vendor Team Account belongs to an individual employee and is connected to the existing Vendor organization. Creating a Team Account does **not** create another store or Vendor organization. Each employee receives their own individual login account, and the Vendor Owner's credentials must never be shared with employees.
+
+If no Vendor Team Accounts are created, all operational functions that would otherwise be assigned to employees remain available through the **Vendor Owner (Main Store Account)**.
+
+---
+
+## Team Invitation Information
+
+Each Team Account invitation records:
+
+* Employee full name
+* Email address
+* Contact number, where required
+* Vendor organization
+* Exactly one fixed role
+* Invitation expiration
+* Inviting user
+* Invitation status
+* Creation date
+* Acceptance date, where applicable
+
+The employee receives the invitation through the provided email address.
+
+All invitation, acceptance, membership, role, activation, deactivation, and staff-management changes must be audit-logged.
+
+---
+### Team Account Logic
+
+# Vendor Owner — Main Store Account
+
+The **Vendor Owner** is the highest-level account within the Vendor organization and retains overall control of the store.
+
+The Vendor Owner can monitor employee-attributed activities, including:
+
+* Employee responsible
+* Action performed
+* Affected record
+* Date and time
+* Current status
+* Relevant before-and-after changes, where applicable
+
+This allows Vendor activities to be traced to the individual employee who performed them.
+
+The Vendor Owner retains access to all Vendor Portal sections and may perform all permitted organization-level functions, including:
+
+* Store administration
+* Orders
+* Fulfillment
+* Customer communication
+* Disputes and appeals
+* Product and inventory management
+* Vehicle management
+* E-Invoices
+* Financial information
+* Analytics
+* Team Account administration
+* Team activity monitoring
+* Store Profile management
+* Business and compliance document management
+
+Where a function is delegated to an employee, the Vendor Owner retains oversight of that function.
+
+---
+
+# Staff Roles
+
+Available Vendor Team roles are:
+
+1. **Store Manager**
+2. **Store Staff**
+3. **Customer Service Staff**
+4. **Inventory Staff**
+5. **Fulfillment Staff**
+
+Each Team Account has **exactly one fixed Vendor role at a time**.
+
+Roles must not be arbitrarily stacked or combined.
+
+The Vendor Owner selects the role that most closely represents the employee's actual responsibilities.
+
+Except for specifically defined settings such as Store Manager staff-management delegation and Customer Service dispute handling, the Vendor Owner must not manually construct arbitrary permissions for an employee. Each role follows its predefined work scope.
+
+Access is determined by:
+
+* Vendor organization membership
+* Fixed assigned role
+* Defined role permissions
+* Approved role-specific settings
+* Store activation status
+* Resource ownership or assignment
+* Backend authorization
+* Applicable recent-authentication requirements
+
+**Frontend visibility does not replace backend authorization.**
+
+A hidden sidebar item must also be protected at the route, API, service, and resource-authorization levels.
+
+---
+
+# Role Definitions and Work Scope
+
+## 1. Store Manager
+
+The **Store Manager** is the highest operational employee role below the Vendor Owner.
+
+The Store Manager oversees normal day-to-day store operations and may manage:
+
+* Orders
+* Customer inquiries
+* Quotations
+* Fulfillment coordination
+* Products and inventory
+* Vehicle configurations
+* Operational E-Invoices
+* Disputes and appeals
+* Store operations
+* Operational notifications
+* Store performance information
+
+The Store Manager does not become a co-owner and cannot perform protected Owner-only functions.
+
+A Store Manager may manage Team Accounts only when the Vendor Owner explicitly enables the **Allow this Store Manager to manage staff accounts** setting.
+
+---
+
+## 2. Store Staff
+
+**Store Staff** is the all-round operational role intended primarily for small and medium-sized hardware stores where one employee may perform both customer-service and inventory responsibilities.
+
+Instead of requiring the Vendor Owner to assign multiple roles to the same employee, Store Staff combines the normal work scope of:
+
+* Customer Service Staff
+* Inventory Staff
+
+Store Staff may therefore:
+
+* Monitor incoming orders
+* Review available stock before accepting or processing an order
+* Accept permitted orders
+* Respond to Buyer inquiries
+* Handle customer conversations
+* Prepare and manage quotations
+* Handle sales transactions assigned to them
+* Manage products
+* Manage product variants
+* Update inventory quantities
+* Perform permitted price changes
+* Maintain applicable product information
+* Handle permitted product compliance submissions and responses
+* Handle disputes when dispute access is enabled by the Vendor Owner
+
+Store Staff does **not** automatically receive Fulfillment Staff privileges, financial access, Team Account administration, or Owner-level permissions.
+
+---
+
+## 3. Customer Service Staff
+
+The **Customer Service Staff** role focuses on Buyer-facing sales and customer communication.
+
+Customer Service Staff may:
+
+* Monitor incoming orders
+* View relevant available stock needed to determine whether an order can be accepted
+* Accept or process permitted orders
+* Respond to Buyer inquiries
+* Manage customer conversations
+* Prepare quotations
+* Handle sales they are responsible for or explicitly assigned to
+* Access applicable E-Invoice information for assigned sales
+* Receive relevant operational notifications
+* Handle disputes and appeals when enabled by the Vendor Owner
+
+Customer Service Staff may **view stock information** needed for sales decisions but must not directly perform inventory administration unless assigned the Store Staff role instead.
+
+### Customer Service Dispute Setting
+
+Dispute access for Customer Service Staff and Store Staff is **enabled by default**.
+
+The Vendor Owner may disable:
+
+**Allow staff to handle disputes and appeals**
+
+If disabled:
+
+* Customer Service Staff cannot access Disputes & Appeals
+* Store Staff cannot access Disputes & Appeals
+* New disputes are handled by the Vendor Owner and, where permitted, the Store Manager
+
+Existing staff activity remains preserved in the audit history.
+
+---
+
+## 4. Inventory Staff
+
+The **Inventory Staff** role focuses on products, inventory, stock accuracy, variants, pricing, and applicable product compliance work.
+
+Inventory Staff may:
+
+* Create or update permitted products
+* Manage product variants
+* Update stock quantities
+* Review stock allocations
+* Perform permitted price changes
+* Maintain product information
+* Upload applicable product documents
+* Handle applicable PS/ICC-related product submissions
+* Update compliance documents associated with their assigned product responsibilities
+* Respond to applicable product compliance review requirements
+* Receive inventory-related notifications
+
+Inventory Staff may view limited order information where necessary to understand stock allocation or reservation, but they must not accept customer orders, manage customer quotations, handle normal customer conversations, manage disputes, or perform fulfillment milestones solely because they can view the related inventory requirements.
+
+---
+
+## 5. Fulfillment Staff
+
+The **Fulfillment Staff** role handles the physical preparation and delivery stage of accepted orders.
+
+Fulfillment Staff may:
+
+* View orders assigned to them
+* Process assigned fulfillment activities
+* Update fulfillment milestones
+* Prepare orders for pickup
+* Process orders for Vendor Delivery
+* View the selected delivery vehicle relevant to an assigned delivery
+* Upload delivery evidence or proof
+* Record applicable fulfillment completion information
+* Receive fulfillment-related notifications
+* Communicate directly with the Buyer through the dedicated fulfillment conversation
+
+Fulfillment Staff must not modify general product inventory administration, pricing, Vendor financial settings, Team Accounts, Store Profile information, or vehicle configurations unless such capabilities are introduced through a future approved role policy.
+
+---
+
+# Vendor Portal Sidebar Access Matrix
+
+The Vendor Portal sidebar contains the following sections:
+
+* Dashboard
+* Orders
+* Fulfillment
+* Messages
+* E-Invoices
+* Notifications
+* Disputes & Appeals
+* My Products
+* Vehicles
+* Wallet
+* Store Performance
+* Earnings
+* Team Accounts
+* Team Tracking
+* Store Profile
+
+Access must follow the matrix below.
+
+| **Sidebar Section**    | **Vendor Owner**         | **Store Manager**                                   | **Store Staff**                        | **Customer Service Staff**   | **Inventory Staff**                         | **Fulfillment Staff**                             |
+| ---------------------- | ------------------------ | --------------------------------------------------- | -------------------------------------- | ---------------------------- | ------------------------------------------- | ------------------------------------------------- |
+| **Dashboard**          | Full                     | Operational                                         | Operational                            | Role-specific                | Role-specific                               | Role-specific                                     |
+| **Orders**             | Full                     | Full operational                                    | Sales/order management                 | Sales/order management       | Limited stock-related view                  | Assigned orders only                              |
+| **Fulfillment**        | Full                     | Full operational                                    | View relevant order fulfillment status | View relevant order status   | No direct fulfillment control               | Assigned fulfillment management                   |
+| **Messages**           | All conversations        | Operational conversations                           | Customer/sales conversations           | Customer/sales conversations | No normal customer-chat access              | Fulfillment threads only                          |
+| **E-Invoices**         | Full                     | Operational                                         | Assigned/permitted sales               | Assigned/permitted sales     | No                                          | View only where required for assigned fulfillment |
+| **Notifications**      | All Vendor notifications | Relevant operational notifications                  | Relevant notifications                 | Relevant notifications       | Relevant inventory/compliance notifications | Relevant fulfillment notifications                |
+| **Disputes & Appeals** | Full                     | Operational                                         | Conditional                            | Conditional                  | No                                          | No direct dispute management                      |
+| **My Products**        | Full                     | Full operational                                    | Product/inventory management           | Stock view only              | Product/inventory management                | Assigned-order product view only                  |
+| **Vehicles**           | Full                     | Manage                                              | No configuration access                | No                           | No                                          | Assigned vehicle information only                 |
+| **Wallet**             | Full                     | No protected financial access                       | No                                     | No                           | No                                          | No                                                |
+| **Store Performance**  | Full                     | View operational analytics                          | No                                     | No                           | No                                          | No                                                |
+| **Earnings**           | Full                     | No                                                  | No                                     | No                           | No                                          | No                                                |
+| **Team Accounts**      | Full                     | Conditional delegation                              | No                                     | No                           | No                                          | No                                                |
+| **Team Tracking**      | Full                     | Limited when staff-management delegation is enabled | No                                     | No                           | No                                          | No                                                |
+| **Store Profile**      | Full                     | View operational store information                  | Limited view                           | Limited view                 | Limited view                                | Limited view                                      |
+
+---
+
+# Sidebar Visibility Rules
+
+The Vendor Portal must dynamically show or hide sidebar sections according to the signed-in user's role and applicable permissions.
+
+A user must not see a normal navigational entry for a section they have no permission to access.
+
+For example:
+
+* Inventory Staff should primarily see **Dashboard, relevant Orders, Notifications, My Products, and Store Profile**
+* Customer Service Staff should primarily see **Dashboard, Orders, Messages, E-Invoices, Notifications, applicable Disputes & Appeals, and Store Profile**
+* Fulfillment Staff should primarily see **Dashboard, assigned Orders, Fulfillment, fulfillment Messages, Notifications, assigned vehicle information where required, and Store Profile**
+* Store Staff should see the combined operational sections required for sales, customer service, and inventory work
+* Store Manager should see most operational sections but not protected Owner financial or ownership functions
+* Vendor Owner sees the complete Vendor Portal
+
+The Dashboard itself must also be **role-aware**. Employees must not receive Owner-only statistics, financial information, compliance information, or administrative controls simply because they can access the Dashboard page.
+
+---
+
+# Financial Access Rules
+
+The following sidebar modules are considered financially sensitive:
+
+* Wallet
+* Earnings
+
+By default, these modules are **Vendor Owner only**.
+
+Employees, including Store Managers, must not:
+
+* Access or modify bank account information
+* Access or modify payout credentials
+* Change settlement information
+* Initiate protected withdrawal or payout operations
+* Replace financial account ownership information
+
+A future approved Owner-level policy may introduce carefully scoped financial permissions, but such permissions must not be assumed by the current role model.
+
+Operational E-Invoice access does not automatically grant access to Wallet, Earnings, payout credentials, or other protected financial information.
+
+---
+
+# Store Profile Access
+
+The **Vendor Owner** has full Store Profile access.
+
+Employees may view only the Store Profile information necessary to perform their responsibilities.
+
+Store Manager may view operational store information but must not modify protected ownership, legal, payout, or business-verification information unless specifically permitted by an approved future policy.
+
+Other employee roles receive only the minimum Store Profile visibility required to identify the organization they work for and perform their assigned responsibilities.
+
+---
+
+# Attribution Rule
+
+Each employee's access and activity attribution are determined by the role assigned by the Vendor Owner.
+
+The system records actions performed by each employee and attributes them to the individual account that actually performed the action.
+
+Audit information may include:
+
+* Employee responsible
+* Employee role at the time of the action
+* Action performed
+* Affected record
+* Previous value, where applicable
+* New value, where applicable
+* Date and time
+* Current status
+* Related order, product, conversation, dispute, or fulfillment record
+
+The Vendor Owner retains overall oversight and can monitor employee-attributed activities.
+
+Employees must not receive attribution for actions performed by another employee.
+
+Changing an employee's role later must not rewrite historical attribution. Historical records preserve the employee and role context applicable when the action occurred.
+
+---
+
+# Message Attribution
+
+For **Messages**, attribution is based on the employee who actively handles the conversation.
+
+When a Buyer sends a normal product, quotation, or order inquiry to the Vendor, the conversation may initially be routed to an available:
+
+1. Store Staff
+2. Customer Service Staff
+3. Store Manager
+4. Vendor Owner
+
+depending on the Vendor's available Team Accounts and applicable assignment rules.
+
+When an authorized employee responds to or takes ownership of the conversation, the system records that employee as the **Message Handler**.
+
+Any:
+
+* Reply
+* Quotation
+* Attachment
+* Order-related action
+* Assignment
+* Transfer
+* Conversation closure
+
+is attributed to the employee who actually performed the action.
+
+If another authorized employee takes over the conversation, the system records the new employee as the current handler while retaining the complete previous handling history.
+
+The transfer must never erase the previous employee's activity.
+
+---
+
+# Fulfillment Message Thread
+
+Fulfillment Staff do not receive unrestricted access to normal customer-service conversations.
+
+When an applicable order reaches a fulfillment stage such as:
+
+* **Ready for Pickup**, or
+* **Out for Delivery**
+
+MateryalPH creates or enables an **order-specific fulfillment message thread** associated with that order.
+
+Authorized Fulfillment Staff assigned to the order may use this thread to communicate with the Buyer regarding matters such as:
+
+* Pickup coordination
+* Delivery arrival
+* Delivery location clarification
+* Alternative drop-off coordination
+* Access restrictions
+* Unloading coordination
+* Delivery delays
+* Delivery proof
+* Other fulfillment-related communication
+
+The fulfillment conversation remains associated with the Order Details and must not provide Fulfillment Staff with access to unrelated Buyer conversations.
+
+---
+
+# Store Manager Delegation
+
+When the Vendor Owner creates or edits a Store Manager, the system displays an off-by-default setting:
+
+**Allow this Store Manager to manage staff accounts**
+
+If disabled, Team Account administration remains Owner-only.
+
+If enabled, the Store Manager may manage only permitted non-manager roles:
+
+* Store Staff
+* Customer Service Staff
+* Inventory Staff
+* Fulfillment Staff
+
+The delegated Store Manager may:
+
+* Send staff invitations
+* View invitation status
+* Resend permitted invitations
+* Edit permitted non-manager staff information
+* Change a permitted non-manager employee from one non-manager role to another
+* Activate or deactivate permitted non-manager Team Accounts
+
+All delegated staff-management actions must notify or otherwise remain visible to the Vendor Owner and must be recorded in the audit trail.
+
+A delegated Store Manager must **not**:
+
+* Create another Store Manager
+* Modify another Store Manager
+* Deactivate another Store Manager
+* Grant Store Manager delegation
+* Change their own role
+* Increase their own permissions
+* Change the Vendor Owner
+* Transfer ownership
+* Modify protected payout credentials
+* Delete or alter audit records
+* Perform Owner-only functions
+
+---
+
+# Restricted Actions
+
+Regardless of employee role, Team Account employees must never be allowed to:
+
+1. Change or transfer the Vendor Owner
+2. Access or modify bank or payout credentials unless explicitly supported by a future approved Owner-level policy
+3. Access data belonging to another Vendor organization
+4. Delete, rewrite, or tamper with Vendor activity or audit logs
+5. Delete their own Team Account in a way that bypasses organization administration or audit retention
+6. Grant permissions they do not possess
+7. Create another Vendor organization under the same employee Team Account
+8. Change protected Vendor ownership information
+9. Bypass Store Activation, account-state, or role-based restrictions
+10. Access a resource merely by manually entering a hidden URL or API endpoint
+11. Modify historical records in a manner that destroys required attribution
+12. Elevate their own role or permissions
+
+The **Vendor Owner remains the highest-level account within the Vendor organization**.
+
+---
+
+# Staff Invitation and First Login
+
+After the Vendor Owner or an authorized delegated Store Manager creates a Team Account invitation, MateryalPH sends an individual invitation link to the employee's email address.
+
+The employee uses the invitation to establish their individual login identity.
+
+After successful sign-in, a Team Account **does not repeat Vendor Onboarding**.
+
+Vendor Onboarding belongs to the Vendor organization rather than the individual employee account.
+
+The employee is directed to the Vendor Dashboard according to:
+
+* Assigned role
+* Applicable role-specific settings
+* Vendor organization
+* Store activation status
+* Resource assignment
+* Backend authorization
+
+---
+
+# Staff Access Before Store Activation
+
+If a Team Account has been activated while the Vendor organization is still awaiting Store Activation, the employee may sign in, but the existence of the Team Account must **not** provide full marketplace access.
+
+The Vendor Portal remains in the appropriate **Limited-Access state**.
+
+The employee sees only functions permitted by both:
+
+1. The Vendor organization's current onboarding and activation state
+2. The employee's assigned role and applicable permissions
+3. The employee's own Account Profile
+
+The dashboard displays a notice such as:
+
+> **This store is not yet active for marketplace participation. Required onboarding and verification must be completed before marketplace features become available.**
+
+Staff without authorization to modify onboarding or verification requirements must not be able to alter those requirements.
+
+Role access never overrides Store Activation requirements.
+
+---
+
+# Staff Access After Store Activation
+
+Once the Vendor organization is activated, employees gain access to the applicable marketplace sections according to their assigned role.
+
+Store Activation does **not** grant every Team Account full Vendor Portal access.
+
+The system must continue enforcing:
+
+* Organization isolation
+* Role-based access control
+* Resource-level authorization
+* Assignment restrictions
+* Role-specific settings
+* Store-status requirements
+* Audit attribution
+* Protected Owner-only functions
+
+The Vendor Owner retains the highest organization authority at all times.
+
+**S5 Store Operation:** this is where the vendor sets the opening and closing time and date, this will be display publicy.
 
 **S6 Review and Complete.** Setup summary, unsaved-change list, completion. Completion never approves a verification item.
 
@@ -574,7 +1347,7 @@ Additive migrations only. Existing records are retained.
 | `vendor_documents` / `vendor_document_versions` | Evidence and its immutable versions | `document_type`, `file_reference`, `checksum`, `scan_state`, `uploaded_by`, `superseded_by`, verified metadata columns |
 | `vendor_addresses` / `vendor_address_versions` | Structured address + separate geography point | structured columns, `location` geography(Point,4326) with GiST index, `version`, `review_state` |
 | `vendor_supplier_classifications` | Type, canonical niches, custom labels | `supplier_type`, `niche_keys[]`, `custom_labels[]` |
-| `vendor_tax_profiles` / `vendor_tax_profile_versions` | Single organization-level legal-tax source | `taxpayer_key`, `tin_core_encrypted`, `tin_branch_code_encrypted`, `branch_scope`, `vat_status_declared`, `vat_status_verified`, `declaration_claim`, `declaration_year`, `effective_from/to`, `representative_version_id` |
+| `vendor_tax_profiles` / `vendor_tax_profile_versions` | Single organization-level legal-tax source | `taxpayer_key`, `tin_encrypted`, `tin_hash`, `vat_status_declared`, `vat_status_verified`, `declaration_claim`, `declaration_year`, `effective_from/to`, `representative_version_id` |
 | `privacy_acknowledgments` | Separate from commercial agreements | `user_id`, `organization_id`, `notice_version_id`, `activity`, `source`, `acknowledged_at` |
 | `vendor_activation_history` | Append-only activation evaluations | `previous_state`, `new_state`, `checklist_version`, `blocking_items[]`, `actor_or_process`, `reason`, `occurred_at` |
 
@@ -591,7 +1364,7 @@ Extend the existing `/api/v1` operations; do not rename them. All responses use 
 | Operation | Notes |
 | --- | --- |
 | `GET /vendor/onboarding` | Authoritative snapshot: both workstreams, requirement registry, step completion, activation readiness with blocking list, current Privacy Notice version, masked representative and tax values, current document versions, correction reasons |
-| `PATCH /vendor/onboarding/verification/draft` | Accepts business type, legal identity, representative details, numeric `tin_core` and `tin_branch_code`, branch length, head-office flag, VAT declaration, declaration claim and year, address, classification. `409` on stale `lock_version` |
+| `PATCH /vendor/onboarding/verification/draft` | Accepts business type, legal identity, representative details, combined `tin` (9-digit taxpayer number plus 3 to 5 digit branch code), VAT declaration, declaration claim and year, address, classification. `409` on stale `lock_version` |
 | `PATCH /vendor/onboarding/setup/draft` | Store Setup draft |
 | `POST /vendor/onboarding/documents` | Types include primary registration, LGU permit, BIR COR, sworn declaration, individual ID front/back, representative identity front/back, authority evidence, optional certification. Returns version and scan state |
 | `POST /vendor/onboarding/store-email/request-code` · `/confirm` | Existing OTP endpoints reused by the single `store_email` field |
@@ -625,7 +1398,7 @@ Extend the existing `/api/v1` operations; do not rename them. All responses use 
 
 ## 14. Acceptance tests
 
-**Structure and navigation.** Four verification steps and six setup steps render. Only the selected step is visible and keyboard reachable. Focus transfers to the step heading. Switching steps preserves native values without saving. Save Draft and Finish Later use the existing builders, version checks and dashboard destination. Unsaved edits appear on the review step and block submission until saved. Completion indicators come from the server.
+**Structure and navigation.** Four verification steps and six setup steps render. Only the selected step is visible and keyboard reachable. Focus transfers to the step heading. Switching steps preserves native values and automatically saves partial progress with version checks. Finish Later saves automatically before returning to the dashboard. The review step lists unsaved edits and private saved progress; submission automatically persists the current package without a manual save prerequisite. Completion indicators come from the server.
 
 **Business Type.** Each of the five values renders only its applicable identity, evidence and tax fields. Changing type recalculates requirements before save, stops counting superseded evidence, and reopens affected approved requirements for review.
 
@@ -633,7 +1406,7 @@ Extend the existing `/api/v1` operations; do not rename them. All responses use 
 
 **Representative and authority.** Officer already shown in accepted records can satisfy the requirement from existing evidence; an employee or accountant cannot and is forced to upload. Sole proprietor path yields `NOT_APPLICABLE` with a reason. Final attestation without an approved scope is refused. Replacing the representative preserves the prior record, reopens review and leaves previously executed agreements bound to the old record. A decision with a stale `lock_version` is rejected.
 
-**TIN.** 9 digits accepted; 8 and 10 rejected; letters and symbols rejected. Branch code accepts 3 and 5 digits including `000` and `00000`; 4 digits rejected; alphanumeric rejected. Head Office prefills and does not require typing; Branch requires an entered code. Stored values are encrypted and masked on read.
+**TIN.** Combined 12–14 digits or hyphenated 9-digit TIN plus 3–5 digit branch suffix accepted; missing suffix, letters and malformed formatting rejected. Separate office and branch request fields are prohibited. Stored values are encrypted and masked on read.
 
 **Store Email.** Exactly one named `store_email` input exists in the DOM. Initial read-only state, change, confirm, re-change. Verified badge only when the displayed normalized address matches the server-confirmed address. A pending replacement never inherits verification. Editing after requesting a code clears the challenge. Request failure and confirmation failure are recoverable. Draft payloads carry the right value. Input and action widths and heights stay stable between `Change` and `Send Code`.
 
@@ -652,3 +1425,20 @@ Extend the existing `/api/v1` operations; do not rename them. All responses use 
 **Authorization.** Cross-Vendor document access returns a safe `403`/`404`. Unauthorized staff cannot read private evidence. A hidden button never authorizes anything. Activation bypass attempts fail at the backend gate.
 
 **Accessibility and responsiveness.** Browser checks at 320, 375, 390, 768, 1024, 1280, 1440 and 1920 px: no horizontal page or stepper overflow, ≥14px step labels, all step buttons within the navigation bounds, one equal-height field row at ≥1024px, matching contact-input geometry, reduced-motion keyboard navigation, and every status conveyed by text or icon in addition to color.
+
+
+### Checklist presentation and private evidence preview
+
+Store Verification, the Limited Dashboard and the Admin review case share this checklist order:
+
+1. Business information, with distinct sections for business details, registered legal identity, registered business address, supplier classification, Tax Profile, applicable Authority to Act, and privacy acknowledgment.
+2. Government ID — Registered legal identity (Sole Proprietorship).
+3. Government ID — Authorized Representative, when applicable.
+4. Sworn Declaration, when applicable.
+5. BIR Certificate of Registration (BIR Form 2303).
+6. Business registration.
+7. LGU permit evidence.
+
+Each Government ID is one checklist item containing its required front and back; a passport uses its identity page. Non-applicable items and optional certification do not appear in this checklist. Required underlying evidence, version checks, separate Admin decisions and Authority to Act scopes remain enforced. A grouped item is complete only when every applicable underlying requirement is approved/completed. Correction and rejection states remain visible. Store Setup uses the same bordered checklist panel with its existing setup requirements.
+
+Submitted and saved private files open in an authenticated portal preview panel. The portal fetches the short-lived signed URL with its isolated HttpOnly cookie context, validates the response, and displays only supported PDF/JPEG/PNG content. Closing/unmounting the preview revokes its temporary browser object URL. Signature, ownership, role and clean-scan checks remain server-side; no document becomes public.

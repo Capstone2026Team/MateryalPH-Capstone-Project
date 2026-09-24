@@ -9,9 +9,11 @@ use App\Domain\Identity\PassportAccessTokenIssuer;
 use App\Domain\Identity\RecaptchaAssessmentGateway;
 use App\Domain\Identity\SecureOtpCodeGenerator;
 use App\Domain\Vendors\AddressGeocoder;
+use App\Domain\Vendors\PsgcProvider;
 use App\Domain\Vendors\PublicStoreMediaStorage;
 use App\Domain\Vendors\XenditAccountVerificationGateway;
 use App\Infrastructure\Geography\ConfiguredGoogleMapsGeocoder;
+use App\Infrastructure\Geography\PsgcCloudProvider;
 use App\Infrastructure\Identity\GoogleRecaptchaEnterpriseGateway;
 use App\Infrastructure\Payments\ConfiguredXenditAccountVerificationGateway;
 use App\Infrastructure\Storage\CloudinaryPublicStoreMediaStorage;
@@ -33,6 +35,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(RecaptchaAssessmentGateway::class, GoogleRecaptchaEnterpriseGateway::class);
         $this->app->bind(PublicStoreMediaStorage::class, CloudinaryPublicStoreMediaStorage::class);
         $this->app->bind(AddressGeocoder::class, ConfiguredGoogleMapsGeocoder::class);
+        $this->app->bind(PsgcProvider::class, PsgcCloudProvider::class);
         $this->app->bind(XenditAccountVerificationGateway::class, ConfiguredXenditAccountVerificationGateway::class);
     }
 

@@ -18,7 +18,6 @@ final class VendorSetupCompleteRequest extends FormRequest
     {
         return [
             'organization_lock_version' => ['required', 'integer', 'min:1'],
-            'commission_terms_accepted' => ['accepted'],
         ];
     }
 }

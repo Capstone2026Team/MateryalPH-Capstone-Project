@@ -12,10 +12,5 @@ void main() {
       // TODO
     });
 
-    // bool commissionTermsAccepted
-    test('to test the property `commissionTermsAccepted`', () async {
-      // TODO
-    });
-
   });
 }

@@ -36,7 +36,7 @@ import {
 export interface VendorSetupDraft {
     [key: string]: any | any;
     /**
-     * Version of this workstream draft; zero for its first save. Stale versions return 409.
+     * Workstream draft version; zero on first save. Send together with the required organization guard. Omission retains legacy behavior without draft-level comparison. A stale draft returns 409 STALE_VERSION; a stale organization returns 409 RESOURCE_VERSION_CONFLICT.
      */
     draftLockVersion?: number;
     /**

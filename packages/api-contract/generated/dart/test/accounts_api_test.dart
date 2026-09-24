@@ -7,7 +7,7 @@ void main() {
   final instance = MateryalphApiClient().getAccountsApi();
 
   group(AccountsApi, () {
-    // Server enforces the route audience, active account and membership, resource ownership, Passport scope and session transport. buyers uses MOBILE bearer; vendors/admin use WEB cookies and CSRF on mutations. Privileged security changes require session-bound recent authentication. No client header can select or bypass transport security.
+    // Vendor commission consent must use the version-bound Store Verification commission endpoint; this account endpoint returns COMMISSION_VERIFICATION_REQUIRED for that agreement. Server enforces the route audience, active account and membership, resource ownership, Passport scope and session transport. buyers uses MOBILE bearer; vendors/admin use WEB cookies and CSRF on mutations. Privileged security changes require session-bound recent authentication. No client header can select or bypass transport security.
     //
     //Future<AccountMutationResultEnvelope> acceptAccountAgreements(String accountPortal, AccountAgreementAcceptance accountAgreementAcceptance) async
     test('test acceptAccountAgreements', () async {

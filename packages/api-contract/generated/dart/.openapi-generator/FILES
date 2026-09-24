@@ -69,6 +69,7 @@ doc/EmailRequest.md
 doc/ErrorEnvelope.md
 doc/FeeAssessment.md
 doc/FinancialSnapshot.md
+doc/GenericDataEnvelope.md
 doc/GoogleMobileExchangeRequest.md
 doc/GoogleOidcStartRequest.md
 doc/HealthEnvelope.md
@@ -86,6 +87,9 @@ doc/OnboardingRequirement.md
 doc/OnboardingStepCompletion.md
 doc/PasswordRecoveryRequest.md
 doc/PasswordResetRequest.md
+doc/PsgcArea.md
+doc/PsgcSearchEnvelope.md
+doc/PsgcSearchEnvelopeData.md
 doc/RegisterRequest.md
 doc/RegistrationEnvelope.md
 doc/RegistrationEnvelopeAllOfData.md
@@ -98,7 +102,9 @@ doc/UserIdentity.md
 doc/VendorActivationSnapshot.md
 doc/VendorAddressGeocode.md
 doc/VendorAddressGeocodeEnvelope.md
+doc/VendorAddressSelection.md
 doc/VendorBotProtectionEvidence.md
+doc/VendorCommissionAcceptance.md
 doc/VendorDocument.md
 doc/VendorDocumentEnvelope.md
 doc/VendorFile.md
@@ -124,6 +130,7 @@ doc/VendorSetupDraftVehiclesInner.md
 doc/VendorStoreEmailConfirmation.md
 doc/VendorStoreEmailEnvelope.md
 doc/VendorVerificationDraft.md
+doc/VendorVerificationDraftClassification.md
 doc/VendorVerificationDraftLegalIdentity.md
 doc/VendorVerificationDraftRepresentative.md
 doc/VendorVerificationDraftTaxProfile.md
@@ -211,6 +218,7 @@ lib/src/model/email_request.dart
 lib/src/model/error_envelope.dart
 lib/src/model/fee_assessment.dart
 lib/src/model/financial_snapshot.dart
+lib/src/model/generic_data_envelope.dart
 lib/src/model/google_mobile_exchange_request.dart
 lib/src/model/google_oidc_start_request.dart
 lib/src/model/health_envelope.dart
@@ -228,6 +236,9 @@ lib/src/model/onboarding_requirement.dart
 lib/src/model/onboarding_step_completion.dart
 lib/src/model/password_recovery_request.dart
 lib/src/model/password_reset_request.dart
+lib/src/model/psgc_area.dart
+lib/src/model/psgc_search_envelope.dart
+lib/src/model/psgc_search_envelope_data.dart
 lib/src/model/register_request.dart
 lib/src/model/registration_envelope.dart
 lib/src/model/registration_envelope_all_of_data.dart
@@ -239,7 +250,9 @@ lib/src/model/user_identity.dart
 lib/src/model/vendor_activation_snapshot.dart
 lib/src/model/vendor_address_geocode.dart
 lib/src/model/vendor_address_geocode_envelope.dart
+lib/src/model/vendor_address_selection.dart
 lib/src/model/vendor_bot_protection_evidence.dart
+lib/src/model/vendor_commission_acceptance.dart
 lib/src/model/vendor_document.dart
 lib/src/model/vendor_document_envelope.dart
 lib/src/model/vendor_file.dart
@@ -264,6 +277,7 @@ lib/src/model/vendor_setup_draft_vehicles_inner.dart
 lib/src/model/vendor_store_email_confirmation.dart
 lib/src/model/vendor_store_email_envelope.dart
 lib/src/model/vendor_verification_draft.dart
+lib/src/model/vendor_verification_draft_classification.dart
 lib/src/model/vendor_verification_draft_legal_identity.dart
 lib/src/model/vendor_verification_draft_representative.dart
 lib/src/model/vendor_verification_draft_tax_profile.dart
@@ -341,6 +355,7 @@ test/email_request_test.dart
 test/error_envelope_test.dart
 test/fee_assessment_test.dart
 test/financial_snapshot_test.dart
+test/generic_data_envelope_test.dart
 test/google_mobile_exchange_request_test.dart
 test/google_oidc_start_request_test.dart
 test/health_envelope_all_of_data_test.dart
@@ -358,6 +373,9 @@ test/onboarding_requirement_test.dart
 test/onboarding_step_completion_test.dart
 test/password_recovery_request_test.dart
 test/password_reset_request_test.dart
+test/psgc_area_test.dart
+test/psgc_search_envelope_data_test.dart
+test/psgc_search_envelope_test.dart
 test/register_request_test.dart
 test/registration_envelope_all_of_data_test.dart
 test/registration_envelope_test.dart
@@ -370,7 +388,9 @@ test/user_identity_test.dart
 test/vendor_activation_snapshot_test.dart
 test/vendor_address_geocode_envelope_test.dart
 test/vendor_address_geocode_test.dart
+test/vendor_address_selection_test.dart
 test/vendor_bot_protection_evidence_test.dart
+test/vendor_commission_acceptance_test.dart
 test/vendor_document_envelope_test.dart
 test/vendor_document_test.dart
 test/vendor_file_envelope_test.dart
@@ -395,6 +415,7 @@ test/vendor_setup_draft_test.dart
 test/vendor_setup_draft_vehicles_inner_test.dart
 test/vendor_store_email_confirmation_test.dart
 test/vendor_store_email_envelope_test.dart
+test/vendor_verification_draft_classification_test.dart
 test/vendor_verification_draft_legal_identity_test.dart
 test/vendor_verification_draft_representative_test.dart
 test/vendor_verification_draft_tax_profile_test.dart

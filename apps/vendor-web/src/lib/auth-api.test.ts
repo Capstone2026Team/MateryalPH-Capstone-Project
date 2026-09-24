@@ -151,6 +151,24 @@ describe('Vendor auth API transport', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
+  test('allows overlapping declared lookup POSTs while guarding real mutations', async () => {
+    const pending: ((response: Response) => void)[] = []
+    vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(resolve => { pending.push(resolve) })))
+    const base = 'http://localhost:8080/api/v1'
+    const transport = createWebApiConfiguration(base, { readOnlyPostPaths: ['/vendors/onboarding/address/pin'] }).fetchApi!
+    const older = transport(`${base}/vendors/onboarding/address/pin`, { method: 'POST', body: 'old' })
+    const newer = transport(`${base}/vendors/onboarding/address/pin`, { method: 'POST', body: 'new' })
+    expect(pending).toHaveLength(2)
+    pending[1]!(jsonResponse({ point: 'new' }))
+    expect(await (await newer).json()).toEqual({ point: 'new' })
+    pending[0]!(jsonResponse({ point: 'old' }))
+    await older
+    const submit = transport(`${base}/vendors/onboarding/verification/submit`, { method: 'POST' })
+    await expect(transport(`${base}/vendors/onboarding/verification/submit`, { method: 'POST' })).rejects.toThrow('already processing')
+    pending[2]!(jsonResponse({ submitted: true }))
+    await submit
+  })
+
   test('returns HTTP 429 without refreshing or clearing the browser session', async () => {
     const fetchMock = vi.fn(async () => jsonResponse({
       data: null,

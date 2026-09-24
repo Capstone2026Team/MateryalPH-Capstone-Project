@@ -17,8 +17,14 @@ void main() {
       // TODO
     });
 
+    // Zero for a pending attachment; review versions are created only on submission.
     // int version
     test('to test the property `version`', () async {
+      // TODO
+    });
+
+    // String status
+    test('to test the property `status`', () async {
       // TODO
     });
 

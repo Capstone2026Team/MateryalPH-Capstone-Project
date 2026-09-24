@@ -23,30 +23,13 @@ export interface VendorSetupComplete {
      *
      */
     organizationLockVersion: number;
-    /**
-     *
-     */
-    commissionTermsAccepted: VendorSetupCompleteCommissionTermsAcceptedEnum;
 }
-
-
-/**
- * @export
- */
-export const VendorSetupCompleteCommissionTermsAcceptedEnum = {
-    True: true,
-} as const;
-export type VendorSetupCompleteCommissionTermsAcceptedEnum = typeof VendorSetupCompleteCommissionTermsAcceptedEnum[keyof typeof VendorSetupCompleteCommissionTermsAcceptedEnum];
-
 
 /**
  * Check if a given object implements the VendorSetupComplete interface.
  */
 export function instanceOfVendorSetupComplete(value: object): value is VendorSetupComplete {
     if ((!('organizationLockVersion' in (value as Record<string, any>)) && !('organization_lock_version' in (value as Record<string, any>))) || ((value as Record<string, any>)['organizationLockVersion'] === undefined && (value as Record<string, any>)['organization_lock_version'] === undefined)) return false;
-    if ((!('commissionTermsAccepted' in (value as Record<string, any>)) && !('commission_terms_accepted' in (value as Record<string, any>))) || ((value as Record<string, any>)['commissionTermsAccepted'] === undefined && (value as Record<string, any>)['commission_terms_accepted'] === undefined)) return false;
-
-    if ((value as Record<string, any>)['commissionTermsAccepted'] !== true && (value as Record<string, any>)['commission_terms_accepted'] !== true) return false;
     return true;
 }
 
@@ -61,7 +44,6 @@ export function VendorSetupCompleteFromJSONTyped(json: any, ignoreDiscriminator:
     return {
 
         'organizationLockVersion': json['organization_lock_version'],
-        'commissionTermsAccepted': json['commission_terms_accepted'],
     };
 }
 
@@ -77,7 +59,6 @@ export function VendorSetupCompleteToJSONTyped(value?: VendorSetupComplete | nul
     return {
 
         'organization_lock_version': value['organizationLockVersion'],
-        'commission_terms_accepted': value['commissionTermsAccepted'],
     };
 }
 

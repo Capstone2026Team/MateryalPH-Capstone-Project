@@ -25,21 +25,9 @@ export interface VendorVerificationDraftTaxProfile {
      */
     taxpayerKey?: string;
     /**
-     *
+     * Combined 9-digit TIN and 3 to 5 digit branch code; use 000 when no branch code applies.
      */
     tin?: string;
-    /**
-     *
-     */
-    branchCode?: string | null;
-    /**
-     *
-     */
-    branchCodeLength?: VendorVerificationDraftTaxProfileBranchCodeLengthEnum;
-    /**
-     *
-     */
-    headOffice?: boolean;
     /**
      *
      */
@@ -98,15 +86,6 @@ export interface VendorVerificationDraftTaxProfile {
 /**
  * @export
  */
-export const VendorVerificationDraftTaxProfileBranchCodeLengthEnum = {
-    NUMBER_3: 3,
-    NUMBER_5: 5,
-} as const;
-export type VendorVerificationDraftTaxProfileBranchCodeLengthEnum = typeof VendorVerificationDraftTaxProfileBranchCodeLengthEnum[keyof typeof VendorVerificationDraftTaxProfileBranchCodeLengthEnum];
-
-/**
- * @export
- */
 export const VendorVerificationDraftTaxProfileEntityClassEnum = {
     Individual: 'INDIVIDUAL',
     Corporation: 'CORPORATION',
@@ -156,9 +135,6 @@ export function VendorVerificationDraftTaxProfileFromJSONTyped(json: any, ignore
             ...json,
         'taxpayerKey': json['taxpayer_key'] == null ? undefined : json['taxpayer_key'],
         'tin': json['tin'] == null ? undefined : json['tin'],
-        'branchCode': json['branch_code'] === undefined ? undefined : json['branch_code'] === null ? null : json['branch_code'],
-        'branchCodeLength': json['branch_code_length'] == null ? undefined : json['branch_code_length'],
-        'headOffice': json['head_office'] == null ? undefined : json['head_office'],
         'declarationYear': json['declaration_year'] === undefined ? undefined : json['declaration_year'] === null ? null : json['declaration_year'],
         'birCorReference': json['bir_cor_reference'] === undefined ? undefined : json['bir_cor_reference'] === null ? null : json['bir_cor_reference'],
         'entityClass': json['entity_class'] == null ? undefined : json['entity_class'],
@@ -189,9 +165,6 @@ export function VendorVerificationDraftTaxProfileToJSONTyped(value?: VendorVerif
             ...value,
         'taxpayer_key': value['taxpayerKey'],
         'tin': value['tin'],
-        'branch_code': value['branchCode'],
-        'branch_code_length': value['branchCodeLength'],
-        'head_office': value['headOffice'],
         'declaration_year': value['declarationYear'],
         'bir_cor_reference': value['birCorReference'],
         'entity_class': value['entityClass'],

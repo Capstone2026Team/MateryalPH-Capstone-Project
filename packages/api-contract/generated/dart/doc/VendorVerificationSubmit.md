@@ -8,6 +8,7 @@ import 'package:materyalph_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
+**draft** | [**VendorVerificationDraft**](VendorVerificationDraft.md) |  | [optional]
 **lockVersion** | **int** |  |
 **privacyAcknowledged** | **bool** |  |
 

@@ -19,7 +19,7 @@ part 'material_price_observation.g.dart';
 /// * [datasetId]
 /// * [vendorId]
 /// * [listingVariantId]
-/// * [comparableGroupVersionId]
+/// * [comparableGroupVersionId] - Reference provider identifier.
 /// * [observedAt]
 /// * [localSnapshotDate]
 /// * [ordinaryPayableCentavos]
@@ -46,6 +46,7 @@ abstract class MaterialPriceObservation implements Built<MaterialPriceObservatio
   @BuiltValueField(wireName: r'listing_variant_id')
   String get listingVariantId;
 
+  /// Reference provider identifier.
   @BuiltValueField(wireName: r'comparable_group_version_id')
   String get comparableGroupVersionId;
 

@@ -129,6 +129,7 @@ All URIs are relative to */api/v1*
 *AuthenticationApi* | [**verifyBuyerMobileEmail**](docs/AuthenticationApi.md#verifybuyermobileemail) | **POST** /mobile/auth/verify-email |
 *AuthenticationApi* | [**verifyEmail**](docs/AuthenticationApi.md#verifyemailoperation) | **POST** /auth/verify-email |
 *SystemApi* | [**getApiHealth**](docs/SystemApi.md#getapihealth) | **GET** /health |
+*VendorOnboardingApi* | [**acceptVendorCommission**](docs/VendorOnboardingApi.md#acceptvendorcommission) | **POST** /vendors/onboarding/verification/commission |
 *VendorOnboardingApi* | [**activateVendorStore**](docs/VendorOnboardingApi.md#activatevendorstore) | **POST** /vendors/onboarding/activation |
 *VendorOnboardingApi* | [**captureVendorPaymentConnection**](docs/VendorOnboardingApi.md#capturevendorpaymentconnection) | **POST** /vendors/onboarding/payment-connection |
 *VendorOnboardingApi* | [**completeVendorSetup**](docs/VendorOnboardingApi.md#completevendorsetup) | **POST** /vendors/onboarding/setup/complete |
@@ -139,12 +140,17 @@ All URIs are relative to */api/v1*
 *VendorOnboardingApi* | [**getVendorOnboarding**](docs/VendorOnboardingApi.md#getvendoronboarding) | **GET** /vendors/onboarding |
 *VendorOnboardingApi* | [**getVendorPrivateFileUrl**](docs/VendorOnboardingApi.md#getvendorprivatefileurl) | **GET** /vendors/onboarding/files/{fileId} |
 *VendorOnboardingApi* | [**inviteVendorTeamMember**](docs/VendorOnboardingApi.md#invitevendorteammember) | **POST** /vendors/account/invitations |
+*VendorOnboardingApi* | [**previewVendorRequirements**](docs/VendorOnboardingApi.md#previewvendorrequirements) | **GET** /vendors/onboarding/requirements |
 *VendorOnboardingApi* | [**receiveXenditAccountVerificationWebhook**](docs/VendorOnboardingApi.md#receivexenditaccountverificationwebhook) | **POST** /webhooks/xendit/account-verification |
 *VendorOnboardingApi* | [**reconcileVendorPaymentConnection**](docs/VendorOnboardingApi.md#reconcilevendorpaymentconnection) | **POST** /vendors/onboarding/payment-connection/reconcile |
+*VendorOnboardingApi* | [**removePendingVendorDocument**](docs/VendorOnboardingApi.md#removependingvendordocument) | **DELETE** /vendors/onboarding/documents/pending/{requirementKey} |
 *VendorOnboardingApi* | [**requestVendorStoreEmailVerification**](docs/VendorOnboardingApi.md#requestvendorstoreemailverification) | **POST** /vendors/onboarding/store-email |
+*VendorOnboardingApi* | [**resolveVendorAddress**](docs/VendorOnboardingApi.md#resolvevendoraddress) | **POST** /vendors/onboarding/address/resolve |
+*VendorOnboardingApi* | [**resolveVendorAddressPin**](docs/VendorOnboardingApi.md#resolvevendoraddresspin) | **POST** /vendors/onboarding/address/pin |
 *VendorOnboardingApi* | [**reverseGeocodeVendorAddress**](docs/VendorOnboardingApi.md#reversegeocodevendoraddress) | **POST** /vendors/onboarding/address/geocode |
 *VendorOnboardingApi* | [**saveVendorSetupDraft**](docs/VendorOnboardingApi.md#savevendorsetupdraft) | **PATCH** /vendors/onboarding/setup |
 *VendorOnboardingApi* | [**saveVendorVerificationDraft**](docs/VendorOnboardingApi.md#savevendorverificationdraft) | **PATCH** /vendors/onboarding/verification |
+*VendorOnboardingApi* | [**searchVendorAddressAreas**](docs/VendorOnboardingApi.md#searchvendoraddressareas) | **GET** /vendors/onboarding/address/areas |
 *VendorOnboardingApi* | [**submitVendorVerification**](docs/VendorOnboardingApi.md#submitvendorverification) | **POST** /vendors/onboarding/verification/submit |
 *VendorOnboardingApi* | [**uploadVendorStoreMedia**](docs/VendorOnboardingApi.md#uploadvendorstoremedia) | **POST** /vendors/onboarding/media |
 *VendorOnboardingApi* | [**uploadVendorVerificationDocument**](docs/VendorOnboardingApi.md#uploadvendorverificationdocument) | **POST** /vendors/onboarding/documents |
@@ -215,6 +221,7 @@ All URIs are relative to */api/v1*
 - [ErrorEnvelope](docs/ErrorEnvelope.md)
 - [FeeAssessment](docs/FeeAssessment.md)
 - [FinancialSnapshot](docs/FinancialSnapshot.md)
+- [GenericDataEnvelope](docs/GenericDataEnvelope.md)
 - [GoogleMobileExchangeRequest](docs/GoogleMobileExchangeRequest.md)
 - [GoogleOidcStartRequest](docs/GoogleOidcStartRequest.md)
 - [HealthEnvelope](docs/HealthEnvelope.md)
@@ -232,6 +239,9 @@ All URIs are relative to */api/v1*
 - [OnboardingStepCompletion](docs/OnboardingStepCompletion.md)
 - [PasswordRecoveryRequest](docs/PasswordRecoveryRequest.md)
 - [PasswordResetRequest](docs/PasswordResetRequest.md)
+- [PsgcArea](docs/PsgcArea.md)
+- [PsgcSearchEnvelope](docs/PsgcSearchEnvelope.md)
+- [PsgcSearchEnvelopeData](docs/PsgcSearchEnvelopeData.md)
 - [RegisterRequest](docs/RegisterRequest.md)
 - [RegistrationEnvelope](docs/RegistrationEnvelope.md)
 - [RegistrationEnvelopeAllOfData](docs/RegistrationEnvelopeAllOfData.md)
@@ -243,7 +253,9 @@ All URIs are relative to */api/v1*
 - [VendorActivationSnapshot](docs/VendorActivationSnapshot.md)
 - [VendorAddressGeocode](docs/VendorAddressGeocode.md)
 - [VendorAddressGeocodeEnvelope](docs/VendorAddressGeocodeEnvelope.md)
+- [VendorAddressSelection](docs/VendorAddressSelection.md)
 - [VendorBotProtectionEvidence](docs/VendorBotProtectionEvidence.md)
+- [VendorCommissionAcceptance](docs/VendorCommissionAcceptance.md)
 - [VendorDocument](docs/VendorDocument.md)
 - [VendorDocumentEnvelope](docs/VendorDocumentEnvelope.md)
 - [VendorFile](docs/VendorFile.md)
@@ -268,6 +280,7 @@ All URIs are relative to */api/v1*
 - [VendorStoreEmailConfirmation](docs/VendorStoreEmailConfirmation.md)
 - [VendorStoreEmailEnvelope](docs/VendorStoreEmailEnvelope.md)
 - [VendorVerificationDraft](docs/VendorVerificationDraft.md)
+- [VendorVerificationDraftClassification](docs/VendorVerificationDraftClassification.md)
 - [VendorVerificationDraftLegalIdentity](docs/VendorVerificationDraftLegalIdentity.md)
 - [VendorVerificationDraftRepresentative](docs/VendorVerificationDraftRepresentative.md)
 - [VendorVerificationDraftTaxProfile](docs/VendorVerificationDraftTaxProfile.md)

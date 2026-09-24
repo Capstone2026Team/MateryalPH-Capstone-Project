@@ -28,15 +28,27 @@ export interface VendorDocument {
      */
     requirementKey: string;
     /**
-     *
+     * Zero for a pending attachment; review versions are created only on submission.
      */
     version: number;
+    /**
+     *
+     */
+    status: VendorDocumentStatusEnum;
     /**
      *
      */
     scanState: VendorDocumentScanStateEnum;
 }
 
+
+/**
+ * @export
+ */
+export const VendorDocumentStatusEnum = {
+    PendingSubmission: 'PENDING_SUBMISSION',
+} as const;
+export type VendorDocumentStatusEnum = typeof VendorDocumentStatusEnum[keyof typeof VendorDocumentStatusEnum];
 
 /**
  * @export
@@ -56,6 +68,9 @@ export function instanceOfVendorDocument(value: object): value is VendorDocument
     if (!('id' in value) || value['id'] === undefined) return false;
     if ((!('requirementKey' in (value as Record<string, any>)) && !('requirement_key' in (value as Record<string, any>))) || ((value as Record<string, any>)['requirementKey'] === undefined && (value as Record<string, any>)['requirement_key'] === undefined)) return false;
     if (!('version' in value) || value['version'] === undefined) return false;
+    if (!('status' in value) || value['status'] === undefined) return false;
+    if (value['status'] !== 'PENDING_SUBMISSION') return false;
+
     if ((!('scanState' in (value as Record<string, any>)) && !('scan_state' in (value as Record<string, any>))) || ((value as Record<string, any>)['scanState'] === undefined && (value as Record<string, any>)['scan_state'] === undefined)) return false;
     return true;
 }
@@ -73,6 +88,7 @@ export function VendorDocumentFromJSONTyped(json: any, ignoreDiscriminator: bool
         'id': json['id'],
         'requirementKey': json['requirement_key'],
         'version': json['version'],
+        'status': json['status'],
         'scanState': json['scan_state'],
     };
 }
@@ -91,6 +107,7 @@ export function VendorDocumentToJSONTyped(value?: VendorDocument | null, ignoreD
         'id': value['id'],
         'requirement_key': value['requirementKey'],
         'version': value['version'],
+        'status': value['status'],
         'scan_state': value['scanState'],
     };
 }

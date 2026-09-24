@@ -1,6 +1,19 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, readdirSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, rmSync, unlinkSync, writeFileSync as writeFileOnce, renameSync } from "node:fs";
 import { join, resolve } from "node:path";
+
+// Windows indexers can temporarily map recently generated files. Replace the
+// normalized output atomically instead of truncating a mapped file in place.
+function writeFileSync(path, contents) {
+  try { writeFileOnce(path, contents); }
+  catch (error) {
+    if (!['UNKNOWN', 'EBUSY', 'EPERM'].includes(error.code)) throw error;
+    const temporary = `${path}.normalize-tmp`;
+    writeFileOnce(temporary, contents);
+    try { renameSync(temporary, path); }
+    finally { if (existsSync(temporary)) unlinkSync(temporary); }
+  }
+}
 
 const generator = join(
   process.cwd(),
@@ -12,6 +25,7 @@ const generator = join(
 const generations = [
   [
     "generate",
+    "--minimal-update",
     "-i", "openapi.yaml",
     "-g", "typescript-fetch",
     "-o", "generated/typescript",
@@ -21,6 +35,7 @@ const generations = [
   ],
   [
     "generate",
+    "--minimal-update",
     "-i", "openapi.yaml",
     "-g", "dart-dio",
     "-o", "generated/dart",
@@ -84,13 +99,15 @@ for (const args of generations) {
       throw new Error("Generated manifest contains a path outside its output directory");
     }
     if (!existsSync(generatedPath)) continue;
-    let contents = readFileSync(generatedPath, "utf8");
+    const originalContents = readFileSync(generatedPath, "utf8");
+    let contents = originalContents;
     if (relativePath.endsWith(".dart") && relativePath.startsWith("lib/")) {
       // Nullable inline objects use nested built_value builders. dart-dio
       // currently assigns the deserialized value to the builder field directly.
       const nestedFields = {
         "lib/src/model/vendor_setup_draft.dart": ["delivery"],
-        "lib/src/model/vendor_verification_draft.dart": ["legalIdentity", "taxProfile"],
+        "lib/src/model/vendor_verification_submit.dart": ["draft"],
+        "lib/src/model/vendor_verification_draft.dart": ["legalIdentity", "taxProfile", "classification"],
       }[relativePath] ?? [];
       for (const field of nestedFields) {
         contents = contents.replace(`result.${field} = valueDes;`, `result.${field} = valueDes.toBuilder();`);
@@ -111,7 +128,8 @@ for (const args of generations) {
         return symbol && !new RegExp(`\\b${symbol}\\b`, "u").test(body) ? "" : line;
       });
     }
-    writeFileSync(generatedPath, contents.replace(/[\t ]+$/gmu, ""));
+    const normalized = contents.replace(/[\t ]+$/gmu, "").replace(relativePath === "lib/src/model/vendor_setup_complete.dart" ? /(?:\r?\n){2,}$/u : /$^/u, "\n");
+    if (normalized !== originalContents) writeFileSync(generatedPath, normalized);
   }
   for (const relativePath of previousFiles) {
     if (currentFiles.has(relativePath)) continue;

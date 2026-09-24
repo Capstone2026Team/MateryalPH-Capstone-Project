@@ -1743,7 +1743,7 @@ paths:
         {
           "operationId": "acceptAccountAgreements",
           "tags": [ "Accounts" ],
-          "description": "Server enforces the route audience, active account and membership, resource ownership, Passport scope
+          "description": "Vendor commission consent must use the version-bound Store Verification commission endpoint; this account endpoint returns COMMISSION_VERIFICATION_REQUIRED for that agreement. Server enforces the route audience, active account and membership, resource ownership, Passport scope
             and session transport. buyers uses MOBILE bearer; vendors/admin use WEB cookies and CSRF on mutations.
             Privileged security changes require session-bound recent authentication. No client header can select or
             bypass transport security.",
@@ -2339,6 +2339,25 @@ paths:
           content: { application/json: { schema: { $ref: "#/components/schemas/VendorOnboardingEnvelope" } } }
         "401": { $ref: "#/components/responses/ErrorResponse" }
         "403": { $ref: "#/components/responses/ErrorResponse" }
+  /vendors/onboarding/requirements:
+    get:
+      operationId: previewVendorRequirements
+      tags: [ Vendor Onboarding ]
+      security: [ { accessCookie: [] } ]
+      parameters:
+        - { name: business_type, in: query, required: true, schema: { type: string, enum: [ SOLE_PROPRIETORSHIP, PARTNERSHIP, CORPORATION, ONE_PERSON_CORPORATION, COOPERATIVE ] } }
+        - { name: representative_role, in: query, schema: { type: string } }
+        - { name: identity_id_type, in: query, schema: { type: string } }
+        - { name: representative_id_type, in: query, schema: { type: string } }
+        - { name: authority_evidence_version_id, in: query, schema: { type: string, format: uuid } }
+        - { name: declaration_claim, in: query, schema: { type: integer, enum: [ 0, 1 ] } }
+      responses:
+        "200":
+          description: Read-only requirement resolution for unsaved verification inputs; no approvals or draft writes.
+          content: { application/json: { schema: { $ref: "#/components/schemas/GenericDataEnvelope" } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
   /vendors/onboarding/verification:
     patch:
       operationId: saveVendorVerificationDraft
@@ -2369,6 +2388,24 @@ paths:
         "403": { $ref: "#/components/responses/ErrorResponse" }
         "409": { $ref: "#/components/responses/ErrorResponse" }
         "422": { $ref: "#/components/responses/ErrorResponse" }
+  /vendors/onboarding/verification/commission:
+    post:
+      operationId: acceptVendorCommission
+      description: Explicit version-bound acceptance in Store Verification. Owner only; applicable current representative authority requires the COMMISSION_AGREEMENT scope. Autosaving or submitting evidence never implies consent. Initial evidence submission remains available while authority approval is pending.
+      tags: [ Vendor Onboarding ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      parameters:
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/VendorCommissionAcceptance" } } }
+      responses:
+        "200": { description: "Commission acceptance recorded; verification.commission_terms contains the current agreement, can_accept and accepted.", content: { application/json: { schema: { $ref: "#/components/schemas/VendorOnboardingEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+        "503": { $ref: "#/components/responses/ErrorResponse" }
   /vendors/onboarding/setup:
     patch:
       operationId: saveVendorSetupDraft
@@ -2410,6 +2447,43 @@ paths:
         "200": { description: Welcome dismissed., content: { application/json: { schema: { $ref: "#/components/schemas/VendorOnboardingEnvelope" } } } }
         "401": { $ref: "#/components/responses/ErrorResponse" }
         "403": { $ref: "#/components/responses/ErrorResponse" }
+  /vendors/onboarding/address/areas:
+    get:
+      operationId: searchVendorAddressAreas
+      tags: [ Vendor Onboarding ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      parameters:
+        - { name: level, in: query, required: true, schema: { type: string, enum: [PROVINCE, CITY, BARANGAY] } }
+        - { name: parent_code, in: query, schema: { type: string, maxLength: 16 } }
+        - { name: q, in: query, schema: { type: string, maxLength: 100 } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, maximum: 2000, default: 1 } }
+      responses:
+        "200": { description: Paginated official PSGC matches. PROVINCE includes region groupings for cities without a province parent., content: { application/json: { schema: { $ref: "#/components/schemas/PsgcSearchEnvelope" } } } }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /vendors/onboarding/address/pin:
+    post:
+      operationId: resolveVendorAddressPin
+      tags: [ Vendor Onboarding ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/VendorAddressGeocode" } } }
+      responses:
+        "200": { description: Reverse-geocoded Philippine map pin with uniquely matched PSGC codes and a short-lived organization-bound pin token. Unmatched fields require a PSGC selection., content: { application/json: { schema: { $ref: "#/components/schemas/GenericDataEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /vendors/onboarding/address/resolve:
+    post:
+      operationId: resolveVendorAddress
+      tags: [ Vendor Onboarding ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/VendorAddressSelection" } } }
+      responses:
+        "200": { description: Canonical address with server-generated coordinates and an organization-bound resolution token valid for 30 minutes., content: { application/json: { schema: { $ref: "#/components/schemas/GenericDataEnvelope" } } } }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
   /vendors/onboarding/address/geocode:
     post:
       operationId: reverseGeocodeVendorAddress
@@ -2460,10 +2534,20 @@ paths:
           multipart/form-data:
             schema: { $ref: "#/components/schemas/VendorDocumentUpload" }
       responses:
-        "201": { description: Private immutable evidence version created., content: { application/json: { schema: { $ref: "#/components/schemas/VendorDocumentEnvelope" } } } }
+        "201": { description: Private pending attachment saved. No review record is created until explicit verification submission., content: { application/json: { schema: { $ref: "#/components/schemas/VendorDocumentEnvelope" } } } }
         "401": { $ref: "#/components/responses/ErrorResponse" }
         "403": { $ref: "#/components/responses/ErrorResponse" }
         "422": { $ref: "#/components/responses/ErrorResponse" }
+  /vendors/onboarding/documents/pending/{requirementKey}:
+    delete:
+      operationId: removePendingVendorDocument
+      tags: [ Vendor Onboarding ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      parameters:
+        - { name: requirementKey, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Pending attachment removed without changing submitted history., content: { application/json: { schema: { $ref: "#/components/schemas/VendorOnboardingEnvelope" } } } }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
   /vendors/onboarding/media:
     post:
       operationId: uploadVendorStoreMedia
@@ -3236,7 +3320,7 @@ components:
         password_confirmation: { type: string, format: password }
         buyer_type: { type: string, maxLength: 32 }
         company_name: { type: [ string, "null" ], maxLength: 180 }
-        terms_version_id: { type: string, format: uuid }
+        terms_version_id: { type: string, description: Reference provider identifier. }
         terms_content_hash: { type: string, pattern: "^[a-f0-9]{64}$" }
         terms_accepted: { type: boolean, const: true }
         privacy_accepted: { type: boolean, const: true }
@@ -3576,6 +3660,13 @@ components:
         activation: { $ref: "#/components/schemas/VendorActivationSnapshot" }
         welcome_required: { type: boolean }
         permissions: { type: array, items: { type: string } }
+    GenericDataEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { type: object, additionalProperties: true }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
     VendorOnboardingEnvelope:
       type: object
       required: [ data, meta, errors ]
@@ -3584,21 +3675,34 @@ components:
         meta: { type: object, additionalProperties: true }
         errors: { type: array, items: { type: object, additionalProperties: true } }
     VendorVerificationDraft:
+      description: Store contact information uses store_email and store_phone. The retired contacts field is rejected and is not returned in current Vendor or Admin snapshots.
       type: object
       required: [ lock_version ]
       additionalProperties: true
       properties:
-        draft_lock_version: { type: integer, minimum: 0, description: 'Version of this workstream draft; zero for its first save. Stale versions return 409.' }
+        form_state: { type: string, maxLength: 65536, description: Encrypted unvalidated form progress as a JSON object of field names to string arrays. Saving progress does not submit or update review records. Sensitive identity numbers are omitted on read and merged server-side on final validation. }
+        draft_lock_version: { type: integer, minimum: 0, description: 'Workstream draft version; zero on first save. Send together with the required organization guard. Omission retains legacy behavior without draft-level comparison. A stale draft returns 409 STALE_VERSION; a stale organization returns 409 RESOURCE_VERSION_CONFLICT.' }
         lock_version: { type: integer, minimum: 1 }
         business_type: { type: string, enum: [ SOLE_PROPRIETORSHIP, PARTNERSHIP, CORPORATION, ONE_PERSON_CORPORATION, COOPERATIVE ] }
-        registered_name: { type: string, maxLength: 180 }
-        store_name: { type: string, maxLength: 180 }
+        registered_name: { type: string, maxLength: 180, deprecated: true }
+        legal_business_name: { type: string, minLength: 2, maxLength: 200 }
+        store_name: { type: string, minLength: 2, maxLength: 100 }
         date_established: { type: string, format: date }
         store_email: { type: string, format: email }
         store_phone: { type: string, maxLength: 24 }
-        contacts: { type: array, items: { type: object, additionalProperties: true } }
-        classification: { type: object, additionalProperties: true }
-        address: { type: object, additionalProperties: true }
+        classification:
+          type: object
+          additionalProperties: true
+          properties:
+            supplier_type: { type: string, description: WHOLESALER_DISTRIBUTOR or RETAIL_HARDWARE_STORE or SPECIALIZED_SUPPLIER. }
+            niches: { type: array, maxItems: 27, items: { type: string, maxLength: 96 } }
+            custom_label: { type: [string, 'null'], minLength: 2, maxLength: 60, deprecated: true, description: Legacy single label; used when custom_labels is omitted. }
+            custom_labels:
+              type: array
+              uniqueItems: true
+              description: Vendor-provided labels for Other Category, kept separate from canonical taxonomy. Returned in onboarding classification; legacy custom_label mirrors the first label. Empty when Other Category is not selected.
+              items: { type: string, minLength: 2, maxLength: 60 }
+        address: { type: object, additionalProperties: true, description: "New or changed addresses require province_code, city_code, psgc_code, street (2–200 characters), four-digit postal_code and canonical display names. source MANUAL is sufficient without geocoding or a token and stores null coordinates. Otherwise resolution_token from resolveVendorAddress is required. Client latitude and longitude are prohibited. Omit address to retain an existing record." }
         representative:
           type: object
           required: [ full_name ]
@@ -3609,6 +3713,12 @@ components:
             email: { type: [ string, 'null' ], format: email }
             phone: { type: [ string, 'null' ], maxLength: 24 }
             relationship: { type: [ string, 'null' ], maxLength: 120 }
+            relationship_other: { type: [ string, 'null' ], maxLength: 120 }
+            authority_evidence_source: { type: string, enum: [ EXISTING_REGISTRATION_EVIDENCE, SEPARATE_AUTHORITY_DOCUMENT ] }
+            authority_evidence_version_id: { type: [ string, 'null' ], format: uuid }
+            authority_document_type: { type: [ string, 'null' ], enum: [ SECRETARYS_CERTIFICATE, BOARD_RESOLUTION, SPECIAL_POWER_OF_ATTORNEY, PARTNERSHIP_AUTHORIZATION, COOPERATIVE_BOARD_RESOLUTION, OTHER_APPROVED ] }
+            authority_document_date: { type: [ string, 'null' ], format: date }
+            authority_scopes: { type: array, uniqueItems: true, items: { type: string, enum: [ TAX_DECLARATIONS, COMMISSION_AGREEMENT, PAYMENT_CONFIGURATION ] } }
             id_type: { type: [ string, 'null' ], enum: [ NATIONAL_ID, DRIVERS_LICENSE, PASSPORT, UMID, OTHER ] }
             id_number: { type: [ string, 'null' ], maxLength: 64, writeOnly: true }
         legal_identity:
@@ -3616,11 +3726,11 @@ components:
           additionalProperties: true
           properties:
             same_as_owner: { type: boolean }
-            surname: { type: [ string, 'null' ], maxLength: 120 }
-            first_name: { type: [ string, 'null' ], maxLength: 120 }
-            middle_name: { type: [ string, 'null' ], maxLength: 120 }
-            suffix: { type: [ string, 'null' ], maxLength: 32 }
-            company_registered_name: { type: [ string, 'null' ], maxLength: 180 }
+            surname: { type: [ string, 'null' ], maxLength: 100 }
+            first_name: { type: [ string, 'null' ], maxLength: 100 }
+            middle_name: { type: [ string, 'null' ], maxLength: 100 }
+            suffix: { type: [ string, 'null' ], maxLength: 10 }
+            company_registered_name: { type: [ string, 'null' ], minLength: 2, maxLength: 200 }
             id_type: { type: [ string, 'null' ], maxLength: 48 }
             id_number: { type: [ string, 'null' ], maxLength: 64, writeOnly: true }
         tax_profile:
@@ -3628,10 +3738,7 @@ components:
           additionalProperties: true
           properties:
             taxpayer_key: { type: string, maxLength: 128, writeOnly: true }
-            tin: { type: string, minLength: 9, maxLength: 9, pattern: '^[0-9]{9}$', writeOnly: true }
-            branch_code: { type: [ string, 'null' ], pattern: '^(?:[0-9]{3}|[0-9]{5})$' }
-            branch_code_length: { type: integer, enum: [ 3, 5 ] }
-            head_office: { type: boolean }
+            tin: { type: string, minLength: 12, maxLength: 17, pattern: '^(?:[0-9]{12,14}|[0-9]{3}-[0-9]{3}-[0-9]{3}-[0-9]{3,5})$', writeOnly: true, description: 'Combined 9-digit TIN and 3 to 5 digit branch code; use 000 when no branch code applies.' }
             declaration_year: { type: [ integer, 'null' ], minimum: 2000, maximum: 2100 }
             bir_cor_reference: { type: [ string, 'null' ], maxLength: 160 }
             entity_class: { type: string, enum: [ INDIVIDUAL, CORPORATION, PARTNERSHIP, COOPERATIVE ] }
@@ -3649,6 +3756,7 @@ components:
       type: object
       required: [ lock_version, privacy_acknowledged ]
       properties:
+        draft: { $ref: '#/components/schemas/VendorVerificationDraft' }
         lock_version: { type: integer, minimum: 1 }
         privacy_acknowledged: { type: boolean, const: true }
     VendorSetupDraft:
@@ -3656,7 +3764,7 @@ components:
       required: [ organization_lock_version ]
       additionalProperties: true
       properties:
-        draft_lock_version: { type: integer, minimum: 0, description: 'Version of this workstream draft; zero for its first save. Stale versions return 409.' }
+        draft_lock_version: { type: integer, minimum: 0, description: 'Workstream draft version; zero on first save. Send together with the required organization guard. Omission retains legacy behavior without draft-level comparison. A stale draft returns 409 STALE_VERSION; a stale organization returns 409 RESOURCE_VERSION_CONFLICT.' }
         organization_lock_version: { type: integer, minimum: 1 }
         public_store_name: { type: string, maxLength: 180 }
         description: { type: [ string, 'null' ], maxLength: 3000 }
@@ -3689,12 +3797,50 @@ components:
               base_fee_centavos: { type: integer, minimum: 0 }
               per_km_centavos: { type: integer, minimum: 0 }
               maximum_distance_km: { type: integer, minimum: 1, maximum: 1000 }
-    VendorSetupComplete:
+    VendorCommissionAcceptance:
       type: object
-      required: [ organization_lock_version, commission_terms_accepted ]
+      required: [ organization_lock_version, agreement_version_id, accepted ]
       properties:
         organization_lock_version: { type: integer, minimum: 1 }
-        commission_terms_accepted: { type: boolean, const: true }
+        agreement_version_id: { type: string, format: uuid }
+        accepted: { type: boolean, const: true }
+    VendorSetupComplete:
+      type: object
+      required: [ organization_lock_version ]
+      properties:
+        organization_lock_version: { type: integer, minimum: 1 }
+    PsgcArea:
+      type: object
+      required: [code, name, level]
+      properties:
+        code: { type: string }
+        name: { type: string }
+        level: { type: string }
+    PsgcSearchEnvelope:
+      type: object
+      required: [data, meta, errors]
+      properties:
+        data:
+          type: object
+          required: [items, page, has_more, version_id]
+          properties:
+            items: { type: array, items: { $ref: "#/components/schemas/PsgcArea" } }
+            page: { type: integer }
+            has_more: { type: boolean }
+            version_id: { type: string, description: Reference provider identifier. }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    VendorAddressSelection:
+      type: object
+      required: [province_code, city_code, psgc_code]
+      properties:
+        pin_token: { type: [string, 'null'], maxLength: 8192, description: Optional server-issued map pin token; never raw coordinates. }
+        province_code: { type: string, maxLength: 16, description: Province code or region code for a city without a province parent. }
+        city_code: { type: string, maxLength: 16 }
+        psgc_code: { type: string, maxLength: 16, description: Official barangay code. }
+        street: { type: [string, 'null'], maxLength: 200 }
+        unit: { type: [string, 'null'], maxLength: 120 }
+        postal_code: { type: [string, 'null'], maxLength: 16 }
     VendorAddressGeocode:
       type: object
       required: [ latitude, longitude ]
@@ -3725,16 +3871,17 @@ components:
       type: object
       required: [ requirement_key, file ]
       properties:
-        requirement_key: { type: string, enum: [ business_registration, lgu_permit, bir_cor, identity_evidence, tax_relief_evidence ] }
+        requirement_key: { type: string, enum: [ business_registration, lgu_permit, bir_cor, identity_evidence, identity_back_evidence, representative_identity, representative_identity_back, authority_to_act, tax_relief_evidence, optional_certification ] }
         file: { type: string, format: binary }
         metadata: { type: object, additionalProperties: { type: string } }
     VendorDocument:
       type: object
-      required: [ id, requirement_key, version, scan_state ]
+      required: [ id, requirement_key, version, scan_state, status ]
       properties:
         id: { type: string, format: uuid }
         requirement_key: { type: string }
-        version: { type: integer, minimum: 1 }
+        version: { type: integer, minimum: 0, description: Zero for a pending attachment; review versions are created only on submission. }
+        status: { type: string, enum: [ PENDING_SUBMISSION ] }
         scan_state: { type: string, enum: [ PENDING, CLEAN, REJECTED ] }
     VendorDocumentEnvelope:
       type: object
@@ -3976,7 +4123,7 @@ components:
         dataset_id: { type: string }
         vendor_id: { type: string, format: uuid }
         listing_variant_id: { type: string, format: uuid }
-        comparable_group_version_id: { type: string, format: uuid }
+        comparable_group_version_id: { type: string, description: Reference provider identifier. }
         observed_at: { type: string, format: date-time }
         local_snapshot_date: { type: string, format: date }
         ordinary_payable_centavos: { type: integer, format: int64, minimum: 1 }

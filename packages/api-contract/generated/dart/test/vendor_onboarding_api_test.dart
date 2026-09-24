@@ -7,6 +7,13 @@ void main() {
   final instance = MateryalphApiClient().getVendorOnboardingApi();
 
   group(VendorOnboardingApi, () {
+    // Explicit version-bound acceptance in Store Verification. Owner only; applicable current representative authority requires the COMMISSION_AGREEMENT scope. Autosaving or submitting evidence never implies consent. Initial evidence submission remains available while authority approval is pending.
+    //
+    //Future<VendorOnboardingEnvelope> acceptVendorCommission(String idempotencyKey, VendorCommissionAcceptance vendorCommissionAcceptance) async
+    test('test acceptVendorCommission', () async {
+      // TODO
+    });
+
     //Future<VendorOnboardingEnvelope> activateVendorStore(String idempotencyKey) async
     test('test activateVendorStore', () async {
       // TODO
@@ -61,6 +68,11 @@ void main() {
       // TODO
     });
 
+    //Future<GenericDataEnvelope> previewVendorRequirements(String businessType, { String representativeRole, String identityIdType, String representativeIdType, String authorityEvidenceVersionId, int declarationClaim }) async
+    test('test previewVendorRequirements', () async {
+      // TODO
+    });
+
     //Future<VendorWebhookEnvelope> receiveXenditAccountVerificationWebhook(String xCallbackToken, XenditAccountVerificationWebhook xenditAccountVerificationWebhook) async
     test('test receiveXenditAccountVerificationWebhook', () async {
       // TODO
@@ -71,8 +83,23 @@ void main() {
       // TODO
     });
 
+    //Future<VendorOnboardingEnvelope> removePendingVendorDocument(String requirementKey) async
+    test('test removePendingVendorDocument', () async {
+      // TODO
+    });
+
     //Future<VendorStoreEmailEnvelope> requestVendorStoreEmailVerification(EmailRequest emailRequest) async
     test('test requestVendorStoreEmailVerification', () async {
+      // TODO
+    });
+
+    //Future<GenericDataEnvelope> resolveVendorAddress(VendorAddressSelection vendorAddressSelection) async
+    test('test resolveVendorAddress', () async {
+      // TODO
+    });
+
+    //Future<GenericDataEnvelope> resolveVendorAddressPin(VendorAddressGeocode vendorAddressGeocode) async
+    test('test resolveVendorAddressPin', () async {
       // TODO
     });
 
@@ -90,6 +117,11 @@ void main() {
 
     //Future<VendorOnboardingEnvelope> saveVendorVerificationDraft(VendorVerificationDraft vendorVerificationDraft) async
     test('test saveVendorVerificationDraft', () async {
+      // TODO
+    });
+
+    //Future<PsgcSearchEnvelope> searchVendorAddressAreas(String level, { String parentCode, String q, int page }) async
+    test('test searchVendorAddressAreas', () async {
       // TODO
     });
 

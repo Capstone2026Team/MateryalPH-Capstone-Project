@@ -31,6 +31,9 @@ final class OnboardingRequirementResolver
         sort($niches);
         foreach ($catalog as $section => $definitions) {
             foreach ($definitions as $key => $definition) {
+                if ($key === 'authority_to_act' && $representative) {
+                    $definition['level'] = ($configuration['authority_from_registration'] ?? false) ? 'CONDITIONALLY_REQUIRED' : 'REQUIRED';
+                }
                 $applies = match ($key) {
                     'legal_identity', 'identity_evidence' => $individual || $businessType === null,
                     'authority_to_act', 'representative_identity' => $representative || $businessType === null,
@@ -81,7 +84,8 @@ final class OnboardingRequirementResolver
         $tax = DB::table('vendor_tax_profiles as p')->join('vendor_tax_profile_versions as v', 'v.id', '=', 'p.current_version_id')->where('p.vendor_organization_id', $organizationId)->first(['v.tax_details']);
         $details = json_decode($tax->tax_details ?? '{}', true, flags: JSON_THROW_ON_ERROR);
         $configuration = (array) $organization + [
-            'representative_role' => $representative === null ? 'PROPRIETOR' : 'REPRESENTATIVE',
+            'representative_role' => $representative['relationship'] ?? ($representative === null ? 'PROPRIETOR' : 'REPRESENTATIVE'),
+            'authority_from_registration' => $representative !== null && app(VendorAuthorityService::class)->registrationCanEstablishAuthority($organizationId, $representative),
             'representative_id_type' => $representative['id_type'] ?? null,
             'representative_version_id' => $representative['id'] ?? null,
             'supplier_type' => $classification?->supplier_type,
@@ -98,7 +102,11 @@ final class OnboardingRequirementResolver
             } elseif ($status === 'NOT_APPLICABLE' || ($row?->resolution_hash !== null && $row->resolution_hash !== $definition['resolution_hash'])) {
                 $status = 'IN_PROGRESS';
             }
-            $success = $definition['section'] === 'STORE_VERIFICATION' ? 'APPROVED' : 'COMPLETED';
+            if ($key === 'commission_terms') {
+                $ownerId = DB::table('vendor_memberships')->where('vendor_organization_id', $organizationId)->where('role', 'OWNER')->where('status', 'ACTIVE')->value('user_id');
+                $status = $ownerId !== null && app(StoreActivationGate::class)->commissionAccepted($organizationId, (int) $ownerId) ? 'COMPLETED' : 'NOT_STARTED';
+            }
+            $success = $definition['section'] === 'STORE_VERIFICATION' && $key !== 'commission_terms' ? 'APPROVED' : 'COMPLETED';
             $blocking = $definition['level'] !== 'OPTIONAL' && $definition['applicable'] && $status !== $success;
             $values = ['level' => $definition['level'], 'status' => $status, 'applicability_reason' => $definition['applicability_reason'], 'resolution_hash' => $definition['resolution_hash'], 'blocking' => $blocking, 'blocking_reason' => $blocking ? ($row->last_reason ?? 'Complete the applicable requirement.') : null];
             if ($row === null) {

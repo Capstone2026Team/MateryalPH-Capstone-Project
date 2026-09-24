@@ -3,7 +3,6 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:built_collection/built_collection.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -13,15 +12,10 @@ part 'vendor_setup_complete.g.dart';
 ///
 /// Properties:
 /// * [organizationLockVersion]
-/// * [commissionTermsAccepted]
 @BuiltValue()
 abstract class VendorSetupComplete implements Built<VendorSetupComplete, VendorSetupCompleteBuilder> {
   @BuiltValueField(wireName: r'organization_lock_version')
   int get organizationLockVersion;
-
-  @BuiltValueField(wireName: r'commission_terms_accepted')
-  VendorSetupCompleteCommissionTermsAcceptedEnum get commissionTermsAccepted;
-  // enum commissionTermsAcceptedEnum {  true,  };
 
   VendorSetupComplete._();
 
@@ -50,11 +44,6 @@ class _$VendorSetupCompleteSerializer implements PrimitiveSerializer<VendorSetup
     yield serializers.serialize(
       object.organizationLockVersion,
       specifiedType: const FullType(int),
-    );
-    yield r'commission_terms_accepted';
-    yield serializers.serialize(
-      object.commissionTermsAccepted,
-      specifiedType: const FullType(VendorSetupCompleteCommissionTermsAcceptedEnum),
     );
   }
 
@@ -86,13 +75,6 @@ class _$VendorSetupCompleteSerializer implements PrimitiveSerializer<VendorSetup
           ) as int;
           result.organizationLockVersion = valueDes;
           break;
-        case r'commission_terms_accepted':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(VendorSetupCompleteCommissionTermsAcceptedEnum),
-          ) as VendorSetupCompleteCommissionTermsAcceptedEnum;
-          result.commissionTermsAccepted = valueDes;
-          break;
         default:
           unhandled.add(key);
           unhandled.add(value);
@@ -121,18 +103,3 @@ class _$VendorSetupCompleteSerializer implements PrimitiveSerializer<VendorSetup
     return result.build();
   }
 }
-
-
-class VendorSetupCompleteCommissionTermsAcceptedEnum extends EnumClass {
-
-  @BuiltValueEnumConst(wireName: r'true')
-  static const VendorSetupCompleteCommissionTermsAcceptedEnum true_ = _$vendorSetupCompleteCommissionTermsAcceptedEnum_true_;
-
-  static Serializer<VendorSetupCompleteCommissionTermsAcceptedEnum> get serializer => _$vendorSetupCompleteCommissionTermsAcceptedEnumSerializer;
-
-  const VendorSetupCompleteCommissionTermsAcceptedEnum._(String name): super(name);
-
-  static BuiltSet<VendorSetupCompleteCommissionTermsAcceptedEnum> get values => _$vendorSetupCompleteCommissionTermsAcceptedEnumValues;
-  static VendorSetupCompleteCommissionTermsAcceptedEnum valueOf(String name) => _$vendorSetupCompleteCommissionTermsAcceptedEnumValueOf(name);
-}
-

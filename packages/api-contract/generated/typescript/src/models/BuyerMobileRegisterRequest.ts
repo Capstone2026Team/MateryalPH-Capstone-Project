@@ -48,7 +48,7 @@ export interface BuyerMobileRegisterRequest {
      */
     companyName?: string | null;
     /**
-     *
+     * Reference provider identifier.
      */
     termsVersionId: string;
     /**

@@ -13,12 +13,24 @@
  */
 
 import { mapValues } from '../runtime';
+import type { VendorVerificationDraft } from './VendorVerificationDraft';
+import {
+    VendorVerificationDraftFromJSON,
+    VendorVerificationDraftFromJSONTyped,
+    VendorVerificationDraftToJSON,
+    VendorVerificationDraftToJSONTyped,
+} from './VendorVerificationDraft';
+
 /**
  *
  * @export
  * @interface VendorVerificationSubmit
  */
 export interface VendorVerificationSubmit {
+    /**
+     *
+     */
+    draft?: VendorVerificationDraft;
     /**
      *
      */
@@ -60,6 +72,7 @@ export function VendorVerificationSubmitFromJSONTyped(json: any, ignoreDiscrimin
     }
     return {
 
+        'draft': json['draft'] == null ? undefined : VendorVerificationDraftFromJSON(json['draft']),
         'lockVersion': json['lock_version'],
         'privacyAcknowledged': json['privacy_acknowledged'],
     };
@@ -76,6 +89,7 @@ export function VendorVerificationSubmitToJSONTyped(value?: VendorVerificationSu
 
     return {
 
+        'draft': VendorVerificationDraftToJSON(value['draft']),
         'lock_version': value['lockVersion'],
         'privacy_acknowledged': value['privacyAcknowledged'],
     };

@@ -14,6 +14,12 @@ Name | Type | Description | Notes
 **email** | **String** |  | [optional]
 **phone** | **String** |  | [optional]
 **relationship** | **String** |  | [optional]
+**relationshipOther** | **String** |  | [optional]
+**authorityEvidenceSource** | **String** |  | [optional]
+**authorityEvidenceVersionId** | **String** |  | [optional]
+**authorityDocumentType** | **String** |  | [optional]
+**authorityDocumentDate** | [**Date**](Date.md) |  | [optional]
+**authorityScopes** | **BuiltSet&lt;String&gt;** |  | [optional]
 **idType** | **String** |  | [optional]
 **idNumber** | **String** |  | [optional]
 

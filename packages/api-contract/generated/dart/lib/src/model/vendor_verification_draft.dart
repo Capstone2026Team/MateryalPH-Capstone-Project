@@ -8,32 +8,38 @@ import 'package:materyalph_api_client/src/model/date.dart';
 import 'package:materyalph_api_client/src/model/vendor_verification_draft_legal_identity.dart';
 import 'package:built_collection/built_collection.dart';
 import 'package:materyalph_api_client/src/model/vendor_verification_draft_representative.dart';
+import 'package:materyalph_api_client/src/model/vendor_verification_draft_classification.dart';
 import 'package:built_value/json_object.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
 part 'vendor_verification_draft.g.dart';
 
-/// VendorVerificationDraft
+/// Store contact information uses store_email and store_phone. The retired contacts field is rejected and is not returned in current Vendor or Admin snapshots.
 ///
 /// Properties:
-/// * [draftLockVersion] - Version of this workstream draft; zero for its first save. Stale versions return 409.
+/// * [formState] - Encrypted unvalidated form progress as a JSON object of field names to string arrays. Saving progress does not submit or update review records. Sensitive identity numbers are omitted on read and merged server-side on final validation.
+/// * [draftLockVersion] - Workstream draft version; zero on first save. Send together with the required organization guard. Omission retains legacy behavior without draft-level comparison. A stale draft returns 409 STALE_VERSION; a stale organization returns 409 RESOURCE_VERSION_CONFLICT.
 /// * [lockVersion]
 /// * [businessType]
 /// * [registeredName]
+/// * [legalBusinessName]
 /// * [storeName]
 /// * [dateEstablished]
 /// * [storeEmail]
 /// * [storePhone]
-/// * [contacts]
 /// * [classification]
-/// * [address]
+/// * [address] - New or changed addresses require province_code, city_code, psgc_code, street (2–200 characters), four-digit postal_code and canonical display names. source MANUAL is sufficient without geocoding or a token and stores null coordinates. Otherwise resolution_token from resolveVendorAddress is required. Client latitude and longitude are prohibited. Omit address to retain an existing record.
 /// * [representative]
 /// * [legalIdentity]
 /// * [taxProfile]
 @BuiltValue()
 abstract class VendorVerificationDraft implements Built<VendorVerificationDraft, VendorVerificationDraftBuilder> {
-  /// Version of this workstream draft; zero for its first save. Stale versions return 409.
+  /// Encrypted unvalidated form progress as a JSON object of field names to string arrays. Saving progress does not submit or update review records. Sensitive identity numbers are omitted on read and merged server-side on final validation.
+  @BuiltValueField(wireName: r'form_state')
+  String? get formState;
+
+  /// Workstream draft version; zero on first save. Send together with the required organization guard. Omission retains legacy behavior without draft-level comparison. A stale draft returns 409 STALE_VERSION; a stale organization returns 409 RESOURCE_VERSION_CONFLICT.
   @BuiltValueField(wireName: r'draft_lock_version')
   int? get draftLockVersion;
 
@@ -44,8 +50,12 @@ abstract class VendorVerificationDraft implements Built<VendorVerificationDraft,
   VendorVerificationDraftBusinessTypeEnum? get businessType;
   // enum businessTypeEnum {  SOLE_PROPRIETORSHIP,  PARTNERSHIP,  CORPORATION,  ONE_PERSON_CORPORATION,  COOPERATIVE,  };
 
+  @Deprecated('registeredName has been deprecated')
   @BuiltValueField(wireName: r'registered_name')
   String? get registeredName;
+
+  @BuiltValueField(wireName: r'legal_business_name')
+  String? get legalBusinessName;
 
   @BuiltValueField(wireName: r'store_name')
   String? get storeName;
@@ -59,12 +69,10 @@ abstract class VendorVerificationDraft implements Built<VendorVerificationDraft,
   @BuiltValueField(wireName: r'store_phone')
   String? get storePhone;
 
-  @BuiltValueField(wireName: r'contacts')
-  BuiltList<BuiltMap<String, JsonObject?>>? get contacts;
-
   @BuiltValueField(wireName: r'classification')
-  BuiltMap<String, JsonObject?>? get classification;
+  VendorVerificationDraftClassification? get classification;
 
+  /// New or changed addresses require province_code, city_code, psgc_code, street (2–200 characters), four-digit postal_code and canonical display names. source MANUAL is sufficient without geocoding or a token and stores null coordinates. Otherwise resolution_token from resolveVendorAddress is required. Client latitude and longitude are prohibited. Omit address to retain an existing record.
   @BuiltValueField(wireName: r'address')
   BuiltMap<String, JsonObject?>? get address;
 
@@ -100,6 +108,13 @@ class _$VendorVerificationDraftSerializer implements PrimitiveSerializer<VendorV
     VendorVerificationDraft object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.formState != null) {
+      yield r'form_state';
+      yield serializers.serialize(
+        object.formState,
+        specifiedType: const FullType(String),
+      );
+    }
     if (object.draftLockVersion != null) {
       yield r'draft_lock_version';
       yield serializers.serialize(
@@ -123,6 +138,13 @@ class _$VendorVerificationDraftSerializer implements PrimitiveSerializer<VendorV
       yield r'registered_name';
       yield serializers.serialize(
         object.registeredName,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.legalBusinessName != null) {
+      yield r'legal_business_name';
+      yield serializers.serialize(
+        object.legalBusinessName,
         specifiedType: const FullType(String),
       );
     }
@@ -154,18 +176,11 @@ class _$VendorVerificationDraftSerializer implements PrimitiveSerializer<VendorV
         specifiedType: const FullType(String),
       );
     }
-    if (object.contacts != null) {
-      yield r'contacts';
-      yield serializers.serialize(
-        object.contacts,
-        specifiedType: const FullType(BuiltList, [FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)])]),
-      );
-    }
     if (object.classification != null) {
       yield r'classification';
       yield serializers.serialize(
         object.classification,
-        specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
+        specifiedType: const FullType(VendorVerificationDraftClassification),
       );
     }
     if (object.address != null) {
@@ -219,6 +234,14 @@ class _$VendorVerificationDraftSerializer implements PrimitiveSerializer<VendorV
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'form_state':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.formState = valueDes;
+          break;
         case r'draft_lock_version':
           final valueDes = serializers.deserialize(
             value,
@@ -249,6 +272,14 @@ class _$VendorVerificationDraftSerializer implements PrimitiveSerializer<VendorV
           ) as String?;
           if (valueDes == null) continue;
           result.registeredName = valueDes;
+          break;
+        case r'legal_business_name':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.legalBusinessName = valueDes;
           break;
         case r'store_name':
           final valueDes = serializers.deserialize(
@@ -282,21 +313,13 @@ class _$VendorVerificationDraftSerializer implements PrimitiveSerializer<VendorV
           if (valueDes == null) continue;
           result.storePhone = valueDes;
           break;
-        case r'contacts':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType.nullable(BuiltList, [FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)])]),
-          ) as BuiltList<BuiltMap<String, JsonObject?>>?;
-          if (valueDes == null) continue;
-          result.contacts.replace(valueDes);
-          break;
         case r'classification':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType.nullable(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
-          ) as BuiltMap<String, JsonObject?>?;
+            specifiedType: const FullType.nullable(VendorVerificationDraftClassification),
+          ) as VendorVerificationDraftClassification?;
           if (valueDes == null) continue;
-          result.classification.replace(valueDes);
+          result.classification = valueDes.toBuilder();
           break;
         case r'address':
           final valueDes = serializers.deserialize(

@@ -12,7 +12,7 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
+import { mapValues, parseDate, parseDateTime, serializeDate, serializeDateTime } from '../runtime';
 /**
  *
  * @export
@@ -46,6 +46,30 @@ export interface VendorVerificationDraftRepresentative {
     /**
      *
      */
+    relationshipOther?: string | null;
+    /**
+     *
+     */
+    authorityEvidenceSource?: VendorVerificationDraftRepresentativeAuthorityEvidenceSourceEnum;
+    /**
+     *
+     */
+    authorityEvidenceVersionId?: string | null;
+    /**
+     *
+     */
+    authorityDocumentType?: VendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum | null;
+    /**
+     *
+     */
+    authorityDocumentDate?: Date | null;
+    /**
+     *
+     */
+    authorityScopes?: Set<VendorVerificationDraftRepresentativeAuthorityScopesEnum>;
+    /**
+     *
+     */
     idType?: VendorVerificationDraftRepresentativeIdTypeEnum | null;
     /**
      *
@@ -53,6 +77,38 @@ export interface VendorVerificationDraftRepresentative {
     idNumber?: string | null;
 }
 
+
+/**
+ * @export
+ */
+export const VendorVerificationDraftRepresentativeAuthorityEvidenceSourceEnum = {
+    ExistingRegistrationEvidence: 'EXISTING_REGISTRATION_EVIDENCE',
+    SeparateAuthorityDocument: 'SEPARATE_AUTHORITY_DOCUMENT',
+} as const;
+export type VendorVerificationDraftRepresentativeAuthorityEvidenceSourceEnum = typeof VendorVerificationDraftRepresentativeAuthorityEvidenceSourceEnum[keyof typeof VendorVerificationDraftRepresentativeAuthorityEvidenceSourceEnum];
+
+/**
+ * @export
+ */
+export const VendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum = {
+    SecretarysCertificate: 'SECRETARYS_CERTIFICATE',
+    BoardResolution: 'BOARD_RESOLUTION',
+    SpecialPowerOfAttorney: 'SPECIAL_POWER_OF_ATTORNEY',
+    PartnershipAuthorization: 'PARTNERSHIP_AUTHORIZATION',
+    CooperativeBoardResolution: 'COOPERATIVE_BOARD_RESOLUTION',
+    OtherApproved: 'OTHER_APPROVED',
+} as const;
+export type VendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum = typeof VendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum[keyof typeof VendorVerificationDraftRepresentativeAuthorityDocumentTypeEnum];
+
+/**
+ * @export
+ */
+export const VendorVerificationDraftRepresentativeAuthorityScopesEnum = {
+    TaxDeclarations: 'TAX_DECLARATIONS',
+    CommissionAgreement: 'COMMISSION_AGREEMENT',
+    PaymentConfiguration: 'PAYMENT_CONFIGURATION',
+} as const;
+export type VendorVerificationDraftRepresentativeAuthorityScopesEnum = typeof VendorVerificationDraftRepresentativeAuthorityScopesEnum[keyof typeof VendorVerificationDraftRepresentativeAuthorityScopesEnum];
 
 /**
  * @export
@@ -91,6 +147,12 @@ export function VendorVerificationDraftRepresentativeFromJSONTyped(json: any, ig
         'email': json['email'] === undefined ? undefined : json['email'] === null ? null : json['email'],
         'phone': json['phone'] === undefined ? undefined : json['phone'] === null ? null : json['phone'],
         'relationship': json['relationship'] === undefined ? undefined : json['relationship'] === null ? null : json['relationship'],
+        'relationshipOther': json['relationship_other'] === undefined ? undefined : json['relationship_other'] === null ? null : json['relationship_other'],
+        'authorityEvidenceSource': json['authority_evidence_source'] == null ? undefined : json['authority_evidence_source'],
+        'authorityEvidenceVersionId': json['authority_evidence_version_id'] === undefined ? undefined : json['authority_evidence_version_id'] === null ? null : json['authority_evidence_version_id'],
+        'authorityDocumentType': json['authority_document_type'] === undefined ? undefined : json['authority_document_type'] === null ? null : json['authority_document_type'],
+        'authorityDocumentDate': json['authority_document_date'] === undefined ? undefined : json['authority_document_date'] === null ? null : (parseDate(json['authority_document_date'])),
+        'authorityScopes': json['authority_scopes'] == null ? undefined : new Set(json['authority_scopes']),
         'idType': json['id_type'] === undefined ? undefined : json['id_type'] === null ? null : json['id_type'],
         'idNumber': json['id_number'] === undefined ? undefined : json['id_number'] === null ? null : json['id_number'],
     };
@@ -113,6 +175,12 @@ export function VendorVerificationDraftRepresentativeToJSONTyped(value?: VendorV
         'email': value['email'],
         'phone': value['phone'],
         'relationship': value['relationship'],
+        'relationship_other': value['relationshipOther'],
+        'authority_evidence_source': value['authorityEvidenceSource'],
+        'authority_evidence_version_id': value['authorityEvidenceVersionId'],
+        'authority_document_type': value['authorityDocumentType'],
+        'authority_document_date': value['authorityDocumentDate'] == null ? value['authorityDocumentDate'] : serializeDate(value['authorityDocumentDate']),
+        'authority_scopes': value['authorityScopes'] == null ? undefined : Array.from(value['authorityScopes'] as Set<any>),
         'id_type': value['idType'],
         'id_number': value['idNumber'],
     };

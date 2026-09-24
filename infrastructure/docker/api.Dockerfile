@@ -23,4 +23,6 @@ RUN apk upgrade --no-cache \
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
+COPY infrastructure/docker/uploads.ini /usr/local/etc/php/conf.d/uploads.ini
+
 WORKDIR /workspace/services/api

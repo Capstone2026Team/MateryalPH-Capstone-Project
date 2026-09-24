@@ -14,7 +14,8 @@ part 'vendor_document.g.dart';
 /// Properties:
 /// * [id]
 /// * [requirementKey]
-/// * [version]
+/// * [version] - Zero for a pending attachment; review versions are created only on submission.
+/// * [status]
 /// * [scanState]
 @BuiltValue()
 abstract class VendorDocument implements Built<VendorDocument, VendorDocumentBuilder> {
@@ -24,8 +25,13 @@ abstract class VendorDocument implements Built<VendorDocument, VendorDocumentBui
   @BuiltValueField(wireName: r'requirement_key')
   String get requirementKey;
 
+  /// Zero for a pending attachment; review versions are created only on submission.
   @BuiltValueField(wireName: r'version')
   int get version;
+
+  @BuiltValueField(wireName: r'status')
+  VendorDocumentStatusEnum get status;
+  // enum statusEnum {  PENDING_SUBMISSION,  };
 
   @BuiltValueField(wireName: r'scan_state')
   VendorDocumentScanStateEnum get scanState;
@@ -68,6 +74,11 @@ class _$VendorDocumentSerializer implements PrimitiveSerializer<VendorDocument> 
     yield serializers.serialize(
       object.version,
       specifiedType: const FullType(int),
+    );
+    yield r'status';
+    yield serializers.serialize(
+      object.status,
+      specifiedType: const FullType(VendorDocumentStatusEnum),
     );
     yield r'scan_state';
     yield serializers.serialize(
@@ -118,6 +129,13 @@ class _$VendorDocumentSerializer implements PrimitiveSerializer<VendorDocument> 
           ) as int;
           result.version = valueDes;
           break;
+        case r'status':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(VendorDocumentStatusEnum),
+          ) as VendorDocumentStatusEnum;
+          result.status = valueDes;
+          break;
         case r'scan_state':
           final valueDes = serializers.deserialize(
             value,
@@ -154,6 +172,19 @@ class _$VendorDocumentSerializer implements PrimitiveSerializer<VendorDocument> 
   }
 }
 
+
+class VendorDocumentStatusEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'PENDING_SUBMISSION')
+  static const VendorDocumentStatusEnum PENDING_SUBMISSION = _$vendorDocumentStatusEnum_PENDING_SUBMISSION;
+
+  static Serializer<VendorDocumentStatusEnum> get serializer => _$vendorDocumentStatusEnumSerializer;
+
+  const VendorDocumentStatusEnum._(String name): super(name);
+
+  static BuiltSet<VendorDocumentStatusEnum> get values => _$vendorDocumentStatusEnumValues;
+  static VendorDocumentStatusEnum valueOf(String name) => _$vendorDocumentStatusEnumValueOf(name);
+}
 
 class VendorDocumentScanStateEnum extends EnumClass {
 

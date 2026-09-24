@@ -14,7 +14,7 @@ Name | Type | Description | Notes
 **datasetId** | **String** |  |
 **vendorId** | **String** |  |
 **listingVariantId** | **String** |  |
-**comparableGroupVersionId** | **String** |  |
+**comparableGroupVersionId** | **String** | Reference provider identifier. |
 **observedAt** | [**DateTime**](DateTime.md) |  |
 **localSnapshotDate** | [**Date**](Date.md) |  |
 **ordinaryPayableCentavos** | **int** |  |

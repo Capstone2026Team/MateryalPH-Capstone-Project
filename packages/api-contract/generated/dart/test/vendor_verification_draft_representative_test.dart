@@ -37,6 +37,36 @@ void main() {
       // TODO
     });
 
+    // String relationshipOther
+    test('to test the property `relationshipOther`', () async {
+      // TODO
+    });
+
+    // String authorityEvidenceSource
+    test('to test the property `authorityEvidenceSource`', () async {
+      // TODO
+    });
+
+    // String authorityEvidenceVersionId
+    test('to test the property `authorityEvidenceVersionId`', () async {
+      // TODO
+    });
+
+    // String authorityDocumentType
+    test('to test the property `authorityDocumentType`', () async {
+      // TODO
+    });
+
+    // Date authorityDocumentDate
+    test('to test the property `authorityDocumentDate`', () async {
+      // TODO
+    });
+
+    // BuiltSet<String> authorityScopes
+    test('to test the property `authorityScopes`', () async {
+      // TODO
+    });
+
     // String idType
     test('to test the property `idType`', () async {
       // TODO
