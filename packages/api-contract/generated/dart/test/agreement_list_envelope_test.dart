@@ -17,7 +17,7 @@ void main() {
       // TODO
     });
 
-    // BuiltList<JsonObject> errors
+    // BuiltList<BuiltMap<String, JsonObject>> errors
     test('to test the property `errors`', () async {
       // TODO
     });

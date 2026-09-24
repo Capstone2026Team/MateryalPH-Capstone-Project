@@ -1,6 +1,19 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, readdirSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, rmSync, unlinkSync, writeFileSync as writeFileOnce, renameSync } from "node:fs";
 import { join, resolve } from "node:path";
+
+// Windows indexers can temporarily map recently generated files. Replace the
+// normalized output atomically instead of truncating a mapped file in place.
+function writeFileSync(path, contents) {
+  try { writeFileOnce(path, contents); }
+  catch (error) {
+    if (!['UNKNOWN', 'EBUSY', 'EPERM'].includes(error.code)) throw error;
+    const temporary = `${path}.normalize-tmp`;
+    writeFileOnce(temporary, contents);
+    try { renameSync(temporary, path); }
+    finally { if (existsSync(temporary)) unlinkSync(temporary); }
+  }
+}
 
 const generator = join(
   process.cwd(),
@@ -12,6 +25,7 @@ const generator = join(
 const generations = [
   [
     "generate",
+    "--minimal-update",
     "-i", "openapi.yaml",
     "-g", "typescript-fetch",
     "-o", "generated/typescript",
@@ -21,6 +35,7 @@ const generations = [
   ],
   [
     "generate",
+    "--minimal-update",
     "-i", "openapi.yaml",
     "-g", "dart-dio",
     "-o", "generated/dart",
@@ -28,9 +43,7 @@ const generations = [
     "--additional-properties", "pubVersion=1.0.0",
   ],
 ];
-const repositoryOwnedDartTests = new Set([
-  "test/vendor_onboarding_deserialization_test.dart",
-]);
+const repositoryOwnedDartTests = new Set();
 
 for (const args of generations) {
   const outputFlag = args.indexOf("-o");
@@ -86,13 +99,27 @@ for (const args of generations) {
       throw new Error("Generated manifest contains a path outside its output directory");
     }
     if (!existsSync(generatedPath)) continue;
-    let contents = readFileSync(generatedPath, "utf8");
+    const originalContents = readFileSync(generatedPath, "utf8");
+    let contents = originalContents;
     if (relativePath.endsWith(".dart") && relativePath.startsWith("lib/")) {
+      // Nullable inline objects use nested built_value builders. dart-dio
+      // currently assigns the deserialized value to the builder field directly.
+      const nestedFields = {
+        "lib/src/model/vendor_setup_draft.dart": ["delivery"],
+        "lib/src/model/vendor_verification_submit.dart": ["draft"],
+        "lib/src/model/vendor_verification_draft.dart": ["legalIdentity", "taxProfile", "classification"],
+      }[relativePath] ?? [];
+      for (const field of nestedFields) {
+        contents = contents.replace(`result.${field} = valueDes;`, `result.${field} = valueDes.toBuilder();`);
+      }
+      // The generator leaves raw nested maps in serializer builder factories.
+      contents = contents.replaceAll('MapBuilder<String, BuiltMap>()', 'MapBuilder<String, BuiltMap<String, JsonObject>>()');
       // dart-dio emits imports for error responses and flattened allOf models
       // even when its generated implementation never references those types.
       const body = contents.replace(/^import .*;\r?\n/gmu, "");
       contents = contents.replace(/^import '([^']+)';\r?\n/gmu, (line, uri) => {
         let symbol;
+        if (uri === "package:built_collection/built_collection.dart" && !/\b(?:BuiltList|BuiltMap|BuiltSet|BuiltListMultimap|BuiltSetMultimap|ListBuilder|MapBuilder|SetBuilder)\b/u.test(body)) return "";
         if (uri === "package:built_value/json_object.dart") symbol = "JsonObject";
         if (uri.startsWith("package:materyalph_api_client/src/model/")) {
           const importedPath = join(output, "lib", uri.slice("package:materyalph_api_client/".length));
@@ -101,7 +128,8 @@ for (const args of generations) {
         return symbol && !new RegExp(`\\b${symbol}\\b`, "u").test(body) ? "" : line;
       });
     }
-    writeFileSync(generatedPath, contents.replace(/[\t ]+$/gmu, ""));
+    const normalized = contents.replace(/[\t ]+$/gmu, "").replace(relativePath === "lib/src/model/vendor_setup_complete.dart" ? /(?:\r?\n){2,}$/u : /$^/u, "\n");
+    if (normalized !== originalContents) writeFileSync(generatedPath, normalized);
   }
   for (const relativePath of previousFiles) {
     if (currentFiles.has(relativePath)) continue;

@@ -4,57 +4,41 @@ All URIs are relative to */api/v1*
 
 | Method | HTTP request | Description |
 |------------- | ------------- | -------------|
-| [**acceptVendorCommissionTerms**](VendorOnboardingApi.md#acceptvendorcommissionterms) | **POST** /vendors/{organization}/commission-terms/acceptance | accept Vendor Commission Terms |
-| [**activateVendorMarketplace**](VendorOnboardingApi.md#activatevendormarketplace) | **POST** /vendors/{organization}/activation | activate Vendor Marketplace |
-| [**changeVendorTeamMember**](VendorOnboardingApi.md#changevendorteammember) | **PATCH** /vendors/{organization}/team/memberships/{membership} | change Vendor Team Member |
-| [**confirmVendorStoreEmailVerification**](VendorOnboardingApi.md#confirmvendorstoreemailverification) | **POST** /vendors/{organization}/business/store-email/verification/confirm | confirm Vendor Store Email Verification |
-| [**connectVendorTest**](VendorOnboardingApi.md#connectvendortest) | **POST** /vendors/{organization}/payment-connection | connect Vendor Test |
-| [**downloadAdminVendorDocument**](VendorOnboardingApi.md#downloadadminvendordocument) | **GET** /admin/vendor-verification/{organization}/documents/{version}/download | download Admin Vendor Document |
-| [**downloadVendorDocument**](VendorOnboardingApi.md#downloadvendordocument) | **GET** /vendors/{organization}/documents/{version}/download | download Vendor Document |
-| [**getAdminVendorBusiness**](VendorOnboardingApi.md#getadminvendorbusiness) | **GET** /admin/vendor-verification/{organization}/business | get Admin Vendor Business |
-| [**getAdminVendorReadiness**](VendorOnboardingApi.md#getadminvendorreadiness) | **GET** /admin/vendor-verification/{organization}/onboarding | get Admin Vendor Readiness |
-| [**getAdminVendorTaxProfile**](VendorOnboardingApi.md#getadminvendortaxprofile) | **GET** /admin/vendor-verification/{organization}/tax-profile | get Admin Vendor Tax Profile |
-| [**getPublicVendorStoreMedia**](VendorOnboardingApi.md#getpublicvendorstoremedia) | **GET** /public/vendors/{organization}/store-media/{media} | get Public Vendor Store Media |
-| [**getVendorBusiness**](VendorOnboardingApi.md#getvendorbusiness) | **GET** /vendors/{organization}/business | get Vendor Business |
-| [**getVendorCommissionTerms**](VendorOnboardingApi.md#getvendorcommissionterms) | **GET** /vendors/{organization}/commission-terms | get Vendor Commission Terms |
-| [**getVendorReadiness**](VendorOnboardingApi.md#getvendorreadiness) | **GET** /vendors/{organization}/onboarding | get Vendor Readiness |
-| [**getVendorSetup**](VendorOnboardingApi.md#getvendorsetup) | **GET** /vendors/{organization}/setup | get Vendor Setup |
-| [**getVendorTaxProfile**](VendorOnboardingApi.md#getvendortaxprofile) | **GET** /vendors/{organization}/tax-profile | get Vendor Tax Profile |
-| [**getVendorTeam**](VendorOnboardingApi.md#getvendorteam) | **GET** /vendors/{organization}/team | get Vendor Team |
-| [**inviteVendorTeam**](VendorOnboardingApi.md#invitevendorteam) | **POST** /vendors/{organization}/team/invitations | invite Vendor Team |
-| [**issueAdminVendorDocumentLink**](VendorOnboardingApi.md#issueadminvendordocumentlink) | **POST** /admin/vendor-verification/{organization}/documents/{version}/download-link | issue Admin Vendor Document Link |
-| [**issueVendorDocumentLink**](VendorOnboardingApi.md#issuevendordocumentlink) | **POST** /vendors/{organization}/documents/{version}/download-link | issue Vendor Document Link |
-| [**listAdminVendorDocuments**](VendorOnboardingApi.md#listadminvendordocuments) | **GET** /admin/vendor-verification/{organization}/documents | list Admin Vendor Documents |
-| [**listAdminVendorStoreMedia**](VendorOnboardingApi.md#listadminvendorstoremedia) | **GET** /admin/vendor-verification/{organization}/store-media | list Admin Vendor Store Media |
-| [**listVendorDocuments**](VendorOnboardingApi.md#listvendordocuments) | **GET** /vendors/{organization}/documents | list Vendor Documents |
-| [**listVendorStoreMedia**](VendorOnboardingApi.md#listvendorstoremedia) | **GET** /vendors/{organization}/store-media | list Vendor Store Media |
-| [**listVendorTeamInvitations**](VendorOnboardingApi.md#listvendorteaminvitations) | **GET** /vendors/{organization}/team/invitations | list Vendor Team Invitations |
-| [**listVendorVerificationQueue**](VendorOnboardingApi.md#listvendorverificationqueue) | **GET** /admin/vendor-verification | list Vendor Verification Queue |
-| [**previewAdminVendorStoreMedia**](VendorOnboardingApi.md#previewadminvendorstoremedia) | **GET** /admin/vendor-verification/{organization}/store-media/{media} | preview Admin Vendor Store Media |
-| [**previewVendorStoreMedia**](VendorOnboardingApi.md#previewvendorstoremedia) | **GET** /vendors/{organization}/store-media/{media} | preview Vendor Store Media |
-| [**reconcileVendorTestConnection**](VendorOnboardingApi.md#reconcilevendortestconnection) | **POST** /vendors/{organization}/payment-connection/reconciliation | reconcile Vendor Test Connection |
-| [**removeVendorStoreMedia**](VendorOnboardingApi.md#removevendorstoremedia) | **POST** /vendors/{organization}/store-media/{media}/remove | remove Vendor Store Media |
-| [**requestVendorStoreEmailVerification**](VendorOnboardingApi.md#requestvendorstoreemailverification) | **POST** /vendors/{organization}/business/store-email/verification | request Vendor Store Email Verification |
-| [**reviewVendorBusiness**](VendorOnboardingApi.md#reviewvendorbusiness) | **POST** /admin/vendor-verification/{organization}/business/reviews | review Vendor Business |
-| [**reviewVendorDocument**](VendorOnboardingApi.md#reviewvendordocument) | **POST** /admin/vendor-verification/{organization}/documents/{version}/reviews | review Vendor Document |
-| [**reviewVendorStoreMedia**](VendorOnboardingApi.md#reviewvendorstoremedia) | **POST** /admin/vendor-verification/{organization}/store-media/{media}/reviews | review Vendor Store Media |
-| [**reviewVendorTaxProfile**](VendorOnboardingApi.md#reviewvendortaxprofile) | **POST** /admin/vendor-verification/{organization}/tax-profile/versions/{version}/reviews | review Vendor Tax Profile |
-| [**revokeVendorTeamInvitation**](VendorOnboardingApi.md#revokevendorteaminvitation) | **POST** /vendors/{organization}/team/invitations/{invitation}/revoke | revoke Vendor Team Invitation |
-| [**saveVendorBusiness**](VendorOnboardingApi.md#savevendorbusiness) | **PUT** /vendors/{organization}/business | save Vendor Business |
-| [**saveVendorStore**](VendorOnboardingApi.md#savevendorstore) | **PUT** /vendors/{organization}/store-profile | save Vendor Store |
-| [**saveVendorTaxProfile**](VendorOnboardingApi.md#savevendortaxprofile) | **POST** /vendors/{organization}/tax-profile/versions | save Vendor Tax Profile |
-| [**uploadVendorDocument**](VendorOnboardingApi.md#uploadvendordocument) | **POST** /vendors/{organization}/documents | upload Vendor Document |
-| [**uploadVendorStoreMedia**](VendorOnboardingApi.md#uploadvendorstoremedia) | **POST** /vendors/{organization}/store-media | upload Vendor Store Media |
+| [**acceptVendorCommission**](VendorOnboardingApi.md#acceptvendorcommission) | **POST** /vendors/onboarding/verification/commission |  |
+| [**activateVendorStore**](VendorOnboardingApi.md#activatevendorstore) | **POST** /vendors/onboarding/activation |  |
+| [**captureVendorPaymentConnection**](VendorOnboardingApi.md#capturevendorpaymentconnection) | **POST** /vendors/onboarding/payment-connection |  |
+| [**completeVendorSetup**](VendorOnboardingApi.md#completevendorsetup) | **POST** /vendors/onboarding/setup/complete |  |
+| [**confirmVendorStoreEmailVerification**](VendorOnboardingApi.md#confirmvendorstoreemailverification) | **POST** /vendors/onboarding/store-email/confirm |  |
+| [**dismissVendorOnboardingWelcome**](VendorOnboardingApi.md#dismissvendoronboardingwelcome) | **POST** /vendors/onboarding/welcome/dismiss |  |
+| [**downloadVendorOnboardingFile**](VendorOnboardingApi.md#downloadvendoronboardingfile) | **GET** /vendor-onboarding-files/{fileId}/content |  |
+| [**getAuthoritativeVendorOnboarding**](VendorOnboardingApi.md#getauthoritativevendoronboarding) | **GET** /vendor/onboarding |  |
+| [**getVendorOnboarding**](VendorOnboardingApi.md#getvendoronboarding) | **GET** /vendors/onboarding |  |
+| [**getVendorPrivateFileUrl**](VendorOnboardingApi.md#getvendorprivatefileurl) | **GET** /vendors/onboarding/files/{fileId} |  |
+| [**inviteVendorTeamMember**](VendorOnboardingApi.md#invitevendorteammember) | **POST** /vendors/account/invitations |  |
+| [**previewVendorRequirements**](VendorOnboardingApi.md#previewvendorrequirements) | **GET** /vendors/onboarding/requirements |  |
+| [**receiveXenditAccountVerificationWebhook**](VendorOnboardingApi.md#receivexenditaccountverificationwebhook) | **POST** /webhooks/xendit/account-verification |  |
+| [**reconcileVendorPaymentConnection**](VendorOnboardingApi.md#reconcilevendorpaymentconnection) | **POST** /vendors/onboarding/payment-connection/reconcile |  |
+| [**removePendingVendorDocument**](VendorOnboardingApi.md#removependingvendordocument) | **DELETE** /vendors/onboarding/documents/pending/{requirementKey} |  |
+| [**requestVendorStoreEmailVerification**](VendorOnboardingApi.md#requestvendorstoreemailverification) | **POST** /vendors/onboarding/store-email |  |
+| [**resolveVendorAddress**](VendorOnboardingApi.md#resolvevendoraddress) | **POST** /vendors/onboarding/address/resolve |  |
+| [**resolveVendorAddressPin**](VendorOnboardingApi.md#resolvevendoraddresspin) | **POST** /vendors/onboarding/address/pin |  |
+| [**reverseGeocodeVendorAddress**](VendorOnboardingApi.md#reversegeocodevendoraddress) | **POST** /vendors/onboarding/address/geocode |  |
+| [**saveVendorSetupDraft**](VendorOnboardingApi.md#savevendorsetupdraft) | **PATCH** /vendors/onboarding/setup |  |
+| [**saveVendorVerificationDraft**](VendorOnboardingApi.md#savevendorverificationdraft) | **PATCH** /vendors/onboarding/verification |  |
+| [**searchVendorAddressAreas**](VendorOnboardingApi.md#searchvendoraddressareas) | **GET** /vendors/onboarding/address/areas |  |
+| [**submitVendorVerification**](VendorOnboardingApi.md#submitvendorverification) | **POST** /vendors/onboarding/verification/submit |  |
+| [**uploadVendorStoreMedia**](VendorOnboardingApi.md#uploadvendorstoremedia) | **POST** /vendors/onboarding/media |  |
+| [**uploadVendorVerificationDocument**](VendorOnboardingApi.md#uploadvendorverificationdocument) | **POST** /vendors/onboarding/documents |  |
 
 
 
-## acceptVendorCommissionTerms
+## acceptVendorCommission
 
-> VendorCommissionTermsEnvelope acceptVendorCommissionTerms(organization, acceptVendorCommission)
+> VendorOnboardingEnvelope acceptVendorCommission(idempotencyKey, vendorCommissionAcceptance)
 
-accept Vendor Commission Terms
 
-TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
+
+Explicit version-bound acceptance in Store Verification. Owner only; applicable current representative authority requires the COMMISSION_AGREEMENT scope. Autosaving or submitting evidence never implies consent. Initial evidence submission remains available while authority approval is pending.
 
 ### Example
 
@@ -63,7 +47,7 @@ import {
   Configuration,
   VendorOnboardingApi,
 } from '@materyalph/api-client-ts';
-import type { AcceptVendorCommissionTermsRequest } from '@materyalph/api-client-ts';
+import type { AcceptVendorCommissionRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
@@ -77,13 +61,13 @@ async function example() {
 
   const body = {
     // string
-    organization: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-    // AcceptVendorCommission
-    acceptVendorCommission: ...,
-  } satisfies AcceptVendorCommissionTermsRequest;
+    idempotencyKey: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // VendorCommissionAcceptance
+    vendorCommissionAcceptance: ...,
+  } satisfies AcceptVendorCommissionRequest;
 
   try {
-    const data = await api.acceptVendorCommissionTerms(body);
+    const data = await api.acceptVendorCommission(body);
     console.log(data);
   } catch (error) {
     console.error(error);
@@ -99,12 +83,12 @@ example().catch(console.error);
 
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
-| **organization** | `string` |  | [Defaults to `undefined`] |
-| **acceptVendorCommission** | [AcceptVendorCommission](AcceptVendorCommission.md) |  | |
+| **idempotencyKey** | `string` |  | [Defaults to `undefined`] |
+| **vendorCommissionAcceptance** | [VendorCommissionAcceptance](VendorCommissionAcceptance.md) |  | |
 
 ### Return type
 
-[**VendorCommissionTermsEnvelope**](VendorCommissionTermsEnvelope.md)
+[**VendorOnboardingEnvelope**](VendorOnboardingEnvelope.md)
 
 ### Authorization
 
@@ -119,25 +103,21 @@ example().catch(console.error);
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **200** | Operation completed. |  -  |
-| **401** | Safe canonical error envelope. |  -  |
-| **403** | Safe canonical error envelope. |  -  |
-| **404** | Safe canonical error envelope. |  -  |
-| **409** | Safe canonical error envelope. |  -  |
-| **422** | Safe canonical error envelope. |  -  |
-| **429** | Safe canonical error envelope. |  -  |
-| **503** | Safe canonical error envelope. |  -  |
+| **200** | Commission acceptance recorded; verification.commission_terms contains the current agreement, can_accept and accepted. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **409** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **503** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
-## activateVendorMarketplace
+## activateVendorStore
 
-> VendorReadinessEnvelope activateVendorMarketplace(organization, vendorVersionMutation)
+> VendorOnboardingEnvelope activateVendorStore(idempotencyKey)
 
-activate Vendor Marketplace
 
-TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
 
 ### Example
 
@@ -146,7 +126,7 @@ import {
   Configuration,
   VendorOnboardingApi,
 } from '@materyalph/api-client-ts';
-import type { ActivateVendorMarketplaceRequest } from '@materyalph/api-client-ts';
+import type { ActivateVendorStoreRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
@@ -160,13 +140,11 @@ async function example() {
 
   const body = {
     // string
-    organization: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-    // VendorVersionMutation
-    vendorVersionMutation: ...,
-  } satisfies ActivateVendorMarketplaceRequest;
+    idempotencyKey: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+  } satisfies ActivateVendorStoreRequest;
 
   try {
-    const data = await api.activateVendorMarketplace(body);
+    const data = await api.activateVendorStore(body);
     console.log(data);
   } catch (error) {
     console.error(error);
@@ -182,12 +160,11 @@ example().catch(console.error);
 
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
-| **organization** | `string` |  | [Defaults to `undefined`] |
-| **vendorVersionMutation** | [VendorVersionMutation](VendorVersionMutation.md) |  | |
+| **idempotencyKey** | `string` |  | [Defaults to `undefined`] |
 
 ### Return type
 
-[**VendorReadinessEnvelope**](VendorReadinessEnvelope.md)
+[**VendorOnboardingEnvelope**](VendorOnboardingEnvelope.md)
 
 ### Authorization
 
@@ -195,32 +172,26 @@ example().catch(console.error);
 
 ### HTTP request headers
 
-- **Content-Type**: `application/json`
+- **Content-Type**: Not defined
 - **Accept**: `application/json`
 
 
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **200** | Operation completed. |  -  |
-| **401** | Safe canonical error envelope. |  -  |
-| **403** | Safe canonical error envelope. |  -  |
-| **404** | Safe canonical error envelope. |  -  |
-| **409** | Safe canonical error envelope. |  -  |
-| **422** | Safe canonical error envelope. |  -  |
-| **429** | Safe canonical error envelope. |  -  |
-| **503** | Safe canonical error envelope. |  -  |
+| **202** | Store Activation recorded; discoverability remains independently gated. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **409** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
-## changeVendorTeamMember
+## captureVendorPaymentConnection
 
-> VendorMutationEnvelope changeVendorTeamMember(organization, membership, changeVendorTeamMember)
+> VendorOnboardingEnvelope captureVendorPaymentConnection(idempotencyKey, vendorPaymentConnection)
 
-change Vendor Team Member
 
-TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
 
 ### Example
 
@@ -229,7 +200,7 @@ import {
   Configuration,
   VendorOnboardingApi,
 } from '@materyalph/api-client-ts';
-import type { ChangeVendorTeamMemberRequest } from '@materyalph/api-client-ts';
+import type { CaptureVendorPaymentConnectionRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
@@ -243,15 +214,13 @@ async function example() {
 
   const body = {
     // string
-    organization: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-    // string
-    membership: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-    // ChangeVendorTeamMember
-    changeVendorTeamMember: ...,
-  } satisfies ChangeVendorTeamMemberRequest;
+    idempotencyKey: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // VendorPaymentConnection
+    vendorPaymentConnection: ...,
+  } satisfies CaptureVendorPaymentConnectionRequest;
 
   try {
-    const data = await api.changeVendorTeamMember(body);
+    const data = await api.captureVendorPaymentConnection(body);
     console.log(data);
   } catch (error) {
     console.error(error);
@@ -267,13 +236,12 @@ example().catch(console.error);
 
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
-| **organization** | `string` |  | [Defaults to `undefined`] |
-| **membership** | `string` |  | [Defaults to `undefined`] |
-| **changeVendorTeamMember** | [ChangeVendorTeamMember](ChangeVendorTeamMember.md) |  | |
+| **idempotencyKey** | `string` |  | [Defaults to `undefined`] |
+| **vendorPaymentConnection** | [VendorPaymentConnection](VendorPaymentConnection.md) |  | |
 
 ### Return type
 
-[**VendorMutationEnvelope**](VendorMutationEnvelope.md)
+[**VendorOnboardingEnvelope**](VendorOnboardingEnvelope.md)
 
 ### Authorization
 
@@ -288,25 +256,97 @@ example().catch(console.error);
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **200** | Operation completed. |  -  |
-| **401** | Safe canonical error envelope. |  -  |
-| **403** | Safe canonical error envelope. |  -  |
-| **404** | Safe canonical error envelope. |  -  |
-| **409** | Safe canonical error envelope. |  -  |
-| **422** | Safe canonical error envelope. |  -  |
-| **429** | Safe canonical error envelope. |  -  |
-| **503** | Safe canonical error envelope. |  -  |
+| **200** | Xendit TEST connection captured as unverified/pending. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## completeVendorSetup
+
+> VendorOnboardingEnvelope completeVendorSetup(idempotencyKey, vendorSetupComplete)
+
+
+
+### Example
+
+```ts
+import {
+  Configuration,
+  VendorOnboardingApi,
+} from '@materyalph/api-client-ts';
+import type { CompleteVendorSetupRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // To configure API key authorization: accessCookie
+    apiKey: "YOUR API KEY",
+    // To configure API key authorization: webCsrf
+    apiKey: "YOUR API KEY",
+  });
+  const api = new VendorOnboardingApi(config);
+
+  const body = {
+    // string
+    idempotencyKey: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // VendorSetupComplete
+    vendorSetupComplete: ...,
+  } satisfies CompleteVendorSetupRequest;
+
+  try {
+    const data = await api.completeVendorSetup(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **idempotencyKey** | `string` |  | [Defaults to `undefined`] |
+| **vendorSetupComplete** | [VendorSetupComplete](VendorSetupComplete.md) |  | |
+
+### Return type
+
+[**VendorOnboardingEnvelope**](VendorOnboardingEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **202** | Setup completion recorded. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **409** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
 ## confirmVendorStoreEmailVerification
 
-> VendorBusinessEnvelope confirmVendorStoreEmailVerification(organization, vendorStoreEmailVerificationConfirmation)
+> VendorOnboardingEnvelope confirmVendorStoreEmailVerification(vendorStoreEmailConfirmation)
 
-confirm Vendor Store Email Verification
 
-TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
 
 ### Example
 
@@ -328,10 +368,8 @@ async function example() {
   const api = new VendorOnboardingApi(config);
 
   const body = {
-    // string
-    organization: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-    // VendorStoreEmailVerificationConfirmation
-    vendorStoreEmailVerificationConfirmation: ...,
+    // VendorStoreEmailConfirmation
+    vendorStoreEmailConfirmation: ...,
   } satisfies ConfirmVendorStoreEmailVerificationRequest;
 
   try {
@@ -351,12 +389,11 @@ example().catch(console.error);
 
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
-| **organization** | `string` |  | [Defaults to `undefined`] |
-| **vendorStoreEmailVerificationConfirmation** | [VendorStoreEmailVerificationConfirmation](VendorStoreEmailVerificationConfirmation.md) |  | |
+| **vendorStoreEmailConfirmation** | [VendorStoreEmailConfirmation](VendorStoreEmailConfirmation.md) |  | |
 
 ### Return type
 
-[**VendorBusinessEnvelope**](VendorBusinessEnvelope.md)
+[**VendorOnboardingEnvelope**](VendorOnboardingEnvelope.md)
 
 ### Authorization
 
@@ -371,25 +408,21 @@ example().catch(console.error);
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **200** | Operation completed. |  -  |
-| **401** | Safe canonical error envelope. |  -  |
-| **403** | Safe canonical error envelope. |  -  |
-| **404** | Safe canonical error envelope. |  -  |
-| **409** | Safe canonical error envelope. |  -  |
-| **422** | Safe canonical error envelope. |  -  |
-| **429** | Safe canonical error envelope. |  -  |
-| **503** | Safe canonical error envelope. |  -  |
+| **200** | Store Email verified. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
-## connectVendorTest
+## dismissVendorOnboardingWelcome
 
-> VendorSetupEnvelope connectVendorTest(organization, connectVendorTest)
+> VendorOnboardingEnvelope dismissVendorOnboardingWelcome()
 
-connect Vendor Test
 
-TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
+
+Persists the Owner welcome completion across refreshes and sessions. Clients continue to Store Verification after success.
 
 ### Example
 
@@ -398,7 +431,344 @@ import {
   Configuration,
   VendorOnboardingApi,
 } from '@materyalph/api-client-ts';
-import type { ConnectVendorTestRequest } from '@materyalph/api-client-ts';
+import type { DismissVendorOnboardingWelcomeRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // To configure API key authorization: accessCookie
+    apiKey: "YOUR API KEY",
+    // To configure API key authorization: webCsrf
+    apiKey: "YOUR API KEY",
+  });
+  const api = new VendorOnboardingApi(config);
+
+  try {
+    const data = await api.dismissVendorOnboardingWelcome();
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+This endpoint does not need any parameter.
+
+### Return type
+
+[**VendorOnboardingEnvelope**](VendorOnboardingEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Welcome dismissed. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## downloadVendorOnboardingFile
+
+> Blob downloadVendorOnboardingFile(fileId)
+
+
+
+### Example
+
+```ts
+import {
+  Configuration,
+  VendorOnboardingApi,
+} from '@materyalph/api-client-ts';
+import type { DownloadVendorOnboardingFileRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // To configure API key authorization: accessCookie
+    apiKey: "YOUR API KEY",
+  });
+  const api = new VendorOnboardingApi(config);
+
+  const body = {
+    // string
+    fileId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+  } satisfies DownloadVendorOnboardingFileRequest;
+
+  try {
+    const data = await api.downloadVendorOnboardingFile(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **fileId** | `string` |  | [Defaults to `undefined`] |
+
+### Return type
+
+**Blob**
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/octet-stream`, `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Authorized private file stream. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **404** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## getAuthoritativeVendorOnboarding
+
+> VendorOnboardingEnvelope getAuthoritativeVendorOnboarding()
+
+
+
+### Example
+
+```ts
+import {
+  Configuration,
+  VendorOnboardingApi,
+} from '@materyalph/api-client-ts';
+import type { GetAuthoritativeVendorOnboardingRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // To configure API key authorization: accessCookie
+    apiKey: "YOUR API KEY",
+  });
+  const api = new VendorOnboardingApi(config);
+
+  try {
+    const data = await api.getAuthoritativeVendorOnboarding();
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+This endpoint does not need any parameter.
+
+### Return type
+
+[**VendorOnboardingEnvelope**](VendorOnboardingEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Vendor onboarding snapshot with separate Store Verification and Store Setup workstreams. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## getVendorOnboarding
+
+> VendorOnboardingEnvelope getVendorOnboarding()
+
+
+
+### Example
+
+```ts
+import {
+  Configuration,
+  VendorOnboardingApi,
+} from '@materyalph/api-client-ts';
+import type { GetVendorOnboardingRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // To configure API key authorization: accessCookie
+    apiKey: "YOUR API KEY",
+  });
+  const api = new VendorOnboardingApi(config);
+
+  try {
+    const data = await api.getVendorOnboarding();
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+This endpoint does not need any parameter.
+
+### Return type
+
+[**VendorOnboardingEnvelope**](VendorOnboardingEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Vendor onboarding snapshot with separate Store Verification and Store Setup workstreams. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## getVendorPrivateFileUrl
+
+> VendorFileEnvelope getVendorPrivateFileUrl(fileId)
+
+
+
+Returns a five-minute signed URL for clean private verification evidence or ready Store Profile media owned by the current Vendor organization. Download rechecks authentication, permissions, ownership and scan state.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  VendorOnboardingApi,
+} from '@materyalph/api-client-ts';
+import type { GetVendorPrivateFileUrlRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // To configure API key authorization: accessCookie
+    apiKey: "YOUR API KEY",
+  });
+  const api = new VendorOnboardingApi(config);
+
+  const body = {
+    // string
+    fileId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+  } satisfies GetVendorPrivateFileUrlRequest;
+
+  try {
+    const data = await api.getVendorPrivateFileUrl(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **fileId** | `string` |  | [Defaults to `undefined`] |
+
+### Return type
+
+[**VendorFileEnvelope**](VendorFileEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Five-minute authorized signed download URL. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **404** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## inviteVendorTeamMember
+
+> VendorInvitationEnvelope inviteVendorTeamMember(idempotencyKey, vendorInvitationRequest)
+
+
+
+### Example
+
+```ts
+import {
+  Configuration,
+  VendorOnboardingApi,
+} from '@materyalph/api-client-ts';
+import type { InviteVendorTeamMemberRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
@@ -412,13 +782,13 @@ async function example() {
 
   const body = {
     // string
-    organization: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-    // ConnectVendorTest
-    connectVendorTest: ...,
-  } satisfies ConnectVendorTestRequest;
+    idempotencyKey: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // VendorInvitationRequest
+    vendorInvitationRequest: ...,
+  } satisfies InviteVendorTeamMemberRequest;
 
   try {
-    const data = await api.connectVendorTest(body);
+    const data = await api.inviteVendorTeamMember(body);
     console.log(data);
   } catch (error) {
     console.error(error);
@@ -434,12 +804,12 @@ example().catch(console.error);
 
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
-| **organization** | `string` |  | [Defaults to `undefined`] |
-| **connectVendorTest** | [ConnectVendorTest](ConnectVendorTest.md) |  | |
+| **idempotencyKey** | `string` |  | [Defaults to `undefined`] |
+| **vendorInvitationRequest** | [VendorInvitationRequest](VendorInvitationRequest.md) |  | |
 
 ### Return type
 
-[**VendorSetupEnvelope**](VendorSetupEnvelope.md)
+[**VendorInvitationEnvelope**](VendorInvitationEnvelope.md)
 
 ### Authorization
 
@@ -454,25 +824,20 @@ example().catch(console.error);
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **200** | Operation completed. |  -  |
-| **401** | Safe canonical error envelope. |  -  |
-| **403** | Safe canonical error envelope. |  -  |
-| **404** | Safe canonical error envelope. |  -  |
-| **409** | Safe canonical error envelope. |  -  |
-| **422** | Safe canonical error envelope. |  -  |
-| **429** | Safe canonical error envelope. |  -  |
-| **503** | Safe canonical error envelope. |  -  |
+| **202** | Fixed-role team invitation queued by an authorized Owner or delegated Manager. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **409** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
-## downloadAdminVendorDocument
+## previewVendorRequirements
 
-> Blob downloadAdminVendorDocument(organization, version, expires, signature, viewer)
+> GenericDataEnvelope previewVendorRequirements(businessType, representativeRole, identityIdType, representativeIdType, authorityEvidenceVersionId, declarationClaim)
 
-download Admin Vendor Document
 
-TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
 
 ### Example
 
@@ -481,7 +846,7 @@ import {
   Configuration,
   VendorOnboardingApi,
 } from '@materyalph/api-client-ts';
-import type { DownloadAdminVendorDocumentRequest } from '@materyalph/api-client-ts';
+import type { PreviewVendorRequirementsRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
@@ -492,20 +857,22 @@ async function example() {
   const api = new VendorOnboardingApi(config);
 
   const body = {
-    // string
-    organization: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-    // string
-    version: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-    // string
-    expires: expires_example,
-    // string
-    signature: signature_example,
-    // string
-    viewer: viewer_example,
-  } satisfies DownloadAdminVendorDocumentRequest;
+    // 'SOLE_PROPRIETORSHIP' | 'PARTNERSHIP' | 'CORPORATION' | 'ONE_PERSON_CORPORATION' | 'COOPERATIVE'
+    businessType: businessType_example,
+    // string (optional)
+    representativeRole: representativeRole_example,
+    // string (optional)
+    identityIdType: identityIdType_example,
+    // string (optional)
+    representativeIdType: representativeIdType_example,
+    // string (optional)
+    authorityEvidenceVersionId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // 0 | 1 (optional)
+    declarationClaim: 56,
+  } satisfies PreviewVendorRequirementsRequest;
 
   try {
-    const data = await api.downloadAdminVendorDocument(body);
+    const data = await api.previewVendorRequirements(body);
     console.log(data);
   } catch (error) {
     console.error(error);
@@ -521,183 +888,16 @@ example().catch(console.error);
 
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
-| **organization** | `string` |  | [Defaults to `undefined`] |
-| **version** | `string` |  | [Defaults to `undefined`] |
-| **expires** | `string` |  | [Defaults to `undefined`] |
-| **signature** | `string` |  | [Defaults to `undefined`] |
-| **viewer** | `string` |  | [Defaults to `undefined`] |
+| **businessType** | `SOLE_PROPRIETORSHIP`, `PARTNERSHIP`, `CORPORATION`, `ONE_PERSON_CORPORATION`, `COOPERATIVE` |  | [Defaults to `undefined`] [Enum: SOLE_PROPRIETORSHIP, PARTNERSHIP, CORPORATION, ONE_PERSON_CORPORATION, COOPERATIVE] |
+| **representativeRole** | `string` |  | [Optional] [Defaults to `undefined`] |
+| **identityIdType** | `string` |  | [Optional] [Defaults to `undefined`] |
+| **representativeIdType** | `string` |  | [Optional] [Defaults to `undefined`] |
+| **authorityEvidenceVersionId** | `string` |  | [Optional] [Defaults to `undefined`] |
+| **declarationClaim** | `0`, `1` |  | [Optional] [Defaults to `undefined`] [Enum: 0, 1] |
 
 ### Return type
 
-**Blob**
-
-### Authorization
-
-[accessCookie](../README.md#accessCookie)
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: `application/octet-stream`, `application/json`
-
-
-### HTTP response details
-| Status code | Description | Response headers |
-|-------------|-------------|------------------|
-| **200** | Operation completed. |  -  |
-| **401** | Safe canonical error envelope. |  -  |
-| **403** | Safe canonical error envelope. |  -  |
-| **404** | Safe canonical error envelope. |  -  |
-| **409** | Safe canonical error envelope. |  -  |
-| **422** | Safe canonical error envelope. |  -  |
-| **429** | Safe canonical error envelope. |  -  |
-| **503** | Safe canonical error envelope. |  -  |
-
-[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
-
-
-## downloadVendorDocument
-
-> Blob downloadVendorDocument(organization, version, expires, signature, viewer)
-
-download Vendor Document
-
-TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-
-### Example
-
-```ts
-import {
-  Configuration,
-  VendorOnboardingApi,
-} from '@materyalph/api-client-ts';
-import type { DownloadVendorDocumentRequest } from '@materyalph/api-client-ts';
-
-async function example() {
-  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({
-    // To configure API key authorization: accessCookie
-    apiKey: "YOUR API KEY",
-  });
-  const api = new VendorOnboardingApi(config);
-
-  const body = {
-    // string
-    organization: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-    // string
-    version: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-    // string
-    expires: expires_example,
-    // string
-    signature: signature_example,
-    // string
-    viewer: viewer_example,
-  } satisfies DownloadVendorDocumentRequest;
-
-  try {
-    const data = await api.downloadVendorDocument(body);
-    console.log(data);
-  } catch (error) {
-    console.error(error);
-  }
-}
-
-// Run the test
-example().catch(console.error);
-```
-
-### Parameters
-
-
-| Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **organization** | `string` |  | [Defaults to `undefined`] |
-| **version** | `string` |  | [Defaults to `undefined`] |
-| **expires** | `string` |  | [Defaults to `undefined`] |
-| **signature** | `string` |  | [Defaults to `undefined`] |
-| **viewer** | `string` |  | [Defaults to `undefined`] |
-
-### Return type
-
-**Blob**
-
-### Authorization
-
-[accessCookie](../README.md#accessCookie)
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: `application/octet-stream`, `application/json`
-
-
-### HTTP response details
-| Status code | Description | Response headers |
-|-------------|-------------|------------------|
-| **200** | Operation completed. |  -  |
-| **401** | Safe canonical error envelope. |  -  |
-| **403** | Safe canonical error envelope. |  -  |
-| **404** | Safe canonical error envelope. |  -  |
-| **409** | Safe canonical error envelope. |  -  |
-| **422** | Safe canonical error envelope. |  -  |
-| **429** | Safe canonical error envelope. |  -  |
-| **503** | Safe canonical error envelope. |  -  |
-
-[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
-
-
-## getAdminVendorBusiness
-
-> VendorBusinessEnvelope getAdminVendorBusiness(organization)
-
-get Admin Vendor Business
-
-TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-
-### Example
-
-```ts
-import {
-  Configuration,
-  VendorOnboardingApi,
-} from '@materyalph/api-client-ts';
-import type { GetAdminVendorBusinessRequest } from '@materyalph/api-client-ts';
-
-async function example() {
-  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({
-    // To configure API key authorization: accessCookie
-    apiKey: "YOUR API KEY",
-  });
-  const api = new VendorOnboardingApi(config);
-
-  const body = {
-    // string
-    organization: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-  } satisfies GetAdminVendorBusinessRequest;
-
-  try {
-    const data = await api.getAdminVendorBusiness(body);
-    console.log(data);
-  } catch (error) {
-    console.error(error);
-  }
-}
-
-// Run the test
-example().catch(console.error);
-```
-
-### Parameters
-
-
-| Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **organization** | `string` |  | [Defaults to `undefined`] |
-
-### Return type
-
-[**VendorBusinessEnvelope**](VendorBusinessEnvelope.md)
+[**GenericDataEnvelope**](GenericDataEnvelope.md)
 
 ### Authorization
 
@@ -712,25 +912,19 @@ example().catch(console.error);
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **200** | Operation completed. |  -  |
-| **401** | Safe canonical error envelope. |  -  |
-| **403** | Safe canonical error envelope. |  -  |
-| **404** | Safe canonical error envelope. |  -  |
-| **409** | Safe canonical error envelope. |  -  |
-| **422** | Safe canonical error envelope. |  -  |
-| **429** | Safe canonical error envelope. |  -  |
-| **503** | Safe canonical error envelope. |  -  |
+| **200** | Read-only requirement resolution for unsaved verification inputs; no approvals or draft writes. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
-## getAdminVendorReadiness
+## receiveXenditAccountVerificationWebhook
 
-> VendorReadinessEnvelope getAdminVendorReadiness(organization)
+> VendorWebhookEnvelope receiveXenditAccountVerificationWebhook(xCallbackToken, xenditAccountVerificationWebhook)
 
-get Admin Vendor Readiness
 
-TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
 
 ### Example
 
@@ -739,163 +933,7 @@ import {
   Configuration,
   VendorOnboardingApi,
 } from '@materyalph/api-client-ts';
-import type { GetAdminVendorReadinessRequest } from '@materyalph/api-client-ts';
-
-async function example() {
-  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({
-    // To configure API key authorization: accessCookie
-    apiKey: "YOUR API KEY",
-  });
-  const api = new VendorOnboardingApi(config);
-
-  const body = {
-    // string
-    organization: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-  } satisfies GetAdminVendorReadinessRequest;
-
-  try {
-    const data = await api.getAdminVendorReadiness(body);
-    console.log(data);
-  } catch (error) {
-    console.error(error);
-  }
-}
-
-// Run the test
-example().catch(console.error);
-```
-
-### Parameters
-
-
-| Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **organization** | `string` |  | [Defaults to `undefined`] |
-
-### Return type
-
-[**VendorReadinessEnvelope**](VendorReadinessEnvelope.md)
-
-### Authorization
-
-[accessCookie](../README.md#accessCookie)
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: `application/json`
-
-
-### HTTP response details
-| Status code | Description | Response headers |
-|-------------|-------------|------------------|
-| **200** | Operation completed. |  -  |
-| **401** | Safe canonical error envelope. |  -  |
-| **403** | Safe canonical error envelope. |  -  |
-| **404** | Safe canonical error envelope. |  -  |
-| **409** | Safe canonical error envelope. |  -  |
-| **422** | Safe canonical error envelope. |  -  |
-| **429** | Safe canonical error envelope. |  -  |
-| **503** | Safe canonical error envelope. |  -  |
-
-[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
-
-
-## getAdminVendorTaxProfile
-
-> VendorTaxProfileEnvelope getAdminVendorTaxProfile(organization)
-
-get Admin Vendor Tax Profile
-
-TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-
-### Example
-
-```ts
-import {
-  Configuration,
-  VendorOnboardingApi,
-} from '@materyalph/api-client-ts';
-import type { GetAdminVendorTaxProfileRequest } from '@materyalph/api-client-ts';
-
-async function example() {
-  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({
-    // To configure API key authorization: accessCookie
-    apiKey: "YOUR API KEY",
-  });
-  const api = new VendorOnboardingApi(config);
-
-  const body = {
-    // string
-    organization: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-  } satisfies GetAdminVendorTaxProfileRequest;
-
-  try {
-    const data = await api.getAdminVendorTaxProfile(body);
-    console.log(data);
-  } catch (error) {
-    console.error(error);
-  }
-}
-
-// Run the test
-example().catch(console.error);
-```
-
-### Parameters
-
-
-| Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **organization** | `string` |  | [Defaults to `undefined`] |
-
-### Return type
-
-[**VendorTaxProfileEnvelope**](VendorTaxProfileEnvelope.md)
-
-### Authorization
-
-[accessCookie](../README.md#accessCookie)
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: `application/json`
-
-
-### HTTP response details
-| Status code | Description | Response headers |
-|-------------|-------------|------------------|
-| **200** | Operation completed. |  -  |
-| **401** | Safe canonical error envelope. |  -  |
-| **403** | Safe canonical error envelope. |  -  |
-| **404** | Safe canonical error envelope. |  -  |
-| **409** | Safe canonical error envelope. |  -  |
-| **422** | Safe canonical error envelope. |  -  |
-| **429** | Safe canonical error envelope. |  -  |
-| **503** | Safe canonical error envelope. |  -  |
-
-[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
-
-
-## getPublicVendorStoreMedia
-
-> Blob getPublicVendorStoreMedia(organization, media)
-
-get Public Vendor Store Media
-
-Public delivery for an approved, unreplaced Store Profile image belonging to an active Vendor.
-
-### Example
-
-```ts
-import {
-  Configuration,
-  VendorOnboardingApi,
-} from '@materyalph/api-client-ts';
-import type { GetPublicVendorStoreMediaRequest } from '@materyalph/api-client-ts';
+import type { ReceiveXenditAccountVerificationWebhookRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
@@ -903,13 +941,13 @@ async function example() {
 
   const body = {
     // string
-    organization: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-    // string
-    media: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-  } satisfies GetPublicVendorStoreMediaRequest;
+    xCallbackToken: xCallbackToken_example,
+    // XenditAccountVerificationWebhook
+    xenditAccountVerificationWebhook: ...,
+  } satisfies ReceiveXenditAccountVerificationWebhookRequest;
 
   try {
-    const data = await api.getPublicVendorStoreMedia(body);
+    const data = await api.receiveXenditAccountVerificationWebhook(body);
     console.log(data);
   } catch (error) {
     console.error(error);
@@ -925,12 +963,12 @@ example().catch(console.error);
 
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
-| **organization** | `string` |  | [Defaults to `undefined`] |
-| **media** | `string` |  | [Defaults to `undefined`] |
+| **xCallbackToken** | `string` |  | [Defaults to `undefined`] |
+| **xenditAccountVerificationWebhook** | [XenditAccountVerificationWebhook](XenditAccountVerificationWebhook.md) |  | |
 
 ### Return type
 
-**Blob**
+[**VendorWebhookEnvelope**](VendorWebhookEnvelope.md)
 
 ### Authorization
 
@@ -938,566 +976,6 @@ No authorization required
 
 ### HTTP request headers
 
-- **Content-Type**: Not defined
-- **Accept**: `application/octet-stream`, `application/json`
-
-
-### HTTP response details
-| Status code | Description | Response headers |
-|-------------|-------------|------------------|
-| **200** | Operation completed. |  -  |
-| **401** | Safe canonical error envelope. |  -  |
-| **403** | Safe canonical error envelope. |  -  |
-| **404** | Safe canonical error envelope. |  -  |
-| **409** | Safe canonical error envelope. |  -  |
-| **422** | Safe canonical error envelope. |  -  |
-| **429** | Safe canonical error envelope. |  -  |
-| **503** | Safe canonical error envelope. |  -  |
-
-[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
-
-
-## getVendorBusiness
-
-> VendorBusinessEnvelope getVendorBusiness(organization)
-
-get Vendor Business
-
-TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-
-### Example
-
-```ts
-import {
-  Configuration,
-  VendorOnboardingApi,
-} from '@materyalph/api-client-ts';
-import type { GetVendorBusinessRequest } from '@materyalph/api-client-ts';
-
-async function example() {
-  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({
-    // To configure API key authorization: accessCookie
-    apiKey: "YOUR API KEY",
-  });
-  const api = new VendorOnboardingApi(config);
-
-  const body = {
-    // string
-    organization: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-  } satisfies GetVendorBusinessRequest;
-
-  try {
-    const data = await api.getVendorBusiness(body);
-    console.log(data);
-  } catch (error) {
-    console.error(error);
-  }
-}
-
-// Run the test
-example().catch(console.error);
-```
-
-### Parameters
-
-
-| Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **organization** | `string` |  | [Defaults to `undefined`] |
-
-### Return type
-
-[**VendorBusinessEnvelope**](VendorBusinessEnvelope.md)
-
-### Authorization
-
-[accessCookie](../README.md#accessCookie)
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: `application/json`
-
-
-### HTTP response details
-| Status code | Description | Response headers |
-|-------------|-------------|------------------|
-| **200** | Operation completed. |  -  |
-| **401** | Safe canonical error envelope. |  -  |
-| **403** | Safe canonical error envelope. |  -  |
-| **404** | Safe canonical error envelope. |  -  |
-| **409** | Safe canonical error envelope. |  -  |
-| **422** | Safe canonical error envelope. |  -  |
-| **429** | Safe canonical error envelope. |  -  |
-| **503** | Safe canonical error envelope. |  -  |
-
-[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
-
-
-## getVendorCommissionTerms
-
-> VendorCommissionTermsEnvelope getVendorCommissionTerms(organization)
-
-get Vendor Commission Terms
-
-TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-
-### Example
-
-```ts
-import {
-  Configuration,
-  VendorOnboardingApi,
-} from '@materyalph/api-client-ts';
-import type { GetVendorCommissionTermsRequest } from '@materyalph/api-client-ts';
-
-async function example() {
-  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({
-    // To configure API key authorization: accessCookie
-    apiKey: "YOUR API KEY",
-  });
-  const api = new VendorOnboardingApi(config);
-
-  const body = {
-    // string
-    organization: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-  } satisfies GetVendorCommissionTermsRequest;
-
-  try {
-    const data = await api.getVendorCommissionTerms(body);
-    console.log(data);
-  } catch (error) {
-    console.error(error);
-  }
-}
-
-// Run the test
-example().catch(console.error);
-```
-
-### Parameters
-
-
-| Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **organization** | `string` |  | [Defaults to `undefined`] |
-
-### Return type
-
-[**VendorCommissionTermsEnvelope**](VendorCommissionTermsEnvelope.md)
-
-### Authorization
-
-[accessCookie](../README.md#accessCookie)
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: `application/json`
-
-
-### HTTP response details
-| Status code | Description | Response headers |
-|-------------|-------------|------------------|
-| **200** | Operation completed. |  -  |
-| **401** | Safe canonical error envelope. |  -  |
-| **403** | Safe canonical error envelope. |  -  |
-| **404** | Safe canonical error envelope. |  -  |
-| **409** | Safe canonical error envelope. |  -  |
-| **422** | Safe canonical error envelope. |  -  |
-| **429** | Safe canonical error envelope. |  -  |
-| **503** | Safe canonical error envelope. |  -  |
-
-[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
-
-
-## getVendorReadiness
-
-> VendorReadinessEnvelope getVendorReadiness(organization)
-
-get Vendor Readiness
-
-TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-
-### Example
-
-```ts
-import {
-  Configuration,
-  VendorOnboardingApi,
-} from '@materyalph/api-client-ts';
-import type { GetVendorReadinessRequest } from '@materyalph/api-client-ts';
-
-async function example() {
-  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({
-    // To configure API key authorization: accessCookie
-    apiKey: "YOUR API KEY",
-  });
-  const api = new VendorOnboardingApi(config);
-
-  const body = {
-    // string
-    organization: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-  } satisfies GetVendorReadinessRequest;
-
-  try {
-    const data = await api.getVendorReadiness(body);
-    console.log(data);
-  } catch (error) {
-    console.error(error);
-  }
-}
-
-// Run the test
-example().catch(console.error);
-```
-
-### Parameters
-
-
-| Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **organization** | `string` |  | [Defaults to `undefined`] |
-
-### Return type
-
-[**VendorReadinessEnvelope**](VendorReadinessEnvelope.md)
-
-### Authorization
-
-[accessCookie](../README.md#accessCookie)
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: `application/json`
-
-
-### HTTP response details
-| Status code | Description | Response headers |
-|-------------|-------------|------------------|
-| **200** | Operation completed. |  -  |
-| **401** | Safe canonical error envelope. |  -  |
-| **403** | Safe canonical error envelope. |  -  |
-| **404** | Safe canonical error envelope. |  -  |
-| **409** | Safe canonical error envelope. |  -  |
-| **422** | Safe canonical error envelope. |  -  |
-| **429** | Safe canonical error envelope. |  -  |
-| **503** | Safe canonical error envelope. |  -  |
-
-[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
-
-
-## getVendorSetup
-
-> VendorSetupEnvelope getVendorSetup(organization)
-
-get Vendor Setup
-
-TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-
-### Example
-
-```ts
-import {
-  Configuration,
-  VendorOnboardingApi,
-} from '@materyalph/api-client-ts';
-import type { GetVendorSetupRequest } from '@materyalph/api-client-ts';
-
-async function example() {
-  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({
-    // To configure API key authorization: accessCookie
-    apiKey: "YOUR API KEY",
-  });
-  const api = new VendorOnboardingApi(config);
-
-  const body = {
-    // string
-    organization: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-  } satisfies GetVendorSetupRequest;
-
-  try {
-    const data = await api.getVendorSetup(body);
-    console.log(data);
-  } catch (error) {
-    console.error(error);
-  }
-}
-
-// Run the test
-example().catch(console.error);
-```
-
-### Parameters
-
-
-| Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **organization** | `string` |  | [Defaults to `undefined`] |
-
-### Return type
-
-[**VendorSetupEnvelope**](VendorSetupEnvelope.md)
-
-### Authorization
-
-[accessCookie](../README.md#accessCookie)
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: `application/json`
-
-
-### HTTP response details
-| Status code | Description | Response headers |
-|-------------|-------------|------------------|
-| **200** | Operation completed. |  -  |
-| **401** | Safe canonical error envelope. |  -  |
-| **403** | Safe canonical error envelope. |  -  |
-| **404** | Safe canonical error envelope. |  -  |
-| **409** | Safe canonical error envelope. |  -  |
-| **422** | Safe canonical error envelope. |  -  |
-| **429** | Safe canonical error envelope. |  -  |
-| **503** | Safe canonical error envelope. |  -  |
-
-[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
-
-
-## getVendorTaxProfile
-
-> VendorTaxProfileEnvelope getVendorTaxProfile(organization)
-
-get Vendor Tax Profile
-
-TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-
-### Example
-
-```ts
-import {
-  Configuration,
-  VendorOnboardingApi,
-} from '@materyalph/api-client-ts';
-import type { GetVendorTaxProfileRequest } from '@materyalph/api-client-ts';
-
-async function example() {
-  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({
-    // To configure API key authorization: accessCookie
-    apiKey: "YOUR API KEY",
-  });
-  const api = new VendorOnboardingApi(config);
-
-  const body = {
-    // string
-    organization: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-  } satisfies GetVendorTaxProfileRequest;
-
-  try {
-    const data = await api.getVendorTaxProfile(body);
-    console.log(data);
-  } catch (error) {
-    console.error(error);
-  }
-}
-
-// Run the test
-example().catch(console.error);
-```
-
-### Parameters
-
-
-| Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **organization** | `string` |  | [Defaults to `undefined`] |
-
-### Return type
-
-[**VendorTaxProfileEnvelope**](VendorTaxProfileEnvelope.md)
-
-### Authorization
-
-[accessCookie](../README.md#accessCookie)
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: `application/json`
-
-
-### HTTP response details
-| Status code | Description | Response headers |
-|-------------|-------------|------------------|
-| **200** | Operation completed. |  -  |
-| **401** | Safe canonical error envelope. |  -  |
-| **403** | Safe canonical error envelope. |  -  |
-| **404** | Safe canonical error envelope. |  -  |
-| **409** | Safe canonical error envelope. |  -  |
-| **422** | Safe canonical error envelope. |  -  |
-| **429** | Safe canonical error envelope. |  -  |
-| **503** | Safe canonical error envelope. |  -  |
-
-[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
-
-
-## getVendorTeam
-
-> VendorTeamEnvelope getVendorTeam(organization, page, perPage)
-
-get Vendor Team
-
-TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-
-### Example
-
-```ts
-import {
-  Configuration,
-  VendorOnboardingApi,
-} from '@materyalph/api-client-ts';
-import type { GetVendorTeamRequest } from '@materyalph/api-client-ts';
-
-async function example() {
-  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({
-    // To configure API key authorization: accessCookie
-    apiKey: "YOUR API KEY",
-  });
-  const api = new VendorOnboardingApi(config);
-
-  const body = {
-    // string
-    organization: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-    // number (optional)
-    page: 56,
-    // number (optional)
-    perPage: 56,
-  } satisfies GetVendorTeamRequest;
-
-  try {
-    const data = await api.getVendorTeam(body);
-    console.log(data);
-  } catch (error) {
-    console.error(error);
-  }
-}
-
-// Run the test
-example().catch(console.error);
-```
-
-### Parameters
-
-
-| Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **organization** | `string` |  | [Defaults to `undefined`] |
-| **page** | `number` |  | [Optional] [Defaults to `1`] |
-| **perPage** | `number` |  | [Optional] [Defaults to `20`] |
-
-### Return type
-
-[**VendorTeamEnvelope**](VendorTeamEnvelope.md)
-
-### Authorization
-
-[accessCookie](../README.md#accessCookie)
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: `application/json`
-
-
-### HTTP response details
-| Status code | Description | Response headers |
-|-------------|-------------|------------------|
-| **200** | Operation completed. |  -  |
-| **401** | Safe canonical error envelope. |  -  |
-| **403** | Safe canonical error envelope. |  -  |
-| **404** | Safe canonical error envelope. |  -  |
-| **409** | Safe canonical error envelope. |  -  |
-| **422** | Safe canonical error envelope. |  -  |
-| **429** | Safe canonical error envelope. |  -  |
-| **503** | Safe canonical error envelope. |  -  |
-
-[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
-
-
-## inviteVendorTeam
-
-> VendorMutationEnvelope inviteVendorTeam(organization, idempotencyKey, inviteVendorTeam)
-
-invite Vendor Team
-
-TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-
-### Example
-
-```ts
-import {
-  Configuration,
-  VendorOnboardingApi,
-} from '@materyalph/api-client-ts';
-import type { InviteVendorTeamRequest } from '@materyalph/api-client-ts';
-
-async function example() {
-  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({
-    // To configure API key authorization: accessCookie
-    apiKey: "YOUR API KEY",
-    // To configure API key authorization: webCsrf
-    apiKey: "YOUR API KEY",
-  });
-  const api = new VendorOnboardingApi(config);
-
-  const body = {
-    // string
-    organization: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-    // string
-    idempotencyKey: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-    // InviteVendorTeam
-    inviteVendorTeam: ...,
-  } satisfies InviteVendorTeamRequest;
-
-  try {
-    const data = await api.inviteVendorTeam(body);
-    console.log(data);
-  } catch (error) {
-    console.error(error);
-  }
-}
-
-// Run the test
-example().catch(console.error);
-```
-
-### Parameters
-
-
-| Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **organization** | `string` |  | [Defaults to `undefined`] |
-| **idempotencyKey** | `string` |  | [Defaults to `undefined`] |
-| **inviteVendorTeam** | [InviteVendorTeam](InviteVendorTeam.md) |  | |
-
-### Return type
-
-[**VendorMutationEnvelope**](VendorMutationEnvelope.md)
-
-### Authorization
-
-[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
-
-### HTTP request headers
-
 - **Content-Type**: `application/json`
 - **Accept**: `application/json`
 
@@ -1505,25 +983,19 @@ example().catch(console.error);
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **202** | Operation completed. |  -  |
-| **401** | Safe canonical error envelope. |  -  |
-| **403** | Safe canonical error envelope. |  -  |
-| **404** | Safe canonical error envelope. |  -  |
-| **409** | Safe canonical error envelope. |  -  |
-| **422** | Safe canonical error envelope. |  -  |
-| **429** | Safe canonical error envelope. |  -  |
-| **503** | Safe canonical error envelope. |  -  |
+| **202** | Verified and replay-safe provider event accepted. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **503** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
-## issueAdminVendorDocumentLink
+## reconcileVendorPaymentConnection
 
-> VendorDownloadLinkEnvelope issueAdminVendorDocumentLink(organization, version)
+> VendorPaymentReconciliationEnvelope reconcileVendorPaymentConnection()
 
-issue Admin Vendor Document Link
 
-TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
 
 ### Example
 
@@ -1532,7 +1004,7 @@ import {
   Configuration,
   VendorOnboardingApi,
 } from '@materyalph/api-client-ts';
-import type { IssueAdminVendorDocumentLinkRequest } from '@materyalph/api-client-ts';
+import type { ReconcileVendorPaymentConnectionRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
@@ -1544,15 +1016,8 @@ async function example() {
   });
   const api = new VendorOnboardingApi(config);
 
-  const body = {
-    // string
-    organization: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-    // string
-    version: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-  } satisfies IssueAdminVendorDocumentLinkRequest;
-
   try {
-    const data = await api.issueAdminVendorDocumentLink(body);
+    const data = await api.reconcileVendorPaymentConnection();
     console.log(data);
   } catch (error) {
     console.error(error);
@@ -1565,15 +1030,11 @@ example().catch(console.error);
 
 ### Parameters
 
-
-| Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **organization** | `string` |  | [Defaults to `undefined`] |
-| **version** | `string` |  | [Defaults to `undefined`] |
+This endpoint does not need any parameter.
 
 ### Return type
 
-[**VendorDownloadLinkEnvelope**](VendorDownloadLinkEnvelope.md)
+[**VendorPaymentReconciliationEnvelope**](VendorPaymentReconciliationEnvelope.md)
 
 ### Authorization
 
@@ -1588,25 +1049,20 @@ example().catch(console.error);
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **200** | Operation completed. |  -  |
-| **401** | Safe canonical error envelope. |  -  |
-| **403** | Safe canonical error envelope. |  -  |
-| **404** | Safe canonical error envelope. |  -  |
-| **409** | Safe canonical error envelope. |  -  |
-| **422** | Safe canonical error envelope. |  -  |
-| **429** | Safe canonical error envelope. |  -  |
-| **503** | Safe canonical error envelope. |  -  |
+| **200** | Provider reconciliation result. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **503** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
-## issueVendorDocumentLink
+## removePendingVendorDocument
 
-> VendorDownloadLinkEnvelope issueVendorDocumentLink(organization, version)
+> VendorOnboardingEnvelope removePendingVendorDocument(requirementKey)
 
-issue Vendor Document Link
 
-TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
 
 ### Example
 
@@ -1615,7 +1071,7 @@ import {
   Configuration,
   VendorOnboardingApi,
 } from '@materyalph/api-client-ts';
-import type { IssueVendorDocumentLinkRequest } from '@materyalph/api-client-ts';
+import type { RemovePendingVendorDocumentRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
@@ -1629,13 +1085,11 @@ async function example() {
 
   const body = {
     // string
-    organization: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-    // string
-    version: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-  } satisfies IssueVendorDocumentLinkRequest;
+    requirementKey: requirementKey_example,
+  } satisfies RemovePendingVendorDocumentRequest;
 
   try {
-    const data = await api.issueVendorDocumentLink(body);
+    const data = await api.removePendingVendorDocument(body);
     console.log(data);
   } catch (error) {
     console.error(error);
@@ -1651,12 +1105,11 @@ example().catch(console.error);
 
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
-| **organization** | `string` |  | [Defaults to `undefined`] |
-| **version** | `string` |  | [Defaults to `undefined`] |
+| **requirementKey** | `string` |  | [Defaults to `undefined`] |
 
 ### Return type
 
-[**VendorDownloadLinkEnvelope**](VendorDownloadLinkEnvelope.md)
+[**VendorOnboardingEnvelope**](VendorOnboardingEnvelope.md)
 
 ### Authorization
 
@@ -1671,845 +1124,17 @@ example().catch(console.error);
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **200** | Operation completed. |  -  |
-| **401** | Safe canonical error envelope. |  -  |
-| **403** | Safe canonical error envelope. |  -  |
-| **404** | Safe canonical error envelope. |  -  |
-| **409** | Safe canonical error envelope. |  -  |
-| **422** | Safe canonical error envelope. |  -  |
-| **429** | Safe canonical error envelope. |  -  |
-| **503** | Safe canonical error envelope. |  -  |
-
-[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
-
-
-## listAdminVendorDocuments
-
-> VendorDocumentListEnvelope listAdminVendorDocuments(organization, page, perPage)
-
-list Admin Vendor Documents
-
-TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-
-### Example
-
-```ts
-import {
-  Configuration,
-  VendorOnboardingApi,
-} from '@materyalph/api-client-ts';
-import type { ListAdminVendorDocumentsRequest } from '@materyalph/api-client-ts';
-
-async function example() {
-  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({
-    // To configure API key authorization: accessCookie
-    apiKey: "YOUR API KEY",
-  });
-  const api = new VendorOnboardingApi(config);
-
-  const body = {
-    // string
-    organization: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-    // number (optional)
-    page: 56,
-    // number (optional)
-    perPage: 56,
-  } satisfies ListAdminVendorDocumentsRequest;
-
-  try {
-    const data = await api.listAdminVendorDocuments(body);
-    console.log(data);
-  } catch (error) {
-    console.error(error);
-  }
-}
-
-// Run the test
-example().catch(console.error);
-```
-
-### Parameters
-
-
-| Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **organization** | `string` |  | [Defaults to `undefined`] |
-| **page** | `number` |  | [Optional] [Defaults to `1`] |
-| **perPage** | `number` |  | [Optional] [Defaults to `20`] |
-
-### Return type
-
-[**VendorDocumentListEnvelope**](VendorDocumentListEnvelope.md)
-
-### Authorization
-
-[accessCookie](../README.md#accessCookie)
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: `application/json`
-
-
-### HTTP response details
-| Status code | Description | Response headers |
-|-------------|-------------|------------------|
-| **200** | Operation completed. |  -  |
-| **401** | Safe canonical error envelope. |  -  |
-| **403** | Safe canonical error envelope. |  -  |
-| **404** | Safe canonical error envelope. |  -  |
-| **409** | Safe canonical error envelope. |  -  |
-| **422** | Safe canonical error envelope. |  -  |
-| **429** | Safe canonical error envelope. |  -  |
-| **503** | Safe canonical error envelope. |  -  |
-
-[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
-
-
-## listAdminVendorStoreMedia
-
-> VendorStoreMediaListEnvelope listAdminVendorStoreMedia(organization)
-
-list Admin Vendor Store Media
-
-TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-
-### Example
-
-```ts
-import {
-  Configuration,
-  VendorOnboardingApi,
-} from '@materyalph/api-client-ts';
-import type { ListAdminVendorStoreMediaRequest } from '@materyalph/api-client-ts';
-
-async function example() {
-  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({
-    // To configure API key authorization: accessCookie
-    apiKey: "YOUR API KEY",
-  });
-  const api = new VendorOnboardingApi(config);
-
-  const body = {
-    // string
-    organization: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-  } satisfies ListAdminVendorStoreMediaRequest;
-
-  try {
-    const data = await api.listAdminVendorStoreMedia(body);
-    console.log(data);
-  } catch (error) {
-    console.error(error);
-  }
-}
-
-// Run the test
-example().catch(console.error);
-```
-
-### Parameters
-
-
-| Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **organization** | `string` |  | [Defaults to `undefined`] |
-
-### Return type
-
-[**VendorStoreMediaListEnvelope**](VendorStoreMediaListEnvelope.md)
-
-### Authorization
-
-[accessCookie](../README.md#accessCookie)
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: `application/json`
-
-
-### HTTP response details
-| Status code | Description | Response headers |
-|-------------|-------------|------------------|
-| **200** | Operation completed. |  -  |
-| **401** | Safe canonical error envelope. |  -  |
-| **403** | Safe canonical error envelope. |  -  |
-| **404** | Safe canonical error envelope. |  -  |
-| **409** | Safe canonical error envelope. |  -  |
-| **422** | Safe canonical error envelope. |  -  |
-| **429** | Safe canonical error envelope. |  -  |
-| **503** | Safe canonical error envelope. |  -  |
-
-[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
-
-
-## listVendorDocuments
-
-> VendorDocumentListEnvelope listVendorDocuments(organization, page, perPage)
-
-list Vendor Documents
-
-TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-
-### Example
-
-```ts
-import {
-  Configuration,
-  VendorOnboardingApi,
-} from '@materyalph/api-client-ts';
-import type { ListVendorDocumentsRequest } from '@materyalph/api-client-ts';
-
-async function example() {
-  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({
-    // To configure API key authorization: accessCookie
-    apiKey: "YOUR API KEY",
-  });
-  const api = new VendorOnboardingApi(config);
-
-  const body = {
-    // string
-    organization: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-    // number (optional)
-    page: 56,
-    // number (optional)
-    perPage: 56,
-  } satisfies ListVendorDocumentsRequest;
-
-  try {
-    const data = await api.listVendorDocuments(body);
-    console.log(data);
-  } catch (error) {
-    console.error(error);
-  }
-}
-
-// Run the test
-example().catch(console.error);
-```
-
-### Parameters
-
-
-| Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **organization** | `string` |  | [Defaults to `undefined`] |
-| **page** | `number` |  | [Optional] [Defaults to `1`] |
-| **perPage** | `number` |  | [Optional] [Defaults to `20`] |
-
-### Return type
-
-[**VendorDocumentListEnvelope**](VendorDocumentListEnvelope.md)
-
-### Authorization
-
-[accessCookie](../README.md#accessCookie)
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: `application/json`
-
-
-### HTTP response details
-| Status code | Description | Response headers |
-|-------------|-------------|------------------|
-| **200** | Operation completed. |  -  |
-| **401** | Safe canonical error envelope. |  -  |
-| **403** | Safe canonical error envelope. |  -  |
-| **404** | Safe canonical error envelope. |  -  |
-| **409** | Safe canonical error envelope. |  -  |
-| **422** | Safe canonical error envelope. |  -  |
-| **429** | Safe canonical error envelope. |  -  |
-| **503** | Safe canonical error envelope. |  -  |
-
-[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
-
-
-## listVendorStoreMedia
-
-> VendorStoreMediaListEnvelope listVendorStoreMedia(organization)
-
-list Vendor Store Media
-
-TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-
-### Example
-
-```ts
-import {
-  Configuration,
-  VendorOnboardingApi,
-} from '@materyalph/api-client-ts';
-import type { ListVendorStoreMediaRequest } from '@materyalph/api-client-ts';
-
-async function example() {
-  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({
-    // To configure API key authorization: accessCookie
-    apiKey: "YOUR API KEY",
-  });
-  const api = new VendorOnboardingApi(config);
-
-  const body = {
-    // string
-    organization: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-  } satisfies ListVendorStoreMediaRequest;
-
-  try {
-    const data = await api.listVendorStoreMedia(body);
-    console.log(data);
-  } catch (error) {
-    console.error(error);
-  }
-}
-
-// Run the test
-example().catch(console.error);
-```
-
-### Parameters
-
-
-| Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **organization** | `string` |  | [Defaults to `undefined`] |
-
-### Return type
-
-[**VendorStoreMediaListEnvelope**](VendorStoreMediaListEnvelope.md)
-
-### Authorization
-
-[accessCookie](../README.md#accessCookie)
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: `application/json`
-
-
-### HTTP response details
-| Status code | Description | Response headers |
-|-------------|-------------|------------------|
-| **200** | Operation completed. |  -  |
-| **401** | Safe canonical error envelope. |  -  |
-| **403** | Safe canonical error envelope. |  -  |
-| **404** | Safe canonical error envelope. |  -  |
-| **409** | Safe canonical error envelope. |  -  |
-| **422** | Safe canonical error envelope. |  -  |
-| **429** | Safe canonical error envelope. |  -  |
-| **503** | Safe canonical error envelope. |  -  |
-
-[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
-
-
-## listVendorTeamInvitations
-
-> VendorTeamInvitationListEnvelope listVendorTeamInvitations(organization, page, perPage)
-
-list Vendor Team Invitations
-
-TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-
-### Example
-
-```ts
-import {
-  Configuration,
-  VendorOnboardingApi,
-} from '@materyalph/api-client-ts';
-import type { ListVendorTeamInvitationsRequest } from '@materyalph/api-client-ts';
-
-async function example() {
-  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({
-    // To configure API key authorization: accessCookie
-    apiKey: "YOUR API KEY",
-  });
-  const api = new VendorOnboardingApi(config);
-
-  const body = {
-    // string
-    organization: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-    // number (optional)
-    page: 56,
-    // number (optional)
-    perPage: 56,
-  } satisfies ListVendorTeamInvitationsRequest;
-
-  try {
-    const data = await api.listVendorTeamInvitations(body);
-    console.log(data);
-  } catch (error) {
-    console.error(error);
-  }
-}
-
-// Run the test
-example().catch(console.error);
-```
-
-### Parameters
-
-
-| Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **organization** | `string` |  | [Defaults to `undefined`] |
-| **page** | `number` |  | [Optional] [Defaults to `1`] |
-| **perPage** | `number` |  | [Optional] [Defaults to `20`] |
-
-### Return type
-
-[**VendorTeamInvitationListEnvelope**](VendorTeamInvitationListEnvelope.md)
-
-### Authorization
-
-[accessCookie](../README.md#accessCookie)
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: `application/json`
-
-
-### HTTP response details
-| Status code | Description | Response headers |
-|-------------|-------------|------------------|
-| **200** | Operation completed. |  -  |
-| **401** | Safe canonical error envelope. |  -  |
-| **403** | Safe canonical error envelope. |  -  |
-| **404** | Safe canonical error envelope. |  -  |
-| **409** | Safe canonical error envelope. |  -  |
-| **422** | Safe canonical error envelope. |  -  |
-| **429** | Safe canonical error envelope. |  -  |
-| **503** | Safe canonical error envelope. |  -  |
-
-[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
-
-
-## listVendorVerificationQueue
-
-> VendorVerificationRowListEnvelope listVendorVerificationQueue(page, perPage)
-
-list Vendor Verification Queue
-
-TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-
-### Example
-
-```ts
-import {
-  Configuration,
-  VendorOnboardingApi,
-} from '@materyalph/api-client-ts';
-import type { ListVendorVerificationQueueRequest } from '@materyalph/api-client-ts';
-
-async function example() {
-  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({
-    // To configure API key authorization: accessCookie
-    apiKey: "YOUR API KEY",
-  });
-  const api = new VendorOnboardingApi(config);
-
-  const body = {
-    // number (optional)
-    page: 56,
-    // number (optional)
-    perPage: 56,
-  } satisfies ListVendorVerificationQueueRequest;
-
-  try {
-    const data = await api.listVendorVerificationQueue(body);
-    console.log(data);
-  } catch (error) {
-    console.error(error);
-  }
-}
-
-// Run the test
-example().catch(console.error);
-```
-
-### Parameters
-
-
-| Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **page** | `number` |  | [Optional] [Defaults to `1`] |
-| **perPage** | `number` |  | [Optional] [Defaults to `20`] |
-
-### Return type
-
-[**VendorVerificationRowListEnvelope**](VendorVerificationRowListEnvelope.md)
-
-### Authorization
-
-[accessCookie](../README.md#accessCookie)
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: `application/json`
-
-
-### HTTP response details
-| Status code | Description | Response headers |
-|-------------|-------------|------------------|
-| **200** | Operation completed. |  -  |
-| **401** | Safe canonical error envelope. |  -  |
-| **403** | Safe canonical error envelope. |  -  |
-| **404** | Safe canonical error envelope. |  -  |
-| **409** | Safe canonical error envelope. |  -  |
-| **422** | Safe canonical error envelope. |  -  |
-| **429** | Safe canonical error envelope. |  -  |
-| **503** | Safe canonical error envelope. |  -  |
-
-[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
-
-
-## previewAdminVendorStoreMedia
-
-> Blob previewAdminVendorStoreMedia(organization, media)
-
-preview Admin Vendor Store Media
-
-TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-
-### Example
-
-```ts
-import {
-  Configuration,
-  VendorOnboardingApi,
-} from '@materyalph/api-client-ts';
-import type { PreviewAdminVendorStoreMediaRequest } from '@materyalph/api-client-ts';
-
-async function example() {
-  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({
-    // To configure API key authorization: accessCookie
-    apiKey: "YOUR API KEY",
-  });
-  const api = new VendorOnboardingApi(config);
-
-  const body = {
-    // string
-    organization: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-    // string
-    media: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-  } satisfies PreviewAdminVendorStoreMediaRequest;
-
-  try {
-    const data = await api.previewAdminVendorStoreMedia(body);
-    console.log(data);
-  } catch (error) {
-    console.error(error);
-  }
-}
-
-// Run the test
-example().catch(console.error);
-```
-
-### Parameters
-
-
-| Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **organization** | `string` |  | [Defaults to `undefined`] |
-| **media** | `string` |  | [Defaults to `undefined`] |
-
-### Return type
-
-**Blob**
-
-### Authorization
-
-[accessCookie](../README.md#accessCookie)
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: `application/octet-stream`, `application/json`
-
-
-### HTTP response details
-| Status code | Description | Response headers |
-|-------------|-------------|------------------|
-| **200** | Operation completed. |  -  |
-| **401** | Safe canonical error envelope. |  -  |
-| **403** | Safe canonical error envelope. |  -  |
-| **404** | Safe canonical error envelope. |  -  |
-| **409** | Safe canonical error envelope. |  -  |
-| **422** | Safe canonical error envelope. |  -  |
-| **429** | Safe canonical error envelope. |  -  |
-| **503** | Safe canonical error envelope. |  -  |
-
-[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
-
-
-## previewVendorStoreMedia
-
-> Blob previewVendorStoreMedia(organization, media)
-
-preview Vendor Store Media
-
-TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-
-### Example
-
-```ts
-import {
-  Configuration,
-  VendorOnboardingApi,
-} from '@materyalph/api-client-ts';
-import type { PreviewVendorStoreMediaRequest } from '@materyalph/api-client-ts';
-
-async function example() {
-  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({
-    // To configure API key authorization: accessCookie
-    apiKey: "YOUR API KEY",
-  });
-  const api = new VendorOnboardingApi(config);
-
-  const body = {
-    // string
-    organization: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-    // string
-    media: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-  } satisfies PreviewVendorStoreMediaRequest;
-
-  try {
-    const data = await api.previewVendorStoreMedia(body);
-    console.log(data);
-  } catch (error) {
-    console.error(error);
-  }
-}
-
-// Run the test
-example().catch(console.error);
-```
-
-### Parameters
-
-
-| Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **organization** | `string` |  | [Defaults to `undefined`] |
-| **media** | `string` |  | [Defaults to `undefined`] |
-
-### Return type
-
-**Blob**
-
-### Authorization
-
-[accessCookie](../README.md#accessCookie)
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: `application/octet-stream`, `application/json`
-
-
-### HTTP response details
-| Status code | Description | Response headers |
-|-------------|-------------|------------------|
-| **200** | Operation completed. |  -  |
-| **401** | Safe canonical error envelope. |  -  |
-| **403** | Safe canonical error envelope. |  -  |
-| **404** | Safe canonical error envelope. |  -  |
-| **409** | Safe canonical error envelope. |  -  |
-| **422** | Safe canonical error envelope. |  -  |
-| **429** | Safe canonical error envelope. |  -  |
-| **503** | Safe canonical error envelope. |  -  |
-
-[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
-
-
-## reconcileVendorTestConnection
-
-> VendorSetupEnvelope reconcileVendorTestConnection(organization, vendorVersionMutation)
-
-reconcile Vendor Test Connection
-
-TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-
-### Example
-
-```ts
-import {
-  Configuration,
-  VendorOnboardingApi,
-} from '@materyalph/api-client-ts';
-import type { ReconcileVendorTestConnectionRequest } from '@materyalph/api-client-ts';
-
-async function example() {
-  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({
-    // To configure API key authorization: accessCookie
-    apiKey: "YOUR API KEY",
-    // To configure API key authorization: webCsrf
-    apiKey: "YOUR API KEY",
-  });
-  const api = new VendorOnboardingApi(config);
-
-  const body = {
-    // string
-    organization: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-    // VendorVersionMutation
-    vendorVersionMutation: ...,
-  } satisfies ReconcileVendorTestConnectionRequest;
-
-  try {
-    const data = await api.reconcileVendorTestConnection(body);
-    console.log(data);
-  } catch (error) {
-    console.error(error);
-  }
-}
-
-// Run the test
-example().catch(console.error);
-```
-
-### Parameters
-
-
-| Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **organization** | `string` |  | [Defaults to `undefined`] |
-| **vendorVersionMutation** | [VendorVersionMutation](VendorVersionMutation.md) |  | |
-
-### Return type
-
-[**VendorSetupEnvelope**](VendorSetupEnvelope.md)
-
-### Authorization
-
-[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
-
-### HTTP request headers
-
-- **Content-Type**: `application/json`
-- **Accept**: `application/json`
-
-
-### HTTP response details
-| Status code | Description | Response headers |
-|-------------|-------------|------------------|
-| **200** | Operation completed. |  -  |
-| **401** | Safe canonical error envelope. |  -  |
-| **403** | Safe canonical error envelope. |  -  |
-| **404** | Safe canonical error envelope. |  -  |
-| **409** | Safe canonical error envelope. |  -  |
-| **422** | Safe canonical error envelope. |  -  |
-| **429** | Safe canonical error envelope. |  -  |
-| **503** | Safe canonical error envelope. |  -  |
-
-[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
-
-
-## removeVendorStoreMedia
-
-> VendorMutationEnvelope removeVendorStoreMedia(organization, media, vendorVersionMutation)
-
-remove Vendor Store Media
-
-TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-
-### Example
-
-```ts
-import {
-  Configuration,
-  VendorOnboardingApi,
-} from '@materyalph/api-client-ts';
-import type { RemoveVendorStoreMediaRequest } from '@materyalph/api-client-ts';
-
-async function example() {
-  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({
-    // To configure API key authorization: accessCookie
-    apiKey: "YOUR API KEY",
-    // To configure API key authorization: webCsrf
-    apiKey: "YOUR API KEY",
-  });
-  const api = new VendorOnboardingApi(config);
-
-  const body = {
-    // string
-    organization: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-    // string
-    media: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-    // VendorVersionMutation
-    vendorVersionMutation: ...,
-  } satisfies RemoveVendorStoreMediaRequest;
-
-  try {
-    const data = await api.removeVendorStoreMedia(body);
-    console.log(data);
-  } catch (error) {
-    console.error(error);
-  }
-}
-
-// Run the test
-example().catch(console.error);
-```
-
-### Parameters
-
-
-| Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **organization** | `string` |  | [Defaults to `undefined`] |
-| **media** | `string` |  | [Defaults to `undefined`] |
-| **vendorVersionMutation** | [VendorVersionMutation](VendorVersionMutation.md) |  | |
-
-### Return type
-
-[**VendorMutationEnvelope**](VendorMutationEnvelope.md)
-
-### Authorization
-
-[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
-
-### HTTP request headers
-
-- **Content-Type**: `application/json`
-- **Accept**: `application/json`
-
-
-### HTTP response details
-| Status code | Description | Response headers |
-|-------------|-------------|------------------|
-| **200** | Operation completed. |  -  |
-| **401** | Safe canonical error envelope. |  -  |
-| **403** | Safe canonical error envelope. |  -  |
-| **404** | Safe canonical error envelope. |  -  |
-| **409** | Safe canonical error envelope. |  -  |
-| **422** | Safe canonical error envelope. |  -  |
-| **429** | Safe canonical error envelope. |  -  |
-| **503** | Safe canonical error envelope. |  -  |
+| **200** | Pending attachment removed without changing submitted history. |  -  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
 ## requestVendorStoreEmailVerification
 
-> VendorBusinessEnvelope requestVendorStoreEmailVerification(organization, vendorStoreEmailVerificationRequest)
+> VendorStoreEmailEnvelope requestVendorStoreEmailVerification(emailRequest)
 
-request Vendor Store Email Verification
 
-TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
 
 ### Example
 
@@ -2531,10 +1156,8 @@ async function example() {
   const api = new VendorOnboardingApi(config);
 
   const body = {
-    // string
-    organization: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-    // VendorStoreEmailVerificationRequest
-    vendorStoreEmailVerificationRequest: ...,
+    // EmailRequest
+    emailRequest: ...,
   } satisfies RequestVendorStoreEmailVerificationRequest;
 
   try {
@@ -2554,12 +1177,11 @@ example().catch(console.error);
 
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
-| **organization** | `string` |  | [Defaults to `undefined`] |
-| **vendorStoreEmailVerificationRequest** | [VendorStoreEmailVerificationRequest](VendorStoreEmailVerificationRequest.md) |  | |
+| **emailRequest** | [EmailRequest](EmailRequest.md) |  | |
 
 ### Return type
 
-[**VendorBusinessEnvelope**](VendorBusinessEnvelope.md)
+[**VendorStoreEmailEnvelope**](VendorStoreEmailEnvelope.md)
 
 ### Authorization
 
@@ -2574,25 +1196,19 @@ example().catch(console.error);
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **200** | Operation completed. |  -  |
-| **401** | Safe canonical error envelope. |  -  |
-| **403** | Safe canonical error envelope. |  -  |
-| **404** | Safe canonical error envelope. |  -  |
-| **409** | Safe canonical error envelope. |  -  |
-| **422** | Safe canonical error envelope. |  -  |
-| **429** | Safe canonical error envelope. |  -  |
-| **503** | Safe canonical error envelope. |  -  |
+| **202** | Short-lived Store Email OTP queued. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
-## reviewVendorBusiness
+## resolveVendorAddress
 
-> VendorReadinessEnvelope reviewVendorBusiness(organization, vendorBusinessReview)
+> GenericDataEnvelope resolveVendorAddress(vendorAddressSelection)
 
-review Vendor Business
 
-TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
 
 ### Example
 
@@ -2601,7 +1217,7 @@ import {
   Configuration,
   VendorOnboardingApi,
 } from '@materyalph/api-client-ts';
-import type { ReviewVendorBusinessRequest } from '@materyalph/api-client-ts';
+import type { ResolveVendorAddressRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
@@ -2614,14 +1230,12 @@ async function example() {
   const api = new VendorOnboardingApi(config);
 
   const body = {
-    // string
-    organization: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-    // VendorBusinessReview
-    vendorBusinessReview: ...,
-  } satisfies ReviewVendorBusinessRequest;
+    // VendorAddressSelection
+    vendorAddressSelection: ...,
+  } satisfies ResolveVendorAddressRequest;
 
   try {
-    const data = await api.reviewVendorBusiness(body);
+    const data = await api.resolveVendorAddress(body);
     console.log(data);
   } catch (error) {
     console.error(error);
@@ -2637,12 +1251,11 @@ example().catch(console.error);
 
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
-| **organization** | `string` |  | [Defaults to `undefined`] |
-| **vendorBusinessReview** | [VendorBusinessReview](VendorBusinessReview.md) |  | |
+| **vendorAddressSelection** | [VendorAddressSelection](VendorAddressSelection.md) |  | |
 
 ### Return type
 
-[**VendorReadinessEnvelope**](VendorReadinessEnvelope.md)
+[**GenericDataEnvelope**](GenericDataEnvelope.md)
 
 ### Authorization
 
@@ -2657,25 +1270,17 @@ example().catch(console.error);
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **200** | Operation completed. |  -  |
-| **401** | Safe canonical error envelope. |  -  |
-| **403** | Safe canonical error envelope. |  -  |
-| **404** | Safe canonical error envelope. |  -  |
-| **409** | Safe canonical error envelope. |  -  |
-| **422** | Safe canonical error envelope. |  -  |
-| **429** | Safe canonical error envelope. |  -  |
-| **503** | Safe canonical error envelope. |  -  |
+| **200** | Canonical address with server-generated coordinates and an organization-bound resolution token valid for 30 minutes. |  -  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
-## reviewVendorDocument
+## resolveVendorAddressPin
 
-> VendorReadinessEnvelope reviewVendorDocument(organization, version, vendorDocumentReview)
+> GenericDataEnvelope resolveVendorAddressPin(vendorAddressGeocode)
 
-review Vendor Document
 
-TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
 
 ### Example
 
@@ -2684,7 +1289,7 @@ import {
   Configuration,
   VendorOnboardingApi,
 } from '@materyalph/api-client-ts';
-import type { ReviewVendorDocumentRequest } from '@materyalph/api-client-ts';
+import type { ResolveVendorAddressPinRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
@@ -2697,16 +1302,12 @@ async function example() {
   const api = new VendorOnboardingApi(config);
 
   const body = {
-    // string
-    organization: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-    // string
-    version: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-    // VendorDocumentReview
-    vendorDocumentReview: ...,
-  } satisfies ReviewVendorDocumentRequest;
+    // VendorAddressGeocode
+    vendorAddressGeocode: ...,
+  } satisfies ResolveVendorAddressPinRequest;
 
   try {
-    const data = await api.reviewVendorDocument(body);
+    const data = await api.resolveVendorAddressPin(body);
     console.log(data);
   } catch (error) {
     console.error(error);
@@ -2722,13 +1323,11 @@ example().catch(console.error);
 
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
-| **organization** | `string` |  | [Defaults to `undefined`] |
-| **version** | `string` |  | [Defaults to `undefined`] |
-| **vendorDocumentReview** | [VendorDocumentReview](VendorDocumentReview.md) |  | |
+| **vendorAddressGeocode** | [VendorAddressGeocode](VendorAddressGeocode.md) |  | |
 
 ### Return type
 
-[**VendorReadinessEnvelope**](VendorReadinessEnvelope.md)
+[**GenericDataEnvelope**](GenericDataEnvelope.md)
 
 ### Authorization
 
@@ -2743,25 +1342,19 @@ example().catch(console.error);
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **200** | Operation completed. |  -  |
-| **401** | Safe canonical error envelope. |  -  |
-| **403** | Safe canonical error envelope. |  -  |
-| **404** | Safe canonical error envelope. |  -  |
-| **409** | Safe canonical error envelope. |  -  |
-| **422** | Safe canonical error envelope. |  -  |
-| **429** | Safe canonical error envelope. |  -  |
-| **503** | Safe canonical error envelope. |  -  |
+| **200** | Reverse-geocoded Philippine map pin with uniquely matched PSGC codes and a short-lived organization-bound pin token. Unmatched fields require a PSGC selection. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
-## reviewVendorStoreMedia
+## reverseGeocodeVendorAddress
 
-> VendorMutationEnvelope reviewVendorStoreMedia(organization, media, vendorReview)
+> VendorAddressGeocodeEnvelope reverseGeocodeVendorAddress(vendorAddressGeocode)
 
-review Vendor Store Media
 
-TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
 
 ### Example
 
@@ -2770,7 +1363,7 @@ import {
   Configuration,
   VendorOnboardingApi,
 } from '@materyalph/api-client-ts';
-import type { ReviewVendorStoreMediaRequest } from '@materyalph/api-client-ts';
+import type { ReverseGeocodeVendorAddressRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
@@ -2783,16 +1376,12 @@ async function example() {
   const api = new VendorOnboardingApi(config);
 
   const body = {
-    // string
-    organization: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-    // string
-    media: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-    // VendorReview
-    vendorReview: ...,
-  } satisfies ReviewVendorStoreMediaRequest;
+    // VendorAddressGeocode
+    vendorAddressGeocode: ...,
+  } satisfies ReverseGeocodeVendorAddressRequest;
 
   try {
-    const data = await api.reviewVendorStoreMedia(body);
+    const data = await api.reverseGeocodeVendorAddress(body);
     console.log(data);
   } catch (error) {
     console.error(error);
@@ -2808,13 +1397,11 @@ example().catch(console.error);
 
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
-| **organization** | `string` |  | [Defaults to `undefined`] |
-| **media** | `string` |  | [Defaults to `undefined`] |
-| **vendorReview** | [VendorReview](VendorReview.md) |  | |
+| **vendorAddressGeocode** | [VendorAddressGeocode](VendorAddressGeocode.md) |  | |
 
 ### Return type
 
-[**VendorMutationEnvelope**](VendorMutationEnvelope.md)
+[**VendorAddressGeocodeEnvelope**](VendorAddressGeocodeEnvelope.md)
 
 ### Authorization
 
@@ -2829,25 +1416,21 @@ example().catch(console.error);
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **200** | Operation completed. |  -  |
-| **401** | Safe canonical error envelope. |  -  |
-| **403** | Safe canonical error envelope. |  -  |
-| **404** | Safe canonical error envelope. |  -  |
-| **409** | Safe canonical error envelope. |  -  |
-| **422** | Safe canonical error envelope. |  -  |
-| **429** | Safe canonical error envelope. |  -  |
-| **503** | Safe canonical error envelope. |  -  |
+| **200** | Provider result or a manual-entry fallback. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
-## reviewVendorTaxProfile
+## saveVendorSetupDraft
 
-> VendorReadinessEnvelope reviewVendorTaxProfile(organization, version, vendorReview)
+> VendorOnboardingEnvelope saveVendorSetupDraft(vendorSetupDraft)
 
-review Vendor Tax Profile
 
-TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
+
+Saves version-checked setup progress. Public-name, description and public-contact-only edits preserve completed setup and activation; operational changes reopen setup requirements. Every successful save advances the organization lock version.
 
 ### Example
 
@@ -2856,7 +1439,7 @@ import {
   Configuration,
   VendorOnboardingApi,
 } from '@materyalph/api-client-ts';
-import type { ReviewVendorTaxProfileRequest } from '@materyalph/api-client-ts';
+import type { SaveVendorSetupDraftRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
@@ -2869,16 +1452,12 @@ async function example() {
   const api = new VendorOnboardingApi(config);
 
   const body = {
-    // string
-    organization: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-    // string
-    version: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-    // VendorReview
-    vendorReview: ...,
-  } satisfies ReviewVendorTaxProfileRequest;
+    // VendorSetupDraft
+    vendorSetupDraft: ...,
+  } satisfies SaveVendorSetupDraftRequest;
 
   try {
-    const data = await api.reviewVendorTaxProfile(body);
+    const data = await api.saveVendorSetupDraft(body);
     console.log(data);
   } catch (error) {
     console.error(error);
@@ -2894,13 +1473,11 @@ example().catch(console.error);
 
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
-| **organization** | `string` |  | [Defaults to `undefined`] |
-| **version** | `string` |  | [Defaults to `undefined`] |
-| **vendorReview** | [VendorReview](VendorReview.md) |  | |
+| **vendorSetupDraft** | [VendorSetupDraft](VendorSetupDraft.md) |  | |
 
 ### Return type
 
-[**VendorReadinessEnvelope**](VendorReadinessEnvelope.md)
+[**VendorOnboardingEnvelope**](VendorOnboardingEnvelope.md)
 
 ### Authorization
 
@@ -2915,25 +1492,20 @@ example().catch(console.error);
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **200** | Operation completed. |  -  |
-| **401** | Safe canonical error envelope. |  -  |
-| **403** | Safe canonical error envelope. |  -  |
-| **404** | Safe canonical error envelope. |  -  |
-| **409** | Safe canonical error envelope. |  -  |
-| **422** | Safe canonical error envelope. |  -  |
-| **429** | Safe canonical error envelope. |  -  |
-| **503** | Safe canonical error envelope. |  -  |
+| **200** | Setup draft saved. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **409** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
-## revokeVendorTeamInvitation
+## saveVendorVerificationDraft
 
-> VendorMutationEnvelope revokeVendorTeamInvitation(organization, invitation, vendorVersionMutation)
+> VendorOnboardingEnvelope saveVendorVerificationDraft(vendorVerificationDraft)
 
-revoke Vendor Team Invitation
 
-TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
 
 ### Example
 
@@ -2942,7 +1514,7 @@ import {
   Configuration,
   VendorOnboardingApi,
 } from '@materyalph/api-client-ts';
-import type { RevokeVendorTeamInvitationRequest } from '@materyalph/api-client-ts';
+import type { SaveVendorVerificationDraftRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
@@ -2955,16 +1527,12 @@ async function example() {
   const api = new VendorOnboardingApi(config);
 
   const body = {
-    // string
-    organization: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-    // string
-    invitation: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-    // VendorVersionMutation
-    vendorVersionMutation: ...,
-  } satisfies RevokeVendorTeamInvitationRequest;
+    // VendorVerificationDraft
+    vendorVerificationDraft: ...,
+  } satisfies SaveVendorVerificationDraftRequest;
 
   try {
-    const data = await api.revokeVendorTeamInvitation(body);
+    const data = await api.saveVendorVerificationDraft(body);
     console.log(data);
   } catch (error) {
     console.error(error);
@@ -2980,13 +1548,11 @@ example().catch(console.error);
 
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
-| **organization** | `string` |  | [Defaults to `undefined`] |
-| **invitation** | `string` |  | [Defaults to `undefined`] |
-| **vendorVersionMutation** | [VendorVersionMutation](VendorVersionMutation.md) |  | |
+| **vendorVerificationDraft** | [VendorVerificationDraft](VendorVerificationDraft.md) |  | |
 
 ### Return type
 
-[**VendorMutationEnvelope**](VendorMutationEnvelope.md)
+[**VendorOnboardingEnvelope**](VendorOnboardingEnvelope.md)
 
 ### Authorization
 
@@ -3001,25 +1567,20 @@ example().catch(console.error);
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **200** | Operation completed. |  -  |
-| **401** | Safe canonical error envelope. |  -  |
-| **403** | Safe canonical error envelope. |  -  |
-| **404** | Safe canonical error envelope. |  -  |
-| **409** | Safe canonical error envelope. |  -  |
-| **422** | Safe canonical error envelope. |  -  |
-| **429** | Safe canonical error envelope. |  -  |
-| **503** | Safe canonical error envelope. |  -  |
+| **200** | Draft saved. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **409** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
-## saveVendorBusiness
+## searchVendorAddressAreas
 
-> VendorBusinessEnvelope saveVendorBusiness(organization, saveVendorBusiness)
+> PsgcSearchEnvelope searchVendorAddressAreas(level, parentCode, q, page)
 
-save Vendor Business
 
-TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
 
 ### Example
 
@@ -3028,7 +1589,7 @@ import {
   Configuration,
   VendorOnboardingApi,
 } from '@materyalph/api-client-ts';
-import type { SaveVendorBusinessRequest } from '@materyalph/api-client-ts';
+import type { SearchVendorAddressAreasRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
@@ -3041,14 +1602,18 @@ async function example() {
   const api = new VendorOnboardingApi(config);
 
   const body = {
-    // string
-    organization: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-    // SaveVendorBusiness
-    saveVendorBusiness: ...,
-  } satisfies SaveVendorBusinessRequest;
+    // 'PROVINCE' | 'CITY' | 'BARANGAY'
+    level: level_example,
+    // string (optional)
+    parentCode: parentCode_example,
+    // string (optional)
+    q: q_example,
+    // number (optional)
+    page: 56,
+  } satisfies SearchVendorAddressAreasRequest;
 
   try {
-    const data = await api.saveVendorBusiness(body);
+    const data = await api.searchVendorAddressAreas(body);
     console.log(data);
   } catch (error) {
     console.error(error);
@@ -3064,12 +1629,14 @@ example().catch(console.error);
 
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
-| **organization** | `string` |  | [Defaults to `undefined`] |
-| **saveVendorBusiness** | [SaveVendorBusiness](SaveVendorBusiness.md) |  | |
+| **level** | `PROVINCE`, `CITY`, `BARANGAY` |  | [Defaults to `undefined`] [Enum: PROVINCE, CITY, BARANGAY] |
+| **parentCode** | `string` |  | [Optional] [Defaults to `undefined`] |
+| **q** | `string` |  | [Optional] [Defaults to `undefined`] |
+| **page** | `number` |  | [Optional] [Defaults to `1`] |
 
 ### Return type
 
-[**VendorBusinessEnvelope**](VendorBusinessEnvelope.md)
+[**PsgcSearchEnvelope**](PsgcSearchEnvelope.md)
 
 ### Authorization
 
@@ -3077,32 +1644,24 @@ example().catch(console.error);
 
 ### HTTP request headers
 
-- **Content-Type**: `application/json`
+- **Content-Type**: Not defined
 - **Accept**: `application/json`
 
 
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **200** | Operation completed. |  -  |
-| **401** | Safe canonical error envelope. |  -  |
-| **403** | Safe canonical error envelope. |  -  |
-| **404** | Safe canonical error envelope. |  -  |
-| **409** | Safe canonical error envelope. |  -  |
-| **422** | Safe canonical error envelope. |  -  |
-| **429** | Safe canonical error envelope. |  -  |
-| **503** | Safe canonical error envelope. |  -  |
+| **200** | Paginated official PSGC matches. PROVINCE includes region groupings for cities without a province parent. |  -  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
-## saveVendorStore
+## submitVendorVerification
 
-> VendorSetupEnvelope saveVendorStore(organization, saveVendorStore)
+> VendorOnboardingEnvelope submitVendorVerification(idempotencyKey, vendorVerificationSubmit)
 
-save Vendor Store
 
-TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
 
 ### Example
 
@@ -3111,7 +1670,7 @@ import {
   Configuration,
   VendorOnboardingApi,
 } from '@materyalph/api-client-ts';
-import type { SaveVendorStoreRequest } from '@materyalph/api-client-ts';
+import type { SubmitVendorVerificationRequest } from '@materyalph/api-client-ts';
 
 async function example() {
   console.log("🚀 Testing @materyalph/api-client-ts SDK...");
@@ -3125,13 +1684,13 @@ async function example() {
 
   const body = {
     // string
-    organization: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-    // SaveVendorStore
-    saveVendorStore: ...,
-  } satisfies SaveVendorStoreRequest;
+    idempotencyKey: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // VendorVerificationSubmit
+    vendorVerificationSubmit: ...,
+  } satisfies SubmitVendorVerificationRequest;
 
   try {
-    const data = await api.saveVendorStore(body);
+    const data = await api.submitVendorVerification(body);
     console.log(data);
   } catch (error) {
     console.error(error);
@@ -3147,12 +1706,12 @@ example().catch(console.error);
 
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
-| **organization** | `string` |  | [Defaults to `undefined`] |
-| **saveVendorStore** | [SaveVendorStore](SaveVendorStore.md) |  | |
+| **idempotencyKey** | `string` |  | [Defaults to `undefined`] |
+| **vendorVerificationSubmit** | [VendorVerificationSubmit](VendorVerificationSubmit.md) |  | |
 
 ### Return type
 
-[**VendorSetupEnvelope**](VendorSetupEnvelope.md)
+[**VendorOnboardingEnvelope**](VendorOnboardingEnvelope.md)
 
 ### Authorization
 
@@ -3167,197 +1726,20 @@ example().catch(console.error);
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **200** | Operation completed. |  -  |
-| **401** | Safe canonical error envelope. |  -  |
-| **403** | Safe canonical error envelope. |  -  |
-| **404** | Safe canonical error envelope. |  -  |
-| **409** | Safe canonical error envelope. |  -  |
-| **422** | Safe canonical error envelope. |  -  |
-| **429** | Safe canonical error envelope. |  -  |
-| **503** | Safe canonical error envelope. |  -  |
-
-[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
-
-
-## saveVendorTaxProfile
-
-> VendorTaxProfileEnvelope saveVendorTaxProfile(organization, saveVendorTax)
-
-save Vendor Tax Profile
-
-TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-
-### Example
-
-```ts
-import {
-  Configuration,
-  VendorOnboardingApi,
-} from '@materyalph/api-client-ts';
-import type { SaveVendorTaxProfileRequest } from '@materyalph/api-client-ts';
-
-async function example() {
-  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({
-    // To configure API key authorization: accessCookie
-    apiKey: "YOUR API KEY",
-    // To configure API key authorization: webCsrf
-    apiKey: "YOUR API KEY",
-  });
-  const api = new VendorOnboardingApi(config);
-
-  const body = {
-    // string
-    organization: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-    // SaveVendorTax
-    saveVendorTax: ...,
-  } satisfies SaveVendorTaxProfileRequest;
-
-  try {
-    const data = await api.saveVendorTaxProfile(body);
-    console.log(data);
-  } catch (error) {
-    console.error(error);
-  }
-}
-
-// Run the test
-example().catch(console.error);
-```
-
-### Parameters
-
-
-| Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **organization** | `string` |  | [Defaults to `undefined`] |
-| **saveVendorTax** | [SaveVendorTax](SaveVendorTax.md) |  | |
-
-### Return type
-
-[**VendorTaxProfileEnvelope**](VendorTaxProfileEnvelope.md)
-
-### Authorization
-
-[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
-
-### HTTP request headers
-
-- **Content-Type**: `application/json`
-- **Accept**: `application/json`
-
-
-### HTTP response details
-| Status code | Description | Response headers |
-|-------------|-------------|------------------|
-| **200** | Operation completed. |  -  |
-| **401** | Safe canonical error envelope. |  -  |
-| **403** | Safe canonical error envelope. |  -  |
-| **404** | Safe canonical error envelope. |  -  |
-| **409** | Safe canonical error envelope. |  -  |
-| **422** | Safe canonical error envelope. |  -  |
-| **429** | Safe canonical error envelope. |  -  |
-| **503** | Safe canonical error envelope. |  -  |
-
-[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
-
-
-## uploadVendorDocument
-
-> VendorDocumentUploadEnvelope uploadVendorDocument(organization, lockVersion, documentType, file)
-
-upload Vendor Document
-
-TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-
-### Example
-
-```ts
-import {
-  Configuration,
-  VendorOnboardingApi,
-} from '@materyalph/api-client-ts';
-import type { UploadVendorDocumentRequest } from '@materyalph/api-client-ts';
-
-async function example() {
-  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({
-    // To configure API key authorization: accessCookie
-    apiKey: "YOUR API KEY",
-    // To configure API key authorization: webCsrf
-    apiKey: "YOUR API KEY",
-  });
-  const api = new VendorOnboardingApi(config);
-
-  const body = {
-    // string
-    organization: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-    // number
-    lockVersion: 56,
-    // string
-    documentType: documentType_example,
-    // Blob
-    file: BINARY_DATA_HERE,
-  } satisfies UploadVendorDocumentRequest;
-
-  try {
-    const data = await api.uploadVendorDocument(body);
-    console.log(data);
-  } catch (error) {
-    console.error(error);
-  }
-}
-
-// Run the test
-example().catch(console.error);
-```
-
-### Parameters
-
-
-| Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **organization** | `string` |  | [Defaults to `undefined`] |
-| **lockVersion** | `number` |  | [Defaults to `undefined`] |
-| **documentType** | `GOVERNMENT_ID`, `DTI`, `SEC`, `CDA`, `LGU_PERMIT`, `BIR_COR`, `REGULATORY`, `ISO_CERTIFICATION`, `TAX_DECLARATION`, `WITHHOLDING_DECLARATION` |  | [Defaults to `undefined`] [Enum: GOVERNMENT_ID, DTI, SEC, CDA, LGU_PERMIT, BIR_COR, REGULATORY, ISO_CERTIFICATION, TAX_DECLARATION, WITHHOLDING_DECLARATION] |
-| **file** | `Blob` |  | [Defaults to `undefined`] |
-
-### Return type
-
-[**VendorDocumentUploadEnvelope**](VendorDocumentUploadEnvelope.md)
-
-### Authorization
-
-[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
-
-### HTTP request headers
-
-- **Content-Type**: `multipart/form-data`
-- **Accept**: `application/json`
-
-
-### HTTP response details
-| Status code | Description | Response headers |
-|-------------|-------------|------------------|
-| **201** | Operation completed. |  -  |
-| **401** | Safe canonical error envelope. |  -  |
-| **403** | Safe canonical error envelope. |  -  |
-| **404** | Safe canonical error envelope. |  -  |
-| **409** | Safe canonical error envelope. |  -  |
-| **422** | Safe canonical error envelope. |  -  |
-| **429** | Safe canonical error envelope. |  -  |
-| **503** | Safe canonical error envelope. |  -  |
+| **202** | Submission queued for manual Admin review. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **409** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
 ## uploadVendorStoreMedia
 
-> VendorMutationEnvelope uploadVendorStoreMedia(organization, lockVersion, kind, altText, file)
+> VendorMediaEnvelope uploadVendorStoreMedia(kind, file, altText)
 
-upload Vendor Store Media
 
-TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
 
 ### Example
 
@@ -3380,15 +1762,11 @@ async function example() {
 
   const body = {
     // string
-    organization: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-    // number
-    lockVersion: 56,
-    // string
     kind: kind_example,
-    // string
-    altText: altText_example,
     // Blob
     file: BINARY_DATA_HERE,
+    // string (optional)
+    altText: altText_example,
   } satisfies UploadVendorStoreMediaRequest;
 
   try {
@@ -3408,15 +1786,13 @@ example().catch(console.error);
 
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
-| **organization** | `string` |  | [Defaults to `undefined`] |
-| **lockVersion** | `number` |  | [Defaults to `undefined`] |
-| **kind** | `LOGO`, `BANNER`, `PROMOTIONAL` |  | [Defaults to `undefined`] [Enum: LOGO, BANNER, PROMOTIONAL] |
-| **altText** | `string` |  | [Defaults to `undefined`] |
+| **kind** | `LOGO`, `BANNER`, `PROMOTIONAL_IMAGE`, `PROMOTIONAL_VIDEO` |  | [Defaults to `undefined`] [Enum: LOGO, BANNER, PROMOTIONAL_IMAGE, PROMOTIONAL_VIDEO] |
 | **file** | `Blob` |  | [Defaults to `undefined`] |
+| **altText** | `string` |  | [Optional] [Defaults to `undefined`] |
 
 ### Return type
 
-[**VendorMutationEnvelope**](VendorMutationEnvelope.md)
+[**VendorMediaEnvelope**](VendorMediaEnvelope.md)
 
 ### Authorization
 
@@ -3431,14 +1807,90 @@ example().catch(console.error);
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **201** | Operation completed. |  -  |
-| **401** | Safe canonical error envelope. |  -  |
-| **403** | Safe canonical error envelope. |  -  |
-| **404** | Safe canonical error envelope. |  -  |
-| **409** | Safe canonical error envelope. |  -  |
-| **422** | Safe canonical error envelope. |  -  |
-| **429** | Safe canonical error envelope. |  -  |
-| **503** | Safe canonical error envelope. |  -  |
+| **201** | Store media uploaded to private storage. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## uploadVendorVerificationDocument
+
+> VendorDocumentEnvelope uploadVendorVerificationDocument(requirementKey, file, metadata)
+
+
+
+### Example
+
+```ts
+import {
+  Configuration,
+  VendorOnboardingApi,
+} from '@materyalph/api-client-ts';
+import type { UploadVendorVerificationDocumentRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // To configure API key authorization: accessCookie
+    apiKey: "YOUR API KEY",
+    // To configure API key authorization: webCsrf
+    apiKey: "YOUR API KEY",
+  });
+  const api = new VendorOnboardingApi(config);
+
+  const body = {
+    // string
+    requirementKey: requirementKey_example,
+    // Blob
+    file: BINARY_DATA_HERE,
+    // { [key: string]: string; } (optional)
+    metadata: Object,
+  } satisfies UploadVendorVerificationDocumentRequest;
+
+  try {
+    const data = await api.uploadVendorVerificationDocument(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **requirementKey** | `business_registration`, `lgu_permit`, `bir_cor`, `identity_evidence`, `identity_back_evidence`, `representative_identity`, `representative_identity_back`, `authority_to_act`, `tax_relief_evidence`, `optional_certification` |  | [Defaults to `undefined`] [Enum: business_registration, lgu_permit, bir_cor, identity_evidence, identity_back_evidence, representative_identity, representative_identity_back, authority_to_act, tax_relief_evidence, optional_certification] |
+| **file** | `Blob` |  | [Defaults to `undefined`] |
+| **metadata** | `{ [key: string]: string; }` |  | [Optional] |
+
+### Return type
+
+[**VendorDocumentEnvelope**](VendorDocumentEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+- **Content-Type**: `multipart/form-data`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **201** | Private pending attachment saved. No review record is created until explicit verification submission. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 

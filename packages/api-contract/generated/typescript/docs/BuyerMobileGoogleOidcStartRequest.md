@@ -11,6 +11,8 @@ Name | Type
 `mobileE164` | string
 `buyerType` | string
 `companyName` | string
+`termsVersionId` | string
+`termsContentHash` | string
 `termsAccepted` | boolean
 `privacyAccepted` | boolean
 
@@ -25,6 +27,8 @@ const example = {
   "mobileE164": null,
   "buyerType": null,
   "companyName": null,
+  "termsVersionId": null,
+  "termsContentHash": null,
   "termsAccepted": null,
   "privacyAccepted": null,
 } satisfies BuyerMobileGoogleOidcStartRequest

@@ -15,6 +15,8 @@ Name | Type | Description | Notes
 **passwordConfirmation** | **String** |  |
 **buyerType** | **String** |  |
 **companyName** | **String** |  | [optional]
+**termsVersionId** | **String** | Reference provider identifier. |
+**termsContentHash** | **String** |  |
 **termsAccepted** | **bool** |  |
 **privacyAccepted** | **bool** |  |
 **riskProofToken** | **String** | Buyer-only proof returned after a server-issued email risk challenge; this is not CAPTCHA evidence. | [optional]

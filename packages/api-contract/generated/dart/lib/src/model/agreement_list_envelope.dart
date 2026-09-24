@@ -3,8 +3,8 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:materyalph_api_client/src/model/agreement.dart';
 import 'package:built_collection/built_collection.dart';
-import 'package:materyalph_api_client/src/model/success_envelope.dart';
 import 'package:built_value/json_object.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
@@ -18,7 +18,16 @@ part 'agreement_list_envelope.g.dart';
 /// * [meta]
 /// * [errors]
 @BuiltValue()
-abstract class AgreementListEnvelope implements SuccessEnvelope, Built<AgreementListEnvelope, AgreementListEnvelopeBuilder> {
+abstract class AgreementListEnvelope implements Built<AgreementListEnvelope, AgreementListEnvelopeBuilder> {
+  @BuiltValueField(wireName: r'data')
+  BuiltList<Agreement> get data;
+
+  @BuiltValueField(wireName: r'meta')
+  BuiltMap<String, JsonObject?> get meta;
+
+  @BuiltValueField(wireName: r'errors')
+  BuiltList<BuiltMap<String, JsonObject?>> get errors;
+
   AgreementListEnvelope._();
 
   factory AgreementListEnvelope([void updates(AgreementListEnvelopeBuilder b)]) = _$AgreementListEnvelope;
@@ -45,7 +54,7 @@ class _$AgreementListEnvelopeSerializer implements PrimitiveSerializer<Agreement
     yield r'data';
     yield serializers.serialize(
       object.data,
-      specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
+      specifiedType: const FullType(BuiltList, [FullType(Agreement)]),
     );
     yield r'meta';
     yield serializers.serialize(
@@ -55,7 +64,7 @@ class _$AgreementListEnvelopeSerializer implements PrimitiveSerializer<Agreement
     yield r'errors';
     yield serializers.serialize(
       object.errors,
-      specifiedType: const FullType(BuiltList, [FullType.nullable(JsonObject)]),
+      specifiedType: const FullType(BuiltList, [FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)])]),
     );
   }
 
@@ -83,8 +92,8 @@ class _$AgreementListEnvelopeSerializer implements PrimitiveSerializer<Agreement
         case r'data':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
-          ) as BuiltMap<String, JsonObject?>;
+            specifiedType: const FullType(BuiltList, [FullType(Agreement)]),
+          ) as BuiltList<Agreement>;
           result.data.replace(valueDes);
           break;
         case r'meta':
@@ -97,8 +106,8 @@ class _$AgreementListEnvelopeSerializer implements PrimitiveSerializer<Agreement
         case r'errors':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(BuiltList, [FullType.nullable(JsonObject)]),
-          ) as BuiltList<JsonObject?>;
+            specifiedType: const FullType(BuiltList, [FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)])]),
+          ) as BuiltList<BuiltMap<String, JsonObject?>>;
           result.errors.replace(valueDes);
           break;
         default:

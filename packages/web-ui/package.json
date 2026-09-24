@@ -9,9 +9,11 @@
   },
   "peerDependencies": {
     "@materyalph/api-client-ts": "*",
+    "lucide-react": "^0.544.0",
     "react": "^19.0.0"
   },
   "devDependencies": {
+    "lucide-react": "^0.544.0",
     "@materyalph/api-client-ts": "file:../api-contract/generated/typescript",
     "@types/react": "^19.2.17",
     "react": "^19.2.8",

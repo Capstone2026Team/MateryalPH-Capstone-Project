@@ -20,6 +20,10 @@ class _$Agreement extends Agreement {
   @override
   final String contentUri;
   @override
+  final String? content;
+  @override
+  final String? contentHash;
+  @override
   final DateTime effectiveAt;
 
   factory _$Agreement([void Function(AgreementBuilder)? updates]) =>
@@ -32,6 +36,8 @@ class _$Agreement extends Agreement {
       required this.audience,
       required this.version,
       required this.contentUri,
+      this.content,
+      this.contentHash,
       required this.effectiveAt})
       : super._();
   @override
@@ -51,6 +57,8 @@ class _$Agreement extends Agreement {
         audience == other.audience &&
         version == other.version &&
         contentUri == other.contentUri &&
+        content == other.content &&
+        contentHash == other.contentHash &&
         effectiveAt == other.effectiveAt;
   }
 
@@ -63,6 +71,8 @@ class _$Agreement extends Agreement {
     _$hash = $jc(_$hash, audience.hashCode);
     _$hash = $jc(_$hash, version.hashCode);
     _$hash = $jc(_$hash, contentUri.hashCode);
+    _$hash = $jc(_$hash, content.hashCode);
+    _$hash = $jc(_$hash, contentHash.hashCode);
     _$hash = $jc(_$hash, effectiveAt.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
@@ -77,6 +87,8 @@ class _$Agreement extends Agreement {
           ..add('audience', audience)
           ..add('version', version)
           ..add('contentUri', contentUri)
+          ..add('content', content)
+          ..add('contentHash', contentHash)
           ..add('effectiveAt', effectiveAt))
         .toString();
   }
@@ -109,6 +121,14 @@ class AgreementBuilder implements Builder<Agreement, AgreementBuilder> {
   String? get contentUri => _$this._contentUri;
   set contentUri(String? contentUri) => _$this._contentUri = contentUri;
 
+  String? _content;
+  String? get content => _$this._content;
+  set content(String? content) => _$this._content = content;
+
+  String? _contentHash;
+  String? get contentHash => _$this._contentHash;
+  set contentHash(String? contentHash) => _$this._contentHash = contentHash;
+
   DateTime? _effectiveAt;
   DateTime? get effectiveAt => _$this._effectiveAt;
   set effectiveAt(DateTime? effectiveAt) => _$this._effectiveAt = effectiveAt;
@@ -126,6 +146,8 @@ class AgreementBuilder implements Builder<Agreement, AgreementBuilder> {
       _audience = $v.audience;
       _version = $v.version;
       _contentUri = $v.contentUri;
+      _content = $v.content;
+      _contentHash = $v.contentHash;
       _effectiveAt = $v.effectiveAt;
       _$v = null;
     }
@@ -159,6 +181,8 @@ class AgreementBuilder implements Builder<Agreement, AgreementBuilder> {
               version, r'Agreement', 'version'),
           contentUri: BuiltValueNullFieldError.checkNotNull(
               contentUri, r'Agreement', 'contentUri'),
+          content: content,
+          contentHash: contentHash,
           effectiveAt: BuiltValueNullFieldError.checkNotNull(
               effectiveAt, r'Agreement', 'effectiveAt'),
         );

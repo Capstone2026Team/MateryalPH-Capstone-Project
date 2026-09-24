@@ -8,11 +8,11 @@ part of 'agreement_list_envelope.dart';
 
 class _$AgreementListEnvelope extends AgreementListEnvelope {
   @override
-  final BuiltMap<String, JsonObject?> data;
+  final BuiltList<Agreement> data;
   @override
   final BuiltMap<String, JsonObject?> meta;
   @override
-  final BuiltList<JsonObject?> errors;
+  final BuiltList<BuiltMap<String, JsonObject?>> errors;
 
   factory _$AgreementListEnvelope(
           [void Function(AgreementListEnvelopeBuilder)? updates]) =>
@@ -60,27 +60,22 @@ class _$AgreementListEnvelope extends AgreementListEnvelope {
 }
 
 class AgreementListEnvelopeBuilder
-    implements
-        Builder<AgreementListEnvelope, AgreementListEnvelopeBuilder>,
-        SuccessEnvelopeBuilder {
+    implements Builder<AgreementListEnvelope, AgreementListEnvelopeBuilder> {
   _$AgreementListEnvelope? _$v;
 
-  MapBuilder<String, JsonObject?>? _data;
-  MapBuilder<String, JsonObject?> get data =>
-      _$this._data ??= MapBuilder<String, JsonObject?>();
-  set data(covariant MapBuilder<String, JsonObject?>? data) =>
-      _$this._data = data;
+  ListBuilder<Agreement>? _data;
+  ListBuilder<Agreement> get data => _$this._data ??= ListBuilder<Agreement>();
+  set data(ListBuilder<Agreement>? data) => _$this._data = data;
 
   MapBuilder<String, JsonObject?>? _meta;
   MapBuilder<String, JsonObject?> get meta =>
       _$this._meta ??= MapBuilder<String, JsonObject?>();
-  set meta(covariant MapBuilder<String, JsonObject?>? meta) =>
-      _$this._meta = meta;
+  set meta(MapBuilder<String, JsonObject?>? meta) => _$this._meta = meta;
 
-  ListBuilder<JsonObject?>? _errors;
-  ListBuilder<JsonObject?> get errors =>
-      _$this._errors ??= ListBuilder<JsonObject?>();
-  set errors(covariant ListBuilder<JsonObject?>? errors) =>
+  ListBuilder<BuiltMap<String, JsonObject?>>? _errors;
+  ListBuilder<BuiltMap<String, JsonObject?>> get errors =>
+      _$this._errors ??= ListBuilder<BuiltMap<String, JsonObject?>>();
+  set errors(ListBuilder<BuiltMap<String, JsonObject?>>? errors) =>
       _$this._errors = errors;
 
   AgreementListEnvelopeBuilder() {
@@ -99,7 +94,7 @@ class AgreementListEnvelopeBuilder
   }
 
   @override
-  void replace(covariant AgreementListEnvelope other) {
+  void replace(AgreementListEnvelope other) {
     _$v = other as _$AgreementListEnvelope;
   }
 

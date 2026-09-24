@@ -1,11 +1,13 @@
-import { QRCodeSVG } from 'qrcode.react'
+import { VendorPlaceholderPage } from './pages/PhaseThreeVendorPages'
 import { AcceptStaffInvitation } from './pages/AcceptStaffInvitation'
-import { AccountWorkspace, VendorDashboardWorkspace, VendorOnboardingWorkspace, Button, Field, PhoneField, StatusMessage } from '@materyalph/web-ui'
+import { Button, Field, PhoneField, StatusMessage } from '@materyalph/web-ui'
 import { ArrowRight } from 'lucide-react'
 import { type FormEvent, type ReactNode, useEffect, useRef, useState } from 'react'
 import { BrowserRouter, Link, Route, Routes, useNavigate, useSearchParams } from 'react-router-dom'
 
 import './App.css'
+import { AuthenticatedPublicPage } from './pages/AuthenticatedPublicPage'
+import { VendorEntryPage } from './pages/VendorEntryPage'
 import { BrandHeader } from './components/BrandHeader'
 import { SiteFooter } from './components/SiteFooter'
 import { RiskOtpPanel } from './components/auth/RiskOtpPanel'
@@ -22,23 +24,31 @@ import {
   VendorVerifyEmailPage,
 } from './pages/AuthSupportPages'
 import { VendorLandingPage } from './pages/VendorLandingPage'
+import { VendorAccountPage, VendorStoreProfilePage, VendorDashboardPage, VendorSetupPage, VendorTeamPage, VendorVerificationPage, VendorWelcomePage } from './pages/PhaseThreeVendorPages'
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<VendorLandingPage />} />
-        <Route path="/login" element={<LoginPage />} />
+        <Route path="/" element={<AuthenticatedPublicPage><VendorLandingPage /></AuthenticatedPublicPage>} />
+        <Route path="/login" element={<AuthenticatedPublicPage><LoginPage /></AuthenticatedPublicPage>} />
         <Route path="/register" element={<RegisterPage />} />
-        <Route path="/onboarding" element={<VendorOnboardingWorkspace portal="vendors" basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} accountPath="/account" dashboardPath="/dashboard" />} /><Route path="/accept-invite" element={<AcceptStaffInvitation />} />
+        <Route path="/accept-invite" element={<AcceptStaffInvitation />} />
         <Route path="/register/google" element={<VendorGoogleRegisterPage />} />
         <Route path="/verify-email" element={<VendorVerifyEmailPage />} />
         <Route path="/forgot-password" element={<VendorForgotPasswordPage />} />
         <Route path="/reset-password" element={<VendorResetPasswordPage />} />
         <Route path="/auth/mfa" element={<VendorMfaPage />} />
         <Route path="/auth/callback" element={<VendorAuthCallbackPage />} />
-        <Route path="/dashboard" element={<VendorDashboardWorkspace basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} loginPath="/login" accountPath="/account" onboardingPath="/onboarding" />} />
-        <Route path="/account" element={<AccountWorkspace portal="vendors" basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} loginPath="/login" renderQr={uri => <QRCodeSVG value={uri} title="Authenticator setup QR code" />} />} />
+        <Route path="/entry" element={<VendorEntryPage />} />
+        <Route path="/welcome" element={<VendorWelcomePage />} />
+        <Route path="/preview/:module" element={<VendorPlaceholderPage />} />
+        <Route path="/dashboard" element={<VendorDashboardPage />} />
+        <Route path="/onboarding/verification" element={<VendorVerificationPage />} />
+        <Route path="/onboarding/setup" element={<VendorSetupPage />} />
+        <Route path="/team" element={<VendorTeamPage />} />
+        <Route path="/settings" element={<VendorAccountPage />} />
+        <Route path="/store-profile" element={<VendorStoreProfilePage />} />
         <Route path="/fees" element={<InfoPage title="Payments and fees"><FeesContent /></InfoPage>} />
         <Route path="/verification" element={<InfoPage title="Vendor verification"><VerificationContent /></InfoPage>} />
         <Route path="/opportunities" element={<InfoPage title="Marketplace opportunities"><OpportunitiesContent /></InfoPage>} />
@@ -73,7 +83,7 @@ function LoginPage() {
       return
     }
 
-    navigate('/dashboard')
+    navigate('/entry')
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {

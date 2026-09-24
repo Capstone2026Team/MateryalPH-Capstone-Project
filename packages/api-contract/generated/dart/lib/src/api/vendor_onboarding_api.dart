@@ -8,33 +8,31 @@ import 'package:built_value/serializer.dart';
 import 'package:dio/dio.dart';
 
 import 'dart:typed_data';
+import 'package:built_collection/built_collection.dart';
 import 'package:materyalph_api_client/src/api_util.dart';
-import 'package:materyalph_api_client/src/model/accept_vendor_commission.dart';
-import 'package:materyalph_api_client/src/model/change_vendor_team_member.dart';
-import 'package:materyalph_api_client/src/model/connect_vendor_test.dart';
-import 'package:materyalph_api_client/src/model/invite_vendor_team.dart';
-import 'package:materyalph_api_client/src/model/save_vendor_business.dart';
-import 'package:materyalph_api_client/src/model/save_vendor_store.dart';
-import 'package:materyalph_api_client/src/model/save_vendor_tax.dart';
-import 'package:materyalph_api_client/src/model/vendor_business_envelope.dart';
-import 'package:materyalph_api_client/src/model/vendor_business_review.dart';
-import 'package:materyalph_api_client/src/model/vendor_commission_terms_envelope.dart';
-import 'package:materyalph_api_client/src/model/vendor_document_list_envelope.dart';
-import 'package:materyalph_api_client/src/model/vendor_document_review.dart';
-import 'package:materyalph_api_client/src/model/vendor_document_upload_envelope.dart';
-import 'package:materyalph_api_client/src/model/vendor_download_link_envelope.dart';
-import 'package:materyalph_api_client/src/model/vendor_mutation_envelope.dart';
-import 'package:materyalph_api_client/src/model/vendor_readiness_envelope.dart';
-import 'package:materyalph_api_client/src/model/vendor_review.dart';
-import 'package:materyalph_api_client/src/model/vendor_setup_envelope.dart';
-import 'package:materyalph_api_client/src/model/vendor_store_email_verification_confirmation.dart';
-import 'package:materyalph_api_client/src/model/vendor_store_email_verification_request.dart';
-import 'package:materyalph_api_client/src/model/vendor_store_media_list_envelope.dart';
-import 'package:materyalph_api_client/src/model/vendor_tax_profile_envelope.dart';
-import 'package:materyalph_api_client/src/model/vendor_team_envelope.dart';
-import 'package:materyalph_api_client/src/model/vendor_team_invitation_list_envelope.dart';
-import 'package:materyalph_api_client/src/model/vendor_verification_row_list_envelope.dart';
-import 'package:materyalph_api_client/src/model/vendor_version_mutation.dart';
+import 'package:materyalph_api_client/src/model/email_request.dart';
+import 'package:materyalph_api_client/src/model/generic_data_envelope.dart';
+import 'package:materyalph_api_client/src/model/psgc_search_envelope.dart';
+import 'package:materyalph_api_client/src/model/vendor_address_geocode.dart';
+import 'package:materyalph_api_client/src/model/vendor_address_geocode_envelope.dart';
+import 'package:materyalph_api_client/src/model/vendor_address_selection.dart';
+import 'package:materyalph_api_client/src/model/vendor_commission_acceptance.dart';
+import 'package:materyalph_api_client/src/model/vendor_document_envelope.dart';
+import 'package:materyalph_api_client/src/model/vendor_file_envelope.dart';
+import 'package:materyalph_api_client/src/model/vendor_invitation_envelope.dart';
+import 'package:materyalph_api_client/src/model/vendor_invitation_request.dart';
+import 'package:materyalph_api_client/src/model/vendor_media_envelope.dart';
+import 'package:materyalph_api_client/src/model/vendor_onboarding_envelope.dart';
+import 'package:materyalph_api_client/src/model/vendor_payment_connection.dart';
+import 'package:materyalph_api_client/src/model/vendor_payment_reconciliation_envelope.dart';
+import 'package:materyalph_api_client/src/model/vendor_setup_complete.dart';
+import 'package:materyalph_api_client/src/model/vendor_setup_draft.dart';
+import 'package:materyalph_api_client/src/model/vendor_store_email_confirmation.dart';
+import 'package:materyalph_api_client/src/model/vendor_store_email_envelope.dart';
+import 'package:materyalph_api_client/src/model/vendor_verification_draft.dart';
+import 'package:materyalph_api_client/src/model/vendor_verification_submit.dart';
+import 'package:materyalph_api_client/src/model/vendor_webhook_envelope.dart';
+import 'package:materyalph_api_client/src/model/xendit_account_verification_webhook.dart';
 
 class VendorOnboardingApi {
 
@@ -44,1573 +42,12 @@ class VendorOnboardingApi {
 
   const VendorOnboardingApi(this._dio, this._serializers);
 
-  /// accept Vendor Commission Terms
-  /// TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
+  /// acceptVendorCommission
+  /// Explicit version-bound acceptance in Store Verification. Owner only; applicable current representative authority requires the COMMISSION_AGREEMENT scope. Autosaving or submitting evidence never implies consent. Initial evidence submission remains available while authority approval is pending.
   ///
   /// Parameters:
-  /// * [organization]
-  /// * [acceptVendorCommission]
-  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
-  /// * [headers] - Can be used to add additional headers to the request
-  /// * [extras] - Can be used to add flags to the request
-  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
-  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
-  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
-  ///
-  /// Returns a [Future] containing a [Response] with a [VendorCommissionTermsEnvelope] as data
-  /// Throws [DioException] if API call or serialization fails
-  Future<Response<VendorCommissionTermsEnvelope>> acceptVendorCommissionTerms({
-    required String organization,
-    required AcceptVendorCommission acceptVendorCommission,
-    CancelToken? cancelToken,
-    Map<String, dynamic>? headers,
-    Map<String, dynamic>? extra,
-    ValidateStatus? validateStatus,
-    ProgressCallback? onSendProgress,
-    ProgressCallback? onReceiveProgress,
-  }) async {
-    final _path = r'/vendors/{organization}/commission-terms/acceptance'.replaceAll('{' r'organization' '}', encodeQueryParameter(_serializers, organization, const FullType(String)).toString());
-    final _options = Options(
-      method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[
-          {
-            'type': 'apiKey',
-            'name': 'accessCookie',
-            'keyName': 'mp_access',
-            'where': '',
-          },{
-            'type': 'apiKey',
-            'name': 'webCsrf',
-            'keyName': 'X-CSRF-Token',
-            'where': 'header',
-          },
-        ],
-        ...?extra,
-      },
-      contentType: 'application/json',
-      validateStatus: validateStatus,
-    );
-
-    dynamic _bodyData;
-
-    try {
-      const _type = FullType(AcceptVendorCommission);
-      _bodyData = _serializers.serialize(acceptVendorCommission, specifiedType: _type);
-
-    } catch(error, stackTrace) {
-      throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    final _response = await _dio.request<Object>(
-      _path,
-      data: _bodyData,
-      options: _options,
-      cancelToken: cancelToken,
-      onSendProgress: onSendProgress,
-      onReceiveProgress: onReceiveProgress,
-    );
-
-    VendorCommissionTermsEnvelope? _responseData;
-
-    try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(VendorCommissionTermsEnvelope),
-      ) as VendorCommissionTermsEnvelope;
-
-    } catch (error, stackTrace) {
-      throw DioException(
-        requestOptions: _response.requestOptions,
-        response: _response,
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    return Response<VendorCommissionTermsEnvelope>(
-      data: _responseData,
-      headers: _response.headers,
-      isRedirect: _response.isRedirect,
-      requestOptions: _response.requestOptions,
-      redirects: _response.redirects,
-      statusCode: _response.statusCode,
-      statusMessage: _response.statusMessage,
-      extra: _response.extra,
-    );
-  }
-
-  /// activate Vendor Marketplace
-  /// TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-  ///
-  /// Parameters:
-  /// * [organization]
-  /// * [vendorVersionMutation]
-  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
-  /// * [headers] - Can be used to add additional headers to the request
-  /// * [extras] - Can be used to add flags to the request
-  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
-  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
-  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
-  ///
-  /// Returns a [Future] containing a [Response] with a [VendorReadinessEnvelope] as data
-  /// Throws [DioException] if API call or serialization fails
-  Future<Response<VendorReadinessEnvelope>> activateVendorMarketplace({
-    required String organization,
-    required VendorVersionMutation vendorVersionMutation,
-    CancelToken? cancelToken,
-    Map<String, dynamic>? headers,
-    Map<String, dynamic>? extra,
-    ValidateStatus? validateStatus,
-    ProgressCallback? onSendProgress,
-    ProgressCallback? onReceiveProgress,
-  }) async {
-    final _path = r'/vendors/{organization}/activation'.replaceAll('{' r'organization' '}', encodeQueryParameter(_serializers, organization, const FullType(String)).toString());
-    final _options = Options(
-      method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[
-          {
-            'type': 'apiKey',
-            'name': 'accessCookie',
-            'keyName': 'mp_access',
-            'where': '',
-          },{
-            'type': 'apiKey',
-            'name': 'webCsrf',
-            'keyName': 'X-CSRF-Token',
-            'where': 'header',
-          },
-        ],
-        ...?extra,
-      },
-      contentType: 'application/json',
-      validateStatus: validateStatus,
-    );
-
-    dynamic _bodyData;
-
-    try {
-      const _type = FullType(VendorVersionMutation);
-      _bodyData = _serializers.serialize(vendorVersionMutation, specifiedType: _type);
-
-    } catch(error, stackTrace) {
-      throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    final _response = await _dio.request<Object>(
-      _path,
-      data: _bodyData,
-      options: _options,
-      cancelToken: cancelToken,
-      onSendProgress: onSendProgress,
-      onReceiveProgress: onReceiveProgress,
-    );
-
-    VendorReadinessEnvelope? _responseData;
-
-    try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(VendorReadinessEnvelope),
-      ) as VendorReadinessEnvelope;
-
-    } catch (error, stackTrace) {
-      throw DioException(
-        requestOptions: _response.requestOptions,
-        response: _response,
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    return Response<VendorReadinessEnvelope>(
-      data: _responseData,
-      headers: _response.headers,
-      isRedirect: _response.isRedirect,
-      requestOptions: _response.requestOptions,
-      redirects: _response.redirects,
-      statusCode: _response.statusCode,
-      statusMessage: _response.statusMessage,
-      extra: _response.extra,
-    );
-  }
-
-  /// change Vendor Team Member
-  /// TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-  ///
-  /// Parameters:
-  /// * [organization]
-  /// * [membership]
-  /// * [changeVendorTeamMember]
-  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
-  /// * [headers] - Can be used to add additional headers to the request
-  /// * [extras] - Can be used to add flags to the request
-  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
-  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
-  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
-  ///
-  /// Returns a [Future] containing a [Response] with a [VendorMutationEnvelope] as data
-  /// Throws [DioException] if API call or serialization fails
-  Future<Response<VendorMutationEnvelope>> changeVendorTeamMember({
-    required String organization,
-    required String membership,
-    required ChangeVendorTeamMember changeVendorTeamMember,
-    CancelToken? cancelToken,
-    Map<String, dynamic>? headers,
-    Map<String, dynamic>? extra,
-    ValidateStatus? validateStatus,
-    ProgressCallback? onSendProgress,
-    ProgressCallback? onReceiveProgress,
-  }) async {
-    final _path = r'/vendors/{organization}/team/memberships/{membership}'.replaceAll('{' r'organization' '}', encodeQueryParameter(_serializers, organization, const FullType(String)).toString()).replaceAll('{' r'membership' '}', encodeQueryParameter(_serializers, membership, const FullType(String)).toString());
-    final _options = Options(
-      method: r'PATCH',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[
-          {
-            'type': 'apiKey',
-            'name': 'accessCookie',
-            'keyName': 'mp_access',
-            'where': '',
-          },{
-            'type': 'apiKey',
-            'name': 'webCsrf',
-            'keyName': 'X-CSRF-Token',
-            'where': 'header',
-          },
-        ],
-        ...?extra,
-      },
-      contentType: 'application/json',
-      validateStatus: validateStatus,
-    );
-
-    dynamic _bodyData;
-
-    try {
-      const _type = FullType(ChangeVendorTeamMember);
-      _bodyData = _serializers.serialize(changeVendorTeamMember, specifiedType: _type);
-
-    } catch(error, stackTrace) {
-      throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    final _response = await _dio.request<Object>(
-      _path,
-      data: _bodyData,
-      options: _options,
-      cancelToken: cancelToken,
-      onSendProgress: onSendProgress,
-      onReceiveProgress: onReceiveProgress,
-    );
-
-    VendorMutationEnvelope? _responseData;
-
-    try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(VendorMutationEnvelope),
-      ) as VendorMutationEnvelope;
-
-    } catch (error, stackTrace) {
-      throw DioException(
-        requestOptions: _response.requestOptions,
-        response: _response,
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    return Response<VendorMutationEnvelope>(
-      data: _responseData,
-      headers: _response.headers,
-      isRedirect: _response.isRedirect,
-      requestOptions: _response.requestOptions,
-      redirects: _response.redirects,
-      statusCode: _response.statusCode,
-      statusMessage: _response.statusMessage,
-      extra: _response.extra,
-    );
-  }
-
-  /// confirm Vendor Store Email Verification
-  /// TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-  ///
-  /// Parameters:
-  /// * [organization]
-  /// * [vendorStoreEmailVerificationConfirmation]
-  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
-  /// * [headers] - Can be used to add additional headers to the request
-  /// * [extras] - Can be used to add flags to the request
-  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
-  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
-  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
-  ///
-  /// Returns a [Future] containing a [Response] with a [VendorBusinessEnvelope] as data
-  /// Throws [DioException] if API call or serialization fails
-  Future<Response<VendorBusinessEnvelope>> confirmVendorStoreEmailVerification({
-    required String organization,
-    required VendorStoreEmailVerificationConfirmation vendorStoreEmailVerificationConfirmation,
-    CancelToken? cancelToken,
-    Map<String, dynamic>? headers,
-    Map<String, dynamic>? extra,
-    ValidateStatus? validateStatus,
-    ProgressCallback? onSendProgress,
-    ProgressCallback? onReceiveProgress,
-  }) async {
-    final _path = r'/vendors/{organization}/business/store-email/verification/confirm'.replaceAll('{' r'organization' '}', encodeQueryParameter(_serializers, organization, const FullType(String)).toString());
-    final _options = Options(
-      method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[
-          {
-            'type': 'apiKey',
-            'name': 'accessCookie',
-            'keyName': 'mp_access',
-            'where': '',
-          },{
-            'type': 'apiKey',
-            'name': 'webCsrf',
-            'keyName': 'X-CSRF-Token',
-            'where': 'header',
-          },
-        ],
-        ...?extra,
-      },
-      contentType: 'application/json',
-      validateStatus: validateStatus,
-    );
-
-    dynamic _bodyData;
-
-    try {
-      const _type = FullType(VendorStoreEmailVerificationConfirmation);
-      _bodyData = _serializers.serialize(vendorStoreEmailVerificationConfirmation, specifiedType: _type);
-
-    } catch(error, stackTrace) {
-      throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    final _response = await _dio.request<Object>(
-      _path,
-      data: _bodyData,
-      options: _options,
-      cancelToken: cancelToken,
-      onSendProgress: onSendProgress,
-      onReceiveProgress: onReceiveProgress,
-    );
-
-    VendorBusinessEnvelope? _responseData;
-
-    try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(VendorBusinessEnvelope),
-      ) as VendorBusinessEnvelope;
-
-    } catch (error, stackTrace) {
-      throw DioException(
-        requestOptions: _response.requestOptions,
-        response: _response,
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    return Response<VendorBusinessEnvelope>(
-      data: _responseData,
-      headers: _response.headers,
-      isRedirect: _response.isRedirect,
-      requestOptions: _response.requestOptions,
-      redirects: _response.redirects,
-      statusCode: _response.statusCode,
-      statusMessage: _response.statusMessage,
-      extra: _response.extra,
-    );
-  }
-
-  /// connect Vendor Test
-  /// TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-  ///
-  /// Parameters:
-  /// * [organization]
-  /// * [connectVendorTest]
-  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
-  /// * [headers] - Can be used to add additional headers to the request
-  /// * [extras] - Can be used to add flags to the request
-  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
-  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
-  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
-  ///
-  /// Returns a [Future] containing a [Response] with a [VendorSetupEnvelope] as data
-  /// Throws [DioException] if API call or serialization fails
-  Future<Response<VendorSetupEnvelope>> connectVendorTest({
-    required String organization,
-    required ConnectVendorTest connectVendorTest,
-    CancelToken? cancelToken,
-    Map<String, dynamic>? headers,
-    Map<String, dynamic>? extra,
-    ValidateStatus? validateStatus,
-    ProgressCallback? onSendProgress,
-    ProgressCallback? onReceiveProgress,
-  }) async {
-    final _path = r'/vendors/{organization}/payment-connection'.replaceAll('{' r'organization' '}', encodeQueryParameter(_serializers, organization, const FullType(String)).toString());
-    final _options = Options(
-      method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[
-          {
-            'type': 'apiKey',
-            'name': 'accessCookie',
-            'keyName': 'mp_access',
-            'where': '',
-          },{
-            'type': 'apiKey',
-            'name': 'webCsrf',
-            'keyName': 'X-CSRF-Token',
-            'where': 'header',
-          },
-        ],
-        ...?extra,
-      },
-      contentType: 'application/json',
-      validateStatus: validateStatus,
-    );
-
-    dynamic _bodyData;
-
-    try {
-      const _type = FullType(ConnectVendorTest);
-      _bodyData = _serializers.serialize(connectVendorTest, specifiedType: _type);
-
-    } catch(error, stackTrace) {
-      throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    final _response = await _dio.request<Object>(
-      _path,
-      data: _bodyData,
-      options: _options,
-      cancelToken: cancelToken,
-      onSendProgress: onSendProgress,
-      onReceiveProgress: onReceiveProgress,
-    );
-
-    VendorSetupEnvelope? _responseData;
-
-    try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(VendorSetupEnvelope),
-      ) as VendorSetupEnvelope;
-
-    } catch (error, stackTrace) {
-      throw DioException(
-        requestOptions: _response.requestOptions,
-        response: _response,
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    return Response<VendorSetupEnvelope>(
-      data: _responseData,
-      headers: _response.headers,
-      isRedirect: _response.isRedirect,
-      requestOptions: _response.requestOptions,
-      redirects: _response.redirects,
-      statusCode: _response.statusCode,
-      statusMessage: _response.statusMessage,
-      extra: _response.extra,
-    );
-  }
-
-  /// download Admin Vendor Document
-  /// TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-  ///
-  /// Parameters:
-  /// * [organization]
-  /// * [version]
-  /// * [expires]
-  /// * [signature]
-  /// * [viewer]
-  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
-  /// * [headers] - Can be used to add additional headers to the request
-  /// * [extras] - Can be used to add flags to the request
-  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
-  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
-  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
-  ///
-  /// Returns a [Future] containing a [Response] with a [Uint8List] as data
-  /// Throws [DioException] if API call or serialization fails
-  Future<Response<Uint8List>> downloadAdminVendorDocument({
-    required String organization,
-    required String version,
-    required String expires,
-    required String signature,
-    required String viewer,
-    CancelToken? cancelToken,
-    Map<String, dynamic>? headers,
-    Map<String, dynamic>? extra,
-    ValidateStatus? validateStatus,
-    ProgressCallback? onSendProgress,
-    ProgressCallback? onReceiveProgress,
-  }) async {
-    final _path = r'/admin/vendor-verification/{organization}/documents/{version}/download'.replaceAll('{' r'organization' '}', encodeQueryParameter(_serializers, organization, const FullType(String)).toString()).replaceAll('{' r'version' '}', encodeQueryParameter(_serializers, version, const FullType(String)).toString());
-    final _options = Options(
-      method: r'GET',
-      responseType: ResponseType.bytes,
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[
-          {
-            'type': 'apiKey',
-            'name': 'accessCookie',
-            'keyName': 'mp_access',
-            'where': '',
-          },
-        ],
-        ...?extra,
-      },
-      validateStatus: validateStatus,
-    );
-
-    final _queryParameters = <String, dynamic>{
-      r'expires': encodeQueryParameter(_serializers, expires, const FullType(String)),
-      r'signature': encodeQueryParameter(_serializers, signature, const FullType(String)),
-      r'viewer': encodeQueryParameter(_serializers, viewer, const FullType(String)),
-    };
-
-    final _response = await _dio.request<Object>(
-      _path,
-      options: _options,
-      queryParameters: _queryParameters,
-      cancelToken: cancelToken,
-      onSendProgress: onSendProgress,
-      onReceiveProgress: onReceiveProgress,
-    );
-
-    Uint8List? _responseData;
-
-    try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : rawResponse as Uint8List;
-
-    } catch (error, stackTrace) {
-      throw DioException(
-        requestOptions: _response.requestOptions,
-        response: _response,
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    return Response<Uint8List>(
-      data: _responseData,
-      headers: _response.headers,
-      isRedirect: _response.isRedirect,
-      requestOptions: _response.requestOptions,
-      redirects: _response.redirects,
-      statusCode: _response.statusCode,
-      statusMessage: _response.statusMessage,
-      extra: _response.extra,
-    );
-  }
-
-  /// download Vendor Document
-  /// TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-  ///
-  /// Parameters:
-  /// * [organization]
-  /// * [version]
-  /// * [expires]
-  /// * [signature]
-  /// * [viewer]
-  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
-  /// * [headers] - Can be used to add additional headers to the request
-  /// * [extras] - Can be used to add flags to the request
-  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
-  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
-  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
-  ///
-  /// Returns a [Future] containing a [Response] with a [Uint8List] as data
-  /// Throws [DioException] if API call or serialization fails
-  Future<Response<Uint8List>> downloadVendorDocument({
-    required String organization,
-    required String version,
-    required String expires,
-    required String signature,
-    required String viewer,
-    CancelToken? cancelToken,
-    Map<String, dynamic>? headers,
-    Map<String, dynamic>? extra,
-    ValidateStatus? validateStatus,
-    ProgressCallback? onSendProgress,
-    ProgressCallback? onReceiveProgress,
-  }) async {
-    final _path = r'/vendors/{organization}/documents/{version}/download'.replaceAll('{' r'organization' '}', encodeQueryParameter(_serializers, organization, const FullType(String)).toString()).replaceAll('{' r'version' '}', encodeQueryParameter(_serializers, version, const FullType(String)).toString());
-    final _options = Options(
-      method: r'GET',
-      responseType: ResponseType.bytes,
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[
-          {
-            'type': 'apiKey',
-            'name': 'accessCookie',
-            'keyName': 'mp_access',
-            'where': '',
-          },
-        ],
-        ...?extra,
-      },
-      validateStatus: validateStatus,
-    );
-
-    final _queryParameters = <String, dynamic>{
-      r'expires': encodeQueryParameter(_serializers, expires, const FullType(String)),
-      r'signature': encodeQueryParameter(_serializers, signature, const FullType(String)),
-      r'viewer': encodeQueryParameter(_serializers, viewer, const FullType(String)),
-    };
-
-    final _response = await _dio.request<Object>(
-      _path,
-      options: _options,
-      queryParameters: _queryParameters,
-      cancelToken: cancelToken,
-      onSendProgress: onSendProgress,
-      onReceiveProgress: onReceiveProgress,
-    );
-
-    Uint8List? _responseData;
-
-    try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : rawResponse as Uint8List;
-
-    } catch (error, stackTrace) {
-      throw DioException(
-        requestOptions: _response.requestOptions,
-        response: _response,
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    return Response<Uint8List>(
-      data: _responseData,
-      headers: _response.headers,
-      isRedirect: _response.isRedirect,
-      requestOptions: _response.requestOptions,
-      redirects: _response.redirects,
-      statusCode: _response.statusCode,
-      statusMessage: _response.statusMessage,
-      extra: _response.extra,
-    );
-  }
-
-  /// get Admin Vendor Business
-  /// TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-  ///
-  /// Parameters:
-  /// * [organization]
-  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
-  /// * [headers] - Can be used to add additional headers to the request
-  /// * [extras] - Can be used to add flags to the request
-  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
-  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
-  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
-  ///
-  /// Returns a [Future] containing a [Response] with a [VendorBusinessEnvelope] as data
-  /// Throws [DioException] if API call or serialization fails
-  Future<Response<VendorBusinessEnvelope>> getAdminVendorBusiness({
-    required String organization,
-    CancelToken? cancelToken,
-    Map<String, dynamic>? headers,
-    Map<String, dynamic>? extra,
-    ValidateStatus? validateStatus,
-    ProgressCallback? onSendProgress,
-    ProgressCallback? onReceiveProgress,
-  }) async {
-    final _path = r'/admin/vendor-verification/{organization}/business'.replaceAll('{' r'organization' '}', encodeQueryParameter(_serializers, organization, const FullType(String)).toString());
-    final _options = Options(
-      method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[
-          {
-            'type': 'apiKey',
-            'name': 'accessCookie',
-            'keyName': 'mp_access',
-            'where': '',
-          },
-        ],
-        ...?extra,
-      },
-      validateStatus: validateStatus,
-    );
-
-    final _response = await _dio.request<Object>(
-      _path,
-      options: _options,
-      cancelToken: cancelToken,
-      onSendProgress: onSendProgress,
-      onReceiveProgress: onReceiveProgress,
-    );
-
-    VendorBusinessEnvelope? _responseData;
-
-    try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(VendorBusinessEnvelope),
-      ) as VendorBusinessEnvelope;
-
-    } catch (error, stackTrace) {
-      throw DioException(
-        requestOptions: _response.requestOptions,
-        response: _response,
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    return Response<VendorBusinessEnvelope>(
-      data: _responseData,
-      headers: _response.headers,
-      isRedirect: _response.isRedirect,
-      requestOptions: _response.requestOptions,
-      redirects: _response.redirects,
-      statusCode: _response.statusCode,
-      statusMessage: _response.statusMessage,
-      extra: _response.extra,
-    );
-  }
-
-  /// get Admin Vendor Readiness
-  /// TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-  ///
-  /// Parameters:
-  /// * [organization]
-  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
-  /// * [headers] - Can be used to add additional headers to the request
-  /// * [extras] - Can be used to add flags to the request
-  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
-  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
-  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
-  ///
-  /// Returns a [Future] containing a [Response] with a [VendorReadinessEnvelope] as data
-  /// Throws [DioException] if API call or serialization fails
-  Future<Response<VendorReadinessEnvelope>> getAdminVendorReadiness({
-    required String organization,
-    CancelToken? cancelToken,
-    Map<String, dynamic>? headers,
-    Map<String, dynamic>? extra,
-    ValidateStatus? validateStatus,
-    ProgressCallback? onSendProgress,
-    ProgressCallback? onReceiveProgress,
-  }) async {
-    final _path = r'/admin/vendor-verification/{organization}/onboarding'.replaceAll('{' r'organization' '}', encodeQueryParameter(_serializers, organization, const FullType(String)).toString());
-    final _options = Options(
-      method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[
-          {
-            'type': 'apiKey',
-            'name': 'accessCookie',
-            'keyName': 'mp_access',
-            'where': '',
-          },
-        ],
-        ...?extra,
-      },
-      validateStatus: validateStatus,
-    );
-
-    final _response = await _dio.request<Object>(
-      _path,
-      options: _options,
-      cancelToken: cancelToken,
-      onSendProgress: onSendProgress,
-      onReceiveProgress: onReceiveProgress,
-    );
-
-    VendorReadinessEnvelope? _responseData;
-
-    try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(VendorReadinessEnvelope),
-      ) as VendorReadinessEnvelope;
-
-    } catch (error, stackTrace) {
-      throw DioException(
-        requestOptions: _response.requestOptions,
-        response: _response,
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    return Response<VendorReadinessEnvelope>(
-      data: _responseData,
-      headers: _response.headers,
-      isRedirect: _response.isRedirect,
-      requestOptions: _response.requestOptions,
-      redirects: _response.redirects,
-      statusCode: _response.statusCode,
-      statusMessage: _response.statusMessage,
-      extra: _response.extra,
-    );
-  }
-
-  /// get Admin Vendor Tax Profile
-  /// TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-  ///
-  /// Parameters:
-  /// * [organization]
-  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
-  /// * [headers] - Can be used to add additional headers to the request
-  /// * [extras] - Can be used to add flags to the request
-  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
-  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
-  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
-  ///
-  /// Returns a [Future] containing a [Response] with a [VendorTaxProfileEnvelope] as data
-  /// Throws [DioException] if API call or serialization fails
-  Future<Response<VendorTaxProfileEnvelope>> getAdminVendorTaxProfile({
-    required String organization,
-    CancelToken? cancelToken,
-    Map<String, dynamic>? headers,
-    Map<String, dynamic>? extra,
-    ValidateStatus? validateStatus,
-    ProgressCallback? onSendProgress,
-    ProgressCallback? onReceiveProgress,
-  }) async {
-    final _path = r'/admin/vendor-verification/{organization}/tax-profile'.replaceAll('{' r'organization' '}', encodeQueryParameter(_serializers, organization, const FullType(String)).toString());
-    final _options = Options(
-      method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[
-          {
-            'type': 'apiKey',
-            'name': 'accessCookie',
-            'keyName': 'mp_access',
-            'where': '',
-          },
-        ],
-        ...?extra,
-      },
-      validateStatus: validateStatus,
-    );
-
-    final _response = await _dio.request<Object>(
-      _path,
-      options: _options,
-      cancelToken: cancelToken,
-      onSendProgress: onSendProgress,
-      onReceiveProgress: onReceiveProgress,
-    );
-
-    VendorTaxProfileEnvelope? _responseData;
-
-    try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(VendorTaxProfileEnvelope),
-      ) as VendorTaxProfileEnvelope;
-
-    } catch (error, stackTrace) {
-      throw DioException(
-        requestOptions: _response.requestOptions,
-        response: _response,
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    return Response<VendorTaxProfileEnvelope>(
-      data: _responseData,
-      headers: _response.headers,
-      isRedirect: _response.isRedirect,
-      requestOptions: _response.requestOptions,
-      redirects: _response.redirects,
-      statusCode: _response.statusCode,
-      statusMessage: _response.statusMessage,
-      extra: _response.extra,
-    );
-  }
-
-  /// get Public Vendor Store Media
-  /// Public delivery for an approved, unreplaced Store Profile image belonging to an active Vendor.
-  ///
-  /// Parameters:
-  /// * [organization]
-  /// * [media]
-  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
-  /// * [headers] - Can be used to add additional headers to the request
-  /// * [extras] - Can be used to add flags to the request
-  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
-  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
-  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
-  ///
-  /// Returns a [Future] containing a [Response] with a [Uint8List] as data
-  /// Throws [DioException] if API call or serialization fails
-  Future<Response<Uint8List>> getPublicVendorStoreMedia({
-    required String organization,
-    required String media,
-    CancelToken? cancelToken,
-    Map<String, dynamic>? headers,
-    Map<String, dynamic>? extra,
-    ValidateStatus? validateStatus,
-    ProgressCallback? onSendProgress,
-    ProgressCallback? onReceiveProgress,
-  }) async {
-    final _path = r'/public/vendors/{organization}/store-media/{media}'.replaceAll('{' r'organization' '}', encodeQueryParameter(_serializers, organization, const FullType(String)).toString()).replaceAll('{' r'media' '}', encodeQueryParameter(_serializers, media, const FullType(String)).toString());
-    final _options = Options(
-      method: r'GET',
-      responseType: ResponseType.bytes,
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[],
-        ...?extra,
-      },
-      validateStatus: validateStatus,
-    );
-
-    final _response = await _dio.request<Object>(
-      _path,
-      options: _options,
-      cancelToken: cancelToken,
-      onSendProgress: onSendProgress,
-      onReceiveProgress: onReceiveProgress,
-    );
-
-    Uint8List? _responseData;
-
-    try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : rawResponse as Uint8List;
-
-    } catch (error, stackTrace) {
-      throw DioException(
-        requestOptions: _response.requestOptions,
-        response: _response,
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    return Response<Uint8List>(
-      data: _responseData,
-      headers: _response.headers,
-      isRedirect: _response.isRedirect,
-      requestOptions: _response.requestOptions,
-      redirects: _response.redirects,
-      statusCode: _response.statusCode,
-      statusMessage: _response.statusMessage,
-      extra: _response.extra,
-    );
-  }
-
-  /// get Vendor Business
-  /// TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-  ///
-  /// Parameters:
-  /// * [organization]
-  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
-  /// * [headers] - Can be used to add additional headers to the request
-  /// * [extras] - Can be used to add flags to the request
-  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
-  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
-  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
-  ///
-  /// Returns a [Future] containing a [Response] with a [VendorBusinessEnvelope] as data
-  /// Throws [DioException] if API call or serialization fails
-  Future<Response<VendorBusinessEnvelope>> getVendorBusiness({
-    required String organization,
-    CancelToken? cancelToken,
-    Map<String, dynamic>? headers,
-    Map<String, dynamic>? extra,
-    ValidateStatus? validateStatus,
-    ProgressCallback? onSendProgress,
-    ProgressCallback? onReceiveProgress,
-  }) async {
-    final _path = r'/vendors/{organization}/business'.replaceAll('{' r'organization' '}', encodeQueryParameter(_serializers, organization, const FullType(String)).toString());
-    final _options = Options(
-      method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[
-          {
-            'type': 'apiKey',
-            'name': 'accessCookie',
-            'keyName': 'mp_access',
-            'where': '',
-          },
-        ],
-        ...?extra,
-      },
-      validateStatus: validateStatus,
-    );
-
-    final _response = await _dio.request<Object>(
-      _path,
-      options: _options,
-      cancelToken: cancelToken,
-      onSendProgress: onSendProgress,
-      onReceiveProgress: onReceiveProgress,
-    );
-
-    VendorBusinessEnvelope? _responseData;
-
-    try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(VendorBusinessEnvelope),
-      ) as VendorBusinessEnvelope;
-
-    } catch (error, stackTrace) {
-      throw DioException(
-        requestOptions: _response.requestOptions,
-        response: _response,
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    return Response<VendorBusinessEnvelope>(
-      data: _responseData,
-      headers: _response.headers,
-      isRedirect: _response.isRedirect,
-      requestOptions: _response.requestOptions,
-      redirects: _response.redirects,
-      statusCode: _response.statusCode,
-      statusMessage: _response.statusMessage,
-      extra: _response.extra,
-    );
-  }
-
-  /// get Vendor Commission Terms
-  /// TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-  ///
-  /// Parameters:
-  /// * [organization]
-  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
-  /// * [headers] - Can be used to add additional headers to the request
-  /// * [extras] - Can be used to add flags to the request
-  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
-  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
-  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
-  ///
-  /// Returns a [Future] containing a [Response] with a [VendorCommissionTermsEnvelope] as data
-  /// Throws [DioException] if API call or serialization fails
-  Future<Response<VendorCommissionTermsEnvelope>> getVendorCommissionTerms({
-    required String organization,
-    CancelToken? cancelToken,
-    Map<String, dynamic>? headers,
-    Map<String, dynamic>? extra,
-    ValidateStatus? validateStatus,
-    ProgressCallback? onSendProgress,
-    ProgressCallback? onReceiveProgress,
-  }) async {
-    final _path = r'/vendors/{organization}/commission-terms'.replaceAll('{' r'organization' '}', encodeQueryParameter(_serializers, organization, const FullType(String)).toString());
-    final _options = Options(
-      method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[
-          {
-            'type': 'apiKey',
-            'name': 'accessCookie',
-            'keyName': 'mp_access',
-            'where': '',
-          },
-        ],
-        ...?extra,
-      },
-      validateStatus: validateStatus,
-    );
-
-    final _response = await _dio.request<Object>(
-      _path,
-      options: _options,
-      cancelToken: cancelToken,
-      onSendProgress: onSendProgress,
-      onReceiveProgress: onReceiveProgress,
-    );
-
-    VendorCommissionTermsEnvelope? _responseData;
-
-    try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(VendorCommissionTermsEnvelope),
-      ) as VendorCommissionTermsEnvelope;
-
-    } catch (error, stackTrace) {
-      throw DioException(
-        requestOptions: _response.requestOptions,
-        response: _response,
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    return Response<VendorCommissionTermsEnvelope>(
-      data: _responseData,
-      headers: _response.headers,
-      isRedirect: _response.isRedirect,
-      requestOptions: _response.requestOptions,
-      redirects: _response.redirects,
-      statusCode: _response.statusCode,
-      statusMessage: _response.statusMessage,
-      extra: _response.extra,
-    );
-  }
-
-  /// get Vendor Readiness
-  /// TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-  ///
-  /// Parameters:
-  /// * [organization]
-  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
-  /// * [headers] - Can be used to add additional headers to the request
-  /// * [extras] - Can be used to add flags to the request
-  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
-  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
-  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
-  ///
-  /// Returns a [Future] containing a [Response] with a [VendorReadinessEnvelope] as data
-  /// Throws [DioException] if API call or serialization fails
-  Future<Response<VendorReadinessEnvelope>> getVendorReadiness({
-    required String organization,
-    CancelToken? cancelToken,
-    Map<String, dynamic>? headers,
-    Map<String, dynamic>? extra,
-    ValidateStatus? validateStatus,
-    ProgressCallback? onSendProgress,
-    ProgressCallback? onReceiveProgress,
-  }) async {
-    final _path = r'/vendors/{organization}/onboarding'.replaceAll('{' r'organization' '}', encodeQueryParameter(_serializers, organization, const FullType(String)).toString());
-    final _options = Options(
-      method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[
-          {
-            'type': 'apiKey',
-            'name': 'accessCookie',
-            'keyName': 'mp_access',
-            'where': '',
-          },
-        ],
-        ...?extra,
-      },
-      validateStatus: validateStatus,
-    );
-
-    final _response = await _dio.request<Object>(
-      _path,
-      options: _options,
-      cancelToken: cancelToken,
-      onSendProgress: onSendProgress,
-      onReceiveProgress: onReceiveProgress,
-    );
-
-    VendorReadinessEnvelope? _responseData;
-
-    try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(VendorReadinessEnvelope),
-      ) as VendorReadinessEnvelope;
-
-    } catch (error, stackTrace) {
-      throw DioException(
-        requestOptions: _response.requestOptions,
-        response: _response,
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    return Response<VendorReadinessEnvelope>(
-      data: _responseData,
-      headers: _response.headers,
-      isRedirect: _response.isRedirect,
-      requestOptions: _response.requestOptions,
-      redirects: _response.redirects,
-      statusCode: _response.statusCode,
-      statusMessage: _response.statusMessage,
-      extra: _response.extra,
-    );
-  }
-
-  /// get Vendor Setup
-  /// TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-  ///
-  /// Parameters:
-  /// * [organization]
-  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
-  /// * [headers] - Can be used to add additional headers to the request
-  /// * [extras] - Can be used to add flags to the request
-  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
-  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
-  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
-  ///
-  /// Returns a [Future] containing a [Response] with a [VendorSetupEnvelope] as data
-  /// Throws [DioException] if API call or serialization fails
-  Future<Response<VendorSetupEnvelope>> getVendorSetup({
-    required String organization,
-    CancelToken? cancelToken,
-    Map<String, dynamic>? headers,
-    Map<String, dynamic>? extra,
-    ValidateStatus? validateStatus,
-    ProgressCallback? onSendProgress,
-    ProgressCallback? onReceiveProgress,
-  }) async {
-    final _path = r'/vendors/{organization}/setup'.replaceAll('{' r'organization' '}', encodeQueryParameter(_serializers, organization, const FullType(String)).toString());
-    final _options = Options(
-      method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[
-          {
-            'type': 'apiKey',
-            'name': 'accessCookie',
-            'keyName': 'mp_access',
-            'where': '',
-          },
-        ],
-        ...?extra,
-      },
-      validateStatus: validateStatus,
-    );
-
-    final _response = await _dio.request<Object>(
-      _path,
-      options: _options,
-      cancelToken: cancelToken,
-      onSendProgress: onSendProgress,
-      onReceiveProgress: onReceiveProgress,
-    );
-
-    VendorSetupEnvelope? _responseData;
-
-    try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(VendorSetupEnvelope),
-      ) as VendorSetupEnvelope;
-
-    } catch (error, stackTrace) {
-      throw DioException(
-        requestOptions: _response.requestOptions,
-        response: _response,
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    return Response<VendorSetupEnvelope>(
-      data: _responseData,
-      headers: _response.headers,
-      isRedirect: _response.isRedirect,
-      requestOptions: _response.requestOptions,
-      redirects: _response.redirects,
-      statusCode: _response.statusCode,
-      statusMessage: _response.statusMessage,
-      extra: _response.extra,
-    );
-  }
-
-  /// get Vendor Tax Profile
-  /// TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-  ///
-  /// Parameters:
-  /// * [organization]
-  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
-  /// * [headers] - Can be used to add additional headers to the request
-  /// * [extras] - Can be used to add flags to the request
-  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
-  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
-  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
-  ///
-  /// Returns a [Future] containing a [Response] with a [VendorTaxProfileEnvelope] as data
-  /// Throws [DioException] if API call or serialization fails
-  Future<Response<VendorTaxProfileEnvelope>> getVendorTaxProfile({
-    required String organization,
-    CancelToken? cancelToken,
-    Map<String, dynamic>? headers,
-    Map<String, dynamic>? extra,
-    ValidateStatus? validateStatus,
-    ProgressCallback? onSendProgress,
-    ProgressCallback? onReceiveProgress,
-  }) async {
-    final _path = r'/vendors/{organization}/tax-profile'.replaceAll('{' r'organization' '}', encodeQueryParameter(_serializers, organization, const FullType(String)).toString());
-    final _options = Options(
-      method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[
-          {
-            'type': 'apiKey',
-            'name': 'accessCookie',
-            'keyName': 'mp_access',
-            'where': '',
-          },
-        ],
-        ...?extra,
-      },
-      validateStatus: validateStatus,
-    );
-
-    final _response = await _dio.request<Object>(
-      _path,
-      options: _options,
-      cancelToken: cancelToken,
-      onSendProgress: onSendProgress,
-      onReceiveProgress: onReceiveProgress,
-    );
-
-    VendorTaxProfileEnvelope? _responseData;
-
-    try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(VendorTaxProfileEnvelope),
-      ) as VendorTaxProfileEnvelope;
-
-    } catch (error, stackTrace) {
-      throw DioException(
-        requestOptions: _response.requestOptions,
-        response: _response,
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    return Response<VendorTaxProfileEnvelope>(
-      data: _responseData,
-      headers: _response.headers,
-      isRedirect: _response.isRedirect,
-      requestOptions: _response.requestOptions,
-      redirects: _response.redirects,
-      statusCode: _response.statusCode,
-      statusMessage: _response.statusMessage,
-      extra: _response.extra,
-    );
-  }
-
-  /// get Vendor Team
-  /// TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-  ///
-  /// Parameters:
-  /// * [organization]
-  /// * [page]
-  /// * [perPage]
-  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
-  /// * [headers] - Can be used to add additional headers to the request
-  /// * [extras] - Can be used to add flags to the request
-  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
-  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
-  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
-  ///
-  /// Returns a [Future] containing a [Response] with a [VendorTeamEnvelope] as data
-  /// Throws [DioException] if API call or serialization fails
-  Future<Response<VendorTeamEnvelope>> getVendorTeam({
-    required String organization,
-    int? page = 1,
-    int? perPage = 20,
-    CancelToken? cancelToken,
-    Map<String, dynamic>? headers,
-    Map<String, dynamic>? extra,
-    ValidateStatus? validateStatus,
-    ProgressCallback? onSendProgress,
-    ProgressCallback? onReceiveProgress,
-  }) async {
-    final _path = r'/vendors/{organization}/team'.replaceAll('{' r'organization' '}', encodeQueryParameter(_serializers, organization, const FullType(String)).toString());
-    final _options = Options(
-      method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[
-          {
-            'type': 'apiKey',
-            'name': 'accessCookie',
-            'keyName': 'mp_access',
-            'where': '',
-          },
-        ],
-        ...?extra,
-      },
-      validateStatus: validateStatus,
-    );
-
-    final _queryParameters = <String, dynamic>{
-      if (page != null) r'page': encodeQueryParameter(_serializers, page, const FullType(int)),
-      if (perPage != null) r'per_page': encodeQueryParameter(_serializers, perPage, const FullType(int)),
-    };
-
-    final _response = await _dio.request<Object>(
-      _path,
-      options: _options,
-      queryParameters: _queryParameters,
-      cancelToken: cancelToken,
-      onSendProgress: onSendProgress,
-      onReceiveProgress: onReceiveProgress,
-    );
-
-    VendorTeamEnvelope? _responseData;
-
-    try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(VendorTeamEnvelope),
-      ) as VendorTeamEnvelope;
-
-    } catch (error, stackTrace) {
-      throw DioException(
-        requestOptions: _response.requestOptions,
-        response: _response,
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    return Response<VendorTeamEnvelope>(
-      data: _responseData,
-      headers: _response.headers,
-      isRedirect: _response.isRedirect,
-      requestOptions: _response.requestOptions,
-      redirects: _response.redirects,
-      statusCode: _response.statusCode,
-      statusMessage: _response.statusMessage,
-      extra: _response.extra,
-    );
-  }
-
-  /// invite Vendor Team
-  /// TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-  ///
-  /// Parameters:
-  /// * [organization]
   /// * [idempotencyKey]
-  /// * [inviteVendorTeam]
+  /// * [vendorCommissionAcceptance]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -1618,12 +55,11 @@ class VendorOnboardingApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [VendorMutationEnvelope] as data
+  /// Returns a [Future] containing a [Response] with a [VendorOnboardingEnvelope] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<VendorMutationEnvelope>> inviteVendorTeam({
-    required String organization,
+  Future<Response<VendorOnboardingEnvelope>> acceptVendorCommission({
     required String idempotencyKey,
-    required InviteVendorTeam inviteVendorTeam,
+    required VendorCommissionAcceptance vendorCommissionAcceptance,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -1631,7 +67,7 @@ class VendorOnboardingApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/vendors/{organization}/team/invitations'.replaceAll('{' r'organization' '}', encodeQueryParameter(_serializers, organization, const FullType(String)).toString());
+    final _path = r'/vendors/onboarding/verification/commission';
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
@@ -1661,8 +97,8 @@ class VendorOnboardingApi {
     dynamic _bodyData;
 
     try {
-      const _type = FullType(InviteVendorTeam);
-      _bodyData = _serializers.serialize(inviteVendorTeam, specifiedType: _type);
+      const _type = FullType(VendorCommissionAcceptance);
+      _bodyData = _serializers.serialize(vendorCommissionAcceptance, specifiedType: _type);
 
     } catch(error, stackTrace) {
       throw DioException(
@@ -1685,14 +121,14 @@ class VendorOnboardingApi {
       onReceiveProgress: onReceiveProgress,
     );
 
-    VendorMutationEnvelope? _responseData;
+    VendorOnboardingEnvelope? _responseData;
 
     try {
       final rawResponse = _response.data;
       _responseData = rawResponse == null ? null : _serializers.deserialize(
         rawResponse,
-        specifiedType: const FullType(VendorMutationEnvelope),
-      ) as VendorMutationEnvelope;
+        specifiedType: const FullType(VendorOnboardingEnvelope),
+      ) as VendorOnboardingEnvelope;
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -1704,7 +140,7 @@ class VendorOnboardingApi {
       );
     }
 
-    return Response<VendorMutationEnvelope>(
+    return Response<VendorOnboardingEnvelope>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -1716,12 +152,11 @@ class VendorOnboardingApi {
     );
   }
 
-  /// issue Admin Vendor Document Link
-  /// TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
+  /// activateVendorStore
+  ///
   ///
   /// Parameters:
-  /// * [organization]
-  /// * [version]
+  /// * [idempotencyKey]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -1729,11 +164,10 @@ class VendorOnboardingApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [VendorDownloadLinkEnvelope] as data
+  /// Returns a [Future] containing a [Response] with a [VendorOnboardingEnvelope] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<VendorDownloadLinkEnvelope>> issueAdminVendorDocumentLink({
-    required String organization,
-    required String version,
+  Future<Response<VendorOnboardingEnvelope>> activateVendorStore({
+    required String idempotencyKey,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -1741,7 +175,420 @@ class VendorOnboardingApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/admin/vendor-verification/{organization}/documents/{version}/download-link'.replaceAll('{' r'organization' '}', encodeQueryParameter(_serializers, organization, const FullType(String)).toString()).replaceAll('{' r'version' '}', encodeQueryParameter(_serializers, version, const FullType(String)).toString());
+    final _path = r'/vendors/onboarding/activation';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        r'Idempotency-Key': idempotencyKey,
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'accessCookie',
+            'keyName': 'mp_access',
+            'where': '',
+          },{
+            'type': 'apiKey',
+            'name': 'webCsrf',
+            'keyName': 'X-CSRF-Token',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    VendorOnboardingEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(VendorOnboardingEnvelope),
+      ) as VendorOnboardingEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<VendorOnboardingEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// captureVendorPaymentConnection
+  ///
+  ///
+  /// Parameters:
+  /// * [idempotencyKey]
+  /// * [vendorPaymentConnection]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [VendorOnboardingEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<VendorOnboardingEnvelope>> captureVendorPaymentConnection({
+    required String idempotencyKey,
+    required VendorPaymentConnection vendorPaymentConnection,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/vendors/onboarding/payment-connection';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        r'Idempotency-Key': idempotencyKey,
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'accessCookie',
+            'keyName': 'mp_access',
+            'where': '',
+          },{
+            'type': 'apiKey',
+            'name': 'webCsrf',
+            'keyName': 'X-CSRF-Token',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(VendorPaymentConnection);
+      _bodyData = _serializers.serialize(vendorPaymentConnection, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    VendorOnboardingEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(VendorOnboardingEnvelope),
+      ) as VendorOnboardingEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<VendorOnboardingEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// completeVendorSetup
+  ///
+  ///
+  /// Parameters:
+  /// * [idempotencyKey]
+  /// * [vendorSetupComplete]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [VendorOnboardingEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<VendorOnboardingEnvelope>> completeVendorSetup({
+    required String idempotencyKey,
+    required VendorSetupComplete vendorSetupComplete,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/vendors/onboarding/setup/complete';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        r'Idempotency-Key': idempotencyKey,
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'accessCookie',
+            'keyName': 'mp_access',
+            'where': '',
+          },{
+            'type': 'apiKey',
+            'name': 'webCsrf',
+            'keyName': 'X-CSRF-Token',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(VendorSetupComplete);
+      _bodyData = _serializers.serialize(vendorSetupComplete, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    VendorOnboardingEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(VendorOnboardingEnvelope),
+      ) as VendorOnboardingEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<VendorOnboardingEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// confirmVendorStoreEmailVerification
+  ///
+  ///
+  /// Parameters:
+  /// * [vendorStoreEmailConfirmation]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [VendorOnboardingEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<VendorOnboardingEnvelope>> confirmVendorStoreEmailVerification({
+    required VendorStoreEmailConfirmation vendorStoreEmailConfirmation,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/vendors/onboarding/store-email/confirm';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'accessCookie',
+            'keyName': 'mp_access',
+            'where': '',
+          },{
+            'type': 'apiKey',
+            'name': 'webCsrf',
+            'keyName': 'X-CSRF-Token',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(VendorStoreEmailConfirmation);
+      _bodyData = _serializers.serialize(vendorStoreEmailConfirmation, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    VendorOnboardingEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(VendorOnboardingEnvelope),
+      ) as VendorOnboardingEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<VendorOnboardingEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// dismissVendorOnboardingWelcome
+  /// Persists the Owner welcome completion across refreshes and sessions. Clients continue to Store Verification after success.
+  ///
+  /// Parameters:
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [VendorOnboardingEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<VendorOnboardingEnvelope>> dismissVendorOnboardingWelcome({
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/vendors/onboarding/welcome/dismiss';
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
@@ -1774,14 +621,14 @@ class VendorOnboardingApi {
       onReceiveProgress: onReceiveProgress,
     );
 
-    VendorDownloadLinkEnvelope? _responseData;
+    VendorOnboardingEnvelope? _responseData;
 
     try {
       final rawResponse = _response.data;
       _responseData = rawResponse == null ? null : _serializers.deserialize(
         rawResponse,
-        specifiedType: const FullType(VendorDownloadLinkEnvelope),
-      ) as VendorDownloadLinkEnvelope;
+        specifiedType: const FullType(VendorOnboardingEnvelope),
+      ) as VendorOnboardingEnvelope;
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -1793,7 +640,7 @@ class VendorOnboardingApi {
       );
     }
 
-    return Response<VendorDownloadLinkEnvelope>(
+    return Response<VendorOnboardingEnvelope>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -1805,631 +652,11 @@ class VendorOnboardingApi {
     );
   }
 
-  /// issue Vendor Document Link
-  /// TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
+  /// downloadVendorOnboardingFile
+  ///
   ///
   /// Parameters:
-  /// * [organization]
-  /// * [version]
-  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
-  /// * [headers] - Can be used to add additional headers to the request
-  /// * [extras] - Can be used to add flags to the request
-  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
-  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
-  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
-  ///
-  /// Returns a [Future] containing a [Response] with a [VendorDownloadLinkEnvelope] as data
-  /// Throws [DioException] if API call or serialization fails
-  Future<Response<VendorDownloadLinkEnvelope>> issueVendorDocumentLink({
-    required String organization,
-    required String version,
-    CancelToken? cancelToken,
-    Map<String, dynamic>? headers,
-    Map<String, dynamic>? extra,
-    ValidateStatus? validateStatus,
-    ProgressCallback? onSendProgress,
-    ProgressCallback? onReceiveProgress,
-  }) async {
-    final _path = r'/vendors/{organization}/documents/{version}/download-link'.replaceAll('{' r'organization' '}', encodeQueryParameter(_serializers, organization, const FullType(String)).toString()).replaceAll('{' r'version' '}', encodeQueryParameter(_serializers, version, const FullType(String)).toString());
-    final _options = Options(
-      method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[
-          {
-            'type': 'apiKey',
-            'name': 'accessCookie',
-            'keyName': 'mp_access',
-            'where': '',
-          },{
-            'type': 'apiKey',
-            'name': 'webCsrf',
-            'keyName': 'X-CSRF-Token',
-            'where': 'header',
-          },
-        ],
-        ...?extra,
-      },
-      validateStatus: validateStatus,
-    );
-
-    final _response = await _dio.request<Object>(
-      _path,
-      options: _options,
-      cancelToken: cancelToken,
-      onSendProgress: onSendProgress,
-      onReceiveProgress: onReceiveProgress,
-    );
-
-    VendorDownloadLinkEnvelope? _responseData;
-
-    try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(VendorDownloadLinkEnvelope),
-      ) as VendorDownloadLinkEnvelope;
-
-    } catch (error, stackTrace) {
-      throw DioException(
-        requestOptions: _response.requestOptions,
-        response: _response,
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    return Response<VendorDownloadLinkEnvelope>(
-      data: _responseData,
-      headers: _response.headers,
-      isRedirect: _response.isRedirect,
-      requestOptions: _response.requestOptions,
-      redirects: _response.redirects,
-      statusCode: _response.statusCode,
-      statusMessage: _response.statusMessage,
-      extra: _response.extra,
-    );
-  }
-
-  /// list Admin Vendor Documents
-  /// TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-  ///
-  /// Parameters:
-  /// * [organization]
-  /// * [page]
-  /// * [perPage]
-  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
-  /// * [headers] - Can be used to add additional headers to the request
-  /// * [extras] - Can be used to add flags to the request
-  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
-  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
-  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
-  ///
-  /// Returns a [Future] containing a [Response] with a [VendorDocumentListEnvelope] as data
-  /// Throws [DioException] if API call or serialization fails
-  Future<Response<VendorDocumentListEnvelope>> listAdminVendorDocuments({
-    required String organization,
-    int? page = 1,
-    int? perPage = 20,
-    CancelToken? cancelToken,
-    Map<String, dynamic>? headers,
-    Map<String, dynamic>? extra,
-    ValidateStatus? validateStatus,
-    ProgressCallback? onSendProgress,
-    ProgressCallback? onReceiveProgress,
-  }) async {
-    final _path = r'/admin/vendor-verification/{organization}/documents'.replaceAll('{' r'organization' '}', encodeQueryParameter(_serializers, organization, const FullType(String)).toString());
-    final _options = Options(
-      method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[
-          {
-            'type': 'apiKey',
-            'name': 'accessCookie',
-            'keyName': 'mp_access',
-            'where': '',
-          },
-        ],
-        ...?extra,
-      },
-      validateStatus: validateStatus,
-    );
-
-    final _queryParameters = <String, dynamic>{
-      if (page != null) r'page': encodeQueryParameter(_serializers, page, const FullType(int)),
-      if (perPage != null) r'per_page': encodeQueryParameter(_serializers, perPage, const FullType(int)),
-    };
-
-    final _response = await _dio.request<Object>(
-      _path,
-      options: _options,
-      queryParameters: _queryParameters,
-      cancelToken: cancelToken,
-      onSendProgress: onSendProgress,
-      onReceiveProgress: onReceiveProgress,
-    );
-
-    VendorDocumentListEnvelope? _responseData;
-
-    try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(VendorDocumentListEnvelope),
-      ) as VendorDocumentListEnvelope;
-
-    } catch (error, stackTrace) {
-      throw DioException(
-        requestOptions: _response.requestOptions,
-        response: _response,
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    return Response<VendorDocumentListEnvelope>(
-      data: _responseData,
-      headers: _response.headers,
-      isRedirect: _response.isRedirect,
-      requestOptions: _response.requestOptions,
-      redirects: _response.redirects,
-      statusCode: _response.statusCode,
-      statusMessage: _response.statusMessage,
-      extra: _response.extra,
-    );
-  }
-
-  /// list Admin Vendor Store Media
-  /// TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-  ///
-  /// Parameters:
-  /// * [organization]
-  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
-  /// * [headers] - Can be used to add additional headers to the request
-  /// * [extras] - Can be used to add flags to the request
-  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
-  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
-  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
-  ///
-  /// Returns a [Future] containing a [Response] with a [VendorStoreMediaListEnvelope] as data
-  /// Throws [DioException] if API call or serialization fails
-  Future<Response<VendorStoreMediaListEnvelope>> listAdminVendorStoreMedia({
-    required String organization,
-    CancelToken? cancelToken,
-    Map<String, dynamic>? headers,
-    Map<String, dynamic>? extra,
-    ValidateStatus? validateStatus,
-    ProgressCallback? onSendProgress,
-    ProgressCallback? onReceiveProgress,
-  }) async {
-    final _path = r'/admin/vendor-verification/{organization}/store-media'.replaceAll('{' r'organization' '}', encodeQueryParameter(_serializers, organization, const FullType(String)).toString());
-    final _options = Options(
-      method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[
-          {
-            'type': 'apiKey',
-            'name': 'accessCookie',
-            'keyName': 'mp_access',
-            'where': '',
-          },
-        ],
-        ...?extra,
-      },
-      validateStatus: validateStatus,
-    );
-
-    final _response = await _dio.request<Object>(
-      _path,
-      options: _options,
-      cancelToken: cancelToken,
-      onSendProgress: onSendProgress,
-      onReceiveProgress: onReceiveProgress,
-    );
-
-    VendorStoreMediaListEnvelope? _responseData;
-
-    try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(VendorStoreMediaListEnvelope),
-      ) as VendorStoreMediaListEnvelope;
-
-    } catch (error, stackTrace) {
-      throw DioException(
-        requestOptions: _response.requestOptions,
-        response: _response,
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    return Response<VendorStoreMediaListEnvelope>(
-      data: _responseData,
-      headers: _response.headers,
-      isRedirect: _response.isRedirect,
-      requestOptions: _response.requestOptions,
-      redirects: _response.redirects,
-      statusCode: _response.statusCode,
-      statusMessage: _response.statusMessage,
-      extra: _response.extra,
-    );
-  }
-
-  /// list Vendor Documents
-  /// TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-  ///
-  /// Parameters:
-  /// * [organization]
-  /// * [page]
-  /// * [perPage]
-  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
-  /// * [headers] - Can be used to add additional headers to the request
-  /// * [extras] - Can be used to add flags to the request
-  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
-  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
-  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
-  ///
-  /// Returns a [Future] containing a [Response] with a [VendorDocumentListEnvelope] as data
-  /// Throws [DioException] if API call or serialization fails
-  Future<Response<VendorDocumentListEnvelope>> listVendorDocuments({
-    required String organization,
-    int? page = 1,
-    int? perPage = 20,
-    CancelToken? cancelToken,
-    Map<String, dynamic>? headers,
-    Map<String, dynamic>? extra,
-    ValidateStatus? validateStatus,
-    ProgressCallback? onSendProgress,
-    ProgressCallback? onReceiveProgress,
-  }) async {
-    final _path = r'/vendors/{organization}/documents'.replaceAll('{' r'organization' '}', encodeQueryParameter(_serializers, organization, const FullType(String)).toString());
-    final _options = Options(
-      method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[
-          {
-            'type': 'apiKey',
-            'name': 'accessCookie',
-            'keyName': 'mp_access',
-            'where': '',
-          },
-        ],
-        ...?extra,
-      },
-      validateStatus: validateStatus,
-    );
-
-    final _queryParameters = <String, dynamic>{
-      if (page != null) r'page': encodeQueryParameter(_serializers, page, const FullType(int)),
-      if (perPage != null) r'per_page': encodeQueryParameter(_serializers, perPage, const FullType(int)),
-    };
-
-    final _response = await _dio.request<Object>(
-      _path,
-      options: _options,
-      queryParameters: _queryParameters,
-      cancelToken: cancelToken,
-      onSendProgress: onSendProgress,
-      onReceiveProgress: onReceiveProgress,
-    );
-
-    VendorDocumentListEnvelope? _responseData;
-
-    try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(VendorDocumentListEnvelope),
-      ) as VendorDocumentListEnvelope;
-
-    } catch (error, stackTrace) {
-      throw DioException(
-        requestOptions: _response.requestOptions,
-        response: _response,
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    return Response<VendorDocumentListEnvelope>(
-      data: _responseData,
-      headers: _response.headers,
-      isRedirect: _response.isRedirect,
-      requestOptions: _response.requestOptions,
-      redirects: _response.redirects,
-      statusCode: _response.statusCode,
-      statusMessage: _response.statusMessage,
-      extra: _response.extra,
-    );
-  }
-
-  /// list Vendor Store Media
-  /// TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-  ///
-  /// Parameters:
-  /// * [organization]
-  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
-  /// * [headers] - Can be used to add additional headers to the request
-  /// * [extras] - Can be used to add flags to the request
-  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
-  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
-  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
-  ///
-  /// Returns a [Future] containing a [Response] with a [VendorStoreMediaListEnvelope] as data
-  /// Throws [DioException] if API call or serialization fails
-  Future<Response<VendorStoreMediaListEnvelope>> listVendorStoreMedia({
-    required String organization,
-    CancelToken? cancelToken,
-    Map<String, dynamic>? headers,
-    Map<String, dynamic>? extra,
-    ValidateStatus? validateStatus,
-    ProgressCallback? onSendProgress,
-    ProgressCallback? onReceiveProgress,
-  }) async {
-    final _path = r'/vendors/{organization}/store-media'.replaceAll('{' r'organization' '}', encodeQueryParameter(_serializers, organization, const FullType(String)).toString());
-    final _options = Options(
-      method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[
-          {
-            'type': 'apiKey',
-            'name': 'accessCookie',
-            'keyName': 'mp_access',
-            'where': '',
-          },
-        ],
-        ...?extra,
-      },
-      validateStatus: validateStatus,
-    );
-
-    final _response = await _dio.request<Object>(
-      _path,
-      options: _options,
-      cancelToken: cancelToken,
-      onSendProgress: onSendProgress,
-      onReceiveProgress: onReceiveProgress,
-    );
-
-    VendorStoreMediaListEnvelope? _responseData;
-
-    try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(VendorStoreMediaListEnvelope),
-      ) as VendorStoreMediaListEnvelope;
-
-    } catch (error, stackTrace) {
-      throw DioException(
-        requestOptions: _response.requestOptions,
-        response: _response,
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    return Response<VendorStoreMediaListEnvelope>(
-      data: _responseData,
-      headers: _response.headers,
-      isRedirect: _response.isRedirect,
-      requestOptions: _response.requestOptions,
-      redirects: _response.redirects,
-      statusCode: _response.statusCode,
-      statusMessage: _response.statusMessage,
-      extra: _response.extra,
-    );
-  }
-
-  /// list Vendor Team Invitations
-  /// TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-  ///
-  /// Parameters:
-  /// * [organization]
-  /// * [page]
-  /// * [perPage]
-  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
-  /// * [headers] - Can be used to add additional headers to the request
-  /// * [extras] - Can be used to add flags to the request
-  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
-  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
-  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
-  ///
-  /// Returns a [Future] containing a [Response] with a [VendorTeamInvitationListEnvelope] as data
-  /// Throws [DioException] if API call or serialization fails
-  Future<Response<VendorTeamInvitationListEnvelope>> listVendorTeamInvitations({
-    required String organization,
-    int? page = 1,
-    int? perPage = 20,
-    CancelToken? cancelToken,
-    Map<String, dynamic>? headers,
-    Map<String, dynamic>? extra,
-    ValidateStatus? validateStatus,
-    ProgressCallback? onSendProgress,
-    ProgressCallback? onReceiveProgress,
-  }) async {
-    final _path = r'/vendors/{organization}/team/invitations'.replaceAll('{' r'organization' '}', encodeQueryParameter(_serializers, organization, const FullType(String)).toString());
-    final _options = Options(
-      method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[
-          {
-            'type': 'apiKey',
-            'name': 'accessCookie',
-            'keyName': 'mp_access',
-            'where': '',
-          },
-        ],
-        ...?extra,
-      },
-      validateStatus: validateStatus,
-    );
-
-    final _queryParameters = <String, dynamic>{
-      if (page != null) r'page': encodeQueryParameter(_serializers, page, const FullType(int)),
-      if (perPage != null) r'per_page': encodeQueryParameter(_serializers, perPage, const FullType(int)),
-    };
-
-    final _response = await _dio.request<Object>(
-      _path,
-      options: _options,
-      queryParameters: _queryParameters,
-      cancelToken: cancelToken,
-      onSendProgress: onSendProgress,
-      onReceiveProgress: onReceiveProgress,
-    );
-
-    VendorTeamInvitationListEnvelope? _responseData;
-
-    try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(VendorTeamInvitationListEnvelope),
-      ) as VendorTeamInvitationListEnvelope;
-
-    } catch (error, stackTrace) {
-      throw DioException(
-        requestOptions: _response.requestOptions,
-        response: _response,
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    return Response<VendorTeamInvitationListEnvelope>(
-      data: _responseData,
-      headers: _response.headers,
-      isRedirect: _response.isRedirect,
-      requestOptions: _response.requestOptions,
-      redirects: _response.redirects,
-      statusCode: _response.statusCode,
-      statusMessage: _response.statusMessage,
-      extra: _response.extra,
-    );
-  }
-
-  /// list Vendor Verification Queue
-  /// TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-  ///
-  /// Parameters:
-  /// * [page]
-  /// * [perPage]
-  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
-  /// * [headers] - Can be used to add additional headers to the request
-  /// * [extras] - Can be used to add flags to the request
-  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
-  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
-  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
-  ///
-  /// Returns a [Future] containing a [Response] with a [VendorVerificationRowListEnvelope] as data
-  /// Throws [DioException] if API call or serialization fails
-  Future<Response<VendorVerificationRowListEnvelope>> listVendorVerificationQueue({
-    int? page = 1,
-    int? perPage = 20,
-    CancelToken? cancelToken,
-    Map<String, dynamic>? headers,
-    Map<String, dynamic>? extra,
-    ValidateStatus? validateStatus,
-    ProgressCallback? onSendProgress,
-    ProgressCallback? onReceiveProgress,
-  }) async {
-    final _path = r'/admin/vendor-verification';
-    final _options = Options(
-      method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[
-          {
-            'type': 'apiKey',
-            'name': 'accessCookie',
-            'keyName': 'mp_access',
-            'where': '',
-          },
-        ],
-        ...?extra,
-      },
-      validateStatus: validateStatus,
-    );
-
-    final _queryParameters = <String, dynamic>{
-      if (page != null) r'page': encodeQueryParameter(_serializers, page, const FullType(int)),
-      if (perPage != null) r'per_page': encodeQueryParameter(_serializers, perPage, const FullType(int)),
-    };
-
-    final _response = await _dio.request<Object>(
-      _path,
-      options: _options,
-      queryParameters: _queryParameters,
-      cancelToken: cancelToken,
-      onSendProgress: onSendProgress,
-      onReceiveProgress: onReceiveProgress,
-    );
-
-    VendorVerificationRowListEnvelope? _responseData;
-
-    try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(VendorVerificationRowListEnvelope),
-      ) as VendorVerificationRowListEnvelope;
-
-    } catch (error, stackTrace) {
-      throw DioException(
-        requestOptions: _response.requestOptions,
-        response: _response,
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    return Response<VendorVerificationRowListEnvelope>(
-      data: _responseData,
-      headers: _response.headers,
-      isRedirect: _response.isRedirect,
-      requestOptions: _response.requestOptions,
-      redirects: _response.redirects,
-      statusCode: _response.statusCode,
-      statusMessage: _response.statusMessage,
-      extra: _response.extra,
-    );
-  }
-
-  /// preview Admin Vendor Store Media
-  /// TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-  ///
-  /// Parameters:
-  /// * [organization]
-  /// * [media]
+  /// * [fileId]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -2439,9 +666,8 @@ class VendorOnboardingApi {
   ///
   /// Returns a [Future] containing a [Response] with a [Uint8List] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<Uint8List>> previewAdminVendorStoreMedia({
-    required String organization,
-    required String media,
+  Future<Response<Uint8List>> downloadVendorOnboardingFile({
+    required String fileId,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -2449,7 +675,7 @@ class VendorOnboardingApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/admin/vendor-verification/{organization}/store-media/{media}'.replaceAll('{' r'organization' '}', encodeQueryParameter(_serializers, organization, const FullType(String)).toString()).replaceAll('{' r'media' '}', encodeQueryParameter(_serializers, media, const FullType(String)).toString());
+    final _path = r'/vendor-onboarding-files/{fileId}/content'.replaceAll('{' r'fileId' '}', encodeQueryParameter(_serializers, fileId, const FullType(String)).toString());
     final _options = Options(
       method: r'GET',
       responseType: ResponseType.bytes,
@@ -2506,12 +732,10 @@ class VendorOnboardingApi {
     );
   }
 
-  /// preview Vendor Store Media
-  /// TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
+  /// getAuthoritativeVendorOnboarding
+  ///
   ///
   /// Parameters:
-  /// * [organization]
-  /// * [media]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -2519,11 +743,9 @@ class VendorOnboardingApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [Uint8List] as data
+  /// Returns a [Future] containing a [Response] with a [VendorOnboardingEnvelope] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<Uint8List>> previewVendorStoreMedia({
-    required String organization,
-    required String media,
+  Future<Response<VendorOnboardingEnvelope>> getAuthoritativeVendorOnboarding({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -2531,10 +753,9 @@ class VendorOnboardingApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/vendors/{organization}/store-media/{media}'.replaceAll('{' r'organization' '}', encodeQueryParameter(_serializers, organization, const FullType(String)).toString()).replaceAll('{' r'media' '}', encodeQueryParameter(_serializers, media, const FullType(String)).toString());
+    final _path = r'/vendor/onboarding';
     final _options = Options(
       method: r'GET',
-      responseType: ResponseType.bytes,
       headers: <String, dynamic>{
         ...?headers,
       },
@@ -2560,11 +781,14 @@ class VendorOnboardingApi {
       onReceiveProgress: onReceiveProgress,
     );
 
-    Uint8List? _responseData;
+    VendorOnboardingEnvelope? _responseData;
 
     try {
       final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : rawResponse as Uint8List;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(VendorOnboardingEnvelope),
+      ) as VendorOnboardingEnvelope;
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -2576,7 +800,7 @@ class VendorOnboardingApi {
       );
     }
 
-    return Response<Uint8List>(
+    return Response<VendorOnboardingEnvelope>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -2588,12 +812,10 @@ class VendorOnboardingApi {
     );
   }
 
-  /// reconcile Vendor Test Connection
-  /// TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
+  /// getVendorOnboarding
+  ///
   ///
   /// Parameters:
-  /// * [organization]
-  /// * [vendorVersionMutation]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -2601,11 +823,9 @@ class VendorOnboardingApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [VendorSetupEnvelope] as data
+  /// Returns a [Future] containing a [Response] with a [VendorOnboardingEnvelope] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<VendorSetupEnvelope>> reconcileVendorTestConnection({
-    required String organization,
-    required VendorVersionMutation vendorVersionMutation,
+  Future<Response<VendorOnboardingEnvelope>> getVendorOnboarding({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -2613,7 +833,653 @@ class VendorOnboardingApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/vendors/{organization}/payment-connection/reconciliation'.replaceAll('{' r'organization' '}', encodeQueryParameter(_serializers, organization, const FullType(String)).toString());
+    final _path = r'/vendors/onboarding';
+    final _options = Options(
+      method: r'GET',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'accessCookie',
+            'keyName': 'mp_access',
+            'where': '',
+          },
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    VendorOnboardingEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(VendorOnboardingEnvelope),
+      ) as VendorOnboardingEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<VendorOnboardingEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// getVendorPrivateFileUrl
+  /// Returns a five-minute signed URL for clean private verification evidence or ready Store Profile media owned by the current Vendor organization. Download rechecks authentication, permissions, ownership and scan state.
+  ///
+  /// Parameters:
+  /// * [fileId]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [VendorFileEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<VendorFileEnvelope>> getVendorPrivateFileUrl({
+    required String fileId,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/vendors/onboarding/files/{fileId}'.replaceAll('{' r'fileId' '}', encodeQueryParameter(_serializers, fileId, const FullType(String)).toString());
+    final _options = Options(
+      method: r'GET',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'accessCookie',
+            'keyName': 'mp_access',
+            'where': '',
+          },
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    VendorFileEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(VendorFileEnvelope),
+      ) as VendorFileEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<VendorFileEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// inviteVendorTeamMember
+  ///
+  ///
+  /// Parameters:
+  /// * [idempotencyKey]
+  /// * [vendorInvitationRequest]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [VendorInvitationEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<VendorInvitationEnvelope>> inviteVendorTeamMember({
+    required String idempotencyKey,
+    required VendorInvitationRequest vendorInvitationRequest,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/vendors/account/invitations';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        r'Idempotency-Key': idempotencyKey,
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'accessCookie',
+            'keyName': 'mp_access',
+            'where': '',
+          },{
+            'type': 'apiKey',
+            'name': 'webCsrf',
+            'keyName': 'X-CSRF-Token',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(VendorInvitationRequest);
+      _bodyData = _serializers.serialize(vendorInvitationRequest, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    VendorInvitationEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(VendorInvitationEnvelope),
+      ) as VendorInvitationEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<VendorInvitationEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// previewVendorRequirements
+  ///
+  ///
+  /// Parameters:
+  /// * [businessType]
+  /// * [representativeRole]
+  /// * [identityIdType]
+  /// * [representativeIdType]
+  /// * [authorityEvidenceVersionId]
+  /// * [declarationClaim]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [GenericDataEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<GenericDataEnvelope>> previewVendorRequirements({
+    required String businessType,
+    String? representativeRole,
+    String? identityIdType,
+    String? representativeIdType,
+    String? authorityEvidenceVersionId,
+    int? declarationClaim,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/vendors/onboarding/requirements';
+    final _options = Options(
+      method: r'GET',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'accessCookie',
+            'keyName': 'mp_access',
+            'where': '',
+          },
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _queryParameters = <String, dynamic>{
+      r'business_type': encodeQueryParameter(_serializers, businessType, const FullType(String)),
+      if (representativeRole != null) r'representative_role': encodeQueryParameter(_serializers, representativeRole, const FullType(String)),
+      if (identityIdType != null) r'identity_id_type': encodeQueryParameter(_serializers, identityIdType, const FullType(String)),
+      if (representativeIdType != null) r'representative_id_type': encodeQueryParameter(_serializers, representativeIdType, const FullType(String)),
+      if (authorityEvidenceVersionId != null) r'authority_evidence_version_id': encodeQueryParameter(_serializers, authorityEvidenceVersionId, const FullType(String)),
+      if (declarationClaim != null) r'declaration_claim': encodeQueryParameter(_serializers, declarationClaim, const FullType(int)),
+    };
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      queryParameters: _queryParameters,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    GenericDataEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(GenericDataEnvelope),
+      ) as GenericDataEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<GenericDataEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// receiveXenditAccountVerificationWebhook
+  ///
+  ///
+  /// Parameters:
+  /// * [xCallbackToken]
+  /// * [xenditAccountVerificationWebhook]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [VendorWebhookEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<VendorWebhookEnvelope>> receiveXenditAccountVerificationWebhook({
+    required String xCallbackToken,
+    required XenditAccountVerificationWebhook xenditAccountVerificationWebhook,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/webhooks/xendit/account-verification';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        r'x-callback-token': xCallbackToken,
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(XenditAccountVerificationWebhook);
+      _bodyData = _serializers.serialize(xenditAccountVerificationWebhook, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    VendorWebhookEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(VendorWebhookEnvelope),
+      ) as VendorWebhookEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<VendorWebhookEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// reconcileVendorPaymentConnection
+  ///
+  ///
+  /// Parameters:
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [VendorPaymentReconciliationEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<VendorPaymentReconciliationEnvelope>> reconcileVendorPaymentConnection({
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/vendors/onboarding/payment-connection/reconcile';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'accessCookie',
+            'keyName': 'mp_access',
+            'where': '',
+          },{
+            'type': 'apiKey',
+            'name': 'webCsrf',
+            'keyName': 'X-CSRF-Token',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    VendorPaymentReconciliationEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(VendorPaymentReconciliationEnvelope),
+      ) as VendorPaymentReconciliationEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<VendorPaymentReconciliationEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// removePendingVendorDocument
+  ///
+  ///
+  /// Parameters:
+  /// * [requirementKey]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [VendorOnboardingEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<VendorOnboardingEnvelope>> removePendingVendorDocument({
+    required String requirementKey,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/vendors/onboarding/documents/pending/{requirementKey}'.replaceAll('{' r'requirementKey' '}', encodeQueryParameter(_serializers, requirementKey, const FullType(String)).toString());
+    final _options = Options(
+      method: r'DELETE',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'accessCookie',
+            'keyName': 'mp_access',
+            'where': '',
+          },{
+            'type': 'apiKey',
+            'name': 'webCsrf',
+            'keyName': 'X-CSRF-Token',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    VendorOnboardingEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(VendorOnboardingEnvelope),
+      ) as VendorOnboardingEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<VendorOnboardingEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// requestVendorStoreEmailVerification
+  ///
+  ///
+  /// Parameters:
+  /// * [emailRequest]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [VendorStoreEmailEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<VendorStoreEmailEnvelope>> requestVendorStoreEmailVerification({
+    required EmailRequest emailRequest,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/vendors/onboarding/store-email';
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
@@ -2642,8 +1508,8 @@ class VendorOnboardingApi {
     dynamic _bodyData;
 
     try {
-      const _type = FullType(VendorVersionMutation);
-      _bodyData = _serializers.serialize(vendorVersionMutation, specifiedType: _type);
+      const _type = FullType(EmailRequest);
+      _bodyData = _serializers.serialize(emailRequest, specifiedType: _type);
 
     } catch(error, stackTrace) {
       throw DioException(
@@ -2666,14 +1532,14 @@ class VendorOnboardingApi {
       onReceiveProgress: onReceiveProgress,
     );
 
-    VendorSetupEnvelope? _responseData;
+    VendorStoreEmailEnvelope? _responseData;
 
     try {
       final rawResponse = _response.data;
       _responseData = rawResponse == null ? null : _serializers.deserialize(
         rawResponse,
-        specifiedType: const FullType(VendorSetupEnvelope),
-      ) as VendorSetupEnvelope;
+        specifiedType: const FullType(VendorStoreEmailEnvelope),
+      ) as VendorStoreEmailEnvelope;
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -2685,7 +1551,7 @@ class VendorOnboardingApi {
       );
     }
 
-    return Response<VendorSetupEnvelope>(
+    return Response<VendorStoreEmailEnvelope>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -2697,13 +1563,11 @@ class VendorOnboardingApi {
     );
   }
 
-  /// remove Vendor Store Media
-  /// TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
+  /// resolveVendorAddress
+  ///
   ///
   /// Parameters:
-  /// * [organization]
-  /// * [media]
-  /// * [vendorVersionMutation]
+  /// * [vendorAddressSelection]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -2711,12 +1575,10 @@ class VendorOnboardingApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [VendorMutationEnvelope] as data
+  /// Returns a [Future] containing a [Response] with a [GenericDataEnvelope] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<VendorMutationEnvelope>> removeVendorStoreMedia({
-    required String organization,
-    required String media,
-    required VendorVersionMutation vendorVersionMutation,
+  Future<Response<GenericDataEnvelope>> resolveVendorAddress({
+    required VendorAddressSelection vendorAddressSelection,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -2724,7 +1586,7 @@ class VendorOnboardingApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/vendors/{organization}/store-media/{media}/remove'.replaceAll('{' r'organization' '}', encodeQueryParameter(_serializers, organization, const FullType(String)).toString()).replaceAll('{' r'media' '}', encodeQueryParameter(_serializers, media, const FullType(String)).toString());
+    final _path = r'/vendors/onboarding/address/resolve';
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
@@ -2753,8 +1615,8 @@ class VendorOnboardingApi {
     dynamic _bodyData;
 
     try {
-      const _type = FullType(VendorVersionMutation);
-      _bodyData = _serializers.serialize(vendorVersionMutation, specifiedType: _type);
+      const _type = FullType(VendorAddressSelection);
+      _bodyData = _serializers.serialize(vendorAddressSelection, specifiedType: _type);
 
     } catch(error, stackTrace) {
       throw DioException(
@@ -2777,14 +1639,14 @@ class VendorOnboardingApi {
       onReceiveProgress: onReceiveProgress,
     );
 
-    VendorMutationEnvelope? _responseData;
+    GenericDataEnvelope? _responseData;
 
     try {
       final rawResponse = _response.data;
       _responseData = rawResponse == null ? null : _serializers.deserialize(
         rawResponse,
-        specifiedType: const FullType(VendorMutationEnvelope),
-      ) as VendorMutationEnvelope;
+        specifiedType: const FullType(GenericDataEnvelope),
+      ) as GenericDataEnvelope;
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -2796,7 +1658,7 @@ class VendorOnboardingApi {
       );
     }
 
-    return Response<VendorMutationEnvelope>(
+    return Response<GenericDataEnvelope>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -2808,12 +1670,11 @@ class VendorOnboardingApi {
     );
   }
 
-  /// request Vendor Store Email Verification
-  /// TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
+  /// resolveVendorAddressPin
+  ///
   ///
   /// Parameters:
-  /// * [organization]
-  /// * [vendorStoreEmailVerificationRequest]
+  /// * [vendorAddressGeocode]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -2821,11 +1682,10 @@ class VendorOnboardingApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [VendorBusinessEnvelope] as data
+  /// Returns a [Future] containing a [Response] with a [GenericDataEnvelope] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<VendorBusinessEnvelope>> requestVendorStoreEmailVerification({
-    required String organization,
-    required VendorStoreEmailVerificationRequest vendorStoreEmailVerificationRequest,
+  Future<Response<GenericDataEnvelope>> resolveVendorAddressPin({
+    required VendorAddressGeocode vendorAddressGeocode,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -2833,7 +1693,7 @@ class VendorOnboardingApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/vendors/{organization}/business/store-email/verification'.replaceAll('{' r'organization' '}', encodeQueryParameter(_serializers, organization, const FullType(String)).toString());
+    final _path = r'/vendors/onboarding/address/pin';
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
@@ -2862,8 +1722,8 @@ class VendorOnboardingApi {
     dynamic _bodyData;
 
     try {
-      const _type = FullType(VendorStoreEmailVerificationRequest);
-      _bodyData = _serializers.serialize(vendorStoreEmailVerificationRequest, specifiedType: _type);
+      const _type = FullType(VendorAddressGeocode);
+      _bodyData = _serializers.serialize(vendorAddressGeocode, specifiedType: _type);
 
     } catch(error, stackTrace) {
       throw DioException(
@@ -2886,14 +1746,14 @@ class VendorOnboardingApi {
       onReceiveProgress: onReceiveProgress,
     );
 
-    VendorBusinessEnvelope? _responseData;
+    GenericDataEnvelope? _responseData;
 
     try {
       final rawResponse = _response.data;
       _responseData = rawResponse == null ? null : _serializers.deserialize(
         rawResponse,
-        specifiedType: const FullType(VendorBusinessEnvelope),
-      ) as VendorBusinessEnvelope;
+        specifiedType: const FullType(GenericDataEnvelope),
+      ) as GenericDataEnvelope;
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -2905,7 +1765,7 @@ class VendorOnboardingApi {
       );
     }
 
-    return Response<VendorBusinessEnvelope>(
+    return Response<GenericDataEnvelope>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -2917,12 +1777,11 @@ class VendorOnboardingApi {
     );
   }
 
-  /// review Vendor Business
-  /// TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
+  /// reverseGeocodeVendorAddress
+  ///
   ///
   /// Parameters:
-  /// * [organization]
-  /// * [vendorBusinessReview]
+  /// * [vendorAddressGeocode]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -2930,11 +1789,10 @@ class VendorOnboardingApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [VendorReadinessEnvelope] as data
+  /// Returns a [Future] containing a [Response] with a [VendorAddressGeocodeEnvelope] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<VendorReadinessEnvelope>> reviewVendorBusiness({
-    required String organization,
-    required VendorBusinessReview vendorBusinessReview,
+  Future<Response<VendorAddressGeocodeEnvelope>> reverseGeocodeVendorAddress({
+    required VendorAddressGeocode vendorAddressGeocode,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -2942,7 +1800,7 @@ class VendorOnboardingApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/admin/vendor-verification/{organization}/business/reviews'.replaceAll('{' r'organization' '}', encodeQueryParameter(_serializers, organization, const FullType(String)).toString());
+    final _path = r'/vendors/onboarding/address/geocode';
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
@@ -2971,8 +1829,8 @@ class VendorOnboardingApi {
     dynamic _bodyData;
 
     try {
-      const _type = FullType(VendorBusinessReview);
-      _bodyData = _serializers.serialize(vendorBusinessReview, specifiedType: _type);
+      const _type = FullType(VendorAddressGeocode);
+      _bodyData = _serializers.serialize(vendorAddressGeocode, specifiedType: _type);
 
     } catch(error, stackTrace) {
       throw DioException(
@@ -2995,14 +1853,14 @@ class VendorOnboardingApi {
       onReceiveProgress: onReceiveProgress,
     );
 
-    VendorReadinessEnvelope? _responseData;
+    VendorAddressGeocodeEnvelope? _responseData;
 
     try {
       final rawResponse = _response.data;
       _responseData = rawResponse == null ? null : _serializers.deserialize(
         rawResponse,
-        specifiedType: const FullType(VendorReadinessEnvelope),
-      ) as VendorReadinessEnvelope;
+        specifiedType: const FullType(VendorAddressGeocodeEnvelope),
+      ) as VendorAddressGeocodeEnvelope;
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -3014,7 +1872,7 @@ class VendorOnboardingApi {
       );
     }
 
-    return Response<VendorReadinessEnvelope>(
+    return Response<VendorAddressGeocodeEnvelope>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -3026,13 +1884,11 @@ class VendorOnboardingApi {
     );
   }
 
-  /// review Vendor Document
-  /// TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
+  /// saveVendorSetupDraft
+  /// Saves version-checked setup progress. Public-name, description and public-contact-only edits preserve completed setup and activation; operational changes reopen setup requirements. Every successful save advances the organization lock version.
   ///
   /// Parameters:
-  /// * [organization]
-  /// * [version]
-  /// * [vendorDocumentReview]
+  /// * [vendorSetupDraft]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -3040,12 +1896,10 @@ class VendorOnboardingApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [VendorReadinessEnvelope] as data
+  /// Returns a [Future] containing a [Response] with a [VendorOnboardingEnvelope] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<VendorReadinessEnvelope>> reviewVendorDocument({
-    required String organization,
-    required String version,
-    required VendorDocumentReview vendorDocumentReview,
+  Future<Response<VendorOnboardingEnvelope>> saveVendorSetupDraft({
+    required VendorSetupDraft vendorSetupDraft,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -3053,10 +1907,328 @@ class VendorOnboardingApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/admin/vendor-verification/{organization}/documents/{version}/reviews'.replaceAll('{' r'organization' '}', encodeQueryParameter(_serializers, organization, const FullType(String)).toString()).replaceAll('{' r'version' '}', encodeQueryParameter(_serializers, version, const FullType(String)).toString());
+    final _path = r'/vendors/onboarding/setup';
+    final _options = Options(
+      method: r'PATCH',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'accessCookie',
+            'keyName': 'mp_access',
+            'where': '',
+          },{
+            'type': 'apiKey',
+            'name': 'webCsrf',
+            'keyName': 'X-CSRF-Token',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(VendorSetupDraft);
+      _bodyData = _serializers.serialize(vendorSetupDraft, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    VendorOnboardingEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(VendorOnboardingEnvelope),
+      ) as VendorOnboardingEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<VendorOnboardingEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// saveVendorVerificationDraft
+  ///
+  ///
+  /// Parameters:
+  /// * [vendorVerificationDraft]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [VendorOnboardingEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<VendorOnboardingEnvelope>> saveVendorVerificationDraft({
+    required VendorVerificationDraft vendorVerificationDraft,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/vendors/onboarding/verification';
+    final _options = Options(
+      method: r'PATCH',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'accessCookie',
+            'keyName': 'mp_access',
+            'where': '',
+          },{
+            'type': 'apiKey',
+            'name': 'webCsrf',
+            'keyName': 'X-CSRF-Token',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(VendorVerificationDraft);
+      _bodyData = _serializers.serialize(vendorVerificationDraft, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    VendorOnboardingEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(VendorOnboardingEnvelope),
+      ) as VendorOnboardingEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<VendorOnboardingEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// searchVendorAddressAreas
+  ///
+  ///
+  /// Parameters:
+  /// * [level]
+  /// * [parentCode]
+  /// * [q]
+  /// * [page]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [PsgcSearchEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<PsgcSearchEnvelope>> searchVendorAddressAreas({
+    required String level,
+    String? parentCode,
+    String? q,
+    int? page = 1,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/vendors/onboarding/address/areas';
+    final _options = Options(
+      method: r'GET',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'accessCookie',
+            'keyName': 'mp_access',
+            'where': '',
+          },{
+            'type': 'apiKey',
+            'name': 'webCsrf',
+            'keyName': 'X-CSRF-Token',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _queryParameters = <String, dynamic>{
+      r'level': encodeQueryParameter(_serializers, level, const FullType(String)),
+      if (parentCode != null) r'parent_code': encodeQueryParameter(_serializers, parentCode, const FullType(String)),
+      if (q != null) r'q': encodeQueryParameter(_serializers, q, const FullType(String)),
+      if (page != null) r'page': encodeQueryParameter(_serializers, page, const FullType(int)),
+    };
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      queryParameters: _queryParameters,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    PsgcSearchEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(PsgcSearchEnvelope),
+      ) as PsgcSearchEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<PsgcSearchEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// submitVendorVerification
+  ///
+  ///
+  /// Parameters:
+  /// * [idempotencyKey]
+  /// * [vendorVerificationSubmit]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [VendorOnboardingEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<VendorOnboardingEnvelope>> submitVendorVerification({
+    required String idempotencyKey,
+    required VendorVerificationSubmit vendorVerificationSubmit,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/vendors/onboarding/verification/submit';
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
+        r'Idempotency-Key': idempotencyKey,
         ...?headers,
       },
       extra: <String, dynamic>{
@@ -3082,8 +2254,8 @@ class VendorOnboardingApi {
     dynamic _bodyData;
 
     try {
-      const _type = FullType(VendorDocumentReview);
-      _bodyData = _serializers.serialize(vendorDocumentReview, specifiedType: _type);
+      const _type = FullType(VendorVerificationSubmit);
+      _bodyData = _serializers.serialize(vendorVerificationSubmit, specifiedType: _type);
 
     } catch(error, stackTrace) {
       throw DioException(
@@ -3106,14 +2278,14 @@ class VendorOnboardingApi {
       onReceiveProgress: onReceiveProgress,
     );
 
-    VendorReadinessEnvelope? _responseData;
+    VendorOnboardingEnvelope? _responseData;
 
     try {
       final rawResponse = _response.data;
       _responseData = rawResponse == null ? null : _serializers.deserialize(
         rawResponse,
-        specifiedType: const FullType(VendorReadinessEnvelope),
-      ) as VendorReadinessEnvelope;
+        specifiedType: const FullType(VendorOnboardingEnvelope),
+      ) as VendorOnboardingEnvelope;
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -3125,7 +2297,7 @@ class VendorOnboardingApi {
       );
     }
 
-    return Response<VendorReadinessEnvelope>(
+    return Response<VendorOnboardingEnvelope>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -3137,791 +2309,13 @@ class VendorOnboardingApi {
     );
   }
 
-  /// review Vendor Store Media
-  /// TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
+  /// uploadVendorStoreMedia
+  ///
   ///
   /// Parameters:
-  /// * [organization]
-  /// * [media]
-  /// * [vendorReview]
-  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
-  /// * [headers] - Can be used to add additional headers to the request
-  /// * [extras] - Can be used to add flags to the request
-  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
-  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
-  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
-  ///
-  /// Returns a [Future] containing a [Response] with a [VendorMutationEnvelope] as data
-  /// Throws [DioException] if API call or serialization fails
-  Future<Response<VendorMutationEnvelope>> reviewVendorStoreMedia({
-    required String organization,
-    required String media,
-    required VendorReview vendorReview,
-    CancelToken? cancelToken,
-    Map<String, dynamic>? headers,
-    Map<String, dynamic>? extra,
-    ValidateStatus? validateStatus,
-    ProgressCallback? onSendProgress,
-    ProgressCallback? onReceiveProgress,
-  }) async {
-    final _path = r'/admin/vendor-verification/{organization}/store-media/{media}/reviews'.replaceAll('{' r'organization' '}', encodeQueryParameter(_serializers, organization, const FullType(String)).toString()).replaceAll('{' r'media' '}', encodeQueryParameter(_serializers, media, const FullType(String)).toString());
-    final _options = Options(
-      method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[
-          {
-            'type': 'apiKey',
-            'name': 'accessCookie',
-            'keyName': 'mp_access',
-            'where': '',
-          },{
-            'type': 'apiKey',
-            'name': 'webCsrf',
-            'keyName': 'X-CSRF-Token',
-            'where': 'header',
-          },
-        ],
-        ...?extra,
-      },
-      contentType: 'application/json',
-      validateStatus: validateStatus,
-    );
-
-    dynamic _bodyData;
-
-    try {
-      const _type = FullType(VendorReview);
-      _bodyData = _serializers.serialize(vendorReview, specifiedType: _type);
-
-    } catch(error, stackTrace) {
-      throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    final _response = await _dio.request<Object>(
-      _path,
-      data: _bodyData,
-      options: _options,
-      cancelToken: cancelToken,
-      onSendProgress: onSendProgress,
-      onReceiveProgress: onReceiveProgress,
-    );
-
-    VendorMutationEnvelope? _responseData;
-
-    try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(VendorMutationEnvelope),
-      ) as VendorMutationEnvelope;
-
-    } catch (error, stackTrace) {
-      throw DioException(
-        requestOptions: _response.requestOptions,
-        response: _response,
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    return Response<VendorMutationEnvelope>(
-      data: _responseData,
-      headers: _response.headers,
-      isRedirect: _response.isRedirect,
-      requestOptions: _response.requestOptions,
-      redirects: _response.redirects,
-      statusCode: _response.statusCode,
-      statusMessage: _response.statusMessage,
-      extra: _response.extra,
-    );
-  }
-
-  /// review Vendor Tax Profile
-  /// TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-  ///
-  /// Parameters:
-  /// * [organization]
-  /// * [version]
-  /// * [vendorReview]
-  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
-  /// * [headers] - Can be used to add additional headers to the request
-  /// * [extras] - Can be used to add flags to the request
-  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
-  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
-  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
-  ///
-  /// Returns a [Future] containing a [Response] with a [VendorReadinessEnvelope] as data
-  /// Throws [DioException] if API call or serialization fails
-  Future<Response<VendorReadinessEnvelope>> reviewVendorTaxProfile({
-    required String organization,
-    required String version,
-    required VendorReview vendorReview,
-    CancelToken? cancelToken,
-    Map<String, dynamic>? headers,
-    Map<String, dynamic>? extra,
-    ValidateStatus? validateStatus,
-    ProgressCallback? onSendProgress,
-    ProgressCallback? onReceiveProgress,
-  }) async {
-    final _path = r'/admin/vendor-verification/{organization}/tax-profile/versions/{version}/reviews'.replaceAll('{' r'organization' '}', encodeQueryParameter(_serializers, organization, const FullType(String)).toString()).replaceAll('{' r'version' '}', encodeQueryParameter(_serializers, version, const FullType(String)).toString());
-    final _options = Options(
-      method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[
-          {
-            'type': 'apiKey',
-            'name': 'accessCookie',
-            'keyName': 'mp_access',
-            'where': '',
-          },{
-            'type': 'apiKey',
-            'name': 'webCsrf',
-            'keyName': 'X-CSRF-Token',
-            'where': 'header',
-          },
-        ],
-        ...?extra,
-      },
-      contentType: 'application/json',
-      validateStatus: validateStatus,
-    );
-
-    dynamic _bodyData;
-
-    try {
-      const _type = FullType(VendorReview);
-      _bodyData = _serializers.serialize(vendorReview, specifiedType: _type);
-
-    } catch(error, stackTrace) {
-      throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    final _response = await _dio.request<Object>(
-      _path,
-      data: _bodyData,
-      options: _options,
-      cancelToken: cancelToken,
-      onSendProgress: onSendProgress,
-      onReceiveProgress: onReceiveProgress,
-    );
-
-    VendorReadinessEnvelope? _responseData;
-
-    try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(VendorReadinessEnvelope),
-      ) as VendorReadinessEnvelope;
-
-    } catch (error, stackTrace) {
-      throw DioException(
-        requestOptions: _response.requestOptions,
-        response: _response,
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    return Response<VendorReadinessEnvelope>(
-      data: _responseData,
-      headers: _response.headers,
-      isRedirect: _response.isRedirect,
-      requestOptions: _response.requestOptions,
-      redirects: _response.redirects,
-      statusCode: _response.statusCode,
-      statusMessage: _response.statusMessage,
-      extra: _response.extra,
-    );
-  }
-
-  /// revoke Vendor Team Invitation
-  /// TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-  ///
-  /// Parameters:
-  /// * [organization]
-  /// * [invitation]
-  /// * [vendorVersionMutation]
-  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
-  /// * [headers] - Can be used to add additional headers to the request
-  /// * [extras] - Can be used to add flags to the request
-  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
-  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
-  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
-  ///
-  /// Returns a [Future] containing a [Response] with a [VendorMutationEnvelope] as data
-  /// Throws [DioException] if API call or serialization fails
-  Future<Response<VendorMutationEnvelope>> revokeVendorTeamInvitation({
-    required String organization,
-    required String invitation,
-    required VendorVersionMutation vendorVersionMutation,
-    CancelToken? cancelToken,
-    Map<String, dynamic>? headers,
-    Map<String, dynamic>? extra,
-    ValidateStatus? validateStatus,
-    ProgressCallback? onSendProgress,
-    ProgressCallback? onReceiveProgress,
-  }) async {
-    final _path = r'/vendors/{organization}/team/invitations/{invitation}/revoke'.replaceAll('{' r'organization' '}', encodeQueryParameter(_serializers, organization, const FullType(String)).toString()).replaceAll('{' r'invitation' '}', encodeQueryParameter(_serializers, invitation, const FullType(String)).toString());
-    final _options = Options(
-      method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[
-          {
-            'type': 'apiKey',
-            'name': 'accessCookie',
-            'keyName': 'mp_access',
-            'where': '',
-          },{
-            'type': 'apiKey',
-            'name': 'webCsrf',
-            'keyName': 'X-CSRF-Token',
-            'where': 'header',
-          },
-        ],
-        ...?extra,
-      },
-      contentType: 'application/json',
-      validateStatus: validateStatus,
-    );
-
-    dynamic _bodyData;
-
-    try {
-      const _type = FullType(VendorVersionMutation);
-      _bodyData = _serializers.serialize(vendorVersionMutation, specifiedType: _type);
-
-    } catch(error, stackTrace) {
-      throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    final _response = await _dio.request<Object>(
-      _path,
-      data: _bodyData,
-      options: _options,
-      cancelToken: cancelToken,
-      onSendProgress: onSendProgress,
-      onReceiveProgress: onReceiveProgress,
-    );
-
-    VendorMutationEnvelope? _responseData;
-
-    try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(VendorMutationEnvelope),
-      ) as VendorMutationEnvelope;
-
-    } catch (error, stackTrace) {
-      throw DioException(
-        requestOptions: _response.requestOptions,
-        response: _response,
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    return Response<VendorMutationEnvelope>(
-      data: _responseData,
-      headers: _response.headers,
-      isRedirect: _response.isRedirect,
-      requestOptions: _response.requestOptions,
-      redirects: _response.redirects,
-      statusCode: _response.statusCode,
-      statusMessage: _response.statusMessage,
-      extra: _response.extra,
-    );
-  }
-
-  /// save Vendor Business
-  /// TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-  ///
-  /// Parameters:
-  /// * [organization]
-  /// * [saveVendorBusiness]
-  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
-  /// * [headers] - Can be used to add additional headers to the request
-  /// * [extras] - Can be used to add flags to the request
-  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
-  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
-  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
-  ///
-  /// Returns a [Future] containing a [Response] with a [VendorBusinessEnvelope] as data
-  /// Throws [DioException] if API call or serialization fails
-  Future<Response<VendorBusinessEnvelope>> saveVendorBusiness({
-    required String organization,
-    required SaveVendorBusiness saveVendorBusiness,
-    CancelToken? cancelToken,
-    Map<String, dynamic>? headers,
-    Map<String, dynamic>? extra,
-    ValidateStatus? validateStatus,
-    ProgressCallback? onSendProgress,
-    ProgressCallback? onReceiveProgress,
-  }) async {
-    final _path = r'/vendors/{organization}/business'.replaceAll('{' r'organization' '}', encodeQueryParameter(_serializers, organization, const FullType(String)).toString());
-    final _options = Options(
-      method: r'PUT',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[
-          {
-            'type': 'apiKey',
-            'name': 'accessCookie',
-            'keyName': 'mp_access',
-            'where': '',
-          },{
-            'type': 'apiKey',
-            'name': 'webCsrf',
-            'keyName': 'X-CSRF-Token',
-            'where': 'header',
-          },
-        ],
-        ...?extra,
-      },
-      contentType: 'application/json',
-      validateStatus: validateStatus,
-    );
-
-    dynamic _bodyData;
-
-    try {
-      const _type = FullType(SaveVendorBusiness);
-      _bodyData = _serializers.serialize(saveVendorBusiness, specifiedType: _type);
-
-    } catch(error, stackTrace) {
-      throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    final _response = await _dio.request<Object>(
-      _path,
-      data: _bodyData,
-      options: _options,
-      cancelToken: cancelToken,
-      onSendProgress: onSendProgress,
-      onReceiveProgress: onReceiveProgress,
-    );
-
-    VendorBusinessEnvelope? _responseData;
-
-    try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(VendorBusinessEnvelope),
-      ) as VendorBusinessEnvelope;
-
-    } catch (error, stackTrace) {
-      throw DioException(
-        requestOptions: _response.requestOptions,
-        response: _response,
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    return Response<VendorBusinessEnvelope>(
-      data: _responseData,
-      headers: _response.headers,
-      isRedirect: _response.isRedirect,
-      requestOptions: _response.requestOptions,
-      redirects: _response.redirects,
-      statusCode: _response.statusCode,
-      statusMessage: _response.statusMessage,
-      extra: _response.extra,
-    );
-  }
-
-  /// save Vendor Store
-  /// TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-  ///
-  /// Parameters:
-  /// * [organization]
-  /// * [saveVendorStore]
-  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
-  /// * [headers] - Can be used to add additional headers to the request
-  /// * [extras] - Can be used to add flags to the request
-  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
-  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
-  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
-  ///
-  /// Returns a [Future] containing a [Response] with a [VendorSetupEnvelope] as data
-  /// Throws [DioException] if API call or serialization fails
-  Future<Response<VendorSetupEnvelope>> saveVendorStore({
-    required String organization,
-    required SaveVendorStore saveVendorStore,
-    CancelToken? cancelToken,
-    Map<String, dynamic>? headers,
-    Map<String, dynamic>? extra,
-    ValidateStatus? validateStatus,
-    ProgressCallback? onSendProgress,
-    ProgressCallback? onReceiveProgress,
-  }) async {
-    final _path = r'/vendors/{organization}/store-profile'.replaceAll('{' r'organization' '}', encodeQueryParameter(_serializers, organization, const FullType(String)).toString());
-    final _options = Options(
-      method: r'PUT',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[
-          {
-            'type': 'apiKey',
-            'name': 'accessCookie',
-            'keyName': 'mp_access',
-            'where': '',
-          },{
-            'type': 'apiKey',
-            'name': 'webCsrf',
-            'keyName': 'X-CSRF-Token',
-            'where': 'header',
-          },
-        ],
-        ...?extra,
-      },
-      contentType: 'application/json',
-      validateStatus: validateStatus,
-    );
-
-    dynamic _bodyData;
-
-    try {
-      const _type = FullType(SaveVendorStore);
-      _bodyData = _serializers.serialize(saveVendorStore, specifiedType: _type);
-
-    } catch(error, stackTrace) {
-      throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    final _response = await _dio.request<Object>(
-      _path,
-      data: _bodyData,
-      options: _options,
-      cancelToken: cancelToken,
-      onSendProgress: onSendProgress,
-      onReceiveProgress: onReceiveProgress,
-    );
-
-    VendorSetupEnvelope? _responseData;
-
-    try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(VendorSetupEnvelope),
-      ) as VendorSetupEnvelope;
-
-    } catch (error, stackTrace) {
-      throw DioException(
-        requestOptions: _response.requestOptions,
-        response: _response,
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    return Response<VendorSetupEnvelope>(
-      data: _responseData,
-      headers: _response.headers,
-      isRedirect: _response.isRedirect,
-      requestOptions: _response.requestOptions,
-      redirects: _response.redirects,
-      statusCode: _response.statusCode,
-      statusMessage: _response.statusMessage,
-      extra: _response.extra,
-    );
-  }
-
-  /// save Vendor Tax Profile
-  /// TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-  ///
-  /// Parameters:
-  /// * [organization]
-  /// * [saveVendorTax]
-  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
-  /// * [headers] - Can be used to add additional headers to the request
-  /// * [extras] - Can be used to add flags to the request
-  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
-  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
-  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
-  ///
-  /// Returns a [Future] containing a [Response] with a [VendorTaxProfileEnvelope] as data
-  /// Throws [DioException] if API call or serialization fails
-  Future<Response<VendorTaxProfileEnvelope>> saveVendorTaxProfile({
-    required String organization,
-    required SaveVendorTax saveVendorTax,
-    CancelToken? cancelToken,
-    Map<String, dynamic>? headers,
-    Map<String, dynamic>? extra,
-    ValidateStatus? validateStatus,
-    ProgressCallback? onSendProgress,
-    ProgressCallback? onReceiveProgress,
-  }) async {
-    final _path = r'/vendors/{organization}/tax-profile/versions'.replaceAll('{' r'organization' '}', encodeQueryParameter(_serializers, organization, const FullType(String)).toString());
-    final _options = Options(
-      method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[
-          {
-            'type': 'apiKey',
-            'name': 'accessCookie',
-            'keyName': 'mp_access',
-            'where': '',
-          },{
-            'type': 'apiKey',
-            'name': 'webCsrf',
-            'keyName': 'X-CSRF-Token',
-            'where': 'header',
-          },
-        ],
-        ...?extra,
-      },
-      contentType: 'application/json',
-      validateStatus: validateStatus,
-    );
-
-    dynamic _bodyData;
-
-    try {
-      const _type = FullType(SaveVendorTax);
-      _bodyData = _serializers.serialize(saveVendorTax, specifiedType: _type);
-
-    } catch(error, stackTrace) {
-      throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    final _response = await _dio.request<Object>(
-      _path,
-      data: _bodyData,
-      options: _options,
-      cancelToken: cancelToken,
-      onSendProgress: onSendProgress,
-      onReceiveProgress: onReceiveProgress,
-    );
-
-    VendorTaxProfileEnvelope? _responseData;
-
-    try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(VendorTaxProfileEnvelope),
-      ) as VendorTaxProfileEnvelope;
-
-    } catch (error, stackTrace) {
-      throw DioException(
-        requestOptions: _response.requestOptions,
-        response: _response,
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    return Response<VendorTaxProfileEnvelope>(
-      data: _responseData,
-      headers: _response.headers,
-      isRedirect: _response.isRedirect,
-      requestOptions: _response.requestOptions,
-      redirects: _response.redirects,
-      statusCode: _response.statusCode,
-      statusMessage: _response.statusMessage,
-      extra: _response.extra,
-    );
-  }
-
-  /// upload Vendor Document
-  /// TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-  ///
-  /// Parameters:
-  /// * [organization]
-  /// * [lockVersion]
-  /// * [documentType]
-  /// * [file]
-  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
-  /// * [headers] - Can be used to add additional headers to the request
-  /// * [extras] - Can be used to add flags to the request
-  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
-  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
-  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
-  ///
-  /// Returns a [Future] containing a [Response] with a [VendorDocumentUploadEnvelope] as data
-  /// Throws [DioException] if API call or serialization fails
-  Future<Response<VendorDocumentUploadEnvelope>> uploadVendorDocument({
-    required String organization,
-    required int lockVersion,
-    required String documentType,
-    required MultipartFile file,
-    CancelToken? cancelToken,
-    Map<String, dynamic>? headers,
-    Map<String, dynamic>? extra,
-    ValidateStatus? validateStatus,
-    ProgressCallback? onSendProgress,
-    ProgressCallback? onReceiveProgress,
-  }) async {
-    final _path = r'/vendors/{organization}/documents'.replaceAll('{' r'organization' '}', encodeQueryParameter(_serializers, organization, const FullType(String)).toString());
-    final _options = Options(
-      method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[
-          {
-            'type': 'apiKey',
-            'name': 'accessCookie',
-            'keyName': 'mp_access',
-            'where': '',
-          },{
-            'type': 'apiKey',
-            'name': 'webCsrf',
-            'keyName': 'X-CSRF-Token',
-            'where': 'header',
-          },
-        ],
-        ...?extra,
-      },
-      contentType: 'multipart/form-data',
-      validateStatus: validateStatus,
-    );
-
-    dynamic _bodyData;
-
-    try {
-      _bodyData = FormData.fromMap(<String, dynamic>{
-        r'lock_version': encodeFormParameter(_serializers, lockVersion, const FullType(int)),
-        r'document_type': encodeFormParameter(_serializers, documentType, const FullType(String)),
-        r'file': file,
-      });
-
-    } catch(error, stackTrace) {
-      throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    final _response = await _dio.request<Object>(
-      _path,
-      data: _bodyData,
-      options: _options,
-      cancelToken: cancelToken,
-      onSendProgress: onSendProgress,
-      onReceiveProgress: onReceiveProgress,
-    );
-
-    VendorDocumentUploadEnvelope? _responseData;
-
-    try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(VendorDocumentUploadEnvelope),
-      ) as VendorDocumentUploadEnvelope;
-
-    } catch (error, stackTrace) {
-      throw DioException(
-        requestOptions: _response.requestOptions,
-        response: _response,
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    return Response<VendorDocumentUploadEnvelope>(
-      data: _responseData,
-      headers: _response.headers,
-      isRedirect: _response.isRedirect,
-      requestOptions: _response.requestOptions,
-      redirects: _response.redirects,
-      statusCode: _response.statusCode,
-      statusMessage: _response.statusMessage,
-      extra: _response.extra,
-    );
-  }
-
-  /// upload Vendor Store Media
-  /// TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-  ///
-  /// Parameters:
-  /// * [organization]
-  /// * [lockVersion]
   /// * [kind]
-  /// * [altText]
   /// * [file]
+  /// * [altText]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -3929,14 +2323,12 @@ class VendorOnboardingApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [VendorMutationEnvelope] as data
+  /// Returns a [Future] containing a [Response] with a [VendorMediaEnvelope] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<VendorMutationEnvelope>> uploadVendorStoreMedia({
-    required String organization,
-    required int lockVersion,
+  Future<Response<VendorMediaEnvelope>> uploadVendorStoreMedia({
     required String kind,
-    required String altText,
     required MultipartFile file,
+    String? altText,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -3944,7 +2336,7 @@ class VendorOnboardingApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/vendors/{organization}/store-media'.replaceAll('{' r'organization' '}', encodeQueryParameter(_serializers, organization, const FullType(String)).toString());
+    final _path = r'/vendors/onboarding/media';
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
@@ -3974,10 +2366,9 @@ class VendorOnboardingApi {
 
     try {
       _bodyData = FormData.fromMap(<String, dynamic>{
-        r'lock_version': encodeFormParameter(_serializers, lockVersion, const FullType(int)),
         r'kind': encodeFormParameter(_serializers, kind, const FullType(String)),
-        r'alt_text': encodeFormParameter(_serializers, altText, const FullType(String)),
         r'file': file,
+        r'alt_text': encodeFormParameter(_serializers, altText, const FullType(String)),
       });
 
     } catch(error, stackTrace) {
@@ -4001,14 +2392,14 @@ class VendorOnboardingApi {
       onReceiveProgress: onReceiveProgress,
     );
 
-    VendorMutationEnvelope? _responseData;
+    VendorMediaEnvelope? _responseData;
 
     try {
       final rawResponse = _response.data;
       _responseData = rawResponse == null ? null : _serializers.deserialize(
         rawResponse,
-        specifiedType: const FullType(VendorMutationEnvelope),
-      ) as VendorMutationEnvelope;
+        specifiedType: const FullType(VendorMediaEnvelope),
+      ) as VendorMediaEnvelope;
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -4020,7 +2411,121 @@ class VendorOnboardingApi {
       );
     }
 
-    return Response<VendorMutationEnvelope>(
+    return Response<VendorMediaEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// uploadVendorVerificationDocument
+  ///
+  ///
+  /// Parameters:
+  /// * [requirementKey]
+  /// * [file]
+  /// * [metadata]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [VendorDocumentEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<VendorDocumentEnvelope>> uploadVendorVerificationDocument({
+    required String requirementKey,
+    required MultipartFile file,
+    BuiltMap<String, String>? metadata,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/vendors/onboarding/documents';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'accessCookie',
+            'keyName': 'mp_access',
+            'where': '',
+          },{
+            'type': 'apiKey',
+            'name': 'webCsrf',
+            'keyName': 'X-CSRF-Token',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      contentType: 'multipart/form-data',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      _bodyData = FormData.fromMap(<String, dynamic>{
+        r'requirement_key': encodeFormParameter(_serializers, requirementKey, const FullType(String)),
+        r'file': file,
+        if (metadata != null) r'metadata': encodeFormParameter(_serializers, metadata, const FullType(BuiltMap, [FullType(String), FullType(BuiltMap)])),
+      });
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    VendorDocumentEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(VendorDocumentEnvelope),
+      ) as VendorDocumentEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<VendorDocumentEnvelope>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

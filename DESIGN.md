@@ -36,4 +36,4 @@ Every map has a synchronized accessible list/table alternative. Tier 2 labels sh
 
 ## Review workflow
 
-Impeccable is diagnostic only. For significant surfaces, use shape, critique, harden, animate, audit, and polish as appropriate, then run deterministic detection. The only approved shared detector exception is the exact `overused-font` value `Inter`, because Inter is the approved MateryalPH brand typeface.
+Review significant surfaces for hierarchy, accessible controls, error states, responsiveness, reduced motion, and semantic token consistency using component tests and browser inspection.

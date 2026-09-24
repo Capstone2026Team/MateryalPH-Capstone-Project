@@ -16,13 +16,18 @@ use App\Http\Controllers\Api\Auth\ResendVerificationController;
 use App\Http\Controllers\Api\Auth\SessionController;
 use App\Http\Controllers\Api\Auth\VerifyEmailController;
 use App\Http\Controllers\Api\HealthController;
+use App\Http\Controllers\Api\XenditAccountVerificationWebhookController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', HealthController::class);
 Route::get('/agreements/current', AgreementController::class);
 
 require __DIR__.'/account.php';
-require __DIR__.'/vendors.php';
+require __DIR__.'/vendor-onboarding.php';
+require __DIR__.'/admin-vendor-verification.php';
+require __DIR__.'/vendor-private-files.php';
+
+Route::post('/webhooks/xendit/account-verification', XenditAccountVerificationWebhookController::class)->middleware('throttle:auth-public');
 
 Route::prefix('auth')->middleware('auth.transport:WEB')->group(function (): void {
     Route::get('/csrf', CsrfController::class)->middleware('throttle:auth-public');

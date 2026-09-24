@@ -17,6 +17,7 @@ Method | HTTP request | Description
 [**changeAccountPassword**](AccountsApi.md#changeaccountpassword) | **POST** /{accountPortal}/account/password |
 [**confirmAccountEmailChange**](AccountsApi.md#confirmaccountemailchange) | **POST** /{accountPortal}/account/email/confirm |
 [**confirmAccountFactorReplacement**](AccountsApi.md#confirmaccountfactorreplacement) | **POST** /{accountPortal}/account/factor/confirm |
+[**getAccountPhoto**](AccountsApi.md#getaccountphoto) | **GET** /{webAccountPortal}/account/photo |
 [**getAccountProfile**](AccountsApi.md#getaccountprofile) | **GET** /{accountPortal}/account/profile |
 [**getAccountSecurity**](AccountsApi.md#getaccountsecurity) | **GET** /{accountPortal}/account/security |
 [**inviteAccountAdmin**](AccountsApi.md#inviteaccountadmin) | **POST** /{accountPortal}/account/invitations |
@@ -33,6 +34,7 @@ Method | HTTP request | Description
 [**startAccountEmailChange**](AccountsApi.md#startaccountemailchange) | **POST** /{accountPortal}/account/email |
 [**startAccountFactorReplacement**](AccountsApi.md#startaccountfactorreplacement) | **POST** /{accountPortal}/account/factor |
 [**updateAccountProfile**](AccountsApi.md#updateaccountprofile) | **PATCH** /{accountPortal}/account/profile |
+[**uploadAccountPhoto**](AccountsApi.md#uploadaccountphoto) | **POST** /{webAccountPortal}/account/photo |
 
 
 # **acceptAccountAgreements**
@@ -40,7 +42,7 @@ Method | HTTP request | Description
 
 
 
-Server enforces the route audience, active account and membership, resource ownership, Passport scope and session transport. buyers uses MOBILE bearer; vendors/admin use WEB cookies and CSRF on mutations. Privileged security changes require session-bound recent authentication. No client header can select or bypass transport security.
+Vendor commission consent must use the version-bound Store Verification commission endpoint; this account endpoint returns COMMISSION_VERIFICATION_REQUIRED for that agreement. Server enforces the route audience, active account and membership, resource ownership, Passport scope and session transport. buyers uses MOBILE bearer; vendors/admin use WEB cookies and CSRF on mutations. Privileged security changes require session-bound recent authentication. No client header can select or bypass transport security.
 
 ### Example
 ```dart
@@ -454,6 +456,61 @@ Name | Type | Description  | Notes
 
  - **Content-Type**: application/json
  - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **getAccountPhoto**
+> Uint8List getAccountPhoto(expires, signature, version, owner, webAccountPortal)
+
+
+
+Use the five-minute signed avatar_url from the profile. Authenticated owner only; private no-store response. No user identifier is accepted.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getAccountsApi();
+final int expires = 56; // int |
+final String signature = signature_example; // String |
+final int version = 56; // int |
+final String owner = owner_example; // String |
+final String webAccountPortal = webAccountPortal_example; // String |
+
+try {
+    final response = api.getAccountPhoto(expires, signature, version, owner, webAccountPortal);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AccountsApi->getAccountPhoto: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **expires** | **int**|  |
+ **signature** | **String**|  |
+ **version** | **int**|  |
+ **owner** | **String**|  |
+ **webAccountPortal** | **String**|  |
+
+### Return type
+
+[**Uint8List**](Uint8List.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: image/png, application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
@@ -1261,6 +1318,61 @@ Name | Type | Description  | Notes
 ### HTTP request headers
 
  - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **uploadAccountPhoto**
+> AccountProfileEnvelope uploadAccountPhoto(webAccountPortal, photo, lockVersion)
+
+
+
+Owner-only personal photo. Maximum 2 MB JPEG/PNG/WebP and 4096 pixels per dimension. Malware-scanned, re-encoded to 256px PNG, privately stored. Five uploads/minute within the overall account budget. Fails closed if scanning or processing is unavailable.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getAccountsApi();
+final String webAccountPortal = webAccountPortal_example; // String |
+final MultipartFile photo = BINARY_DATA_HERE; // MultipartFile |
+final int lockVersion = 56; // int |
+
+try {
+    final response = api.uploadAccountPhoto(webAccountPortal, photo, lockVersion);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AccountsApi->uploadAccountPhoto: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **webAccountPortal** | **String**|  |
+ **photo** | **MultipartFile**|  |
+ **lockVersion** | **int**|  |
+
+### Return type
+
+[**AccountProfileEnvelope**](AccountProfileEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: multipart/form-data
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)

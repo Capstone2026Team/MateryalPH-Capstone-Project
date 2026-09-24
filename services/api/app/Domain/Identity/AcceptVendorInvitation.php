@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Domain\Identity;
 
-use App\Domain\Vendors\ReviewVendorEvidence;
 use App\Models\User;
 use App\Models\UserProfile;
 use App\Models\VendorMembership;
@@ -47,11 +46,10 @@ final class AcceptVendorInvitation
                 'user_id' => $user->getKey(), 'vendor_organization_id' => $invitation->vendor_organization_id, 'role' => $invitation->role,
                 'can_manage_staff' => (bool) $invitation->can_manage_staff, 'status' => 'ACTIVE', 'activated_at' => now(),
             ]);
-            DB::table('vendor_invitations')->where('id', $invitation->id)->update(['accepted_at' => now(), 'accepted_by_user_id' => $user->getKey(), 'updated_at' => now()]);
+            DB::table('vendor_invitations')->where('id', $invitation->id)->update(['accepted_at' => now(), 'updated_at' => now()]);
             $request->setUserResolver(fn () => $user);
             $request->attributes->set('account_scope', ['role' => $invitation->role, 'organization_id' => $invitation->vendor_organization_id]);
             $this->audit->account($request, 'VENDOR_INVITATION_ACCEPTED', 'VENDOR_MEMBERSHIP', (string) $membership->getKey(), after: ['invitation_id' => $invitation->id, 'inviter_id' => $invitation->invited_by_user_id]);
-            app(ReviewVendorEvidence::class)->notice($invitation->vendor_organization_id, 'A team invitation was accepted. Review Team Accounts.');
         });
     }
 }

@@ -10,6 +10,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\URL;
 
 /** @mixin User */
 final class AccountProfileResource extends JsonResource
@@ -31,7 +32,10 @@ final class AccountProfileResource extends JsonResource
         return [
             'id' => $this->public_id,
             'full_name' => $this->name,
+            'avatar_url' => $this->account_type !== 'BUYER' && $this->profile_photo_key ? URL::temporarySignedRoute('account.photo.'.strtolower($this->account_type), now()->addMinutes(5), ['version' => $this->lock_version, 'owner' => $this->public_id]) : null,
             'email' => $email,
+            'email_masked' => $this->account_type === 'BUYER' && ! $recent,
+            'mobile_e164' => $this->account_type === 'BUYER' ? DB::table('user_profiles')->where('user_id', $this->getKey())->value('mobile_e164') : null,
             'account_type' => $this->account_type,
             'account_status' => $this->account_status,
             'lock_version' => (int) $this->lock_version,

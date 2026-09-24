@@ -62,7 +62,7 @@ final class AccountAccess
     public function vendorPermissions(string $role, bool $delegated = false): array
     {
         $permissions = match ($role) {
-            'OWNER', 'STORE_MANAGER' => ['quotations.publish', 'orders.set_nrpc', 'orders.confirm', 'catalog.manage', 'inventory.manage', 'compliance.submit', 'auto_accept.configure', 'fulfillment.record', 'finance.view', 'finance.draft_corrections', 'materials_analytics.view_competitors'],
+            'OWNER', 'STORE_MANAGER' => ['quotations.publish', 'orders.set_nrpc', 'orders.confirm', 'catalog.manage', 'inventory.manage', 'compliance.submit', 'auto_accept.configure', 'fulfillment.record', 'finance.view', 'finance.draft_corrections', 'materials_analytics.view_competitors', 'vendor.onboarding.manage', 'vendor.onboarding.private_documents'],
             'STORE_STAFF' => ['quotations.publish', 'orders.set_nrpc', 'orders.confirm', 'catalog.manage', 'inventory.manage', 'compliance.submit', 'auto_accept.view_outcomes'],
             'CUSTOMER_SERVICE' => ['orders.confirm', 'auto_accept.view_outcomes'],
             'INVENTORY' => ['catalog.manage', 'inventory.manage', 'compliance.submit', 'auto_accept.manage_allotment'],
@@ -70,7 +70,7 @@ final class AccountAccess
             default => [],
         };
         if ($role === 'OWNER') {
-            $permissions = [...$permissions, 'staff.manage', 'managers.manage', 'staff.delegate', 'organization.legal', 'organization.delete', 'payments.configure', 'finance.attest', 'finance.pay'];
+            $permissions = [...$permissions, 'staff.manage', 'managers.manage', 'staff.delegate', 'organization.legal', 'organization.delete', 'payments.configure', 'finance.attest', 'finance.pay', 'vendor.onboarding.submit', 'vendor.payment.configure', 'vendor.activation'];
         } elseif ($role === 'STORE_MANAGER' && $delegated) {
             $permissions[] = 'staff.manage';
         }

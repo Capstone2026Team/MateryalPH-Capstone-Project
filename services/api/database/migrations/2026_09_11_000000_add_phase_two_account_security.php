@@ -20,6 +20,9 @@ return new class extends Migration
                 $table->timestampTz('revoked_at')->nullable();
             });
         }
+        Schema::table('vendor_memberships', function (Blueprint $table): void {
+            $table->unsignedInteger('lock_version')->default(1);
+        });
         Schema::table('agreement_versions', function (Blueprint $table): void {
             $table->boolean('requires_reacceptance')->default(false);
         });
@@ -68,6 +71,7 @@ SQL);
         foreach (['admin_invitations', 'vendor_invitations'] as $name) {
             Schema::table($name, fn (Blueprint $table) => $table->dropColumn('revoked_at'));
         }
+        Schema::table('vendor_memberships', fn (Blueprint $table) => $table->dropColumn('lock_version'));
         Schema::table('auth_sessions', fn (Blueprint $table) => $table->dropColumn(['reauthenticated_at', 'reauthentication_method']));
     }
 };

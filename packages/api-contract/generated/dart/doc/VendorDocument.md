@@ -8,19 +8,11 @@ import 'package:materyalph_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**reviewReason** | **String** |  |
-**verifiedReference** | **String** |  |
-**verifiedIssuedOn** | **String** |  |
-**verifiedExpiresOn** | **String** |  |
-**verifiedExpiryNotApplicable** | **bool** |  |
 **id** | **String** |  |
-**documentType** | **String** |  |
+**requirementKey** | **String** |  |
+**version** | **int** | Zero for a pending attachment; review versions are created only on submission. |
 **status** | **String** |  |
-**version** | **int** |  |
-**environment** | **String** |  |
-**evidenceOrigin** | **String** |  |
 **scanState** | **String** |  |
-**createdAt** | **String** |  |
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

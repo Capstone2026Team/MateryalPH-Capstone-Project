@@ -15,6 +15,7 @@ else {
   routes = JSON.parse(result.stdout)
 }
 const actual = new Map(routes.flatMap(route => route.method.split('|').filter(method => method !== 'HEAD').map(method => [`${method} /${route.uri}`, route])))
+const hasMiddleware = (route, ...names) => names.some(name => route.middleware.includes(name))
 const expected = new Set()
 for (const [path, item] of Object.entries(spec.paths)) {
   if (!path.startsWith('/{accountPortal}/account/')) continue
@@ -26,16 +27,45 @@ for (const [path, item] of Object.entries(spec.paths)) {
       expected.add(key)
       const route = actual.get(key)
       assert.ok(route, `Contract route missing from Laravel: ${key}`)
-      assert.ok(route.middleware.includes('auth:api'), `Passport guard missing: ${key}`)
-      assert.ok(route.middleware.includes(`account.access:${{ buyers: 'BUYER', vendors: 'VENDOR', admin: 'ADMIN' }[portal]}`), `Portal authorization missing: ${key}`)
-      assert.ok(route.middleware.includes(`auth.transport:${portal === 'buyers' ? 'MOBILE' : 'WEB'}`), `Transport guard missing: ${key}`)
-      if (portal !== 'buyers') assert.ok(route.middleware.includes('App\\Http\\Middleware\\VerifyAccountCsrf'), `Web CSRF guard missing: ${key}`)
+      assert.ok(hasMiddleware(route, 'auth:api', 'Illuminate\\Auth\\Middleware\\Authenticate:api'), `Passport guard missing: ${key}`)
+      const audience = { buyers: 'BUYER', vendors: 'VENDOR', admin: 'ADMIN' }[portal]
+      assert.ok(hasMiddleware(route, `account.access:${audience}`, `App\\Http\\Middleware\\RequireAccountAccess:${audience}`), `Portal authorization missing: ${key}`)
+      const transport = portal === 'buyers' ? 'MOBILE' : 'WEB'
+      assert.ok(hasMiddleware(route, `auth.transport:${transport}`, `App\\Http\\Middleware\\SetAuthTransport:${transport}`), `Transport guard missing: ${key}`)
+      if (portal !== 'buyers') assert.ok(hasMiddleware(route, 'web.csrf', 'App\\Http\\Middleware\\VerifyAccountCsrf'), `Web CSRF guard missing: ${key}`)
     }
     for (const response of Object.values(operation.responses)) {
       const reference = response.content?.['application/json']?.schema?.$ref
       assert.ok(reference, `${operation.operationId} needs a defined response envelope`)
       assert.ok(spec.components.schemas[reference.split('/').at(-1)])
     }
+  }
+}
+const vendorInvite = spec.paths['/vendors/account/invitations']?.post
+if (vendorInvite) {
+  const key = 'POST /api/v1/vendors/account/invitations'
+  expected.add(key)
+  const route = actual.get(key)
+  assert.ok(route, `Contract route missing from Laravel: ${key}`)
+  assert.ok(hasMiddleware(route, 'auth:api', 'Illuminate\\Auth\\Middleware\\Authenticate:api'), `Passport guard missing: ${key}`)
+  assert.ok(hasMiddleware(route, 'account.access:VENDOR', 'App\\Http\\Middleware\\RequireAccountAccess:VENDOR'), `Portal authorization missing: ${key}`)
+  assert.ok(hasMiddleware(route, 'auth.transport:WEB', 'App\\Http\\Middleware\\SetAuthTransport:WEB'), `Transport guard missing: ${key}`)
+  assert.ok(hasMiddleware(route, 'web.csrf', 'App\\Http\\Middleware\\VerifyAccountCsrf'), `Web CSRF guard missing: ${key}`)
+  const reference = vendorInvite.responses?.['202']?.content?.['application/json']?.schema?.$ref
+  assert.ok(reference && spec.components.schemas[reference.split('/').at(-1)], `${vendorInvite.operationId} needs a defined response envelope`)
+}
+for (const portal of ['vendors', 'admin']) {
+  const path = '/{webAccountPortal}/account/photo'
+  for (const method of ['get', 'post']) {
+    assert.ok(spec.paths[path]?.[method]?.operationId)
+    const key = `${method.toUpperCase()} /api/v1/${portal}/account/photo`
+    expected.add(key)
+    const route = actual.get(key)
+    assert.ok(route, `Photo route missing: ${key}`)
+    assert.ok(hasMiddleware(route, 'auth:api', 'Illuminate\\Auth\\Middleware\\Authenticate:api'))
+    assert.ok(hasMiddleware(route, `account.access:${portal === 'admin' ? 'ADMIN' : 'VENDOR'}`, `App\\Http\\Middleware\\RequireAccountAccess:${portal === 'admin' ? 'ADMIN' : 'VENDOR'}`))
+    assert.ok(hasMiddleware(route, 'web.csrf', 'App\\Http\\Middleware\\VerifyAccountCsrf'))
+    if (method === 'get') assert.ok(hasMiddleware(route, 'signed', 'Illuminate\\Routing\\Middleware\\ValidateSignature'))
   }
 }
 for (const key of actual.keys()) {

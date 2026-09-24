@@ -6,7 +6,6 @@ namespace App\Domain\Agreements;
 
 use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
-use App\Domain\Vendors\OnboardingAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -62,15 +61,11 @@ final class AccountAgreements
                 if ($agreement === null) {
                     throw new AuthenticationException('AGREEMENT_VERSION_CONFLICT', 'Reload the current agreement versions.', 409);
                 }
-                if ($agreement['code'] === 'VENDOR_COMMISSION_TEST') {
-                    $organization = $request->attributes->get('account_scope')['organization_id'] ?? '';
-                    app(OnboardingAccess::class)->vendor($request, $organization, 'finance.attest', true);
-                    if (config('finance.live_commerce_enabled') || ! in_array(config('finance.mode'), ['TEST', 'DEMO'], true)) {
-                        throw new AuthenticationException('TEST_ONLY', 'These commission Terms apply only to TEST.', 422);
-                    }
-                }
                 if (! $agreement['content_available']) {
                     throw new AuthenticationException('AGREEMENT_CONTENT_UNAVAILABLE', 'The approved agreement text is not available yet.', 503);
+                }
+                if ($agreement['code'] === 'VENDOR_COMMISSION_TEST') {
+                    throw new AuthenticationException('COMMISSION_VERIFICATION_REQUIRED', 'Review and accept commission terms in Store Verification.', 422);
                 }
                 if ($agreement['accepted_at'] !== null) {
                     continue;
@@ -78,7 +73,7 @@ final class AccountAgreements
                 DB::table('agreement_acceptances')->insert([
                     'id' => (string) Str::uuid7(), 'user_id' => $request->user()->getKey(), 'agreement_version_id' => $id,
                     'vendor_organization_id' => $request->attributes->get('account_scope')['organization_id'] ?? null,
-                    'source' => $agreement['code'] === 'VENDOR_COMMISSION_TEST' ? 'PHASE_3_TEST' : 'ACCOUNT_SETTINGS', 'accepted_at' => now(), 'created_at' => now(), 'updated_at' => now(),
+                    'source' => 'ACCOUNT_SETTINGS', 'accepted_at' => now(), 'created_at' => now(), 'updated_at' => now(),
                 ]);
                 $this->audit->account($request, 'AGREEMENT_ACCEPTED', 'AGREEMENT_VERSION', $id, after: ['version' => $agreement['version'], 'code' => $agreement['code']]);
             }

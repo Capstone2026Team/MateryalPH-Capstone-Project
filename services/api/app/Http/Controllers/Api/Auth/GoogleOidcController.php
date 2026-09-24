@@ -48,6 +48,8 @@ final class GoogleOidcController extends Controller
             'company_name' => [Rule::requiredIf(fn (): bool => $request->input('mode') === 'SIGN_UP' && $portal === 'BUYER' && $request->input('buyer_type') === 'BUSINESS'), 'nullable', 'string', 'max:180'],
             'business_name' => [Rule::requiredIf(fn (): bool => $request->input('mode') === 'SIGN_UP' && $portal === 'VENDOR'), 'nullable', 'string', 'max:180'],
             'terms_accepted' => ['sometimes', 'boolean'],
+            'terms_version_id' => [Rule::requiredIf(fn (): bool => $request->input('mode') === 'SIGN_UP' && $portal === 'BUYER'), 'nullable', 'uuid'],
+            'terms_content_hash' => [Rule::requiredIf(fn (): bool => $request->input('mode') === 'SIGN_UP' && $portal === 'BUYER'), 'nullable', 'regex:/^[a-f0-9]{64}$/D'],
             'privacy_accepted' => ['sometimes', 'boolean'],
         ]);
 
@@ -61,6 +63,8 @@ final class GoogleOidcController extends Controller
             $input['buyer_type'] ?? null,
             $input['company_name'] ?? null,
             $input['business_name'] ?? null,
+            $input['terms_version_id'] ?? null,
+            $input['terms_content_hash'] ?? null,
         )]);
     }
 

@@ -77,9 +77,23 @@ Phase 1 platform foundation record.
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
 | `location` | `geography` | Yes | — | Location. |
+| `street` | `character varying` | Yes | — | Street. |
+| `unit` | `character varying` | Yes | — | Unit. |
+| `barangay` | `character varying` | Yes | — | Barangay. |
+| `city_municipality` | `character varying` | Yes | — | City municipality. |
+| `province` | `character varying` | Yes | — | Province. |
+| `postal_code` | `character varying` | Yes | — | Postal code. |
+| `source` | `character varying` | No | `'MANUAL'::character varying` | Source. |
+| `provider` | `character varying` | Yes | — | Provider. |
+| `provider_place_id` | `character varying` | Yes | — | Provider place id. |
+| `review_state` | `character varying` | No | `'UNREVIEWED'::character varying` | Review state. |
+| `version` | `integer` | No | `1` | Version. |
+| `is_current` | `boolean` | No | `true` | Is current. |
 
 **Constraints**
 
+- `vendor_address_coordinates_check` — CHECK: `CHECK (latitude IS NULL AND longitude IS NULL OR latitude >= '-90'::integer::numeric AND latitude <= 90::numeric AND longitude >= '-180'::integer::numeric AND longitude <= 180::numeric)`
+- `vendor_address_version_check` — CHECK: `CHECK (version >= 1)`
 - `addresses_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
 
 **Indexes**
@@ -88,6 +102,7 @@ Phase 1 platform foundation record.
 - `addresses_owner_type_owner_id_index` — `CREATE INDEX addresses_owner_type_owner_id_index ON public.addresses USING btree (owner_type, owner_id)`
 - `addresses_pkey` — `CREATE UNIQUE INDEX addresses_pkey ON public.addresses USING btree (id)`
 - `addresses_psgc_code_index` — `CREATE INDEX addresses_psgc_code_index ON public.addresses USING btree (psgc_code)`
+- `vendor_one_current_address_unique` — `CREATE UNIQUE INDEX vendor_one_current_address_unique ON public.addresses USING btree (owner_type, owner_id) WHERE ((is_current = true) AND ((owner_type)::text = 'VENDOR_ORGANIZATION'::text))`
 
 ## `admin_invitations`
 
@@ -652,26 +667,31 @@ Phase 1 platform foundation record.
 | `reviewer_user_id` | `bigint` | No | — | Reviewer user id. |
 | `decision` | `character varying` | No | — | Decision. |
 | `reason` | `text` | Yes | — | Reason. |
-| `source_reference` | `character varying` | Yes | — | Source reference. |
+| `verified_document_number` | `character varying` | Yes | — | Verified document number. |
+| `verified_issue_date` | `date` | Yes | — | Verified issue date. |
+| `expiration_kind` | `character varying` | No | `'UNVERIFIED'::character varying` | Expiration kind. |
+| `verified_expiration_date` | `date` | Yes | — | Verified expiration date. |
+| `evidence_source` | `character varying` | Yes | — | Evidence source. |
+| `remarks` | `text` | Yes | — | Remarks. |
+| `reviewed_at` | `timestamp with time zone` | No | — | Reviewed at. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
-| `verified_reference` | `character varying` | Yes | — | Verified reference. |
-| `verified_issued_on` | `date` | Yes | — | Verified issued on. |
-| `verified_expires_on` | `date` | Yes | — | Verified expires on. |
-| `verified_expiry_not_applicable` | `boolean` | No | `false` | Verified expiry not applicable. |
-| `remarks` | `text` | Yes | — | Remarks. |
-| `immediate_restriction` | `boolean` | No | `false` | Immediate restriction. |
-| `environment` | `character varying` | No | `'TEST'::character varying` | Environment. |
 
 **Constraints**
 
-- `verified_expiry_check` — CHECK: `CHECK (NOT verified_expiry_not_applicable OR verified_expires_on IS NULL)`
+- `business_document_review_dates_check` — CHECK: `CHECK (verified_expiration_date IS NULL OR verified_issue_date IS NULL OR verified_expiration_date >= verified_issue_date)`
+- `business_document_review_decision_check` — CHECK: `CHECK (decision::text = ANY (ARRAY['APPROVED'::character varying, 'CHANGES_REQUIRED'::character varying, 'REJECTED'::character varying]::text[]))`
+- `business_document_review_expiration_check` — CHECK: `CHECK (expiration_kind::text = 'DATE'::text AND verified_expiration_date IS NOT NULL OR (expiration_kind::text = ANY (ARRAY['NO_EXPIRATION'::character varying, 'UNVERIFIED'::character varying]::text[])) AND verified_expiration_date IS NULL)`
+- `business_document_review_reason_check` — CHECK: `CHECK (decision::text = 'APPROVED'::text OR reason IS NOT NULL)`
 - `business_document_reviews_business_document_version_id_foreign` — FOREIGN KEY: `FOREIGN KEY (business_document_version_id) REFERENCES business_document_versions(id) ON DELETE RESTRICT`
 - `business_document_reviews_reviewer_user_id_foreign` — FOREIGN KEY: `FOREIGN KEY (reviewer_user_id) REFERENCES users(id) ON DELETE RESTRICT`
 - `business_document_reviews_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
+- `business_document_reviews_business_document_version_id_reviewed` — UNIQUE: `UNIQUE (business_document_version_id, reviewed_at)`
 
 **Indexes**
 
+- `business_document_reviews_business_document_version_id_reviewed` — `CREATE UNIQUE INDEX business_document_reviews_business_document_version_id_reviewed ON public.business_document_reviews USING btree (business_document_version_id, reviewed_at)`
+- `business_document_reviews_decision_reviewed_at_index` — `CREATE INDEX business_document_reviews_decision_reviewed_at_index ON public.business_document_reviews USING btree (decision, reviewed_at)`
 - `business_document_reviews_pkey` — `CREATE UNIQUE INDEX business_document_reviews_pkey ON public.business_document_reviews USING btree (id)`
 
 ## `business_document_versions`
@@ -682,23 +702,22 @@ Phase 1 platform foundation record.
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | No | — | Primary key. Id. |
 | `business_document_id` | `uuid` | No | — | Business document id. |
-| `version` | `integer` | No | — | Version. |
 | `file_id` | `uuid` | No | — | File id. |
-| `document_number_masked` | `character varying` | Yes | — | Document number masked. |
-| `issued_on` | `date` | Yes | — | Issued on. |
-| `expires_on` | `date` | Yes | — | Expires on. |
-| `expiry_not_applicable` | `boolean` | No | `false` | Expiry not applicable. |
+| `version` | `integer` | No | — | Version. |
+| `uploaded_by_user_id` | `bigint` | No | — | Uploaded by user id. |
 | `content_hash` | `character varying` | No | — | Content hash. |
+| `scan_state` | `character varying` | No | `'PENDING'::character varying` | Scan state. |
+| `vendor_metadata` | `jsonb` | Yes | — | Vendor metadata. |
+| `supersedes_version_id` | `uuid` | Yes | — | Supersedes version id. |
+| `submitted_at` | `timestamp with time zone` | Yes | — | Submitted at. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
-| `environment` | `character varying` | No | `'TEST'::character varying` | Environment. |
-| `evidence_origin` | `character varying` | No | `'SAMPLE_DEMO'::character varying` | Evidence origin. |
-| `uploaded_by_user_id` | `bigint` | Yes | — | Uploaded by user id. |
 
 **Constraints**
 
 - `business_document_versions_business_document_id_foreign` — FOREIGN KEY: `FOREIGN KEY (business_document_id) REFERENCES business_documents(id) ON DELETE RESTRICT`
 - `business_document_versions_file_id_foreign` — FOREIGN KEY: `FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE RESTRICT`
+- `business_document_versions_supersedes_version_id_foreign` — FOREIGN KEY: `FOREIGN KEY (supersedes_version_id) REFERENCES business_document_versions(id) ON DELETE RESTRICT`
 - `business_document_versions_uploaded_by_user_id_foreign` — FOREIGN KEY: `FOREIGN KEY (uploaded_by_user_id) REFERENCES users(id) ON DELETE RESTRICT`
 - `business_document_versions_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
 - `business_document_versions_business_document_id_version_unique` — UNIQUE: `UNIQUE (business_document_id, version)`
@@ -716,26 +735,27 @@ Phase 1 platform foundation record.
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | No | — | Primary key. Id. |
 | `vendor_organization_id` | `uuid` | No | — | Vendor organization id. |
+| `onboarding_step_id` | `uuid` | Yes | — | Onboarding step id. |
+| `requirement_key` | `character varying` | No | — | Requirement key. |
 | `document_type` | `character varying` | No | — | Document type. |
 | `current_version_id` | `uuid` | Yes | — | Current version id. |
-| `status` | `character varying` | No | `'PENDING_VERIFICATION'::character varying` | Status. |
+| `status` | `character varying` | No | `'NOT_SUBMITTED'::character varying` | Status. |
+| `lock_version` | `integer` | No | `1` | Lock version. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
-| `lock_version` | `integer` | No | `1` | Lock version. |
-| `expiry_warned_at` | `timestamp with time zone` | Yes | — | Expiry warned at. |
 
 **Constraints**
 
 - `business_documents_current_version_id_foreign` — FOREIGN KEY: `FOREIGN KEY (current_version_id) REFERENCES business_document_versions(id) ON DELETE RESTRICT`
+- `business_documents_onboarding_step_id_foreign` — FOREIGN KEY: `FOREIGN KEY (onboarding_step_id) REFERENCES vendor_onboarding_steps(id) ON DELETE RESTRICT`
 - `business_documents_vendor_organization_id_foreign` — FOREIGN KEY: `FOREIGN KEY (vendor_organization_id) REFERENCES vendor_organizations(id) ON DELETE RESTRICT`
 - `business_documents_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
-- `business_documents_vendor_organization_id_document_type_unique` — UNIQUE: `UNIQUE (vendor_organization_id, document_type)`
+- `business_documents_vendor_organization_id_requirement_key_uniqu` — UNIQUE: `UNIQUE (vendor_organization_id, requirement_key)`
 
 **Indexes**
 
 - `business_documents_pkey` — `CREATE UNIQUE INDEX business_documents_pkey ON public.business_documents USING btree (id)`
-- `business_documents_status_index` — `CREATE INDEX business_documents_status_index ON public.business_documents USING btree (status)`
-- `business_documents_vendor_organization_id_document_type_unique` — `CREATE UNIQUE INDEX business_documents_vendor_organization_id_document_type_unique ON public.business_documents USING btree (vendor_organization_id, document_type)`
+- `business_documents_vendor_organization_id_requirement_key_uniqu` — `CREATE UNIQUE INDEX business_documents_vendor_organization_id_requirement_key_uniqu ON public.business_documents USING btree (vendor_organization_id, requirement_key)`
 
 ## `buyer_locations`
 
@@ -1346,23 +1366,27 @@ Phase 1 platform foundation record.
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | No | — | Primary key. Id. |
 | `vendor_organization_id` | `uuid` | No | — | Vendor organization id. |
-| `origin_address_id` | `uuid` | No | — | Origin address id. |
-| `radius_km` | `smallint` | No | — | Radius km. |
+| `address_id` | `uuid` | Yes | — | Address id. |
+| `area_type` | `character varying` | No | `'RADIUS'::character varying` | Area type. |
+| `maximum_distance_km` | `smallint` | Yes | — | Maximum distance km. |
+| `coverage_notes` | `text` | Yes | — | Coverage notes. |
+| `active` | `boolean` | No | `true` | Active. |
+| `version` | `integer` | No | `1` | Version. |
+| `lock_version` | `integer` | No | `1` | Lock version. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
 
 **Constraints**
 
-- `delivery_service_radius_check` — CHECK: `CHECK (radius_km = ANY (ARRAY[5, 10, 20, 30, 40, 50]))`
-- `delivery_service_areas_origin_address_id_foreign` — FOREIGN KEY: `FOREIGN KEY (origin_address_id) REFERENCES addresses(id) ON DELETE RESTRICT`
+- `delivery_service_areas_address_id_foreign` — FOREIGN KEY: `FOREIGN KEY (address_id) REFERENCES addresses(id) ON DELETE RESTRICT`
 - `delivery_service_areas_vendor_organization_id_foreign` — FOREIGN KEY: `FOREIGN KEY (vendor_organization_id) REFERENCES vendor_organizations(id) ON DELETE RESTRICT`
 - `delivery_service_areas_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
-- `delivery_service_areas_vendor_organization_id_origin_address_id` — UNIQUE: `UNIQUE (vendor_organization_id, origin_address_id, radius_km)`
+- `delivery_service_areas_vendor_organization_id_unique` — UNIQUE: `UNIQUE (vendor_organization_id)`
 
 **Indexes**
 
 - `delivery_service_areas_pkey` — `CREATE UNIQUE INDEX delivery_service_areas_pkey ON public.delivery_service_areas USING btree (id)`
-- `delivery_service_areas_vendor_organization_id_origin_address_id` — `CREATE UNIQUE INDEX delivery_service_areas_vendor_organization_id_origin_address_id ON public.delivery_service_areas USING btree (vendor_organization_id, origin_address_id, radius_km)`
+- `delivery_service_areas_vendor_organization_id_unique` — `CREATE UNIQUE INDEX delivery_service_areas_vendor_organization_id_unique ON public.delivery_service_areas USING btree (vendor_organization_id)`
 
 ## `directory_suppliers`
 
@@ -1955,16 +1979,13 @@ Phase 1 platform foundation record.
 | `retention_class` | `character varying` | No | — | Retention class. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
-| `vendor_organization_id` | `uuid` | Yes | — | Vendor organization id. |
-| `environment` | `character varying` | No | `'TEST'::character varying` | Environment. |
-| `evidence_origin` | `character varying` | No | `'SAMPLE_DEMO'::character varying` | Evidence origin. |
-| `storage_provider` | `character varying` | No | `'S3'::character varying` | Storage provider. |
-| `provider_asset_id` | `character varying` | Yes | — | Provider asset id. |
-| `provider_format` | `character varying` | Yes | — | Provider format. |
+| `original_name` | `character varying` | Yes | — | Original name. |
+| `uploaded_by_user_id` | `bigint` | Yes | — | Uploaded by user id. |
+| `metadata` | `jsonb` | Yes | — | Metadata. |
 
 **Constraints**
 
-- `files_vendor_organization_id_foreign` — FOREIGN KEY: `FOREIGN KEY (vendor_organization_id) REFERENCES vendor_organizations(id) ON DELETE RESTRICT`
+- `files_uploaded_by_user_id_foreign` — FOREIGN KEY: `FOREIGN KEY (uploaded_by_user_id) REFERENCES users(id) ON DELETE RESTRICT`
 - `files_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
 - `files_object_key_unique` — UNIQUE: `UNIQUE (object_key)`
 
@@ -3389,10 +3410,10 @@ Phase 1 platform foundation record.
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | No | — | Primary key. Id. |
 | `store_profile_id` | `uuid` | No | — | Store profile id. |
-| `weekday` | `smallint` | No | — | Weekday. |
+| `day_of_week` | `smallint` | No | — | Day of week. |
+| `is_closed` | `boolean` | No | `false` | Is closed. |
 | `opens_at` | `time without time zone` | Yes | — | Opens at. |
 | `closes_at` | `time without time zone` | Yes | — | Closes at. |
-| `closed` | `boolean` | No | `false` | Closed. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
 
@@ -3400,12 +3421,12 @@ Phase 1 platform foundation record.
 
 - `operating_hours_store_profile_id_foreign` — FOREIGN KEY: `FOREIGN KEY (store_profile_id) REFERENCES store_profiles(id) ON DELETE RESTRICT`
 - `operating_hours_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
-- `operating_hours_store_profile_id_weekday_unique` — UNIQUE: `UNIQUE (store_profile_id, weekday)`
+- `operating_hours_store_profile_id_day_of_week_unique` — UNIQUE: `UNIQUE (store_profile_id, day_of_week)`
 
 **Indexes**
 
 - `operating_hours_pkey` — `CREATE UNIQUE INDEX operating_hours_pkey ON public.operating_hours USING btree (id)`
-- `operating_hours_store_profile_id_weekday_unique` — `CREATE UNIQUE INDEX operating_hours_store_profile_id_weekday_unique ON public.operating_hours USING btree (store_profile_id, weekday)`
+- `operating_hours_store_profile_id_day_of_week_unique` — `CREATE UNIQUE INDEX operating_hours_store_profile_id_day_of_week_unique ON public.operating_hours USING btree (store_profile_id, day_of_week)`
 
 ## `order_lines`
 
@@ -4787,27 +4808,25 @@ Vendor organization, access, onboarding, or storefront record.
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | No | — | Primary key. Id. |
 | `store_profile_id` | `uuid` | No | — | Store profile id. |
-| `file_id` | `uuid` | Yes | — | File id. |
+| `file_id` | `uuid` | No | — | File id. |
 | `kind` | `character varying` | No | — | Kind. |
 | `alt_text` | `character varying` | Yes | — | Alt text. |
 | `sort_order` | `smallint` | No | `'0'::smallint` | Sort order. |
+| `status` | `character varying` | No | `'PENDING_SCAN'::character varying` | Status. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
-| `review_status` | `character varying` | No | `'PENDING_VERIFICATION'::character varying` | Review status. |
-| `replaced_at` | `timestamp with time zone` | Yes | — | Replaced at. |
 
 **Constraints**
 
-- `vendor_media_review_status` — CHECK: `CHECK (review_status::text = ANY (ARRAY['PENDING_VERIFICATION'::character varying, 'APPROVED'::character varying, 'RETURN_FOR_CORRECTION'::character varying, 'REJECTED'::character varying]::text[]))`
 - `store_media_file_id_foreign` — FOREIGN KEY: `FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE RESTRICT`
 - `store_media_store_profile_id_foreign` — FOREIGN KEY: `FOREIGN KEY (store_profile_id) REFERENCES store_profiles(id) ON DELETE RESTRICT`
 - `store_media_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
+- `store_media_store_profile_id_file_id_unique` — UNIQUE: `UNIQUE (store_profile_id, file_id)`
 
 **Indexes**
 
-- `store_media_current_approved_identity_unique` — `CREATE UNIQUE INDEX store_media_current_approved_identity_unique ON public.store_media USING btree (store_profile_id, kind) WHERE ((replaced_at IS NULL) AND ((review_status)::text = 'APPROVED'::text) AND ((kind)::text = ANY ((ARRAY['LOGO'::character varying, 'BANNER'::character varying])::text[])))`
-- `store_media_current_pending_identity_unique` — `CREATE UNIQUE INDEX store_media_current_pending_identity_unique ON public.store_media USING btree (store_profile_id, kind) WHERE ((replaced_at IS NULL) AND ((review_status)::text = 'PENDING_VERIFICATION'::text) AND ((kind)::text = ANY ((ARRAY['LOGO'::character varying, 'BANNER'::character varying])::text[])))`
 - `store_media_pkey` — `CREATE UNIQUE INDEX store_media_pkey ON public.store_media USING btree (id)`
+- `store_media_store_profile_id_file_id_unique` — `CREATE UNIQUE INDEX store_media_store_profile_id_file_id_unique ON public.store_media USING btree (store_profile_id, file_id)`
 
 ## `store_profiles`
 
@@ -4817,21 +4836,24 @@ Vendor organization, access, onboarding, or storefront record.
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | No | — | Primary key. Id. |
 | `vendor_organization_id` | `uuid` | No | — | Vendor organization id. |
-| `address_id` | `uuid` | Yes | — | Address id. |
+| `public_store_name` | `character varying` | No | — | Public store name. |
 | `description` | `text` | Yes | — | Description. |
+| `bulk_capability` | `boolean` | Yes | — | Bulk capability. |
+| `fulfillment_method` | `character varying` | Yes | — | Fulfillment method. |
+| `logo_file_id` | `uuid` | Yes | — | Logo file id. |
+| `banner_file_id` | `uuid` | Yes | — | Banner file id. |
 | `public_email` | `character varying` | Yes | — | Public email. |
 | `public_phone` | `character varying` | Yes | — | Public phone. |
-| `pickup_enabled` | `boolean` | No | `false` | Pickup enabled. |
-| `delivery_enabled` | `boolean` | No | `false` | Delivery enabled. |
+| `status` | `character varying` | No | `'DRAFT'::character varying` | Status. |
+| `version` | `integer` | No | `1` | Version. |
+| `lock_version` | `integer` | No | `1` | Lock version. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
-| `cod_enabled` | `boolean` | No | `false` | Cod enabled. |
-| `in_store_payment_enabled` | `boolean` | No | `false` | In store payment enabled. |
-| `lock_version` | `integer` | No | `1` | Lock version. |
 
 **Constraints**
 
-- `store_profiles_address_id_foreign` — FOREIGN KEY: `FOREIGN KEY (address_id) REFERENCES addresses(id) ON DELETE RESTRICT`
+- `store_profiles_banner_file_id_foreign` — FOREIGN KEY: `FOREIGN KEY (banner_file_id) REFERENCES files(id) ON DELETE RESTRICT`
+- `store_profiles_logo_file_id_foreign` — FOREIGN KEY: `FOREIGN KEY (logo_file_id) REFERENCES files(id) ON DELETE RESTRICT`
 - `store_profiles_vendor_organization_id_foreign` — FOREIGN KEY: `FOREIGN KEY (vendor_organization_id) REFERENCES vendor_organizations(id) ON DELETE RESTRICT`
 - `store_profiles_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
 - `store_profiles_vendor_organization_id_unique` — UNIQUE: `UNIQUE (vendor_organization_id)`
@@ -5281,6 +5303,8 @@ Phase 1 platform foundation record.
 | `account_status` | `character varying` | No | `'PENDING_VERIFICATION'::character varying` | Account status. |
 | `last_authenticated_at` | `timestamp with time zone` | Yes | — | Last authenticated at. |
 | `lock_version` | `integer` | No | `1` | Lock version. |
+| `profile_photo_key` | `character varying` | Yes | — | Profile photo key. |
+| `profile_photo_disk` | `character varying` | Yes | — | Profile photo disk. |
 
 **Constraints**
 
@@ -5333,18 +5357,21 @@ Vendor organization, access, onboarding, or storefront record.
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | No | — | Primary key. Id. |
 | `vendor_organization_id` | `uuid` | No | — | Vendor organization id. |
-| `actor_user_id` | `bigint` | Yes | — | Actor user id. |
-| `from_status` | `character varying` | Yes | — | From status. |
-| `to_status` | `character varying` | No | — | To status. |
+| `state_before` | `character varying` | Yes | — | State before. |
+| `state_after` | `character varying` | No | — | State after. |
+| `result` | `character varying` | No | — | Result. |
 | `reason` | `text` | Yes | — | Reason. |
+| `blockers` | `jsonb` | Yes | — | Blockers. |
+| `readiness_snapshot` | `jsonb` | Yes | — | Readiness snapshot. |
+| `actor_user_id` | `bigint` | Yes | — | Actor user id. |
+| `source` | `character varying` | No | `'SYSTEM'::character varying` | Source. |
+| `recorded_at` | `timestamp with time zone` | No | — | Recorded at. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
-| `rule_version` | `character varying` | Yes | — | Rule version. |
-| `result` | `jsonb` | Yes | — | Result. |
-| `correlation_id` | `character varying` | Yes | — | Correlation id. |
 
 **Constraints**
 
+- `vendor_activation_result_check` — CHECK: `CHECK (result::text = ANY (ARRAY['READY'::character varying, 'ACTIVATED'::character varying, 'BLOCKED'::character varying, 'RESTRICTED'::character varying, 'RESTORED'::character varying, 'SUSPENDED'::character varying]::text[]))`
 - `vendor_activation_history_actor_user_id_foreign` — FOREIGN KEY: `FOREIGN KEY (actor_user_id) REFERENCES users(id) ON DELETE RESTRICT`
 - `vendor_activation_history_vendor_organization_id_foreign` — FOREIGN KEY: `FOREIGN KEY (vendor_organization_id) REFERENCES vendor_organizations(id) ON DELETE RESTRICT`
 - `vendor_activation_history_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
@@ -5352,6 +5379,7 @@ Vendor organization, access, onboarding, or storefront record.
 **Indexes**
 
 - `vendor_activation_history_pkey` — `CREATE UNIQUE INDEX vendor_activation_history_pkey ON public.vendor_activation_history USING btree (id)`
+- `vendor_activation_history_vendor_organization_id_recorded_at_in` — `CREATE INDEX vendor_activation_history_vendor_organization_id_recorded_at_in ON public.vendor_activation_history USING btree (vendor_organization_id, recorded_at)`
 
 ## `vendor_badge_history`
 
@@ -5377,33 +5405,6 @@ Vendor organization, access, onboarding, or storefront record.
 
 - `vendor_badge_history_pkey` — `CREATE UNIQUE INDEX vendor_badge_history_pkey ON public.vendor_badge_history USING btree (id)`
 
-## `vendor_business_submissions`
-
-Vendor organization, access, onboarding, or storefront record.
-
-| Column | Database type | Null | Default | Key / meaning |
-| --- | --- | --- | --- | --- |
-| `id` | `uuid` | No | — | Primary key. Id. |
-| `vendor_organization_id` | `uuid` | No | — | Vendor organization id. |
-| `submitted_by_user_id` | `bigint` | No | — | Submitted by user id. |
-| `organization_version` | `integer` | No | — | Organization version. |
-| `business_information` | `jsonb` | No | — | Business information. |
-| `content_hash` | `character` | No | — | Content hash. |
-| `created_at` | `timestamp with time zone` | Yes | — | Created at. |
-| `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
-
-**Constraints**
-
-- `vendor_business_submissions_submitted_by_user_id_foreign` — FOREIGN KEY: `FOREIGN KEY (submitted_by_user_id) REFERENCES users(id) ON DELETE RESTRICT`
-- `vendor_business_submissions_vendor_organization_id_foreign` — FOREIGN KEY: `FOREIGN KEY (vendor_organization_id) REFERENCES vendor_organizations(id) ON DELETE RESTRICT`
-- `vendor_business_submissions_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
-- `vendor_business_submissions_vendor_organization_id_organization` — UNIQUE: `UNIQUE (vendor_organization_id, organization_version)`
-
-**Indexes**
-
-- `vendor_business_submissions_pkey` — `CREATE UNIQUE INDEX vendor_business_submissions_pkey ON public.vendor_business_submissions USING btree (id)`
-- `vendor_business_submissions_vendor_organization_id_organization` — `CREATE UNIQUE INDEX vendor_business_submissions_vendor_organization_id_organization ON public.vendor_business_submissions USING btree (vendor_organization_id, organization_version)`
-
 ## `vendor_classifications`
 
 Vendor organization, access, onboarding, or storefront record.
@@ -5412,20 +5413,25 @@ Vendor organization, access, onboarding, or storefront record.
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | No | — | Primary key. Id. |
 | `vendor_organization_id` | `uuid` | No | — | Vendor organization id. |
-| `classification` | `character varying` | No | — | Classification. |
+| `supplier_type` | `character varying` | No | — | Supplier type. |
+| `niches` | `jsonb` | No | `'[]'::jsonb` | Niches. |
+| `custom_label` | `character varying` | Yes | — | Custom label. |
+| `version` | `integer` | No | `1` | Version. |
+| `lock_version` | `integer` | No | `1` | Lock version. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
 
 **Constraints**
 
+- `vendor_supplier_type_check` — CHECK: `CHECK (supplier_type::text = ANY (ARRAY['WHOLESALER_DISTRIBUTOR'::character varying, 'RETAIL_HARDWARE_STORE'::character varying, 'SPECIALIZED_SUPPLIER'::character varying, 'OTHER'::character varying]::text[]))`
 - `vendor_classifications_vendor_organization_id_foreign` — FOREIGN KEY: `FOREIGN KEY (vendor_organization_id) REFERENCES vendor_organizations(id) ON DELETE RESTRICT`
 - `vendor_classifications_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
-- `vendor_classifications_vendor_organization_id_classification_un` — UNIQUE: `UNIQUE (vendor_organization_id, classification)`
+- `vendor_classifications_vendor_organization_id_unique` — UNIQUE: `UNIQUE (vendor_organization_id)`
 
 **Indexes**
 
 - `vendor_classifications_pkey` — `CREATE UNIQUE INDEX vendor_classifications_pkey ON public.vendor_classifications USING btree (id)`
-- `vendor_classifications_vendor_organization_id_classification_un` — `CREATE UNIQUE INDEX vendor_classifications_vendor_organization_id_classification_un ON public.vendor_classifications USING btree (vendor_organization_id, classification)`
+- `vendor_classifications_vendor_organization_id_unique` — `CREATE UNIQUE INDEX vendor_classifications_vendor_organization_id_unique ON public.vendor_classifications USING btree (vendor_organization_id)`
 
 ## `vendor_confirmations`
 
@@ -5452,34 +5458,33 @@ Vendor organization, access, onboarding, or storefront record.
 
 - `vendor_confirmations_pkey` — `CREATE UNIQUE INDEX vendor_confirmations_pkey ON public.vendor_confirmations USING btree (id)`
 
-## `vendor_contacts`
+## Retired primary business contacts
+
+The `vendor_contacts` table is removed by `2026_09_23_000002_remove_vendor_primary_business_contacts.php`. Business communication uses `vendor_organizations.store_email` and `store_phone`. Existing audit and compliance history remains immutable. Rolling back recreates an empty table, not the removed records.
+
+## `vendor_document_expiry_notices`
 
 Vendor organization, access, onboarding, or storefront record.
 
 | Column | Database type | Null | Default | Key / meaning |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | No | — | Primary key. Id. |
-| `vendor_organization_id` | `uuid` | No | — | Vendor organization id. |
-| `full_name` | `character varying` | No | — | Full name. |
-| `position` | `character varying` | Yes | — | Position. |
-| `email` | `character varying` | Yes | — | Email. |
-| `telephone_e164` | `character varying` | Yes | — | Telephone e164. |
-| `authorized_representative` | `boolean` | No | `false` | Authorized representative. |
+| `business_document_version_id` | `uuid` | No | — | Business document version id. |
+| `notice_kind` | `character varying` | No | — | Notice kind. |
+| `sent_at` | `timestamp with time zone` | No | — | Sent at. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
-| `is_primary` | `boolean` | No | `false` | Is primary. |
-| `lock_version` | `integer` | No | `1` | Lock version. |
-| `deactivated_at` | `timestamp with time zone` | Yes | — | Deactivated at. |
 
 **Constraints**
 
-- `vendor_contacts_vendor_organization_id_foreign` — FOREIGN KEY: `FOREIGN KEY (vendor_organization_id) REFERENCES vendor_organizations(id) ON DELETE RESTRICT`
-- `vendor_contacts_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
+- `vendor_document_expiry_notices_business_document_version_id_for` — FOREIGN KEY: `FOREIGN KEY (business_document_version_id) REFERENCES business_document_versions(id) ON DELETE RESTRICT`
+- `vendor_document_expiry_notices_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
+- `vendor_document_expiry_notices_business_document_version_id_not` — UNIQUE: `UNIQUE (business_document_version_id, notice_kind)`
 
 **Indexes**
 
-- `vendor_contacts_pkey` — `CREATE UNIQUE INDEX vendor_contacts_pkey ON public.vendor_contacts USING btree (id)`
-- `vendor_primary_contact_unique` — `CREATE UNIQUE INDEX vendor_primary_contact_unique ON public.vendor_contacts USING btree (vendor_organization_id) WHERE (is_primary AND (deactivated_at IS NULL))`
+- `vendor_document_expiry_notices_business_document_version_id_not` — `CREATE UNIQUE INDEX vendor_document_expiry_notices_business_document_version_id_not ON public.vendor_document_expiry_notices USING btree (business_document_version_id, notice_kind)`
+- `vendor_document_expiry_notices_pkey` — `CREATE UNIQUE INDEX vendor_document_expiry_notices_pkey ON public.vendor_document_expiry_notices USING btree (id)`
 
 ## `vendor_invitations`
 
@@ -5499,15 +5504,11 @@ Vendor organization, access, onboarding, or storefront record.
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
 | `revoked_at` | `timestamp with time zone` | Yes | — | Revoked at. |
-| `full_name` | `character varying` | Yes | — | Full name. |
-| `telephone_e164` | `character varying` | Yes | — | Telephone e164. |
-| `accepted_by_user_id` | `bigint` | Yes | — | Accepted by user id. |
-| `expiry_recorded_at` | `timestamp with time zone` | Yes | — | Expiry recorded at. |
-| `lock_version` | `integer` | No | `1` | Lock version. |
+| `invitee_name` | `character varying` | Yes | — | Invitee name. |
+| `invitee_mobile` | `character varying` | Yes | — | Invitee mobile. |
 
 **Constraints**
 
-- `vendor_invitations_accepted_by_user_id_foreign` — FOREIGN KEY: `FOREIGN KEY (accepted_by_user_id) REFERENCES users(id) ON DELETE RESTRICT`
 - `vendor_invitations_invited_by_user_id_foreign` — FOREIGN KEY: `FOREIGN KEY (invited_by_user_id) REFERENCES users(id) ON DELETE RESTRICT`
 - `vendor_invitations_vendor_organization_id_foreign` — FOREIGN KEY: `FOREIGN KEY (vendor_organization_id) REFERENCES vendor_organizations(id) ON DELETE RESTRICT`
 - `vendor_invitations_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
@@ -5590,22 +5591,40 @@ Vendor organization, access, onboarding, or storefront record.
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | No | — | Primary key. Id. |
 | `vendor_organization_id` | `uuid` | No | — | Vendor organization id. |
-| `step_code` | `character varying` | No | — | Step code. |
-| `status` | `character varying` | No | `'REQUIRED'::character varying` | Status. |
-| `completed_at` | `timestamp with time zone` | Yes | — | Completed at. |
+| `section` | `character varying` | No | — | Section. |
+| `requirement_key` | `character varying` | No | — | Requirement key. |
+| `level` | `character varying` | No | — | Level. |
+| `status` | `character varying` | No | `'NOT_STARTED'::character varying` | Status. |
+| `applicability_reason` | `text` | Yes | — | Applicability reason. |
+| `source_version` | `character varying` | No | `'phase3.v1'::character varying` | Source version. |
+| `version` | `integer` | No | `1` | Version. |
+| `is_current` | `boolean` | No | `true` | Is current. |
+| `submitted_by_user_id` | `bigint` | Yes | — | Submitted by user id. |
+| `submitted_at` | `timestamp with time zone` | Yes | — | Submitted at. |
+| `reviewed_by_user_id` | `bigint` | Yes | — | Reviewed by user id. |
+| `reviewed_at` | `timestamp with time zone` | Yes | — | Reviewed at. |
+| `last_reason` | `text` | Yes | — | Last reason. |
+| `lock_version` | `integer` | No | `1` | Lock version. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
 
 **Constraints**
 
+- `onboarding_level_check` — CHECK: `CHECK (level::text = ANY (ARRAY['REQUIRED'::character varying, 'OPTIONAL'::character varying, 'CONDITIONALLY_REQUIRED'::character varying]::text[]))`
+- `onboarding_na_reason_check` — CHECK: `CHECK (status::text <> 'NOT_APPLICABLE'::text OR level::text = 'CONDITIONALLY_REQUIRED'::text AND applicability_reason IS NOT NULL)`
+- `onboarding_section_check` — CHECK: `CHECK (section::text = ANY (ARRAY['STORE_VERIFICATION'::character varying, 'STORE_SETUP'::character varying]::text[]))`
+- `onboarding_status_check` — CHECK: `CHECK (status::text = ANY (ARRAY['NOT_STARTED'::character varying, 'IN_PROGRESS'::character varying, 'SUBMITTED'::character varying, 'PENDING_VERIFICATION'::character varying, 'APPROVED'::character varying, 'CHANGES_REQUIRED'::character varying, 'REJECTED'::character varying, 'EXPIRED'::character varying, 'NOT_APPLICABLE'::character varying, 'COMPLETED'::character varying]::text[]))`
+- `vendor_onboarding_steps_reviewed_by_user_id_foreign` — FOREIGN KEY: `FOREIGN KEY (reviewed_by_user_id) REFERENCES users(id) ON DELETE RESTRICT`
+- `vendor_onboarding_steps_submitted_by_user_id_foreign` — FOREIGN KEY: `FOREIGN KEY (submitted_by_user_id) REFERENCES users(id) ON DELETE RESTRICT`
 - `vendor_onboarding_steps_vendor_organization_id_foreign` — FOREIGN KEY: `FOREIGN KEY (vendor_organization_id) REFERENCES vendor_organizations(id) ON DELETE RESTRICT`
 - `vendor_onboarding_steps_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
-- `vendor_onboarding_steps_vendor_organization_id_step_code_unique` — UNIQUE: `UNIQUE (vendor_organization_id, step_code)`
+- `vendor_onboarding_step_version_unique` — UNIQUE: `UNIQUE (vendor_organization_id, section, requirement_key, version)`
 
 **Indexes**
 
+- `vendor_onboarding_step_version_unique` — `CREATE UNIQUE INDEX vendor_onboarding_step_version_unique ON public.vendor_onboarding_steps USING btree (vendor_organization_id, section, requirement_key, version)`
 - `vendor_onboarding_steps_pkey` — `CREATE UNIQUE INDEX vendor_onboarding_steps_pkey ON public.vendor_onboarding_steps USING btree (id)`
-- `vendor_onboarding_steps_vendor_organization_id_step_code_unique` — `CREATE UNIQUE INDEX vendor_onboarding_steps_vendor_organization_id_step_code_unique ON public.vendor_onboarding_steps USING btree (vendor_organization_id, step_code)`
+- `vendor_onboarding_steps_vendor_organization_id_section_is_curre` — `CREATE INDEX vendor_onboarding_steps_vendor_organization_id_section_is_curre ON public.vendor_onboarding_steps USING btree (vendor_organization_id, section, is_current)`
 
 ## `vendor_organizations`
 
@@ -5619,30 +5638,50 @@ Vendor organization, access, onboarding, or storefront record.
 | `account_status` | `character varying` | No | `'ACTIVE'::character varying` | Account status. |
 | `onboarding_status` | `character varying` | No | `'NOT_STARTED'::character varying` | Onboarding status. |
 | `marketplace_status` | `character varying` | No | `'NOT_ACTIVE'::character varying` | Marketplace status. |
-| `bulk_order_capable` | `boolean` | No | `false` | Bulk order capable. |
 | `lock_version` | `integer` | No | `1` | Lock version. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
 | `business_type` | `character varying` | Yes | — | Business type. |
-| `established_on` | `date` | Yes | — | Established on. |
-| `business_draft` | `jsonb` | Yes | — | Business draft. |
-| `bulk_capability_recorded` | `boolean` | No | `false` | Bulk capability recorded. |
-| `activation_hold` | `boolean` | No | `false` | Activation hold. |
-| `withholding_demo_scenario` | `character varying` | Yes | — | Withholding demo scenario. |
-| `submitted_at` | `timestamp with time zone` | Yes | — | Submitted at. |
-| `regulatory_evidence_required` | `boolean` | Yes | — | Regulatory evidence required. |
-| `regulatory_review_basis` | `text` | Yes | — | Regulatory review basis. |
+| `registered_name` | `character varying` | Yes | — | Registered name. |
+| `date_established` | `date` | Yes | — | Date established. |
+| `store_email` | `character varying` | Yes | — | Store email. |
+| `store_email_verified_at` | `timestamp with time zone` | Yes | — | Store email verified at. |
+| `store_phone` | `character varying` | Yes | — | Store phone. |
+| `store_verification_status` | `character varying` | No | `'NOT_STARTED'::character varying` | Store verification status. |
+| `store_setup_status` | `character varying` | No | `'NOT_STARTED'::character varying` | Store setup status. |
+| `store_activation_status` | `character varying` | No | `'NOT_READY'::character varying` | Store activation status. |
+| `marketplace_discoverability_status` | `character varying` | No | `'NOT_DISCOVERABLE'::character varying` | Marketplace discoverability status. |
+| `onboarding_welcome_dismissed_at` | `timestamp with time zone` | Yes | — | Onboarding welcome dismissed at. |
+| `activation_hold_code` | `character varying` | Yes | — | Activation hold code. |
+| `activation_hold_reason` | `text` | Yes | — | Activation hold reason. |
+| `pending_store_email` | `character varying` | Yes | — | Pending store email. |
+| `pending_store_email_expires_at` | `timestamp with time zone` | Yes | — | Pending store email expires at. |
+| `individual_registered_surname` | `character varying` | Yes | — | Individual registered surname. |
+| `individual_registered_first_name` | `character varying` | Yes | — | Individual registered first name. |
+| `individual_registered_middle_name` | `character varying` | Yes | — | Individual registered middle name. |
+| `individual_registered_suffix` | `character varying` | Yes | — | Individual registered suffix. |
+| `company_registered_name` | `character varying` | Yes | — | Company registered name. |
+| `legal_identity_same_as_owner` | `boolean` | No | `false` | Legal identity same as owner. |
+| `identity_id_type` | `character varying` | Yes | — | Identity id type. |
+| `identity_id_number_encrypted` | `text` | Yes | — | Identity id number encrypted. |
+| `identity_id_number_last4` | `character varying` | Yes | — | Identity id number last4. |
 
 **Constraints**
 
-- `vendor_business_type_check` — CHECK: `CHECK (business_type IS NULL OR (business_type::text = ANY (ARRAY['SOLE_PROPRIETORSHIP'::character varying, 'PARTNERSHIP'::character varying, 'CORPORATION'::character varying]::text[])))`
-- `vendor_onboarding_state_check` — CHECK: `CHECK (onboarding_status::text = ANY (ARRAY['NOT_STARTED'::character varying, 'IN_PROGRESS'::character varying, 'PENDING_VERIFICATION'::character varying, 'CHANGES_REQUIRED'::character varying, 'APPROVED'::character varying, 'REJECTED'::character varying, 'COMPLETED'::character varying]::text[]))`
+- `vendor_activation_status_check` — CHECK: `CHECK (store_activation_status::text = ANY (ARRAY['NOT_READY'::character varying, 'READY'::character varying, 'ACTIVE'::character varying, 'RESTRICTED'::character varying, 'SUSPENDED'::character varying]::text[]))`
+- `vendor_business_type_check` — CHECK: `CHECK (business_type IS NULL OR (business_type::text = ANY (ARRAY['SOLE_PROPRIETORSHIP'::character varying, 'PARTNERSHIP'::character varying, 'CORPORATION'::character varying, 'ONE_PERSON_CORPORATION'::character varying, 'COOPERATIVE'::character varying]::text[])))`
+- `vendor_setup_status_check` — CHECK: `CHECK (store_setup_status::text = ANY (ARRAY['NOT_STARTED'::character varying, 'IN_PROGRESS'::character varying, 'COMPLETED'::character varying, 'CHANGES_REQUIRED'::character varying]::text[]))`
+- `vendor_verification_status_check` — CHECK: `CHECK (store_verification_status::text = ANY (ARRAY['NOT_STARTED'::character varying, 'IN_PROGRESS'::character varying, 'SUBMITTED'::character varying, 'PENDING_VERIFICATION'::character varying, 'APPROVED'::character varying, 'CHANGES_REQUIRED'::character varying, 'REJECTED'::character varying, 'EXPIRED'::character varying]::text[]))`
 - `vendor_organizations_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
 
 **Indexes**
 
+- `vendor_organizations_marketplace_discoverability_status_index` — `CREATE INDEX vendor_organizations_marketplace_discoverability_status_index ON public.vendor_organizations USING btree (marketplace_discoverability_status)`
 - `vendor_organizations_marketplace_status_index` — `CREATE INDEX vendor_organizations_marketplace_status_index ON public.vendor_organizations USING btree (marketplace_status)`
 - `vendor_organizations_pkey` — `CREATE UNIQUE INDEX vendor_organizations_pkey ON public.vendor_organizations USING btree (id)`
+- `vendor_organizations_store_activation_status_index` — `CREATE INDEX vendor_organizations_store_activation_status_index ON public.vendor_organizations USING btree (store_activation_status)`
+- `vendor_organizations_store_setup_status_index` — `CREATE INDEX vendor_organizations_store_setup_status_index ON public.vendor_organizations USING btree (store_setup_status)`
+- `vendor_organizations_store_verification_status_index` — `CREATE INDEX vendor_organizations_store_verification_status_index ON public.vendor_organizations USING btree (store_verification_status)`
 
 ## `vendor_payment_accounts`
 
@@ -5652,94 +5691,33 @@ Vendor organization, access, onboarding, or storefront record.
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | No | — | Primary key. Id. |
 | `vendor_organization_id` | `uuid` | No | — | Vendor organization id. |
-| `environment` | `character varying` | No | `'TEST'::character varying` | Environment. |
 | `provider` | `character varying` | No | `'XENDIT'::character varying` | Provider. |
-| `provider_account_reference` | `character varying` | Yes | — | Provider account reference. |
-| `status` | `character varying` | No | `'NOT_CONNECTED'::character varying` | Status. |
+| `environment` | `character varying` | No | `'TEST'::character varying` | Environment. |
+| `provider_account_id` | `character varying` | Yes | — | Provider account id. |
+| `connection_status` | `character varying` | No | `'UNVERIFIED'::character varying` | Connection status. |
+| `provider_status` | `character varying` | Yes | — | Provider status. |
 | `capabilities` | `jsonb` | Yes | — | Capabilities. |
+| `invitation_url_encrypted` | `text` | Yes | — | Invitation url encrypted. |
+| `invitation_url_hash` | `character varying` | Yes | — | Invitation url hash. |
+| `invitation_url_masked` | `character varying` | Yes | — | Invitation url masked. |
+| `last_reconciled_at` | `timestamp with time zone` | Yes | — | Last reconciled at. |
+| `last_provider_event_at` | `timestamp with time zone` | Yes | — | Last provider event at. |
+| `last_error_code` | `character varying` | Yes | — | Last error code. |
+| `lock_version` | `integer` | No | `1` | Lock version. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
-| `evidence_origin` | `character varying` | Yes | — | Evidence origin. |
-| `checked_at` | `timestamp with time zone` | Yes | — | Checked at. |
-| `lock_version` | `integer` | No | `1` | Lock version. |
-| `provider_status` | `character varying` | Yes | — | Provider status. |
-| `connection_attempt_id` | `uuid` | Yes | — | Connection attempt id. |
-| `connection_error` | `character varying` | Yes | — | Connection error. |
 
 **Constraints**
+
+- `vendor_payment_provider_check` — CHECK: `CHECK (provider::text = 'XENDIT'::text AND (environment::text = ANY (ARRAY['TEST'::character varying, 'DEMO'::character varying, 'LIVE'::character varying]::text[])) AND (connection_status::text = ANY (ARRAY['UNVERIFIED'::character varying, 'PENDING'::character varying, 'CONNECTED'::character varying, 'FAILED'::character varying, 'REVOKED'::character varying]::text[])))`
 - `vendor_payment_accounts_vendor_organization_id_foreign` — FOREIGN KEY: `FOREIGN KEY (vendor_organization_id) REFERENCES vendor_organizations(id) ON DELETE RESTRICT`
 - `vendor_payment_accounts_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
-- `vendor_payment_accounts_connection_attempt_id_unique` — UNIQUE: `UNIQUE (connection_attempt_id)`
 - `vendor_payment_accounts_vendor_organization_id_unique` — UNIQUE: `UNIQUE (vendor_organization_id)`
-- `vendor_provider_account_unique` — UNIQUE: `UNIQUE (provider, environment, provider_account_reference)`
 
 **Indexes**
 
-- `vendor_payment_accounts_connection_attempt_id_unique` — `CREATE UNIQUE INDEX vendor_payment_accounts_connection_attempt_id_unique ON public.vendor_payment_accounts USING btree (connection_attempt_id)`
 - `vendor_payment_accounts_pkey` — `CREATE UNIQUE INDEX vendor_payment_accounts_pkey ON public.vendor_payment_accounts USING btree (id)`
 - `vendor_payment_accounts_vendor_organization_id_unique` — `CREATE UNIQUE INDEX vendor_payment_accounts_vendor_organization_id_unique ON public.vendor_payment_accounts USING btree (vendor_organization_id)`
-- `vendor_provider_account_unique` — `CREATE UNIQUE INDEX vendor_provider_account_unique ON public.vendor_payment_accounts USING btree (provider, environment, provider_account_reference)`
-
-## `vendor_public_media_recoveries`
-
-Vendor organization, access, onboarding, or storefront record.
-
-| Column | Database type | Null | Default | Key / meaning |
-| --- | --- | --- | --- | --- |
-| `id` | `uuid` | No | — | Primary key. Id. |
-| `vendor_organization_id` | `uuid` | No | — | Vendor organization id. |
-| `store_media_id` | `uuid` | Yes | — | Store media id. |
-| `object_key` | `character varying` | No | — | Object key. |
-| `state` | `character varying` | No | — | State. |
-| `provider_asset_id` | `character varying` | Yes | — | Provider asset id. |
-| `provider_format` | `character varying` | Yes | — | Provider format. |
-| `last_error` | `character varying` | Yes | — | Last error. |
-| `cleanup_attempts` | `smallint` | No | `'0'::smallint` | Cleanup attempts. |
-| `recovered_at` | `timestamp with time zone` | Yes | — | Recovered at. |
-| `created_at` | `timestamp with time zone` | Yes | — | Created at. |
-| `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
-
-**Constraints**
-
-- `vendor_public_media_recovery_state` — CHECK: `CHECK (state::text = ANY (ARRAY['PLANNED'::character varying, 'UPLOAD_UNCONFIRMED'::character varying, 'UPLOAD_CONFIRMED'::character varying, 'LINKED'::character varying, 'CLEANUP_REQUIRED'::character varying, 'CLEANED'::character varying]::text[]))`
-- `vendor_public_media_recoveries_store_media_id_foreign` — FOREIGN KEY: `FOREIGN KEY (store_media_id) REFERENCES store_media(id) ON DELETE RESTRICT`
-- `vendor_public_media_recoveries_vendor_organization_id_foreign` — FOREIGN KEY: `FOREIGN KEY (vendor_organization_id) REFERENCES vendor_organizations(id) ON DELETE RESTRICT`
-- `vendor_public_media_recoveries_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
-- `vendor_public_media_recoveries_object_key_unique` — UNIQUE: `UNIQUE (object_key)`
-
-**Indexes**
-
-- `vendor_public_media_recoveries_object_key_unique` — `CREATE UNIQUE INDEX vendor_public_media_recoveries_object_key_unique ON public.vendor_public_media_recoveries USING btree (object_key)`
-- `vendor_public_media_recoveries_pkey` — `CREATE UNIQUE INDEX vendor_public_media_recoveries_pkey ON public.vendor_public_media_recoveries USING btree (id)`
-- `vendor_public_media_recoveries_state_updated_at_index` — `CREATE INDEX vendor_public_media_recoveries_state_updated_at_index ON public.vendor_public_media_recoveries USING btree (state, updated_at)`
-- `vendor_public_media_recoveries_vendor_organization_id_state_ind` — `CREATE INDEX vendor_public_media_recoveries_vendor_organization_id_state_ind ON public.vendor_public_media_recoveries USING btree (vendor_organization_id, state)`
-
-## `vendor_tax_profile_reviews`
-
-Vendor organization, access, onboarding, or storefront record.
-
-| Column | Database type | Null | Default | Key / meaning |
-| --- | --- | --- | --- | --- |
-| `id` | `uuid` | No | — | Primary key. Id. |
-| `vendor_tax_profile_version_id` | `uuid` | No | — | Vendor tax profile version id. |
-| `reviewer_user_id` | `bigint` | No | — | Reviewer user id. |
-| `decision` | `character varying` | No | — | Decision. |
-| `reason` | `text` | Yes | — | Reason. |
-| `approval_scope` | `character varying` | No | — | Approval scope. |
-| `environment` | `character varying` | No | `'TEST'::character varying` | Environment. |
-| `created_at` | `timestamp with time zone` | Yes | — | Created at. |
-| `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
-
-**Constraints**
-
-- `tax_review_decision_check` — CHECK: `CHECK ((decision::text = ANY (ARRAY['APPROVE'::character varying, 'RETURN_FOR_CORRECTION'::character varying, 'REJECT'::character varying]::text[])) AND (decision::text = 'APPROVE'::text OR reason IS NOT NULL AND length(TRIM(BOTH FROM reason)) >= 3))`
-- `vendor_tax_profile_reviews_reviewer_user_id_foreign` — FOREIGN KEY: `FOREIGN KEY (reviewer_user_id) REFERENCES users(id) ON DELETE RESTRICT`
-- `vendor_tax_profile_reviews_vendor_tax_profile_version_id_foreig` — FOREIGN KEY: `FOREIGN KEY (vendor_tax_profile_version_id) REFERENCES vendor_tax_profile_versions(id) ON DELETE RESTRICT`
-- `vendor_tax_profile_reviews_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
-
-**Indexes**
-
-- `vendor_tax_profile_reviews_pkey` — `CREATE UNIQUE INDEX vendor_tax_profile_reviews_pkey ON public.vendor_tax_profile_reviews USING btree (id)`
 
 ## `vendor_tax_profile_versions`
 
@@ -5763,16 +5741,26 @@ Vendor organization, access, onboarding, or storefront record.
 | `content_hash` | `character varying` | No | — | Content hash. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
-| `profile_data` | `jsonb` | Yes | — | Profile data. |
-| `environment` | `character varying` | No | `'TEST'::character varying` | Environment. |
-| `evidence_origin` | `character varying` | No | `'SAMPLE_DEMO'::character varying` | Evidence origin. |
+| `taxpayer_key_encrypted` | `text` | Yes | — | Taxpayer key encrypted. |
+| `taxpayer_key_last4` | `character varying` | Yes | — | Taxpayer key last4. |
+| `tin_last4` | `character varying` | Yes | — | Tin last4. |
+| `tax_details` | `jsonb` | Yes | — | Tax details. |
+| `drafted_by_user_id` | `bigint` | Yes | — | Drafted by user id. |
 | `owner_attested_at` | `timestamp with time zone` | Yes | — | Owner attested at. |
+| `owner_attested_by_user_id` | `bigint` | Yes | — | Owner attested by user id. |
+| `tin_encrypted` | `text` | Yes | — | Tin encrypted. |
+| `tin_hash` | `character varying` | Yes | — | Tin hash. |
+| `tin_branch_code` | `character varying` | Yes | — | Tin branch code. |
+| `bir_cor_reference` | `character varying` | Yes | — | Bir cor reference. |
+| `vat_verified_category` | `character varying` | Yes | — | Vat verified category. |
 
 **Constraints**
 
 - `tax_profile_approval_actor_check` — CHECK: `CHECK (approved_by_user_id IS NULL OR approved_by_user_id <> submitted_by_user_id)`
 - `tax_profile_fiscal_month_check` — CHECK: `CHECK (fiscal_year_start_month >= 1 AND fiscal_year_start_month <= 12)`
 - `vendor_tax_profile_versions_approved_by_user_id_foreign` — FOREIGN KEY: `FOREIGN KEY (approved_by_user_id) REFERENCES users(id) ON DELETE RESTRICT`
+- `vendor_tax_profile_versions_drafted_by_user_id_foreign` — FOREIGN KEY: `FOREIGN KEY (drafted_by_user_id) REFERENCES users(id) ON DELETE RESTRICT`
+- `vendor_tax_profile_versions_owner_attested_by_user_id_foreign` — FOREIGN KEY: `FOREIGN KEY (owner_attested_by_user_id) REFERENCES users(id) ON DELETE RESTRICT`
 - `vendor_tax_profile_versions_submitted_by_user_id_foreign` — FOREIGN KEY: `FOREIGN KEY (submitted_by_user_id) REFERENCES users(id) ON DELETE RESTRICT`
 - `vendor_tax_profile_versions_vendor_tax_profile_id_foreign` — FOREIGN KEY: `FOREIGN KEY (vendor_tax_profile_id) REFERENCES vendor_tax_profiles(id) ON DELETE RESTRICT`
 - `vendor_tax_profile_versions_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
@@ -5797,10 +5785,13 @@ Vendor organization, access, onboarding, or storefront record.
 | `lock_version` | `integer` | No | `1` | Lock version. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+| `attested_at` | `timestamp with time zone` | Yes | — | Attested at. |
+| `attested_by_user_id` | `bigint` | Yes | — | Attested by user id. |
 
 **Constraints**
 
 - `vendor_tax_profiles_environment_check` — CHECK: `CHECK (environment::text = ANY (ARRAY['TEST'::character varying, 'DEMO'::character varying, 'LIVE'::character varying]::text[]))`
+- `vendor_tax_profiles_attested_by_user_id_foreign` — FOREIGN KEY: `FOREIGN KEY (attested_by_user_id) REFERENCES users(id) ON DELETE RESTRICT`
 - `vendor_tax_profiles_current_version_id_foreign` — FOREIGN KEY: `FOREIGN KEY (current_version_id) REFERENCES vendor_tax_profile_versions(id) ON DELETE RESTRICT`
 - `vendor_tax_profiles_vendor_organization_id_foreign` — FOREIGN KEY: `FOREIGN KEY (vendor_organization_id) REFERENCES vendor_organizations(id) ON DELETE RESTRICT`
 - `vendor_tax_profiles_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
@@ -5826,9 +5817,17 @@ Vendor organization, access, onboarding, or storefront record.
 | `active` | `boolean` | No | `true` | Active. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+| `image_file_id` | `uuid` | Yes | — | Image file id. |
+| `cargo_length_m` | `numeric` | Yes | — | Cargo length m. |
+| `cargo_width_m` | `numeric` | Yes | — | Cargo width m. |
+| `cargo_height_m` | `numeric` | Yes | — | Cargo height m. |
+| `heavy_classification` | `character varying` | Yes | — | Heavy classification. |
+| `lock_version` | `integer` | No | `1` | Lock version. |
 
 **Constraints**
 
+- `vendor_vehicle_phase_three_dimensions_check` — CHECK: `CHECK ((cargo_length_m IS NULL OR cargo_length_m > 0::numeric) AND (cargo_width_m IS NULL OR cargo_width_m > 0::numeric) AND (cargo_height_m IS NULL OR cargo_height_m > 0::numeric))`
+- `vendor_vehicles_image_file_id_foreign` — FOREIGN KEY: `FOREIGN KEY (image_file_id) REFERENCES files(id) ON DELETE RESTRICT`
 - `vendor_vehicles_vendor_organization_id_foreign` — FOREIGN KEY: `FOREIGN KEY (vendor_organization_id) REFERENCES vendor_organizations(id) ON DELETE RESTRICT`
 - `vendor_vehicles_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
 
@@ -5968,3 +5967,8 @@ Procurement or immutable commerce record.
 **Indexes**
 
 - `work_packages_pkey` — `CREATE UNIQUE INDEX work_packages_pkey ON public.work_packages USING btree (id)`
+
+
+### Combined Vendor TIN (2026-09-23)
+
+`vendor_tax_profile_versions.tin_encrypted` stores the full canonical 9-digit TIN plus 3–5 digit branch suffix. `tin_hash` and `tin_last4` remain derived from the 9-digit taxpayer identity. Migration `2026_09_23_000003` combines existing ciphertext values and drops `tin_branch_code` and `branch_code_encrypted`. Editable onboarding drafts remove `head_office`, `branch_code_length` and `branch_code`; historical tax version metadata and content hashes remain intact.

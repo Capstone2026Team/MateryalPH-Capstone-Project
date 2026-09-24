@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * MateryalPH API
- * Versioned Phase 1–3 contract. Later-phase commerce foundations do not expose placeholder operations.
+ * Versioned Phase 1–3 contract. Vendor onboarding, verification, activation readiness, private evidence, and team invitations are server-authorized. Browser credentials are isolated by configured frontend origin using _vendor and _admin suffixes on access, refresh, CSRF, MFA and bot-proof cookies. Existing unsuffixed browser sessions require sign-in again; cookie selection never replaces account authorization. Native Buyer transport is unchanged.
  *
  * The version of the OpenAPI document: 1.0.0-phase.3
  *
@@ -35,6 +35,14 @@ export interface BuyerMobileGoogleOidcStartRequest {
      *
      */
     companyName?: string | null;
+    /**
+     * Required for SIGN_UP.
+     */
+    termsVersionId?: string;
+    /**
+     * Required for SIGN_UP.
+     */
+    termsContentHash?: string;
     /**
      *
      */
@@ -78,6 +86,8 @@ export function BuyerMobileGoogleOidcStartRequestFromJSONTyped(json: any, ignore
         'mobileE164': json['mobile_e164'] === undefined ? undefined : json['mobile_e164'] === null ? null : json['mobile_e164'],
         'buyerType': json['buyer_type'] === undefined ? undefined : json['buyer_type'] === null ? null : json['buyer_type'],
         'companyName': json['company_name'] === undefined ? undefined : json['company_name'] === null ? null : json['company_name'],
+        'termsVersionId': json['terms_version_id'] == null ? undefined : json['terms_version_id'],
+        'termsContentHash': json['terms_content_hash'] == null ? undefined : json['terms_content_hash'],
         'termsAccepted': json['terms_accepted'] == null ? undefined : json['terms_accepted'],
         'privacyAccepted': json['privacy_accepted'] == null ? undefined : json['privacy_accepted'],
     };
@@ -98,6 +108,8 @@ export function BuyerMobileGoogleOidcStartRequestToJSONTyped(value?: BuyerMobile
         'mobile_e164': value['mobileE164'],
         'buyer_type': value['buyerType'],
         'company_name': value['companyName'],
+        'terms_version_id': value['termsVersionId'],
+        'terms_content_hash': value['termsContentHash'],
         'terms_accepted': value['termsAccepted'],
         'privacy_accepted': value['privacyAccepted'],
     };

@@ -12,6 +12,7 @@ use App\Domain\Identity\OtpCodeGenerator;
 use App\Domain\Identity\TokenSessionService;
 use App\Models\AuthSession;
 use App\Models\User;
+use App\Models\UserProfile;
 use App\Models\VendorMembership;
 use App\Models\VendorOrganization;
 use Database\Seeders\SystemFoundationSeeder;
@@ -40,6 +41,20 @@ final class PhaseTwoAccountSecurityTest extends TestCase
         $this->patchJson('/api/v1/buyers/account/profile', ['full_name' => 'Stale name', 'lock_version' => 1])->assertConflict();
         self::assertSame('BUYER', $user->refresh()->account_type);
         $this->assertDatabaseHas('audit_logs', ['action' => 'PROFILE_UPDATED', 'actor_user_id' => $user->getKey()]);
+    }
+
+    public function test_buyer_contact_number_is_owned_and_full_email_still_requires_recent_identity_verification(): void
+    {
+        [$user] = $this->buyer();
+        UserProfile::query()->create(['user_id' => $user->getKey(), 'full_name' => $user->name, 'mobile_e164' => '+639171234567', 'locale' => 'en']);
+        $other = User::factory()->create();
+        UserProfile::query()->create(['user_id' => $other->getKey(), 'full_name' => $other->name, 'mobile_e164' => '+639189999999', 'locale' => 'en']);
+        $this->getJson('/api/v1/buyers/account/profile?user_id='.$other->public_id)->assertOk()
+            ->assertJsonPath('data.mobile_e164', '+639171234567')->assertJsonPath('data.email_masked', true);
+        $this->postJson('/api/v1/buyers/account/reauthentication', ['password' => 'OriginalPassword123'])->assertOk();
+        $this->getJson('/api/v1/buyers/account/profile')->assertOk()->assertJsonPath('data.email', $user->email)->assertJsonPath('data.email_masked', false);
+        $this->travel(16)->minutes();
+        $this->getJson('/api/v1/buyers/account/profile')->assertOk()->assertJsonPath('data.email_masked', true);
     }
 
     public function test_recent_authentication_is_session_bound_and_password_change_revokes_others(): void

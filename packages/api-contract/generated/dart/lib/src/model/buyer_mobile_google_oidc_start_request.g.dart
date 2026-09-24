@@ -79,6 +79,10 @@ class _$BuyerMobileGoogleOidcStartRequest
   @override
   final String? companyName;
   @override
+  final String? termsVersionId;
+  @override
+  final String? termsContentHash;
+  @override
   final bool? termsAccepted;
   @override
   final bool? privacyAccepted;
@@ -92,6 +96,8 @@ class _$BuyerMobileGoogleOidcStartRequest
       this.mobileE164,
       this.buyerType,
       this.companyName,
+      this.termsVersionId,
+      this.termsContentHash,
       this.termsAccepted,
       this.privacyAccepted})
       : super._();
@@ -112,6 +118,8 @@ class _$BuyerMobileGoogleOidcStartRequest
         mobileE164 == other.mobileE164 &&
         buyerType == other.buyerType &&
         companyName == other.companyName &&
+        termsVersionId == other.termsVersionId &&
+        termsContentHash == other.termsContentHash &&
         termsAccepted == other.termsAccepted &&
         privacyAccepted == other.privacyAccepted;
   }
@@ -123,6 +131,8 @@ class _$BuyerMobileGoogleOidcStartRequest
     _$hash = $jc(_$hash, mobileE164.hashCode);
     _$hash = $jc(_$hash, buyerType.hashCode);
     _$hash = $jc(_$hash, companyName.hashCode);
+    _$hash = $jc(_$hash, termsVersionId.hashCode);
+    _$hash = $jc(_$hash, termsContentHash.hashCode);
     _$hash = $jc(_$hash, termsAccepted.hashCode);
     _$hash = $jc(_$hash, privacyAccepted.hashCode);
     _$hash = $jf(_$hash);
@@ -136,6 +146,8 @@ class _$BuyerMobileGoogleOidcStartRequest
           ..add('mobileE164', mobileE164)
           ..add('buyerType', buyerType)
           ..add('companyName', companyName)
+          ..add('termsVersionId', termsVersionId)
+          ..add('termsContentHash', termsContentHash)
           ..add('termsAccepted', termsAccepted)
           ..add('privacyAccepted', privacyAccepted))
         .toString();
@@ -165,6 +177,16 @@ class BuyerMobileGoogleOidcStartRequestBuilder
   String? get companyName => _$this._companyName;
   set companyName(String? companyName) => _$this._companyName = companyName;
 
+  String? _termsVersionId;
+  String? get termsVersionId => _$this._termsVersionId;
+  set termsVersionId(String? termsVersionId) =>
+      _$this._termsVersionId = termsVersionId;
+
+  String? _termsContentHash;
+  String? get termsContentHash => _$this._termsContentHash;
+  set termsContentHash(String? termsContentHash) =>
+      _$this._termsContentHash = termsContentHash;
+
   bool? _termsAccepted;
   bool? get termsAccepted => _$this._termsAccepted;
   set termsAccepted(bool? termsAccepted) =>
@@ -186,6 +208,8 @@ class BuyerMobileGoogleOidcStartRequestBuilder
       _mobileE164 = $v.mobileE164;
       _buyerType = $v.buyerType;
       _companyName = $v.companyName;
+      _termsVersionId = $v.termsVersionId;
+      _termsContentHash = $v.termsContentHash;
       _termsAccepted = $v.termsAccepted;
       _privacyAccepted = $v.privacyAccepted;
       _$v = null;
@@ -215,6 +239,8 @@ class BuyerMobileGoogleOidcStartRequestBuilder
           mobileE164: mobileE164,
           buyerType: buyerType,
           companyName: companyName,
+          termsVersionId: termsVersionId,
+          termsContentHash: termsContentHash,
           termsAccepted: termsAccepted,
           privacyAccepted: privacyAccepted,
         );

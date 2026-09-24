@@ -68,6 +68,7 @@ All URIs are relative to */api/v1*
 *AccountsApi* | [**changeAccountPassword**](docs/AccountsApi.md#changeaccountpassword) | **POST** /{accountPortal}/account/password |
 *AccountsApi* | [**confirmAccountEmailChange**](docs/AccountsApi.md#confirmaccountemailchange) | **POST** /{accountPortal}/account/email/confirm |
 *AccountsApi* | [**confirmAccountFactorReplacement**](docs/AccountsApi.md#confirmaccountfactorreplacement) | **POST** /{accountPortal}/account/factor/confirm |
+*AccountsApi* | [**getAccountPhoto**](docs/AccountsApi.md#getaccountphoto) | **GET** /{webAccountPortal}/account/photo |
 *AccountsApi* | [**getAccountProfile**](docs/AccountsApi.md#getaccountprofile) | **GET** /{accountPortal}/account/profile |
 *AccountsApi* | [**getAccountSecurity**](docs/AccountsApi.md#getaccountsecurity) | **GET** /{accountPortal}/account/security |
 *AccountsApi* | [**inviteAccountAdmin**](docs/AccountsApi.md#inviteaccountadmin) | **POST** /{accountPortal}/account/invitations |
@@ -84,6 +85,15 @@ All URIs are relative to */api/v1*
 *AccountsApi* | [**startAccountEmailChange**](docs/AccountsApi.md#startaccountemailchange) | **POST** /{accountPortal}/account/email |
 *AccountsApi* | [**startAccountFactorReplacement**](docs/AccountsApi.md#startaccountfactorreplacement) | **POST** /{accountPortal}/account/factor |
 *AccountsApi* | [**updateAccountProfile**](docs/AccountsApi.md#updateaccountprofile) | **PATCH** /{accountPortal}/account/profile |
+*AccountsApi* | [**uploadAccountPhoto**](docs/AccountsApi.md#uploadaccountphoto) | **POST** /{webAccountPortal}/account/photo |
+*AdminVendorVerificationApi* | [**decideVendorVerificationRequirement**](docs/AdminVendorVerificationApi.md#decidevendorverificationrequirement) | **POST** /admin/vendor-verification/{organizationId}/requirements/{requirementKey}/decision |
+*AdminVendorVerificationApi* | [**getAdminDashboard**](docs/AdminVendorVerificationApi.md#getadmindashboard) | **GET** /admin/dashboard |
+*AdminVendorVerificationApi* | [**getAdminVendorEvidenceUrl**](docs/AdminVendorVerificationApi.md#getadminvendorevidenceurl) | **GET** /admin/vendor-verification/files/{fileId} |
+*AdminVendorVerificationApi* | [**getVendorVerificationCase**](docs/AdminVendorVerificationApi.md#getvendorverificationcase) | **GET** /admin/vendor-verification/{organizationId} |
+*AdminVendorVerificationApi* | [**listAdminDashboardAudit**](docs/AdminVendorVerificationApi.md#listadmindashboardaudit) | **GET** /admin/dashboard/audit |
+*AdminVendorVerificationApi* | [**listVendorVerificationQueue**](docs/AdminVendorVerificationApi.md#listvendorverificationqueue) | **GET** /admin/vendor-verification |
+*AdminVendorVerificationApi* | [**restoreVendorActivation**](docs/AdminVendorVerificationApi.md#restorevendoractivation) | **POST** /admin/vendor-verification/{organizationId}/restore |
+*AdminVendorVerificationApi* | [**restrictVendorActivation**](docs/AdminVendorVerificationApi.md#restrictvendoractivation) | **POST** /admin/vendor-verification/{organizationId}/restrict |
 *AgreementsApi* | [**listCurrentAgreements**](docs/AgreementsApi.md#listcurrentagreements) | **GET** /agreements/current |
 *AuthenticationApi* | [**acceptAdminInvitation**](docs/AuthenticationApi.md#acceptadmininvitation) | **POST** /auth/admin-invitations/accept |
 *AuthenticationApi* | [**completeGoogleOidc**](docs/AuthenticationApi.md#completegoogleoidc) | **GET** /auth/google/callback |
@@ -119,52 +129,35 @@ All URIs are relative to */api/v1*
 *AuthenticationApi* | [**verifyBuyerMobileEmail**](docs/AuthenticationApi.md#verifybuyermobileemail) | **POST** /mobile/auth/verify-email |
 *AuthenticationApi* | [**verifyEmail**](docs/AuthenticationApi.md#verifyemailoperation) | **POST** /auth/verify-email |
 *SystemApi* | [**getApiHealth**](docs/SystemApi.md#getapihealth) | **GET** /health |
-*VendorOnboardingApi* | [**acceptVendorCommissionTerms**](docs/VendorOnboardingApi.md#acceptvendorcommissionterms) | **POST** /vendors/{organization}/commission-terms/acceptance | accept Vendor Commission Terms
-*VendorOnboardingApi* | [**activateVendorMarketplace**](docs/VendorOnboardingApi.md#activatevendormarketplace) | **POST** /vendors/{organization}/activation | activate Vendor Marketplace
-*VendorOnboardingApi* | [**changeVendorTeamMember**](docs/VendorOnboardingApi.md#changevendorteammember) | **PATCH** /vendors/{organization}/team/memberships/{membership} | change Vendor Team Member
-*VendorOnboardingApi* | [**confirmVendorStoreEmailVerification**](docs/VendorOnboardingApi.md#confirmvendorstoreemailverification) | **POST** /vendors/{organization}/business/store-email/verification/confirm | confirm Vendor Store Email Verification
-*VendorOnboardingApi* | [**connectVendorTest**](docs/VendorOnboardingApi.md#connectvendortest) | **POST** /vendors/{organization}/payment-connection | connect Vendor Test
-*VendorOnboardingApi* | [**downloadAdminVendorDocument**](docs/VendorOnboardingApi.md#downloadadminvendordocument) | **GET** /admin/vendor-verification/{organization}/documents/{version}/download | download Admin Vendor Document
-*VendorOnboardingApi* | [**downloadVendorDocument**](docs/VendorOnboardingApi.md#downloadvendordocument) | **GET** /vendors/{organization}/documents/{version}/download | download Vendor Document
-*VendorOnboardingApi* | [**getAdminVendorBusiness**](docs/VendorOnboardingApi.md#getadminvendorbusiness) | **GET** /admin/vendor-verification/{organization}/business | get Admin Vendor Business
-*VendorOnboardingApi* | [**getAdminVendorReadiness**](docs/VendorOnboardingApi.md#getadminvendorreadiness) | **GET** /admin/vendor-verification/{organization}/onboarding | get Admin Vendor Readiness
-*VendorOnboardingApi* | [**getAdminVendorTaxProfile**](docs/VendorOnboardingApi.md#getadminvendortaxprofile) | **GET** /admin/vendor-verification/{organization}/tax-profile | get Admin Vendor Tax Profile
-*VendorOnboardingApi* | [**getPublicVendorStoreMedia**](docs/VendorOnboardingApi.md#getpublicvendorstoremedia) | **GET** /public/vendors/{organization}/store-media/{media} | get Public Vendor Store Media
-*VendorOnboardingApi* | [**getVendorBusiness**](docs/VendorOnboardingApi.md#getvendorbusiness) | **GET** /vendors/{organization}/business | get Vendor Business
-*VendorOnboardingApi* | [**getVendorCommissionTerms**](docs/VendorOnboardingApi.md#getvendorcommissionterms) | **GET** /vendors/{organization}/commission-terms | get Vendor Commission Terms
-*VendorOnboardingApi* | [**getVendorReadiness**](docs/VendorOnboardingApi.md#getvendorreadiness) | **GET** /vendors/{organization}/onboarding | get Vendor Readiness
-*VendorOnboardingApi* | [**getVendorSetup**](docs/VendorOnboardingApi.md#getvendorsetup) | **GET** /vendors/{organization}/setup | get Vendor Setup
-*VendorOnboardingApi* | [**getVendorTaxProfile**](docs/VendorOnboardingApi.md#getvendortaxprofile) | **GET** /vendors/{organization}/tax-profile | get Vendor Tax Profile
-*VendorOnboardingApi* | [**getVendorTeam**](docs/VendorOnboardingApi.md#getvendorteam) | **GET** /vendors/{organization}/team | get Vendor Team
-*VendorOnboardingApi* | [**inviteVendorTeam**](docs/VendorOnboardingApi.md#invitevendorteam) | **POST** /vendors/{organization}/team/invitations | invite Vendor Team
-*VendorOnboardingApi* | [**issueAdminVendorDocumentLink**](docs/VendorOnboardingApi.md#issueadminvendordocumentlink) | **POST** /admin/vendor-verification/{organization}/documents/{version}/download-link | issue Admin Vendor Document Link
-*VendorOnboardingApi* | [**issueVendorDocumentLink**](docs/VendorOnboardingApi.md#issuevendordocumentlink) | **POST** /vendors/{organization}/documents/{version}/download-link | issue Vendor Document Link
-*VendorOnboardingApi* | [**listAdminVendorDocuments**](docs/VendorOnboardingApi.md#listadminvendordocuments) | **GET** /admin/vendor-verification/{organization}/documents | list Admin Vendor Documents
-*VendorOnboardingApi* | [**listAdminVendorStoreMedia**](docs/VendorOnboardingApi.md#listadminvendorstoremedia) | **GET** /admin/vendor-verification/{organization}/store-media | list Admin Vendor Store Media
-*VendorOnboardingApi* | [**listVendorDocuments**](docs/VendorOnboardingApi.md#listvendordocuments) | **GET** /vendors/{organization}/documents | list Vendor Documents
-*VendorOnboardingApi* | [**listVendorStoreMedia**](docs/VendorOnboardingApi.md#listvendorstoremedia) | **GET** /vendors/{organization}/store-media | list Vendor Store Media
-*VendorOnboardingApi* | [**listVendorTeamInvitations**](docs/VendorOnboardingApi.md#listvendorteaminvitations) | **GET** /vendors/{organization}/team/invitations | list Vendor Team Invitations
-*VendorOnboardingApi* | [**listVendorVerificationQueue**](docs/VendorOnboardingApi.md#listvendorverificationqueue) | **GET** /admin/vendor-verification | list Vendor Verification Queue
-*VendorOnboardingApi* | [**previewAdminVendorStoreMedia**](docs/VendorOnboardingApi.md#previewadminvendorstoremedia) | **GET** /admin/vendor-verification/{organization}/store-media/{media} | preview Admin Vendor Store Media
-*VendorOnboardingApi* | [**previewVendorStoreMedia**](docs/VendorOnboardingApi.md#previewvendorstoremedia) | **GET** /vendors/{organization}/store-media/{media} | preview Vendor Store Media
-*VendorOnboardingApi* | [**reconcileVendorTestConnection**](docs/VendorOnboardingApi.md#reconcilevendortestconnection) | **POST** /vendors/{organization}/payment-connection/reconciliation | reconcile Vendor Test Connection
-*VendorOnboardingApi* | [**removeVendorStoreMedia**](docs/VendorOnboardingApi.md#removevendorstoremedia) | **POST** /vendors/{organization}/store-media/{media}/remove | remove Vendor Store Media
-*VendorOnboardingApi* | [**requestVendorStoreEmailVerification**](docs/VendorOnboardingApi.md#requestvendorstoreemailverification) | **POST** /vendors/{organization}/business/store-email/verification | request Vendor Store Email Verification
-*VendorOnboardingApi* | [**reviewVendorBusiness**](docs/VendorOnboardingApi.md#reviewvendorbusiness) | **POST** /admin/vendor-verification/{organization}/business/reviews | review Vendor Business
-*VendorOnboardingApi* | [**reviewVendorDocument**](docs/VendorOnboardingApi.md#reviewvendordocument) | **POST** /admin/vendor-verification/{organization}/documents/{version}/reviews | review Vendor Document
-*VendorOnboardingApi* | [**reviewVendorStoreMedia**](docs/VendorOnboardingApi.md#reviewvendorstoremedia) | **POST** /admin/vendor-verification/{organization}/store-media/{media}/reviews | review Vendor Store Media
-*VendorOnboardingApi* | [**reviewVendorTaxProfile**](docs/VendorOnboardingApi.md#reviewvendortaxprofile) | **POST** /admin/vendor-verification/{organization}/tax-profile/versions/{version}/reviews | review Vendor Tax Profile
-*VendorOnboardingApi* | [**revokeVendorTeamInvitation**](docs/VendorOnboardingApi.md#revokevendorteaminvitation) | **POST** /vendors/{organization}/team/invitations/{invitation}/revoke | revoke Vendor Team Invitation
-*VendorOnboardingApi* | [**saveVendorBusiness**](docs/VendorOnboardingApi.md#savevendorbusiness) | **PUT** /vendors/{organization}/business | save Vendor Business
-*VendorOnboardingApi* | [**saveVendorStore**](docs/VendorOnboardingApi.md#savevendorstore) | **PUT** /vendors/{organization}/store-profile | save Vendor Store
-*VendorOnboardingApi* | [**saveVendorTaxProfile**](docs/VendorOnboardingApi.md#savevendortaxprofile) | **POST** /vendors/{organization}/tax-profile/versions | save Vendor Tax Profile
-*VendorOnboardingApi* | [**uploadVendorDocument**](docs/VendorOnboardingApi.md#uploadvendordocument) | **POST** /vendors/{organization}/documents | upload Vendor Document
-*VendorOnboardingApi* | [**uploadVendorStoreMedia**](docs/VendorOnboardingApi.md#uploadvendorstoremedia) | **POST** /vendors/{organization}/store-media | upload Vendor Store Media
+*VendorOnboardingApi* | [**acceptVendorCommission**](docs/VendorOnboardingApi.md#acceptvendorcommission) | **POST** /vendors/onboarding/verification/commission |
+*VendorOnboardingApi* | [**activateVendorStore**](docs/VendorOnboardingApi.md#activatevendorstore) | **POST** /vendors/onboarding/activation |
+*VendorOnboardingApi* | [**captureVendorPaymentConnection**](docs/VendorOnboardingApi.md#capturevendorpaymentconnection) | **POST** /vendors/onboarding/payment-connection |
+*VendorOnboardingApi* | [**completeVendorSetup**](docs/VendorOnboardingApi.md#completevendorsetup) | **POST** /vendors/onboarding/setup/complete |
+*VendorOnboardingApi* | [**confirmVendorStoreEmailVerification**](docs/VendorOnboardingApi.md#confirmvendorstoreemailverification) | **POST** /vendors/onboarding/store-email/confirm |
+*VendorOnboardingApi* | [**dismissVendorOnboardingWelcome**](docs/VendorOnboardingApi.md#dismissvendoronboardingwelcome) | **POST** /vendors/onboarding/welcome/dismiss |
+*VendorOnboardingApi* | [**downloadVendorOnboardingFile**](docs/VendorOnboardingApi.md#downloadvendoronboardingfile) | **GET** /vendor-onboarding-files/{fileId}/content |
+*VendorOnboardingApi* | [**getAuthoritativeVendorOnboarding**](docs/VendorOnboardingApi.md#getauthoritativevendoronboarding) | **GET** /vendor/onboarding |
+*VendorOnboardingApi* | [**getVendorOnboarding**](docs/VendorOnboardingApi.md#getvendoronboarding) | **GET** /vendors/onboarding |
+*VendorOnboardingApi* | [**getVendorPrivateFileUrl**](docs/VendorOnboardingApi.md#getvendorprivatefileurl) | **GET** /vendors/onboarding/files/{fileId} |
+*VendorOnboardingApi* | [**inviteVendorTeamMember**](docs/VendorOnboardingApi.md#invitevendorteammember) | **POST** /vendors/account/invitations |
+*VendorOnboardingApi* | [**previewVendorRequirements**](docs/VendorOnboardingApi.md#previewvendorrequirements) | **GET** /vendors/onboarding/requirements |
+*VendorOnboardingApi* | [**receiveXenditAccountVerificationWebhook**](docs/VendorOnboardingApi.md#receivexenditaccountverificationwebhook) | **POST** /webhooks/xendit/account-verification |
+*VendorOnboardingApi* | [**reconcileVendorPaymentConnection**](docs/VendorOnboardingApi.md#reconcilevendorpaymentconnection) | **POST** /vendors/onboarding/payment-connection/reconcile |
+*VendorOnboardingApi* | [**removePendingVendorDocument**](docs/VendorOnboardingApi.md#removependingvendordocument) | **DELETE** /vendors/onboarding/documents/pending/{requirementKey} |
+*VendorOnboardingApi* | [**requestVendorStoreEmailVerification**](docs/VendorOnboardingApi.md#requestvendorstoreemailverification) | **POST** /vendors/onboarding/store-email |
+*VendorOnboardingApi* | [**resolveVendorAddress**](docs/VendorOnboardingApi.md#resolvevendoraddress) | **POST** /vendors/onboarding/address/resolve |
+*VendorOnboardingApi* | [**resolveVendorAddressPin**](docs/VendorOnboardingApi.md#resolvevendoraddresspin) | **POST** /vendors/onboarding/address/pin |
+*VendorOnboardingApi* | [**reverseGeocodeVendorAddress**](docs/VendorOnboardingApi.md#reversegeocodevendoraddress) | **POST** /vendors/onboarding/address/geocode |
+*VendorOnboardingApi* | [**saveVendorSetupDraft**](docs/VendorOnboardingApi.md#savevendorsetupdraft) | **PATCH** /vendors/onboarding/setup |
+*VendorOnboardingApi* | [**saveVendorVerificationDraft**](docs/VendorOnboardingApi.md#savevendorverificationdraft) | **PATCH** /vendors/onboarding/verification |
+*VendorOnboardingApi* | [**searchVendorAddressAreas**](docs/VendorOnboardingApi.md#searchvendoraddressareas) | **GET** /vendors/onboarding/address/areas |
+*VendorOnboardingApi* | [**submitVendorVerification**](docs/VendorOnboardingApi.md#submitvendorverification) | **POST** /vendors/onboarding/verification/submit |
+*VendorOnboardingApi* | [**uploadVendorStoreMedia**](docs/VendorOnboardingApi.md#uploadvendorstoremedia) | **POST** /vendors/onboarding/media |
+*VendorOnboardingApi* | [**uploadVendorVerificationDocument**](docs/VendorOnboardingApi.md#uploadvendorverificationdocument) | **POST** /vendors/onboarding/documents |
 
 
 ### Models
 
-- [AcceptVendorCommission](docs/AcceptVendorCommission.md)
 - [AccountAdminChange](docs/AccountAdminChange.md)
 - [AccountAdminInvitation](docs/AccountAdminInvitation.md)
 - [AccountAdministrator](docs/AccountAdministrator.md)
@@ -199,7 +192,14 @@ All URIs are relative to */api/v1*
 - [AccountSessionListEnvelope](docs/AccountSessionListEnvelope.md)
 - [AccountSessionRevocation](docs/AccountSessionRevocation.md)
 - [AccountType](docs/AccountType.md)
+- [AdminDashboardAuditEnvelope](docs/AdminDashboardAuditEnvelope.md)
+- [AdminDashboardEnvelope](docs/AdminDashboardEnvelope.md)
+- [AdminDashboardSummary](docs/AdminDashboardSummary.md)
 - [AdminInvitationRequest](docs/AdminInvitationRequest.md)
+- [AdminVendorVerificationDecision](docs/AdminVendorVerificationDecision.md)
+- [AdminVendorVerificationDetailEnvelope](docs/AdminVendorVerificationDetailEnvelope.md)
+- [AdminVendorVerificationQueueEnvelope](docs/AdminVendorVerificationQueueEnvelope.md)
+- [AdminVendorVerificationQueueItem](docs/AdminVendorVerificationQueueItem.md)
 - [Agreement](docs/Agreement.md)
 - [AgreementListEnvelope](docs/AgreementListEnvelope.md)
 - [ApiError](docs/ApiError.md)
@@ -215,19 +215,17 @@ All URIs are relative to */api/v1*
 - [BuyerMobilePasswordRecoveryRequest](docs/BuyerMobilePasswordRecoveryRequest.md)
 - [BuyerMobileRefreshRequest](docs/BuyerMobileRefreshRequest.md)
 - [BuyerMobileRegisterRequest](docs/BuyerMobileRegisterRequest.md)
-- [ChangeVendorTeamMember](docs/ChangeVendorTeamMember.md)
-- [ConnectVendorTest](docs/ConnectVendorTest.md)
 - [CsrfEnvelope](docs/CsrfEnvelope.md)
 - [CsrfEnvelopeAllOfData](docs/CsrfEnvelopeAllOfData.md)
 - [EmailRequest](docs/EmailRequest.md)
 - [ErrorEnvelope](docs/ErrorEnvelope.md)
 - [FeeAssessment](docs/FeeAssessment.md)
 - [FinancialSnapshot](docs/FinancialSnapshot.md)
+- [GenericDataEnvelope](docs/GenericDataEnvelope.md)
 - [GoogleMobileExchangeRequest](docs/GoogleMobileExchangeRequest.md)
 - [GoogleOidcStartRequest](docs/GoogleOidcStartRequest.md)
 - [HealthEnvelope](docs/HealthEnvelope.md)
 - [HealthEnvelopeAllOfData](docs/HealthEnvelopeAllOfData.md)
-- [InviteVendorTeam](docs/InviteVendorTeam.md)
 - [LoginRequest](docs/LoginRequest.md)
 - [MaterialPriceObservation](docs/MaterialPriceObservation.md)
 - [MfaCodeRequest](docs/MfaCodeRequest.md)
@@ -236,68 +234,61 @@ All URIs are relative to */api/v1*
 - [MfaRecoveryRequest](docs/MfaRecoveryRequest.md)
 - [MfaStatusEnvelope](docs/MfaStatusEnvelope.md)
 - [MfaStatusEnvelopeAllOfData](docs/MfaStatusEnvelopeAllOfData.md)
+- [OnboardingDraftVersion](docs/OnboardingDraftVersion.md)
+- [OnboardingRequirement](docs/OnboardingRequirement.md)
+- [OnboardingStepCompletion](docs/OnboardingStepCompletion.md)
 - [PasswordRecoveryRequest](docs/PasswordRecoveryRequest.md)
 - [PasswordResetRequest](docs/PasswordResetRequest.md)
+- [PsgcArea](docs/PsgcArea.md)
+- [PsgcSearchEnvelope](docs/PsgcSearchEnvelope.md)
+- [PsgcSearchEnvelopeData](docs/PsgcSearchEnvelopeData.md)
 - [RegisterRequest](docs/RegisterRequest.md)
 - [RegistrationEnvelope](docs/RegistrationEnvelope.md)
 - [RegistrationEnvelopeAllOfData](docs/RegistrationEnvelopeAllOfData.md)
 - [ResendBotChallengeRequest](docs/ResendBotChallengeRequest.md)
-- [SaveVendorBusiness](docs/SaveVendorBusiness.md)
-- [SaveVendorStore](docs/SaveVendorStore.md)
-- [SaveVendorStoreRefundConfiguration](docs/SaveVendorStoreRefundConfiguration.md)
-- [SaveVendorTax](docs/SaveVendorTax.md)
+- [StoreActivationBlocker](docs/StoreActivationBlocker.md)
+- [StoreActivationReadiness](docs/StoreActivationReadiness.md)
 - [SuccessEnvelope](docs/SuccessEnvelope.md)
 - [UserIdentity](docs/UserIdentity.md)
+- [VendorActivationSnapshot](docs/VendorActivationSnapshot.md)
+- [VendorAddressGeocode](docs/VendorAddressGeocode.md)
+- [VendorAddressGeocodeEnvelope](docs/VendorAddressGeocodeEnvelope.md)
+- [VendorAddressSelection](docs/VendorAddressSelection.md)
 - [VendorBotProtectionEvidence](docs/VendorBotProtectionEvidence.md)
-- [VendorBusiness](docs/VendorBusiness.md)
-- [VendorBusinessAddress](docs/VendorBusinessAddress.md)
-- [VendorBusinessContact](docs/VendorBusinessContact.md)
-- [VendorBusinessDraft](docs/VendorBusinessDraft.md)
-- [VendorBusinessEnvelope](docs/VendorBusinessEnvelope.md)
-- [VendorBusinessReview](docs/VendorBusinessReview.md)
-- [VendorChecklistItem](docs/VendorChecklistItem.md)
-- [VendorCommissionTerms](docs/VendorCommissionTerms.md)
-- [VendorCommissionTermsEnvelope](docs/VendorCommissionTermsEnvelope.md)
-- [VendorConnection](docs/VendorConnection.md)
+- [VendorCommissionAcceptance](docs/VendorCommissionAcceptance.md)
 - [VendorDocument](docs/VendorDocument.md)
-- [VendorDocumentListEnvelope](docs/VendorDocumentListEnvelope.md)
-- [VendorDocumentReview](docs/VendorDocumentReview.md)
-- [VendorDocumentUpload](docs/VendorDocumentUpload.md)
-- [VendorDocumentUploadEnvelope](docs/VendorDocumentUploadEnvelope.md)
-- [VendorDownloadLink](docs/VendorDownloadLink.md)
-- [VendorDownloadLinkEnvelope](docs/VendorDownloadLinkEnvelope.md)
-- [VendorIndividualRegisteredName](docs/VendorIndividualRegisteredName.md)
+- [VendorDocumentEnvelope](docs/VendorDocumentEnvelope.md)
+- [VendorFile](docs/VendorFile.md)
+- [VendorFileEnvelope](docs/VendorFileEnvelope.md)
+- [VendorInvitation](docs/VendorInvitation.md)
 - [VendorInvitationAcceptance](docs/VendorInvitationAcceptance.md)
-- [VendorMutationEnvelope](docs/VendorMutationEnvelope.md)
-- [VendorOperatingDay](docs/VendorOperatingDay.md)
-- [VendorReadiness](docs/VendorReadiness.md)
-- [VendorReadinessEnvelope](docs/VendorReadinessEnvelope.md)
-- [VendorReview](docs/VendorReview.md)
-- [VendorSetup](docs/VendorSetup.md)
-- [VendorSetupEnvelope](docs/VendorSetupEnvelope.md)
-- [VendorStore](docs/VendorStore.md)
-- [VendorStoreEmailVerification](docs/VendorStoreEmailVerification.md)
-- [VendorStoreEmailVerificationConfirmation](docs/VendorStoreEmailVerificationConfirmation.md)
-- [VendorStoreEmailVerificationRequest](docs/VendorStoreEmailVerificationRequest.md)
-- [VendorStoreMedia](docs/VendorStoreMedia.md)
-- [VendorStoreMediaListEnvelope](docs/VendorStoreMediaListEnvelope.md)
-- [VendorTaxData](docs/VendorTaxData.md)
-- [VendorTaxProfile](docs/VendorTaxProfile.md)
-- [VendorTaxProfileEnvelope](docs/VendorTaxProfileEnvelope.md)
-- [VendorTaxProfileEvidenceVersionsInner](docs/VendorTaxProfileEvidenceVersionsInner.md)
-- [VendorTaxReviewHistory](docs/VendorTaxReviewHistory.md)
-- [VendorTaxVersionHistory](docs/VendorTaxVersionHistory.md)
-- [VendorTeam](docs/VendorTeam.md)
-- [VendorTeamEnvelope](docs/VendorTeamEnvelope.md)
-- [VendorTeamInvitation](docs/VendorTeamInvitation.md)
-- [VendorTeamInvitationListEnvelope](docs/VendorTeamInvitationListEnvelope.md)
-- [VendorTeamMember](docs/VendorTeamMember.md)
-- [VendorVehicle](docs/VendorVehicle.md)
-- [VendorVerificationRow](docs/VendorVerificationRow.md)
-- [VendorVerificationRowListEnvelope](docs/VendorVerificationRowListEnvelope.md)
-- [VendorVersionMutation](docs/VendorVersionMutation.md)
+- [VendorInvitationEnvelope](docs/VendorInvitationEnvelope.md)
+- [VendorInvitationRequest](docs/VendorInvitationRequest.md)
+- [VendorMediaEnvelope](docs/VendorMediaEnvelope.md)
+- [VendorOnboardingEnvelope](docs/VendorOnboardingEnvelope.md)
+- [VendorOnboardingSection](docs/VendorOnboardingSection.md)
+- [VendorOnboardingSnapshot](docs/VendorOnboardingSnapshot.md)
+- [VendorOnboardingStep](docs/VendorOnboardingStep.md)
+- [VendorPaymentConnection](docs/VendorPaymentConnection.md)
+- [VendorPaymentReconciliationEnvelope](docs/VendorPaymentReconciliationEnvelope.md)
+- [VendorRestriction](docs/VendorRestriction.md)
+- [VendorRestrictionEnvelope](docs/VendorRestrictionEnvelope.md)
+- [VendorSetupComplete](docs/VendorSetupComplete.md)
+- [VendorSetupDraft](docs/VendorSetupDraft.md)
+- [VendorSetupDraftDelivery](docs/VendorSetupDraftDelivery.md)
+- [VendorSetupDraftVehiclesInner](docs/VendorSetupDraftVehiclesInner.md)
+- [VendorStoreEmailConfirmation](docs/VendorStoreEmailConfirmation.md)
+- [VendorStoreEmailEnvelope](docs/VendorStoreEmailEnvelope.md)
+- [VendorVerificationDraft](docs/VendorVerificationDraft.md)
+- [VendorVerificationDraftClassification](docs/VendorVerificationDraftClassification.md)
+- [VendorVerificationDraftLegalIdentity](docs/VendorVerificationDraftLegalIdentity.md)
+- [VendorVerificationDraftRepresentative](docs/VendorVerificationDraftRepresentative.md)
+- [VendorVerificationDraftTaxProfile](docs/VendorVerificationDraftTaxProfile.md)
+- [VendorVerificationSubmit](docs/VendorVerificationSubmit.md)
+- [VendorWebhookEnvelope](docs/VendorWebhookEnvelope.md)
 - [VerifyBotChallengeRequest](docs/VerifyBotChallengeRequest.md)
 - [VerifyEmailRequest](docs/VerifyEmailRequest.md)
+- [XenditAccountVerificationWebhook](docs/XenditAccountVerificationWebhook.md)
 
 ### Authorization
 

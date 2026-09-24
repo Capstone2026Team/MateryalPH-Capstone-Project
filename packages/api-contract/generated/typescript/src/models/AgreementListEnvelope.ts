@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * MateryalPH API
- * Versioned Phase 1–3 contract. Later-phase commerce foundations do not expose placeholder operations.
+ * Versioned Phase 1–3 contract. Vendor onboarding, verification, activation readiness, private evidence, and team invitations are server-authorized. Browser credentials are isolated by configured frontend origin using _vendor and _admin suffixes on access, refresh, CSRF, MFA and bot-proof cookies. Existing unsuffixed browser sessions require sign-in again; cookie selection never replaces account authorization. Native Buyer transport is unchanged.
  *
  * The version of the OpenAPI document: 1.0.0-phase.3
  *
@@ -38,7 +38,7 @@ export interface AgreementListEnvelope {
     /**
      *
      */
-    errors: Array<any>;
+    errors: Array<{ [key: string]: any; }>;
 }
 
 /**

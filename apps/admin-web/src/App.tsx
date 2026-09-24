@@ -1,5 +1,6 @@
+import { AdminPlaceholderPage } from './pages/AdminPlaceholderPage'
 import { QRCodeSVG } from 'qrcode.react'
-import { AccountWorkspace, VendorOnboardingWorkspace, Button, Field, StatusMessage } from '@materyalph/web-ui'
+import { AccountWorkspace, Button, Field, StatusMessage } from '@materyalph/web-ui'
 import { ArrowRight } from 'lucide-react'
 import { type FormEvent, useEffect, useState } from 'react'
 import { BrowserRouter, Link, Route, Routes, useNavigate, useSearchParams } from 'react-router-dom'
@@ -7,10 +8,12 @@ import { BrowserRouter, Link, Route, Routes, useNavigate, useSearchParams } from
 import { AdminAuthShell } from './components/AdminAuthShell'
 import { acceptAdminInvitation, readableApiError, signInAdmin } from './lib/auth-api'
 import { AdminForgotPasswordPage, AdminMfaPage, AdminResetPasswordPage } from './pages/AuthSupportPages'
+import { AdminShell, AdminVendorVerificationDetailPage, AdminVendorVerificationQueuePage } from './pages/PhaseThreeAdminPages'
 import './App.css'
+import { AdminDashboardPage, AdminAuditPage } from './pages/AdminDashboardPage'
 
 function App() {
-  return <BrowserRouter><Routes><Route path="/vendor-verification" element={<VendorOnboardingWorkspace portal="admin" basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} accountPath="/workspace" dashboardPath="/workspace" />} /><Route path="/" element={<AdminLogin />} /><Route path="/login" element={<AdminLogin />} /><Route path="/accept-invite" element={<AcceptInvite />} /><Route path="/forgot-password" element={<AdminForgotPasswordPage />} /><Route path="/reset-password" element={<AdminResetPasswordPage />} /><Route path="/auth/mfa" element={<AdminMfaPage />} /><Route path="/workspace" element={<AccountWorkspace portal="admin" basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} loginPath="/login" renderQr={uri => <QRCodeSVG value={uri} title="Authenticator setup QR code" />} />} /><Route path="*" element={<AdminLogin />} /></Routes></BrowserRouter>
+  return <BrowserRouter><Routes><Route path="/" element={<AdminLogin />} /><Route path="/login" element={<AdminLogin />} /><Route path="/accept-invite" element={<AcceptInvite />} /><Route path="/forgot-password" element={<AdminForgotPasswordPage />} /><Route path="/reset-password" element={<AdminResetPasswordPage />} /><Route path="/auth/mfa" element={<AdminMfaPage />} /><Route path="/preview/:module" element={<AdminPlaceholderPage />} /><Route path="/dashboard" element={<AdminDashboardPage />} /><Route path="/audit" element={<AdminAuditPage />} /><Route path="/vendor-verification" element={<AdminVendorVerificationQueuePage />} /><Route path="/vendor-verification/:organizationId" element={<AdminVendorVerificationDetailPage />} /><Route path="/workspace" element={<AdminShell activeHref="/workspace"><AccountWorkspace embedded portal="admin" basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} loginPath="/login" renderQr={uri => <QRCodeSVG value={uri} title="Authenticator setup QR code" />} /></AdminShell>} /><Route path="*" element={<AdminShell activeHref=""><h1 className="text-2xl font-semibold">Page not found</h1><Link to="/vendor-verification">Return to verification queue</Link></AdminShell>} /></Routes></BrowserRouter>
 }
 
 function AdminLogin() {

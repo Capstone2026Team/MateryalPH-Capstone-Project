@@ -30,4 +30,9 @@ return [
             'WEB' => array_values(array_filter(array_map('trim', explode(',', (string) env('RECAPTCHA_VENDOR_WEB_ALLOWED_HOSTNAMES', 'localhost,127.0.0.1'))))),
         ],
     ],
+    'files' => [
+        'disk' => env('VENDOR_PRIVATE_DISK', 'local'),
+        'max_document_kb' => (int) env('VENDOR_DOCUMENT_MAX_KB', 10240),
+        'max_media_kb' => (int) env('VENDOR_MEDIA_MAX_KB', 20480),
+    ],
 ];

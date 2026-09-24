@@ -46,4 +46,23 @@ return [
         'timeout_seconds' => (int) env('RECAPTCHA_TIMEOUT_SECONDS', 5),
     ],
 
+    'cloudinary' => [
+        'cloud_name' => env('CLOUDINARY_CLOUD_NAME'),
+        'api_key' => env('CLOUDINARY_API_KEY'),
+        'api_secret' => env('CLOUDINARY_API_SECRET'),
+    ],
+
+    'google_maps' => [
+        'server_api_key' => env('GOOGLE_MAPS_SERVER_API_KEY'),
+        'timeout_seconds' => (int) env('GOOGLE_MAPS_TIMEOUT_SECONDS', 5),
+    ],
+
+    'xendit' => [
+        'mode' => env('XENDIT_MODE', 'TEST'),
+        'secret_key' => env('XENDIT_SECRET_KEY'),
+        'webhook_token' => env('XENDIT_WEBHOOK_VERIFICATION_TOKEN'),
+        'base_url' => env('XENDIT_API_BASE_URL', 'https://api.xendit.co'),
+        'timeout_seconds' => (int) env('XENDIT_TIMEOUT_SECONDS', 5),
+    ],
+
 ];

@@ -3,10 +3,12 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasUuidV7;
+use Carbon\CarbonImmutable;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Carbon;
 use Laravel\Passport\Contracts\OAuthenticatable;
 use Laravel\Passport\HasApiTokens;
 
@@ -16,6 +18,14 @@ use Laravel\Passport\HasApiTokens;
  * @property string $email
  * @property string $account_type
  * @property string $account_status
+ * @property string $password
+ * @property int $lock_version
+ * @property Carbon|null $email_verified_at
+ * @property CarbonImmutable|null $last_authenticated_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property string|null $profile_photo_key
+ * @property string|null $profile_photo_disk
  */
 class User extends Authenticatable implements OAuthenticatable
 {
@@ -49,6 +59,8 @@ class User extends Authenticatable implements OAuthenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'profile_photo_key',
+        'profile_photo_disk',
     ];
 
     /**

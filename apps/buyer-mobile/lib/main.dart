@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'auth/auth_repository.dart';
@@ -17,6 +18,7 @@ import 'screens/register_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/verify_email_screen.dart';
 import 'screens/welcome_screen.dart';
+import 'screens/terms_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -44,6 +46,7 @@ enum _AppStage {
   onboarding,
   welcome,
   login,
+  terms,
   register,
   googleSignup,
   verifyEmail,
@@ -58,6 +61,15 @@ class _BuyerAppState extends State<BuyerApp> {
   late final DeepLinkSource _deepLinkSource;
   StreamSubscription<Uri>? _linkSubscription;
   _AppStage _stage = _AppStage.splash;
+  _AppStage _termsOrigin = _AppStage.welcome;
+  void _beginTerms(_AppStage origin) {
+    _authRepository.clearTermsReview();
+    setState(() {
+      _termsOrigin = origin;
+      _stage = _AppStage.terms;
+    });
+  }
+
   String _verificationEmail = '';
   String? _lastExchangeCode;
 
@@ -136,6 +148,9 @@ class _BuyerAppState extends State<BuyerApp> {
         _showMessage(context, 'Google sign-in could not be opened.');
       }
     } on BuyerAuthException catch (error) {
+      if (signUp && mounted && !_authRepository.hasReviewedTerms) {
+        _beginTerms(_termsOrigin);
+      }
       if (context.mounted) _showMessage(context, error.message);
     } catch (_) {
       if (context.mounted) {
@@ -182,6 +197,10 @@ class _BuyerAppState extends State<BuyerApp> {
       title: 'MateryalPH Buyer',
       debugShowCheckedModeBanner: false,
       theme: BuyerTheme.light,
+      builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
+        value: BuyerTheme.systemUi,
+        child: child ?? const SizedBox.shrink(),
+      ),
       home: Builder(
         builder: (context) {
           final reduceMotion = MediaQuery.disableAnimationsOf(context);
@@ -208,7 +227,7 @@ class _BuyerAppState extends State<BuyerApp> {
       case _AppStage.welcome:
         return WelcomeScreen(
           onLogin: () => setState(() => _stage = _AppStage.login),
-          onRegister: () => setState(() => _stage = _AppStage.register),
+          onRegister: () => _beginTerms(_AppStage.welcome),
           onGoogle: () => _startGoogleSignIn(context),
         );
       case _AppStage.login:
@@ -216,10 +235,19 @@ class _BuyerAppState extends State<BuyerApp> {
           onGoogle: () => _startGoogleSignIn(context),
           authRepository: _authRepository,
           onAuthenticated: () => setState(() => _stage = _AppStage.home),
-          onRegister: () => setState(() => _stage = _AppStage.register),
+          onRegister: () => _beginTerms(_AppStage.login),
           onForgotPassword: () =>
               setState(() => _stage = _AppStage.passwordRecovery),
           onBack: () => setState(() => _stage = _AppStage.welcome),
+        );
+      case _AppStage.terms:
+        return TermsScreen(
+          repository: _authRepository,
+          onAccepted: () => setState(() => _stage = _AppStage.register),
+          onBack: () {
+            _authRepository.clearTermsReview();
+            setState(() => _stage = _termsOrigin);
+          },
         );
       case _AppStage.register:
         return RegisterScreen(
@@ -231,7 +259,7 @@ class _BuyerAppState extends State<BuyerApp> {
           onGoogleRegister: () =>
               setState(() => _stage = _AppStage.googleSignup),
           onLogin: () => setState(() => _stage = _AppStage.login),
-          onBack: () => setState(() => _stage = _AppStage.welcome),
+          onBack: () => _beginTerms(_termsOrigin),
         );
       case _AppStage.googleSignup:
         return GoogleSignupScreen(

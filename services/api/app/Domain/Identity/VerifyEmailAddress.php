@@ -29,6 +29,24 @@ final class VerifyEmailAddress
                 'account_status' => 'ACTIVE',
             ])->save();
 
+            if ($user->account_type === 'VENDOR') {
+                $organizationIds = DB::table('vendor_memberships')
+                    ->where('user_id', $user->getKey())
+                    ->where('role', 'OWNER')
+                    ->where('status', 'ACTIVE')
+                    ->pluck('vendor_organization_id');
+
+                DB::table('vendor_organizations')
+                    ->whereIn('id', $organizationIds->all())
+                    ->whereNull('store_email')
+                    ->whereNull('pending_store_email')
+                    ->update([
+                        'store_email' => mb_strtolower((string) $user->email),
+                        'store_email_verified_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+            }
+
             return $user;
         });
     }

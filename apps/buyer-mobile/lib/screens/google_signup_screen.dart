@@ -158,10 +158,7 @@ class _GoogleSignupScreenState extends State<GoogleSignupScreen> {
                 const SizedBox(height: 20),
                 FilledButton.icon(
                   onPressed: _submitting ? null : _submit,
-                  icon: const Text(
-                    'G',
-                    style: TextStyle(fontWeight: FontWeight.w800),
-                  ),
+                  icon: const Icon(Icons.g_mobiledata, size: 32),
                   label: Text(
                     _submitting ? 'Opening Google…' : 'Continue with Google',
                   ),

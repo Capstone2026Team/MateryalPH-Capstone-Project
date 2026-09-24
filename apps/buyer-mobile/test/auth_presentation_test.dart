@@ -1,3 +1,4 @@
+import 'terms_fixtures.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -27,7 +28,7 @@ void main() {
             tester.platformDispatcher.clearTextScaleFactorTestValue();
             return tester.binding.setSurfaceSize(null);
           });
-          final repository = AuthRepository(tokenStore: _MemoryTokens());
+          final repository = (await tester.runAsync(reviewedRepository))!;
           final screens = [
             LoginScreen(
               authRepository: repository,

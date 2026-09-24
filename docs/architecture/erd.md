@@ -572,9 +572,6 @@ erDiagram
     VENDOR_BADGE_HISTORY {
         uuid id PK
     }
-    VENDOR_BUSINESS_SUBMISSIONS {
-        uuid id PK
-    }
     VENDOR_CLASSIFICATIONS {
         uuid id PK
     }
@@ -582,6 +579,9 @@ erDiagram
         uuid id PK
     }
     VENDOR_CONTACTS {
+        uuid id PK
+    }
+    VENDOR_DOCUMENT_EXPIRY_NOTICES {
         uuid id PK
     }
     VENDOR_INVITATIONS {
@@ -600,12 +600,6 @@ erDiagram
         uuid id PK
     }
     VENDOR_PAYMENT_ACCOUNTS {
-        uuid id PK
-    }
-    VENDOR_PUBLIC_MEDIA_RECOVERIES {
-        uuid id PK
-    }
-    VENDOR_TAX_PROFILE_REVIEWS {
         uuid id PK
     }
     VENDOR_TAX_PROFILE_VERSIONS {
@@ -633,10 +627,9 @@ erDiagram
         uuid id PK
     }
     ADDRESSES ||--|{ BUYER_LOCATIONS : "address_id → id"
-    ADDRESSES ||--|{ DELIVERY_SERVICE_AREAS : "origin_address_id → id"
+    ADDRESSES ||--o{ DELIVERY_SERVICE_AREAS : "address_id → id"
     ADDRESSES ||--|{ PRICE_OBSERVATIONS : "address_id → id"
     ADDRESSES ||--|{ PROJECT_SITES : "address_id → id"
-    ADDRESSES ||--o{ STORE_PROFILES : "address_id → id"
     AGREEMENT_DOCUMENTS ||--|{ AGREEMENT_VERSIONS : "agreement_document_id → id"
     AGREEMENT_VERSIONS ||--|{ AGREEMENT_ACCEPTANCES : "agreement_version_id → id"
     ANALYTICS_REFRESH_RUNS ||--|{ ANALYTICS_PUBLISHED_RUNS : "analytics_refresh_run_id → id"
@@ -651,7 +644,9 @@ erDiagram
     BADGE_DEFINITIONS ||--|{ VENDOR_BADGE_HISTORY : "badge_definition_id → id"
     BOT_RISK_CHALLENGES ||--o{ EMAIL_OTPS : "bot_risk_challenge_id → id"
     BUSINESS_DOCUMENT_VERSIONS ||--|{ BUSINESS_DOCUMENT_REVIEWS : "business_document_version_id → id"
+    BUSINESS_DOCUMENT_VERSIONS ||--o{ BUSINESS_DOCUMENT_VERSIONS : "supersedes_version_id → id"
     BUSINESS_DOCUMENT_VERSIONS ||--o{ BUSINESS_DOCUMENTS : "current_version_id → id"
+    BUSINESS_DOCUMENT_VERSIONS ||--|{ VENDOR_DOCUMENT_EXPIRY_NOTICES : "business_document_version_id → id"
     BUSINESS_DOCUMENTS ||--|{ BUSINESS_DOCUMENT_VERSIONS : "business_document_id → id"
     BUYER_PROFILES ||--|{ BUYER_LOCATIONS : "buyer_profile_id → id"
     BUYER_PROFILES ||--|{ BUYER_RANKING_PREFERENCES : "buyer_profile_id → id"
@@ -704,11 +699,14 @@ erDiagram
     FILES ||--o{ PHYSICAL_PAYMENT_RECORDS : "evidence_file_id → id"
     FILES ||--o{ PHYSICAL_REIMBURSEMENTS : "evidence_file_id → id"
     FILES ||--o{ REMITTANCE_ASSESSMENTS : "evidence_file_id → id"
-    FILES ||--o{ STORE_MEDIA : "file_id → id"
+    FILES ||--|{ STORE_MEDIA : "file_id → id"
+    FILES ||--o{ STORE_PROFILES : "banner_file_id → id"
+    FILES ||--o{ STORE_PROFILES : "logo_file_id → id"
     FILES ||--o{ TAX_ADJUSTMENTS : "evidence_file_id → id"
     FILES ||--|{ TAX_CERTIFICATES : "file_id → id"
     FILES ||--|{ TAX_EVIDENCE : "file_id → id"
     FILES ||--o{ TAX_REPORT_PACKAGES : "file_id → id"
+    FILES ||--o{ VENDOR_VEHICLES : "image_file_id → id"
     FILING_CALENDAR_VERSIONS ||--|{ FILING_DEADLINES : "filing_calendar_version_id → id"
     FILING_CALENDAR_VERSIONS ||--o{ TAX_REPORT_PACKAGES : "filing_calendar_version_id → id"
     FILING_DEADLINES ||--|{ EXTERNAL_FILING_EVIDENCE : "filing_deadline_id → id"
@@ -815,7 +813,6 @@ erDiagram
     REMITTANCE_GROUPS ||--|{ REMITTANCE_COLLECTIONS : "remittance_group_id → id"
     REVIEWS ||--|{ REVIEW_MEDIA : "review_id → id"
     REVIEWS ||--|{ REVIEW_MODERATION : "review_id → id"
-    STORE_MEDIA ||--o{ VENDOR_PUBLIC_MEDIA_RECOVERIES : "store_media_id → id"
     STORE_PROFILES ||--|{ OPERATING_HOURS : "store_profile_id → id"
     STORE_PROFILES ||--|{ STORE_MEDIA : "store_profile_id → id"
     TAX_REPORT_PACKAGES ||--|{ TAX_REPORT_PACKAGE_LINES : "tax_report_package_id → id"
@@ -840,7 +837,7 @@ erDiagram
     USERS ||--|{ AUTO_ACCEPT_POLICY_VERSIONS : "created_by_user_id → id"
     USERS ||--|{ BUDGET_OVERRIDES : "buyer_user_id → id"
     USERS ||--|{ BUSINESS_DOCUMENT_REVIEWS : "reviewer_user_id → id"
-    USERS ||--o{ BUSINESS_DOCUMENT_VERSIONS : "uploaded_by_user_id → id"
+    USERS ||--|{ BUSINESS_DOCUMENT_VERSIONS : "uploaded_by_user_id → id"
     USERS ||--|{ BUYER_PROFILES : "user_id → id"
     USERS ||--o{ CANCELLATION_DECISIONS : "actor_user_id → id"
     USERS ||--o{ CANCELLATION_REQUESTS : "actor_user_id → id"
@@ -863,6 +860,7 @@ erDiagram
     USERS ||--|{ FEE_ADJUSTMENTS : "approved_by_user_id → id"
     USERS ||--|{ FEE_ADJUSTMENTS : "prepared_by_user_id → id"
     USERS ||--o{ FEE_POLICY_VERSIONS : "approved_by_user_id → id"
+    USERS ||--o{ FILES : "uploaded_by_user_id → id"
     USERS ||--o{ FILING_CALENDAR_VERSIONS : "approved_by_user_id → id"
     USERS ||--o{ FINANCIAL_LEDGER_ENTRIES : "actor_user_id → id"
     USERS ||--o{ FINANCIAL_POSTING_BATCHES : "prepared_by_user_id → id"
@@ -912,19 +910,22 @@ erDiagram
     USERS ||--o{ UNIT_CONVERSIONS : "approved_by_user_id → id"
     USERS ||--|{ USER_PROFILES : "user_id → id"
     USERS ||--o{ VENDOR_ACTIVATION_HISTORY : "actor_user_id → id"
-    USERS ||--|{ VENDOR_BUSINESS_SUBMISSIONS : "submitted_by_user_id → id"
     USERS ||--o{ VENDOR_CONFIRMATIONS : "actor_user_id → id"
-    USERS ||--o{ VENDOR_INVITATIONS : "accepted_by_user_id → id"
     USERS ||--|{ VENDOR_INVITATIONS : "invited_by_user_id → id"
     USERS ||--|{ VENDOR_MEMBERSHIPS : "user_id → id"
-    USERS ||--|{ VENDOR_TAX_PROFILE_REVIEWS : "reviewer_user_id → id"
+    USERS ||--o{ VENDOR_ONBOARDING_STEPS : "reviewed_by_user_id → id"
+    USERS ||--o{ VENDOR_ONBOARDING_STEPS : "submitted_by_user_id → id"
     USERS ||--o{ VENDOR_TAX_PROFILE_VERSIONS : "approved_by_user_id → id"
+    USERS ||--o{ VENDOR_TAX_PROFILE_VERSIONS : "drafted_by_user_id → id"
+    USERS ||--o{ VENDOR_TAX_PROFILE_VERSIONS : "owner_attested_by_user_id → id"
     USERS ||--|{ VENDOR_TAX_PROFILE_VERSIONS : "submitted_by_user_id → id"
+    USERS ||--o{ VENDOR_TAX_PROFILES : "attested_by_user_id → id"
     VEHICLE_RATE_VERSIONS ||--|{ DELIVERY_QUOTES : "vehicle_rate_version_id → id"
     VENDOR_LISTINGS ||--|{ COMPLIANCE_SUBMISSIONS : "vendor_listing_id → id"
     VENDOR_LISTINGS ||--|{ LISTING_MEDIA : "vendor_listing_id → id"
     VENDOR_LISTINGS ||--|{ LISTING_STATUS_HISTORY : "vendor_listing_id → id"
     VENDOR_LISTINGS ||--|{ LISTING_VARIANTS : "vendor_listing_id → id"
+    VENDOR_ONBOARDING_STEPS ||--o{ BUSINESS_DOCUMENTS : "onboarding_step_id → id"
     VENDOR_ORGANIZATIONS ||--o{ AGREEMENT_ACCEPTANCES : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ BUSINESS_DOCUMENTS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ CHECKOUT_VENDOR_GROUPS : "vendor_organization_id → id"
@@ -937,7 +938,6 @@ erDiagram
     VENDOR_ORGANIZATIONS ||--|{ FAVORITE_VENDORS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ FEE_ASSESSMENTS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ FEE_STATEMENTS : "vendor_organization_id → id"
-    VENDOR_ORGANIZATIONS ||--o{ FILES : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ INVOICE_RECORDS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ METRIC_EVENTS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ ORDERS : "vendor_organization_id → id"
@@ -951,7 +951,6 @@ erDiagram
     VENDOR_ORGANIZATIONS ||--|{ TAX_YEAR_ACCUMULATORS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ VENDOR_ACTIVATION_HISTORY : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ VENDOR_BADGE_HISTORY : "vendor_organization_id → id"
-    VENDOR_ORGANIZATIONS ||--|{ VENDOR_BUSINESS_SUBMISSIONS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ VENDOR_CLASSIFICATIONS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ VENDOR_CONTACTS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ VENDOR_INVITATIONS : "vendor_organization_id → id"
@@ -959,12 +958,10 @@ erDiagram
     VENDOR_ORGANIZATIONS ||--|{ VENDOR_MEMBERSHIPS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ VENDOR_ONBOARDING_STEPS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ VENDOR_PAYMENT_ACCOUNTS : "vendor_organization_id → id"
-    VENDOR_ORGANIZATIONS ||--|{ VENDOR_PUBLIC_MEDIA_RECOVERIES : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ VENDOR_TAX_PROFILES : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ VENDOR_VEHICLES : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--o{ WORK_PACKAGES : "selected_vendor_organization_id → id"
     VENDOR_TAX_PROFILE_VERSIONS ||--|{ TAX_EVIDENCE : "vendor_tax_profile_version_id → id"
-    VENDOR_TAX_PROFILE_VERSIONS ||--|{ VENDOR_TAX_PROFILE_REVIEWS : "vendor_tax_profile_version_id → id"
     VENDOR_TAX_PROFILE_VERSIONS ||--o{ VENDOR_TAX_PROFILES : "current_version_id → id"
     VENDOR_TAX_PROFILE_VERSIONS ||--|{ WITHHOLDING_ASSIGNMENTS : "vendor_tax_profile_version_id → id"
     VENDOR_TAX_PROFILES ||--|{ VENDOR_TAX_PROFILE_VERSIONS : "vendor_tax_profile_id → id"

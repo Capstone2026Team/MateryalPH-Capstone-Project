@@ -3,6 +3,7 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:built_collection/built_collection.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -11,59 +12,30 @@ part 'vendor_document.g.dart';
 /// VendorDocument
 ///
 /// Properties:
-/// * [reviewReason]
-/// * [verifiedReference]
-/// * [verifiedIssuedOn]
-/// * [verifiedExpiresOn]
-/// * [verifiedExpiryNotApplicable]
 /// * [id]
-/// * [documentType]
+/// * [requirementKey]
+/// * [version] - Zero for a pending attachment; review versions are created only on submission.
 /// * [status]
-/// * [version]
-/// * [environment]
-/// * [evidenceOrigin]
 /// * [scanState]
-/// * [createdAt]
 @BuiltValue()
 abstract class VendorDocument implements Built<VendorDocument, VendorDocumentBuilder> {
-  @BuiltValueField(wireName: r'review_reason')
-  String? get reviewReason;
-
-  @BuiltValueField(wireName: r'verified_reference')
-  String? get verifiedReference;
-
-  @BuiltValueField(wireName: r'verified_issued_on')
-  String? get verifiedIssuedOn;
-
-  @BuiltValueField(wireName: r'verified_expires_on')
-  String? get verifiedExpiresOn;
-
-  @BuiltValueField(wireName: r'verified_expiry_not_applicable')
-  bool get verifiedExpiryNotApplicable;
-
   @BuiltValueField(wireName: r'id')
   String get id;
 
-  @BuiltValueField(wireName: r'document_type')
-  String get documentType;
+  @BuiltValueField(wireName: r'requirement_key')
+  String get requirementKey;
 
-  @BuiltValueField(wireName: r'status')
-  String get status;
-
+  /// Zero for a pending attachment; review versions are created only on submission.
   @BuiltValueField(wireName: r'version')
   int get version;
 
-  @BuiltValueField(wireName: r'environment')
-  String get environment;
-
-  @BuiltValueField(wireName: r'evidence_origin')
-  String get evidenceOrigin;
+  @BuiltValueField(wireName: r'status')
+  VendorDocumentStatusEnum get status;
+  // enum statusEnum {  PENDING_SUBMISSION,  };
 
   @BuiltValueField(wireName: r'scan_state')
-  String get scanState;
-
-  @BuiltValueField(wireName: r'created_at')
-  String get createdAt;
+  VendorDocumentScanStateEnum get scanState;
+  // enum scanStateEnum {  PENDING,  CLEAN,  REJECTED,  };
 
   VendorDocument._();
 
@@ -88,44 +60,14 @@ class _$VendorDocumentSerializer implements PrimitiveSerializer<VendorDocument> 
     VendorDocument object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
-    yield r'review_reason';
-    yield object.reviewReason == null ? null : serializers.serialize(
-      object.reviewReason,
-      specifiedType: const FullType.nullable(String),
-    );
-    yield r'verified_reference';
-    yield object.verifiedReference == null ? null : serializers.serialize(
-      object.verifiedReference,
-      specifiedType: const FullType.nullable(String),
-    );
-    yield r'verified_issued_on';
-    yield object.verifiedIssuedOn == null ? null : serializers.serialize(
-      object.verifiedIssuedOn,
-      specifiedType: const FullType.nullable(String),
-    );
-    yield r'verified_expires_on';
-    yield object.verifiedExpiresOn == null ? null : serializers.serialize(
-      object.verifiedExpiresOn,
-      specifiedType: const FullType.nullable(String),
-    );
-    yield r'verified_expiry_not_applicable';
-    yield serializers.serialize(
-      object.verifiedExpiryNotApplicable,
-      specifiedType: const FullType(bool),
-    );
     yield r'id';
     yield serializers.serialize(
       object.id,
       specifiedType: const FullType(String),
     );
-    yield r'document_type';
+    yield r'requirement_key';
     yield serializers.serialize(
-      object.documentType,
-      specifiedType: const FullType(String),
-    );
-    yield r'status';
-    yield serializers.serialize(
-      object.status,
+      object.requirementKey,
       specifiedType: const FullType(String),
     );
     yield r'version';
@@ -133,25 +75,15 @@ class _$VendorDocumentSerializer implements PrimitiveSerializer<VendorDocument> 
       object.version,
       specifiedType: const FullType(int),
     );
-    yield r'environment';
+    yield r'status';
     yield serializers.serialize(
-      object.environment,
-      specifiedType: const FullType(String),
-    );
-    yield r'evidence_origin';
-    yield serializers.serialize(
-      object.evidenceOrigin,
-      specifiedType: const FullType(String),
+      object.status,
+      specifiedType: const FullType(VendorDocumentStatusEnum),
     );
     yield r'scan_state';
     yield serializers.serialize(
       object.scanState,
-      specifiedType: const FullType(String),
-    );
-    yield r'created_at';
-    yield serializers.serialize(
-      object.createdAt,
-      specifiedType: const FullType(String),
+      specifiedType: const FullType(VendorDocumentScanStateEnum),
     );
   }
 
@@ -176,45 +108,6 @@ class _$VendorDocumentSerializer implements PrimitiveSerializer<VendorDocument> 
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
-        case r'review_reason':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType.nullable(String),
-          ) as String?;
-          if (valueDes == null) continue;
-          result.reviewReason = valueDes;
-          break;
-        case r'verified_reference':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType.nullable(String),
-          ) as String?;
-          if (valueDes == null) continue;
-          result.verifiedReference = valueDes;
-          break;
-        case r'verified_issued_on':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType.nullable(String),
-          ) as String?;
-          if (valueDes == null) continue;
-          result.verifiedIssuedOn = valueDes;
-          break;
-        case r'verified_expires_on':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType.nullable(String),
-          ) as String?;
-          if (valueDes == null) continue;
-          result.verifiedExpiresOn = valueDes;
-          break;
-        case r'verified_expiry_not_applicable':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(bool),
-          ) as bool;
-          result.verifiedExpiryNotApplicable = valueDes;
-          break;
         case r'id':
           final valueDes = serializers.deserialize(
             value,
@@ -222,19 +115,12 @@ class _$VendorDocumentSerializer implements PrimitiveSerializer<VendorDocument> 
           ) as String;
           result.id = valueDes;
           break;
-        case r'document_type':
+        case r'requirement_key':
           final valueDes = serializers.deserialize(
             value,
             specifiedType: const FullType(String),
           ) as String;
-          result.documentType = valueDes;
-          break;
-        case r'status':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
-          result.status = valueDes;
+          result.requirementKey = valueDes;
           break;
         case r'version':
           final valueDes = serializers.deserialize(
@@ -243,33 +129,19 @@ class _$VendorDocumentSerializer implements PrimitiveSerializer<VendorDocument> 
           ) as int;
           result.version = valueDes;
           break;
-        case r'environment':
+        case r'status':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(String),
-          ) as String;
-          result.environment = valueDes;
-          break;
-        case r'evidence_origin':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
-          result.evidenceOrigin = valueDes;
+            specifiedType: const FullType(VendorDocumentStatusEnum),
+          ) as VendorDocumentStatusEnum;
+          result.status = valueDes;
           break;
         case r'scan_state':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(String),
-          ) as String;
+            specifiedType: const FullType(VendorDocumentScanStateEnum),
+          ) as VendorDocumentScanStateEnum;
           result.scanState = valueDes;
-          break;
-        case r'created_at':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
-          result.createdAt = valueDes;
           break;
         default:
           unhandled.add(key);
@@ -300,4 +172,34 @@ class _$VendorDocumentSerializer implements PrimitiveSerializer<VendorDocument> 
   }
 }
 
+
+class VendorDocumentStatusEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'PENDING_SUBMISSION')
+  static const VendorDocumentStatusEnum PENDING_SUBMISSION = _$vendorDocumentStatusEnum_PENDING_SUBMISSION;
+
+  static Serializer<VendorDocumentStatusEnum> get serializer => _$vendorDocumentStatusEnumSerializer;
+
+  const VendorDocumentStatusEnum._(String name): super(name);
+
+  static BuiltSet<VendorDocumentStatusEnum> get values => _$vendorDocumentStatusEnumValues;
+  static VendorDocumentStatusEnum valueOf(String name) => _$vendorDocumentStatusEnumValueOf(name);
+}
+
+class VendorDocumentScanStateEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'PENDING')
+  static const VendorDocumentScanStateEnum PENDING = _$vendorDocumentScanStateEnum_PENDING;
+  @BuiltValueEnumConst(wireName: r'CLEAN')
+  static const VendorDocumentScanStateEnum CLEAN = _$vendorDocumentScanStateEnum_CLEAN;
+  @BuiltValueEnumConst(wireName: r'REJECTED')
+  static const VendorDocumentScanStateEnum REJECTED = _$vendorDocumentScanStateEnum_REJECTED;
+
+  static Serializer<VendorDocumentScanStateEnum> get serializer => _$vendorDocumentScanStateEnumSerializer;
+
+  const VendorDocumentScanStateEnum._(String name): super(name);
+
+  static BuiltSet<VendorDocumentScanStateEnum> get values => _$vendorDocumentScanStateEnumValues;
+  static VendorDocumentScanStateEnum valueOf(String name) => _$vendorDocumentScanStateEnumValueOf(name);
+}
 

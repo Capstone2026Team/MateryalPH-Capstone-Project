@@ -10,6 +10,7 @@ import 'package:materyalph_api_client/src/auth/basic_auth.dart';
 import 'package:materyalph_api_client/src/auth/bearer_auth.dart';
 import 'package:materyalph_api_client/src/auth/oauth.dart';
 import 'package:materyalph_api_client/src/api/accounts_api.dart';
+import 'package:materyalph_api_client/src/api/admin_vendor_verification_api.dart';
 import 'package:materyalph_api_client/src/api/agreements_api.dart';
 import 'package:materyalph_api_client/src/api/authentication_api.dart';
 import 'package:materyalph_api_client/src/api/system_api.dart';
@@ -113,6 +114,12 @@ class MateryalphApiClient {
   /// by doing that all interceptors will not be executed
   AccountsApi getAccountsApi() {
     return AccountsApi(dio, serializers);
+  }
+
+  /// Get AdminVendorVerificationApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  AdminVendorVerificationApi getAdminVendorVerificationApi() {
+    return AdminVendorVerificationApi(dio, serializers);
   }
 
   /// Get AgreementsApi instance, base route and serializer can be overridden by a given but be careful,

@@ -7,372 +7,136 @@ void main() {
   final instance = MateryalphApiClient().getVendorOnboardingApi();
 
   group(VendorOnboardingApi, () {
-    // accept Vendor Commission Terms
+    // Explicit version-bound acceptance in Store Verification. Owner only; applicable current representative authority requires the COMMISSION_AGREEMENT scope. Autosaving or submitting evidence never implies consent. Initial evidence submission remains available while authority approval is pending.
     //
-    // TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-    //
-    //Future<VendorCommissionTermsEnvelope> acceptVendorCommissionTerms(String organization, AcceptVendorCommission acceptVendorCommission) async
-    test('test acceptVendorCommissionTerms', () async {
+    //Future<VendorOnboardingEnvelope> acceptVendorCommission(String idempotencyKey, VendorCommissionAcceptance vendorCommissionAcceptance) async
+    test('test acceptVendorCommission', () async {
       // TODO
     });
 
-    // activate Vendor Marketplace
-    //
-    // TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-    //
-    //Future<VendorReadinessEnvelope> activateVendorMarketplace(String organization, VendorVersionMutation vendorVersionMutation) async
-    test('test activateVendorMarketplace', () async {
+    //Future<VendorOnboardingEnvelope> activateVendorStore(String idempotencyKey) async
+    test('test activateVendorStore', () async {
       // TODO
     });
 
-    // change Vendor Team Member
-    //
-    // TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-    //
-    //Future<VendorMutationEnvelope> changeVendorTeamMember(String organization, String membership, ChangeVendorTeamMember changeVendorTeamMember) async
-    test('test changeVendorTeamMember', () async {
+    //Future<VendorOnboardingEnvelope> captureVendorPaymentConnection(String idempotencyKey, VendorPaymentConnection vendorPaymentConnection) async
+    test('test captureVendorPaymentConnection', () async {
       // TODO
     });
 
-    // confirm Vendor Store Email Verification
-    //
-    // TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-    //
-    //Future<VendorBusinessEnvelope> confirmVendorStoreEmailVerification(String organization, VendorStoreEmailVerificationConfirmation vendorStoreEmailVerificationConfirmation) async
+    //Future<VendorOnboardingEnvelope> completeVendorSetup(String idempotencyKey, VendorSetupComplete vendorSetupComplete) async
+    test('test completeVendorSetup', () async {
+      // TODO
+    });
+
+    //Future<VendorOnboardingEnvelope> confirmVendorStoreEmailVerification(VendorStoreEmailConfirmation vendorStoreEmailConfirmation) async
     test('test confirmVendorStoreEmailVerification', () async {
       // TODO
     });
 
-    // connect Vendor Test
+    // Persists the Owner welcome completion across refreshes and sessions. Clients continue to Store Verification after success.
     //
-    // TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-    //
-    //Future<VendorSetupEnvelope> connectVendorTest(String organization, ConnectVendorTest connectVendorTest) async
-    test('test connectVendorTest', () async {
+    //Future<VendorOnboardingEnvelope> dismissVendorOnboardingWelcome() async
+    test('test dismissVendorOnboardingWelcome', () async {
       // TODO
     });
 
-    // download Admin Vendor Document
-    //
-    // TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-    //
-    //Future<Uint8List> downloadAdminVendorDocument(String organization, String version, String expires, String signature, String viewer) async
-    test('test downloadAdminVendorDocument', () async {
+    //Future<Uint8List> downloadVendorOnboardingFile(String fileId) async
+    test('test downloadVendorOnboardingFile', () async {
       // TODO
     });
 
-    // download Vendor Document
-    //
-    // TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-    //
-    //Future<Uint8List> downloadVendorDocument(String organization, String version, String expires, String signature, String viewer) async
-    test('test downloadVendorDocument', () async {
+    //Future<VendorOnboardingEnvelope> getAuthoritativeVendorOnboarding() async
+    test('test getAuthoritativeVendorOnboarding', () async {
       // TODO
     });
 
-    // get Admin Vendor Business
-    //
-    // TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-    //
-    //Future<VendorBusinessEnvelope> getAdminVendorBusiness(String organization) async
-    test('test getAdminVendorBusiness', () async {
+    //Future<VendorOnboardingEnvelope> getVendorOnboarding() async
+    test('test getVendorOnboarding', () async {
       // TODO
     });
 
-    // get Admin Vendor Readiness
+    // Returns a five-minute signed URL for clean private verification evidence or ready Store Profile media owned by the current Vendor organization. Download rechecks authentication, permissions, ownership and scan state.
     //
-    // TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-    //
-    //Future<VendorReadinessEnvelope> getAdminVendorReadiness(String organization) async
-    test('test getAdminVendorReadiness', () async {
+    //Future<VendorFileEnvelope> getVendorPrivateFileUrl(String fileId) async
+    test('test getVendorPrivateFileUrl', () async {
       // TODO
     });
 
-    // get Admin Vendor Tax Profile
-    //
-    // TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-    //
-    //Future<VendorTaxProfileEnvelope> getAdminVendorTaxProfile(String organization) async
-    test('test getAdminVendorTaxProfile', () async {
+    //Future<VendorInvitationEnvelope> inviteVendorTeamMember(String idempotencyKey, VendorInvitationRequest vendorInvitationRequest) async
+    test('test inviteVendorTeamMember', () async {
       // TODO
     });
 
-    // get Public Vendor Store Media
-    //
-    // Public delivery for an approved, unreplaced Store Profile image belonging to an active Vendor.
-    //
-    //Future<Uint8List> getPublicVendorStoreMedia(String organization, String media) async
-    test('test getPublicVendorStoreMedia', () async {
+    //Future<GenericDataEnvelope> previewVendorRequirements(String businessType, { String representativeRole, String identityIdType, String representativeIdType, String authorityEvidenceVersionId, int declarationClaim }) async
+    test('test previewVendorRequirements', () async {
       // TODO
     });
 
-    // get Vendor Business
-    //
-    // TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-    //
-    //Future<VendorBusinessEnvelope> getVendorBusiness(String organization) async
-    test('test getVendorBusiness', () async {
+    //Future<VendorWebhookEnvelope> receiveXenditAccountVerificationWebhook(String xCallbackToken, XenditAccountVerificationWebhook xenditAccountVerificationWebhook) async
+    test('test receiveXenditAccountVerificationWebhook', () async {
       // TODO
     });
 
-    // get Vendor Commission Terms
-    //
-    // TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-    //
-    //Future<VendorCommissionTermsEnvelope> getVendorCommissionTerms(String organization) async
-    test('test getVendorCommissionTerms', () async {
+    //Future<VendorPaymentReconciliationEnvelope> reconcileVendorPaymentConnection() async
+    test('test reconcileVendorPaymentConnection', () async {
       // TODO
     });
 
-    // get Vendor Readiness
-    //
-    // TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-    //
-    //Future<VendorReadinessEnvelope> getVendorReadiness(String organization) async
-    test('test getVendorReadiness', () async {
+    //Future<VendorOnboardingEnvelope> removePendingVendorDocument(String requirementKey) async
+    test('test removePendingVendorDocument', () async {
       // TODO
     });
 
-    // get Vendor Setup
-    //
-    // TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-    //
-    //Future<VendorSetupEnvelope> getVendorSetup(String organization) async
-    test('test getVendorSetup', () async {
-      // TODO
-    });
-
-    // get Vendor Tax Profile
-    //
-    // TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-    //
-    //Future<VendorTaxProfileEnvelope> getVendorTaxProfile(String organization) async
-    test('test getVendorTaxProfile', () async {
-      // TODO
-    });
-
-    // get Vendor Team
-    //
-    // TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-    //
-    //Future<VendorTeamEnvelope> getVendorTeam(String organization, { int page, int perPage }) async
-    test('test getVendorTeam', () async {
-      // TODO
-    });
-
-    // invite Vendor Team
-    //
-    // TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-    //
-    //Future<VendorMutationEnvelope> inviteVendorTeam(String organization, String idempotencyKey, InviteVendorTeam inviteVendorTeam) async
-    test('test inviteVendorTeam', () async {
-      // TODO
-    });
-
-    // issue Admin Vendor Document Link
-    //
-    // TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-    //
-    //Future<VendorDownloadLinkEnvelope> issueAdminVendorDocumentLink(String organization, String version) async
-    test('test issueAdminVendorDocumentLink', () async {
-      // TODO
-    });
-
-    // issue Vendor Document Link
-    //
-    // TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-    //
-    //Future<VendorDownloadLinkEnvelope> issueVendorDocumentLink(String organization, String version) async
-    test('test issueVendorDocumentLink', () async {
-      // TODO
-    });
-
-    // list Admin Vendor Documents
-    //
-    // TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-    //
-    //Future<VendorDocumentListEnvelope> listAdminVendorDocuments(String organization, { int page, int perPage }) async
-    test('test listAdminVendorDocuments', () async {
-      // TODO
-    });
-
-    // list Admin Vendor Store Media
-    //
-    // TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-    //
-    //Future<VendorStoreMediaListEnvelope> listAdminVendorStoreMedia(String organization) async
-    test('test listAdminVendorStoreMedia', () async {
-      // TODO
-    });
-
-    // list Vendor Documents
-    //
-    // TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-    //
-    //Future<VendorDocumentListEnvelope> listVendorDocuments(String organization, { int page, int perPage }) async
-    test('test listVendorDocuments', () async {
-      // TODO
-    });
-
-    // list Vendor Store Media
-    //
-    // TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-    //
-    //Future<VendorStoreMediaListEnvelope> listVendorStoreMedia(String organization) async
-    test('test listVendorStoreMedia', () async {
-      // TODO
-    });
-
-    // list Vendor Team Invitations
-    //
-    // TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-    //
-    //Future<VendorTeamInvitationListEnvelope> listVendorTeamInvitations(String organization, { int page, int perPage }) async
-    test('test listVendorTeamInvitations', () async {
-      // TODO
-    });
-
-    // list Vendor Verification Queue
-    //
-    // TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-    //
-    //Future<VendorVerificationRowListEnvelope> listVendorVerificationQueue({ int page, int perPage }) async
-    test('test listVendorVerificationQueue', () async {
-      // TODO
-    });
-
-    // preview Admin Vendor Store Media
-    //
-    // TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-    //
-    //Future<Uint8List> previewAdminVendorStoreMedia(String organization, String media) async
-    test('test previewAdminVendorStoreMedia', () async {
-      // TODO
-    });
-
-    // preview Vendor Store Media
-    //
-    // TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-    //
-    //Future<Uint8List> previewVendorStoreMedia(String organization, String media) async
-    test('test previewVendorStoreMedia', () async {
-      // TODO
-    });
-
-    // reconcile Vendor Test Connection
-    //
-    // TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-    //
-    //Future<VendorSetupEnvelope> reconcileVendorTestConnection(String organization, VendorVersionMutation vendorVersionMutation) async
-    test('test reconcileVendorTestConnection', () async {
-      // TODO
-    });
-
-    // remove Vendor Store Media
-    //
-    // TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-    //
-    //Future<VendorMutationEnvelope> removeVendorStoreMedia(String organization, String media, VendorVersionMutation vendorVersionMutation) async
-    test('test removeVendorStoreMedia', () async {
-      // TODO
-    });
-
-    // request Vendor Store Email Verification
-    //
-    // TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-    //
-    //Future<VendorBusinessEnvelope> requestVendorStoreEmailVerification(String organization, VendorStoreEmailVerificationRequest vendorStoreEmailVerificationRequest) async
+    //Future<VendorStoreEmailEnvelope> requestVendorStoreEmailVerification(EmailRequest emailRequest) async
     test('test requestVendorStoreEmailVerification', () async {
       // TODO
     });
 
-    // review Vendor Business
-    //
-    // TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-    //
-    //Future<VendorReadinessEnvelope> reviewVendorBusiness(String organization, VendorBusinessReview vendorBusinessReview) async
-    test('test reviewVendorBusiness', () async {
+    //Future<GenericDataEnvelope> resolveVendorAddress(VendorAddressSelection vendorAddressSelection) async
+    test('test resolveVendorAddress', () async {
       // TODO
     });
 
-    // review Vendor Document
-    //
-    // TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-    //
-    //Future<VendorReadinessEnvelope> reviewVendorDocument(String organization, String version, VendorDocumentReview vendorDocumentReview) async
-    test('test reviewVendorDocument', () async {
+    //Future<GenericDataEnvelope> resolveVendorAddressPin(VendorAddressGeocode vendorAddressGeocode) async
+    test('test resolveVendorAddressPin', () async {
       // TODO
     });
 
-    // review Vendor Store Media
-    //
-    // TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-    //
-    //Future<VendorMutationEnvelope> reviewVendorStoreMedia(String organization, String media, VendorReview vendorReview) async
-    test('test reviewVendorStoreMedia', () async {
+    //Future<VendorAddressGeocodeEnvelope> reverseGeocodeVendorAddress(VendorAddressGeocode vendorAddressGeocode) async
+    test('test reverseGeocodeVendorAddress', () async {
       // TODO
     });
 
-    // review Vendor Tax Profile
+    // Saves version-checked setup progress. Public-name, description and public-contact-only edits preserve completed setup and activation; operational changes reopen setup requirements. Every successful save advances the organization lock version.
     //
-    // TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-    //
-    //Future<VendorReadinessEnvelope> reviewVendorTaxProfile(String organization, String version, VendorReview vendorReview) async
-    test('test reviewVendorTaxProfile', () async {
+    //Future<VendorOnboardingEnvelope> saveVendorSetupDraft(VendorSetupDraft vendorSetupDraft) async
+    test('test saveVendorSetupDraft', () async {
       // TODO
     });
 
-    // revoke Vendor Team Invitation
-    //
-    // TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-    //
-    //Future<VendorMutationEnvelope> revokeVendorTeamInvitation(String organization, String invitation, VendorVersionMutation vendorVersionMutation) async
-    test('test revokeVendorTeamInvitation', () async {
+    //Future<VendorOnboardingEnvelope> saveVendorVerificationDraft(VendorVerificationDraft vendorVerificationDraft) async
+    test('test saveVendorVerificationDraft', () async {
       // TODO
     });
 
-    // save Vendor Business
-    //
-    // TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-    //
-    //Future<VendorBusinessEnvelope> saveVendorBusiness(String organization, SaveVendorBusiness saveVendorBusiness) async
-    test('test saveVendorBusiness', () async {
+    //Future<PsgcSearchEnvelope> searchVendorAddressAreas(String level, { String parentCode, String q, int page }) async
+    test('test searchVendorAddressAreas', () async {
       // TODO
     });
 
-    // save Vendor Store
-    //
-    // TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-    //
-    //Future<VendorSetupEnvelope> saveVendorStore(String organization, SaveVendorStore saveVendorStore) async
-    test('test saveVendorStore', () async {
+    //Future<VendorOnboardingEnvelope> submitVendorVerification(String idempotencyKey, VendorVerificationSubmit vendorVerificationSubmit) async
+    test('test submitVendorVerification', () async {
       // TODO
     });
 
-    // save Vendor Tax Profile
-    //
-    // TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-    //
-    //Future<VendorTaxProfileEnvelope> saveVendorTaxProfile(String organization, SaveVendorTax saveVendorTax) async
-    test('test saveVendorTaxProfile', () async {
-      // TODO
-    });
-
-    // upload Vendor Document
-    //
-    // TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-    //
-    //Future<VendorDocumentUploadEnvelope> uploadVendorDocument(String organization, int lockVersion, String documentType, MultipartFile file) async
-    test('test uploadVendorDocument', () async {
-      // TODO
-    });
-
-    // upload Vendor Store Media
-    //
-    // TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-    //
-    //Future<VendorMutationEnvelope> uploadVendorStoreMedia(String organization, int lockVersion, String kind, String altText, MultipartFile file) async
+    //Future<VendorMediaEnvelope> uploadVendorStoreMedia(String kind, MultipartFile file, { String altText }) async
     test('test uploadVendorStoreMedia', () async {
+      // TODO
+    });
+
+    //Future<VendorDocumentEnvelope> uploadVendorVerificationDocument(String requirementKey, MultipartFile file, { BuiltMap<String, String> metadata }) async
+    test('test uploadVendorVerificationDocument', () async {
       // TODO
     });
 

@@ -44,7 +44,7 @@ queued: the API, queue worker, and scheduler must all remain running.
 ```powershell
 Set-Location services/api
 composer install
-php artisan serve --host=127.0.0.1 --port=8080
+php -d upload_max_filesize=10M -d post_max_size=12M -S 127.0.0.1:8080 -t public vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php
 ```
 
 The scaffold API is exposed under `http://127.0.0.1:8080/api/v1`.
@@ -71,6 +71,7 @@ npm run dev
 Set-Location apps/buyer-mobile
 flutter pub get
 flutter run
+flutter run -d 110013341G000422 --dart-define-from-file=config/development.json
 ```
 
 adb -s 110013341G000422 reverse tcp:8080 tcp:8080
@@ -87,8 +88,10 @@ vendor/bin/pint --test
 vendor/bin/phpstan analyse --memory-limit=1G
 php artisan test
 
-# isolated PostgreSQL 16/PostGIS migration and backend gate
+# isolated PostgreSQL 16/PostGIS Phase 2 gate
 powershell -ExecutionPolicy Bypass -File scripts/run-tests-isolated.ps1
+
+# The former Phase 3 implementation and its tests have been removed.
 
 # each React portal
 npm run typecheck
@@ -99,11 +102,8 @@ npm run build
 flutter analyze
 flutter test
 
-# repository root after project-local installation
-npx impeccable detect apps/vendor-web/src apps/admin-web/src
-```
 
-Real provider credentials belong only in ignored local files. See
+Real provider credentials belong only n ignored local files. See
 `docs/architecture/MateryalPH_Environment_and_API_Key_Setup.md` for Google OIDC
 and Vendor reCAPTCHA Enterprise setup. Buyer iOS acceptance requires macOS with Xcode.
 

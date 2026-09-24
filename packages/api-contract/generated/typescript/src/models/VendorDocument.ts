@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * MateryalPH API
- * Versioned Phase 1–3 contract. Later-phase commerce foundations do not expose placeholder operations.
+ * Versioned Phase 1–3 contract. Vendor onboarding, verification, activation readiness, private evidence, and team invitations are server-authorized. Browser credentials are isolated by configured frontend origin using _vendor and _admin suffixes on access, refresh, CSRF, MFA and bot-proof cookies. Existing unsuffixed browser sessions require sign-in again; cookie selection never replaces account authorization. Native Buyer transport is unchanged.
  *
  * The version of the OpenAPI document: 1.0.0-phase.3
  *
@@ -22,74 +22,56 @@ export interface VendorDocument {
     /**
      *
      */
-    reviewReason: string | null;
-    /**
-     *
-     */
-    verifiedReference: string | null;
-    /**
-     *
-     */
-    verifiedIssuedOn: string | null;
-    /**
-     *
-     */
-    verifiedExpiresOn: string | null;
-    /**
-     *
-     */
-    verifiedExpiryNotApplicable: boolean;
-    /**
-     *
-     */
     id: string;
     /**
      *
      */
-    documentType: string;
+    requirementKey: string;
     /**
-     *
-     */
-    status: string;
-    /**
-     *
+     * Zero for a pending attachment; review versions are created only on submission.
      */
     version: number;
     /**
      *
      */
-    environment: string;
+    status: VendorDocumentStatusEnum;
     /**
      *
      */
-    evidenceOrigin: string;
-    /**
-     *
-     */
-    scanState: string;
-    /**
-     *
-     */
-    createdAt: string;
+    scanState: VendorDocumentScanStateEnum;
 }
+
+
+/**
+ * @export
+ */
+export const VendorDocumentStatusEnum = {
+    PendingSubmission: 'PENDING_SUBMISSION',
+} as const;
+export type VendorDocumentStatusEnum = typeof VendorDocumentStatusEnum[keyof typeof VendorDocumentStatusEnum];
+
+/**
+ * @export
+ */
+export const VendorDocumentScanStateEnum = {
+    Pending: 'PENDING',
+    Clean: 'CLEAN',
+    Rejected: 'REJECTED',
+} as const;
+export type VendorDocumentScanStateEnum = typeof VendorDocumentScanStateEnum[keyof typeof VendorDocumentScanStateEnum];
+
 
 /**
  * Check if a given object implements the VendorDocument interface.
  */
 export function instanceOfVendorDocument(value: object): value is VendorDocument {
-    if ((!('reviewReason' in (value as Record<string, any>)) && !('review_reason' in (value as Record<string, any>))) || ((value as Record<string, any>)['reviewReason'] === undefined && (value as Record<string, any>)['review_reason'] === undefined)) return false;
-    if ((!('verifiedReference' in (value as Record<string, any>)) && !('verified_reference' in (value as Record<string, any>))) || ((value as Record<string, any>)['verifiedReference'] === undefined && (value as Record<string, any>)['verified_reference'] === undefined)) return false;
-    if ((!('verifiedIssuedOn' in (value as Record<string, any>)) && !('verified_issued_on' in (value as Record<string, any>))) || ((value as Record<string, any>)['verifiedIssuedOn'] === undefined && (value as Record<string, any>)['verified_issued_on'] === undefined)) return false;
-    if ((!('verifiedExpiresOn' in (value as Record<string, any>)) && !('verified_expires_on' in (value as Record<string, any>))) || ((value as Record<string, any>)['verifiedExpiresOn'] === undefined && (value as Record<string, any>)['verified_expires_on'] === undefined)) return false;
-    if ((!('verifiedExpiryNotApplicable' in (value as Record<string, any>)) && !('verified_expiry_not_applicable' in (value as Record<string, any>))) || ((value as Record<string, any>)['verifiedExpiryNotApplicable'] === undefined && (value as Record<string, any>)['verified_expiry_not_applicable'] === undefined)) return false;
     if (!('id' in value) || value['id'] === undefined) return false;
-    if ((!('documentType' in (value as Record<string, any>)) && !('document_type' in (value as Record<string, any>))) || ((value as Record<string, any>)['documentType'] === undefined && (value as Record<string, any>)['document_type'] === undefined)) return false;
-    if (!('status' in value) || value['status'] === undefined) return false;
+    if ((!('requirementKey' in (value as Record<string, any>)) && !('requirement_key' in (value as Record<string, any>))) || ((value as Record<string, any>)['requirementKey'] === undefined && (value as Record<string, any>)['requirement_key'] === undefined)) return false;
     if (!('version' in value) || value['version'] === undefined) return false;
-    if (!('environment' in value) || value['environment'] === undefined) return false;
-    if ((!('evidenceOrigin' in (value as Record<string, any>)) && !('evidence_origin' in (value as Record<string, any>))) || ((value as Record<string, any>)['evidenceOrigin'] === undefined && (value as Record<string, any>)['evidence_origin'] === undefined)) return false;
+    if (!('status' in value) || value['status'] === undefined) return false;
+    if (value['status'] !== 'PENDING_SUBMISSION') return false;
+
     if ((!('scanState' in (value as Record<string, any>)) && !('scan_state' in (value as Record<string, any>))) || ((value as Record<string, any>)['scanState'] === undefined && (value as Record<string, any>)['scan_state'] === undefined)) return false;
-    if ((!('createdAt' in (value as Record<string, any>)) && !('created_at' in (value as Record<string, any>))) || ((value as Record<string, any>)['createdAt'] === undefined && (value as Record<string, any>)['created_at'] === undefined)) return false;
     return true;
 }
 
@@ -103,19 +85,11 @@ export function VendorDocumentFromJSONTyped(json: any, ignoreDiscriminator: bool
     }
     return {
 
-        'reviewReason': json['review_reason'],
-        'verifiedReference': json['verified_reference'],
-        'verifiedIssuedOn': json['verified_issued_on'],
-        'verifiedExpiresOn': json['verified_expires_on'],
-        'verifiedExpiryNotApplicable': json['verified_expiry_not_applicable'],
         'id': json['id'],
-        'documentType': json['document_type'],
-        'status': json['status'],
+        'requirementKey': json['requirement_key'],
         'version': json['version'],
-        'environment': json['environment'],
-        'evidenceOrigin': json['evidence_origin'],
+        'status': json['status'],
         'scanState': json['scan_state'],
-        'createdAt': json['created_at'],
     };
 }
 
@@ -130,19 +104,11 @@ export function VendorDocumentToJSONTyped(value?: VendorDocument | null, ignoreD
 
     return {
 
-        'review_reason': value['reviewReason'],
-        'verified_reference': value['verifiedReference'],
-        'verified_issued_on': value['verifiedIssuedOn'],
-        'verified_expires_on': value['verifiedExpiresOn'],
-        'verified_expiry_not_applicable': value['verifiedExpiryNotApplicable'],
         'id': value['id'],
-        'document_type': value['documentType'],
-        'status': value['status'],
+        'requirement_key': value['requirementKey'],
         'version': value['version'],
-        'environment': value['environment'],
-        'evidence_origin': value['evidenceOrigin'],
+        'status': value['status'],
         'scan_state': value['scanState'],
-        'created_at': value['createdAt'],
     };
 }
 

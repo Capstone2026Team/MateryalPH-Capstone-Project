@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * MateryalPH API
- * Versioned Phase 1–3 contract. Later-phase commerce foundations do not expose placeholder operations.
+ * Versioned Phase 1–3 contract. Vendor onboarding, verification, activation readiness, private evidence, and team invitations are server-authorized. Browser credentials are isolated by configured frontend origin using _vendor and _admin suffixes on access, refresh, CSRF, MFA and bot-proof cookies. Existing unsuffixed browser sessions require sign-in again; cookie selection never replaces account authorization. Native Buyer transport is unchanged.
  *
  * The version of the OpenAPI document: 1.0.0-phase.3
  *
@@ -14,333 +14,127 @@
 
 import * as runtime from '../runtime';
 import {
-    type AcceptVendorCommission,
-    AcceptVendorCommissionFromJSON,
-    AcceptVendorCommissionToJSON,
-} from '../models/AcceptVendorCommission';
-import {
-    type ChangeVendorTeamMember,
-    ChangeVendorTeamMemberFromJSON,
-    ChangeVendorTeamMemberToJSON,
-} from '../models/ChangeVendorTeamMember';
-import {
-    type ConnectVendorTest,
-    ConnectVendorTestFromJSON,
-    ConnectVendorTestToJSON,
-} from '../models/ConnectVendorTest';
+    type EmailRequest,
+    EmailRequestFromJSON,
+    EmailRequestToJSON,
+} from '../models/EmailRequest';
 import {
     type ErrorEnvelope,
     ErrorEnvelopeFromJSON,
     ErrorEnvelopeToJSON,
 } from '../models/ErrorEnvelope';
 import {
-    type InviteVendorTeam,
-    InviteVendorTeamFromJSON,
-    InviteVendorTeamToJSON,
-} from '../models/InviteVendorTeam';
+    type GenericDataEnvelope,
+    GenericDataEnvelopeFromJSON,
+    GenericDataEnvelopeToJSON,
+} from '../models/GenericDataEnvelope';
 import {
-    type SaveVendorBusiness,
-    SaveVendorBusinessFromJSON,
-    SaveVendorBusinessToJSON,
-} from '../models/SaveVendorBusiness';
+    type PsgcSearchEnvelope,
+    PsgcSearchEnvelopeFromJSON,
+    PsgcSearchEnvelopeToJSON,
+} from '../models/PsgcSearchEnvelope';
 import {
-    type SaveVendorStore,
-    SaveVendorStoreFromJSON,
-    SaveVendorStoreToJSON,
-} from '../models/SaveVendorStore';
+    type VendorAddressGeocode,
+    VendorAddressGeocodeFromJSON,
+    VendorAddressGeocodeToJSON,
+} from '../models/VendorAddressGeocode';
 import {
-    type SaveVendorTax,
-    SaveVendorTaxFromJSON,
-    SaveVendorTaxToJSON,
-} from '../models/SaveVendorTax';
+    type VendorAddressGeocodeEnvelope,
+    VendorAddressGeocodeEnvelopeFromJSON,
+    VendorAddressGeocodeEnvelopeToJSON,
+} from '../models/VendorAddressGeocodeEnvelope';
 import {
-    type VendorBusinessEnvelope,
-    VendorBusinessEnvelopeFromJSON,
-    VendorBusinessEnvelopeToJSON,
-} from '../models/VendorBusinessEnvelope';
+    type VendorAddressSelection,
+    VendorAddressSelectionFromJSON,
+    VendorAddressSelectionToJSON,
+} from '../models/VendorAddressSelection';
 import {
-    type VendorBusinessReview,
-    VendorBusinessReviewFromJSON,
-    VendorBusinessReviewToJSON,
-} from '../models/VendorBusinessReview';
+    type VendorCommissionAcceptance,
+    VendorCommissionAcceptanceFromJSON,
+    VendorCommissionAcceptanceToJSON,
+} from '../models/VendorCommissionAcceptance';
 import {
-    type VendorCommissionTermsEnvelope,
-    VendorCommissionTermsEnvelopeFromJSON,
-    VendorCommissionTermsEnvelopeToJSON,
-} from '../models/VendorCommissionTermsEnvelope';
+    type VendorDocumentEnvelope,
+    VendorDocumentEnvelopeFromJSON,
+    VendorDocumentEnvelopeToJSON,
+} from '../models/VendorDocumentEnvelope';
 import {
-    type VendorDocumentListEnvelope,
-    VendorDocumentListEnvelopeFromJSON,
-    VendorDocumentListEnvelopeToJSON,
-} from '../models/VendorDocumentListEnvelope';
+    type VendorFileEnvelope,
+    VendorFileEnvelopeFromJSON,
+    VendorFileEnvelopeToJSON,
+} from '../models/VendorFileEnvelope';
 import {
-    type VendorDocumentReview,
-    VendorDocumentReviewFromJSON,
-    VendorDocumentReviewToJSON,
-} from '../models/VendorDocumentReview';
+    type VendorInvitationEnvelope,
+    VendorInvitationEnvelopeFromJSON,
+    VendorInvitationEnvelopeToJSON,
+} from '../models/VendorInvitationEnvelope';
 import {
-    type VendorDocumentUploadEnvelope,
-    VendorDocumentUploadEnvelopeFromJSON,
-    VendorDocumentUploadEnvelopeToJSON,
-} from '../models/VendorDocumentUploadEnvelope';
+    type VendorInvitationRequest,
+    VendorInvitationRequestFromJSON,
+    VendorInvitationRequestToJSON,
+} from '../models/VendorInvitationRequest';
 import {
-    type VendorDownloadLinkEnvelope,
-    VendorDownloadLinkEnvelopeFromJSON,
-    VendorDownloadLinkEnvelopeToJSON,
-} from '../models/VendorDownloadLinkEnvelope';
+    type VendorMediaEnvelope,
+    VendorMediaEnvelopeFromJSON,
+    VendorMediaEnvelopeToJSON,
+} from '../models/VendorMediaEnvelope';
 import {
-    type VendorMutationEnvelope,
-    VendorMutationEnvelopeFromJSON,
-    VendorMutationEnvelopeToJSON,
-} from '../models/VendorMutationEnvelope';
+    type VendorOnboardingEnvelope,
+    VendorOnboardingEnvelopeFromJSON,
+    VendorOnboardingEnvelopeToJSON,
+} from '../models/VendorOnboardingEnvelope';
 import {
-    type VendorReadinessEnvelope,
-    VendorReadinessEnvelopeFromJSON,
-    VendorReadinessEnvelopeToJSON,
-} from '../models/VendorReadinessEnvelope';
+    type VendorPaymentConnection,
+    VendorPaymentConnectionFromJSON,
+    VendorPaymentConnectionToJSON,
+} from '../models/VendorPaymentConnection';
 import {
-    type VendorReview,
-    VendorReviewFromJSON,
-    VendorReviewToJSON,
-} from '../models/VendorReview';
+    type VendorPaymentReconciliationEnvelope,
+    VendorPaymentReconciliationEnvelopeFromJSON,
+    VendorPaymentReconciliationEnvelopeToJSON,
+} from '../models/VendorPaymentReconciliationEnvelope';
 import {
-    type VendorSetupEnvelope,
-    VendorSetupEnvelopeFromJSON,
-    VendorSetupEnvelopeToJSON,
-} from '../models/VendorSetupEnvelope';
+    type VendorSetupComplete,
+    VendorSetupCompleteFromJSON,
+    VendorSetupCompleteToJSON,
+} from '../models/VendorSetupComplete';
 import {
-    type VendorStoreEmailVerificationConfirmation,
-    VendorStoreEmailVerificationConfirmationFromJSON,
-    VendorStoreEmailVerificationConfirmationToJSON,
-} from '../models/VendorStoreEmailVerificationConfirmation';
+    type VendorSetupDraft,
+    VendorSetupDraftFromJSON,
+    VendorSetupDraftToJSON,
+} from '../models/VendorSetupDraft';
 import {
-    type VendorStoreEmailVerificationRequest,
-    VendorStoreEmailVerificationRequestFromJSON,
-    VendorStoreEmailVerificationRequestToJSON,
-} from '../models/VendorStoreEmailVerificationRequest';
+    type VendorStoreEmailConfirmation,
+    VendorStoreEmailConfirmationFromJSON,
+    VendorStoreEmailConfirmationToJSON,
+} from '../models/VendorStoreEmailConfirmation';
 import {
-    type VendorStoreMediaListEnvelope,
-    VendorStoreMediaListEnvelopeFromJSON,
-    VendorStoreMediaListEnvelopeToJSON,
-} from '../models/VendorStoreMediaListEnvelope';
+    type VendorStoreEmailEnvelope,
+    VendorStoreEmailEnvelopeFromJSON,
+    VendorStoreEmailEnvelopeToJSON,
+} from '../models/VendorStoreEmailEnvelope';
 import {
-    type VendorTaxProfileEnvelope,
-    VendorTaxProfileEnvelopeFromJSON,
-    VendorTaxProfileEnvelopeToJSON,
-} from '../models/VendorTaxProfileEnvelope';
+    type VendorVerificationDraft,
+    VendorVerificationDraftFromJSON,
+    VendorVerificationDraftToJSON,
+} from '../models/VendorVerificationDraft';
 import {
-    type VendorTeamEnvelope,
-    VendorTeamEnvelopeFromJSON,
-    VendorTeamEnvelopeToJSON,
-} from '../models/VendorTeamEnvelope';
+    type VendorVerificationSubmit,
+    VendorVerificationSubmitFromJSON,
+    VendorVerificationSubmitToJSON,
+} from '../models/VendorVerificationSubmit';
 import {
-    type VendorTeamInvitationListEnvelope,
-    VendorTeamInvitationListEnvelopeFromJSON,
-    VendorTeamInvitationListEnvelopeToJSON,
-} from '../models/VendorTeamInvitationListEnvelope';
+    type VendorWebhookEnvelope,
+    VendorWebhookEnvelopeFromJSON,
+    VendorWebhookEnvelopeToJSON,
+} from '../models/VendorWebhookEnvelope';
 import {
-    type VendorVerificationRowListEnvelope,
-    VendorVerificationRowListEnvelopeFromJSON,
-    VendorVerificationRowListEnvelopeToJSON,
-} from '../models/VendorVerificationRowListEnvelope';
-import {
-    type VendorVersionMutation,
-    VendorVersionMutationFromJSON,
-    VendorVersionMutationToJSON,
-} from '../models/VendorVersionMutation';
+    type XenditAccountVerificationWebhook,
+    XenditAccountVerificationWebhookFromJSON,
+    XenditAccountVerificationWebhookToJSON,
+} from '../models/XenditAccountVerificationWebhook';
 
-export interface AcceptVendorCommissionTermsRequest {
-    /**
-     *
-     */
-    organization: string;
-    /**
-     *
-     */
-    acceptVendorCommission: AcceptVendorCommission;
-}
-
-export interface ActivateVendorMarketplaceRequest {
-    /**
-     *
-     */
-    organization: string;
-    /**
-     *
-     */
-    vendorVersionMutation: VendorVersionMutation;
-}
-
-export interface ChangeVendorTeamMemberRequest {
-    /**
-     *
-     */
-    organization: string;
-    /**
-     *
-     */
-    membership: string;
-    /**
-     *
-     */
-    changeVendorTeamMember: ChangeVendorTeamMember;
-}
-
-export interface ConfirmVendorStoreEmailVerificationRequest {
-    /**
-     *
-     */
-    organization: string;
-    /**
-     *
-     */
-    vendorStoreEmailVerificationConfirmation: VendorStoreEmailVerificationConfirmation;
-}
-
-export interface ConnectVendorTestRequest {
-    /**
-     *
-     */
-    organization: string;
-    /**
-     *
-     */
-    connectVendorTest: ConnectVendorTest;
-}
-
-export interface DownloadAdminVendorDocumentRequest {
-    /**
-     *
-     */
-    organization: string;
-    /**
-     *
-     */
-    version: string;
-    /**
-     *
-     */
-    expires: string;
-    /**
-     *
-     */
-    signature: string;
-    /**
-     *
-     */
-    viewer: string;
-}
-
-export interface DownloadVendorDocumentRequest {
-    /**
-     *
-     */
-    organization: string;
-    /**
-     *
-     */
-    version: string;
-    /**
-     *
-     */
-    expires: string;
-    /**
-     *
-     */
-    signature: string;
-    /**
-     *
-     */
-    viewer: string;
-}
-
-export interface GetAdminVendorBusinessRequest {
-    /**
-     *
-     */
-    organization: string;
-}
-
-export interface GetAdminVendorReadinessRequest {
-    /**
-     *
-     */
-    organization: string;
-}
-
-export interface GetAdminVendorTaxProfileRequest {
-    /**
-     *
-     */
-    organization: string;
-}
-
-export interface GetPublicVendorStoreMediaRequest {
-    /**
-     *
-     */
-    organization: string;
-    /**
-     *
-     */
-    media: string;
-}
-
-export interface GetVendorBusinessRequest {
-    /**
-     *
-     */
-    organization: string;
-}
-
-export interface GetVendorCommissionTermsRequest {
-    /**
-     *
-     */
-    organization: string;
-}
-
-export interface GetVendorReadinessRequest {
-    /**
-     *
-     */
-    organization: string;
-}
-
-export interface GetVendorSetupRequest {
-    /**
-     *
-     */
-    organization: string;
-}
-
-export interface GetVendorTaxProfileRequest {
-    /**
-     *
-     */
-    organization: string;
-}
-
-export interface GetVendorTeamRequest {
-    /**
-     *
-     */
-    organization: string;
-    /**
-     *
-     */
-    page?: number;
-    /**
-     *
-     */
-    perPage?: number;
-}
-
-export interface InviteVendorTeamRequest {
-    /**
-     *
-     */
-    organization: string;
+export interface AcceptVendorCommissionRequest {
     /**
      *
      */
@@ -348,292 +142,188 @@ export interface InviteVendorTeamRequest {
     /**
      *
      */
-    inviteVendorTeam: InviteVendorTeam;
+    vendorCommissionAcceptance: VendorCommissionAcceptance;
 }
 
-export interface IssueAdminVendorDocumentLinkRequest {
+export interface ActivateVendorStoreRequest {
     /**
      *
      */
-    organization: string;
-    /**
-     *
-     */
-    version: string;
+    idempotencyKey: string;
 }
 
-export interface IssueVendorDocumentLinkRequest {
+export interface CaptureVendorPaymentConnectionRequest {
     /**
      *
      */
-    organization: string;
+    idempotencyKey: string;
     /**
      *
      */
-    version: string;
+    vendorPaymentConnection: VendorPaymentConnection;
 }
 
-export interface ListAdminVendorDocumentsRequest {
+export interface CompleteVendorSetupRequest {
     /**
      *
      */
-    organization: string;
+    idempotencyKey: string;
     /**
      *
      */
-    page?: number;
-    /**
-     *
-     */
-    perPage?: number;
+    vendorSetupComplete: VendorSetupComplete;
 }
 
-export interface ListAdminVendorStoreMediaRequest {
+export interface ConfirmVendorStoreEmailVerificationRequest {
     /**
      *
      */
-    organization: string;
+    vendorStoreEmailConfirmation: VendorStoreEmailConfirmation;
 }
 
-export interface ListVendorDocumentsRequest {
+export interface DownloadVendorOnboardingFileRequest {
     /**
      *
      */
-    organization: string;
-    /**
-     *
-     */
-    page?: number;
-    /**
-     *
-     */
-    perPage?: number;
+    fileId: string;
 }
 
-export interface ListVendorStoreMediaRequest {
+export interface GetVendorPrivateFileUrlRequest {
     /**
      *
      */
-    organization: string;
+    fileId: string;
 }
 
-export interface ListVendorTeamInvitationsRequest {
+export interface InviteVendorTeamMemberRequest {
     /**
      *
      */
-    organization: string;
+    idempotencyKey: string;
     /**
      *
      */
-    page?: number;
-    /**
-     *
-     */
-    perPage?: number;
+    vendorInvitationRequest: VendorInvitationRequest;
 }
 
-export interface ListVendorVerificationQueueRequest {
+export interface PreviewVendorRequirementsRequest {
     /**
      *
      */
-    page?: number;
+    businessType: PreviewVendorRequirementsBusinessTypeEnum;
     /**
      *
      */
-    perPage?: number;
+    representativeRole?: string;
+    /**
+     *
+     */
+    identityIdType?: string;
+    /**
+     *
+     */
+    representativeIdType?: string;
+    /**
+     *
+     */
+    authorityEvidenceVersionId?: string;
+    /**
+     *
+     */
+    declarationClaim?: PreviewVendorRequirementsDeclarationClaimEnum;
 }
 
-export interface PreviewAdminVendorStoreMediaRequest {
+export interface ReceiveXenditAccountVerificationWebhookRequest {
     /**
      *
      */
-    organization: string;
+    xCallbackToken: string;
     /**
      *
      */
-    media: string;
+    xenditAccountVerificationWebhook: XenditAccountVerificationWebhook;
 }
 
-export interface PreviewVendorStoreMediaRequest {
+export interface RemovePendingVendorDocumentRequest {
     /**
      *
      */
-    organization: string;
-    /**
-     *
-     */
-    media: string;
-}
-
-export interface ReconcileVendorTestConnectionRequest {
-    /**
-     *
-     */
-    organization: string;
-    /**
-     *
-     */
-    vendorVersionMutation: VendorVersionMutation;
-}
-
-export interface RemoveVendorStoreMediaRequest {
-    /**
-     *
-     */
-    organization: string;
-    /**
-     *
-     */
-    media: string;
-    /**
-     *
-     */
-    vendorVersionMutation: VendorVersionMutation;
+    requirementKey: string;
 }
 
 export interface RequestVendorStoreEmailVerificationRequest {
     /**
      *
      */
-    organization: string;
-    /**
-     *
-     */
-    vendorStoreEmailVerificationRequest: VendorStoreEmailVerificationRequest;
+    emailRequest: EmailRequest;
 }
 
-export interface ReviewVendorBusinessRequest {
+export interface ResolveVendorAddressRequest {
     /**
      *
      */
-    organization: string;
-    /**
-     *
-     */
-    vendorBusinessReview: VendorBusinessReview;
+    vendorAddressSelection: VendorAddressSelection;
 }
 
-export interface ReviewVendorDocumentRequest {
+export interface ResolveVendorAddressPinRequest {
     /**
      *
      */
-    organization: string;
-    /**
-     *
-     */
-    version: string;
-    /**
-     *
-     */
-    vendorDocumentReview: VendorDocumentReview;
+    vendorAddressGeocode: VendorAddressGeocode;
 }
 
-export interface ReviewVendorStoreMediaRequest {
+export interface ReverseGeocodeVendorAddressRequest {
     /**
      *
      */
-    organization: string;
-    /**
-     *
-     */
-    media: string;
-    /**
-     *
-     */
-    vendorReview: VendorReview;
+    vendorAddressGeocode: VendorAddressGeocode;
 }
 
-export interface ReviewVendorTaxProfileRequest {
+export interface SaveVendorSetupDraftRequest {
     /**
      *
      */
-    organization: string;
-    /**
-     *
-     */
-    version: string;
-    /**
-     *
-     */
-    vendorReview: VendorReview;
+    vendorSetupDraft: VendorSetupDraft;
 }
 
-export interface RevokeVendorTeamInvitationRequest {
+export interface SaveVendorVerificationDraftRequest {
     /**
      *
      */
-    organization: string;
-    /**
-     *
-     */
-    invitation: string;
-    /**
-     *
-     */
-    vendorVersionMutation: VendorVersionMutation;
+    vendorVerificationDraft: VendorVerificationDraft;
 }
 
-export interface SaveVendorBusinessRequest {
+export interface SearchVendorAddressAreasRequest {
     /**
      *
      */
-    organization: string;
+    level: SearchVendorAddressAreasLevelEnum;
     /**
      *
      */
-    saveVendorBusiness: SaveVendorBusiness;
+    parentCode?: string;
+    /**
+     *
+     */
+    q?: string;
+    /**
+     *
+     */
+    page?: number;
 }
 
-export interface SaveVendorStoreRequest {
+export interface SubmitVendorVerificationRequest {
     /**
      *
      */
-    organization: string;
+    idempotencyKey: string;
     /**
      *
      */
-    saveVendorStore: SaveVendorStore;
-}
-
-export interface SaveVendorTaxProfileRequest {
-    /**
-     *
-     */
-    organization: string;
-    /**
-     *
-     */
-    saveVendorTax: SaveVendorTax;
-}
-
-export interface UploadVendorDocumentRequest {
-    /**
-     *
-     */
-    organization: string;
-    /**
-     *
-     */
-    lockVersion: number;
-    /**
-     *
-     */
-    documentType: UploadVendorDocumentDocumentTypeEnum;
-    /**
-     *
-     */
-    file: Blob;
+    vendorVerificationSubmit: VendorVerificationSubmit;
 }
 
 export interface UploadVendorStoreMediaRequest {
-    /**
-     *
-     */
-    organization: string;
-    /**
-     *
-     */
-    lockVersion: number;
     /**
      *
      */
@@ -641,11 +331,26 @@ export interface UploadVendorStoreMediaRequest {
     /**
      *
      */
-    altText: string;
+    file: Blob;
+    /**
+     *
+     */
+    altText?: string | null;
+}
+
+export interface UploadVendorVerificationDocumentRequest {
+    /**
+     *
+     */
+    requirementKey: UploadVendorVerificationDocumentRequirementKeyEnum;
     /**
      *
      */
     file: Blob;
+    /**
+     *
+     */
+    metadata?: { [key: string]: string; };
 }
 
 /**
@@ -654,1002 +359,20 @@ export interface UploadVendorStoreMediaRequest {
 export class VendorOnboardingApi extends runtime.BaseAPI {
 
     /**
-     * Creates request options for acceptVendorCommissionTerms without sending the request
+     * Creates request options for acceptVendorCommission without sending the request
      */
-    async acceptVendorCommissionTermsRequestOpts(requestParameters: AcceptVendorCommissionTermsRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['organization'] == null) {
-            throw new runtime.RequiredError(
-                'organization',
-                'Required parameter "organization" was null or undefined when calling acceptVendorCommissionTerms().'
-            );
-        }
-
-        if (requestParameters['acceptVendorCommission'] == null) {
-            throw new runtime.RequiredError(
-                'acceptVendorCommission',
-                'Required parameter "acceptVendorCommission" was null or undefined when calling acceptVendorCommissionTerms().'
-            );
-        }
-
-        const queryParameters: any = {};
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-        headerParameters['Content-Type'] = 'application/json';
-
-        if (this.configuration && this.configuration.apiKey) {
-            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
-        }
-
-
-        let urlPath = `/vendors/{organization}/commission-terms/acceptance`;
-        urlPath = urlPath.replace('{organization}', encodeURIComponent(String(requestParameters['organization'])));
-
-        return {
-            path: urlPath,
-            method: 'POST',
-            headers: headerParameters,
-            query: queryParameters,
-            body: AcceptVendorCommissionToJSON(requestParameters['acceptVendorCommission']),
-        };
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * accept Vendor Commission Terms
-     */
-    async acceptVendorCommissionTermsRaw(requestParameters: AcceptVendorCommissionTermsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorCommissionTermsEnvelope>> {
-        const requestOptions = await this.acceptVendorCommissionTermsRequestOpts(requestParameters);
-        const response = await this.request(requestOptions, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => VendorCommissionTermsEnvelopeFromJSON(jsonValue));
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * accept Vendor Commission Terms
-     */
-    async acceptVendorCommissionTerms(requestParameters: AcceptVendorCommissionTermsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorCommissionTermsEnvelope> {
-        const response = await this.acceptVendorCommissionTermsRaw(requestParameters, initOverrides);
-        return await response.value();
-    }
-
-    /**
-     * Creates request options for activateVendorMarketplace without sending the request
-     */
-    async activateVendorMarketplaceRequestOpts(requestParameters: ActivateVendorMarketplaceRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['organization'] == null) {
-            throw new runtime.RequiredError(
-                'organization',
-                'Required parameter "organization" was null or undefined when calling activateVendorMarketplace().'
-            );
-        }
-
-        if (requestParameters['vendorVersionMutation'] == null) {
-            throw new runtime.RequiredError(
-                'vendorVersionMutation',
-                'Required parameter "vendorVersionMutation" was null or undefined when calling activateVendorMarketplace().'
-            );
-        }
-
-        const queryParameters: any = {};
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-        headerParameters['Content-Type'] = 'application/json';
-
-        if (this.configuration && this.configuration.apiKey) {
-            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
-        }
-
-
-        let urlPath = `/vendors/{organization}/activation`;
-        urlPath = urlPath.replace('{organization}', encodeURIComponent(String(requestParameters['organization'])));
-
-        return {
-            path: urlPath,
-            method: 'POST',
-            headers: headerParameters,
-            query: queryParameters,
-            body: VendorVersionMutationToJSON(requestParameters['vendorVersionMutation']),
-        };
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * activate Vendor Marketplace
-     */
-    async activateVendorMarketplaceRaw(requestParameters: ActivateVendorMarketplaceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorReadinessEnvelope>> {
-        const requestOptions = await this.activateVendorMarketplaceRequestOpts(requestParameters);
-        const response = await this.request(requestOptions, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => VendorReadinessEnvelopeFromJSON(jsonValue));
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * activate Vendor Marketplace
-     */
-    async activateVendorMarketplace(requestParameters: ActivateVendorMarketplaceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorReadinessEnvelope> {
-        const response = await this.activateVendorMarketplaceRaw(requestParameters, initOverrides);
-        return await response.value();
-    }
-
-    /**
-     * Creates request options for changeVendorTeamMember without sending the request
-     */
-    async changeVendorTeamMemberRequestOpts(requestParameters: ChangeVendorTeamMemberRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['organization'] == null) {
-            throw new runtime.RequiredError(
-                'organization',
-                'Required parameter "organization" was null or undefined when calling changeVendorTeamMember().'
-            );
-        }
-
-        if (requestParameters['membership'] == null) {
-            throw new runtime.RequiredError(
-                'membership',
-                'Required parameter "membership" was null or undefined when calling changeVendorTeamMember().'
-            );
-        }
-
-        if (requestParameters['changeVendorTeamMember'] == null) {
-            throw new runtime.RequiredError(
-                'changeVendorTeamMember',
-                'Required parameter "changeVendorTeamMember" was null or undefined when calling changeVendorTeamMember().'
-            );
-        }
-
-        const queryParameters: any = {};
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-        headerParameters['Content-Type'] = 'application/json';
-
-        if (this.configuration && this.configuration.apiKey) {
-            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
-        }
-
-
-        let urlPath = `/vendors/{organization}/team/memberships/{membership}`;
-        urlPath = urlPath.replace('{organization}', encodeURIComponent(String(requestParameters['organization'])));
-        urlPath = urlPath.replace('{membership}', encodeURIComponent(String(requestParameters['membership'])));
-
-        return {
-            path: urlPath,
-            method: 'PATCH',
-            headers: headerParameters,
-            query: queryParameters,
-            body: ChangeVendorTeamMemberToJSON(requestParameters['changeVendorTeamMember']),
-        };
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * change Vendor Team Member
-     */
-    async changeVendorTeamMemberRaw(requestParameters: ChangeVendorTeamMemberRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorMutationEnvelope>> {
-        const requestOptions = await this.changeVendorTeamMemberRequestOpts(requestParameters);
-        const response = await this.request(requestOptions, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => VendorMutationEnvelopeFromJSON(jsonValue));
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * change Vendor Team Member
-     */
-    async changeVendorTeamMember(requestParameters: ChangeVendorTeamMemberRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorMutationEnvelope> {
-        const response = await this.changeVendorTeamMemberRaw(requestParameters, initOverrides);
-        return await response.value();
-    }
-
-    /**
-     * Creates request options for confirmVendorStoreEmailVerification without sending the request
-     */
-    async confirmVendorStoreEmailVerificationRequestOpts(requestParameters: ConfirmVendorStoreEmailVerificationRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['organization'] == null) {
-            throw new runtime.RequiredError(
-                'organization',
-                'Required parameter "organization" was null or undefined when calling confirmVendorStoreEmailVerification().'
-            );
-        }
-
-        if (requestParameters['vendorStoreEmailVerificationConfirmation'] == null) {
-            throw new runtime.RequiredError(
-                'vendorStoreEmailVerificationConfirmation',
-                'Required parameter "vendorStoreEmailVerificationConfirmation" was null or undefined when calling confirmVendorStoreEmailVerification().'
-            );
-        }
-
-        const queryParameters: any = {};
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-        headerParameters['Content-Type'] = 'application/json';
-
-        if (this.configuration && this.configuration.apiKey) {
-            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
-        }
-
-
-        let urlPath = `/vendors/{organization}/business/store-email/verification/confirm`;
-        urlPath = urlPath.replace('{organization}', encodeURIComponent(String(requestParameters['organization'])));
-
-        return {
-            path: urlPath,
-            method: 'POST',
-            headers: headerParameters,
-            query: queryParameters,
-            body: VendorStoreEmailVerificationConfirmationToJSON(requestParameters['vendorStoreEmailVerificationConfirmation']),
-        };
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * confirm Vendor Store Email Verification
-     */
-    async confirmVendorStoreEmailVerificationRaw(requestParameters: ConfirmVendorStoreEmailVerificationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorBusinessEnvelope>> {
-        const requestOptions = await this.confirmVendorStoreEmailVerificationRequestOpts(requestParameters);
-        const response = await this.request(requestOptions, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => VendorBusinessEnvelopeFromJSON(jsonValue));
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * confirm Vendor Store Email Verification
-     */
-    async confirmVendorStoreEmailVerification(requestParameters: ConfirmVendorStoreEmailVerificationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorBusinessEnvelope> {
-        const response = await this.confirmVendorStoreEmailVerificationRaw(requestParameters, initOverrides);
-        return await response.value();
-    }
-
-    /**
-     * Creates request options for connectVendorTest without sending the request
-     */
-    async connectVendorTestRequestOpts(requestParameters: ConnectVendorTestRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['organization'] == null) {
-            throw new runtime.RequiredError(
-                'organization',
-                'Required parameter "organization" was null or undefined when calling connectVendorTest().'
-            );
-        }
-
-        if (requestParameters['connectVendorTest'] == null) {
-            throw new runtime.RequiredError(
-                'connectVendorTest',
-                'Required parameter "connectVendorTest" was null or undefined when calling connectVendorTest().'
-            );
-        }
-
-        const queryParameters: any = {};
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-        headerParameters['Content-Type'] = 'application/json';
-
-        if (this.configuration && this.configuration.apiKey) {
-            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
-        }
-
-
-        let urlPath = `/vendors/{organization}/payment-connection`;
-        urlPath = urlPath.replace('{organization}', encodeURIComponent(String(requestParameters['organization'])));
-
-        return {
-            path: urlPath,
-            method: 'POST',
-            headers: headerParameters,
-            query: queryParameters,
-            body: ConnectVendorTestToJSON(requestParameters['connectVendorTest']),
-        };
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * connect Vendor Test
-     */
-    async connectVendorTestRaw(requestParameters: ConnectVendorTestRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorSetupEnvelope>> {
-        const requestOptions = await this.connectVendorTestRequestOpts(requestParameters);
-        const response = await this.request(requestOptions, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => VendorSetupEnvelopeFromJSON(jsonValue));
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * connect Vendor Test
-     */
-    async connectVendorTest(requestParameters: ConnectVendorTestRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorSetupEnvelope> {
-        const response = await this.connectVendorTestRaw(requestParameters, initOverrides);
-        return await response.value();
-    }
-
-    /**
-     * Creates request options for downloadAdminVendorDocument without sending the request
-     */
-    async downloadAdminVendorDocumentRequestOpts(requestParameters: DownloadAdminVendorDocumentRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['organization'] == null) {
-            throw new runtime.RequiredError(
-                'organization',
-                'Required parameter "organization" was null or undefined when calling downloadAdminVendorDocument().'
-            );
-        }
-
-        if (requestParameters['version'] == null) {
-            throw new runtime.RequiredError(
-                'version',
-                'Required parameter "version" was null or undefined when calling downloadAdminVendorDocument().'
-            );
-        }
-
-        if (requestParameters['expires'] == null) {
-            throw new runtime.RequiredError(
-                'expires',
-                'Required parameter "expires" was null or undefined when calling downloadAdminVendorDocument().'
-            );
-        }
-
-        if (requestParameters['signature'] == null) {
-            throw new runtime.RequiredError(
-                'signature',
-                'Required parameter "signature" was null or undefined when calling downloadAdminVendorDocument().'
-            );
-        }
-
-        if (requestParameters['viewer'] == null) {
-            throw new runtime.RequiredError(
-                'viewer',
-                'Required parameter "viewer" was null or undefined when calling downloadAdminVendorDocument().'
-            );
-        }
-
-        const queryParameters: any = {};
-
-        if (requestParameters['expires'] != null) {
-            queryParameters['expires'] = requestParameters['expires'];
-        }
-
-        if (requestParameters['signature'] != null) {
-            queryParameters['signature'] = requestParameters['signature'];
-        }
-
-        if (requestParameters['viewer'] != null) {
-            queryParameters['viewer'] = requestParameters['viewer'];
-        }
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-
-        let urlPath = `/admin/vendor-verification/{organization}/documents/{version}/download`;
-        urlPath = urlPath.replace('{organization}', encodeURIComponent(String(requestParameters['organization'])));
-        urlPath = urlPath.replace('{version}', encodeURIComponent(String(requestParameters['version'])));
-
-        return {
-            path: urlPath,
-            method: 'GET',
-            headers: headerParameters,
-            query: queryParameters,
-        };
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * download Admin Vendor Document
-     */
-    async downloadAdminVendorDocumentRaw(requestParameters: DownloadAdminVendorDocumentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Blob>> {
-        const requestOptions = await this.downloadAdminVendorDocumentRequestOpts(requestParameters);
-        const response = await this.request(requestOptions, initOverrides);
-
-        return new runtime.BlobApiResponse(response);
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * download Admin Vendor Document
-     */
-    async downloadAdminVendorDocument(requestParameters: DownloadAdminVendorDocumentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Blob> {
-        const response = await this.downloadAdminVendorDocumentRaw(requestParameters, initOverrides);
-        return await response.value();
-    }
-
-    /**
-     * Creates request options for downloadVendorDocument without sending the request
-     */
-    async downloadVendorDocumentRequestOpts(requestParameters: DownloadVendorDocumentRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['organization'] == null) {
-            throw new runtime.RequiredError(
-                'organization',
-                'Required parameter "organization" was null or undefined when calling downloadVendorDocument().'
-            );
-        }
-
-        if (requestParameters['version'] == null) {
-            throw new runtime.RequiredError(
-                'version',
-                'Required parameter "version" was null or undefined when calling downloadVendorDocument().'
-            );
-        }
-
-        if (requestParameters['expires'] == null) {
-            throw new runtime.RequiredError(
-                'expires',
-                'Required parameter "expires" was null or undefined when calling downloadVendorDocument().'
-            );
-        }
-
-        if (requestParameters['signature'] == null) {
-            throw new runtime.RequiredError(
-                'signature',
-                'Required parameter "signature" was null or undefined when calling downloadVendorDocument().'
-            );
-        }
-
-        if (requestParameters['viewer'] == null) {
-            throw new runtime.RequiredError(
-                'viewer',
-                'Required parameter "viewer" was null or undefined when calling downloadVendorDocument().'
-            );
-        }
-
-        const queryParameters: any = {};
-
-        if (requestParameters['expires'] != null) {
-            queryParameters['expires'] = requestParameters['expires'];
-        }
-
-        if (requestParameters['signature'] != null) {
-            queryParameters['signature'] = requestParameters['signature'];
-        }
-
-        if (requestParameters['viewer'] != null) {
-            queryParameters['viewer'] = requestParameters['viewer'];
-        }
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-
-        let urlPath = `/vendors/{organization}/documents/{version}/download`;
-        urlPath = urlPath.replace('{organization}', encodeURIComponent(String(requestParameters['organization'])));
-        urlPath = urlPath.replace('{version}', encodeURIComponent(String(requestParameters['version'])));
-
-        return {
-            path: urlPath,
-            method: 'GET',
-            headers: headerParameters,
-            query: queryParameters,
-        };
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * download Vendor Document
-     */
-    async downloadVendorDocumentRaw(requestParameters: DownloadVendorDocumentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Blob>> {
-        const requestOptions = await this.downloadVendorDocumentRequestOpts(requestParameters);
-        const response = await this.request(requestOptions, initOverrides);
-
-        return new runtime.BlobApiResponse(response);
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * download Vendor Document
-     */
-    async downloadVendorDocument(requestParameters: DownloadVendorDocumentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Blob> {
-        const response = await this.downloadVendorDocumentRaw(requestParameters, initOverrides);
-        return await response.value();
-    }
-
-    /**
-     * Creates request options for getAdminVendorBusiness without sending the request
-     */
-    async getAdminVendorBusinessRequestOpts(requestParameters: GetAdminVendorBusinessRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['organization'] == null) {
-            throw new runtime.RequiredError(
-                'organization',
-                'Required parameter "organization" was null or undefined when calling getAdminVendorBusiness().'
-            );
-        }
-
-        const queryParameters: any = {};
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-
-        let urlPath = `/admin/vendor-verification/{organization}/business`;
-        urlPath = urlPath.replace('{organization}', encodeURIComponent(String(requestParameters['organization'])));
-
-        return {
-            path: urlPath,
-            method: 'GET',
-            headers: headerParameters,
-            query: queryParameters,
-        };
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * get Admin Vendor Business
-     */
-    async getAdminVendorBusinessRaw(requestParameters: GetAdminVendorBusinessRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorBusinessEnvelope>> {
-        const requestOptions = await this.getAdminVendorBusinessRequestOpts(requestParameters);
-        const response = await this.request(requestOptions, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => VendorBusinessEnvelopeFromJSON(jsonValue));
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * get Admin Vendor Business
-     */
-    async getAdminVendorBusiness(requestParameters: GetAdminVendorBusinessRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorBusinessEnvelope> {
-        const response = await this.getAdminVendorBusinessRaw(requestParameters, initOverrides);
-        return await response.value();
-    }
-
-    /**
-     * Creates request options for getAdminVendorReadiness without sending the request
-     */
-    async getAdminVendorReadinessRequestOpts(requestParameters: GetAdminVendorReadinessRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['organization'] == null) {
-            throw new runtime.RequiredError(
-                'organization',
-                'Required parameter "organization" was null or undefined when calling getAdminVendorReadiness().'
-            );
-        }
-
-        const queryParameters: any = {};
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-
-        let urlPath = `/admin/vendor-verification/{organization}/onboarding`;
-        urlPath = urlPath.replace('{organization}', encodeURIComponent(String(requestParameters['organization'])));
-
-        return {
-            path: urlPath,
-            method: 'GET',
-            headers: headerParameters,
-            query: queryParameters,
-        };
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * get Admin Vendor Readiness
-     */
-    async getAdminVendorReadinessRaw(requestParameters: GetAdminVendorReadinessRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorReadinessEnvelope>> {
-        const requestOptions = await this.getAdminVendorReadinessRequestOpts(requestParameters);
-        const response = await this.request(requestOptions, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => VendorReadinessEnvelopeFromJSON(jsonValue));
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * get Admin Vendor Readiness
-     */
-    async getAdminVendorReadiness(requestParameters: GetAdminVendorReadinessRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorReadinessEnvelope> {
-        const response = await this.getAdminVendorReadinessRaw(requestParameters, initOverrides);
-        return await response.value();
-    }
-
-    /**
-     * Creates request options for getAdminVendorTaxProfile without sending the request
-     */
-    async getAdminVendorTaxProfileRequestOpts(requestParameters: GetAdminVendorTaxProfileRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['organization'] == null) {
-            throw new runtime.RequiredError(
-                'organization',
-                'Required parameter "organization" was null or undefined when calling getAdminVendorTaxProfile().'
-            );
-        }
-
-        const queryParameters: any = {};
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-
-        let urlPath = `/admin/vendor-verification/{organization}/tax-profile`;
-        urlPath = urlPath.replace('{organization}', encodeURIComponent(String(requestParameters['organization'])));
-
-        return {
-            path: urlPath,
-            method: 'GET',
-            headers: headerParameters,
-            query: queryParameters,
-        };
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * get Admin Vendor Tax Profile
-     */
-    async getAdminVendorTaxProfileRaw(requestParameters: GetAdminVendorTaxProfileRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorTaxProfileEnvelope>> {
-        const requestOptions = await this.getAdminVendorTaxProfileRequestOpts(requestParameters);
-        const response = await this.request(requestOptions, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => VendorTaxProfileEnvelopeFromJSON(jsonValue));
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * get Admin Vendor Tax Profile
-     */
-    async getAdminVendorTaxProfile(requestParameters: GetAdminVendorTaxProfileRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorTaxProfileEnvelope> {
-        const response = await this.getAdminVendorTaxProfileRaw(requestParameters, initOverrides);
-        return await response.value();
-    }
-
-    /**
-     * Creates request options for getPublicVendorStoreMedia without sending the request
-     */
-    async getPublicVendorStoreMediaRequestOpts(requestParameters: GetPublicVendorStoreMediaRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['organization'] == null) {
-            throw new runtime.RequiredError(
-                'organization',
-                'Required parameter "organization" was null or undefined when calling getPublicVendorStoreMedia().'
-            );
-        }
-
-        if (requestParameters['media'] == null) {
-            throw new runtime.RequiredError(
-                'media',
-                'Required parameter "media" was null or undefined when calling getPublicVendorStoreMedia().'
-            );
-        }
-
-        const queryParameters: any = {};
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-
-        let urlPath = `/public/vendors/{organization}/store-media/{media}`;
-        urlPath = urlPath.replace('{organization}', encodeURIComponent(String(requestParameters['organization'])));
-        urlPath = urlPath.replace('{media}', encodeURIComponent(String(requestParameters['media'])));
-
-        return {
-            path: urlPath,
-            method: 'GET',
-            headers: headerParameters,
-            query: queryParameters,
-        };
-    }
-
-    /**
-     * Public delivery for an approved, unreplaced Store Profile image belonging to an active Vendor.
-     * get Public Vendor Store Media
-     */
-    async getPublicVendorStoreMediaRaw(requestParameters: GetPublicVendorStoreMediaRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Blob>> {
-        const requestOptions = await this.getPublicVendorStoreMediaRequestOpts(requestParameters);
-        const response = await this.request(requestOptions, initOverrides);
-
-        return new runtime.BlobApiResponse(response);
-    }
-
-    /**
-     * Public delivery for an approved, unreplaced Store Profile image belonging to an active Vendor.
-     * get Public Vendor Store Media
-     */
-    async getPublicVendorStoreMedia(requestParameters: GetPublicVendorStoreMediaRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Blob> {
-        const response = await this.getPublicVendorStoreMediaRaw(requestParameters, initOverrides);
-        return await response.value();
-    }
-
-    /**
-     * Creates request options for getVendorBusiness without sending the request
-     */
-    async getVendorBusinessRequestOpts(requestParameters: GetVendorBusinessRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['organization'] == null) {
-            throw new runtime.RequiredError(
-                'organization',
-                'Required parameter "organization" was null or undefined when calling getVendorBusiness().'
-            );
-        }
-
-        const queryParameters: any = {};
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-
-        let urlPath = `/vendors/{organization}/business`;
-        urlPath = urlPath.replace('{organization}', encodeURIComponent(String(requestParameters['organization'])));
-
-        return {
-            path: urlPath,
-            method: 'GET',
-            headers: headerParameters,
-            query: queryParameters,
-        };
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * get Vendor Business
-     */
-    async getVendorBusinessRaw(requestParameters: GetVendorBusinessRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorBusinessEnvelope>> {
-        const requestOptions = await this.getVendorBusinessRequestOpts(requestParameters);
-        const response = await this.request(requestOptions, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => VendorBusinessEnvelopeFromJSON(jsonValue));
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * get Vendor Business
-     */
-    async getVendorBusiness(requestParameters: GetVendorBusinessRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorBusinessEnvelope> {
-        const response = await this.getVendorBusinessRaw(requestParameters, initOverrides);
-        return await response.value();
-    }
-
-    /**
-     * Creates request options for getVendorCommissionTerms without sending the request
-     */
-    async getVendorCommissionTermsRequestOpts(requestParameters: GetVendorCommissionTermsRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['organization'] == null) {
-            throw new runtime.RequiredError(
-                'organization',
-                'Required parameter "organization" was null or undefined when calling getVendorCommissionTerms().'
-            );
-        }
-
-        const queryParameters: any = {};
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-
-        let urlPath = `/vendors/{organization}/commission-terms`;
-        urlPath = urlPath.replace('{organization}', encodeURIComponent(String(requestParameters['organization'])));
-
-        return {
-            path: urlPath,
-            method: 'GET',
-            headers: headerParameters,
-            query: queryParameters,
-        };
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * get Vendor Commission Terms
-     */
-    async getVendorCommissionTermsRaw(requestParameters: GetVendorCommissionTermsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorCommissionTermsEnvelope>> {
-        const requestOptions = await this.getVendorCommissionTermsRequestOpts(requestParameters);
-        const response = await this.request(requestOptions, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => VendorCommissionTermsEnvelopeFromJSON(jsonValue));
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * get Vendor Commission Terms
-     */
-    async getVendorCommissionTerms(requestParameters: GetVendorCommissionTermsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorCommissionTermsEnvelope> {
-        const response = await this.getVendorCommissionTermsRaw(requestParameters, initOverrides);
-        return await response.value();
-    }
-
-    /**
-     * Creates request options for getVendorReadiness without sending the request
-     */
-    async getVendorReadinessRequestOpts(requestParameters: GetVendorReadinessRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['organization'] == null) {
-            throw new runtime.RequiredError(
-                'organization',
-                'Required parameter "organization" was null or undefined when calling getVendorReadiness().'
-            );
-        }
-
-        const queryParameters: any = {};
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-
-        let urlPath = `/vendors/{organization}/onboarding`;
-        urlPath = urlPath.replace('{organization}', encodeURIComponent(String(requestParameters['organization'])));
-
-        return {
-            path: urlPath,
-            method: 'GET',
-            headers: headerParameters,
-            query: queryParameters,
-        };
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * get Vendor Readiness
-     */
-    async getVendorReadinessRaw(requestParameters: GetVendorReadinessRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorReadinessEnvelope>> {
-        const requestOptions = await this.getVendorReadinessRequestOpts(requestParameters);
-        const response = await this.request(requestOptions, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => VendorReadinessEnvelopeFromJSON(jsonValue));
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * get Vendor Readiness
-     */
-    async getVendorReadiness(requestParameters: GetVendorReadinessRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorReadinessEnvelope> {
-        const response = await this.getVendorReadinessRaw(requestParameters, initOverrides);
-        return await response.value();
-    }
-
-    /**
-     * Creates request options for getVendorSetup without sending the request
-     */
-    async getVendorSetupRequestOpts(requestParameters: GetVendorSetupRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['organization'] == null) {
-            throw new runtime.RequiredError(
-                'organization',
-                'Required parameter "organization" was null or undefined when calling getVendorSetup().'
-            );
-        }
-
-        const queryParameters: any = {};
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-
-        let urlPath = `/vendors/{organization}/setup`;
-        urlPath = urlPath.replace('{organization}', encodeURIComponent(String(requestParameters['organization'])));
-
-        return {
-            path: urlPath,
-            method: 'GET',
-            headers: headerParameters,
-            query: queryParameters,
-        };
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * get Vendor Setup
-     */
-    async getVendorSetupRaw(requestParameters: GetVendorSetupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorSetupEnvelope>> {
-        const requestOptions = await this.getVendorSetupRequestOpts(requestParameters);
-        const response = await this.request(requestOptions, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => VendorSetupEnvelopeFromJSON(jsonValue));
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * get Vendor Setup
-     */
-    async getVendorSetup(requestParameters: GetVendorSetupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorSetupEnvelope> {
-        const response = await this.getVendorSetupRaw(requestParameters, initOverrides);
-        return await response.value();
-    }
-
-    /**
-     * Creates request options for getVendorTaxProfile without sending the request
-     */
-    async getVendorTaxProfileRequestOpts(requestParameters: GetVendorTaxProfileRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['organization'] == null) {
-            throw new runtime.RequiredError(
-                'organization',
-                'Required parameter "organization" was null or undefined when calling getVendorTaxProfile().'
-            );
-        }
-
-        const queryParameters: any = {};
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-
-        let urlPath = `/vendors/{organization}/tax-profile`;
-        urlPath = urlPath.replace('{organization}', encodeURIComponent(String(requestParameters['organization'])));
-
-        return {
-            path: urlPath,
-            method: 'GET',
-            headers: headerParameters,
-            query: queryParameters,
-        };
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * get Vendor Tax Profile
-     */
-    async getVendorTaxProfileRaw(requestParameters: GetVendorTaxProfileRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorTaxProfileEnvelope>> {
-        const requestOptions = await this.getVendorTaxProfileRequestOpts(requestParameters);
-        const response = await this.request(requestOptions, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => VendorTaxProfileEnvelopeFromJSON(jsonValue));
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * get Vendor Tax Profile
-     */
-    async getVendorTaxProfile(requestParameters: GetVendorTaxProfileRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorTaxProfileEnvelope> {
-        const response = await this.getVendorTaxProfileRaw(requestParameters, initOverrides);
-        return await response.value();
-    }
-
-    /**
-     * Creates request options for getVendorTeam without sending the request
-     */
-    async getVendorTeamRequestOpts(requestParameters: GetVendorTeamRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['organization'] == null) {
-            throw new runtime.RequiredError(
-                'organization',
-                'Required parameter "organization" was null or undefined when calling getVendorTeam().'
-            );
-        }
-
-        const queryParameters: any = {};
-
-        if (requestParameters['page'] != null) {
-            queryParameters['page'] = requestParameters['page'];
-        }
-
-        if (requestParameters['perPage'] != null) {
-            queryParameters['per_page'] = requestParameters['perPage'];
-        }
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-
-        let urlPath = `/vendors/{organization}/team`;
-        urlPath = urlPath.replace('{organization}', encodeURIComponent(String(requestParameters['organization'])));
-
-        return {
-            path: urlPath,
-            method: 'GET',
-            headers: headerParameters,
-            query: queryParameters,
-        };
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * get Vendor Team
-     */
-    async getVendorTeamRaw(requestParameters: GetVendorTeamRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorTeamEnvelope>> {
-        const requestOptions = await this.getVendorTeamRequestOpts(requestParameters);
-        const response = await this.request(requestOptions, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => VendorTeamEnvelopeFromJSON(jsonValue));
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * get Vendor Team
-     */
-    async getVendorTeam(requestParameters: GetVendorTeamRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorTeamEnvelope> {
-        const response = await this.getVendorTeamRaw(requestParameters, initOverrides);
-        return await response.value();
-    }
-
-    /**
-     * Creates request options for inviteVendorTeam without sending the request
-     */
-    async inviteVendorTeamRequestOpts(requestParameters: InviteVendorTeamRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['organization'] == null) {
-            throw new runtime.RequiredError(
-                'organization',
-                'Required parameter "organization" was null or undefined when calling inviteVendorTeam().'
-            );
-        }
-
+    async acceptVendorCommissionRequestOpts(requestParameters: AcceptVendorCommissionRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['idempotencyKey'] == null) {
             throw new runtime.RequiredError(
                 'idempotencyKey',
-                'Required parameter "idempotencyKey" was null or undefined when calling inviteVendorTeam().'
+                'Required parameter "idempotencyKey" was null or undefined when calling acceptVendorCommission().'
             );
         }
 
-        if (requestParameters['inviteVendorTeam'] == null) {
+        if (requestParameters['vendorCommissionAcceptance'] == null) {
             throw new runtime.RequiredError(
-                'inviteVendorTeam',
-                'Required parameter "inviteVendorTeam" was null or undefined when calling inviteVendorTeam().'
+                'vendorCommissionAcceptance',
+                'Required parameter "vendorCommissionAcceptance" was null or undefined when calling acceptVendorCommission().'
             );
         }
 
@@ -1668,68 +391,60 @@ export class VendorOnboardingApi extends runtime.BaseAPI {
         }
 
 
-        let urlPath = `/vendors/{organization}/team/invitations`;
-        urlPath = urlPath.replace('{organization}', encodeURIComponent(String(requestParameters['organization'])));
+        let urlPath = `/vendors/onboarding/verification/commission`;
 
         return {
             path: urlPath,
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
-            body: InviteVendorTeamToJSON(requestParameters['inviteVendorTeam']),
+            body: VendorCommissionAcceptanceToJSON(requestParameters['vendorCommissionAcceptance']),
         };
     }
 
     /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * invite Vendor Team
+     * Explicit version-bound acceptance in Store Verification. Owner only; applicable current representative authority requires the COMMISSION_AGREEMENT scope. Autosaving or submitting evidence never implies consent. Initial evidence submission remains available while authority approval is pending.
      */
-    async inviteVendorTeamRaw(requestParameters: InviteVendorTeamRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorMutationEnvelope>> {
-        const requestOptions = await this.inviteVendorTeamRequestOpts(requestParameters);
+    async acceptVendorCommissionRaw(requestParameters: AcceptVendorCommissionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorOnboardingEnvelope>> {
+        const requestOptions = await this.acceptVendorCommissionRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => VendorMutationEnvelopeFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => VendorOnboardingEnvelopeFromJSON(jsonValue));
     }
 
     /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * invite Vendor Team
+     * Explicit version-bound acceptance in Store Verification. Owner only; applicable current representative authority requires the COMMISSION_AGREEMENT scope. Autosaving or submitting evidence never implies consent. Initial evidence submission remains available while authority approval is pending.
      */
-    async inviteVendorTeam(requestParameters: InviteVendorTeamRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorMutationEnvelope> {
-        const response = await this.inviteVendorTeamRaw(requestParameters, initOverrides);
+    async acceptVendorCommission(requestParameters: AcceptVendorCommissionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorOnboardingEnvelope> {
+        const response = await this.acceptVendorCommissionRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
     /**
-     * Creates request options for issueAdminVendorDocumentLink without sending the request
+     * Creates request options for activateVendorStore without sending the request
      */
-    async issueAdminVendorDocumentLinkRequestOpts(requestParameters: IssueAdminVendorDocumentLinkRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['organization'] == null) {
+    async activateVendorStoreRequestOpts(requestParameters: ActivateVendorStoreRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['idempotencyKey'] == null) {
             throw new runtime.RequiredError(
-                'organization',
-                'Required parameter "organization" was null or undefined when calling issueAdminVendorDocumentLink().'
-            );
-        }
-
-        if (requestParameters['version'] == null) {
-            throw new runtime.RequiredError(
-                'version',
-                'Required parameter "version" was null or undefined when calling issueAdminVendorDocumentLink().'
+                'idempotencyKey',
+                'Required parameter "idempotencyKey" was null or undefined when calling activateVendorStore().'
             );
         }
 
         const queryParameters: any = {};
 
         const headerParameters: runtime.HTTPHeaders = {};
+
+        if (requestParameters['idempotencyKey'] != null) {
+            headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
+        }
 
         if (this.configuration && this.configuration.apiKey) {
             headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
         }
 
 
-        let urlPath = `/admin/vendor-verification/{organization}/documents/{version}/download-link`;
-        urlPath = urlPath.replace('{organization}', encodeURIComponent(String(requestParameters['organization'])));
-        urlPath = urlPath.replace('{version}', encodeURIComponent(String(requestParameters['version'])));
+        let urlPath = `/vendors/onboarding/activation`;
 
         return {
             path: urlPath,
@@ -1740,147 +455,96 @@ export class VendorOnboardingApi extends runtime.BaseAPI {
     }
 
     /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * issue Admin Vendor Document Link
      */
-    async issueAdminVendorDocumentLinkRaw(requestParameters: IssueAdminVendorDocumentLinkRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorDownloadLinkEnvelope>> {
-        const requestOptions = await this.issueAdminVendorDocumentLinkRequestOpts(requestParameters);
+    async activateVendorStoreRaw(requestParameters: ActivateVendorStoreRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorOnboardingEnvelope>> {
+        const requestOptions = await this.activateVendorStoreRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => VendorDownloadLinkEnvelopeFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => VendorOnboardingEnvelopeFromJSON(jsonValue));
     }
 
     /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * issue Admin Vendor Document Link
      */
-    async issueAdminVendorDocumentLink(requestParameters: IssueAdminVendorDocumentLinkRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorDownloadLinkEnvelope> {
-        const response = await this.issueAdminVendorDocumentLinkRaw(requestParameters, initOverrides);
+    async activateVendorStore(requestParameters: ActivateVendorStoreRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorOnboardingEnvelope> {
+        const response = await this.activateVendorStoreRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
     /**
-     * Creates request options for issueVendorDocumentLink without sending the request
+     * Creates request options for captureVendorPaymentConnection without sending the request
      */
-    async issueVendorDocumentLinkRequestOpts(requestParameters: IssueVendorDocumentLinkRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['organization'] == null) {
+    async captureVendorPaymentConnectionRequestOpts(requestParameters: CaptureVendorPaymentConnectionRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['idempotencyKey'] == null) {
             throw new runtime.RequiredError(
-                'organization',
-                'Required parameter "organization" was null or undefined when calling issueVendorDocumentLink().'
+                'idempotencyKey',
+                'Required parameter "idempotencyKey" was null or undefined when calling captureVendorPaymentConnection().'
             );
         }
 
-        if (requestParameters['version'] == null) {
+        if (requestParameters['vendorPaymentConnection'] == null) {
             throw new runtime.RequiredError(
-                'version',
-                'Required parameter "version" was null or undefined when calling issueVendorDocumentLink().'
+                'vendorPaymentConnection',
+                'Required parameter "vendorPaymentConnection" was null or undefined when calling captureVendorPaymentConnection().'
             );
         }
 
         const queryParameters: any = {};
 
         const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (requestParameters['idempotencyKey'] != null) {
+            headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
+        }
 
         if (this.configuration && this.configuration.apiKey) {
             headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
         }
 
 
-        let urlPath = `/vendors/{organization}/documents/{version}/download-link`;
-        urlPath = urlPath.replace('{organization}', encodeURIComponent(String(requestParameters['organization'])));
-        urlPath = urlPath.replace('{version}', encodeURIComponent(String(requestParameters['version'])));
+        let urlPath = `/vendors/onboarding/payment-connection`;
 
         return {
             path: urlPath,
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
+            body: VendorPaymentConnectionToJSON(requestParameters['vendorPaymentConnection']),
         };
     }
 
     /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * issue Vendor Document Link
      */
-    async issueVendorDocumentLinkRaw(requestParameters: IssueVendorDocumentLinkRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorDownloadLinkEnvelope>> {
-        const requestOptions = await this.issueVendorDocumentLinkRequestOpts(requestParameters);
+    async captureVendorPaymentConnectionRaw(requestParameters: CaptureVendorPaymentConnectionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorOnboardingEnvelope>> {
+        const requestOptions = await this.captureVendorPaymentConnectionRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => VendorDownloadLinkEnvelopeFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => VendorOnboardingEnvelopeFromJSON(jsonValue));
     }
 
     /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * issue Vendor Document Link
      */
-    async issueVendorDocumentLink(requestParameters: IssueVendorDocumentLinkRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorDownloadLinkEnvelope> {
-        const response = await this.issueVendorDocumentLinkRaw(requestParameters, initOverrides);
+    async captureVendorPaymentConnection(requestParameters: CaptureVendorPaymentConnectionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorOnboardingEnvelope> {
+        const response = await this.captureVendorPaymentConnectionRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
     /**
-     * Creates request options for listAdminVendorDocuments without sending the request
+     * Creates request options for completeVendorSetup without sending the request
      */
-    async listAdminVendorDocumentsRequestOpts(requestParameters: ListAdminVendorDocumentsRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['organization'] == null) {
+    async completeVendorSetupRequestOpts(requestParameters: CompleteVendorSetupRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['idempotencyKey'] == null) {
             throw new runtime.RequiredError(
-                'organization',
-                'Required parameter "organization" was null or undefined when calling listAdminVendorDocuments().'
+                'idempotencyKey',
+                'Required parameter "idempotencyKey" was null or undefined when calling completeVendorSetup().'
             );
         }
 
-        const queryParameters: any = {};
-
-        if (requestParameters['page'] != null) {
-            queryParameters['page'] = requestParameters['page'];
-        }
-
-        if (requestParameters['perPage'] != null) {
-            queryParameters['per_page'] = requestParameters['perPage'];
-        }
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-
-        let urlPath = `/admin/vendor-verification/{organization}/documents`;
-        urlPath = urlPath.replace('{organization}', encodeURIComponent(String(requestParameters['organization'])));
-
-        return {
-            path: urlPath,
-            method: 'GET',
-            headers: headerParameters,
-            query: queryParameters,
-        };
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * list Admin Vendor Documents
-     */
-    async listAdminVendorDocumentsRaw(requestParameters: ListAdminVendorDocumentsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorDocumentListEnvelope>> {
-        const requestOptions = await this.listAdminVendorDocumentsRequestOpts(requestParameters);
-        const response = await this.request(requestOptions, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => VendorDocumentListEnvelopeFromJSON(jsonValue));
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * list Admin Vendor Documents
-     */
-    async listAdminVendorDocuments(requestParameters: ListAdminVendorDocumentsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorDocumentListEnvelope> {
-        const response = await this.listAdminVendorDocumentsRaw(requestParameters, initOverrides);
-        return await response.value();
-    }
-
-    /**
-     * Creates request options for listAdminVendorStoreMedia without sending the request
-     */
-    async listAdminVendorStoreMediaRequestOpts(requestParameters: ListAdminVendorStoreMediaRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['organization'] == null) {
+        if (requestParameters['vendorSetupComplete'] == null) {
             throw new runtime.RequiredError(
-                'organization',
-                'Required parameter "organization" was null or undefined when calling listAdminVendorStoreMedia().'
+                'vendorSetupComplete',
+                'Required parameter "vendorSetupComplete" was null or undefined when calling completeVendorSetup().'
             );
         }
 
@@ -1888,367 +552,52 @@ export class VendorOnboardingApi extends runtime.BaseAPI {
 
         const headerParameters: runtime.HTTPHeaders = {};
 
+        headerParameters['Content-Type'] = 'application/json';
 
-        let urlPath = `/admin/vendor-verification/{organization}/store-media`;
-        urlPath = urlPath.replace('{organization}', encodeURIComponent(String(requestParameters['organization'])));
+        if (requestParameters['idempotencyKey'] != null) {
+            headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
+        }
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/vendors/onboarding/setup/complete`;
 
         return {
             path: urlPath,
-            method: 'GET',
+            method: 'POST',
             headers: headerParameters,
             query: queryParameters,
+            body: VendorSetupCompleteToJSON(requestParameters['vendorSetupComplete']),
         };
     }
 
     /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * list Admin Vendor Store Media
      */
-    async listAdminVendorStoreMediaRaw(requestParameters: ListAdminVendorStoreMediaRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorStoreMediaListEnvelope>> {
-        const requestOptions = await this.listAdminVendorStoreMediaRequestOpts(requestParameters);
+    async completeVendorSetupRaw(requestParameters: CompleteVendorSetupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorOnboardingEnvelope>> {
+        const requestOptions = await this.completeVendorSetupRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => VendorStoreMediaListEnvelopeFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => VendorOnboardingEnvelopeFromJSON(jsonValue));
     }
 
     /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * list Admin Vendor Store Media
      */
-    async listAdminVendorStoreMedia(requestParameters: ListAdminVendorStoreMediaRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorStoreMediaListEnvelope> {
-        const response = await this.listAdminVendorStoreMediaRaw(requestParameters, initOverrides);
+    async completeVendorSetup(requestParameters: CompleteVendorSetupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorOnboardingEnvelope> {
+        const response = await this.completeVendorSetupRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
     /**
-     * Creates request options for listVendorDocuments without sending the request
+     * Creates request options for confirmVendorStoreEmailVerification without sending the request
      */
-    async listVendorDocumentsRequestOpts(requestParameters: ListVendorDocumentsRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['organization'] == null) {
+    async confirmVendorStoreEmailVerificationRequestOpts(requestParameters: ConfirmVendorStoreEmailVerificationRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['vendorStoreEmailConfirmation'] == null) {
             throw new runtime.RequiredError(
-                'organization',
-                'Required parameter "organization" was null or undefined when calling listVendorDocuments().'
-            );
-        }
-
-        const queryParameters: any = {};
-
-        if (requestParameters['page'] != null) {
-            queryParameters['page'] = requestParameters['page'];
-        }
-
-        if (requestParameters['perPage'] != null) {
-            queryParameters['per_page'] = requestParameters['perPage'];
-        }
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-
-        let urlPath = `/vendors/{organization}/documents`;
-        urlPath = urlPath.replace('{organization}', encodeURIComponent(String(requestParameters['organization'])));
-
-        return {
-            path: urlPath,
-            method: 'GET',
-            headers: headerParameters,
-            query: queryParameters,
-        };
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * list Vendor Documents
-     */
-    async listVendorDocumentsRaw(requestParameters: ListVendorDocumentsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorDocumentListEnvelope>> {
-        const requestOptions = await this.listVendorDocumentsRequestOpts(requestParameters);
-        const response = await this.request(requestOptions, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => VendorDocumentListEnvelopeFromJSON(jsonValue));
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * list Vendor Documents
-     */
-    async listVendorDocuments(requestParameters: ListVendorDocumentsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorDocumentListEnvelope> {
-        const response = await this.listVendorDocumentsRaw(requestParameters, initOverrides);
-        return await response.value();
-    }
-
-    /**
-     * Creates request options for listVendorStoreMedia without sending the request
-     */
-    async listVendorStoreMediaRequestOpts(requestParameters: ListVendorStoreMediaRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['organization'] == null) {
-            throw new runtime.RequiredError(
-                'organization',
-                'Required parameter "organization" was null or undefined when calling listVendorStoreMedia().'
-            );
-        }
-
-        const queryParameters: any = {};
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-
-        let urlPath = `/vendors/{organization}/store-media`;
-        urlPath = urlPath.replace('{organization}', encodeURIComponent(String(requestParameters['organization'])));
-
-        return {
-            path: urlPath,
-            method: 'GET',
-            headers: headerParameters,
-            query: queryParameters,
-        };
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * list Vendor Store Media
-     */
-    async listVendorStoreMediaRaw(requestParameters: ListVendorStoreMediaRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorStoreMediaListEnvelope>> {
-        const requestOptions = await this.listVendorStoreMediaRequestOpts(requestParameters);
-        const response = await this.request(requestOptions, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => VendorStoreMediaListEnvelopeFromJSON(jsonValue));
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * list Vendor Store Media
-     */
-    async listVendorStoreMedia(requestParameters: ListVendorStoreMediaRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorStoreMediaListEnvelope> {
-        const response = await this.listVendorStoreMediaRaw(requestParameters, initOverrides);
-        return await response.value();
-    }
-
-    /**
-     * Creates request options for listVendorTeamInvitations without sending the request
-     */
-    async listVendorTeamInvitationsRequestOpts(requestParameters: ListVendorTeamInvitationsRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['organization'] == null) {
-            throw new runtime.RequiredError(
-                'organization',
-                'Required parameter "organization" was null or undefined when calling listVendorTeamInvitations().'
-            );
-        }
-
-        const queryParameters: any = {};
-
-        if (requestParameters['page'] != null) {
-            queryParameters['page'] = requestParameters['page'];
-        }
-
-        if (requestParameters['perPage'] != null) {
-            queryParameters['per_page'] = requestParameters['perPage'];
-        }
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-
-        let urlPath = `/vendors/{organization}/team/invitations`;
-        urlPath = urlPath.replace('{organization}', encodeURIComponent(String(requestParameters['organization'])));
-
-        return {
-            path: urlPath,
-            method: 'GET',
-            headers: headerParameters,
-            query: queryParameters,
-        };
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * list Vendor Team Invitations
-     */
-    async listVendorTeamInvitationsRaw(requestParameters: ListVendorTeamInvitationsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorTeamInvitationListEnvelope>> {
-        const requestOptions = await this.listVendorTeamInvitationsRequestOpts(requestParameters);
-        const response = await this.request(requestOptions, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => VendorTeamInvitationListEnvelopeFromJSON(jsonValue));
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * list Vendor Team Invitations
-     */
-    async listVendorTeamInvitations(requestParameters: ListVendorTeamInvitationsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorTeamInvitationListEnvelope> {
-        const response = await this.listVendorTeamInvitationsRaw(requestParameters, initOverrides);
-        return await response.value();
-    }
-
-    /**
-     * Creates request options for listVendorVerificationQueue without sending the request
-     */
-    async listVendorVerificationQueueRequestOpts(requestParameters: ListVendorVerificationQueueRequest): Promise<runtime.RequestOpts> {
-        const queryParameters: any = {};
-
-        if (requestParameters['page'] != null) {
-            queryParameters['page'] = requestParameters['page'];
-        }
-
-        if (requestParameters['perPage'] != null) {
-            queryParameters['per_page'] = requestParameters['perPage'];
-        }
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-
-        let urlPath = `/admin/vendor-verification`;
-
-        return {
-            path: urlPath,
-            method: 'GET',
-            headers: headerParameters,
-            query: queryParameters,
-        };
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * list Vendor Verification Queue
-     */
-    async listVendorVerificationQueueRaw(requestParameters: ListVendorVerificationQueueRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorVerificationRowListEnvelope>> {
-        const requestOptions = await this.listVendorVerificationQueueRequestOpts(requestParameters);
-        const response = await this.request(requestOptions, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => VendorVerificationRowListEnvelopeFromJSON(jsonValue));
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * list Vendor Verification Queue
-     */
-    async listVendorVerificationQueue(requestParameters: ListVendorVerificationQueueRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorVerificationRowListEnvelope> {
-        const response = await this.listVendorVerificationQueueRaw(requestParameters, initOverrides);
-        return await response.value();
-    }
-
-    /**
-     * Creates request options for previewAdminVendorStoreMedia without sending the request
-     */
-    async previewAdminVendorStoreMediaRequestOpts(requestParameters: PreviewAdminVendorStoreMediaRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['organization'] == null) {
-            throw new runtime.RequiredError(
-                'organization',
-                'Required parameter "organization" was null or undefined when calling previewAdminVendorStoreMedia().'
-            );
-        }
-
-        if (requestParameters['media'] == null) {
-            throw new runtime.RequiredError(
-                'media',
-                'Required parameter "media" was null or undefined when calling previewAdminVendorStoreMedia().'
-            );
-        }
-
-        const queryParameters: any = {};
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-
-        let urlPath = `/admin/vendor-verification/{organization}/store-media/{media}`;
-        urlPath = urlPath.replace('{organization}', encodeURIComponent(String(requestParameters['organization'])));
-        urlPath = urlPath.replace('{media}', encodeURIComponent(String(requestParameters['media'])));
-
-        return {
-            path: urlPath,
-            method: 'GET',
-            headers: headerParameters,
-            query: queryParameters,
-        };
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * preview Admin Vendor Store Media
-     */
-    async previewAdminVendorStoreMediaRaw(requestParameters: PreviewAdminVendorStoreMediaRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Blob>> {
-        const requestOptions = await this.previewAdminVendorStoreMediaRequestOpts(requestParameters);
-        const response = await this.request(requestOptions, initOverrides);
-
-        return new runtime.BlobApiResponse(response);
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * preview Admin Vendor Store Media
-     */
-    async previewAdminVendorStoreMedia(requestParameters: PreviewAdminVendorStoreMediaRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Blob> {
-        const response = await this.previewAdminVendorStoreMediaRaw(requestParameters, initOverrides);
-        return await response.value();
-    }
-
-    /**
-     * Creates request options for previewVendorStoreMedia without sending the request
-     */
-    async previewVendorStoreMediaRequestOpts(requestParameters: PreviewVendorStoreMediaRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['organization'] == null) {
-            throw new runtime.RequiredError(
-                'organization',
-                'Required parameter "organization" was null or undefined when calling previewVendorStoreMedia().'
-            );
-        }
-
-        if (requestParameters['media'] == null) {
-            throw new runtime.RequiredError(
-                'media',
-                'Required parameter "media" was null or undefined when calling previewVendorStoreMedia().'
-            );
-        }
-
-        const queryParameters: any = {};
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-
-        let urlPath = `/vendors/{organization}/store-media/{media}`;
-        urlPath = urlPath.replace('{organization}', encodeURIComponent(String(requestParameters['organization'])));
-        urlPath = urlPath.replace('{media}', encodeURIComponent(String(requestParameters['media'])));
-
-        return {
-            path: urlPath,
-            method: 'GET',
-            headers: headerParameters,
-            query: queryParameters,
-        };
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * preview Vendor Store Media
-     */
-    async previewVendorStoreMediaRaw(requestParameters: PreviewVendorStoreMediaRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Blob>> {
-        const requestOptions = await this.previewVendorStoreMediaRequestOpts(requestParameters);
-        const response = await this.request(requestOptions, initOverrides);
-
-        return new runtime.BlobApiResponse(response);
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * preview Vendor Store Media
-     */
-    async previewVendorStoreMedia(requestParameters: PreviewVendorStoreMediaRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Blob> {
-        const response = await this.previewVendorStoreMediaRaw(requestParameters, initOverrides);
-        return await response.value();
-    }
-
-    /**
-     * Creates request options for reconcileVendorTestConnection without sending the request
-     */
-    async reconcileVendorTestConnectionRequestOpts(requestParameters: ReconcileVendorTestConnectionRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['organization'] == null) {
-            throw new runtime.RequiredError(
-                'organization',
-                'Required parameter "organization" was null or undefined when calling reconcileVendorTestConnection().'
-            );
-        }
-
-        if (requestParameters['vendorVersionMutation'] == null) {
-            throw new runtime.RequiredError(
-                'vendorVersionMutation',
-                'Required parameter "vendorVersionMutation" was null or undefined when calling reconcileVendorTestConnection().'
+                'vendorStoreEmailConfirmation',
+                'Required parameter "vendorStoreEmailConfirmation" was null or undefined when calling confirmVendorStoreEmailVerification().'
             );
         }
 
@@ -2263,60 +612,247 @@ export class VendorOnboardingApi extends runtime.BaseAPI {
         }
 
 
-        let urlPath = `/vendors/{organization}/payment-connection/reconciliation`;
-        urlPath = urlPath.replace('{organization}', encodeURIComponent(String(requestParameters['organization'])));
+        let urlPath = `/vendors/onboarding/store-email/confirm`;
 
         return {
             path: urlPath,
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
-            body: VendorVersionMutationToJSON(requestParameters['vendorVersionMutation']),
+            body: VendorStoreEmailConfirmationToJSON(requestParameters['vendorStoreEmailConfirmation']),
         };
     }
 
     /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * reconcile Vendor Test Connection
      */
-    async reconcileVendorTestConnectionRaw(requestParameters: ReconcileVendorTestConnectionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorSetupEnvelope>> {
-        const requestOptions = await this.reconcileVendorTestConnectionRequestOpts(requestParameters);
+    async confirmVendorStoreEmailVerificationRaw(requestParameters: ConfirmVendorStoreEmailVerificationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorOnboardingEnvelope>> {
+        const requestOptions = await this.confirmVendorStoreEmailVerificationRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => VendorSetupEnvelopeFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => VendorOnboardingEnvelopeFromJSON(jsonValue));
     }
 
     /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * reconcile Vendor Test Connection
      */
-    async reconcileVendorTestConnection(requestParameters: ReconcileVendorTestConnectionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorSetupEnvelope> {
-        const response = await this.reconcileVendorTestConnectionRaw(requestParameters, initOverrides);
+    async confirmVendorStoreEmailVerification(requestParameters: ConfirmVendorStoreEmailVerificationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorOnboardingEnvelope> {
+        const response = await this.confirmVendorStoreEmailVerificationRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
     /**
-     * Creates request options for removeVendorStoreMedia without sending the request
+     * Creates request options for dismissVendorOnboardingWelcome without sending the request
      */
-    async removeVendorStoreMediaRequestOpts(requestParameters: RemoveVendorStoreMediaRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['organization'] == null) {
+    async dismissVendorOnboardingWelcomeRequestOpts(): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/vendors/onboarding/welcome/dismiss`;
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Persists the Owner welcome completion across refreshes and sessions. Clients continue to Store Verification after success.
+     */
+    async dismissVendorOnboardingWelcomeRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorOnboardingEnvelope>> {
+        const requestOptions = await this.dismissVendorOnboardingWelcomeRequestOpts();
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => VendorOnboardingEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * Persists the Owner welcome completion across refreshes and sessions. Clients continue to Store Verification after success.
+     */
+    async dismissVendorOnboardingWelcome(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorOnboardingEnvelope> {
+        const response = await this.dismissVendorOnboardingWelcomeRaw(initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for downloadVendorOnboardingFile without sending the request
+     */
+    async downloadVendorOnboardingFileRequestOpts(requestParameters: DownloadVendorOnboardingFileRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['fileId'] == null) {
             throw new runtime.RequiredError(
-                'organization',
-                'Required parameter "organization" was null or undefined when calling removeVendorStoreMedia().'
+                'fileId',
+                'Required parameter "fileId" was null or undefined when calling downloadVendorOnboardingFile().'
             );
         }
 
-        if (requestParameters['media'] == null) {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/vendor-onboarding-files/{fileId}/content`;
+        urlPath = urlPath.replace('{fileId}', encodeURIComponent(String(requestParameters['fileId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     */
+    async downloadVendorOnboardingFileRaw(requestParameters: DownloadVendorOnboardingFileRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Blob>> {
+        const requestOptions = await this.downloadVendorOnboardingFileRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.BlobApiResponse(response);
+    }
+
+    /**
+     */
+    async downloadVendorOnboardingFile(requestParameters: DownloadVendorOnboardingFileRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Blob> {
+        const response = await this.downloadVendorOnboardingFileRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for getAuthoritativeVendorOnboarding without sending the request
+     */
+    async getAuthoritativeVendorOnboardingRequestOpts(): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/vendor/onboarding`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     */
+    async getAuthoritativeVendorOnboardingRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorOnboardingEnvelope>> {
+        const requestOptions = await this.getAuthoritativeVendorOnboardingRequestOpts();
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => VendorOnboardingEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async getAuthoritativeVendorOnboarding(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorOnboardingEnvelope> {
+        const response = await this.getAuthoritativeVendorOnboardingRaw(initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for getVendorOnboarding without sending the request
+     */
+    async getVendorOnboardingRequestOpts(): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/vendors/onboarding`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     */
+    async getVendorOnboardingRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorOnboardingEnvelope>> {
+        const requestOptions = await this.getVendorOnboardingRequestOpts();
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => VendorOnboardingEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async getVendorOnboarding(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorOnboardingEnvelope> {
+        const response = await this.getVendorOnboardingRaw(initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for getVendorPrivateFileUrl without sending the request
+     */
+    async getVendorPrivateFileUrlRequestOpts(requestParameters: GetVendorPrivateFileUrlRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['fileId'] == null) {
             throw new runtime.RequiredError(
-                'media',
-                'Required parameter "media" was null or undefined when calling removeVendorStoreMedia().'
+                'fileId',
+                'Required parameter "fileId" was null or undefined when calling getVendorPrivateFileUrl().'
             );
         }
 
-        if (requestParameters['vendorVersionMutation'] == null) {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/vendors/onboarding/files/{fileId}`;
+        urlPath = urlPath.replace('{fileId}', encodeURIComponent(String(requestParameters['fileId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Returns a five-minute signed URL for clean private verification evidence or ready Store Profile media owned by the current Vendor organization. Download rechecks authentication, permissions, ownership and scan state.
+     */
+    async getVendorPrivateFileUrlRaw(requestParameters: GetVendorPrivateFileUrlRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorFileEnvelope>> {
+        const requestOptions = await this.getVendorPrivateFileUrlRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => VendorFileEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * Returns a five-minute signed URL for clean private verification evidence or ready Store Profile media owned by the current Vendor organization. Download rechecks authentication, permissions, ownership and scan state.
+     */
+    async getVendorPrivateFileUrl(requestParameters: GetVendorPrivateFileUrlRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorFileEnvelope> {
+        const response = await this.getVendorPrivateFileUrlRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for inviteVendorTeamMember without sending the request
+     */
+    async inviteVendorTeamMemberRequestOpts(requestParameters: InviteVendorTeamMemberRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['idempotencyKey'] == null) {
             throw new runtime.RequiredError(
-                'vendorVersionMutation',
-                'Required parameter "vendorVersionMutation" was null or undefined when calling removeVendorStoreMedia().'
+                'idempotencyKey',
+                'Required parameter "idempotencyKey" was null or undefined when calling inviteVendorTeamMember().'
+            );
+        }
+
+        if (requestParameters['vendorInvitationRequest'] == null) {
+            throw new runtime.RequiredError(
+                'vendorInvitationRequest',
+                'Required parameter "vendorInvitationRequest" was null or undefined when calling inviteVendorTeamMember().'
             );
         }
 
@@ -2326,41 +862,247 @@ export class VendorOnboardingApi extends runtime.BaseAPI {
 
         headerParameters['Content-Type'] = 'application/json';
 
+        if (requestParameters['idempotencyKey'] != null) {
+            headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
+        }
+
         if (this.configuration && this.configuration.apiKey) {
             headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
         }
 
 
-        let urlPath = `/vendors/{organization}/store-media/{media}/remove`;
-        urlPath = urlPath.replace('{organization}', encodeURIComponent(String(requestParameters['organization'])));
-        urlPath = urlPath.replace('{media}', encodeURIComponent(String(requestParameters['media'])));
+        let urlPath = `/vendors/account/invitations`;
 
         return {
             path: urlPath,
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
-            body: VendorVersionMutationToJSON(requestParameters['vendorVersionMutation']),
+            body: VendorInvitationRequestToJSON(requestParameters['vendorInvitationRequest']),
         };
     }
 
     /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * remove Vendor Store Media
      */
-    async removeVendorStoreMediaRaw(requestParameters: RemoveVendorStoreMediaRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorMutationEnvelope>> {
-        const requestOptions = await this.removeVendorStoreMediaRequestOpts(requestParameters);
+    async inviteVendorTeamMemberRaw(requestParameters: InviteVendorTeamMemberRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorInvitationEnvelope>> {
+        const requestOptions = await this.inviteVendorTeamMemberRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => VendorMutationEnvelopeFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => VendorInvitationEnvelopeFromJSON(jsonValue));
     }
 
     /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * remove Vendor Store Media
      */
-    async removeVendorStoreMedia(requestParameters: RemoveVendorStoreMediaRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorMutationEnvelope> {
-        const response = await this.removeVendorStoreMediaRaw(requestParameters, initOverrides);
+    async inviteVendorTeamMember(requestParameters: InviteVendorTeamMemberRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorInvitationEnvelope> {
+        const response = await this.inviteVendorTeamMemberRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for previewVendorRequirements without sending the request
+     */
+    async previewVendorRequirementsRequestOpts(requestParameters: PreviewVendorRequirementsRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['businessType'] == null) {
+            throw new runtime.RequiredError(
+                'businessType',
+                'Required parameter "businessType" was null or undefined when calling previewVendorRequirements().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['businessType'] != null) {
+            queryParameters['business_type'] = requestParameters['businessType'];
+        }
+
+        if (requestParameters['representativeRole'] != null) {
+            queryParameters['representative_role'] = requestParameters['representativeRole'];
+        }
+
+        if (requestParameters['identityIdType'] != null) {
+            queryParameters['identity_id_type'] = requestParameters['identityIdType'];
+        }
+
+        if (requestParameters['representativeIdType'] != null) {
+            queryParameters['representative_id_type'] = requestParameters['representativeIdType'];
+        }
+
+        if (requestParameters['authorityEvidenceVersionId'] != null) {
+            queryParameters['authority_evidence_version_id'] = requestParameters['authorityEvidenceVersionId'];
+        }
+
+        if (requestParameters['declarationClaim'] != null) {
+            queryParameters['declaration_claim'] = requestParameters['declarationClaim'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/vendors/onboarding/requirements`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     */
+    async previewVendorRequirementsRaw(requestParameters: PreviewVendorRequirementsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<GenericDataEnvelope>> {
+        const requestOptions = await this.previewVendorRequirementsRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => GenericDataEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async previewVendorRequirements(requestParameters: PreviewVendorRequirementsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<GenericDataEnvelope> {
+        const response = await this.previewVendorRequirementsRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for receiveXenditAccountVerificationWebhook without sending the request
+     */
+    async receiveXenditAccountVerificationWebhookRequestOpts(requestParameters: ReceiveXenditAccountVerificationWebhookRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['xCallbackToken'] == null) {
+            throw new runtime.RequiredError(
+                'xCallbackToken',
+                'Required parameter "xCallbackToken" was null or undefined when calling receiveXenditAccountVerificationWebhook().'
+            );
+        }
+
+        if (requestParameters['xenditAccountVerificationWebhook'] == null) {
+            throw new runtime.RequiredError(
+                'xenditAccountVerificationWebhook',
+                'Required parameter "xenditAccountVerificationWebhook" was null or undefined when calling receiveXenditAccountVerificationWebhook().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (requestParameters['xCallbackToken'] != null) {
+            headerParameters['x-callback-token'] = String(requestParameters['xCallbackToken']);
+        }
+
+
+        let urlPath = `/webhooks/xendit/account-verification`;
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: XenditAccountVerificationWebhookToJSON(requestParameters['xenditAccountVerificationWebhook']),
+        };
+    }
+
+    /**
+     */
+    async receiveXenditAccountVerificationWebhookRaw(requestParameters: ReceiveXenditAccountVerificationWebhookRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorWebhookEnvelope>> {
+        const requestOptions = await this.receiveXenditAccountVerificationWebhookRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => VendorWebhookEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async receiveXenditAccountVerificationWebhook(requestParameters: ReceiveXenditAccountVerificationWebhookRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorWebhookEnvelope> {
+        const response = await this.receiveXenditAccountVerificationWebhookRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for reconcileVendorPaymentConnection without sending the request
+     */
+    async reconcileVendorPaymentConnectionRequestOpts(): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/vendors/onboarding/payment-connection/reconcile`;
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     */
+    async reconcileVendorPaymentConnectionRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorPaymentReconciliationEnvelope>> {
+        const requestOptions = await this.reconcileVendorPaymentConnectionRequestOpts();
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => VendorPaymentReconciliationEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async reconcileVendorPaymentConnection(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorPaymentReconciliationEnvelope> {
+        const response = await this.reconcileVendorPaymentConnectionRaw(initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for removePendingVendorDocument without sending the request
+     */
+    async removePendingVendorDocumentRequestOpts(requestParameters: RemovePendingVendorDocumentRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['requirementKey'] == null) {
+            throw new runtime.RequiredError(
+                'requirementKey',
+                'Required parameter "requirementKey" was null or undefined when calling removePendingVendorDocument().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/vendors/onboarding/documents/pending/{requirementKey}`;
+        urlPath = urlPath.replace('{requirementKey}', encodeURIComponent(String(requestParameters['requirementKey'])));
+
+        return {
+            path: urlPath,
+            method: 'DELETE',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     */
+    async removePendingVendorDocumentRaw(requestParameters: RemovePendingVendorDocumentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorOnboardingEnvelope>> {
+        const requestOptions = await this.removePendingVendorDocumentRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => VendorOnboardingEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async removePendingVendorDocument(requestParameters: RemovePendingVendorDocumentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorOnboardingEnvelope> {
+        const response = await this.removePendingVendorDocumentRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -2368,17 +1110,10 @@ export class VendorOnboardingApi extends runtime.BaseAPI {
      * Creates request options for requestVendorStoreEmailVerification without sending the request
      */
     async requestVendorStoreEmailVerificationRequestOpts(requestParameters: RequestVendorStoreEmailVerificationRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['organization'] == null) {
+        if (requestParameters['emailRequest'] == null) {
             throw new runtime.RequiredError(
-                'organization',
-                'Required parameter "organization" was null or undefined when calling requestVendorStoreEmailVerification().'
-            );
-        }
-
-        if (requestParameters['vendorStoreEmailVerificationRequest'] == null) {
-            throw new runtime.RequiredError(
-                'vendorStoreEmailVerificationRequest',
-                'Required parameter "vendorStoreEmailVerificationRequest" was null or undefined when calling requestVendorStoreEmailVerification().'
+                'emailRequest',
+                'Required parameter "emailRequest" was null or undefined when calling requestVendorStoreEmailVerification().'
             );
         }
 
@@ -2393,53 +1128,41 @@ export class VendorOnboardingApi extends runtime.BaseAPI {
         }
 
 
-        let urlPath = `/vendors/{organization}/business/store-email/verification`;
-        urlPath = urlPath.replace('{organization}', encodeURIComponent(String(requestParameters['organization'])));
+        let urlPath = `/vendors/onboarding/store-email`;
 
         return {
             path: urlPath,
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
-            body: VendorStoreEmailVerificationRequestToJSON(requestParameters['vendorStoreEmailVerificationRequest']),
+            body: EmailRequestToJSON(requestParameters['emailRequest']),
         };
     }
 
     /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * request Vendor Store Email Verification
      */
-    async requestVendorStoreEmailVerificationRaw(requestParameters: RequestVendorStoreEmailVerificationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorBusinessEnvelope>> {
+    async requestVendorStoreEmailVerificationRaw(requestParameters: RequestVendorStoreEmailVerificationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorStoreEmailEnvelope>> {
         const requestOptions = await this.requestVendorStoreEmailVerificationRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => VendorBusinessEnvelopeFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => VendorStoreEmailEnvelopeFromJSON(jsonValue));
     }
 
     /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * request Vendor Store Email Verification
      */
-    async requestVendorStoreEmailVerification(requestParameters: RequestVendorStoreEmailVerificationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorBusinessEnvelope> {
+    async requestVendorStoreEmailVerification(requestParameters: RequestVendorStoreEmailVerificationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorStoreEmailEnvelope> {
         const response = await this.requestVendorStoreEmailVerificationRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
     /**
-     * Creates request options for reviewVendorBusiness without sending the request
+     * Creates request options for resolveVendorAddress without sending the request
      */
-    async reviewVendorBusinessRequestOpts(requestParameters: ReviewVendorBusinessRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['organization'] == null) {
+    async resolveVendorAddressRequestOpts(requestParameters: ResolveVendorAddressRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['vendorAddressSelection'] == null) {
             throw new runtime.RequiredError(
-                'organization',
-                'Required parameter "organization" was null or undefined when calling reviewVendorBusiness().'
-            );
-        }
-
-        if (requestParameters['vendorBusinessReview'] == null) {
-            throw new runtime.RequiredError(
-                'vendorBusinessReview',
-                'Required parameter "vendorBusinessReview" was null or undefined when calling reviewVendorBusiness().'
+                'vendorAddressSelection',
+                'Required parameter "vendorAddressSelection" was null or undefined when calling resolveVendorAddress().'
             );
         }
 
@@ -2454,60 +1177,41 @@ export class VendorOnboardingApi extends runtime.BaseAPI {
         }
 
 
-        let urlPath = `/admin/vendor-verification/{organization}/business/reviews`;
-        urlPath = urlPath.replace('{organization}', encodeURIComponent(String(requestParameters['organization'])));
+        let urlPath = `/vendors/onboarding/address/resolve`;
 
         return {
             path: urlPath,
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
-            body: VendorBusinessReviewToJSON(requestParameters['vendorBusinessReview']),
+            body: VendorAddressSelectionToJSON(requestParameters['vendorAddressSelection']),
         };
     }
 
     /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * review Vendor Business
      */
-    async reviewVendorBusinessRaw(requestParameters: ReviewVendorBusinessRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorReadinessEnvelope>> {
-        const requestOptions = await this.reviewVendorBusinessRequestOpts(requestParameters);
+    async resolveVendorAddressRaw(requestParameters: ResolveVendorAddressRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<GenericDataEnvelope>> {
+        const requestOptions = await this.resolveVendorAddressRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => VendorReadinessEnvelopeFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => GenericDataEnvelopeFromJSON(jsonValue));
     }
 
     /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * review Vendor Business
      */
-    async reviewVendorBusiness(requestParameters: ReviewVendorBusinessRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorReadinessEnvelope> {
-        const response = await this.reviewVendorBusinessRaw(requestParameters, initOverrides);
+    async resolveVendorAddress(requestParameters: ResolveVendorAddressRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<GenericDataEnvelope> {
+        const response = await this.resolveVendorAddressRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
     /**
-     * Creates request options for reviewVendorDocument without sending the request
+     * Creates request options for resolveVendorAddressPin without sending the request
      */
-    async reviewVendorDocumentRequestOpts(requestParameters: ReviewVendorDocumentRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['organization'] == null) {
+    async resolveVendorAddressPinRequestOpts(requestParameters: ResolveVendorAddressPinRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['vendorAddressGeocode'] == null) {
             throw new runtime.RequiredError(
-                'organization',
-                'Required parameter "organization" was null or undefined when calling reviewVendorDocument().'
-            );
-        }
-
-        if (requestParameters['version'] == null) {
-            throw new runtime.RequiredError(
-                'version',
-                'Required parameter "version" was null or undefined when calling reviewVendorDocument().'
-            );
-        }
-
-        if (requestParameters['vendorDocumentReview'] == null) {
-            throw new runtime.RequiredError(
-                'vendorDocumentReview',
-                'Required parameter "vendorDocumentReview" was null or undefined when calling reviewVendorDocument().'
+                'vendorAddressGeocode',
+                'Required parameter "vendorAddressGeocode" was null or undefined when calling resolveVendorAddressPin().'
             );
         }
 
@@ -2522,61 +1226,41 @@ export class VendorOnboardingApi extends runtime.BaseAPI {
         }
 
 
-        let urlPath = `/admin/vendor-verification/{organization}/documents/{version}/reviews`;
-        urlPath = urlPath.replace('{organization}', encodeURIComponent(String(requestParameters['organization'])));
-        urlPath = urlPath.replace('{version}', encodeURIComponent(String(requestParameters['version'])));
+        let urlPath = `/vendors/onboarding/address/pin`;
 
         return {
             path: urlPath,
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
-            body: VendorDocumentReviewToJSON(requestParameters['vendorDocumentReview']),
+            body: VendorAddressGeocodeToJSON(requestParameters['vendorAddressGeocode']),
         };
     }
 
     /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * review Vendor Document
      */
-    async reviewVendorDocumentRaw(requestParameters: ReviewVendorDocumentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorReadinessEnvelope>> {
-        const requestOptions = await this.reviewVendorDocumentRequestOpts(requestParameters);
+    async resolveVendorAddressPinRaw(requestParameters: ResolveVendorAddressPinRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<GenericDataEnvelope>> {
+        const requestOptions = await this.resolveVendorAddressPinRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => VendorReadinessEnvelopeFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => GenericDataEnvelopeFromJSON(jsonValue));
     }
 
     /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * review Vendor Document
      */
-    async reviewVendorDocument(requestParameters: ReviewVendorDocumentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorReadinessEnvelope> {
-        const response = await this.reviewVendorDocumentRaw(requestParameters, initOverrides);
+    async resolveVendorAddressPin(requestParameters: ResolveVendorAddressPinRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<GenericDataEnvelope> {
+        const response = await this.resolveVendorAddressPinRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
     /**
-     * Creates request options for reviewVendorStoreMedia without sending the request
+     * Creates request options for reverseGeocodeVendorAddress without sending the request
      */
-    async reviewVendorStoreMediaRequestOpts(requestParameters: ReviewVendorStoreMediaRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['organization'] == null) {
+    async reverseGeocodeVendorAddressRequestOpts(requestParameters: ReverseGeocodeVendorAddressRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['vendorAddressGeocode'] == null) {
             throw new runtime.RequiredError(
-                'organization',
-                'Required parameter "organization" was null or undefined when calling reviewVendorStoreMedia().'
-            );
-        }
-
-        if (requestParameters['media'] == null) {
-            throw new runtime.RequiredError(
-                'media',
-                'Required parameter "media" was null or undefined when calling reviewVendorStoreMedia().'
-            );
-        }
-
-        if (requestParameters['vendorReview'] == null) {
-            throw new runtime.RequiredError(
-                'vendorReview',
-                'Required parameter "vendorReview" was null or undefined when calling reviewVendorStoreMedia().'
+                'vendorAddressGeocode',
+                'Required parameter "vendorAddressGeocode" was null or undefined when calling reverseGeocodeVendorAddress().'
             );
         }
 
@@ -2591,61 +1275,41 @@ export class VendorOnboardingApi extends runtime.BaseAPI {
         }
 
 
-        let urlPath = `/admin/vendor-verification/{organization}/store-media/{media}/reviews`;
-        urlPath = urlPath.replace('{organization}', encodeURIComponent(String(requestParameters['organization'])));
-        urlPath = urlPath.replace('{media}', encodeURIComponent(String(requestParameters['media'])));
+        let urlPath = `/vendors/onboarding/address/geocode`;
 
         return {
             path: urlPath,
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
-            body: VendorReviewToJSON(requestParameters['vendorReview']),
+            body: VendorAddressGeocodeToJSON(requestParameters['vendorAddressGeocode']),
         };
     }
 
     /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * review Vendor Store Media
      */
-    async reviewVendorStoreMediaRaw(requestParameters: ReviewVendorStoreMediaRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorMutationEnvelope>> {
-        const requestOptions = await this.reviewVendorStoreMediaRequestOpts(requestParameters);
+    async reverseGeocodeVendorAddressRaw(requestParameters: ReverseGeocodeVendorAddressRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorAddressGeocodeEnvelope>> {
+        const requestOptions = await this.reverseGeocodeVendorAddressRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => VendorMutationEnvelopeFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => VendorAddressGeocodeEnvelopeFromJSON(jsonValue));
     }
 
     /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * review Vendor Store Media
      */
-    async reviewVendorStoreMedia(requestParameters: ReviewVendorStoreMediaRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorMutationEnvelope> {
-        const response = await this.reviewVendorStoreMediaRaw(requestParameters, initOverrides);
+    async reverseGeocodeVendorAddress(requestParameters: ReverseGeocodeVendorAddressRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorAddressGeocodeEnvelope> {
+        const response = await this.reverseGeocodeVendorAddressRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
     /**
-     * Creates request options for reviewVendorTaxProfile without sending the request
+     * Creates request options for saveVendorSetupDraft without sending the request
      */
-    async reviewVendorTaxProfileRequestOpts(requestParameters: ReviewVendorTaxProfileRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['organization'] == null) {
+    async saveVendorSetupDraftRequestOpts(requestParameters: SaveVendorSetupDraftRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['vendorSetupDraft'] == null) {
             throw new runtime.RequiredError(
-                'organization',
-                'Required parameter "organization" was null or undefined when calling reviewVendorTaxProfile().'
-            );
-        }
-
-        if (requestParameters['version'] == null) {
-            throw new runtime.RequiredError(
-                'version',
-                'Required parameter "version" was null or undefined when calling reviewVendorTaxProfile().'
-            );
-        }
-
-        if (requestParameters['vendorReview'] == null) {
-            throw new runtime.RequiredError(
-                'vendorReview',
-                'Required parameter "vendorReview" was null or undefined when calling reviewVendorTaxProfile().'
+                'vendorSetupDraft',
+                'Required parameter "vendorSetupDraft" was null or undefined when calling saveVendorSetupDraft().'
             );
         }
 
@@ -2660,389 +1324,203 @@ export class VendorOnboardingApi extends runtime.BaseAPI {
         }
 
 
-        let urlPath = `/admin/vendor-verification/{organization}/tax-profile/versions/{version}/reviews`;
-        urlPath = urlPath.replace('{organization}', encodeURIComponent(String(requestParameters['organization'])));
-        urlPath = urlPath.replace('{version}', encodeURIComponent(String(requestParameters['version'])));
+        let urlPath = `/vendors/onboarding/setup`;
+
+        return {
+            path: urlPath,
+            method: 'PATCH',
+            headers: headerParameters,
+            query: queryParameters,
+            body: VendorSetupDraftToJSON(requestParameters['vendorSetupDraft']),
+        };
+    }
+
+    /**
+     * Saves version-checked setup progress. Public-name, description and public-contact-only edits preserve completed setup and activation; operational changes reopen setup requirements. Every successful save advances the organization lock version.
+     */
+    async saveVendorSetupDraftRaw(requestParameters: SaveVendorSetupDraftRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorOnboardingEnvelope>> {
+        const requestOptions = await this.saveVendorSetupDraftRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => VendorOnboardingEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * Saves version-checked setup progress. Public-name, description and public-contact-only edits preserve completed setup and activation; operational changes reopen setup requirements. Every successful save advances the organization lock version.
+     */
+    async saveVendorSetupDraft(requestParameters: SaveVendorSetupDraftRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorOnboardingEnvelope> {
+        const response = await this.saveVendorSetupDraftRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for saveVendorVerificationDraft without sending the request
+     */
+    async saveVendorVerificationDraftRequestOpts(requestParameters: SaveVendorVerificationDraftRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['vendorVerificationDraft'] == null) {
+            throw new runtime.RequiredError(
+                'vendorVerificationDraft',
+                'Required parameter "vendorVerificationDraft" was null or undefined when calling saveVendorVerificationDraft().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/vendors/onboarding/verification`;
+
+        return {
+            path: urlPath,
+            method: 'PATCH',
+            headers: headerParameters,
+            query: queryParameters,
+            body: VendorVerificationDraftToJSON(requestParameters['vendorVerificationDraft']),
+        };
+    }
+
+    /**
+     */
+    async saveVendorVerificationDraftRaw(requestParameters: SaveVendorVerificationDraftRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorOnboardingEnvelope>> {
+        const requestOptions = await this.saveVendorVerificationDraftRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => VendorOnboardingEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async saveVendorVerificationDraft(requestParameters: SaveVendorVerificationDraftRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorOnboardingEnvelope> {
+        const response = await this.saveVendorVerificationDraftRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for searchVendorAddressAreas without sending the request
+     */
+    async searchVendorAddressAreasRequestOpts(requestParameters: SearchVendorAddressAreasRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['level'] == null) {
+            throw new runtime.RequiredError(
+                'level',
+                'Required parameter "level" was null or undefined when calling searchVendorAddressAreas().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['level'] != null) {
+            queryParameters['level'] = requestParameters['level'];
+        }
+
+        if (requestParameters['parentCode'] != null) {
+            queryParameters['parent_code'] = requestParameters['parentCode'];
+        }
+
+        if (requestParameters['q'] != null) {
+            queryParameters['q'] = requestParameters['q'];
+        }
+
+        if (requestParameters['page'] != null) {
+            queryParameters['page'] = requestParameters['page'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/vendors/onboarding/address/areas`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     */
+    async searchVendorAddressAreasRaw(requestParameters: SearchVendorAddressAreasRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PsgcSearchEnvelope>> {
+        const requestOptions = await this.searchVendorAddressAreasRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => PsgcSearchEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async searchVendorAddressAreas(requestParameters: SearchVendorAddressAreasRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PsgcSearchEnvelope> {
+        const response = await this.searchVendorAddressAreasRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for submitVendorVerification without sending the request
+     */
+    async submitVendorVerificationRequestOpts(requestParameters: SubmitVendorVerificationRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['idempotencyKey'] == null) {
+            throw new runtime.RequiredError(
+                'idempotencyKey',
+                'Required parameter "idempotencyKey" was null or undefined when calling submitVendorVerification().'
+            );
+        }
+
+        if (requestParameters['vendorVerificationSubmit'] == null) {
+            throw new runtime.RequiredError(
+                'vendorVerificationSubmit',
+                'Required parameter "vendorVerificationSubmit" was null or undefined when calling submitVendorVerification().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (requestParameters['idempotencyKey'] != null) {
+            headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
+        }
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/vendors/onboarding/verification/submit`;
 
         return {
             path: urlPath,
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
-            body: VendorReviewToJSON(requestParameters['vendorReview']),
+            body: VendorVerificationSubmitToJSON(requestParameters['vendorVerificationSubmit']),
         };
     }
 
     /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * review Vendor Tax Profile
      */
-    async reviewVendorTaxProfileRaw(requestParameters: ReviewVendorTaxProfileRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorReadinessEnvelope>> {
-        const requestOptions = await this.reviewVendorTaxProfileRequestOpts(requestParameters);
+    async submitVendorVerificationRaw(requestParameters: SubmitVendorVerificationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorOnboardingEnvelope>> {
+        const requestOptions = await this.submitVendorVerificationRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => VendorReadinessEnvelopeFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => VendorOnboardingEnvelopeFromJSON(jsonValue));
     }
 
     /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * review Vendor Tax Profile
      */
-    async reviewVendorTaxProfile(requestParameters: ReviewVendorTaxProfileRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorReadinessEnvelope> {
-        const response = await this.reviewVendorTaxProfileRaw(requestParameters, initOverrides);
-        return await response.value();
-    }
-
-    /**
-     * Creates request options for revokeVendorTeamInvitation without sending the request
-     */
-    async revokeVendorTeamInvitationRequestOpts(requestParameters: RevokeVendorTeamInvitationRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['organization'] == null) {
-            throw new runtime.RequiredError(
-                'organization',
-                'Required parameter "organization" was null or undefined when calling revokeVendorTeamInvitation().'
-            );
-        }
-
-        if (requestParameters['invitation'] == null) {
-            throw new runtime.RequiredError(
-                'invitation',
-                'Required parameter "invitation" was null or undefined when calling revokeVendorTeamInvitation().'
-            );
-        }
-
-        if (requestParameters['vendorVersionMutation'] == null) {
-            throw new runtime.RequiredError(
-                'vendorVersionMutation',
-                'Required parameter "vendorVersionMutation" was null or undefined when calling revokeVendorTeamInvitation().'
-            );
-        }
-
-        const queryParameters: any = {};
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-        headerParameters['Content-Type'] = 'application/json';
-
-        if (this.configuration && this.configuration.apiKey) {
-            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
-        }
-
-
-        let urlPath = `/vendors/{organization}/team/invitations/{invitation}/revoke`;
-        urlPath = urlPath.replace('{organization}', encodeURIComponent(String(requestParameters['organization'])));
-        urlPath = urlPath.replace('{invitation}', encodeURIComponent(String(requestParameters['invitation'])));
-
-        return {
-            path: urlPath,
-            method: 'POST',
-            headers: headerParameters,
-            query: queryParameters,
-            body: VendorVersionMutationToJSON(requestParameters['vendorVersionMutation']),
-        };
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * revoke Vendor Team Invitation
-     */
-    async revokeVendorTeamInvitationRaw(requestParameters: RevokeVendorTeamInvitationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorMutationEnvelope>> {
-        const requestOptions = await this.revokeVendorTeamInvitationRequestOpts(requestParameters);
-        const response = await this.request(requestOptions, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => VendorMutationEnvelopeFromJSON(jsonValue));
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * revoke Vendor Team Invitation
-     */
-    async revokeVendorTeamInvitation(requestParameters: RevokeVendorTeamInvitationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorMutationEnvelope> {
-        const response = await this.revokeVendorTeamInvitationRaw(requestParameters, initOverrides);
-        return await response.value();
-    }
-
-    /**
-     * Creates request options for saveVendorBusiness without sending the request
-     */
-    async saveVendorBusinessRequestOpts(requestParameters: SaveVendorBusinessRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['organization'] == null) {
-            throw new runtime.RequiredError(
-                'organization',
-                'Required parameter "organization" was null or undefined when calling saveVendorBusiness().'
-            );
-        }
-
-        if (requestParameters['saveVendorBusiness'] == null) {
-            throw new runtime.RequiredError(
-                'saveVendorBusiness',
-                'Required parameter "saveVendorBusiness" was null or undefined when calling saveVendorBusiness().'
-            );
-        }
-
-        const queryParameters: any = {};
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-        headerParameters['Content-Type'] = 'application/json';
-
-        if (this.configuration && this.configuration.apiKey) {
-            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
-        }
-
-
-        let urlPath = `/vendors/{organization}/business`;
-        urlPath = urlPath.replace('{organization}', encodeURIComponent(String(requestParameters['organization'])));
-
-        return {
-            path: urlPath,
-            method: 'PUT',
-            headers: headerParameters,
-            query: queryParameters,
-            body: SaveVendorBusinessToJSON(requestParameters['saveVendorBusiness']),
-        };
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * save Vendor Business
-     */
-    async saveVendorBusinessRaw(requestParameters: SaveVendorBusinessRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorBusinessEnvelope>> {
-        const requestOptions = await this.saveVendorBusinessRequestOpts(requestParameters);
-        const response = await this.request(requestOptions, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => VendorBusinessEnvelopeFromJSON(jsonValue));
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * save Vendor Business
-     */
-    async saveVendorBusiness(requestParameters: SaveVendorBusinessRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorBusinessEnvelope> {
-        const response = await this.saveVendorBusinessRaw(requestParameters, initOverrides);
-        return await response.value();
-    }
-
-    /**
-     * Creates request options for saveVendorStore without sending the request
-     */
-    async saveVendorStoreRequestOpts(requestParameters: SaveVendorStoreRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['organization'] == null) {
-            throw new runtime.RequiredError(
-                'organization',
-                'Required parameter "organization" was null or undefined when calling saveVendorStore().'
-            );
-        }
-
-        if (requestParameters['saveVendorStore'] == null) {
-            throw new runtime.RequiredError(
-                'saveVendorStore',
-                'Required parameter "saveVendorStore" was null or undefined when calling saveVendorStore().'
-            );
-        }
-
-        const queryParameters: any = {};
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-        headerParameters['Content-Type'] = 'application/json';
-
-        if (this.configuration && this.configuration.apiKey) {
-            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
-        }
-
-
-        let urlPath = `/vendors/{organization}/store-profile`;
-        urlPath = urlPath.replace('{organization}', encodeURIComponent(String(requestParameters['organization'])));
-
-        return {
-            path: urlPath,
-            method: 'PUT',
-            headers: headerParameters,
-            query: queryParameters,
-            body: SaveVendorStoreToJSON(requestParameters['saveVendorStore']),
-        };
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * save Vendor Store
-     */
-    async saveVendorStoreRaw(requestParameters: SaveVendorStoreRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorSetupEnvelope>> {
-        const requestOptions = await this.saveVendorStoreRequestOpts(requestParameters);
-        const response = await this.request(requestOptions, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => VendorSetupEnvelopeFromJSON(jsonValue));
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * save Vendor Store
-     */
-    async saveVendorStore(requestParameters: SaveVendorStoreRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorSetupEnvelope> {
-        const response = await this.saveVendorStoreRaw(requestParameters, initOverrides);
-        return await response.value();
-    }
-
-    /**
-     * Creates request options for saveVendorTaxProfile without sending the request
-     */
-    async saveVendorTaxProfileRequestOpts(requestParameters: SaveVendorTaxProfileRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['organization'] == null) {
-            throw new runtime.RequiredError(
-                'organization',
-                'Required parameter "organization" was null or undefined when calling saveVendorTaxProfile().'
-            );
-        }
-
-        if (requestParameters['saveVendorTax'] == null) {
-            throw new runtime.RequiredError(
-                'saveVendorTax',
-                'Required parameter "saveVendorTax" was null or undefined when calling saveVendorTaxProfile().'
-            );
-        }
-
-        const queryParameters: any = {};
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-        headerParameters['Content-Type'] = 'application/json';
-
-        if (this.configuration && this.configuration.apiKey) {
-            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
-        }
-
-
-        let urlPath = `/vendors/{organization}/tax-profile/versions`;
-        urlPath = urlPath.replace('{organization}', encodeURIComponent(String(requestParameters['organization'])));
-
-        return {
-            path: urlPath,
-            method: 'POST',
-            headers: headerParameters,
-            query: queryParameters,
-            body: SaveVendorTaxToJSON(requestParameters['saveVendorTax']),
-        };
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * save Vendor Tax Profile
-     */
-    async saveVendorTaxProfileRaw(requestParameters: SaveVendorTaxProfileRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorTaxProfileEnvelope>> {
-        const requestOptions = await this.saveVendorTaxProfileRequestOpts(requestParameters);
-        const response = await this.request(requestOptions, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => VendorTaxProfileEnvelopeFromJSON(jsonValue));
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * save Vendor Tax Profile
-     */
-    async saveVendorTaxProfile(requestParameters: SaveVendorTaxProfileRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorTaxProfileEnvelope> {
-        const response = await this.saveVendorTaxProfileRaw(requestParameters, initOverrides);
-        return await response.value();
-    }
-
-    /**
-     * Creates request options for uploadVendorDocument without sending the request
-     */
-    async uploadVendorDocumentRequestOpts(requestParameters: UploadVendorDocumentRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['organization'] == null) {
-            throw new runtime.RequiredError(
-                'organization',
-                'Required parameter "organization" was null or undefined when calling uploadVendorDocument().'
-            );
-        }
-
-        if (requestParameters['lockVersion'] == null) {
-            throw new runtime.RequiredError(
-                'lockVersion',
-                'Required parameter "lockVersion" was null or undefined when calling uploadVendorDocument().'
-            );
-        }
-
-        if (requestParameters['documentType'] == null) {
-            throw new runtime.RequiredError(
-                'documentType',
-                'Required parameter "documentType" was null or undefined when calling uploadVendorDocument().'
-            );
-        }
-
-        if (requestParameters['file'] == null) {
-            throw new runtime.RequiredError(
-                'file',
-                'Required parameter "file" was null or undefined when calling uploadVendorDocument().'
-            );
-        }
-
-        const queryParameters: any = {};
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-        if (this.configuration && this.configuration.apiKey) {
-            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
-        }
-
-        const consumes: runtime.Consume[] = [
-            { contentType: 'multipart/form-data' },
-        ];
-        // @ts-ignore: canConsumeForm may be unused
-        const canConsumeForm = runtime.canConsumeForm(consumes);
-
-        let formParams: { append(param: string, value: any): any };
-        let useForm = false;
-        // use FormData to transmit files using content-type "multipart/form-data"
-        useForm = canConsumeForm;
-        if (useForm) {
-            formParams = new FormData();
-        } else {
-            formParams = new URLSearchParams();
-        }
-
-        if (requestParameters['lockVersion'] != null) {
-            formParams.append('lock_version', requestParameters['lockVersion'] as any);
-        }
-
-        if (requestParameters['documentType'] != null) {
-            formParams.append('document_type', requestParameters['documentType'] as any);
-        }
-
-        if (requestParameters['file'] != null) {
-            formParams.append('file', requestParameters['file'] as any);
-        }
-
-
-        let urlPath = `/vendors/{organization}/documents`;
-        urlPath = urlPath.replace('{organization}', encodeURIComponent(String(requestParameters['organization'])));
-
-        return {
-            path: urlPath,
-            method: 'POST',
-            headers: headerParameters,
-            query: queryParameters,
-            body: formParams,
-        };
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * upload Vendor Document
-     */
-    async uploadVendorDocumentRaw(requestParameters: UploadVendorDocumentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorDocumentUploadEnvelope>> {
-        const requestOptions = await this.uploadVendorDocumentRequestOpts(requestParameters);
-        const response = await this.request(requestOptions, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => VendorDocumentUploadEnvelopeFromJSON(jsonValue));
-    }
-
-    /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * upload Vendor Document
-     */
-    async uploadVendorDocument(requestParameters: UploadVendorDocumentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorDocumentUploadEnvelope> {
-        const response = await this.uploadVendorDocumentRaw(requestParameters, initOverrides);
+    async submitVendorVerification(requestParameters: SubmitVendorVerificationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorOnboardingEnvelope> {
+        const response = await this.submitVendorVerificationRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -3050,31 +1528,10 @@ export class VendorOnboardingApi extends runtime.BaseAPI {
      * Creates request options for uploadVendorStoreMedia without sending the request
      */
     async uploadVendorStoreMediaRequestOpts(requestParameters: UploadVendorStoreMediaRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['organization'] == null) {
-            throw new runtime.RequiredError(
-                'organization',
-                'Required parameter "organization" was null or undefined when calling uploadVendorStoreMedia().'
-            );
-        }
-
-        if (requestParameters['lockVersion'] == null) {
-            throw new runtime.RequiredError(
-                'lockVersion',
-                'Required parameter "lockVersion" was null or undefined when calling uploadVendorStoreMedia().'
-            );
-        }
-
         if (requestParameters['kind'] == null) {
             throw new runtime.RequiredError(
                 'kind',
                 'Required parameter "kind" was null or undefined when calling uploadVendorStoreMedia().'
-            );
-        }
-
-        if (requestParameters['altText'] == null) {
-            throw new runtime.RequiredError(
-                'altText',
-                'Required parameter "altText" was null or undefined when calling uploadVendorStoreMedia().'
             );
         }
 
@@ -3109,25 +1566,20 @@ export class VendorOnboardingApi extends runtime.BaseAPI {
             formParams = new URLSearchParams();
         }
 
-        if (requestParameters['lockVersion'] != null) {
-            formParams.append('lock_version', requestParameters['lockVersion'] as any);
-        }
-
         if (requestParameters['kind'] != null) {
             formParams.append('kind', requestParameters['kind'] as any);
-        }
-
-        if (requestParameters['altText'] != null) {
-            formParams.append('alt_text', requestParameters['altText'] as any);
         }
 
         if (requestParameters['file'] != null) {
             formParams.append('file', requestParameters['file'] as any);
         }
 
+        if (requestParameters['altText'] != null) {
+            formParams.append('alt_text', requestParameters['altText'] as any);
+        }
 
-        let urlPath = `/vendors/{organization}/store-media`;
-        urlPath = urlPath.replace('{organization}', encodeURIComponent(String(requestParameters['organization'])));
+
+        let urlPath = `/vendors/onboarding/media`;
 
         return {
             path: urlPath,
@@ -3139,22 +1591,100 @@ export class VendorOnboardingApi extends runtime.BaseAPI {
     }
 
     /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * upload Vendor Store Media
      */
-    async uploadVendorStoreMediaRaw(requestParameters: UploadVendorStoreMediaRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorMutationEnvelope>> {
+    async uploadVendorStoreMediaRaw(requestParameters: UploadVendorStoreMediaRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorMediaEnvelope>> {
         const requestOptions = await this.uploadVendorStoreMediaRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => VendorMutationEnvelopeFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => VendorMediaEnvelopeFromJSON(jsonValue));
     }
 
     /**
-     * TEST onboarding. Passport session, current membership/role, resource ownership and applicable recent authentication are enforced. Later-phase dependencies do not authorize activation.
-     * upload Vendor Store Media
      */
-    async uploadVendorStoreMedia(requestParameters: UploadVendorStoreMediaRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorMutationEnvelope> {
+    async uploadVendorStoreMedia(requestParameters: UploadVendorStoreMediaRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorMediaEnvelope> {
         const response = await this.uploadVendorStoreMediaRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for uploadVendorVerificationDocument without sending the request
+     */
+    async uploadVendorVerificationDocumentRequestOpts(requestParameters: UploadVendorVerificationDocumentRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['requirementKey'] == null) {
+            throw new runtime.RequiredError(
+                'requirementKey',
+                'Required parameter "requirementKey" was null or undefined when calling uploadVendorVerificationDocument().'
+            );
+        }
+
+        if (requestParameters['file'] == null) {
+            throw new runtime.RequiredError(
+                'file',
+                'Required parameter "file" was null or undefined when calling uploadVendorVerificationDocument().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+        const consumes: runtime.Consume[] = [
+            { contentType: 'multipart/form-data' },
+        ];
+        // @ts-ignore: canConsumeForm may be unused
+        const canConsumeForm = runtime.canConsumeForm(consumes);
+
+        let formParams: { append(param: string, value: any): any };
+        let useForm = false;
+        // use FormData to transmit files using content-type "multipart/form-data"
+        useForm = canConsumeForm;
+        if (useForm) {
+            formParams = new FormData();
+        } else {
+            formParams = new URLSearchParams();
+        }
+
+        if (requestParameters['requirementKey'] != null) {
+            formParams.append('requirement_key', requestParameters['requirementKey'] as any);
+        }
+
+        if (requestParameters['file'] != null) {
+            formParams.append('file', requestParameters['file'] as any);
+        }
+
+        if (requestParameters['metadata'] != null) {
+            formParams.append('metadata', new Blob([JSON.stringify(requestParameters['metadata'])], { type: "application/json", }));
+                    }
+
+
+        let urlPath = `/vendors/onboarding/documents`;
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: formParams,
+        };
+    }
+
+    /**
+     */
+    async uploadVendorVerificationDocumentRaw(requestParameters: UploadVendorVerificationDocumentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorDocumentEnvelope>> {
+        const requestOptions = await this.uploadVendorVerificationDocumentRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => VendorDocumentEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async uploadVendorVerificationDocument(requestParameters: UploadVendorVerificationDocumentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorDocumentEnvelope> {
+        const response = await this.uploadVendorVerificationDocumentRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -3163,25 +1693,54 @@ export class VendorOnboardingApi extends runtime.BaseAPI {
 /**
  * @export
  */
-export const UploadVendorDocumentDocumentTypeEnum = {
-    GovernmentId: 'GOVERNMENT_ID',
-    Dti: 'DTI',
-    Sec: 'SEC',
-    Cda: 'CDA',
-    LguPermit: 'LGU_PERMIT',
-    BirCor: 'BIR_COR',
-    Regulatory: 'REGULATORY',
-    IsoCertification: 'ISO_CERTIFICATION',
-    TaxDeclaration: 'TAX_DECLARATION',
-    WithholdingDeclaration: 'WITHHOLDING_DECLARATION',
+export const PreviewVendorRequirementsBusinessTypeEnum = {
+    SoleProprietorship: 'SOLE_PROPRIETORSHIP',
+    Partnership: 'PARTNERSHIP',
+    Corporation: 'CORPORATION',
+    OnePersonCorporation: 'ONE_PERSON_CORPORATION',
+    Cooperative: 'COOPERATIVE',
 } as const;
-export type UploadVendorDocumentDocumentTypeEnum = typeof UploadVendorDocumentDocumentTypeEnum[keyof typeof UploadVendorDocumentDocumentTypeEnum];
+export type PreviewVendorRequirementsBusinessTypeEnum = typeof PreviewVendorRequirementsBusinessTypeEnum[keyof typeof PreviewVendorRequirementsBusinessTypeEnum];
+/**
+ * @export
+ */
+export const PreviewVendorRequirementsDeclarationClaimEnum = {
+    NUMBER_0: 0,
+    NUMBER_1: 1,
+} as const;
+export type PreviewVendorRequirementsDeclarationClaimEnum = typeof PreviewVendorRequirementsDeclarationClaimEnum[keyof typeof PreviewVendorRequirementsDeclarationClaimEnum];
+/**
+ * @export
+ */
+export const SearchVendorAddressAreasLevelEnum = {
+    Province: 'PROVINCE',
+    City: 'CITY',
+    Barangay: 'BARANGAY',
+} as const;
+export type SearchVendorAddressAreasLevelEnum = typeof SearchVendorAddressAreasLevelEnum[keyof typeof SearchVendorAddressAreasLevelEnum];
 /**
  * @export
  */
 export const UploadVendorStoreMediaKindEnum = {
     Logo: 'LOGO',
     Banner: 'BANNER',
-    Promotional: 'PROMOTIONAL',
+    PromotionalImage: 'PROMOTIONAL_IMAGE',
+    PromotionalVideo: 'PROMOTIONAL_VIDEO',
 } as const;
 export type UploadVendorStoreMediaKindEnum = typeof UploadVendorStoreMediaKindEnum[keyof typeof UploadVendorStoreMediaKindEnum];
+/**
+ * @export
+ */
+export const UploadVendorVerificationDocumentRequirementKeyEnum = {
+    BusinessRegistration: 'business_registration',
+    LguPermit: 'lgu_permit',
+    BirCor: 'bir_cor',
+    IdentityEvidence: 'identity_evidence',
+    IdentityBackEvidence: 'identity_back_evidence',
+    RepresentativeIdentity: 'representative_identity',
+    RepresentativeIdentityBack: 'representative_identity_back',
+    AuthorityToAct: 'authority_to_act',
+    TaxReliefEvidence: 'tax_relief_evidence',
+    OptionalCertification: 'optional_certification',
+} as const;
+export type UploadVendorVerificationDocumentRequirementKeyEnum = typeof UploadVendorVerificationDocumentRequirementKeyEnum[keyof typeof UploadVendorVerificationDocumentRequirementKeyEnum];

@@ -7,7 +7,7 @@ void main() {
   final instance = MateryalphApiClient().getAccountsApi();
 
   group(AccountsApi, () {
-    // Server enforces the route audience, active account and membership, resource ownership, Passport scope and session transport. buyers uses MOBILE bearer; vendors/admin use WEB cookies and CSRF on mutations. Privileged security changes require session-bound recent authentication. No client header can select or bypass transport security.
+    // Vendor commission consent must use the version-bound Store Verification commission endpoint; this account endpoint returns COMMISSION_VERIFICATION_REQUIRED for that agreement. Server enforces the route audience, active account and membership, resource ownership, Passport scope and session transport. buyers uses MOBILE bearer; vendors/admin use WEB cookies and CSRF on mutations. Privileged security changes require session-bound recent authentication. No client header can select or bypass transport security.
     //
     //Future<AccountMutationResultEnvelope> acceptAccountAgreements(String accountPortal, AccountAgreementAcceptance accountAgreementAcceptance) async
     test('test acceptAccountAgreements', () async {
@@ -58,6 +58,13 @@ void main() {
     //
     //Future<AccountRecoveryCodesEnvelope> confirmAccountFactorReplacement(String accountPortal, AccountCodeConfirmation accountCodeConfirmation) async
     test('test confirmAccountFactorReplacement', () async {
+      // TODO
+    });
+
+    // Use the five-minute signed avatar_url from the profile. Authenticated owner only; private no-store response. No user identifier is accepted.
+    //
+    //Future<Uint8List> getAccountPhoto(int expires, String signature, int version, String owner, String webAccountPortal) async
+    test('test getAccountPhoto', () async {
       // TODO
     });
 
@@ -170,6 +177,13 @@ void main() {
     //
     //Future<AccountProfileEnvelope> updateAccountProfile(String accountPortal, AccountProfileUpdate accountProfileUpdate) async
     test('test updateAccountProfile', () async {
+      // TODO
+    });
+
+    // Owner-only personal photo. Maximum 2 MB JPEG/PNG/WebP and 4096 pixels per dimension. Malware-scanned, re-encoded to 256px PNG, privately stored. Five uploads/minute within the overall account budget. Fails closed if scanning or processing is unavailable.
+    //
+    //Future<AccountProfileEnvelope> uploadAccountPhoto(String webAccountPortal, MultipartFile photo, int lockVersion) async
+    test('test uploadAccountPhoto', () async {
       // TODO
     });
 

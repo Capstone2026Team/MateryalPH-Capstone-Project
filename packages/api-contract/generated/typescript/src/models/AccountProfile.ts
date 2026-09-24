@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * MateryalPH API
- * Versioned Phase 1–3 contract. Later-phase commerce foundations do not expose placeholder operations.
+ * Versioned Phase 1–3 contract. Vendor onboarding, verification, activation readiness, private evidence, and team invitations are server-authorized. Browser credentials are isolated by configured frontend origin using _vendor and _admin suffixes on access, refresh, CSRF, MFA and bot-proof cookies. Existing unsuffixed browser sessions require sign-in again; cookie selection never replaces account authorization. Native Buyer transport is unchanged.
  *
  * The version of the OpenAPI document: 1.0.0-phase.3
  *
@@ -27,6 +27,18 @@ export interface AccountProfile {
      *
      */
     fullName: string;
+    /**
+     * Short-lived owner-only personal photo URL; never the store logo.
+     */
+    avatarUrl?: string | null;
+    /**
+     * Authenticated Buyer registered contact number.
+     */
+    mobileE164?: string | null;
+    /**
+     * Buyer email stays masked until recent identity verification.
+     */
+    emailMasked?: boolean;
     /**
      *
      */
@@ -115,6 +127,9 @@ export function AccountProfileFromJSONTyped(json: any, ignoreDiscriminator: bool
 
         'id': json['id'],
         'fullName': json['full_name'],
+        'avatarUrl': json['avatar_url'] === undefined ? undefined : json['avatar_url'] === null ? null : json['avatar_url'],
+        'mobileE164': json['mobile_e164'] === undefined ? undefined : json['mobile_e164'] === null ? null : json['mobile_e164'],
+        'emailMasked': json['email_masked'] == null ? undefined : json['email_masked'],
         'email': json['email'],
         'accountType': json['account_type'],
         'accountStatus': json['account_status'],
@@ -144,6 +159,9 @@ export function AccountProfileToJSONTyped(value?: AccountProfile | null, ignoreD
 
         'id': value['id'],
         'full_name': value['fullName'],
+        'avatar_url': value['avatarUrl'],
+        'mobile_e164': value['mobileE164'],
+        'email_masked': value['emailMasked'],
         'email': value['email'],
         'account_type': value['accountType'],
         'account_status': value['accountStatus'],

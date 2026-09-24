@@ -44,9 +44,9 @@ The Admin Dashboard is the platform operations center. It is accessible only to 
 
 **Dashboard Sections**
 
-**1. Platform KPIs:** Active Tier 2 Vendors, active Buyers, order requests awaiting Vendor response, confirmed orders, pending business-document reviews, pending product-compliance reviews, open disputes, appeals, account flags, unresolved invoice requests, failed background jobs, and external-integration health.
+**1. Dashboard:** Active Tier 2 Vendors, active Buyers, order requests awaiting Vendor response, confirmed orders, pending business-document reviews, pending product-compliance reviews, open disputes, appeals, account flags, unresolved invoice requests, failed background jobs, and external-integration health.
 
-**2. Philippine Geographic Marketplace Analytics:**
+**2. Marketplace Analytics:**
 
 The dashboard provides an interactive Philippines map using versioned Philippine Standard Geographic Code identifiers and approved administrative-boundary data. Its hierarchy is `Philippines → Region → Province or Independent/Highly Urbanized City → City or Municipality`, so NCR, independent cities, and municipalities are not omitted. The current geographic-data version and last aggregation time are displayed.
 
@@ -81,7 +81,7 @@ The Vendor review workspace keeps the following concepts separate:
 
 | **Workstream** | **Purpose** | **Normal successful status** | **Admin review** |
 | --- | --- | --- | --- |
-| Store Verification | Legal identity and identity evidence, Business Information, contacts, registered address, Supplier Type/niches, business registration, permits, tax information, and other regulatory evidence | `APPROVED` for each applicable mandatory Admin-reviewed requirement | Required; uploading information or a document never verifies it automatically |
+| Store Verification | Legal identity and identity evidence, Business Information, Store Contact Information, registered address, Supplier Type/niches, business registration, permits, tax information, and other regulatory evidence | `APPROVED` for each applicable mandatory Admin-reviewed requirement | Required; uploading information or a document never verifies it automatically |
 | Store Setup | Public Store Profile, procurement capability, fulfillment and conditional delivery configuration, payment configuration, and other operational settings | `COMPLETED` for each applicable mandatory non-reviewed requirement | Not a substitute for Store Verification approval |
 
 Requirement Level is `REQUIRED`, `OPTIONAL`, or `CONDITIONALLY_REQUIRED`. Requirement Status is `NOT_STARTED`, `IN_PROGRESS`, `SUBMITTED`, `PENDING_VERIFICATION`, `APPROVED`, `COMPLETED`, `CHANGES_REQUIRED`, `REJECTED`, `EXPIRED`, or `NOT_APPLICABLE`. These are separate concepts: a requirement level is never a status. `NOT_APPLICABLE` is allowed only for a conditionally required requirement whose documented condition does not apply; it cannot bypass an incomplete required item. Document metadata may separately show **Expiration Date: Not Applicable** when a document legitimately has no expiration date.

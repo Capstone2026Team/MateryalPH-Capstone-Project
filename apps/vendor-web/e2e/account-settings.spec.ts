@@ -19,8 +19,8 @@ for (const portal of ['vendors', 'admin'] as const) {
       if (path.endsWith('/sessions') || path.endsWith('/agreements')) data = []
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data, meta: {}, errors: [] }) })
     })
-    await page.goto(portal === 'vendors' ? '/dashboard' : 'http://127.0.0.1:4174/workspace')
-    await expect(page.getByRole('heading', { name: 'Your account' })).toBeVisible()
+    await page.goto(portal === 'vendors' ? '/settings' : 'http://127.0.0.1:4174/workspace')
+    await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible()
     await expect(page.getByRole('textbox', { name: 'Full name' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Admin accounts', exact: true })).toHaveCount(0)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
@@ -36,7 +36,7 @@ for (const portal of ['vendors', 'admin'] as const) {
     await expect(page.getByRole('button', { name: 'Send email verification instead' })).toBeFocused()
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
     await page.screenshot({ path: testInfo.outputPath(`${portal}-security.png`), fullPage: true })
-    await page.getByRole('button', { name: 'Sessions', exact: true }).click()
+    await page.getByRole('button', { name: 'Sessions / Devices', exact: true }).click()
     await expect(page.getByText('No active sessions.')).toBeVisible()
   })
 }

@@ -16,6 +16,8 @@ part 'buyer_mobile_google_oidc_start_request.g.dart';
 /// * [mobileE164]
 /// * [buyerType]
 /// * [companyName]
+/// * [termsVersionId] - Required for SIGN_UP.
+/// * [termsContentHash] - Required for SIGN_UP.
 /// * [termsAccepted]
 /// * [privacyAccepted]
 @BuiltValue()
@@ -32,6 +34,14 @@ abstract class BuyerMobileGoogleOidcStartRequest implements Built<BuyerMobileGoo
 
   @BuiltValueField(wireName: r'company_name')
   String? get companyName;
+
+  /// Required for SIGN_UP.
+  @BuiltValueField(wireName: r'terms_version_id')
+  String? get termsVersionId;
+
+  /// Required for SIGN_UP.
+  @BuiltValueField(wireName: r'terms_content_hash')
+  String? get termsContentHash;
 
   @BuiltValueField(wireName: r'terms_accepted')
   bool? get termsAccepted;
@@ -86,6 +96,20 @@ class _$BuyerMobileGoogleOidcStartRequestSerializer implements PrimitiveSerializ
       yield serializers.serialize(
         object.companyName,
         specifiedType: const FullType.nullable(String),
+      );
+    }
+    if (object.termsVersionId != null) {
+      yield r'terms_version_id';
+      yield serializers.serialize(
+        object.termsVersionId,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.termsContentHash != null) {
+      yield r'terms_content_hash';
+      yield serializers.serialize(
+        object.termsContentHash,
+        specifiedType: const FullType(String),
       );
     }
     if (object.termsAccepted != null) {
@@ -155,6 +179,22 @@ class _$BuyerMobileGoogleOidcStartRequestSerializer implements PrimitiveSerializ
           ) as String?;
           if (valueDes == null) continue;
           result.companyName = valueDes;
+          break;
+        case r'terms_version_id':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.termsVersionId = valueDes;
+          break;
+        case r'terms_content_hash':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.termsContentHash = valueDes;
           break;
         case r'terms_accepted':
           final valueDes = serializers.deserialize(

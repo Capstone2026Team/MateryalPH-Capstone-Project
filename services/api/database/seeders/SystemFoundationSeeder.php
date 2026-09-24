@@ -17,6 +17,7 @@ final class SystemFoundationSeeder extends Seeder
         $this->agreements();
         $this->roles();
         $this->financePolicies();
+        $this->taxRules();
         $this->passportClient();
     }
 
@@ -26,7 +27,7 @@ final class SystemFoundationSeeder extends Seeder
             ['TERMS_OF_SERVICE', 'ALL', 'MateryalPH Capstone Terms of Service', '/legal/terms-of-service', 2, true],
             ['PRIVACY_NOTICE', 'ALL', 'MateryalPH Capstone Privacy Notice', '/legal/privacy-notice', 2, true],
             ['VENDOR_CODE_OF_CONDUCT', 'VENDOR', 'Vendor Code of Conduct — Capstone/Test', '/legal/vendor-code-of-conduct', 2, true],
-            ['VENDOR_COMMISSION_TEST', 'VENDOR', 'Vendor 2% Commission Terms — Capstone/Test', '/legal/vendor-commission-terms', 1, false],
+            ['VENDOR_COMMISSION_TEST', 'VENDOR', 'Vendor Commission Terms — TEST/DEMO', '/legal/vendor-commission-test', 1, true],
         ] as [$code, $audience, $title, $uri, $version, $requiresReacceptance]) {
             $path = resource_path('agreements/'.$code.'/'.$version.'.md');
             $content = is_file($path) ? file_get_contents($path) : false;
@@ -72,6 +73,7 @@ final class SystemFoundationSeeder extends Seeder
             ['ADMIN_SUPERADMIN', 'ADMIN', 'Superadmin'],
             ['ADMIN_OPERATIONS', 'ADMIN', 'Operations Admin'],
             ['ADMIN_COMPLIANCE', 'ADMIN', 'Compliance Admin'],
+            ['ADMIN_VENDOR_VERIFICATION', 'ADMIN', 'Vendor Verification Admin'],
             ['ADMIN_FINANCE', 'ADMIN', 'Finance Admin'],
             ['ADMIN_DISPUTE', 'ADMIN', 'Dispute Admin'],
         ] as [$code, $platform, $name]) {
@@ -114,6 +116,27 @@ final class SystemFoundationSeeder extends Seeder
         );
         if (! $hasPersonalClient) {
             app(ClientRepository::class)->createPersonalAccessGrantClient('MateryalPH first-party clients', 'users');
+        }
+    }
+
+    private function taxRules(): void
+    {
+        foreach ([
+            ['DEMO_PLATFORM_WITHHOLDER', ['responsibility' => 'PLATFORM', 'rate_basis_points' => 50, 'label' => 'DEMO platform withholding scenario']],
+            ['DEMO_PROVIDER_WITHHOLDER', ['responsibility' => 'PROVIDER', 'rate_basis_points' => 50, 'label' => 'DEMO provider withholding scenario']],
+        ] as [$code, $rules]) {
+            DB::table('tax_rule_versions')->updateOrInsert(
+                ['environment' => 'DEMO', 'code' => $code, 'version' => 1],
+                [
+                    'id' => DB::table('tax_rule_versions')->where('environment', 'DEMO')->where('code', $code)->where('version', 1)->value('id') ?? (string) Str::uuid7(),
+                    'source_type' => 'APPROVED_FIXTURE',
+                    'source_reference' => 'MateryalPH Phase 3 DEMO fixture',
+                    'rules' => json_encode($rules, JSON_THROW_ON_ERROR),
+                    'effective_from' => now()->startOfDay(),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ],
+            );
         }
     }
 }

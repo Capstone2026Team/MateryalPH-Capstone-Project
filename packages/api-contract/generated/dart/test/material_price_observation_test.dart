@@ -37,6 +37,7 @@ void main() {
       // TODO
     });
 
+    // Reference provider identifier.
     // String comparableGroupVersionId
     test('to test the property `comparableGroupVersionId`', () async {
       // TODO

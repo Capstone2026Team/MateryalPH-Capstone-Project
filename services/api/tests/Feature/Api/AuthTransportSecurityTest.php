@@ -177,7 +177,7 @@ final class AuthTransportSecurityTest extends TestCase
             ->assertOk()
             ->assertHeader('Access-Control-Allow-Origin', 'http://localhost:5173')
             ->assertHeader('Access-Control-Allow-Credentials', 'true')
-            ->assertHeader('Access-Control-Expose-Headers', 'X-Correlation-ID');
+            ->assertHeader('Access-Control-Expose-Headers', 'X-Correlation-ID, Retry-After, X-RateLimit-Limit, X-RateLimit-Remaining');
     }
 
     public function test_unapproved_web_origin_receives_no_cors_permission(): void

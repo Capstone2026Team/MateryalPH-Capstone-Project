@@ -91,6 +91,7 @@ services:
       - .:/workspace
       - api-vendor:/workspace/services/api/vendor
       - passport-keys:/var/lib/materyalph/passport:ro
+      - avatar-scan-definitions:/var/lib/clamav:ro
     ports:
       - "${API_PORT:-8080}:8080"
     healthcheck:
@@ -101,6 +102,15 @@ services:
     depends_on:
       api-setup:
         condition: service_completed_successfully
+
+  avatar-signatures:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/api.Dockerfile
+    command: ["freshclam", "--daemon", "--foreground", "--pid=/var/lib/clamav/freshclam.pid"]
+    volumes:
+      - avatar-scan-definitions:/var/lib/clamav
+    restart: unless-stopped
 
   horizon:
     build:
@@ -139,6 +149,7 @@ services:
         condition: service_completed_successfully
 
 volumes:
+  avatar-scan-definitions:
   postgres-data:
   redis-data:
   minio-data:

@@ -35,6 +35,8 @@ final class RegisterRequest extends FormRequest
             'buyer_type' => [Rule::requiredIf($transport === AuthTransport::MOBILE), 'nullable', 'string', 'max:32'],
             'company_name' => ['nullable', 'string', 'max:180'],
             'terms_accepted' => ['accepted'],
+            'terms_version_id' => [Rule::requiredIf($transport === AuthTransport::MOBILE), 'uuid'],
+            'terms_content_hash' => [Rule::requiredIf($transport === AuthTransport::MOBILE), 'regex:/^[a-f0-9]{64}$/D'],
             'privacy_accepted' => ['accepted'],
         ] + $this->botProtectionRules();
     }

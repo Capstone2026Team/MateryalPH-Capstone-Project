@@ -2,19 +2,21 @@
 
 namespace App\Providers;
 
+use App\Domain\Authorization\AccountAccess;
 use App\Domain\Identity\AccessTokenIssuer;
 use App\Domain\Identity\OtpCodeGenerator;
 use App\Domain\Identity\PassportAccessTokenIssuer;
 use App\Domain\Identity\RecaptchaAssessmentGateway;
 use App\Domain\Identity\SecureOtpCodeGenerator;
-use App\Domain\Vendors\CloudinaryPublicMedia;
-use App\Domain\Vendors\FileScanner;
-use App\Domain\Vendors\PublicMediaProvider;
-use App\Domain\Vendors\SimulatedXenditConnection;
-use App\Domain\Vendors\TestConnectionProvider;
-use App\Domain\Vendors\TestFileScanner;
-use App\Domain\Vendors\XenditTestConnection;
+use App\Domain\Vendors\AddressGeocoder;
+use App\Domain\Vendors\PsgcProvider;
+use App\Domain\Vendors\PublicStoreMediaStorage;
+use App\Domain\Vendors\XenditAccountVerificationGateway;
+use App\Infrastructure\Geography\ConfiguredGoogleMapsGeocoder;
+use App\Infrastructure\Geography\PsgcCloudProvider;
 use App\Infrastructure\Identity\GoogleRecaptchaEnterpriseGateway;
+use App\Infrastructure\Payments\ConfiguredXenditAccountVerificationGateway;
+use App\Infrastructure\Storage\CloudinaryPublicStoreMediaStorage;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -28,12 +30,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->bind(FileScanner::class, TestFileScanner::class);
-        $this->app->bind(PublicMediaProvider::class, CloudinaryPublicMedia::class);
-        $this->app->bind(TestConnectionProvider::class, fn () => config('vendor_onboarding.simulated_connection') ? new SimulatedXenditConnection : new XenditTestConnection);
         $this->app->bind(OtpCodeGenerator::class, SecureOtpCodeGenerator::class);
         $this->app->bind(AccessTokenIssuer::class, PassportAccessTokenIssuer::class);
         $this->app->bind(RecaptchaAssessmentGateway::class, GoogleRecaptchaEnterpriseGateway::class);
+        $this->app->bind(PublicStoreMediaStorage::class, CloudinaryPublicStoreMediaStorage::class);
+        $this->app->bind(AddressGeocoder::class, ConfiguredGoogleMapsGeocoder::class);
+        $this->app->bind(PsgcProvider::class, PsgcCloudProvider::class);
+        $this->app->bind(XenditAccountVerificationGateway::class, ConfiguredXenditAccountVerificationGateway::class);
     }
 
     /**
@@ -42,7 +45,19 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         RateLimiter::for('account', fn (Request $request): Limit => Limit::perMinute(60)->by((string) $request->user()?->getAuthIdentifier()));
+        RateLimiter::for('profile-photo', fn (Request $request): Limit => Limit::perMinute(5)->by((string) $request->user()?->getAuthIdentifier()));
         RateLimiter::for('account-security', fn (Request $request): Limit => Limit::perMinutes(15, 5)->by((string) $request->user()?->getAuthIdentifier().'|'.$request->path()));
+        RateLimiter::for('account-upload', function (Request $request): array {
+            $scope = $request->attributes->get('account_scope');
+            if (! is_array($scope)) {
+                $scope = app(AccountAccess::class)->resolve($request->user());
+            }
+
+            return [
+                Limit::perMinute(20)->by('user|'.$request->user()->getAuthIdentifier()),
+                Limit::perMinute(20)->by('organization|'.$scope['organization_id']),
+            ];
+        });
         $keyPath = config('passport.key_path');
         if (is_string($keyPath) && trim($keyPath) !== '') {
             Passport::loadKeysFrom($keyPath);

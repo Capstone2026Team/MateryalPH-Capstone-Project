@@ -13,13 +13,9 @@
 
 Authenticated Buyers, Vendor employees and Admins manage their own identity and security. Use the existing Inter typography, semantic tokens and accessible controls. Personal profile, security, sessions and agreements are separate navigable sections; privileged administration appears only after server permission resolution. Read-only role and organization information must remain distinct from editable personal fields. Require confirmation for session revocation and security changes; clear sensitive inputs after submission. Handle loading, offline/retry, validation, expired access, denied access and success without raw JSON. Preserve the Buyer five-destination navigation foundation without fictional marketplace data.
 
-## Diagnostic limitation
+## Design review
 
-IMPECCABLE — BLOCKED (TOOLING / LOCAL SECURITY)
-
-The downloaded engine matched its published SHA-256 checksum, but Windows Security blocked the executable as containing a virus or potentially unwanted software.
-
-This is not an application failure. No security bypass attempted. Do not execute the blocked binary again. Use DESIGN.md, the UI/UX planner, semantic components, accessibility/responsive review and automated checks. Full Impeccable audit remains available for the later designated hardening/polish phase after a security-cleared engine is available. This diagnostic limitation alone does not determine Phase 2 acceptance.
+The optional Impeccable diagnostic was removed from current acceptance gates at the user's request. Continue to use DESIGN.md, the UI planner, semantic components, accessibility and responsive review, and automated tests.
 
 ## Acceptance evidence
 
@@ -34,7 +30,7 @@ The acceptance run resumed the existing working tree at repository HEAD `3f5e3c2
 | Backend formatting | `cd services/api; php vendor/bin/pint --test` | Passed |
 | Backend static analysis | `php vendor/bin/phpstan analyse --no-progress --memory-limit=1G` | No errors |
 | Final focused authorization/account security | isolated `api-test php artisan test --compact --filter=PhaseTwoAccountSecurityTest` | 11 tests, 110 assertions passed after the final permission correction |
-| Final backend and Phase 1 regression | isolated `api-test php artisan test --compact` | 86 tests, 1,096 assertions passed after the final permission correction; 59.06 seconds |
+| Final backend and Phase 1 regression (current Phase 2 scope) | isolated `api-test php artisan test --compact` | 86 tests, 1,096 assertions passed after the final permission correction; 59.06 seconds |
 | Buyer regression | `flutter test` | 31 tests passed; repeated after generated-client cleanup |
 | Buyer static analysis | `flutter analyze` | No issues; repeated after generated-client cleanup |
 | Android debug | `flutter build apk --debug` | APK built; repeated after generated-client cleanup |
@@ -89,7 +85,7 @@ No new external provider credentials are required. Approved legal Markdown remai
 
 Android tooling emitted future-support notices for Gradle 8.14, AGP 8.11.1 and Kotlin 2.2.20. The debug build passed without bypass flags or toolchain changes.
 
-Impeccable: BLOCKED — local tooling/security limitation; no bypass attempted. The downloaded engine matched its published SHA-256 checksum, but Windows Security blocked the executable as containing a virus or potentially unwanted software. This is not an application failure. Full Impeccable audit remains available for the later designated hardening/polish phase after a security-cleared engine is available.
+The former optional Impeccable diagnostic is retired and is not a release blocker.
 
 ### Approved authorization clarification
 
@@ -103,8 +99,8 @@ Store Staff and Customer Service explicitly receive `auto_accept.view_outcomes`,
 
 The final commit-free snapshot includes both the Store Staff mutation-grant removal and explicit Store Staff/Customer Service read grant, plus the persisted-role regression test. Snapshot tree: `943043c754d07eb520624b9b03639ff275121f3f`. Container image digest: `c67fc17ec8113673fe160ca65d8c8787fd58026edf34117cbd289a8aafd47009`. Isolated project: `materyalph_clean_72ad216eff72`. Local evidence log: `%TEMP%/materyalph-phase2-clean-current.log`.
 
-The final snapshot passed the 6.92 MB source secret scan, live PostgreSQL 16/PostGIS isolation guard, empty migrations, rollback/reapply, schema drift, Passport key handling, SMTP/Mailpit, Pint (177 files), PHPStan (no errors), full backend regression (86 tests / 1,096 assertions, 33.51 seconds), OpenAPI validation, TypeScript/Dart regeneration without drift, Dart serializer generation, Dart analysis (no issues), and whitespace verification. Disposable containers were stopped after success. Development volumes and existing Passport keys were not modified. The report was finalized after that snapshot; implementation source remains the verified candidate.
+The final snapshot passed the 6.92 MB source secret scan, live PostgreSQL 16/PostGIS isolation guard, empty migrations, rollback/reapply, schema drift, Passport key handling, SMTP/Mailpit, Pint (177 files), PHPStan (no errors), Phase 2 backend regression (86 tests / 1,096 assertions, 33.51 seconds), OpenAPI validation, TypeScript/Dart regeneration without drift, Dart serializer generation, Dart analysis (no issues), and whitespace verification. Disposable containers were stopped after success. Development volumes and existing Passport keys were not modified. The report was finalized after that snapshot; implementation source remains the verified candidate.
 
-No Phase 2 functional, security, build, static-analysis or verification blocker remains. The optional Impeccable diagnostic remains blocked as documented above.
+No Phase 2 functional, security, build, static-analysis or verification blocker remains. Design review uses the tests and accessibility checks described above.
 
 PHASE 2 — PASS

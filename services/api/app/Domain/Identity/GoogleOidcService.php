@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Identity;
 
+use App\Domain\Agreements\BuyerRegistrationTerms;
 use App\Models\ExternalIdentity;
 use App\Models\User;
 use Firebase\JWT\JWK;
@@ -42,7 +43,12 @@ final class GoogleOidcService
         ?string $buyerType,
         ?string $companyName,
         ?string $businessName,
+        ?string $termsVersionId = null,
+        ?string $termsContentHash = null,
     ): string {
+        if ($portal === 'BUYER' && $mode === 'SIGN_UP') {
+            app(BuyerRegistrationTerms::class)->assertCurrent($termsVersionId, $termsContentHash);
+        }
         $this->assertConfigured();
         if ($clientKind === 'MOBILE' && blank(config('app.buyer_redirect_uri'))) {
             throw new AuthenticationException('OIDC_NOT_CONFIGURED', 'Google sign-in is not configured for the Buyer app.', 503);
@@ -58,6 +64,8 @@ final class GoogleOidcService
             'portal' => $portal,
             'client_kind' => $clientKind,
             'terms_accepted' => $termsAccepted,
+            'terms_version_id' => $termsVersionId,
+            'terms_content_hash' => $termsContentHash,
             'privacy_accepted' => $privacyAccepted,
             'mode' => $mode,
             'mobile_e164' => $mobileE164,
@@ -126,6 +134,9 @@ final class GoogleOidcService
                 }
                 if (! $flow['terms_accepted'] || ! $flow['privacy_accepted']) {
                     throw new AuthenticationException('CONSENT_REQUIRED', 'Accept the Terms and Privacy Notice to create an account.');
+                }
+                if ($portal === 'BUYER') {
+                    app(BuyerRegistrationTerms::class)->assertCurrent($flow['terms_version_id'] ?? null, $flow['terms_content_hash'] ?? null);
                 }
                 $user = User::query()->create([
                     'name' => trim((string) ($claims['name'] ?? 'MateryalPH user')),
@@ -265,10 +276,11 @@ final class GoogleOidcService
             'id' => $organizationId,
             'legal_name' => $flow['business_name'],
             'store_name' => $flow['business_name'],
+            'store_email' => $user->email,
+            'store_email_verified_at' => now(),
             'account_status' => 'ACTIVE',
             'onboarding_status' => 'NOT_STARTED',
             'marketplace_status' => 'NOT_ACTIVE',
-            'bulk_order_capable' => false,
             'lock_version' => 1,
             'created_at' => now(),
             'updated_at' => now(),

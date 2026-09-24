@@ -42,6 +42,17 @@ void main() {
       // TODO
     });
 
+    // Reference provider identifier.
+    // String termsVersionId
+    test('to test the property `termsVersionId`', () async {
+      // TODO
+    });
+
+    // String termsContentHash
+    test('to test the property `termsContentHash`', () async {
+      // TODO
+    });
+
     // bool termsAccepted
     test('to test the property `termsAccepted`', () async {
       // TODO

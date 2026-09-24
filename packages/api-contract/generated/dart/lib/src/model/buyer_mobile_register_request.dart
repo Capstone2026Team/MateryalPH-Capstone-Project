@@ -19,6 +19,8 @@ part 'buyer_mobile_register_request.g.dart';
 /// * [passwordConfirmation]
 /// * [buyerType]
 /// * [companyName]
+/// * [termsVersionId] - Reference provider identifier.
+/// * [termsContentHash]
 /// * [termsAccepted]
 /// * [privacyAccepted]
 /// * [riskProofToken] - Buyer-only proof returned after a server-issued email risk challenge; this is not CAPTCHA evidence.
@@ -44,6 +46,13 @@ abstract class BuyerMobileRegisterRequest implements Built<BuyerMobileRegisterRe
 
   @BuiltValueField(wireName: r'company_name')
   String? get companyName;
+
+  /// Reference provider identifier.
+  @BuiltValueField(wireName: r'terms_version_id')
+  String get termsVersionId;
+
+  @BuiltValueField(wireName: r'terms_content_hash')
+  String get termsContentHash;
 
   @BuiltValueField(wireName: r'terms_accepted')
   BuyerMobileRegisterRequestTermsAcceptedEnum get termsAccepted;
@@ -117,6 +126,16 @@ class _$BuyerMobileRegisterRequestSerializer implements PrimitiveSerializer<Buye
         specifiedType: const FullType.nullable(String),
       );
     }
+    yield r'terms_version_id';
+    yield serializers.serialize(
+      object.termsVersionId,
+      specifiedType: const FullType(String),
+    );
+    yield r'terms_content_hash';
+    yield serializers.serialize(
+      object.termsContentHash,
+      specifiedType: const FullType(String),
+    );
     yield r'terms_accepted';
     yield serializers.serialize(
       object.termsAccepted,
@@ -206,6 +225,20 @@ class _$BuyerMobileRegisterRequestSerializer implements PrimitiveSerializer<Buye
           ) as String?;
           if (valueDes == null) continue;
           result.companyName = valueDes;
+          break;
+        case r'terms_version_id':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.termsVersionId = valueDes;
+          break;
+        case r'terms_content_hash':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.termsContentHash = valueDes;
           break;
         case r'terms_accepted':
           final valueDes = serializers.deserialize(

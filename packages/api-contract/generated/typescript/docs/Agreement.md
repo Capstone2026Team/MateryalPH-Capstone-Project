@@ -12,6 +12,8 @@ Name | Type
 `audience` | string
 `version` | number
 `contentUri` | string
+`content` | string
+`contentHash` | string
 `effectiveAt` | Date
 
 ## Example
@@ -27,6 +29,8 @@ const example = {
   "audience": null,
   "version": null,
   "contentUri": null,
+  "content": null,
+  "contentHash": null,
   "effectiveAt": null,
 } satisfies Agreement
 

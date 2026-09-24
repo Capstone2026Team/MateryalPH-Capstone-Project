@@ -16,7 +16,7 @@ final class AuditRecorder
      * @param  array<string, mixed>  $before
      * @param  array<string, mixed>  $after
      */
-    public function account(Request $request, string $action, string $resourceType, ?string $resourceId, array $before = [], array $after = [], bool $succeeded = true): void
+    public function account(Request $request, string $action, string $resourceType, ?string $resourceId, array $before = [], array $after = [], bool $succeeded = true, ?string $reason = null): void
     {
         $scope = $request->attributes->get('account_scope', []);
         DB::table('audit_logs')->insert([
@@ -29,6 +29,7 @@ final class AuditRecorder
             'resource_id' => $resourceId,
             'before' => json_encode($before, JSON_THROW_ON_ERROR),
             'after' => json_encode($after, JSON_THROW_ON_ERROR),
+            'reason' => $reason,
             'correlation_id' => (string) $request->attributes->get('correlation_id'),
             'succeeded' => $succeeded,
             'created_at' => now(),

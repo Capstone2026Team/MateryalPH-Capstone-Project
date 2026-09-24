@@ -194,7 +194,6 @@ return new class extends Migration
             $table->string('account_status', 24)->default('ACTIVE');
             $table->string('onboarding_status', 32)->default('NOT_STARTED');
             $table->string('marketplace_status', 24)->default('NOT_ACTIVE')->index();
-            $table->boolean('bulk_order_capable')->default(false);
             $table->unsignedInteger('lock_version')->default(1);
         });
         Schema::table('agreement_acceptances', function (Blueprint $table): void {
@@ -220,33 +219,6 @@ return new class extends Migration
             $table->timestampTz('expires_at');
             $table->timestampTz('accepted_at')->nullable();
         });
-        $this->entity('vendor_contacts', function (Blueprint $table): void {
-            $table->foreignUuid('vendor_organization_id')->constrained()->restrictOnDelete();
-            $table->string('full_name');
-            $table->string('position')->nullable();
-            $table->string('email')->nullable();
-            $table->string('telephone_e164', 20)->nullable();
-            $table->boolean('authorized_representative')->default(false);
-        });
-        $this->entity('vendor_classifications', function (Blueprint $table): void {
-            $table->foreignUuid('vendor_organization_id')->constrained()->restrictOnDelete();
-            $table->string('classification', 64);
-            $table->unique(['vendor_organization_id', 'classification']);
-        });
-        $this->entity('vendor_onboarding_steps', function (Blueprint $table): void {
-            $table->foreignUuid('vendor_organization_id')->constrained()->restrictOnDelete();
-            $table->string('step_code', 64);
-            $table->string('status', 32)->default('REQUIRED');
-            $table->timestampTz('completed_at')->nullable();
-            $table->unique(['vendor_organization_id', 'step_code']);
-        });
-        $this->entity('vendor_activation_history', function (Blueprint $table): void {
-            $table->foreignUuid('vendor_organization_id')->constrained()->restrictOnDelete();
-            $table->foreignId('actor_user_id')->nullable()->constrained('users')->restrictOnDelete();
-            $table->string('from_status', 24)->nullable();
-            $table->string('to_status', 24);
-            $table->text('reason')->nullable();
-        });
         $this->entity('addresses', function (Blueprint $table): void {
             $table->string('owner_type', 32);
             $table->uuid('owner_id');
@@ -258,71 +230,6 @@ return new class extends Migration
             $table->text('geography_wkt')->nullable();
             $table->boolean('verified')->default(false);
             $table->index(['owner_type', 'owner_id']);
-        });
-        $this->entity('store_profiles', function (Blueprint $table): void {
-            $table->foreignUuid('vendor_organization_id')->unique()->constrained()->restrictOnDelete();
-            $table->foreignUuid('address_id')->nullable()->constrained('addresses')->restrictOnDelete();
-            $table->text('description')->nullable();
-            $table->string('public_email')->nullable();
-            $table->string('public_phone', 20)->nullable();
-            $table->boolean('pickup_enabled')->default(false);
-            $table->boolean('delivery_enabled')->default(false);
-        });
-        $this->entity('store_media', function (Blueprint $table): void {
-            $table->foreignUuid('store_profile_id')->constrained()->restrictOnDelete();
-            $table->uuid('file_id')->nullable();
-            $table->string('kind', 24);
-            $table->string('alt_text')->nullable();
-            $table->unsignedSmallInteger('sort_order')->default(0);
-        });
-        $this->entity('operating_hours', function (Blueprint $table): void {
-            $table->foreignUuid('store_profile_id')->constrained()->restrictOnDelete();
-            $table->unsignedTinyInteger('weekday');
-            $table->time('opens_at')->nullable();
-            $table->time('closes_at')->nullable();
-            $table->boolean('closed')->default(false);
-            $table->unique(['store_profile_id', 'weekday']);
-        });
-        $this->entity('delivery_service_areas', function (Blueprint $table): void {
-            $table->foreignUuid('vendor_organization_id')->constrained()->restrictOnDelete();
-            $table->foreignUuid('origin_address_id')->constrained('addresses')->restrictOnDelete();
-            $table->unsignedSmallInteger('radius_km');
-            $table->unique(['vendor_organization_id', 'origin_address_id', 'radius_km']);
-        });
-        $this->entity('business_documents', function (Blueprint $table): void {
-            $table->foreignUuid('vendor_organization_id')->constrained()->restrictOnDelete();
-            $table->string('document_type', 48);
-            $table->uuid('current_version_id')->nullable();
-            $table->string('status', 32)->default('PENDING_VERIFICATION')->index();
-        });
-        $this->entity('business_document_versions', function (Blueprint $table): void {
-            $table->foreignUuid('business_document_id')->constrained()->restrictOnDelete();
-            $table->unsignedInteger('version');
-            $table->uuid('file_id');
-            $table->string('document_number_masked')->nullable();
-            $table->date('issued_on')->nullable();
-            $table->date('expires_on')->nullable();
-            $table->boolean('expiry_not_applicable')->default(false);
-            $table->string('content_hash');
-            $table->unique(['business_document_id', 'version']);
-        });
-        Schema::table('business_documents', function (Blueprint $table): void {
-            $table->foreign('current_version_id')->references('id')->on('business_document_versions')->restrictOnDelete();
-        });
-        $this->entity('business_document_reviews', function (Blueprint $table): void {
-            $table->foreignUuid('business_document_version_id')->constrained()->restrictOnDelete();
-            $table->foreignId('reviewer_user_id')->constrained('users')->restrictOnDelete();
-            $table->string('decision', 32);
-            $table->text('reason')->nullable();
-            $table->string('source_reference')->nullable();
-        });
-        $this->entity('vendor_payment_accounts', function (Blueprint $table): void {
-            $table->foreignUuid('vendor_organization_id')->unique()->constrained()->restrictOnDelete();
-            $table->string('environment', 8)->default('TEST');
-            $table->string('provider', 32)->default('XENDIT');
-            $table->string('provider_account_reference')->nullable();
-            $table->string('status', 32)->default('NOT_CONNECTED');
-            $table->jsonb('capabilities')->nullable();
         });
         $this->entity('buyer_profiles', function (Blueprint $table): void {
             $table->foreignId('user_id')->unique()->constrained()->restrictOnDelete();
@@ -854,8 +761,6 @@ return new class extends Migration
             $table->string('retention_class', 32);
             $table->index(['owner_type', 'owner_id']);
         });
-        Schema::table('store_media', fn (Blueprint $table) => $table->foreign('file_id')->references('id')->on('files')->restrictOnDelete());
-        Schema::table('business_document_versions', fn (Blueprint $table) => $table->foreign('file_id')->references('id')->on('files')->restrictOnDelete());
         Schema::table('listing_media', fn (Blueprint $table) => $table->foreign('file_id')->references('id')->on('files')->restrictOnDelete());
         Schema::table('message_attachments', fn (Blueprint $table) => $table->foreign('file_id')->references('id')->on('files')->restrictOnDelete());
 
@@ -1193,7 +1098,6 @@ return new class extends Migration
             "ALTER TABLE vendor_memberships ADD CONSTRAINT vendor_memberships_role_check CHECK (role IN ('OWNER','STORE_MANAGER','STORE_STAFF','CUSTOMER_SERVICE','INVENTORY','FULFILLMENT'))",
             "ALTER TABLE vendor_memberships ADD CONSTRAINT vendor_manager_delegation_check CHECK (can_manage_staff = false OR role = 'STORE_MANAGER')",
             "CREATE UNIQUE INDEX vendor_one_active_owner_unique ON vendor_memberships (vendor_organization_id) WHERE role = 'OWNER' AND status = 'ACTIVE'",
-            'ALTER TABLE delivery_service_areas ADD CONSTRAINT delivery_service_radius_check CHECK (radius_km IN (5,10,20,30,40,50))',
             'ALTER TABLE unit_conversions ADD CONSTRAINT unit_conversion_positive_check CHECK (multiplier > 0)',
             'ALTER TABLE listing_variants ADD CONSTRAINT listing_variants_pack_positive_check CHECK (pack_quantity > 0)',
             'ALTER TABLE listing_price_versions ADD CONSTRAINT listing_price_positive_check CHECK (amount_centavos > 0)',
@@ -1280,10 +1184,8 @@ return new class extends Migration
             'listing_status_history', 'listing_price_versions', 'listing_media', 'listing_variants', 'vendor_listings',
             'regulated_material_rules', 'technical_attribute_definitions', 'material_tag_links', 'material_tags',
             'unit_conversions', 'material_aliases', 'materials', 'units', 'material_categories', 'buyer_ranking_preferences',
-            'favorite_vendors', 'buyer_locations', 'buyer_profiles', 'vendor_payment_accounts', 'business_document_reviews',
-            'business_document_versions', 'business_documents', 'delivery_service_areas', 'operating_hours', 'store_media',
-            'store_profiles', 'addresses', 'vendor_activation_history', 'vendor_onboarding_steps', 'vendor_classifications',
-            'vendor_contacts', 'vendor_invitations', 'vendor_memberships', 'vendor_organizations', 'admin_invitations',
+            'favorite_vendors', 'buyer_locations', 'buyer_profiles', 'addresses', 'vendor_invitations', 'vendor_memberships',
+            'vendor_organizations', 'admin_invitations',
             'admin_memberships', 'role_permissions', 'permissions', 'platform_roles', 'agreement_acceptances',
             'agreement_versions', 'agreement_documents', 'login_events', 'recovery_codes', 'totp_factors', 'trusted_devices',
             'auth_refresh_token_history', 'auth_sessions', 'email_otps', 'external_identities', 'user_profiles',

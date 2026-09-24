@@ -6,51 +6,136 @@ part of 'vendor_document.dart';
 // BuiltValueGenerator
 // **************************************************************************
 
+const VendorDocumentStatusEnum _$vendorDocumentStatusEnum_PENDING_SUBMISSION =
+    const VendorDocumentStatusEnum._('PENDING_SUBMISSION');
+
+VendorDocumentStatusEnum _$vendorDocumentStatusEnumValueOf(String name) {
+  switch (name) {
+    case 'PENDING_SUBMISSION':
+      return _$vendorDocumentStatusEnum_PENDING_SUBMISSION;
+    default:
+      throw ArgumentError(name);
+  }
+}
+
+final BuiltSet<VendorDocumentStatusEnum> _$vendorDocumentStatusEnumValues =
+    BuiltSet<VendorDocumentStatusEnum>(const <VendorDocumentStatusEnum>[
+  _$vendorDocumentStatusEnum_PENDING_SUBMISSION,
+]);
+
+const VendorDocumentScanStateEnum _$vendorDocumentScanStateEnum_PENDING =
+    const VendorDocumentScanStateEnum._('PENDING');
+const VendorDocumentScanStateEnum _$vendorDocumentScanStateEnum_CLEAN =
+    const VendorDocumentScanStateEnum._('CLEAN');
+const VendorDocumentScanStateEnum _$vendorDocumentScanStateEnum_REJECTED =
+    const VendorDocumentScanStateEnum._('REJECTED');
+
+VendorDocumentScanStateEnum _$vendorDocumentScanStateEnumValueOf(String name) {
+  switch (name) {
+    case 'PENDING':
+      return _$vendorDocumentScanStateEnum_PENDING;
+    case 'CLEAN':
+      return _$vendorDocumentScanStateEnum_CLEAN;
+    case 'REJECTED':
+      return _$vendorDocumentScanStateEnum_REJECTED;
+    default:
+      throw ArgumentError(name);
+  }
+}
+
+final BuiltSet<VendorDocumentScanStateEnum>
+    _$vendorDocumentScanStateEnumValues =
+    BuiltSet<VendorDocumentScanStateEnum>(const <VendorDocumentScanStateEnum>[
+  _$vendorDocumentScanStateEnum_PENDING,
+  _$vendorDocumentScanStateEnum_CLEAN,
+  _$vendorDocumentScanStateEnum_REJECTED,
+]);
+
+Serializer<VendorDocumentStatusEnum> _$vendorDocumentStatusEnumSerializer =
+    _$VendorDocumentStatusEnumSerializer();
+Serializer<VendorDocumentScanStateEnum>
+    _$vendorDocumentScanStateEnumSerializer =
+    _$VendorDocumentScanStateEnumSerializer();
+
+class _$VendorDocumentStatusEnumSerializer
+    implements PrimitiveSerializer<VendorDocumentStatusEnum> {
+  static const Map<String, Object> _toWire = const <String, Object>{
+    'PENDING_SUBMISSION': 'PENDING_SUBMISSION',
+  };
+  static const Map<Object, String> _fromWire = const <Object, String>{
+    'PENDING_SUBMISSION': 'PENDING_SUBMISSION',
+  };
+
+  @override
+  final Iterable<Type> types = const <Type>[VendorDocumentStatusEnum];
+  @override
+  final String wireName = 'VendorDocumentStatusEnum';
+
+  @override
+  Object serialize(Serializers serializers, VendorDocumentStatusEnum object,
+          {FullType specifiedType = FullType.unspecified}) =>
+      _toWire[object.name] ?? object.name;
+
+  @override
+  VendorDocumentStatusEnum deserialize(
+          Serializers serializers, Object serialized,
+          {FullType specifiedType = FullType.unspecified}) =>
+      VendorDocumentStatusEnum.valueOf(
+          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+}
+
+class _$VendorDocumentScanStateEnumSerializer
+    implements PrimitiveSerializer<VendorDocumentScanStateEnum> {
+  static const Map<String, Object> _toWire = const <String, Object>{
+    'PENDING': 'PENDING',
+    'CLEAN': 'CLEAN',
+    'REJECTED': 'REJECTED',
+  };
+  static const Map<Object, String> _fromWire = const <Object, String>{
+    'PENDING': 'PENDING',
+    'CLEAN': 'CLEAN',
+    'REJECTED': 'REJECTED',
+  };
+
+  @override
+  final Iterable<Type> types = const <Type>[VendorDocumentScanStateEnum];
+  @override
+  final String wireName = 'VendorDocumentScanStateEnum';
+
+  @override
+  Object serialize(Serializers serializers, VendorDocumentScanStateEnum object,
+          {FullType specifiedType = FullType.unspecified}) =>
+      _toWire[object.name] ?? object.name;
+
+  @override
+  VendorDocumentScanStateEnum deserialize(
+          Serializers serializers, Object serialized,
+          {FullType specifiedType = FullType.unspecified}) =>
+      VendorDocumentScanStateEnum.valueOf(
+          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+}
+
 class _$VendorDocument extends VendorDocument {
-  @override
-  final String? reviewReason;
-  @override
-  final String? verifiedReference;
-  @override
-  final String? verifiedIssuedOn;
-  @override
-  final String? verifiedExpiresOn;
-  @override
-  final bool verifiedExpiryNotApplicable;
   @override
   final String id;
   @override
-  final String documentType;
-  @override
-  final String status;
+  final String requirementKey;
   @override
   final int version;
   @override
-  final String environment;
+  final VendorDocumentStatusEnum status;
   @override
-  final String evidenceOrigin;
-  @override
-  final String scanState;
-  @override
-  final String createdAt;
+  final VendorDocumentScanStateEnum scanState;
 
   factory _$VendorDocument([void Function(VendorDocumentBuilder)? updates]) =>
       (VendorDocumentBuilder()..update(updates))._build();
 
   _$VendorDocument._(
-      {this.reviewReason,
-      this.verifiedReference,
-      this.verifiedIssuedOn,
-      this.verifiedExpiresOn,
-      required this.verifiedExpiryNotApplicable,
-      required this.id,
-      required this.documentType,
-      required this.status,
+      {required this.id,
+      required this.requirementKey,
       required this.version,
-      required this.environment,
-      required this.evidenceOrigin,
-      required this.scanState,
-      required this.createdAt})
+      required this.status,
+      required this.scanState})
       : super._();
   @override
   VendorDocument rebuild(void Function(VendorDocumentBuilder) updates) =>
@@ -63,37 +148,21 @@ class _$VendorDocument extends VendorDocument {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is VendorDocument &&
-        reviewReason == other.reviewReason &&
-        verifiedReference == other.verifiedReference &&
-        verifiedIssuedOn == other.verifiedIssuedOn &&
-        verifiedExpiresOn == other.verifiedExpiresOn &&
-        verifiedExpiryNotApplicable == other.verifiedExpiryNotApplicable &&
         id == other.id &&
-        documentType == other.documentType &&
-        status == other.status &&
+        requirementKey == other.requirementKey &&
         version == other.version &&
-        environment == other.environment &&
-        evidenceOrigin == other.evidenceOrigin &&
-        scanState == other.scanState &&
-        createdAt == other.createdAt;
+        status == other.status &&
+        scanState == other.scanState;
   }
 
   @override
   int get hashCode {
     var _$hash = 0;
-    _$hash = $jc(_$hash, reviewReason.hashCode);
-    _$hash = $jc(_$hash, verifiedReference.hashCode);
-    _$hash = $jc(_$hash, verifiedIssuedOn.hashCode);
-    _$hash = $jc(_$hash, verifiedExpiresOn.hashCode);
-    _$hash = $jc(_$hash, verifiedExpiryNotApplicable.hashCode);
     _$hash = $jc(_$hash, id.hashCode);
-    _$hash = $jc(_$hash, documentType.hashCode);
-    _$hash = $jc(_$hash, status.hashCode);
+    _$hash = $jc(_$hash, requirementKey.hashCode);
     _$hash = $jc(_$hash, version.hashCode);
-    _$hash = $jc(_$hash, environment.hashCode);
-    _$hash = $jc(_$hash, evidenceOrigin.hashCode);
+    _$hash = $jc(_$hash, status.hashCode);
     _$hash = $jc(_$hash, scanState.hashCode);
-    _$hash = $jc(_$hash, createdAt.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -101,19 +170,11 @@ class _$VendorDocument extends VendorDocument {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'VendorDocument')
-          ..add('reviewReason', reviewReason)
-          ..add('verifiedReference', verifiedReference)
-          ..add('verifiedIssuedOn', verifiedIssuedOn)
-          ..add('verifiedExpiresOn', verifiedExpiresOn)
-          ..add('verifiedExpiryNotApplicable', verifiedExpiryNotApplicable)
           ..add('id', id)
-          ..add('documentType', documentType)
-          ..add('status', status)
+          ..add('requirementKey', requirementKey)
           ..add('version', version)
-          ..add('environment', environment)
-          ..add('evidenceOrigin', evidenceOrigin)
-          ..add('scanState', scanState)
-          ..add('createdAt', createdAt))
+          ..add('status', status)
+          ..add('scanState', scanState))
         .toString();
   }
 }
@@ -122,62 +183,27 @@ class VendorDocumentBuilder
     implements Builder<VendorDocument, VendorDocumentBuilder> {
   _$VendorDocument? _$v;
 
-  String? _reviewReason;
-  String? get reviewReason => _$this._reviewReason;
-  set reviewReason(String? reviewReason) => _$this._reviewReason = reviewReason;
-
-  String? _verifiedReference;
-  String? get verifiedReference => _$this._verifiedReference;
-  set verifiedReference(String? verifiedReference) =>
-      _$this._verifiedReference = verifiedReference;
-
-  String? _verifiedIssuedOn;
-  String? get verifiedIssuedOn => _$this._verifiedIssuedOn;
-  set verifiedIssuedOn(String? verifiedIssuedOn) =>
-      _$this._verifiedIssuedOn = verifiedIssuedOn;
-
-  String? _verifiedExpiresOn;
-  String? get verifiedExpiresOn => _$this._verifiedExpiresOn;
-  set verifiedExpiresOn(String? verifiedExpiresOn) =>
-      _$this._verifiedExpiresOn = verifiedExpiresOn;
-
-  bool? _verifiedExpiryNotApplicable;
-  bool? get verifiedExpiryNotApplicable => _$this._verifiedExpiryNotApplicable;
-  set verifiedExpiryNotApplicable(bool? verifiedExpiryNotApplicable) =>
-      _$this._verifiedExpiryNotApplicable = verifiedExpiryNotApplicable;
-
   String? _id;
   String? get id => _$this._id;
   set id(String? id) => _$this._id = id;
 
-  String? _documentType;
-  String? get documentType => _$this._documentType;
-  set documentType(String? documentType) => _$this._documentType = documentType;
-
-  String? _status;
-  String? get status => _$this._status;
-  set status(String? status) => _$this._status = status;
+  String? _requirementKey;
+  String? get requirementKey => _$this._requirementKey;
+  set requirementKey(String? requirementKey) =>
+      _$this._requirementKey = requirementKey;
 
   int? _version;
   int? get version => _$this._version;
   set version(int? version) => _$this._version = version;
 
-  String? _environment;
-  String? get environment => _$this._environment;
-  set environment(String? environment) => _$this._environment = environment;
+  VendorDocumentStatusEnum? _status;
+  VendorDocumentStatusEnum? get status => _$this._status;
+  set status(VendorDocumentStatusEnum? status) => _$this._status = status;
 
-  String? _evidenceOrigin;
-  String? get evidenceOrigin => _$this._evidenceOrigin;
-  set evidenceOrigin(String? evidenceOrigin) =>
-      _$this._evidenceOrigin = evidenceOrigin;
-
-  String? _scanState;
-  String? get scanState => _$this._scanState;
-  set scanState(String? scanState) => _$this._scanState = scanState;
-
-  String? _createdAt;
-  String? get createdAt => _$this._createdAt;
-  set createdAt(String? createdAt) => _$this._createdAt = createdAt;
+  VendorDocumentScanStateEnum? _scanState;
+  VendorDocumentScanStateEnum? get scanState => _$this._scanState;
+  set scanState(VendorDocumentScanStateEnum? scanState) =>
+      _$this._scanState = scanState;
 
   VendorDocumentBuilder() {
     VendorDocument._defaults(this);
@@ -186,19 +212,11 @@ class VendorDocumentBuilder
   VendorDocumentBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
-      _reviewReason = $v.reviewReason;
-      _verifiedReference = $v.verifiedReference;
-      _verifiedIssuedOn = $v.verifiedIssuedOn;
-      _verifiedExpiresOn = $v.verifiedExpiresOn;
-      _verifiedExpiryNotApplicable = $v.verifiedExpiryNotApplicable;
       _id = $v.id;
-      _documentType = $v.documentType;
-      _status = $v.status;
+      _requirementKey = $v.requirementKey;
       _version = $v.version;
-      _environment = $v.environment;
-      _evidenceOrigin = $v.evidenceOrigin;
+      _status = $v.status;
       _scanState = $v.scanState;
-      _createdAt = $v.createdAt;
       _$v = null;
     }
     return this;
@@ -220,30 +238,16 @@ class VendorDocumentBuilder
   _$VendorDocument _build() {
     final _$result = _$v ??
         _$VendorDocument._(
-          reviewReason: reviewReason,
-          verifiedReference: verifiedReference,
-          verifiedIssuedOn: verifiedIssuedOn,
-          verifiedExpiresOn: verifiedExpiresOn,
-          verifiedExpiryNotApplicable: BuiltValueNullFieldError.checkNotNull(
-              verifiedExpiryNotApplicable,
-              r'VendorDocument',
-              'verifiedExpiryNotApplicable'),
           id: BuiltValueNullFieldError.checkNotNull(
               id, r'VendorDocument', 'id'),
-          documentType: BuiltValueNullFieldError.checkNotNull(
-              documentType, r'VendorDocument', 'documentType'),
-          status: BuiltValueNullFieldError.checkNotNull(
-              status, r'VendorDocument', 'status'),
+          requirementKey: BuiltValueNullFieldError.checkNotNull(
+              requirementKey, r'VendorDocument', 'requirementKey'),
           version: BuiltValueNullFieldError.checkNotNull(
               version, r'VendorDocument', 'version'),
-          environment: BuiltValueNullFieldError.checkNotNull(
-              environment, r'VendorDocument', 'environment'),
-          evidenceOrigin: BuiltValueNullFieldError.checkNotNull(
-              evidenceOrigin, r'VendorDocument', 'evidenceOrigin'),
+          status: BuiltValueNullFieldError.checkNotNull(
+              status, r'VendorDocument', 'status'),
           scanState: BuiltValueNullFieldError.checkNotNull(
               scanState, r'VendorDocument', 'scanState'),
-          createdAt: BuiltValueNullFieldError.checkNotNull(
-              createdAt, r'VendorDocument', 'createdAt'),
         );
     replace(_$result);
     return _$result;

@@ -6,19 +6,11 @@
 
 Name | Type
 ------------ | -------------
-`reviewReason` | string
-`verifiedReference` | string
-`verifiedIssuedOn` | string
-`verifiedExpiresOn` | string
-`verifiedExpiryNotApplicable` | boolean
 `id` | string
-`documentType` | string
-`status` | string
+`requirementKey` | string
 `version` | number
-`environment` | string
-`evidenceOrigin` | string
+`status` | string
 `scanState` | string
-`createdAt` | string
 
 ## Example
 
@@ -27,19 +19,11 @@ import type { VendorDocument } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
-  "reviewReason": null,
-  "verifiedReference": null,
-  "verifiedIssuedOn": null,
-  "verifiedExpiresOn": null,
-  "verifiedExpiryNotApplicable": null,
   "id": null,
-  "documentType": null,
-  "status": null,
+  "requirementKey": null,
   "version": null,
-  "environment": null,
-  "evidenceOrigin": null,
+  "status": null,
   "scanState": null,
-  "createdAt": null,
 } satisfies VendorDocument
 
 console.log(example)
