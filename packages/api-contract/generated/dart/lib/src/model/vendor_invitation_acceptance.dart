@@ -14,7 +14,7 @@ part 'vendor_invitation_acceptance.g.dart';
 /// * [token]
 /// * [email]
 /// * [fullName]
-/// * [password]
+/// * [password] - New Vendor identities require at least 14 characters, mixed case, and a number. Existing eligible Vendor identities use their current password.
 /// * [passwordConfirmation]
 @BuiltValue()
 abstract class VendorInvitationAcceptance implements Built<VendorInvitationAcceptance, VendorInvitationAcceptanceBuilder> {
@@ -27,6 +27,7 @@ abstract class VendorInvitationAcceptance implements Built<VendorInvitationAccep
   @BuiltValueField(wireName: r'full_name')
   String get fullName;
 
+  /// New Vendor identities require at least 14 characters, mixed case, and a number. Existing eligible Vendor identities use their current password.
   @BuiltValueField(wireName: r'password')
   String get password;
 

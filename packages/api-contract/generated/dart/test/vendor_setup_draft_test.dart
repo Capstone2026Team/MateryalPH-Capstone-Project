@@ -18,6 +18,12 @@ void main() {
       // TODO
     });
 
+    // Encrypted JSON setup form progress. Unfinished vehicle entries are not operational configurations. Returned privately as setup.form_state.
+    // String formState
+    test('to test the property `formState`', () async {
+      // TODO
+    });
+
     // String publicStoreName
     test('to test the property `publicStoreName`', () async {
       // TODO
@@ -45,6 +51,12 @@ void main() {
 
     // String publicPhone
     test('to test the property `publicPhone`', () async {
+      // TODO
+    });
+
+    // Complete replacement of the normal weekly schedule. All seven distinct weekdays are required. Closed days have null times; Open days need a same-day opening and later closing time.
+    // BuiltList<StoreOperatingDay> operatingSchedule
+    test('to test the property `operatingSchedule`', () async {
       // TODO
     });
 

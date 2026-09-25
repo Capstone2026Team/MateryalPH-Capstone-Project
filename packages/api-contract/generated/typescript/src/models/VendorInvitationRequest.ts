@@ -35,6 +35,10 @@ export interface VendorInvitationRequest {
      *
      */
     role: VendorInvitationRequestRoleEnum;
+    /**
+     * Owner-only setting for Store Manager invitations. Enabling requires recent authentication. Invitations are permitted during Store Setup and never grant marketplace activation.
+     */
+    canManageStaff?: boolean;
 }
 
 
@@ -75,6 +79,7 @@ export function VendorInvitationRequestFromJSONTyped(json: any, ignoreDiscrimina
         'inviteeName': json['invitee_name'],
         'inviteeMobile': json['invitee_mobile'] === undefined ? undefined : json['invitee_mobile'] === null ? null : json['invitee_mobile'],
         'role': json['role'],
+        'canManageStaff': json['can_manage_staff'] == null ? undefined : json['can_manage_staff'],
     };
 }
 
@@ -93,6 +98,7 @@ export function VendorInvitationRequestToJSONTyped(value?: VendorInvitationReque
         'invitee_name': value['inviteeName'],
         'invitee_mobile': value['inviteeMobile'],
         'role': value['role'],
+        'can_manage_staff': value['canManageStaff'],
     };
 }
 

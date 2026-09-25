@@ -331,7 +331,9 @@ Changing ordinary public marketing text or a public profile image does not by it
 
 ## 2. Store Setup
 
-Store Setup is the second primary section of Vendor Onboarding. It may begin after Store Verification is submitted, even while review is pending. Its operational checklist and completion state are independent from Store Verification. It includes Business Store Profile, Fulfillment Configuration, conditional Delivery Configuration, Payment Configuration, optional Vendor Team Account Management, Finish Later and limited-dashboard behavior, and Store Activation readiness.
+Store Setup is the second primary section of Vendor Onboarding. It may begin after Store Verification is submitted, even while review is pending. Its operational checklist and completion state are independent from Store Verification. It includes Business Store Profile, Fulfillment Configuration, conditional Delivery Configuration, Payment Configuration, optional Vendor Team Account Management, required Store Operation, Finish Later and limited-dashboard behavior, and Store Activation readiness.
+
+Store Operation is the public weekly schedule for Monday through Sunday. Each day is explicitly Open with a same-day opening and later closing time, or Closed without times. A valid schedule completes S5 but does not activate the Store, approve verification, or change fulfillment or Xendit status. The Vendor can update hours later in Store Profile; changes are audit-attributed. Buyers see the saved schedule only when the Store is publicly discoverable. An explicit date-specific entry, when configured, overrides the weekly schedule for that date; no holiday schedule is inferred.
 
 **Business Store Profile Setup**
 
@@ -402,7 +404,7 @@ Payment Configuration reaches `COMPLETED` only when the required Xendit connecti
 
 ## 6. Vendor Team Account Management
 
-Team Accounts are optional and never block Store Activation. After the Vendor Owner has completed and submitted the required Store Setup configuration, the Owner may invite staff even when Store Verification is still pending. The Owner may also create Team Accounts after Store Activation. Every invitation identifies the employee, email, contact number where required, exactly one fixed role, organization, expiry, and inviting actor. The employee accepts through an individual account and never receives or uses the Owner's credentials.
+Team Accounts are optional and never block Store Activation. During Store Setup, the Owner may invite staff even when Store Verification is still pending. Invitations do not require setup completion. The Owner may also create Team Accounts after Store Activation. Every invitation identifies the employee, email, contact number where required, exactly one fixed role, organization, expiry, and inviting actor. The employee accepts through an individual account and never receives or uses the Owner's credentials.
 
 The fixed Vendor Team roles are **Store Manager**, **Store Staff**, **Customer Service Staff**, **Inventory Staff**, and **Fulfillment Staff**. Each employee has one fixed role and individual audit history. A Team Account belongs to the Vendor organization and does not repeat Vendor Onboarding, create another store, or bypass Store Activation. A staff member may sign in before activation only in the limited-access state permitted by the organization's state and the staff member's role.
 
@@ -773,7 +775,7 @@ Fulfillment Staff prepares assigned confirmed orders, records fulfillment milest
 
 ## Restricted Actions
 
-No employee, including Store Manager, may transfer ownership, access another Vendor, delete audit history, create another Vendor organization under the membership, edit payout credentials, change their own role, or grant access beyond the fixed delegation rule. Only the Store Manager may view store-wide operations and earnings; specialized staff remain restricted to their scope.
+No employee, including Store Manager, may transfer ownership, access another Vendor, delete audit history, create another Vendor organization under the membership, edit payout credentials, change their own role, or grant access beyond the fixed delegation rule. Store Managers may view operational store-wide performance. Wallet and Earnings remain Vendor Owner only; specialized staff remain restricted to their scope.
 
 ## Attribution Rules
 

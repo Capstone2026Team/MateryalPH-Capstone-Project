@@ -32,7 +32,7 @@ export interface VendorInvitationAcceptance {
      */
     fullName: string;
     /**
-     *
+     * New Vendor identities require at least 14 characters, mixed case, and a number. Existing eligible Vendor identities use their current password.
      */
     password: string;
     /**

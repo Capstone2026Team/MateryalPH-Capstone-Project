@@ -11,10 +11,11 @@ part 'vendor_setup_draft_delivery.g.dart';
 /// VendorSetupDraftDelivery
 ///
 /// Properties:
-/// * [maximumDistanceKm]
+/// * [maximumDistanceKm] - Omission retains the saved limit; new coverage defaults to the approved 50 km procurement limit. New vehicle rates inherit coverage.
 /// * [coverageNotes]
 @BuiltValue()
 abstract class VendorSetupDraftDelivery implements Built<VendorSetupDraftDelivery, VendorSetupDraftDeliveryBuilder> {
+  /// Omission retains the saved limit; new coverage defaults to the approved 50 km procurement limit. New vehicle rates inherit coverage.
   @BuiltValueField(wireName: r'maximum_distance_km')
   int? get maximumDistanceKm;
 

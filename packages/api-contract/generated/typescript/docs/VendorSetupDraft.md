@@ -8,12 +8,14 @@ Name | Type
 ------------ | -------------
 `draftLockVersion` | number
 `organizationLockVersion` | number
+`formState` | string
 `publicStoreName` | string
 `description` | string
 `bulkCapability` | boolean
 `fulfillmentMethod` | string
 `publicEmail` | string
 `publicPhone` | string
+`operatingSchedule` | [Array&lt;StoreOperatingDay&gt;](StoreOperatingDay.md)
 `delivery` | [VendorSetupDraftDelivery](VendorSetupDraftDelivery.md)
 `vehicles` | [Array&lt;VendorSetupDraftVehiclesInner&gt;](VendorSetupDraftVehiclesInner.md)
 
@@ -26,12 +28,14 @@ import type { VendorSetupDraft } from '@materyalph/api-client-ts'
 const example = {
   "draftLockVersion": null,
   "organizationLockVersion": null,
+  "formState": null,
   "publicStoreName": null,
   "description": null,
   "bulkCapability": null,
   "fulfillmentMethod": null,
   "publicEmail": null,
   "publicPhone": null,
+  "operatingSchedule": null,
   "delivery": null,
   "vehicles": null,
 } satisfies VendorSetupDraft

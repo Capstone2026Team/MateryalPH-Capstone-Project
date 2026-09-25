@@ -74,10 +74,8 @@ erDiagram
         uuid id PK
     }
     BUSINESS_DOCUMENT_VERSIONS {
-        uuid id PK
     }
     BUSINESS_DOCUMENTS {
-        uuid id PK
     }
     BUYER_LOCATIONS {
         uuid id PK
@@ -371,6 +369,9 @@ erDiagram
     OPERATING_HOURS {
         uuid id PK
     }
+    ORDER_DELIVERY_SNAPSHOTS {
+        uuid id PK
+    }
     ORDER_LINES {
         uuid id PK
     }
@@ -420,6 +421,9 @@ erDiagram
         uuid id PK
     }
     PRICE_OBSERVATIONS {
+        uuid id PK
+    }
+    PRIVACY_ACKNOWLEDGMENTS {
         uuid id PK
     }
     PRIVACY_REQUESTS {
@@ -518,6 +522,9 @@ erDiagram
     STORE_MEDIA {
         uuid id PK
     }
+    STORE_OPERATION_DATE_OVERRIDES {
+        uuid id PK
+    }
     STORE_PROFILES {
         uuid id PK
     }
@@ -569,6 +576,15 @@ erDiagram
     VENDOR_ACTIVATION_HISTORY {
         uuid id PK
     }
+    VENDOR_ADDRESS_VERSIONS {
+        uuid id PK
+    }
+    VENDOR_ADDRESSES {
+        uuid id PK
+    }
+    VENDOR_AUTHORITY_REVIEWS {
+        uuid id PK
+    }
     VENDOR_BADGE_HISTORY {
         uuid id PK
     }
@@ -578,10 +594,15 @@ erDiagram
     VENDOR_CONFIRMATIONS {
         uuid id PK
     }
-    VENDOR_CONTACTS {
+    VENDOR_DOCUMENT_EXPIRY_NOTICES {
         uuid id PK
     }
-    VENDOR_DOCUMENT_EXPIRY_NOTICES {
+    VENDOR_DOCUMENT_SUPERSESSIONS {
+    }
+    VENDOR_DOCUMENT_VERSIONS {
+        uuid id PK
+    }
+    VENDOR_DOCUMENTS {
         uuid id PK
     }
     VENDOR_INVITATIONS {
@@ -593,13 +614,24 @@ erDiagram
     VENDOR_MEMBERSHIPS {
         uuid id PK
     }
-    VENDOR_ONBOARDING_STEPS {
+    VENDOR_ONBOARDING_DRAFTS {
         uuid id PK
+    }
+    VENDOR_ONBOARDING_REQUIREMENTS {
+        uuid id PK
+    }
+    VENDOR_ONBOARDING_STEPS {
     }
     VENDOR_ORGANIZATIONS {
         uuid id PK
     }
     VENDOR_PAYMENT_ACCOUNTS {
+        uuid id PK
+    }
+    VENDOR_PENDING_DOCUMENTS {
+        uuid id PK
+    }
+    VENDOR_REPRESENTATIVE_VERSIONS {
         uuid id PK
     }
     VENDOR_TAX_PROFILE_VERSIONS {
@@ -610,6 +642,11 @@ erDiagram
     }
     VENDOR_VEHICLES {
         uuid id PK
+    }
+    VENDOR_VERIFICATION_CHANGE_HISTORY {
+        uuid id PK
+    }
+    VENDOR_VERIFICATION_CHANGES {
     }
     WEBHOOK_EVENTS {
         uuid id PK
@@ -632,6 +669,7 @@ erDiagram
     ADDRESSES ||--|{ PROJECT_SITES : "address_id → id"
     AGREEMENT_DOCUMENTS ||--|{ AGREEMENT_VERSIONS : "agreement_document_id → id"
     AGREEMENT_VERSIONS ||--|{ AGREEMENT_ACCEPTANCES : "agreement_version_id → id"
+    AGREEMENT_VERSIONS ||--|{ PRIVACY_ACKNOWLEDGMENTS : "agreement_version_id → id"
     ANALYTICS_REFRESH_RUNS ||--|{ ANALYTICS_PUBLISHED_RUNS : "analytics_refresh_run_id → id"
     ANALYTICS_REFRESH_RUNS ||--o{ ANALYTICS_REFRESH_RUNS : "supersedes_run_id → id"
     ANALYTICS_REFRESH_RUNS ||--|{ MATERIAL_PRICE_DAILY_AGGREGATES : "analytics_refresh_run_id → id"
@@ -643,11 +681,6 @@ erDiagram
     AUTO_ACCEPT_POLICIES ||--|{ AUTO_ACCEPT_POLICY_VERSIONS : "auto_accept_policy_id → id"
     BADGE_DEFINITIONS ||--|{ VENDOR_BADGE_HISTORY : "badge_definition_id → id"
     BOT_RISK_CHALLENGES ||--o{ EMAIL_OTPS : "bot_risk_challenge_id → id"
-    BUSINESS_DOCUMENT_VERSIONS ||--|{ BUSINESS_DOCUMENT_REVIEWS : "business_document_version_id → id"
-    BUSINESS_DOCUMENT_VERSIONS ||--o{ BUSINESS_DOCUMENT_VERSIONS : "supersedes_version_id → id"
-    BUSINESS_DOCUMENT_VERSIONS ||--o{ BUSINESS_DOCUMENTS : "current_version_id → id"
-    BUSINESS_DOCUMENT_VERSIONS ||--|{ VENDOR_DOCUMENT_EXPIRY_NOTICES : "business_document_version_id → id"
-    BUSINESS_DOCUMENTS ||--|{ BUSINESS_DOCUMENT_VERSIONS : "business_document_id → id"
     BUYER_PROFILES ||--|{ BUYER_LOCATIONS : "buyer_profile_id → id"
     BUYER_PROFILES ||--|{ BUYER_RANKING_PREFERENCES : "buyer_profile_id → id"
     BUYER_PROFILES ||--|{ CARTS : "buyer_profile_id → id"
@@ -691,7 +724,6 @@ erDiagram
     FEE_STATEMENTS ||--o{ INVOICE_RECORDS : "fee_statement_id → id"
     FEE_STATEMENTS ||--o{ PAYMENTS : "fee_statement_id → id"
     FEE_STATEMENTS ||--o{ REFUNDS : "fee_statement_id → id"
-    FILES ||--|{ BUSINESS_DOCUMENT_VERSIONS : "file_id → id"
     FILES ||--|{ EXTERNAL_FILING_EVIDENCE : "file_id → id"
     FILES ||--|{ INVOICE_RECORDS : "file_id → id"
     FILES ||--|{ LISTING_MEDIA : "file_id → id"
@@ -706,6 +738,8 @@ erDiagram
     FILES ||--|{ TAX_CERTIFICATES : "file_id → id"
     FILES ||--|{ TAX_EVIDENCE : "file_id → id"
     FILES ||--o{ TAX_REPORT_PACKAGES : "file_id → id"
+    FILES ||--|{ VENDOR_DOCUMENT_VERSIONS : "file_id → id"
+    FILES ||--|{ VENDOR_PENDING_DOCUMENTS : "file_id → id"
     FILES ||--o{ VENDOR_VEHICLES : "image_file_id → id"
     FILING_CALENDAR_VERSIONS ||--|{ FILING_DEADLINES : "filing_calendar_version_id → id"
     FILING_CALENDAR_VERSIONS ||--o{ TAX_REPORT_PACKAGES : "filing_calendar_version_id → id"
@@ -762,6 +796,7 @@ erDiagram
     ORDERS ||--o{ INVOICE_RECORDS : "order_id → id"
     ORDERS ||--|{ NRPC_ACCEPTANCES : "order_id → id"
     ORDERS ||--|{ NRPC_RECORDS : "order_id → id"
+    ORDERS ||--|{ ORDER_DELIVERY_SNAPSHOTS : "order_id → id"
     ORDERS ||--|{ ORDER_LINES : "order_id → id"
     ORDERS ||--|{ ORDER_SNAPSHOTS : "order_id → id"
     ORDERS ||--|{ ORDER_STATUS_HISTORY : "order_id → id"
@@ -815,6 +850,7 @@ erDiagram
     REVIEWS ||--|{ REVIEW_MODERATION : "review_id → id"
     STORE_PROFILES ||--|{ OPERATING_HOURS : "store_profile_id → id"
     STORE_PROFILES ||--|{ STORE_MEDIA : "store_profile_id → id"
+    STORE_PROFILES ||--|{ STORE_OPERATION_DATE_OVERRIDES : "store_profile_id → id"
     TAX_REPORT_PACKAGES ||--|{ TAX_REPORT_PACKAGE_LINES : "tax_report_package_id → id"
     TAX_RULE_VERSIONS ||--o{ FINANCIAL_SNAPSHOTS : "tax_rule_version_id → id"
     TAX_RULE_VERSIONS ||--|{ WITHHOLDING_ASSIGNMENTS : "tax_rule_version_id → id"
@@ -837,7 +873,6 @@ erDiagram
     USERS ||--|{ AUTO_ACCEPT_POLICY_VERSIONS : "created_by_user_id → id"
     USERS ||--|{ BUDGET_OVERRIDES : "buyer_user_id → id"
     USERS ||--|{ BUSINESS_DOCUMENT_REVIEWS : "reviewer_user_id → id"
-    USERS ||--|{ BUSINESS_DOCUMENT_VERSIONS : "uploaded_by_user_id → id"
     USERS ||--|{ BUYER_PROFILES : "user_id → id"
     USERS ||--o{ CANCELLATION_DECISIONS : "actor_user_id → id"
     USERS ||--o{ CANCELLATION_REQUESTS : "actor_user_id → id"
@@ -882,12 +917,14 @@ erDiagram
     USERS ||--|{ NOTIFICATIONS : "user_id → id"
     USERS ||--o{ NRPC_ACCEPTANCES : "actor_user_id → id"
     USERS ||--o{ NRPC_RECORDS : "actor_user_id → id"
+    USERS ||--|{ ORDER_DELIVERY_SNAPSHOTS : "confirmed_by_user_id → id"
     USERS ||--o{ ORDER_STATUS_HISTORY : "actor_user_id → id"
     USERS ||--|{ PHYSICAL_PAYMENT_RECORDS : "recorded_by_user_id → id"
     USERS ||--o{ PHYSICAL_REIMBURSEMENTS : "confirmed_by_user_id → id"
     USERS ||--|{ PHYSICAL_REIMBURSEMENTS : "recorded_by_user_id → id"
     USERS ||--o{ PICKUP_AUTHORIZATIONS : "actor_user_id → id"
     USERS ||--o{ PLATFORM_SETTINGS : "updated_by_user_id → id"
+    USERS ||--|{ PRIVACY_ACKNOWLEDGMENTS : "user_id → id"
     USERS ||--|{ PRIVACY_REQUESTS : "user_id → id"
     USERS ||--|{ QUOTATION_CHANGES : "actor_user_id → id"
     USERS ||--|{ QUOTATION_COUNTER_OFFERS : "actor_user_id → id"
@@ -898,6 +935,8 @@ erDiagram
     USERS ||--o{ REVIEW_MODERATION : "actor_user_id → id"
     USERS ||--|{ REVIEWS : "reviewer_user_id → id"
     USERS ||--|{ STOCK_CONFIRMATION_EVENTS : "actor_user_id → id"
+    USERS ||--|{ STORE_OPERATION_DATE_OVERRIDES : "created_by_user_id → id"
+    USERS ||--|{ STORE_OPERATION_DATE_OVERRIDES : "updated_by_user_id → id"
     USERS ||--|{ TAX_ADJUSTMENTS : "prepared_by_user_id → id"
     USERS ||--o{ TAX_ADJUSTMENTS : "reviewed_by_user_id → id"
     USERS ||--o{ TAX_CERTIFICATES : "verified_by_user_id → id"
@@ -910,24 +949,37 @@ erDiagram
     USERS ||--o{ UNIT_CONVERSIONS : "approved_by_user_id → id"
     USERS ||--|{ USER_PROFILES : "user_id → id"
     USERS ||--o{ VENDOR_ACTIVATION_HISTORY : "actor_user_id → id"
+    USERS ||--|{ VENDOR_AUTHORITY_REVIEWS : "reviewer_user_id → id"
     USERS ||--o{ VENDOR_CONFIRMATIONS : "actor_user_id → id"
+    USERS ||--|{ VENDOR_DOCUMENT_VERSIONS : "uploaded_by_user_id → id"
     USERS ||--|{ VENDOR_INVITATIONS : "invited_by_user_id → id"
     USERS ||--|{ VENDOR_MEMBERSHIPS : "user_id → id"
-    USERS ||--o{ VENDOR_ONBOARDING_STEPS : "reviewed_by_user_id → id"
-    USERS ||--o{ VENDOR_ONBOARDING_STEPS : "submitted_by_user_id → id"
+    USERS ||--o{ VENDOR_ONBOARDING_DRAFTS : "updated_by_user_id → id"
+    USERS ||--o{ VENDOR_ONBOARDING_REQUIREMENTS : "reviewed_by_user_id → id"
+    USERS ||--o{ VENDOR_ONBOARDING_REQUIREMENTS : "submitted_by_user_id → id"
+    USERS ||--o{ VENDOR_REPRESENTATIVE_VERSIONS : "account_user_id → id"
+    USERS ||--|{ VENDOR_REPRESENTATIVE_VERSIONS : "created_by_user_id → id"
     USERS ||--o{ VENDOR_TAX_PROFILE_VERSIONS : "approved_by_user_id → id"
     USERS ||--o{ VENDOR_TAX_PROFILE_VERSIONS : "drafted_by_user_id → id"
     USERS ||--o{ VENDOR_TAX_PROFILE_VERSIONS : "owner_attested_by_user_id → id"
     USERS ||--|{ VENDOR_TAX_PROFILE_VERSIONS : "submitted_by_user_id → id"
     USERS ||--o{ VENDOR_TAX_PROFILES : "attested_by_user_id → id"
+    USERS ||--|{ VENDOR_VERIFICATION_CHANGE_HISTORY : "actor_user_id → id"
     VEHICLE_RATE_VERSIONS ||--|{ DELIVERY_QUOTES : "vehicle_rate_version_id → id"
+    VENDOR_ADDRESS_VERSIONS ||--o{ VENDOR_ADDRESSES : "current_version_id → id"
+    VENDOR_ADDRESSES ||--|{ VENDOR_ADDRESS_VERSIONS : "vendor_address_id → id"
+    VENDOR_DOCUMENT_VERSIONS ||--|{ BUSINESS_DOCUMENT_REVIEWS : "business_document_version_id → id"
+    VENDOR_DOCUMENT_VERSIONS ||--o{ VENDOR_AUTHORITY_REVIEWS : "evidence_version_id → id"
+    VENDOR_DOCUMENT_VERSIONS ||--|{ VENDOR_DOCUMENT_EXPIRY_NOTICES : "business_document_version_id → id"
+    VENDOR_DOCUMENT_VERSIONS ||--o{ VENDOR_DOCUMENT_VERSIONS : "supersedes_version_id → id"
+    VENDOR_DOCUMENT_VERSIONS ||--o{ VENDOR_DOCUMENTS : "current_version_id → id"
+    VENDOR_DOCUMENTS ||--|{ VENDOR_DOCUMENT_VERSIONS : "business_document_id → id"
     VENDOR_LISTINGS ||--|{ COMPLIANCE_SUBMISSIONS : "vendor_listing_id → id"
     VENDOR_LISTINGS ||--|{ LISTING_MEDIA : "vendor_listing_id → id"
     VENDOR_LISTINGS ||--|{ LISTING_STATUS_HISTORY : "vendor_listing_id → id"
     VENDOR_LISTINGS ||--|{ LISTING_VARIANTS : "vendor_listing_id → id"
-    VENDOR_ONBOARDING_STEPS ||--o{ BUSINESS_DOCUMENTS : "onboarding_step_id → id"
+    VENDOR_ONBOARDING_REQUIREMENTS ||--o{ VENDOR_DOCUMENTS : "onboarding_step_id → id"
     VENDOR_ORGANIZATIONS ||--o{ AGREEMENT_ACCEPTANCES : "vendor_organization_id → id"
-    VENDOR_ORGANIZATIONS ||--|{ BUSINESS_DOCUMENTS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ CHECKOUT_VENDOR_GROUPS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ COMPILED_ESTIMATE_VENDORS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ CONVERSATIONS : "vendor_organization_id → id"
@@ -940,8 +992,10 @@ erDiagram
     VENDOR_ORGANIZATIONS ||--|{ FEE_STATEMENTS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ INVOICE_RECORDS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ METRIC_EVENTS : "vendor_organization_id → id"
+    VENDOR_ORGANIZATIONS ||--|{ ORDER_DELIVERY_SNAPSHOTS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ ORDERS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ PRICE_OBSERVATIONS : "vendor_organization_id → id"
+    VENDOR_ORGANIZATIONS ||--|{ PRIVACY_ACKNOWLEDGMENTS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ QUOTATIONS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ REMITTANCE_GROUPS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ SCORE_SNAPSHOTS : "vendor_organization_id → id"
@@ -950,17 +1004,25 @@ erDiagram
     VENDOR_ORGANIZATIONS ||--|{ TAX_REPORT_PACKAGES : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ TAX_YEAR_ACCUMULATORS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ VENDOR_ACTIVATION_HISTORY : "vendor_organization_id → id"
+    VENDOR_ORGANIZATIONS ||--|{ VENDOR_ADDRESSES : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ VENDOR_BADGE_HISTORY : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ VENDOR_CLASSIFICATIONS : "vendor_organization_id → id"
-    VENDOR_ORGANIZATIONS ||--|{ VENDOR_CONTACTS : "vendor_organization_id → id"
+    VENDOR_ORGANIZATIONS ||--|{ VENDOR_DOCUMENTS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ VENDOR_INVITATIONS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ VENDOR_LISTINGS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ VENDOR_MEMBERSHIPS : "vendor_organization_id → id"
-    VENDOR_ORGANIZATIONS ||--|{ VENDOR_ONBOARDING_STEPS : "vendor_organization_id → id"
+    VENDOR_ORGANIZATIONS ||--|{ VENDOR_ONBOARDING_DRAFTS : "vendor_organization_id → id"
+    VENDOR_ORGANIZATIONS ||--|{ VENDOR_ONBOARDING_REQUIREMENTS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ VENDOR_PAYMENT_ACCOUNTS : "vendor_organization_id → id"
+    VENDOR_ORGANIZATIONS ||--|{ VENDOR_PENDING_DOCUMENTS : "vendor_organization_id → id"
+    VENDOR_ORGANIZATIONS ||--|{ VENDOR_REPRESENTATIVE_VERSIONS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ VENDOR_TAX_PROFILES : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ VENDOR_VEHICLES : "vendor_organization_id → id"
+    VENDOR_ORGANIZATIONS ||--|{ VENDOR_VERIFICATION_CHANGE_HISTORY : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--o{ WORK_PACKAGES : "selected_vendor_organization_id → id"
+    VENDOR_REPRESENTATIVE_VERSIONS ||--o{ AGREEMENT_ACCEPTANCES : "representative_version_id → id"
+    VENDOR_REPRESENTATIVE_VERSIONS ||--|{ VENDOR_AUTHORITY_REVIEWS : "representative_version_id → id"
+    VENDOR_REPRESENTATIVE_VERSIONS ||--o{ VENDOR_TAX_PROFILE_VERSIONS : "representative_version_id → id"
     VENDOR_TAX_PROFILE_VERSIONS ||--|{ TAX_EVIDENCE : "vendor_tax_profile_version_id → id"
     VENDOR_TAX_PROFILE_VERSIONS ||--o{ VENDOR_TAX_PROFILES : "current_version_id → id"
     VENDOR_TAX_PROFILE_VERSIONS ||--|{ WITHHOLDING_ASSIGNMENTS : "vendor_tax_profile_version_id → id"

@@ -22,6 +22,7 @@ void main() {
       // TODO
     });
 
+    // New Vendor identities require at least 14 characters, mixed case, and a number. Existing eligible Vendor identities use their current password.
     // String password
     test('to test the property `password`', () async {
       // TODO

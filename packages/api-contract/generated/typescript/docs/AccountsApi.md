@@ -29,6 +29,7 @@ All URIs are relative to */api/v1*
 | [**startAccountEmailChange**](AccountsApi.md#startaccountemailchange) | **POST** /{accountPortal}/account/email |  |
 | [**startAccountFactorReplacement**](AccountsApi.md#startaccountfactorreplacement) | **POST** /{accountPortal}/account/factor |  |
 | [**updateAccountProfile**](AccountsApi.md#updateaccountprofile) | **PATCH** /{accountPortal}/account/profile |  |
+| [**updateVendorStaff**](AccountsApi.md#updatevendorstaff) | **PATCH** /vendors/account/memberships/{membershipId} |  |
 | [**uploadAccountPhoto**](AccountsApi.md#uploadaccountphoto) | **POST** /{webAccountPortal}/account/photo |  |
 
 
@@ -2140,6 +2141,84 @@ example().catch(console.error);
 | **422** | Safe canonical error with correlation identifier. |  -  |
 | **429** | Safe canonical error with correlation identifier. |  -  |
 | **503** | Safe canonical error with correlation identifier. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## updateVendorStaff
+
+> AccountMutationResultEnvelope updateVendorStaff(membershipId, vendorStaffUpdate)
+
+
+
+### Example
+
+```ts
+import {
+  Configuration,
+  AccountsApi,
+} from '@materyalph/api-client-ts';
+import type { UpdateVendorStaffRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // To configure API key authorization: accessCookie
+    apiKey: "YOUR API KEY",
+    // To configure API key authorization: webCsrf
+    apiKey: "YOUR API KEY",
+  });
+  const api = new AccountsApi(config);
+
+  const body = {
+    // string
+    membershipId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // VendorStaffUpdate
+    vendorStaffUpdate: ...,
+  } satisfies UpdateVendorStaffRequest;
+
+  try {
+    const data = await api.updateVendorStaff(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **membershipId** | `string` |  | [Defaults to `undefined`] |
+| **vendorStaffUpdate** | [VendorStaffUpdate](VendorStaffUpdate.md) |  | |
+
+### Return type
+
+[**AccountMutationResultEnvelope**](AccountMutationResultEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Staff information and role updated; sessions revoked; audit history preserved. |  -  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **404** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **409** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 

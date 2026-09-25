@@ -12,6 +12,7 @@ Name | Type | Description | Notes
 **authorityScopes** | **BuiltList&lt;String&gt;** |  | [optional]
 **decision** | **String** |  |
 **lockVersion** | **int** |  | [optional]
+**requirementVersions** | **BuiltMap&lt;String, int&gt;** | Current lock version of every applicable underlying requirement when deciding a grouped review item. | [optional]
 **reason** | **String** |  | [optional]
 **verifiedDocumentNumber** | **String** |  | [optional]
 **verifiedIssueDate** | [**Date**](Date.md) |  | [optional]

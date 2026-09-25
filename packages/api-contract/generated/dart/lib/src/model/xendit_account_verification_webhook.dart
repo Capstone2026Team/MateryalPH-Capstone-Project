@@ -3,6 +3,8 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:built_collection/built_collection.dart';
+import 'package:materyalph_api_client/src/model/xendit_account_verification_webhook_data.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -11,31 +13,20 @@ part 'xendit_account_verification_webhook.g.dart';
 /// XenditAccountVerificationWebhook
 ///
 /// Properties:
-/// * [id]
-/// * [forUserId]
-/// * [accountId]
-/// * [subaccountId]
-/// * [status]
-/// * [verificationStatus]
+/// * [event]
+/// * [created]
+/// * [data]
 @BuiltValue()
 abstract class XenditAccountVerificationWebhook implements Built<XenditAccountVerificationWebhook, XenditAccountVerificationWebhookBuilder> {
-  @BuiltValueField(wireName: r'id')
-  String get id;
+  @BuiltValueField(wireName: r'event')
+  XenditAccountVerificationWebhookEventEnum get event;
+  // enum eventEnum {  account.registered,  account.activated,  };
 
-  @BuiltValueField(wireName: r'for_user_id')
-  String? get forUserId;
+  @BuiltValueField(wireName: r'created')
+  DateTime get created;
 
-  @BuiltValueField(wireName: r'account_id')
-  String? get accountId;
-
-  @BuiltValueField(wireName: r'subaccount_id')
-  String? get subaccountId;
-
-  @BuiltValueField(wireName: r'status')
-  String? get status;
-
-  @BuiltValueField(wireName: r'verification_status')
-  String? get verificationStatus;
+  @BuiltValueField(wireName: r'data')
+  XenditAccountVerificationWebhookData get data;
 
   XenditAccountVerificationWebhook._();
 
@@ -60,46 +51,21 @@ class _$XenditAccountVerificationWebhookSerializer implements PrimitiveSerialize
     XenditAccountVerificationWebhook object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
-    yield r'id';
+    yield r'event';
     yield serializers.serialize(
-      object.id,
-      specifiedType: const FullType(String),
+      object.event,
+      specifiedType: const FullType(XenditAccountVerificationWebhookEventEnum),
     );
-    if (object.forUserId != null) {
-      yield r'for_user_id';
-      yield serializers.serialize(
-        object.forUserId,
-        specifiedType: const FullType(String),
-      );
-    }
-    if (object.accountId != null) {
-      yield r'account_id';
-      yield serializers.serialize(
-        object.accountId,
-        specifiedType: const FullType(String),
-      );
-    }
-    if (object.subaccountId != null) {
-      yield r'subaccount_id';
-      yield serializers.serialize(
-        object.subaccountId,
-        specifiedType: const FullType(String),
-      );
-    }
-    if (object.status != null) {
-      yield r'status';
-      yield serializers.serialize(
-        object.status,
-        specifiedType: const FullType(String),
-      );
-    }
-    if (object.verificationStatus != null) {
-      yield r'verification_status';
-      yield serializers.serialize(
-        object.verificationStatus,
-        specifiedType: const FullType(String),
-      );
-    }
+    yield r'created';
+    yield serializers.serialize(
+      object.created,
+      specifiedType: const FullType(DateTime),
+    );
+    yield r'data';
+    yield serializers.serialize(
+      object.data,
+      specifiedType: const FullType(XenditAccountVerificationWebhookData),
+    );
   }
 
   @override
@@ -123,52 +89,26 @@ class _$XenditAccountVerificationWebhookSerializer implements PrimitiveSerialize
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
-        case r'id':
+        case r'event':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(String),
-          ) as String;
-          result.id = valueDes;
+            specifiedType: const FullType(XenditAccountVerificationWebhookEventEnum),
+          ) as XenditAccountVerificationWebhookEventEnum;
+          result.event = valueDes;
           break;
-        case r'for_user_id':
+        case r'created':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType.nullable(String),
-          ) as String?;
-          if (valueDes == null) continue;
-          result.forUserId = valueDes;
+            specifiedType: const FullType(DateTime),
+          ) as DateTime;
+          result.created = valueDes;
           break;
-        case r'account_id':
+        case r'data':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType.nullable(String),
-          ) as String?;
-          if (valueDes == null) continue;
-          result.accountId = valueDes;
-          break;
-        case r'subaccount_id':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType.nullable(String),
-          ) as String?;
-          if (valueDes == null) continue;
-          result.subaccountId = valueDes;
-          break;
-        case r'status':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType.nullable(String),
-          ) as String?;
-          if (valueDes == null) continue;
-          result.status = valueDes;
-          break;
-        case r'verification_status':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType.nullable(String),
-          ) as String?;
-          if (valueDes == null) continue;
-          result.verificationStatus = valueDes;
+            specifiedType: const FullType(XenditAccountVerificationWebhookData),
+          ) as XenditAccountVerificationWebhookData;
+          result.data.replace(valueDes);
           break;
         default:
           unhandled.add(key);
@@ -199,4 +139,19 @@ class _$XenditAccountVerificationWebhookSerializer implements PrimitiveSerialize
   }
 }
 
+
+class XenditAccountVerificationWebhookEventEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'account.registered')
+  static const XenditAccountVerificationWebhookEventEnum accountPeriodRegistered = _$xenditAccountVerificationWebhookEventEnum_accountPeriodRegistered;
+  @BuiltValueEnumConst(wireName: r'account.activated')
+  static const XenditAccountVerificationWebhookEventEnum accountPeriodActivated = _$xenditAccountVerificationWebhookEventEnum_accountPeriodActivated;
+
+  static Serializer<XenditAccountVerificationWebhookEventEnum> get serializer => _$xenditAccountVerificationWebhookEventEnumSerializer;
+
+  const XenditAccountVerificationWebhookEventEnum._(String name): super(name);
+
+  static BuiltSet<XenditAccountVerificationWebhookEventEnum> get values => _$xenditAccountVerificationWebhookEventEnumValues;
+  static XenditAccountVerificationWebhookEventEnum valueOf(String name) => _$xenditAccountVerificationWebhookEventEnumValueOf(name);
+}
 

@@ -18,7 +18,7 @@ export const Field = forwardRef<HTMLInputElement, FieldProps>(
     const descriptionId = error ? `${fieldId}-error` : hint ? `${fieldId}-hint` : undefined
 
     return (
-      <div className="grid gap-2 text-sm font-semibold text-text-strong">
+      <div className="grid min-w-0 gap-2 text-sm font-semibold text-text-strong">
         <label htmlFor={fieldId}>
           {label} {required && <span className="text-status-error" aria-hidden="true">*</span>}
         </label>
@@ -26,7 +26,7 @@ export const Field = forwardRef<HTMLInputElement, FieldProps>(
         <input
           aria-describedby={descriptionId}
           aria-invalid={Boolean(error)}
-          className={`min-h-12 w-full rounded-control border bg-surface-primary px-3 text-base font-normal text-text-strong transition-[border-color,box-shadow] placeholder:text-text-secondary focus:border-focus-ring focus:ring-2 focus:ring-focus-ring/20 ${type === 'password' ? 'pr-20' : ''} ${error ? 'border-status-error' : 'border-border-default'} ${className}`}
+          className={`min-h-12 w-full min-w-0 rounded-control border bg-surface-primary px-3 text-base font-normal text-text-strong transition-[border-color,box-shadow] placeholder:text-text-secondary focus:border-focus-ring focus:ring-2 focus:ring-focus-ring/20 ${type === 'password' ? 'pr-20' : ''} ${error ? 'border-status-error' : 'border-border-default'} ${className}`}
           id={fieldId}
           ref={ref}
           required={required}

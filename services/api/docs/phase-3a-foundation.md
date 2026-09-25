@@ -29,6 +29,8 @@ OpenAPI and its contract checker were updated. TypeScript and Dart clients were 
 
 ## Validation
 
+Cloudinary public-media uploads explicitly send `asset_folder` from `CLOUDINARY_ASSET_FOLDER` (default `marketplace`). In dynamic folder mode the public ID path does not select the asset folder. Grant the application key Contributor access to that destination using `cld::role::folder::contributor`; administrator credentials are only for provisioning and are not used by the upload adapter. Keep private verification evidence on its private disk. A successful standalone provider probe must be followed by a test of the actual application adapter.
+
 Commands below were run from their relevant package, or from the repository root for Docker/Git. All final commands exited 0.
 
 | Command | Final result |

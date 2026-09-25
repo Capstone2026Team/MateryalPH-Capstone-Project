@@ -226,6 +226,7 @@ export class AdminVendorVerificationApi extends runtime.BaseAPI {
     }
 
     /**
+     * Business information and each Government ID can be decided as a grouped review item. Grouped requests supply requirement_versions for every applicable underlying step; BIR COR, business registration, LGU permit, and other documents retain separate decisions.
      */
     async decideVendorVerificationRequirementRaw(requestParameters: DecideVendorVerificationRequirementRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AdminVendorVerificationDetailEnvelope>> {
         const requestOptions = await this.decideVendorVerificationRequirementRequestOpts(requestParameters);
@@ -235,6 +236,7 @@ export class AdminVendorVerificationApi extends runtime.BaseAPI {
     }
 
     /**
+     * Business information and each Government ID can be decided as a grouped review item. Grouped requests supply requirement_versions for every applicable underlying step; BIR COR, business registration, LGU permit, and other documents retain separate decisions.
      */
     async decideVendorVerificationRequirement(requestParameters: DecideVendorVerificationRequirementRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AdminVendorVerificationDetailEnvelope> {
         const response = await this.decideVendorVerificationRequirementRaw(requestParameters, initOverrides);

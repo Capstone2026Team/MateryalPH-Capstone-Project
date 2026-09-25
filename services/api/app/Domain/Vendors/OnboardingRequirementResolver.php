@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Vendors;
 
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -93,6 +94,9 @@ final class OnboardingRequirementResolver
             'declaration_claim' => $details['tax_relief_claimed'] ?? null,
             'fulfillment_method' => DB::table('store_profiles')->where('vendor_organization_id', $organizationId)->value('fulfillment_method'),
         ];
+        DB::table('vendor_onboarding_requirements')->where('vendor_organization_id', $organizationId)
+            ->where('section', 'STORE_SETUP')->whereIn('requirement_key', ['store_media', 'team'])
+            ->where('is_current', true)->update(['is_current' => false, 'updated_at' => now()]);
         foreach ($this->resolve($configuration) as $key => $definition) {
             $query = DB::table('vendor_onboarding_requirements')->where('vendor_organization_id', $organizationId)->where('requirement_key', $key)->where('is_current', true);
             $row = $query->first();
@@ -114,6 +118,60 @@ final class OnboardingRequirementResolver
             } elseif (collect($values)->contains(fn ($value, $field): bool => (string) $row->{$field} !== (string) $value)) {
                 $query->update($values + ['lock_version' => (int) $row->lock_version + 1, 'updated_at' => now()]);
             }
+        }
+        $this->synchronizeSetup($organizationId);
+    }
+
+    private function synchronizeSetup(string $organizationId): void
+    {
+        $profile = DB::table('store_profiles')->where('vendor_organization_id', $organizationId)->first();
+        $mediaReady = static function (?string $fileId, string $kind) use ($organizationId): bool {
+            return $fileId !== null && DB::table('store_media as m')
+                ->join('store_profiles as p', 'p.id', '=', 'm.store_profile_id')
+                ->join('files as f', 'f.id', '=', 'm.file_id')
+                ->where('p.vendor_organization_id', $organizationId)->where('m.file_id', $fileId)->where('m.kind', $kind)
+                ->where('m.status', 'READY')->where('f.scan_state', 'CLEAN')->exists();
+        };
+        $name = trim((string) ($profile->public_store_name ?? ''));
+        $description = trim((string) ($profile->description ?? ''));
+        $logo = $mediaReady($profile?->logo_file_id, 'LOGO');
+        $banner = $mediaReady($profile?->banner_file_id, 'BANNER');
+        $method = (string) ($profile->fulfillment_method ?? '');
+        $delivery = DB::table('delivery_service_areas')->where('vendor_organization_id', $organizationId)->where('active', true)->first();
+        $encryptedDraft = DB::table('vendor_onboarding_drafts')->where('vendor_organization_id', $organizationId)->where('workstream', 'STORE_SETUP')->value('payload_encrypted');
+        $draft = is_string($encryptedDraft) ? json_decode(Crypt::decryptString($encryptedDraft), true, flags: JSON_THROW_ON_ERROR) : [];
+        $formState = json_decode($draft['form_state'] ?? '{}', true, flags: JSON_THROW_ON_ERROR);
+        $pendingVehicles = is_array($formState) && ($formState['vehicles'] ?? []) !== [];
+        $deliveryReady = in_array($method, ['VENDOR_DELIVERY', 'BOTH'], true) && $delivery !== null && (int) $delivery->maximum_distance_km >= 1
+            && ! $pendingVehicles && app(DeliveryRecommendationService::class)->eligibleVehicles($organizationId) !== [];
+        $payment = DB::table('vendor_payment_accounts')->where('vendor_organization_id', $organizationId)->first();
+        $paymentReady = $payment !== null && $payment->environment === 'TEST'
+            && $payment->provider_associated_at !== null && $payment->connection_status === 'CONNECTED_TEST'
+            && $payment->provider_status === 'LIVE' && ! empty($payment->provider_account_id);
+        $schedule = $profile === null ? [] : app(StoreOperatingSchedule::class)->weekly((string) $profile->id);
+        $statuses = [
+            'public_store_profile' => $name !== '' && $description !== '' && $logo && $banner ? 'COMPLETED' : ($name !== '' || $description !== '' || $logo || $banner ? 'IN_PROGRESS' : 'NOT_STARTED'),
+            'bulk_capability' => $profile?->bulk_capability === null ? 'NOT_STARTED' : 'COMPLETED',
+            'fulfillment_method' => in_array($method, ['SELF_PICKUP', 'VENDOR_DELIVERY', 'BOTH'], true) ? 'COMPLETED' : 'NOT_STARTED',
+            'delivery_configuration' => $method === 'SELF_PICKUP' ? 'NOT_APPLICABLE' : ($method === '' ? 'NOT_STARTED' : ($deliveryReady ? 'COMPLETED' : 'IN_PROGRESS')),
+            'payment_connection' => $paymentReady ? 'COMPLETED' : ($payment === null ? 'NOT_STARTED' : 'IN_PROGRESS'),
+            'store_operation' => app(StoreOperatingSchedule::class)->valid($schedule) ? 'COMPLETED' : ($schedule === [] ? 'NOT_STARTED' : 'IN_PROGRESS'),
+        ];
+        if ($profile !== null && $profile->status === 'COMPLETED' && $statuses['public_store_profile'] !== 'COMPLETED') {
+            DB::table('store_profiles')->where('id', $profile->id)->update(['status' => 'DRAFT', 'updated_at' => now()]);
+        }
+        foreach ($statuses as $key => $status) {
+            $query = DB::table('vendor_onboarding_requirements')->where('vendor_organization_id', $organizationId)->where('section', 'STORE_SETUP')->where('requirement_key', $key)->where('is_current', true);
+            $row = $query->first();
+            if ($row !== null && $row->status !== $status) {
+                $query->update(['status' => $status, 'blocking' => ! in_array($status, ['COMPLETED', 'NOT_APPLICABLE'], true),
+                    'applicability_reason' => $status === 'NOT_APPLICABLE' ? 'Vendor selected Self-Pickup only.' : null,
+                    'lock_version' => (int) $row->lock_version + 1, 'updated_at' => now()]);
+            }
+        }
+        if (DB::table('vendor_organizations')->where('id', $organizationId)->where('store_setup_status', 'COMPLETED')->exists()
+            && collect($statuses)->contains(fn (string $status): bool => ! in_array($status, ['COMPLETED', 'NOT_APPLICABLE'], true))) {
+            DB::table('vendor_organizations')->where('id', $organizationId)->update(['store_setup_status' => 'IN_PROGRESS', 'updated_at' => now()]);
         }
     }
 }

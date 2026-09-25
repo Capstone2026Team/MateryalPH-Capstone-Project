@@ -10,6 +10,7 @@ Name | Type
 `inviteeName` | string
 `inviteeMobile` | string
 `role` | string
+`canManageStaff` | boolean
 
 ## Example
 
@@ -22,6 +23,7 @@ const example = {
   "inviteeName": null,
   "inviteeMobile": null,
   "role": null,
+  "canManageStaff": null,
 } satisfies VendorInvitationRequest
 
 console.log(example)

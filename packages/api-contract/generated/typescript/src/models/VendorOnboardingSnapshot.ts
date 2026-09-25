@@ -41,6 +41,13 @@ import {
     OnboardingStepCompletionToJSON,
     OnboardingStepCompletionToJSONTyped,
 } from './OnboardingStepCompletion';
+import type { VendorOnboardingSnapshotSetup } from './VendorOnboardingSnapshotSetup';
+import {
+    VendorOnboardingSnapshotSetupFromJSON,
+    VendorOnboardingSnapshotSetupFromJSONTyped,
+    VendorOnboardingSnapshotSetupToJSON,
+    VendorOnboardingSnapshotSetupToJSONTyped,
+} from './VendorOnboardingSnapshotSetup';
 import type { VendorActivationSnapshot } from './VendorActivationSnapshot';
 import {
     VendorActivationSnapshotFromJSON,
@@ -86,7 +93,7 @@ export interface VendorOnboardingSnapshot {
     /**
      *
      */
-    setup: { [key: string]: any; };
+    setup: VendorOnboardingSnapshotSetup;
     /**
      *
      */
@@ -136,7 +143,7 @@ export function VendorOnboardingSnapshotFromJSONTyped(json: any, ignoreDiscrimin
         'organization': json['organization'],
         'sections': (mapValues(json['sections'], VendorOnboardingSectionFromJSON)),
         'verification': json['verification'],
-        'setup': json['setup'],
+        'setup': VendorOnboardingSnapshotSetupFromJSON(json['setup']),
         'activation': VendorActivationSnapshotFromJSON(json['activation']),
         'welcomeRequired': json['welcome_required'],
         'permissions': json['permissions'],
@@ -161,7 +168,7 @@ export function VendorOnboardingSnapshotToJSONTyped(value?: VendorOnboardingSnap
         'organization': value['organization'],
         'sections': (mapValues(value['sections'], VendorOnboardingSectionToJSON)),
         'verification': value['verification'],
-        'setup': value['setup'],
+        'setup': VendorOnboardingSnapshotSetupToJSON(value['setup']),
         'activation': VendorActivationSnapshotToJSON(value['activation']),
         'welcome_required': value['welcomeRequired'],
         'permissions': value['permissions'],

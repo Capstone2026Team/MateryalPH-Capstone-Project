@@ -6,7 +6,6 @@ import {
   type VendorCommissionAcceptance,
   type VendorInvitationRequest,
   type VendorOnboardingSnapshot,
-  type VendorPaymentConnection,
   type VendorSetupComplete,
   type VendorSetupDraft,
   type VendorStoreEmailConfirmation,
@@ -92,14 +91,18 @@ export async function uploadVendorDocument(requirementKey: string, file: Blob, m
   return response.data
 }
 
-export async function uploadVendorMedia(kind: 'LOGO' | 'BANNER' | 'PROMOTIONAL_IMAGE' | 'PROMOTIONAL_VIDEO', file: Blob, altText?: string) {
+export async function uploadVendorMedia(kind: 'LOGO' | 'BANNER' | 'PROMOTIONAL_IMAGE' | 'PROMOTIONAL_VIDEO' | 'VEHICLE_IMAGE', file: Blob, altText?: string) {
   const response = await onboardingApi().uploadVendorStoreMedia({ kind, file, altText: altText ?? null })
   return response.data
 }
 
-export async function captureVendorPaymentConnection(input: VendorPaymentConnection) {
-  const response = await onboardingApi().captureVendorPaymentConnection({ idempotencyKey: newIdempotencyKey(), vendorPaymentConnection: input })
+export async function removeVendorMedia(mediaId: string): Promise<VendorOnboardingSnapshot> {
+  const response = await onboardingApi().removeVendorStoreMedia({ mediaId })
   return response.data
+}
+
+export async function connectVendorPayment() {
+  return (await onboardingApi().connectVendorPayment({ idempotencyKey: newIdempotencyKey() })).data
 }
 
 export async function reconcileVendorPaymentConnection() {
@@ -120,6 +123,18 @@ export async function getVendorPrivateFileUrl(fileId: string) {
 export async function inviteVendorTeamMember(input: VendorInvitationRequest) {
   const response = await onboardingApi().inviteVendorTeamMember({ idempotencyKey: newIdempotencyKey(), vendorInvitationRequest: input })
   return response.data
+}
+
+export async function listVendorTeamInvitations(page = 1) {
+  return onboardingApi().listVendorTeamInvitations({ page })
+}
+
+export async function listVendorTeamActivity(page = 1) {
+  return onboardingApi().listVendorTeamActivity({ page })
+}
+
+export async function changeVendorStaffDisputes(enabled: boolean, lockVersion: number) {
+  return onboardingApi().changeVendorStaffDisputes({ vendorStaffDisputeSetting: { enabled, lockVersion } })
 }
 
 export async function readableOnboardingError(error: unknown): Promise<string> {

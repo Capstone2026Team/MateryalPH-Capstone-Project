@@ -1433,6 +1433,7 @@ export class AuthenticationApi extends runtime.BaseAPI {
     }
 
     /**
+     * Issues a new code for a pending Vendor account or an active Vendor account whose Owner email is still unverified. The response does not reveal whether an eligible account exists.
      */
     async resendEmailVerificationRaw(requestParameters: ResendEmailVerificationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SuccessEnvelope>> {
         const requestOptions = await this.resendEmailVerificationRequestOpts(requestParameters);
@@ -1442,6 +1443,7 @@ export class AuthenticationApi extends runtime.BaseAPI {
     }
 
     /**
+     * Issues a new code for a pending Vendor account or an active Vendor account whose Owner email is still unverified. The response does not reveal whether an eligible account exists.
      */
     async resendEmailVerification(requestParameters: ResendEmailVerificationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SuccessEnvelope> {
         const response = await this.resendEmailVerificationRaw(requestParameters, initOverrides);

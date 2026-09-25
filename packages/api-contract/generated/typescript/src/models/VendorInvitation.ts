@@ -30,7 +30,7 @@ export interface VendorInvitation {
     /**
      *
      */
-    role: string;
+    role?: string;
     /**
      *
      */
@@ -42,7 +42,6 @@ export interface VendorInvitation {
  */
 export function instanceOfVendorInvitation(value: object): value is VendorInvitation {
     if (!('queued' in value) || value['queued'] === undefined) return false;
-    if (!('role' in value) || value['role'] === undefined) return false;
     return true;
 }
 
@@ -58,7 +57,7 @@ export function VendorInvitationFromJSONTyped(json: any, ignoreDiscriminator: bo
 
         'queued': json['queued'],
         'invitationId': json['invitation_id'] == null ? undefined : json['invitation_id'],
-        'role': json['role'],
+        'role': json['role'] == null ? undefined : json['role'],
         'expiresAt': json['expires_at'] == null ? undefined : (parseDateTime(json['expires_at'])),
     };
 }

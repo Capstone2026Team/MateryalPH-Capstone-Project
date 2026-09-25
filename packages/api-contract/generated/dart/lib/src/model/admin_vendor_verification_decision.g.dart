@@ -315,6 +315,8 @@ class _$AdminVendorVerificationDecision
   @override
   final int? lockVersion;
   @override
+  final BuiltMap<String, int>? requirementVersions;
+  @override
   final String? reason;
   @override
   final String? verifiedDocumentNumber;
@@ -341,6 +343,7 @@ class _$AdminVendorVerificationDecision
       this.authorityScopes,
       required this.decision,
       this.lockVersion,
+      this.requirementVersions,
       this.reason,
       this.verifiedDocumentNumber,
       this.verifiedIssueDate,
@@ -367,6 +370,7 @@ class _$AdminVendorVerificationDecision
         authorityScopes == other.authorityScopes &&
         decision == other.decision &&
         lockVersion == other.lockVersion &&
+        requirementVersions == other.requirementVersions &&
         reason == other.reason &&
         verifiedDocumentNumber == other.verifiedDocumentNumber &&
         verifiedIssueDate == other.verifiedIssueDate &&
@@ -384,6 +388,7 @@ class _$AdminVendorVerificationDecision
     _$hash = $jc(_$hash, authorityScopes.hashCode);
     _$hash = $jc(_$hash, decision.hashCode);
     _$hash = $jc(_$hash, lockVersion.hashCode);
+    _$hash = $jc(_$hash, requirementVersions.hashCode);
     _$hash = $jc(_$hash, reason.hashCode);
     _$hash = $jc(_$hash, verifiedDocumentNumber.hashCode);
     _$hash = $jc(_$hash, verifiedIssueDate.hashCode);
@@ -403,6 +408,7 @@ class _$AdminVendorVerificationDecision
           ..add('authorityScopes', authorityScopes)
           ..add('decision', decision)
           ..add('lockVersion', lockVersion)
+          ..add('requirementVersions', requirementVersions)
           ..add('reason', reason)
           ..add('verifiedDocumentNumber', verifiedDocumentNumber)
           ..add('verifiedIssueDate', verifiedIssueDate)
@@ -444,6 +450,12 @@ class AdminVendorVerificationDecisionBuilder
   int? _lockVersion;
   int? get lockVersion => _$this._lockVersion;
   set lockVersion(int? lockVersion) => _$this._lockVersion = lockVersion;
+
+  MapBuilder<String, int>? _requirementVersions;
+  MapBuilder<String, int> get requirementVersions =>
+      _$this._requirementVersions ??= MapBuilder<String, int>();
+  set requirementVersions(MapBuilder<String, int>? requirementVersions) =>
+      _$this._requirementVersions = requirementVersions;
 
   String? _reason;
   String? get reason => _$this._reason;
@@ -499,6 +511,7 @@ class AdminVendorVerificationDecisionBuilder
       _authorityScopes = $v.authorityScopes?.toBuilder();
       _decision = $v.decision;
       _lockVersion = $v.lockVersion;
+      _requirementVersions = $v.requirementVersions?.toBuilder();
       _reason = $v.reason;
       _verifiedDocumentNumber = $v.verifiedDocumentNumber;
       _verifiedIssueDate = $v.verifiedIssueDate;
@@ -535,6 +548,7 @@ class AdminVendorVerificationDecisionBuilder
             decision: BuiltValueNullFieldError.checkNotNull(
                 decision, r'AdminVendorVerificationDecision', 'decision'),
             lockVersion: lockVersion,
+            requirementVersions: _requirementVersions?.build(),
             reason: reason,
             verifiedDocumentNumber: verifiedDocumentNumber,
             verifiedIssueDate: verifiedIssueDate,
@@ -549,6 +563,9 @@ class AdminVendorVerificationDecisionBuilder
       try {
         _$failedField = 'authorityScopes';
         _authorityScopes?.build();
+
+        _$failedField = 'requirementVersions';
+        _requirementVersions?.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
             r'AdminVendorVerificationDecision', _$failedField, e.toString());

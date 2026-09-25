@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\DB;
 
 final class ManageMembership
 {
-    public function __construct(private readonly RecentAuthentication $recent, private readonly MembershipPolicy $policy, private readonly AuditRecorder $audit, private readonly TokenSessionService $sessions, private readonly ManageAccount $accounts, private readonly AccountAgreements $agreements) {}
+    public function __construct(private readonly RecentAuthentication $recent, private readonly MembershipPolicy $policy, private readonly AuditRecorder $audit, private readonly TokenSessionService $sessions, private readonly ManageAccount $accounts, private readonly AccountAgreements $agreements, private readonly CurrentVendorTeamAuthority $authority) {}
 
     public function change(Request $request, string $id, string $field, bool|string $value): void
     {
@@ -24,6 +24,7 @@ final class ManageMembership
         $this->agreements->requireCurrent($request);
         DB::transaction(function () use ($request, $id, $field, $value): void {
             $organization = $request->attributes->get('account_scope')['organization_id'];
+            $this->authority->lock($request, $organization);
             $target = VendorMembership::query()->whereKey($id)->where('vendor_organization_id', $organization)->lockForUpdate()->first();
             if ($target === null) {
                 throw new AuthenticationException('RESOURCE_NOT_FOUND', 'The membership is unavailable.', 404);
@@ -34,6 +35,9 @@ final class ManageMembership
             }
             $before = [$field => $target->getAttribute($field)];
             $target->update([$field => $value]);
+            if ($field === 'status') {
+                $target->update($value === 'ACTIVE' ? ['activated_at' => now(), 'deactivated_at' => null] : ['deactivated_at' => now()]);
+            }
             DB::table('vendor_memberships')->where('id', $id)->increment('lock_version');
             foreach (AuthSession::query()->where('user_id', $target->user_id)->whereNull('revoked_at')->orderBy('id')->lockForUpdate()->get() as $session) {
                 $this->sessions->revoke($session, 'MEMBERSHIP_CHANGED');

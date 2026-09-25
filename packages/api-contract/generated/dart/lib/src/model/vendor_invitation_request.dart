@@ -16,6 +16,7 @@ part 'vendor_invitation_request.g.dart';
 /// * [inviteeName]
 /// * [inviteeMobile]
 /// * [role]
+/// * [canManageStaff] - Owner-only setting for Store Manager invitations. Enabling requires recent authentication. Invitations are permitted during Store Setup and never grant marketplace activation.
 @BuiltValue()
 abstract class VendorInvitationRequest implements Built<VendorInvitationRequest, VendorInvitationRequestBuilder> {
   @BuiltValueField(wireName: r'email')
@@ -31,12 +32,17 @@ abstract class VendorInvitationRequest implements Built<VendorInvitationRequest,
   VendorInvitationRequestRoleEnum get role;
   // enum roleEnum {  STORE_MANAGER,  STORE_STAFF,  CUSTOMER_SERVICE,  INVENTORY,  FULFILLMENT,  };
 
+  /// Owner-only setting for Store Manager invitations. Enabling requires recent authentication. Invitations are permitted during Store Setup and never grant marketplace activation.
+  @BuiltValueField(wireName: r'can_manage_staff')
+  bool? get canManageStaff;
+
   VendorInvitationRequest._();
 
   factory VendorInvitationRequest([void updates(VendorInvitationRequestBuilder b)]) = _$VendorInvitationRequest;
 
   @BuiltValueHook(initializeBuilder: true)
-  static void _defaults(VendorInvitationRequestBuilder b) => b;
+  static void _defaults(VendorInvitationRequestBuilder b) => b
+      ..canManageStaff = false;
 
   @BuiltValueSerializer(custom: true)
   static Serializer<VendorInvitationRequest> get serializer => _$VendorInvitationRequestSerializer();
@@ -76,6 +82,13 @@ class _$VendorInvitationRequestSerializer implements PrimitiveSerializer<VendorI
       object.role,
       specifiedType: const FullType(VendorInvitationRequestRoleEnum),
     );
+    if (object.canManageStaff != null) {
+      yield r'can_manage_staff';
+      yield serializers.serialize(
+        object.canManageStaff,
+        specifiedType: const FullType(bool),
+      );
+    }
   }
 
   @override
@@ -127,6 +140,14 @@ class _$VendorInvitationRequestSerializer implements PrimitiveSerializer<VendorI
             specifiedType: const FullType(VendorInvitationRequestRoleEnum),
           ) as VendorInvitationRequestRoleEnum;
           result.role = valueDes;
+          break;
+        case r'can_manage_staff':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.canManageStaff = valueDes;
           break;
         default:
           unhandled.add(key);

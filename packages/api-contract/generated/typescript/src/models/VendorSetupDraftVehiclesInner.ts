@@ -25,9 +25,33 @@ export interface VendorSetupDraftVehiclesInner {
      */
     id?: string | null;
     /**
+     * Separate category and type. Categorized configurations require applicable cargo dimensions or mixer capacity and heavy classification.
+     */
+    vehicleCategory?: VendorSetupDraftVehiclesInnerVehicleCategoryEnum;
+    /**
      *
      */
     vehicleType?: string;
+    /**
+     *
+     */
+    customTypeName?: string | null;
+    /**
+     *
+     */
+    brand?: string | null;
+    /**
+     *
+     */
+    mixerCapacityM3?: number | null;
+    /**
+     * Clean VEHICLE_IMAGE file owned by this Vendor.
+     */
+    imageFileId?: string | null;
+    /**
+     * Disabled configurations are retained for history and excluded from recommendations.
+     */
+    active?: boolean;
     /**
      *
      */
@@ -65,10 +89,23 @@ export interface VendorSetupDraftVehiclesInner {
      */
     perKmCentavos?: number;
     /**
-     *
+     * Omission retains the saved limit; new coverage defaults to the approved 50 km procurement limit. New vehicle rates inherit coverage.
      */
     maximumDistanceKm?: number;
 }
+
+
+/**
+ * @export
+ */
+export const VendorSetupDraftVehiclesInnerVehicleCategoryEnum = {
+    Motorcycle: 'MOTORCYCLE',
+    Pickup: 'PICKUP',
+    Van: 'VAN',
+    Truck: 'TRUCK',
+} as const;
+export type VendorSetupDraftVehiclesInnerVehicleCategoryEnum = typeof VendorSetupDraftVehiclesInnerVehicleCategoryEnum[keyof typeof VendorSetupDraftVehiclesInnerVehicleCategoryEnum];
+
 
 /**
  * Check if a given object implements the VendorSetupDraftVehiclesInner interface.
@@ -89,7 +126,13 @@ export function VendorSetupDraftVehiclesInnerFromJSONTyped(json: any, ignoreDisc
 
             ...json,
         'id': json['id'] === undefined ? undefined : json['id'] === null ? null : json['id'],
+        'vehicleCategory': json['vehicle_category'] == null ? undefined : json['vehicle_category'],
         'vehicleType': json['vehicle_type'] == null ? undefined : json['vehicle_type'],
+        'customTypeName': json['custom_type_name'] === undefined ? undefined : json['custom_type_name'] === null ? null : json['custom_type_name'],
+        'brand': json['brand'] === undefined ? undefined : json['brand'] === null ? null : json['brand'],
+        'mixerCapacityM3': json['mixer_capacity_m3'] === undefined ? undefined : json['mixer_capacity_m3'] === null ? null : json['mixer_capacity_m3'],
+        'imageFileId': json['image_file_id'] === undefined ? undefined : json['image_file_id'] === null ? null : json['image_file_id'],
+        'active': json['active'] == null ? undefined : json['active'],
         'name': json['name'] == null ? undefined : json['name'],
         'capacityKg': json['capacity_kg'] == null ? undefined : json['capacity_kg'],
         'numberAvailable': json['number_available'] == null ? undefined : json['number_available'],
@@ -116,7 +159,13 @@ export function VendorSetupDraftVehiclesInnerToJSONTyped(value?: VendorSetupDraf
 
             ...value,
         'id': value['id'],
+        'vehicle_category': value['vehicleCategory'],
         'vehicle_type': value['vehicleType'],
+        'custom_type_name': value['customTypeName'],
+        'brand': value['brand'],
+        'mixer_capacity_m3': value['mixerCapacityM3'],
+        'image_file_id': value['imageFileId'],
+        'active': value['active'],
         'name': value['name'],
         'capacity_kg': value['capacityKg'],
         'number_available': value['numberAvailable'],

@@ -21,6 +21,24 @@ final class EmailOtpLifecycleTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_active_vendor_with_unverified_email_can_request_a_new_verification_code(): void
+    {
+        $user = User::factory()->create(['account_type' => 'VENDOR', 'account_status' => 'ACTIVE', 'email_verified_at' => null]);
+
+        $this->withCredentials()->withUnencryptedCookie('mp_csrf', 'test-csrf-token')
+            ->withHeader('X-CSRF-Token', 'test-csrf-token')
+            ->postJson('/api/v1/auth/verify-email/resend', ['email' => $user->email])
+            ->assertOk();
+        self::assertSame(1, EmailOtp::query()->where('user_id', $user->getKey())->where('purpose', 'EMAIL_VERIFICATION')->count());
+
+        $user->forceFill(['email_verified_at' => now()])->save();
+        $this->withCredentials()->withUnencryptedCookie('mp_csrf', 'test-csrf-token')
+            ->withHeader('X-CSRF-Token', 'test-csrf-token')
+            ->postJson('/api/v1/auth/verify-email/resend', ['email' => $user->email])
+            ->assertOk();
+        self::assertSame(1, EmailOtp::query()->where('user_id', $user->getKey())->where('purpose', 'EMAIL_VERIFICATION')->count());
+    }
+
     public function test_otp_is_hashed_single_use_and_attempt_limited(): void
     {
         $generator = new class implements OtpCodeGenerator

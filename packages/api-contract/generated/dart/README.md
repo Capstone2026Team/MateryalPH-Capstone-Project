@@ -91,6 +91,7 @@ Class | Method | HTTP request | Description
 [*AccountsApi*](doc/AccountsApi.md) | [**startAccountEmailChange**](doc/AccountsApi.md#startaccountemailchange) | **POST** /{accountPortal}/account/email |
 [*AccountsApi*](doc/AccountsApi.md) | [**startAccountFactorReplacement**](doc/AccountsApi.md#startaccountfactorreplacement) | **POST** /{accountPortal}/account/factor |
 [*AccountsApi*](doc/AccountsApi.md) | [**updateAccountProfile**](doc/AccountsApi.md#updateaccountprofile) | **PATCH** /{accountPortal}/account/profile |
+[*AccountsApi*](doc/AccountsApi.md) | [**updateVendorStaff**](doc/AccountsApi.md#updatevendorstaff) | **PATCH** /vendors/account/memberships/{membershipId} |
 [*AccountsApi*](doc/AccountsApi.md) | [**uploadAccountPhoto**](doc/AccountsApi.md#uploadaccountphoto) | **POST** /{webAccountPortal}/account/photo |
 [*AdminVendorVerificationApi*](doc/AdminVendorVerificationApi.md) | [**decideVendorVerificationRequirement**](doc/AdminVendorVerificationApi.md#decidevendorverificationrequirement) | **POST** /admin/vendor-verification/{organizationId}/requirements/{requirementKey}/decision |
 [*AdminVendorVerificationApi*](doc/AdminVendorVerificationApi.md) | [**getAdminDashboard**](doc/AdminVendorVerificationApi.md#getadmindashboard) | **GET** /admin/dashboard |
@@ -134,22 +135,28 @@ Class | Method | HTTP request | Description
 [*AuthenticationApi*](doc/AuthenticationApi.md) | [**verifyBuyerMobileBotChallenge**](doc/AuthenticationApi.md#verifybuyermobilebotchallenge) | **POST** /mobile/auth/bot-challenges/{challenge_id}/verify |
 [*AuthenticationApi*](doc/AuthenticationApi.md) | [**verifyBuyerMobileEmail**](doc/AuthenticationApi.md#verifybuyermobileemail) | **POST** /mobile/auth/verify-email |
 [*AuthenticationApi*](doc/AuthenticationApi.md) | [**verifyEmail**](doc/AuthenticationApi.md#verifyemail) | **POST** /auth/verify-email |
+[*StoresApi*](doc/StoresApi.md) | [**getPublicStoreProfile**](doc/StoresApi.md#getpublicstoreprofile) | **GET** /stores/{storeId}/profile |
+[*StoresApi*](doc/StoresApi.md) | [**listPublicStores**](doc/StoresApi.md#listpublicstores) | **GET** /stores |
 [*SystemApi*](doc/SystemApi.md) | [**getApiHealth**](doc/SystemApi.md#getapihealth) | **GET** /health |
 [*VendorOnboardingApi*](doc/VendorOnboardingApi.md) | [**acceptVendorCommission**](doc/VendorOnboardingApi.md#acceptvendorcommission) | **POST** /vendors/onboarding/verification/commission |
 [*VendorOnboardingApi*](doc/VendorOnboardingApi.md) | [**activateVendorStore**](doc/VendorOnboardingApi.md#activatevendorstore) | **POST** /vendors/onboarding/activation |
-[*VendorOnboardingApi*](doc/VendorOnboardingApi.md) | [**captureVendorPaymentConnection**](doc/VendorOnboardingApi.md#capturevendorpaymentconnection) | **POST** /vendors/onboarding/payment-connection |
+[*VendorOnboardingApi*](doc/VendorOnboardingApi.md) | [**changeVendorStaffDisputes**](doc/VendorOnboardingApi.md#changevendorstaffdisputes) | **PATCH** /vendors/account/staff-disputes |
 [*VendorOnboardingApi*](doc/VendorOnboardingApi.md) | [**completeVendorSetup**](doc/VendorOnboardingApi.md#completevendorsetup) | **POST** /vendors/onboarding/setup/complete |
 [*VendorOnboardingApi*](doc/VendorOnboardingApi.md) | [**confirmVendorStoreEmailVerification**](doc/VendorOnboardingApi.md#confirmvendorstoreemailverification) | **POST** /vendors/onboarding/store-email/confirm |
+[*VendorOnboardingApi*](doc/VendorOnboardingApi.md) | [**connectVendorPayment**](doc/VendorOnboardingApi.md#connectvendorpayment) | **POST** /vendors/onboarding/payment-connection |
 [*VendorOnboardingApi*](doc/VendorOnboardingApi.md) | [**dismissVendorOnboardingWelcome**](doc/VendorOnboardingApi.md#dismissvendoronboardingwelcome) | **POST** /vendors/onboarding/welcome/dismiss |
 [*VendorOnboardingApi*](doc/VendorOnboardingApi.md) | [**downloadVendorOnboardingFile**](doc/VendorOnboardingApi.md#downloadvendoronboardingfile) | **GET** /vendor-onboarding-files/{fileId}/content |
 [*VendorOnboardingApi*](doc/VendorOnboardingApi.md) | [**getAuthoritativeVendorOnboarding**](doc/VendorOnboardingApi.md#getauthoritativevendoronboarding) | **GET** /vendor/onboarding |
 [*VendorOnboardingApi*](doc/VendorOnboardingApi.md) | [**getVendorOnboarding**](doc/VendorOnboardingApi.md#getvendoronboarding) | **GET** /vendors/onboarding |
 [*VendorOnboardingApi*](doc/VendorOnboardingApi.md) | [**getVendorPrivateFileUrl**](doc/VendorOnboardingApi.md#getvendorprivatefileurl) | **GET** /vendors/onboarding/files/{fileId} |
 [*VendorOnboardingApi*](doc/VendorOnboardingApi.md) | [**inviteVendorTeamMember**](doc/VendorOnboardingApi.md#invitevendorteammember) | **POST** /vendors/account/invitations |
+[*VendorOnboardingApi*](doc/VendorOnboardingApi.md) | [**listVendorTeamActivity**](doc/VendorOnboardingApi.md#listvendorteamactivity) | **GET** /vendors/account/activity |
+[*VendorOnboardingApi*](doc/VendorOnboardingApi.md) | [**listVendorTeamInvitations**](doc/VendorOnboardingApi.md#listvendorteaminvitations) | **GET** /vendors/account/invitations |
 [*VendorOnboardingApi*](doc/VendorOnboardingApi.md) | [**previewVendorRequirements**](doc/VendorOnboardingApi.md#previewvendorrequirements) | **GET** /vendors/onboarding/requirements |
 [*VendorOnboardingApi*](doc/VendorOnboardingApi.md) | [**receiveXenditAccountVerificationWebhook**](doc/VendorOnboardingApi.md#receivexenditaccountverificationwebhook) | **POST** /webhooks/xendit/account-verification |
 [*VendorOnboardingApi*](doc/VendorOnboardingApi.md) | [**reconcileVendorPaymentConnection**](doc/VendorOnboardingApi.md#reconcilevendorpaymentconnection) | **POST** /vendors/onboarding/payment-connection/reconcile |
 [*VendorOnboardingApi*](doc/VendorOnboardingApi.md) | [**removePendingVendorDocument**](doc/VendorOnboardingApi.md#removependingvendordocument) | **DELETE** /vendors/onboarding/documents/pending/{requirementKey} |
+[*VendorOnboardingApi*](doc/VendorOnboardingApi.md) | [**removeVendorStoreMedia**](doc/VendorOnboardingApi.md#removevendorstoremedia) | **DELETE** /vendors/onboarding/media/{mediaId} |
 [*VendorOnboardingApi*](doc/VendorOnboardingApi.md) | [**requestVendorStoreEmailVerification**](doc/VendorOnboardingApi.md#requestvendorstoreemailverification) | **POST** /vendors/onboarding/store-email |
 [*VendorOnboardingApi*](doc/VendorOnboardingApi.md) | [**resolveVendorAddress**](doc/VendorOnboardingApi.md#resolvevendoraddress) | **POST** /vendors/onboarding/address/resolve |
 [*VendorOnboardingApi*](doc/VendorOnboardingApi.md) | [**resolveVendorAddressPin**](doc/VendorOnboardingApi.md#resolvevendoraddresspin) | **POST** /vendors/onboarding/address/pin |
@@ -248,12 +255,18 @@ Class | Method | HTTP request | Description
  - [PsgcArea](doc/PsgcArea.md)
  - [PsgcSearchEnvelope](doc/PsgcSearchEnvelope.md)
  - [PsgcSearchEnvelopeData](doc/PsgcSearchEnvelopeData.md)
+ - [PublicStoreListEnvelope](doc/PublicStoreListEnvelope.md)
+ - [PublicStoreListEnvelopeMeta](doc/PublicStoreListEnvelopeMeta.md)
+ - [PublicStoreProfile](doc/PublicStoreProfile.md)
+ - [PublicStoreProfileEnvelope](doc/PublicStoreProfileEnvelope.md)
+ - [PublicStoreSummary](doc/PublicStoreSummary.md)
  - [RegisterRequest](doc/RegisterRequest.md)
  - [RegistrationEnvelope](doc/RegistrationEnvelope.md)
  - [RegistrationEnvelopeAllOfData](doc/RegistrationEnvelopeAllOfData.md)
  - [ResendBotChallengeRequest](doc/ResendBotChallengeRequest.md)
  - [StoreActivationBlocker](doc/StoreActivationBlocker.md)
  - [StoreActivationReadiness](doc/StoreActivationReadiness.md)
+ - [StoreOperatingDay](doc/StoreOperatingDay.md)
  - [SuccessEnvelope](doc/SuccessEnvelope.md)
  - [UserIdentity](doc/UserIdentity.md)
  - [VendorActivationSnapshot](doc/VendorActivationSnapshot.md)
@@ -274,8 +287,10 @@ Class | Method | HTTP request | Description
  - [VendorOnboardingEnvelope](doc/VendorOnboardingEnvelope.md)
  - [VendorOnboardingSection](doc/VendorOnboardingSection.md)
  - [VendorOnboardingSnapshot](doc/VendorOnboardingSnapshot.md)
+ - [VendorOnboardingSnapshotSetup](doc/VendorOnboardingSnapshotSetup.md)
  - [VendorOnboardingStep](doc/VendorOnboardingStep.md)
- - [VendorPaymentConnection](doc/VendorPaymentConnection.md)
+ - [VendorPaymentOnboarding](doc/VendorPaymentOnboarding.md)
+ - [VendorPaymentOnboardingEnvelope](doc/VendorPaymentOnboardingEnvelope.md)
  - [VendorPaymentReconciliationEnvelope](doc/VendorPaymentReconciliationEnvelope.md)
  - [VendorRestriction](doc/VendorRestriction.md)
  - [VendorRestrictionEnvelope](doc/VendorRestrictionEnvelope.md)
@@ -283,8 +298,15 @@ Class | Method | HTTP request | Description
  - [VendorSetupDraft](doc/VendorSetupDraft.md)
  - [VendorSetupDraftDelivery](doc/VendorSetupDraftDelivery.md)
  - [VendorSetupDraftVehiclesInner](doc/VendorSetupDraftVehiclesInner.md)
+ - [VendorStaffDisputeSetting](doc/VendorStaffDisputeSetting.md)
+ - [VendorStaffUpdate](doc/VendorStaffUpdate.md)
  - [VendorStoreEmailConfirmation](doc/VendorStoreEmailConfirmation.md)
  - [VendorStoreEmailEnvelope](doc/VendorStoreEmailEnvelope.md)
+ - [VendorTeamActivity](doc/VendorTeamActivity.md)
+ - [VendorTeamActivityEnvelope](doc/VendorTeamActivityEnvelope.md)
+ - [VendorTeamActivityEnvelopeMeta](doc/VendorTeamActivityEnvelopeMeta.md)
+ - [VendorTeamInvitationListEnvelope](doc/VendorTeamInvitationListEnvelope.md)
+ - [VendorTeamInvitationRecord](doc/VendorTeamInvitationRecord.md)
  - [VendorVerificationDraft](doc/VendorVerificationDraft.md)
  - [VendorVerificationDraftClassification](doc/VendorVerificationDraftClassification.md)
  - [VendorVerificationDraftLegalIdentity](doc/VendorVerificationDraftLegalIdentity.md)
@@ -295,6 +317,8 @@ Class | Method | HTTP request | Description
  - [VerifyBotChallengeRequest](doc/VerifyBotChallengeRequest.md)
  - [VerifyEmailRequest](doc/VerifyEmailRequest.md)
  - [XenditAccountVerificationWebhook](doc/XenditAccountVerificationWebhook.md)
+ - [XenditAccountVerificationWebhookData](doc/XenditAccountVerificationWebhookData.md)
+ - [XenditAccountVerificationWebhookDataAccountInfo](doc/XenditAccountVerificationWebhookDataAccountInfo.md)
 
 
 ## Documentation For Authorization

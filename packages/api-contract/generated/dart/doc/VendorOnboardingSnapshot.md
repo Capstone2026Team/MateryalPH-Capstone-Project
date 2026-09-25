@@ -15,7 +15,7 @@ Name | Type | Description | Notes
 **organization** | [**BuiltMap&lt;String, JsonObject&gt;**](JsonObject.md) |  |
 **sections** | [**BuiltMap&lt;String, VendorOnboardingSection&gt;**](VendorOnboardingSection.md) |  |
 **verification** | [**BuiltMap&lt;String, JsonObject&gt;**](JsonObject.md) |  |
-**setup** | [**BuiltMap&lt;String, JsonObject&gt;**](JsonObject.md) |  |
+**setup** | [**VendorOnboardingSnapshotSetup**](VendorOnboardingSnapshotSetup.md) |  |
 **activation** | [**VendorActivationSnapshot**](VendorActivationSnapshot.md) |  |
 **welcomeRequired** | **bool** |  |
 **permissions** | **BuiltList&lt;String&gt;** |  |

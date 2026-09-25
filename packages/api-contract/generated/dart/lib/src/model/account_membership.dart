@@ -16,6 +16,7 @@ part 'account_membership.g.dart';
 /// * [role]
 /// * [status]
 /// * [canManageStaff]
+/// * [lockVersion]
 @BuiltValue()
 abstract class AccountMembership implements Built<AccountMembership, AccountMembershipBuilder> {
   @BuiltValueField(wireName: r'id')
@@ -32,6 +33,9 @@ abstract class AccountMembership implements Built<AccountMembership, AccountMemb
 
   @BuiltValueField(wireName: r'can_manage_staff')
   bool get canManageStaff;
+
+  @BuiltValueField(wireName: r'lock_version')
+  int? get lockVersion;
 
   AccountMembership._();
 
@@ -81,6 +85,13 @@ class _$AccountMembershipSerializer implements PrimitiveSerializer<AccountMember
       object.canManageStaff,
       specifiedType: const FullType(bool),
     );
+    if (object.lockVersion != null) {
+      yield r'lock_version';
+      yield serializers.serialize(
+        object.lockVersion,
+        specifiedType: const FullType(int),
+      );
+    }
   }
 
   @override
@@ -138,6 +149,14 @@ class _$AccountMembershipSerializer implements PrimitiveSerializer<AccountMember
             specifiedType: const FullType(bool),
           ) as bool;
           result.canManageStaff = valueDes;
+          break;
+        case r'lock_version':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.lockVersion = valueDes;
           break;
         default:
           unhandled.add(key);

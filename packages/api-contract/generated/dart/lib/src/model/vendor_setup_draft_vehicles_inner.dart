@@ -3,6 +3,7 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:built_collection/built_collection.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -12,7 +13,13 @@ part 'vendor_setup_draft_vehicles_inner.g.dart';
 ///
 /// Properties:
 /// * [id]
+/// * [vehicleCategory] - Separate category and type. Categorized configurations require applicable cargo dimensions or mixer capacity and heavy classification.
 /// * [vehicleType]
+/// * [customTypeName]
+/// * [brand]
+/// * [mixerCapacityM3]
+/// * [imageFileId] - Clean VEHICLE_IMAGE file owned by this Vendor.
+/// * [active] - Disabled configurations are retained for history and excluded from recommendations.
 /// * [name]
 /// * [capacityKg]
 /// * [numberAvailable]
@@ -22,14 +29,36 @@ part 'vendor_setup_draft_vehicles_inner.g.dart';
 /// * [heavyClassification]
 /// * [baseFeeCentavos]
 /// * [perKmCentavos]
-/// * [maximumDistanceKm]
+/// * [maximumDistanceKm] - Omission retains the saved limit; new coverage defaults to the approved 50 km procurement limit. New vehicle rates inherit coverage.
 @BuiltValue()
 abstract class VendorSetupDraftVehiclesInner implements Built<VendorSetupDraftVehiclesInner, VendorSetupDraftVehiclesInnerBuilder> {
   @BuiltValueField(wireName: r'id')
   String? get id;
 
+  /// Separate category and type. Categorized configurations require applicable cargo dimensions or mixer capacity and heavy classification.
+  @BuiltValueField(wireName: r'vehicle_category')
+  VendorSetupDraftVehiclesInnerVehicleCategoryEnum? get vehicleCategory;
+  // enum vehicleCategoryEnum {  MOTORCYCLE,  PICKUP,  VAN,  TRUCK,  };
+
   @BuiltValueField(wireName: r'vehicle_type')
   String? get vehicleType;
+
+  @BuiltValueField(wireName: r'custom_type_name')
+  String? get customTypeName;
+
+  @BuiltValueField(wireName: r'brand')
+  String? get brand;
+
+  @BuiltValueField(wireName: r'mixer_capacity_m3')
+  num? get mixerCapacityM3;
+
+  /// Clean VEHICLE_IMAGE file owned by this Vendor.
+  @BuiltValueField(wireName: r'image_file_id')
+  String? get imageFileId;
+
+  /// Disabled configurations are retained for history and excluded from recommendations.
+  @BuiltValueField(wireName: r'active')
+  bool? get active;
 
   @BuiltValueField(wireName: r'name')
   String? get name;
@@ -58,6 +87,7 @@ abstract class VendorSetupDraftVehiclesInner implements Built<VendorSetupDraftVe
   @BuiltValueField(wireName: r'per_km_centavos')
   int? get perKmCentavos;
 
+  /// Omission retains the saved limit; new coverage defaults to the approved 50 km procurement limit. New vehicle rates inherit coverage.
   @BuiltValueField(wireName: r'maximum_distance_km')
   int? get maximumDistanceKm;
 
@@ -91,11 +121,53 @@ class _$VendorSetupDraftVehiclesInnerSerializer implements PrimitiveSerializer<V
         specifiedType: const FullType.nullable(String),
       );
     }
+    if (object.vehicleCategory != null) {
+      yield r'vehicle_category';
+      yield serializers.serialize(
+        object.vehicleCategory,
+        specifiedType: const FullType(VendorSetupDraftVehiclesInnerVehicleCategoryEnum),
+      );
+    }
     if (object.vehicleType != null) {
       yield r'vehicle_type';
       yield serializers.serialize(
         object.vehicleType,
         specifiedType: const FullType(String),
+      );
+    }
+    if (object.customTypeName != null) {
+      yield r'custom_type_name';
+      yield serializers.serialize(
+        object.customTypeName,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
+    if (object.brand != null) {
+      yield r'brand';
+      yield serializers.serialize(
+        object.brand,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
+    if (object.mixerCapacityM3 != null) {
+      yield r'mixer_capacity_m3';
+      yield serializers.serialize(
+        object.mixerCapacityM3,
+        specifiedType: const FullType.nullable(num),
+      );
+    }
+    if (object.imageFileId != null) {
+      yield r'image_file_id';
+      yield serializers.serialize(
+        object.imageFileId,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
+    if (object.active != null) {
+      yield r'active';
+      yield serializers.serialize(
+        object.active,
+        specifiedType: const FullType(bool),
       );
     }
     if (object.name != null) {
@@ -199,6 +271,14 @@ class _$VendorSetupDraftVehiclesInnerSerializer implements PrimitiveSerializer<V
           if (valueDes == null) continue;
           result.id = valueDes;
           break;
+        case r'vehicle_category':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(VendorSetupDraftVehiclesInnerVehicleCategoryEnum),
+          ) as VendorSetupDraftVehiclesInnerVehicleCategoryEnum?;
+          if (valueDes == null) continue;
+          result.vehicleCategory = valueDes;
+          break;
         case r'vehicle_type':
           final valueDes = serializers.deserialize(
             value,
@@ -206,6 +286,46 @@ class _$VendorSetupDraftVehiclesInnerSerializer implements PrimitiveSerializer<V
           ) as String?;
           if (valueDes == null) continue;
           result.vehicleType = valueDes;
+          break;
+        case r'custom_type_name':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.customTypeName = valueDes;
+          break;
+        case r'brand':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.brand = valueDes;
+          break;
+        case r'mixer_capacity_m3':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(num),
+          ) as num?;
+          if (valueDes == null) continue;
+          result.mixerCapacityM3 = valueDes;
+          break;
+        case r'image_file_id':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.imageFileId = valueDes;
+          break;
+        case r'active':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.active = valueDes;
           break;
         case r'name':
           final valueDes = serializers.deserialize(
@@ -316,4 +436,24 @@ class _$VendorSetupDraftVehiclesInnerSerializer implements PrimitiveSerializer<V
   }
 }
 
+
+/// Separate category and type. Categorized configurations require applicable cargo dimensions or mixer capacity and heavy classification.
+class VendorSetupDraftVehiclesInnerVehicleCategoryEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'MOTORCYCLE')
+  static const VendorSetupDraftVehiclesInnerVehicleCategoryEnum MOTORCYCLE = _$vendorSetupDraftVehiclesInnerVehicleCategoryEnum_MOTORCYCLE;
+  @BuiltValueEnumConst(wireName: r'PICKUP')
+  static const VendorSetupDraftVehiclesInnerVehicleCategoryEnum PICKUP = _$vendorSetupDraftVehiclesInnerVehicleCategoryEnum_PICKUP;
+  @BuiltValueEnumConst(wireName: r'VAN')
+  static const VendorSetupDraftVehiclesInnerVehicleCategoryEnum VAN = _$vendorSetupDraftVehiclesInnerVehicleCategoryEnum_VAN;
+  @BuiltValueEnumConst(wireName: r'TRUCK')
+  static const VendorSetupDraftVehiclesInnerVehicleCategoryEnum TRUCK = _$vendorSetupDraftVehiclesInnerVehicleCategoryEnum_TRUCK;
+
+  static Serializer<VendorSetupDraftVehiclesInnerVehicleCategoryEnum> get serializer => _$vendorSetupDraftVehiclesInnerVehicleCategoryEnumSerializer;
+
+  const VendorSetupDraftVehiclesInnerVehicleCategoryEnum._(String name): super(name);
+
+  static BuiltSet<VendorSetupDraftVehiclesInnerVehicleCategoryEnum> get values => _$vendorSetupDraftVehiclesInnerVehicleCategoryEnumValues;
+  static VendorSetupDraftVehiclesInnerVehicleCategoryEnum valueOf(String name) => _$vendorSetupDraftVehiclesInnerVehicleCategoryEnumValueOf(name);
+}
 

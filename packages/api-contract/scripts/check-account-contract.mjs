@@ -41,6 +41,19 @@ for (const [path, item] of Object.entries(spec.paths)) {
     }
   }
 }
+for (const [path, item] of Object.entries(spec.paths)) {
+  if (!path.startsWith('/vendors/account/')) continue
+  for (const [method, operation] of Object.entries(item)) {
+    const key = `${method.toUpperCase()} /api/v1${path}`
+    expected.add(key)
+    const route = actual.get(key)
+    assert.ok(route, `Contract route missing from Laravel: ${key}`)
+    assert.ok(hasMiddleware(route, 'auth:api', 'Illuminate\\Auth\\Middleware\\Authenticate:api'), `Passport guard missing: ${key}`)
+    assert.ok(hasMiddleware(route, 'account.access:VENDOR', 'App\\Http\\Middleware\\RequireAccountAccess:VENDOR'), `Vendor guard missing: ${key}`)
+    assert.ok(hasMiddleware(route, 'web.csrf', 'App\\Http\\Middleware\\VerifyAccountCsrf'), `CSRF guard missing: ${key}`)
+    assert.ok(operation.security?.length, `Security missing: ${key}`)
+  }
+}
 const vendorInvite = spec.paths['/vendors/account/invitations']?.post
 if (vendorInvite) {
   const key = 'POST /api/v1/vendors/account/invitations'

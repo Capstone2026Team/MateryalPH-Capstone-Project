@@ -39,6 +39,7 @@ final class OnboardingRequirementResolverTest extends TestCase
         self::assertTrue($after['delivery_configuration']['applicable']);
         self::assertNotSame($before['supplier_classification']['resolution_hash'], $after['supplier_classification']['resolution_hash']);
         self::assertSame($before['business_registration']['resolution_hash'], $after['business_registration']['resolution_hash']);
-        self::assertSame('OPTIONAL', $after['team']['level']);
+        self::assertArrayNotHasKey('team', $after);
+        self::assertArrayNotHasKey('store_media', $after);
     }
 }

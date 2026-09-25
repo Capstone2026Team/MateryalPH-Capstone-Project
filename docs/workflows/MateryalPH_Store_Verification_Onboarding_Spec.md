@@ -66,16 +66,15 @@ Non-reviewed Store Setup items go `NOT_STARTED → IN_PROGRESS → COMPLETED`.
 | --- | --- | --- |
 | S1 | Public Store Profile | Logo · banner · description · public contact · city/province summary · Store Media subsection · live marketplace-style preview |
 | S2 | Fulfillment Configuration | Bulk Order Capability · Self-Pickup / Vendor Delivery / Both · delivery coverage · vehicle fields when applicable |
-| S3 | Xendit TEST Connection | xenPlatform sub-account onboarding, captured provider link, sub-account reference, backend reconciliation |
-| S4 | 2% Commission Terms | Versioned agreement, Owner or authorized signatory acceptance |
-| S5 | Team Accounts | Optional; explains the existing post-setup invitation route |
-| S6 | Review and Complete | Setup summary, unsaved-change detection, completion |
+| S3 | Xendit TEST Connection | Server-side TEST sub-account provisioning and authoritative backend/provider connection status |
+| S4 | Team Accounts | Optional staff configuration; excluded from setup completion and activation requirements |
+| S5 | Store Operation | Required weekly operating schedule; every day explicitly Open or Closed |
+| S6 | Review and Complete | Setup summary including public Store Hours, unsaved-change detection, completion |
 
 ### Navigation contract
 
 - Only the selected step is visible **and** keyboard reachable. Other steps are removed from the accessibility tree, not merely hidden visually.
-- Switching steps preserves native form values in memory; it never auto-saves.
-- `Save Draft` persists through the existing request builders with the current `lock_version`. `Finish Later` saves and returns to the limited Dashboard.
+- Store Setup edits auto-save after validation with version checks; switching steps and Finish Later flush pending valid changes before navigation.
 - Unsaved edits are listed on V4/S6 and must be saved before submission or completion.
 - Privacy acknowledgment and commission choices persist in memory across step changes; only the final endpoints record them.
 - Changing Business Type re-evaluates conditional identity fields **before** the next save.
@@ -479,7 +478,9 @@ A missing or invalid item blocks submission and the response identifies the **ex
 
 Independent checklist. May begin after Store Verification is submitted.
 
-**S1 Public Store Profile.** Editable form plus a marketplace-style preview with banner, overlapping logo, name, description, Text changes appear immediately. Store Media is a subsection beside the editor and preview; a successful upload refreshes the preview without discarding unsaved fields. Missing media shows structured placeholders; a failed preview offers retry. Legal fields cannot be edited here. Private staff contacts, tax data and evidence are excluded from the profile and the preview. Media is validated for supported type, maximum size, safety, appropriate content, intellectual-property requirements and accessibility metadata. Operating hours and additional gallery media are not implemented by the current surface and must not be fabricated in the preview.
+The required Setup Checklist has five entries: Public Store Profile, Bulk Capability, Fulfillment Method, Xendit TEST Connection, and Store Operation. Delivery Configuration is evaluated within Fulfillment Method when delivery applies. Store Media is a subsection of Public Store Profile, and Team Accounts remains optional outside the checklist and activation gate. Public Store Profile completes only when its saved name and description and persisted clean Logo and Banner are present; removal or clearing required data recalculates its status and progress. Valid Store Setup edits auto-save with version checks, and the API snapshot supplies the current checklist.
+
+**S1 Public Store Profile.** Editable form plus a marketplace-style preview with banner, overlapping logo, name and description. Text changes appear immediately. Store Media is a subsection beside the editor and preview; a successful upload refreshes the preview without discarding unsaved fields. Missing media shows structured placeholders; a failed preview offers retry. Legal fields cannot be edited here. Private staff contacts, tax data and evidence are excluded from the profile and the preview. Media is validated for supported type, maximum size, safety, appropriate content, intellectual-property requirements and accessibility metadata. Operating hours and additional gallery media are not implemented by the current surface and must not be fabricated in the preview.
 
 **S2 Fulfillment Configuration.** Bulk Order Capability — **Yes** enables both Item-Based and Project-Based procurement eligibility; **No** enables Item-Based procurement only. Enabling Bulk Order Capability does not create a competitive RFQ bidding queue, auction, or automatic vendor competition mechanism, and changing this setting later must never modify, cancel, or rewrite an already accepted order.
 
@@ -726,12 +727,15 @@ Once an order and its delivery arrangement are accepted, MateryalPH stores an im
 
 Editing, replacing, disabling, or deleting a vehicle configuration later must **never modify the delivery snapshot, delivery charge, vehicle arrangement, or fulfillment terms of an already accepted order**. Any subsequent vehicle configuration changes apply only to future fulfillment recommendations and future orders.
 
-**S3 Xendit TEST Connection.** xenPlatform TEST sub-account connection is mandatory for every Vendor seeking Store Activation, regardless of the Vendor's MateryalPH Business Type. The Vendor initiates the connection from MateryalPH through an explicit **Connect Xendit** action; no manual copying or pasting of Xendit URLs is required. After the Vendor confirms the action, MateryalPH's backend uses the official Xendit API with server-side TEST credentials to create the Vendor's TEST sub-account under the MateryalPH xenPlatform master account. MateryalPH captures and securely stores the provider-issued sub-account ID and automatically reconciles the account through permitted backend-only Xendit API mechanisms before marking the connection as **Connected — TEST**. A locally stored identifier or URL alone must never be treated as proof of a successful connection.
+**S3 Xendit TEST Connection.** A backend-created xenPlatform TEST Owned sub-account is mandatory for every Tier 2 Vendor seeking Store Activation, regardless of actual MateryalPH Business Type. This account is platform-controlled for simulated payments; LIVE merchant onboarding is a separate future workflow. Keep one step title and explain that Xendit is MateryalPH's payment service provider.
 
-Because Xendit TEST mode imposes provider-specific restrictions, MateryalPH must not represent the TEST sub-account as proof of the Vendor's actual legal entity classification, production KYC verification, or live account activation. Where the configured Xendit TEST API requires a fixed test entity type or prevents Authorized Representative invitations, MateryalPH must comply with those TEST restrictions while retaining the Vendor's actual Business Type and verification information separately within MateryalPH. The TEST connection represents only successful technical provisioning and reconciliation of a Xendit TEST sub-account.
+The Vendor Owner clicks **Connect Xendit**, subject to current PAYMENT_CONFIGURATION authority. MateryalPH calls `POST /v2/accounts` with the server-only master TEST credential, `type=OWNED`, trusted store name in `public_profile.business_name`, and the verified Store Email when available, otherwise the authenticated Owner email. Xendit requires an email field for account creation but sends no Vendor registration invitation in this TEST flow. TEST onboarding never overwrites the Vendor's actual MateryalPH Business Type.
 
-All Xendit API credentials must remain backend-only and must never be exposed to the Buyer application, Vendor web application, Admin web application, client-side source code, logs, or public configuration. TEST/DEMO capability does not constitute live payment processing, production KYC, BIR registration, statutory withholding compliance, or government approval. If Xendit does not support a required provisioning or reconciliation operation in the configured TEST environment, MateryalPH must keep the Xendit connection unverified and report the provider limitation rather than fabricating or manually overriding a successful connection.
+Validate the provider response, account ID, Owned type, and matching operation identity before storing the backend-owned association. A create response remains **PENDING** until a separate backend `GET /v2/accounts/{id}` confirms `LIVE`; the Owner may select **Check account status** again if needed. Only authoritative provider `LIVE` becomes `CONNECTED_TEST` and displays **Xendit — Connected** with a visible TEST indicator. Browser-supplied identifiers never establish a connection. Xendit's TEST sub-accounts cannot log in or be activated, so no hosted partner registration link is presented as a way to complete TEST setup.
 
+Reuse an existing confirmed association. Reserve creation under an organization lock and release the lock before networking. Explicit provider rejections allow retries; uncertain attempts retain their reservation for safe investigation instead of automatically creating another account. Audit attempts, failures and success without provider payloads or credentials.
+
+**DEMO — No real funds or BIR filing.** TEST connection does not activate live payments or establish production KYC, BIR registration, statutory withholding compliance, or government approval. Future LIVE onboarding must follow Xendit's applicable production invitation, merchant verification, KYC and activation rules; it is outside this implementation. See `services/api/docs/xendit-onboarding.md`.
 
 **S4 Team Accounts.** Vendor Team setup is **optional** and does not block Store Activation. The Vendor Owner may create Team Accounts before or after Store Activation.
 
@@ -1277,7 +1281,7 @@ The system must continue enforcing:
 
 The Vendor Owner retains the highest organization authority at all times.
 
-**S5 Store Operation:** this is where the vendor sets the opening and closing time and date, this will be display publicy.
+**S5 Store Operation.** The Vendor sets the normal weekly public schedule for Monday through Sunday. Every day must explicitly be Open or Closed. An Open day requires Opening Time and Closing Time in Philippine local time; Closing Time must be later on the same day. A Closed day has no times. Overnight periods are not supported. Copying hours to selected days is a convenience only; every day remains independently editable. The saved schedule is structured Store Setup data, appears on the public Store Profile after activation, and is required before setup completion. Later changes are attributed to the acting Vendor Owner in the audit log and update the current public schedule without approving verification, changing Xendit, changing fulfillment, or activating the store. The date-override data model is distinct from the weekly schedule; an explicitly configured date entry takes precedence for that date. No holiday entries are created automatically.
 
 **S6 Review and Complete.** Setup summary, unsaved-change list, completion. Completion never approves a verification item.
 
@@ -1440,5 +1444,7 @@ Store Verification, the Limited Dashboard and the Admin review case share this c
 7. LGU permit evidence.
 
 Each Government ID is one checklist item containing its required front and back; a passport uses its identity page. Non-applicable items and optional certification do not appear in this checklist. Required underlying evidence, version checks, separate Admin decisions and Authority to Act scopes remain enforced. A grouped item is complete only when every applicable underlying requirement is approved/completed. Correction and rejection states remain visible. Store Setup uses the same bordered checklist panel with its existing setup requirements.
+
+In the Admin review case, **Business Information** is one selectable decision for the applicable informational requirements: business type, business details, registered legal identity, registered business address, supplier classification, tax profile, and privacy acknowledgment. The selected panel presents their submitted values together. Its single decision updates those underlying requirement states atomically with version guards. Authority to Act keeps its separate scoped decision. Government ID front and back form one ID review decision, with both current files and the related identity values visible together. BIR COR, business registration, LGU permit, and other documentary requirements keep independent decisions and verified metadata. The selected panel shows submitted information, inline private evidence previews where applicable, relevant verification details, and the Admin decision. Group approval does not bypass tax verification, evidence validation, or the activation gate.
 
 Submitted and saved private files open in an authenticated portal preview panel. The portal fetches the short-lived signed URL with its isolated HttpOnly cookie context, validates the response, and displays only supported PDF/JPEG/PNG content. Closing/unmounting the preview revokes its temporary browser object URL. Signature, ownership, role and clean-scan checks remain server-side; no document becomes public.

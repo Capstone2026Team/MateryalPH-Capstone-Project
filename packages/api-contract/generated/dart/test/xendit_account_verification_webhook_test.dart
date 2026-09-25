@@ -7,33 +7,18 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(XenditAccountVerificationWebhook, () {
-    // String id
-    test('to test the property `id`', () async {
+    // String event
+    test('to test the property `event`', () async {
       // TODO
     });
 
-    // String forUserId
-    test('to test the property `forUserId`', () async {
+    // DateTime created
+    test('to test the property `created`', () async {
       // TODO
     });
 
-    // String accountId
-    test('to test the property `accountId`', () async {
-      // TODO
-    });
-
-    // String subaccountId
-    test('to test the property `subaccountId`', () async {
-      // TODO
-    });
-
-    // String status
-    test('to test the property `status`', () async {
-      // TODO
-    });
-
-    // String verificationStatus
-    test('to test the property `verificationStatus`', () async {
+    // XenditAccountVerificationWebhookData data
+    test('to test the property `data`', () async {
       // TODO
     });
 

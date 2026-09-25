@@ -1611,6 +1611,8 @@ No authorization required
 
 
 
+Issues a new code for a pending Vendor account or an active Vendor account whose Owner email is still unverified. The response does not reveal whether an eligible account exists.
+
 ### Example
 
 ```ts

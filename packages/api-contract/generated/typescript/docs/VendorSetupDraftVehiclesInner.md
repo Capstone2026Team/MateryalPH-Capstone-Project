@@ -7,7 +7,13 @@
 Name | Type
 ------------ | -------------
 `id` | string
+`vehicleCategory` | string
 `vehicleType` | string
+`customTypeName` | string
+`brand` | string
+`mixerCapacityM3` | number
+`imageFileId` | string
+`active` | boolean
 `name` | string
 `capacityKg` | number
 `numberAvailable` | number
@@ -27,7 +33,13 @@ import type { VendorSetupDraftVehiclesInner } from '@materyalph/api-client-ts'
 // TODO: Update the object below with actual values
 const example = {
   "id": null,
+  "vehicleCategory": null,
   "vehicleType": null,
+  "customTypeName": null,
+  "brand": null,
+  "mixerCapacityM3": null,
+  "imageFileId": null,
+  "active": null,
   "name": null,
   "capacityKg": null,
   "numberAvailable": null,

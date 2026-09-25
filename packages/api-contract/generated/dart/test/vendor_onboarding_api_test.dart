@@ -19,11 +19,13 @@ void main() {
       // TODO
     });
 
-    //Future<VendorOnboardingEnvelope> captureVendorPaymentConnection(String idempotencyKey, VendorPaymentConnection vendorPaymentConnection) async
-    test('test captureVendorPaymentConnection', () async {
+    //Future<AccountMutationResultEnvelope> changeVendorStaffDisputes(VendorStaffDisputeSetting vendorStaffDisputeSetting) async
+    test('test changeVendorStaffDisputes', () async {
       // TODO
     });
 
+    // Requires a valid seven-day Store Operation schedule, applicable setup configuration and confirmed TEST payment connection. Missing or invalid hours return STORE_OPERATION_REQUIRED. Completion does not activate the store or approve verification.
+    //
     //Future<VendorOnboardingEnvelope> completeVendorSetup(String idempotencyKey, VendorSetupComplete vendorSetupComplete) async
     test('test completeVendorSetup', () async {
       // TODO
@@ -31,6 +33,13 @@ void main() {
 
     //Future<VendorOnboardingEnvelope> confirmVendorStoreEmailVerification(VendorStoreEmailConfirmation vendorStoreEmailConfirmation) async
     test('test confirmVendorStoreEmailVerification', () async {
+      // TODO
+    });
+
+    // Owner and current PAYMENT_CONFIGURATION authority only. Creates a platform-controlled TEST OWNED sub-account through backend POST /v2/accounts for simulated payments, without a Vendor invitation or separate Xendit login. A validated create response is PENDING until backend GET /v2/accounts/{id} confirms LIVE, which yields CONNECTED_TEST. Reuses existing associations and rejects uncertain duplicate attempts. No client-supplied account ID or URL is accepted. Responses are private and no-store.
+    //
+    //Future<VendorPaymentOnboardingEnvelope> connectVendorPayment(String idempotencyKey) async
+    test('test connectVendorPayment', () async {
       // TODO
     });
 
@@ -68,6 +77,18 @@ void main() {
       // TODO
     });
 
+    //Future<VendorTeamActivityEnvelope> listVendorTeamActivity({ int page }) async
+    test('test listVendorTeamActivity', () async {
+      // TODO
+    });
+
+    // Paginated organization-scoped invitation history. Delegated Managers cannot view Manager invitations. Invitation status is derived from acceptance, revocation and expiry.
+    //
+    //Future<VendorTeamInvitationListEnvelope> listVendorTeamInvitations({ int page }) async
+    test('test listVendorTeamInvitations', () async {
+      // TODO
+    });
+
     //Future<GenericDataEnvelope> previewVendorRequirements(String businessType, { String representativeRole, String identityIdType, String representativeIdType, String authorityEvidenceVersionId, int declarationClaim }) async
     test('test previewVendorRequirements', () async {
       // TODO
@@ -85,6 +106,13 @@ void main() {
 
     //Future<VendorOnboardingEnvelope> removePendingVendorDocument(String requirementKey) async
     test('test removePendingVendorDocument', () async {
+      // TODO
+    });
+
+    // Removes the current Store Logo or Banner record. A stale media ID cannot remove its replacement; the returned onboarding snapshot recalculates the profile checklist.
+    //
+    //Future<VendorOnboardingEnvelope> removeVendorStoreMedia(String mediaId) async
+    test('test removeVendorStoreMedia', () async {
       // TODO
     });
 
@@ -108,7 +136,7 @@ void main() {
       // TODO
     });
 
-    // Saves version-checked setup progress. Public-name, description and public-contact-only edits preserve completed setup and activation; operational changes reopen setup requirements. Every successful save advances the organization lock version.
+    // Saves version-checked setup progress. Public profile and weekly operating schedule edits preserve completed setup and activation; fulfillment changes reopen setup requirements. Every successful save advances the organization lock version.
     //
     //Future<VendorOnboardingEnvelope> saveVendorSetupDraft(VendorSetupDraft vendorSetupDraft) async
     test('test saveVendorSetupDraft', () async {

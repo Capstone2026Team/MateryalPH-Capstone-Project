@@ -203,11 +203,11 @@ export async function readWebPrivateFile(basePath: string, signedUrl: string): P
     throw new Error('The private evidence URL is invalid. Refresh and try again.')
   }
   const response = await coordinatedFetch(normalizedBasePath(base.href), true, url, {
-    credentials: 'include', cache: 'no-store', referrerPolicy: 'origin', headers: { Accept: 'application/pdf,image/jpeg,image/png' },
+    credentials: 'include', cache: 'no-store', referrerPolicy: 'origin', headers: { Accept: 'application/pdf,image/jpeg,image/png,image/webp' },
   })
   if (!response.ok) throw new ResponseError(response)
   const blob = await response.blob()
-  if (!['application/pdf', 'image/jpeg', 'image/png'].includes(blob.type.split(';')[0] ?? '')) {
+  if (!['application/pdf', 'image/jpeg', 'image/png', 'image/webp'].includes(blob.type.split(';')[0] ?? '')) {
     throw new Error('This file type cannot be previewed.')
   }
   return blob

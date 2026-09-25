@@ -82,6 +82,8 @@ class _$VendorSetupDraft extends VendorSetupDraft {
   @override
   final int organizationLockVersion;
   @override
+  final String? formState;
+  @override
   final String? publicStoreName;
   @override
   final String? description;
@@ -94,6 +96,8 @@ class _$VendorSetupDraft extends VendorSetupDraft {
   @override
   final String? publicPhone;
   @override
+  final BuiltList<StoreOperatingDay>? operatingSchedule;
+  @override
   final VendorSetupDraftDelivery? delivery;
   @override
   final BuiltList<VendorSetupDraftVehiclesInner>? vehicles;
@@ -105,12 +109,14 @@ class _$VendorSetupDraft extends VendorSetupDraft {
   _$VendorSetupDraft._(
       {this.draftLockVersion,
       required this.organizationLockVersion,
+      this.formState,
       this.publicStoreName,
       this.description,
       this.bulkCapability,
       this.fulfillmentMethod,
       this.publicEmail,
       this.publicPhone,
+      this.operatingSchedule,
       this.delivery,
       this.vehicles})
       : super._();
@@ -128,12 +134,14 @@ class _$VendorSetupDraft extends VendorSetupDraft {
     return other is VendorSetupDraft &&
         draftLockVersion == other.draftLockVersion &&
         organizationLockVersion == other.organizationLockVersion &&
+        formState == other.formState &&
         publicStoreName == other.publicStoreName &&
         description == other.description &&
         bulkCapability == other.bulkCapability &&
         fulfillmentMethod == other.fulfillmentMethod &&
         publicEmail == other.publicEmail &&
         publicPhone == other.publicPhone &&
+        operatingSchedule == other.operatingSchedule &&
         delivery == other.delivery &&
         vehicles == other.vehicles;
   }
@@ -143,12 +151,14 @@ class _$VendorSetupDraft extends VendorSetupDraft {
     var _$hash = 0;
     _$hash = $jc(_$hash, draftLockVersion.hashCode);
     _$hash = $jc(_$hash, organizationLockVersion.hashCode);
+    _$hash = $jc(_$hash, formState.hashCode);
     _$hash = $jc(_$hash, publicStoreName.hashCode);
     _$hash = $jc(_$hash, description.hashCode);
     _$hash = $jc(_$hash, bulkCapability.hashCode);
     _$hash = $jc(_$hash, fulfillmentMethod.hashCode);
     _$hash = $jc(_$hash, publicEmail.hashCode);
     _$hash = $jc(_$hash, publicPhone.hashCode);
+    _$hash = $jc(_$hash, operatingSchedule.hashCode);
     _$hash = $jc(_$hash, delivery.hashCode);
     _$hash = $jc(_$hash, vehicles.hashCode);
     _$hash = $jf(_$hash);
@@ -160,12 +170,14 @@ class _$VendorSetupDraft extends VendorSetupDraft {
     return (newBuiltValueToStringHelper(r'VendorSetupDraft')
           ..add('draftLockVersion', draftLockVersion)
           ..add('organizationLockVersion', organizationLockVersion)
+          ..add('formState', formState)
           ..add('publicStoreName', publicStoreName)
           ..add('description', description)
           ..add('bulkCapability', bulkCapability)
           ..add('fulfillmentMethod', fulfillmentMethod)
           ..add('publicEmail', publicEmail)
           ..add('publicPhone', publicPhone)
+          ..add('operatingSchedule', operatingSchedule)
           ..add('delivery', delivery)
           ..add('vehicles', vehicles))
         .toString();
@@ -185,6 +197,10 @@ class VendorSetupDraftBuilder
   int? get organizationLockVersion => _$this._organizationLockVersion;
   set organizationLockVersion(int? organizationLockVersion) =>
       _$this._organizationLockVersion = organizationLockVersion;
+
+  String? _formState;
+  String? get formState => _$this._formState;
+  set formState(String? formState) => _$this._formState = formState;
 
   String? _publicStoreName;
   String? get publicStoreName => _$this._publicStoreName;
@@ -215,6 +231,12 @@ class VendorSetupDraftBuilder
   String? get publicPhone => _$this._publicPhone;
   set publicPhone(String? publicPhone) => _$this._publicPhone = publicPhone;
 
+  ListBuilder<StoreOperatingDay>? _operatingSchedule;
+  ListBuilder<StoreOperatingDay> get operatingSchedule =>
+      _$this._operatingSchedule ??= ListBuilder<StoreOperatingDay>();
+  set operatingSchedule(ListBuilder<StoreOperatingDay>? operatingSchedule) =>
+      _$this._operatingSchedule = operatingSchedule;
+
   VendorSetupDraftDeliveryBuilder? _delivery;
   VendorSetupDraftDeliveryBuilder get delivery =>
       _$this._delivery ??= VendorSetupDraftDeliveryBuilder();
@@ -236,12 +258,14 @@ class VendorSetupDraftBuilder
     if ($v != null) {
       _draftLockVersion = $v.draftLockVersion;
       _organizationLockVersion = $v.organizationLockVersion;
+      _formState = $v.formState;
       _publicStoreName = $v.publicStoreName;
       _description = $v.description;
       _bulkCapability = $v.bulkCapability;
       _fulfillmentMethod = $v.fulfillmentMethod;
       _publicEmail = $v.publicEmail;
       _publicPhone = $v.publicPhone;
+      _operatingSchedule = $v.operatingSchedule?.toBuilder();
       _delivery = $v.delivery?.toBuilder();
       _vehicles = $v.vehicles?.toBuilder();
       _$v = null;
@@ -272,18 +296,22 @@ class VendorSetupDraftBuilder
                 organizationLockVersion,
                 r'VendorSetupDraft',
                 'organizationLockVersion'),
+            formState: formState,
             publicStoreName: publicStoreName,
             description: description,
             bulkCapability: bulkCapability,
             fulfillmentMethod: fulfillmentMethod,
             publicEmail: publicEmail,
             publicPhone: publicPhone,
+            operatingSchedule: _operatingSchedule?.build(),
             delivery: _delivery?.build(),
             vehicles: _vehicles?.build(),
           );
     } catch (_) {
       late String _$failedField;
       try {
+        _$failedField = 'operatingSchedule';
+        _operatingSchedule?.build();
         _$failedField = 'delivery';
         _delivery?.build();
         _$failedField = 'vehicles';

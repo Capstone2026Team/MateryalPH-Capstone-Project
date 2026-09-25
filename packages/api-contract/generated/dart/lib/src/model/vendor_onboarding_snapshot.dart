@@ -5,6 +5,7 @@
 // ignore_for_file: unused_element
 import 'package:materyalph_api_client/src/model/onboarding_requirement.dart';
 import 'package:materyalph_api_client/src/model/vendor_onboarding_section.dart';
+import 'package:materyalph_api_client/src/model/vendor_onboarding_snapshot_setup.dart';
 import 'package:built_collection/built_collection.dart';
 import 'package:materyalph_api_client/src/model/onboarding_step_completion.dart';
 import 'package:materyalph_api_client/src/model/vendor_activation_snapshot.dart';
@@ -53,7 +54,7 @@ abstract class VendorOnboardingSnapshot implements Built<VendorOnboardingSnapsho
   BuiltMap<String, JsonObject?> get verification;
 
   @BuiltValueField(wireName: r'setup')
-  BuiltMap<String, JsonObject?> get setup;
+  VendorOnboardingSnapshotSetup get setup;
 
   @BuiltValueField(wireName: r'activation')
   VendorActivationSnapshot get activation;
@@ -125,7 +126,7 @@ class _$VendorOnboardingSnapshotSerializer implements PrimitiveSerializer<Vendor
     yield r'setup';
     yield serializers.serialize(
       object.setup,
-      specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
+      specifiedType: const FullType(VendorOnboardingSnapshotSetup),
     );
     yield r'activation';
     yield serializers.serialize(
@@ -217,9 +218,9 @@ class _$VendorOnboardingSnapshotSerializer implements PrimitiveSerializer<Vendor
         case r'setup':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
-          ) as BuiltMap<String, JsonObject?>;
-          result.setup.replace(valueDes);
+            specifiedType: const FullType(VendorOnboardingSnapshotSetup),
+          ) as VendorOnboardingSnapshotSetup;
+          result.setup = valueDes.toBuilder();
           break;
         case r'activation':
           final valueDes = serializers.deserialize(

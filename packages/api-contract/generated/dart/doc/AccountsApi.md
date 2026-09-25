@@ -34,6 +34,7 @@ Method | HTTP request | Description
 [**startAccountEmailChange**](AccountsApi.md#startaccountemailchange) | **POST** /{accountPortal}/account/email |
 [**startAccountFactorReplacement**](AccountsApi.md#startaccountfactorreplacement) | **POST** /{accountPortal}/account/factor |
 [**updateAccountProfile**](AccountsApi.md#updateaccountprofile) | **PATCH** /{accountPortal}/account/profile |
+[**updateVendorStaff**](AccountsApi.md#updatevendorstaff) | **PATCH** /vendors/account/memberships/{membershipId} |
 [**uploadAccountPhoto**](AccountsApi.md#uploadaccountphoto) | **POST** /{webAccountPortal}/account/photo |
 
 
@@ -1314,6 +1315,57 @@ Name | Type | Description  | Notes
 ### Authorization
 
 [accessCookie](../README.md#accessCookie), [passportBearer](../README.md#passportBearer), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **updateVendorStaff**
+> AccountMutationResultEnvelope updateVendorStaff(membershipId, vendorStaffUpdate)
+
+
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getAccountsApi();
+final String membershipId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final VendorStaffUpdate vendorStaffUpdate = ; // VendorStaffUpdate |
+
+try {
+    final response = api.updateVendorStaff(membershipId, vendorStaffUpdate);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AccountsApi->updateVendorStaff: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **membershipId** | **String**|  |
+ **vendorStaffUpdate** | [**VendorStaffUpdate**](VendorStaffUpdate.md)|  |
+
+### Return type
+
+[**AccountMutationResultEnvelope**](AccountMutationResultEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
 
 ### HTTP request headers
 

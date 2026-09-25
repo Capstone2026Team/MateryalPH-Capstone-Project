@@ -8,12 +8,9 @@ import 'package:materyalph_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**id** | **String** |  |
-**forUserId** | **String** |  | [optional]
-**accountId** | **String** |  | [optional]
-**subaccountId** | **String** |  | [optional]
-**status** | **String** |  | [optional]
-**verificationStatus** | **String** |  | [optional]
+**event** | **String** |  |
+**created** | [**DateTime**](DateTime.md) |  |
+**data** | [**XenditAccountVerificationWebhookData**](XenditAccountVerificationWebhookData.md) |  |
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

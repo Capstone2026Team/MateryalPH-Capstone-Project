@@ -39,7 +39,7 @@ export function OnboardingFlow({ steps, current, onStep, section, children, acti
     <section className="min-w-0 rounded-surface border border-border-default bg-surface-primary p-5 sm:p-7" aria-labelledby="onboarding-section-title">
       <h2 ref={heading} tabIndex={-1} id="onboarding-section-title" className="mb-6 text-2xl font-semibold tracking-tight">{steps[current]?.label}</h2>
       <div className="min-w-0">{children}</div>
-      <p className="mt-6 text-xs leading-5 text-text-secondary">{autosave ? 'Progress saves when you change steps or return to the dashboard. Only Submit for Admin Review sends your documents to Admin.' : 'Switching steps keeps your edits on this page. Save a draft to keep them for later.'}</p>
+      <p className="mt-6 text-xs leading-5 text-text-secondary">{autosave ? `Progress saves when you change steps or return to the dashboard.${section.key === 'STORE_VERIFICATION' ? ' Only Submit for Admin Review sends your documents to Admin.' : ''}` : 'Switching steps keeps your edits on this page. Save a draft to keep them for later.'}</p>
       <div className="mt-8 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 border-t border-border-default pt-5">
         {current > 0 && <Button type="button" variant="secondary" disabled={busy} onClick={() => onStep(current - 1)}>Back</Button>}
         {actions}

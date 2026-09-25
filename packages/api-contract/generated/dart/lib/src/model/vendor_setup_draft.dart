@@ -5,6 +5,7 @@
 // ignore_for_file: unused_element
 import 'package:built_collection/built_collection.dart';
 import 'package:materyalph_api_client/src/model/vendor_setup_draft_delivery.dart';
+import 'package:materyalph_api_client/src/model/store_operating_day.dart';
 import 'package:materyalph_api_client/src/model/vendor_setup_draft_vehicles_inner.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
@@ -16,12 +17,14 @@ part 'vendor_setup_draft.g.dart';
 /// Properties:
 /// * [draftLockVersion] - Workstream draft version; zero on first save. Send together with the required organization guard. Omission retains legacy behavior without draft-level comparison. A stale draft returns 409 STALE_VERSION; a stale organization returns 409 RESOURCE_VERSION_CONFLICT.
 /// * [organizationLockVersion]
+/// * [formState] - Encrypted JSON setup form progress. Unfinished vehicle entries are not operational configurations. Returned privately as setup.form_state.
 /// * [publicStoreName]
 /// * [description]
 /// * [bulkCapability]
 /// * [fulfillmentMethod]
 /// * [publicEmail]
 /// * [publicPhone]
+/// * [operatingSchedule] - Complete replacement of the normal weekly schedule. All seven distinct weekdays are required. Closed days have null times; Open days need a same-day opening and later closing time.
 /// * [delivery]
 /// * [vehicles]
 @BuiltValue()
@@ -32,6 +35,10 @@ abstract class VendorSetupDraft implements Built<VendorSetupDraft, VendorSetupDr
 
   @BuiltValueField(wireName: r'organization_lock_version')
   int get organizationLockVersion;
+
+  /// Encrypted JSON setup form progress. Unfinished vehicle entries are not operational configurations. Returned privately as setup.form_state.
+  @BuiltValueField(wireName: r'form_state')
+  String? get formState;
 
   @BuiltValueField(wireName: r'public_store_name')
   String? get publicStoreName;
@@ -51,6 +58,10 @@ abstract class VendorSetupDraft implements Built<VendorSetupDraft, VendorSetupDr
 
   @BuiltValueField(wireName: r'public_phone')
   String? get publicPhone;
+
+  /// Complete replacement of the normal weekly schedule. All seven distinct weekdays are required. Closed days have null times; Open days need a same-day opening and later closing time.
+  @BuiltValueField(wireName: r'operating_schedule')
+  BuiltList<StoreOperatingDay>? get operatingSchedule;
 
   @BuiltValueField(wireName: r'delivery')
   VendorSetupDraftDelivery? get delivery;
@@ -93,6 +104,13 @@ class _$VendorSetupDraftSerializer implements PrimitiveSerializer<VendorSetupDra
       object.organizationLockVersion,
       specifiedType: const FullType(int),
     );
+    if (object.formState != null) {
+      yield r'form_state';
+      yield serializers.serialize(
+        object.formState,
+        specifiedType: const FullType(String),
+      );
+    }
     if (object.publicStoreName != null) {
       yield r'public_store_name';
       yield serializers.serialize(
@@ -133,6 +151,13 @@ class _$VendorSetupDraftSerializer implements PrimitiveSerializer<VendorSetupDra
       yield serializers.serialize(
         object.publicPhone,
         specifiedType: const FullType.nullable(String),
+      );
+    }
+    if (object.operatingSchedule != null) {
+      yield r'operating_schedule';
+      yield serializers.serialize(
+        object.operatingSchedule,
+        specifiedType: const FullType(BuiltList, [FullType(StoreOperatingDay)]),
       );
     }
     if (object.delivery != null) {
@@ -187,6 +212,14 @@ class _$VendorSetupDraftSerializer implements PrimitiveSerializer<VendorSetupDra
           ) as int;
           result.organizationLockVersion = valueDes;
           break;
+        case r'form_state':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.formState = valueDes;
+          break;
         case r'public_store_name':
           final valueDes = serializers.deserialize(
             value,
@@ -234,6 +267,14 @@ class _$VendorSetupDraftSerializer implements PrimitiveSerializer<VendorSetupDra
           ) as String?;
           if (valueDes == null) continue;
           result.publicPhone = valueDes;
+          break;
+        case r'operating_schedule':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltList, [FullType(StoreOperatingDay)]),
+          ) as BuiltList<StoreOperatingDay>?;
+          if (valueDes == null) continue;
+          result.operatingSchedule.replace(valueDes);
           break;
         case r'delivery':
           final valueDes = serializers.deserialize(

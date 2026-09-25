@@ -16,10 +16,13 @@ use App\Http\Controllers\Api\Auth\ResendVerificationController;
 use App\Http\Controllers\Api\Auth\SessionController;
 use App\Http\Controllers\Api\Auth\VerifyEmailController;
 use App\Http\Controllers\Api\HealthController;
+use App\Http\Controllers\Api\PublicStoreProfileController;
 use App\Http\Controllers\Api\XenditAccountVerificationWebhookController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', HealthController::class);
+Route::get('/stores', [PublicStoreProfileController::class, 'index'])->middleware('throttle:auth-public');
+Route::get('/stores/{storeId}/profile', PublicStoreProfileController::class)->whereUuid('storeId')->middleware('throttle:auth-public');
 Route::get('/agreements/current', AgreementController::class);
 
 require __DIR__.'/account.php';

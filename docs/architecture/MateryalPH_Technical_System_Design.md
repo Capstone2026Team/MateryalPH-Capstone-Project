@@ -383,7 +383,7 @@ Use `SELECT ... FOR UPDATE`, deterministic row ordering, database constraints, a
 
 | Command | Authority and output |
 | --- | --- |
-| POST `/vendor-tax-profiles/{id}/submit` or `/review` | Owner submits; Verification/finance permission reviews assigned evidence; Manager may draft only |
+| POST `/vendor-tax-profiles/{id}/submit` or `/review` | Owner submits; Verification/finance permission reviews assigned evidence; employee roles cannot edit protected business verification |
 | POST `/remittance-assessments/{id}/reconcile` | Finance reviewer, matching assignment/issuer evidence; never a Buyer payment-success trigger |
 | POST `/fee-statements/{id}/approve` or `/payments` | Finance approves unmodified draft sources; Vendor Owner pays issued positive collectible amount with PLATFORM_FEE_PAYMENT |
 | POST `/physical-payment-records` or `/physical-reimbursements/{id}/confirm` | Existing authorized Vendor recorder or Buyer/authorized case reviewer respectively; evidence and remaining-amount guard |
@@ -455,7 +455,7 @@ Authorization checks combine platform type, account state, organization membersh
 
 All rules are implemented as backend policies and feature tests. Hiding a navigation item is only a user-interface convenience.
 
-**Finance and market permissions.** Owner submits legal tax declarations, accepts commission Terms and pays fee statements. Manager may view own finance and draft corrections but cannot attest/pay in the Owner's place. Only Owner/Manager receive `materials_analytics.view_competitors`; no delegation to other staff is allowed. Own-listing editing still requires its normal policy. Admin `analytics.view_aggregates` is separate from `materials_analytics.inspect_sources` and every finance permission. Super Admin receives `finance.view`, `finance.review_tax`, `finance.approve_statements`, `finance.export`, `finance.record_external_evidence` and source inspection. Custom roles may receive only explicitly approved grants. Tax overrides, adjustments and report packages require different named preparer/reviewer users, including two named demo accounts. None of these roles may bypass the disabled LIVE gate or change payout destinations.
+**Finance and market permissions.** Owner submits legal tax declarations, accepts commission Terms and pays fee statements. Wallet, Earnings, financial information and financial corrections are Owner-only. Managers retain operational E-Invoice and performance access without protected financial access. Only Owner/Manager receive `materials_analytics.view_competitors`; no delegation to other staff is allowed. Own-listing editing still requires its normal policy. Admin `analytics.view_aggregates` is separate from `materials_analytics.inspect_sources` and every finance permission. Super Admin receives `finance.view`, `finance.review_tax`, `finance.approve_statements`, `finance.export`, `finance.record_external_evidence` and source inspection. Custom roles may receive only explicitly approved grants. Tax overrides, adjustments and report packages require different named preparer/reviewer users, including two named demo accounts. None of these roles may bypass the disabled LIVE gate or change payout destinations.
 
 ### 11.2 Admin Roles
 

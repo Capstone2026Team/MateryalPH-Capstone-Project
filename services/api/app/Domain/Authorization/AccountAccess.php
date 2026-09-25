@@ -26,7 +26,7 @@ final class AccountAccess
         if ($user->account_type === 'VENDOR') {
             $member = DB::table('vendor_memberships as m')->join('vendor_organizations as o', 'o.id', '=', 'm.vendor_organization_id')
                 ->where('m.user_id', $user->getKey())->where('m.status', 'ACTIVE')->where('o.account_status', 'ACTIVE')
-                ->first(['m.id', 'm.role', 'm.vendor_organization_id', 'm.can_manage_staff']);
+                ->first(['m.id', 'm.role', 'm.vendor_organization_id', 'm.can_manage_staff', 'o.staff_disputes_enabled']);
             if ($member === null || ! in_array($member->role, self::VENDOR_ROLES, true)) {
                 throw new AuthenticationException('MEMBERSHIP_NOT_ACTIVE', 'Your membership does not permit access.', 403);
             }
@@ -35,6 +35,9 @@ final class AccountAccess
             $membershipId = $member->id;
             $delegated = $role === 'STORE_MANAGER' && (bool) $member->can_manage_staff;
             $permissions = $this->vendorPermissions($role, $delegated);
+            if (! $member->staff_disputes_enabled && in_array($role, ['STORE_STAFF', 'CUSTOMER_SERVICE'], true)) {
+                $permissions = array_values(array_diff($permissions, ['portal.disputes']));
+            }
         } elseif ($user->account_type === 'ADMIN') {
             $member = DB::table('admin_memberships as m')->join('platform_roles as r', 'r.id', '=', 'm.platform_role_id')
                 ->where('m.user_id', $user->getKey())->where('m.status', 'ACTIVE')->where('r.platform', 'ADMIN')
@@ -62,7 +65,7 @@ final class AccountAccess
     public function vendorPermissions(string $role, bool $delegated = false): array
     {
         $permissions = match ($role) {
-            'OWNER', 'STORE_MANAGER' => ['quotations.publish', 'orders.set_nrpc', 'orders.confirm', 'catalog.manage', 'inventory.manage', 'compliance.submit', 'auto_accept.configure', 'fulfillment.record', 'finance.view', 'finance.draft_corrections', 'materials_analytics.view_competitors', 'vendor.onboarding.manage', 'vendor.onboarding.private_documents'],
+            'OWNER', 'STORE_MANAGER' => ['quotations.publish', 'orders.set_nrpc', 'orders.confirm', 'catalog.manage', 'inventory.manage', 'compliance.submit', 'auto_accept.configure', 'fulfillment.record', 'materials_analytics.view_competitors'],
             'STORE_STAFF' => ['quotations.publish', 'orders.set_nrpc', 'orders.confirm', 'catalog.manage', 'inventory.manage', 'compliance.submit', 'auto_accept.view_outcomes'],
             'CUSTOMER_SERVICE' => ['orders.confirm', 'auto_accept.view_outcomes'],
             'INVENTORY' => ['catalog.manage', 'inventory.manage', 'compliance.submit', 'auto_accept.manage_allotment'],
@@ -70,11 +73,23 @@ final class AccountAccess
             default => [],
         };
         if ($role === 'OWNER') {
-            $permissions = [...$permissions, 'staff.manage', 'managers.manage', 'staff.delegate', 'organization.legal', 'organization.delete', 'payments.configure', 'finance.attest', 'finance.pay', 'vendor.onboarding.submit', 'vendor.payment.configure', 'vendor.activation'];
+            $permissions = [...$permissions, 'staff.manage', 'managers.manage', 'staff.delegate', 'organization.legal', 'organization.delete', 'payments.configure', 'finance.attest', 'finance.pay', 'finance.view', 'finance.draft_corrections', 'vendor.onboarding.manage', 'vendor.onboarding.private_documents', 'vendor.onboarding.submit', 'vendor.payment.configure', 'vendor.activation'];
         } elseif ($role === 'STORE_MANAGER' && $delegated) {
             $permissions[] = 'staff.manage';
         }
 
-        return $permissions;
+        $sections = match ($role) {
+            'OWNER' => ['orders', 'fulfillment', 'messages', 'invoices', 'notifications', 'disputes', 'products', 'vehicles', 'wallet', 'performance', 'earnings', 'tracking'],
+            'STORE_MANAGER' => ['orders', 'fulfillment', 'messages', 'invoices', 'notifications', 'disputes', 'products', 'vehicles', 'performance'],
+            'STORE_STAFF', 'CUSTOMER_SERVICE' => ['orders', 'fulfillment', 'messages', 'invoices', 'notifications', 'disputes', 'products'],
+            'INVENTORY' => ['orders', 'notifications', 'products'],
+            'FULFILLMENT' => ['orders', 'fulfillment', 'messages', 'invoices', 'notifications', 'products', 'vehicles'],
+            default => [],
+        };
+        if ($role === 'STORE_MANAGER' && $delegated) {
+            $sections[] = 'tracking';
+        }
+
+        return [...$permissions, ...array_map(fn (string $section): string => 'portal.'.$section, $sections)];
     }
 }

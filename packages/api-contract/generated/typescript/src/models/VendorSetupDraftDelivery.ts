@@ -21,7 +21,7 @@ import { mapValues } from '../runtime';
 export interface VendorSetupDraftDelivery {
     [key: string]: any | any;
     /**
-     *
+     * Omission retains the saved limit; new coverage defaults to the approved 50 km procurement limit. New vehicle rates inherit coverage.
      */
     maximumDistanceKm?: number;
     /**

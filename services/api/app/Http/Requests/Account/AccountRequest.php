@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Account;
 
+use App\Domain\Vendors\IssueVendorInvitation;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
@@ -35,6 +36,8 @@ final class AccountRequest extends FormRequest
             'revokeSessions' => ['scope' => ['required', Rule::in(['OTHERS', 'ALL'])]],
             'acceptAgreements' => ['version_ids' => ['required', 'array', 'min:1', 'max:20'], 'version_ids.*' => ['required', 'uuid', 'distinct']],
             'delegate' => ['can_manage_staff' => ['required', 'boolean']],
+            'staffDisputes' => ['enabled' => ['required', 'boolean'], 'lock_version' => ['required', 'integer', 'min:1']],
+            'updateStaff' => ['full_name' => ['required', 'string', 'max:160'], 'role' => ['required', Rule::in(IssueVendorInvitation::ROLES)], 'lock_version' => ['required', 'integer', 'min:1']],
             'changeMembership' => ['status' => ['required', Rule::in(['ACTIVE', 'SUSPENDED', 'DEACTIVATED'])]],
             'inviteAdmin' => ['email' => ['required', 'email:rfc', 'max:254'], 'role_id' => ['required', 'uuid']],
             'changeAdmin' => ['lock_version' => ['required', 'integer', 'min:1'], 'reason' => ['required', 'string', 'min:3', 'max:500'], 'status' => ['required_without:role_id', Rule::in(['ACTIVE', 'SUSPENDED', 'DEACTIVATED'])], 'role_id' => ['required_without:status', 'uuid']],

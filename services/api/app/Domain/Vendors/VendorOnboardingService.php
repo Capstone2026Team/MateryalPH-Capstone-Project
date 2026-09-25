@@ -67,13 +67,12 @@ final class VendorOnboardingService
             'privacy_acknowledgement' => ['label' => 'Privacy acknowledgement', 'level' => 'REQUIRED'],
         ],
         'STORE_SETUP' => [
-            'public_store_profile' => ['label' => 'Public store profile', 'level' => 'REQUIRED'],
-            'store_media' => ['label' => 'Store media', 'level' => 'OPTIONAL'],
-            'bulk_capability' => ['label' => 'Bulk capability', 'level' => 'REQUIRED'],
-            'fulfillment_method' => ['label' => 'Fulfillment method', 'level' => 'REQUIRED'],
+            'public_store_profile' => ['label' => 'Public Store Profile', 'level' => 'REQUIRED'],
+            'bulk_capability' => ['label' => 'Bulk Capability', 'level' => 'REQUIRED'],
+            'fulfillment_method' => ['label' => 'Fulfillment Method', 'level' => 'REQUIRED'],
             'delivery_configuration' => ['label' => 'Delivery configuration', 'level' => 'CONDITIONALLY_REQUIRED'],
             'payment_connection' => ['label' => 'Xendit TEST connection', 'level' => 'REQUIRED'],
-            'team' => ['label' => 'Team accounts', 'level' => 'OPTIONAL'],
+            'store_operation' => ['label' => 'Store Operation', 'level' => 'REQUIRED'],
         ],
     ];
 
@@ -123,16 +122,31 @@ final class VendorOnboardingService
             throw new AuthenticationException('RESOURCE_NOT_FOUND', 'The Vendor organization is unavailable.', 404);
         }
 
+        if (! $canReadPrivate) {
+            $readiness = $this->readinessForOrganization($organizationId);
+            $readiness['blockers'] = [];
+
+            return [
+                'lock_version' => (int) $organization->lock_version, 'drafts' => [], 'requirements' => [], 'step_completion' => [],
+                'organization' => ['id' => (string) $organization->id, 'store_name' => $organization->store_name],
+                'sections' => [], 'verification' => [], 'setup' => ['status' => $organization->store_setup_status],
+                'activation' => ['status' => $organization->store_activation_status, 'marketplace_discoverability_status' => $organization->marketplace_discoverability_status, 'readiness' => $readiness],
+                'welcome_required' => false, 'permissions' => $scope['permissions'],
+            ];
+        }
+
+        $readiness = $this->readinessForOrganization($organizationId);
+        $organization = DB::table('vendor_organizations')->where('id', $organizationId)->first();
         $steps = DB::table('vendor_onboarding_requirements')->where('vendor_organization_id', $organizationId)->where('is_current', true)->orderBy('section')->orderBy('id')->get();
         $verificationSteps = $steps->where('section', 'STORE_VERIFICATION')->values();
         $setupSteps = $steps->where('section', 'STORE_SETUP')->values();
-        $readiness = $this->readinessForOrganization($organizationId);
         $profile = DB::table('store_profiles')->where('vendor_organization_id', $organizationId)->first();
+        $operatingSchedule = $profile === null ? [] : app(StoreOperatingSchedule::class)->weekly((string) $profile->id);
         $classification = DB::table('vendor_classifications')->where('vendor_organization_id', $organizationId)->first();
         $address = DB::table('addresses')->where('owner_type', 'VENDOR_ORGANIZATION')->where('owner_id', $organizationId)->where('is_current', true)->first();
         $tax = DB::table('vendor_tax_profiles as p')->leftJoin('vendor_tax_profile_versions as v', 'v.id', '=', 'p.current_version_id')->where('p.vendor_organization_id', $organizationId)->first(['p.status', 'p.environment', 'p.lock_version', 'p.attested_at', 'v.version', 'v.entity_class', 'v.registration_category', 'v.vat_category', 'v.vat_verified_category', 'v.tin_encrypted', 'v.declaration_claim', 'v.taxable_year', 'v.bir_cor_reference', 'v.fiscal_year_start_month', 'v.taxpayer_key_last4', 'v.tin_last4', 'v.tax_details', 'v.owner_attested_at']);
-        $payment = DB::table('vendor_payment_accounts')->where('vendor_organization_id', $organizationId)->first(['environment', 'provider', 'provider_account_id', 'connection_status', 'provider_status', 'capabilities', 'invitation_url_masked', 'last_reconciled_at', 'last_error_code', 'lock_version']);
-        $media = DB::table('store_media as m')->join('files as f', 'f.id', '=', 'm.file_id')->join('store_profiles as p', 'p.id', '=', 'm.store_profile_id')->where('p.vendor_organization_id', $organizationId)->orderBy('m.sort_order')->orderBy('m.id')->get(['m.id', 'm.file_id', 'm.kind', 'm.alt_text', 'm.status', 'f.original_name', 'f.scan_state']);
+        $payment = DB::table('vendor_payment_accounts')->where('vendor_organization_id', $organizationId)->first(['environment', 'provider', 'provider_account_id', 'connection_status', 'provider_status', 'capabilities', 'invitation_url_masked', 'last_reconciled_at', 'last_error_code', 'lock_version', 'provider_associated_at']);
+        $media = DB::table('store_media as m')->join('files as f', 'f.id', '=', 'm.file_id')->join('store_profiles as p', 'p.id', '=', 'm.store_profile_id')->where('p.vendor_organization_id', $organizationId)->where('m.status', 'READY')->where('f.scan_state', 'CLEAN')->orderBy('m.sort_order')->orderBy('m.id')->get(['m.id', 'm.file_id', 'm.kind', 'm.alt_text', 'm.status', 'f.original_name', 'f.scan_state']);
         $delivery = DB::table('delivery_service_areas')->where('vendor_organization_id', $organizationId)->first(['area_type', 'maximum_distance_km', 'coverage_notes', 'active', 'version', 'lock_version']);
         $vehicles = $this->vehicles($organizationId);
         $privacyAcknowledged = $this->privacyNoticeAccepted($request, $organizationId);
@@ -160,6 +174,7 @@ final class VendorOnboardingService
                 'pending_store_email' => $organization->pending_store_email,
                 'pending_store_email_expires_at' => $organization->pending_store_email_expires_at,
                 'store_phone' => $organization->store_phone,
+                'staff_disputes_enabled' => (bool) $organization->staff_disputes_enabled,
                 'lock_version' => (int) $organization->lock_version,
             ],
             'sections' => [
@@ -169,26 +184,28 @@ final class VendorOnboardingService
             'verification' => [
                 'status' => $organization->store_verification_status,
                 'privacy_acknowledged' => $privacyAcknowledged,
-                'documents' => $canReadPrivate ? DB::table('vendor_documents as d')->where('d.review_submitted', true)->join('vendor_document_versions as v', 'v.id', '=', 'd.current_version_id')->join('files as f', 'f.id', '=', 'v.file_id')->where('d.vendor_organization_id', $organizationId)->get(['d.requirement_key', 'd.document_type', 'd.status', 'd.superseded_at', 'v.id', 'v.business_document_id', 'v.file_id', 'v.version', 'v.scan_state', 'v.content_validation_state', 'v.content_hash', 'v.mime_type', 'v.byte_size', 'v.supersedes_version_id', 'f.original_name'])->map(function (object $row): array {
+                'documents' => DB::table('vendor_documents as d')->where('d.review_submitted', true)->join('vendor_document_versions as v', 'v.id', '=', 'd.current_version_id')->join('files as f', 'f.id', '=', 'v.file_id')->where('d.vendor_organization_id', $organizationId)->get(['d.requirement_key', 'd.document_type', 'd.status', 'd.superseded_at', 'v.id', 'v.business_document_id', 'v.file_id', 'v.version', 'v.scan_state', 'v.content_validation_state', 'v.content_hash', 'v.mime_type', 'v.byte_size', 'v.supersedes_version_id', 'f.original_name'])->map(function (object $row): array {
                     $versions = DB::table('vendor_document_versions as v')->join('files as f', 'f.id', '=', 'v.file_id')->where('v.business_document_id', $row->business_document_id)->orderByDesc('v.version')->limit(5)->get(['v.id', 'v.file_id', 'v.version', 'v.scan_state', 'f.original_name'])->map(fn (object $version): array => (array) $version)->all();
                     unset($row->business_document_id);
 
                     return (array) $row + ['recent_versions' => $versions];
-                })->all() : [],
-                'form_state' => $canReadPrivate ? $this->verificationFormState($organizationId, true) : [],
-                'pending_documents' => $canReadPrivate ? DB::table('vendor_pending_documents as p')->join('files as f', 'f.id', '=', 'p.file_id')->where('p.vendor_organization_id', $organizationId)->get(['p.requirement_key', 'p.file_id', 'f.original_name', 'f.byte_size', 'f.content_type'])->map(fn (object $row): array => (array) $row + ['status' => 'PENDING_SUBMISSION'])->all() : [],
+                })->all(),
+                'form_state' => $this->verificationFormState($organizationId, true),
+                'pending_documents' => DB::table('vendor_pending_documents as p')->join('files as f', 'f.id', '=', 'p.file_id')->where('p.vendor_organization_id', $organizationId)->get(['p.requirement_key', 'p.file_id', 'f.original_name', 'f.byte_size', 'f.content_type'])->map(fn (object $row): array => (array) $row + ['status' => 'PENDING_SUBMISSION'])->all(),
                 'commission_terms' => $this->commissionTerms($request, $organizationId),
                 'privacy_notice' => collect($this->agreements->current($request))->firstWhere('code', 'PRIVACY_NOTICE'),
-                'legal_identity' => $canReadPrivate ? $this->legalIdentity($organization) : null,
-                'representative' => $canReadPrivate ? $this->authority->snapshot($organizationId) : null,
-                'authority_review' => $canReadPrivate ? DB::table('vendor_authority_reviews')->where('representative_version_id', $this->authority->current($organizationId)?->id)->orderByDesc('reviewed_at')->first(['decision', 'scope', 'reason', 'reviewed_at']) : null,
-                'owner' => $canReadPrivate ? $this->ownerInformation($organizationId) : null,
+                'legal_identity' => $this->legalIdentity($organization),
+                'representative' => $this->authority->snapshot($organizationId),
+                'authority_review' => DB::table('vendor_authority_reviews')->where('representative_version_id', $this->authority->current($organizationId)?->id)->orderByDesc('reviewed_at')->first(['decision', 'scope', 'reason', 'reviewed_at']),
+                'owner' => $this->ownerInformation($organizationId),
                 'classification' => $classification === null ? null : ['supplier_type' => $classification->supplier_type, 'niches' => $this->jsonArray($classification->niches), 'custom_label' => $classification->custom_label, 'custom_labels' => $this->jsonArray($classification->custom_labels), 'version' => (int) $classification->version, 'lock_version' => (int) $classification->lock_version],
                 'address' => $address === null ? null : $this->address($address),
-                'tax_profile' => ! $canReadPrivate || $tax === null ? null : $this->tax($tax),
+                'tax_profile' => $tax === null ? null : $this->tax($tax),
             ],
             'setup' => [
+                'form_state' => $this->setupFormState($organizationId),
                 'status' => $organization->store_setup_status,
+                'operating_schedule' => $operatingSchedule,
                 'profile' => $profile === null ? null : ['public_store_name' => $profile->public_store_name, 'description' => $profile->description, 'bulk_capability' => $profile->bulk_capability === null ? null : (bool) $profile->bulk_capability, 'fulfillment_method' => $profile->fulfillment_method, 'public_email' => $profile->public_email, 'public_phone' => $profile->public_phone, 'status' => $profile->status, 'version' => (int) $profile->version, 'lock_version' => (int) $profile->lock_version],
                 'delivery' => $delivery === null ? null : (array) $delivery,
                 'vehicles' => $vehicles,
@@ -406,9 +423,15 @@ final class VendorOnboardingService
             $organization = DB::table('vendor_organizations')->where('id', $organizationId)->lockForUpdate()->first();
             $this->assertVersion($organization, $input['organization_lock_version'] ?? null);
             $this->drafts->save($organizationId, 'STORE_SETUP', $input, (int) $request->user()->getKey(), isset($input['draft_lock_version']) ? (int) $input['draft_lock_version'] : null);
+            if (array_key_exists('form_state', $input) && array_diff(array_keys($input), ['organization_lock_version', 'draft_lock_version', 'form_state']) === []) {
+                DB::table('vendor_organizations')->where('id', $organizationId)->update(['store_setup_status' => $organization->store_setup_status === 'COMPLETED' ? 'COMPLETED' : 'IN_PROGRESS', 'lock_version' => (int) $organization->lock_version + 1, 'updated_at' => now()]);
+                $this->audit->account($request, 'VENDOR_STORE_SETUP_DRAFT_SAVED', 'VENDOR_ORGANIZATION', $organizationId, after: ['fields' => ['form_state']]);
+
+                return;
+            }
             $existing = DB::table('store_profiles')->where('vendor_organization_id', $organizationId)->first();
             $publicProfileOnly = $existing !== null && $organization->store_setup_status === 'COMPLETED'
-                && array_diff(array_keys($input), ['organization_lock_version', 'draft_lock_version', 'public_store_name', 'description', 'public_email', 'public_phone']) === [];
+                && array_diff(array_keys($input), ['organization_lock_version', 'draft_lock_version', 'public_store_name', 'description', 'public_email', 'public_phone', 'operating_schedule']) === [];
             $profile = [
                 'public_store_name' => trim((string) ($input['public_store_name'] ?? ($existing === null ? $organization->store_name : $existing->public_store_name))),
                 'description' => array_key_exists('description', $input) ? $input['description'] : ($existing === null ? null : $existing->description),
@@ -416,7 +439,7 @@ final class VendorOnboardingService
                 'fulfillment_method' => $input['fulfillment_method'] ?? ($existing === null ? null : $existing->fulfillment_method),
                 'public_email' => array_key_exists('public_email', $input) ? $input['public_email'] : ($existing === null ? null : $existing->public_email),
                 'public_phone' => array_key_exists('public_phone', $input) ? $input['public_phone'] : ($existing === null ? null : $existing->public_phone),
-                'status' => 'DRAFT',
+                'status' => $organization->store_setup_status === 'COMPLETED' ? 'COMPLETED' : 'DRAFT',
                 'version' => ($existing === null ? 0 : (int) $existing->version) + 1,
                 'lock_version' => ($existing === null ? 0 : (int) $existing->lock_version) + 1,
                 'updated_at' => now(),
@@ -429,29 +452,35 @@ final class VendorOnboardingService
             } else {
                 DB::table('store_profiles')->where('id', $existing->id)->update($profile);
             }
+            $profileId = (string) ($existing->id ?? $profile['id']);
+            if (isset($input['operating_schedule'])) {
+                $schedule = app(StoreOperatingSchedule::class);
+                $before = $schedule->weekly($profileId);
+                $schedule->replaceWeekly($profileId, $input['operating_schedule']);
+                if ($before !== $schedule->weekly($profileId)) {
+                    $this->audit->account($request, 'VENDOR_STORE_OPERATION_UPDATED', 'STORE_PROFILE', $profileId, after: ['operating_schedule' => $schedule->weekly($profileId)]);
+                }
+            }
             if ($publicProfileOnly) {
                 DB::table('store_profiles')->where('id', $existing->id)->update(['status' => $existing->status]);
                 DB::table('vendor_organizations')->where('id', $organizationId)->update(['lock_version' => (int) $organization->lock_version + 1, 'updated_at' => now()]);
-                $this->audit->account($request, 'VENDOR_PUBLIC_STORE_PROFILE_UPDATED', 'STORE_PROFILE', (string) $existing->id, after: ['fields' => array_keys($input)]);
+                if (array_diff(array_keys($input), ['organization_lock_version', 'draft_lock_version', 'operating_schedule']) !== []) {
+                    $this->audit->account($request, 'VENDOR_PUBLIC_STORE_PROFILE_UPDATED', 'STORE_PROFILE', (string) $existing->id, after: ['fields' => array_keys($input)]);
+                }
 
                 return;
             }
             $method = (string) ($profile['fulfillment_method'] ?? '');
             if ($method === 'SELF_PICKUP') {
-                $this->setStep($organizationId, 'STORE_SETUP', 'delivery_configuration', 'NOT_APPLICABLE', 'Vendor selected Self-Pickup only.');
                 DB::table('delivery_service_areas')->where('vendor_organization_id', $organizationId)->update(['active' => false, 'updated_at' => now()]);
             } elseif (in_array($method, ['VENDOR_DELIVERY', 'BOTH'], true)) {
                 $delivery = is_array($input['delivery'] ?? null) ? $input['delivery'] : [];
                 $this->saveDelivery($organizationId, $delivery);
-                $this->setStep($organizationId, 'STORE_SETUP', 'delivery_configuration', 'IN_PROGRESS');
             }
             if (is_array($input['vehicles'] ?? null)) {
                 $this->saveVehicles($organizationId, $input['vehicles']);
             }
-            $this->setStep($organizationId, 'STORE_SETUP', 'public_store_profile', $profile['public_store_name'] !== '' ? 'IN_PROGRESS' : 'NOT_STARTED');
-            $this->setStep($organizationId, 'STORE_SETUP', 'bulk_capability', $profile['bulk_capability'] === null ? 'NOT_STARTED' : 'IN_PROGRESS');
-            $this->setStep($organizationId, 'STORE_SETUP', 'fulfillment_method', $method === '' ? 'NOT_STARTED' : 'IN_PROGRESS');
-            DB::table('vendor_organizations')->where('id', $organizationId)->update(['store_setup_status' => 'IN_PROGRESS', 'lock_version' => (int) $organization->lock_version + 1, 'updated_at' => now()]);
+            DB::table('vendor_organizations')->where('id', $organizationId)->update(['store_setup_status' => $organization->store_setup_status === 'COMPLETED' ? 'COMPLETED' : 'IN_PROGRESS', 'lock_version' => (int) $organization->lock_version + 1, 'updated_at' => now()]);
             $this->audit->account($request, 'VENDOR_STORE_SETUP_DRAFT_SAVED', 'STORE_PROFILE', (string) ($existing->id ?? $profile['id']), after: ['fields' => array_keys($input)]);
             $this->requirements->synchronize($organizationId);
         });
@@ -478,30 +507,29 @@ final class VendorOnboardingService
             }
             $this->assertVersion($organization, $input['organization_lock_version'] ?? null);
             $profile = DB::table('store_profiles')->where('vendor_organization_id', $organizationId)->first();
-            if ($profile === null || $profile->public_store_name === '' || $profile->bulk_capability === null || ! in_array($profile->fulfillment_method, ['SELF_PICKUP', 'VENDOR_DELIVERY', 'BOTH'], true)) {
+            if ($profile === null || trim((string) $profile->public_store_name) === '' || trim((string) $profile->description) === '' || $profile->bulk_capability === null || ! in_array($profile->fulfillment_method, ['SELF_PICKUP', 'VENDOR_DELIVERY', 'BOTH'], true)) {
                 throw new AuthenticationException('STORE_SETUP_INCOMPLETE', 'Complete the public profile, bulk capability, and fulfillment method before finishing Store Setup.', 422);
+            }
+            foreach (['logo_file_id' => 'LOGO', 'banner_file_id' => 'BANNER'] as $mediaField => $kind) {
+                if ($profile->{$mediaField} === null || ! DB::table('store_media as m')->join('files as f', 'f.id', '=', 'm.file_id')->where('m.store_profile_id', $profile->id)->where('m.file_id', $profile->{$mediaField})->where('m.kind', $kind)->where('m.status', 'READY')->where('f.scan_state', 'CLEAN')->exists()) {
+                    throw new AuthenticationException('STORE_PROFILE_MEDIA_REQUIRED', 'Upload a valid Store Logo and Store Banner before finishing Store Setup.', 422);
+                }
+            }
+            if (! app(StoreOperatingSchedule::class)->valid(app(StoreOperatingSchedule::class)->weekly((string) $profile->id))) {
+                throw new AuthenticationException('STORE_OPERATION_REQUIRED', 'Set a valid Open or Closed state for every day before finishing Store Setup.', 422);
             }
             if (in_array($profile->fulfillment_method, ['VENDOR_DELIVERY', 'BOTH'], true)) {
                 $delivery = DB::table('delivery_service_areas')->where('vendor_organization_id', $organizationId)->where('active', true)->first();
                 if ($delivery === null || $delivery->maximum_distance_km === null || (int) $delivery->maximum_distance_km < 1) {
                     throw new AuthenticationException('DELIVERY_CONFIGURATION_REQUIRED', 'Add the delivery distance before finishing Store Setup.', 422);
                 }
-                if (! $this->vehicleConfigurationReady($organizationId)) {
+                if (($this->setupFormState($organizationId)['vehicles'] ?? []) !== [] || ! $this->vehicleConfigurationReady($organizationId)) {
                     throw new AuthenticationException('VEHICLE_CONFIGURATION_REQUIRED', 'Configure at least one active vehicle with a current non-negative delivery rate before finishing Store Setup.', 422);
                 }
             }
             $payment = DB::table('vendor_payment_accounts')->where('vendor_organization_id', $organizationId)->first();
-            if ($payment === null || $payment->environment !== 'TEST' || $payment->connection_status !== 'CONNECTED') {
-                throw new AuthenticationException('PAYMENT_CONNECTION_REQUIRED', 'Reconcile the Xendit TEST connection before finishing Store Setup.', 422);
-            }
-            $this->setStep($organizationId, 'STORE_SETUP', 'public_store_profile', 'COMPLETED');
-            $this->setStep($organizationId, 'STORE_SETUP', 'bulk_capability', 'COMPLETED');
-            $this->setStep($organizationId, 'STORE_SETUP', 'fulfillment_method', 'COMPLETED');
-            $this->setStep($organizationId, 'STORE_SETUP', 'payment_connection', 'COMPLETED');
-            if ($profile->fulfillment_method === 'SELF_PICKUP') {
-                $this->setStep($organizationId, 'STORE_SETUP', 'delivery_configuration', 'NOT_APPLICABLE', 'Vendor selected Self-Pickup only.');
-            } else {
-                $this->setStep($organizationId, 'STORE_SETUP', 'delivery_configuration', 'COMPLETED');
+            if ($payment === null || $payment->environment !== 'TEST' || $payment->provider_associated_at === null || $payment->connection_status !== 'CONNECTED_TEST' || $payment->provider_status !== 'LIVE' || empty($payment->provider_account_id)) {
+                throw new AuthenticationException('PAYMENT_CONNECTION_REQUIRED', 'Connect the Xendit TEST sub-account before finishing Store Setup.', 422);
             }
             DB::table('store_profiles')->where('id', $profile->id)->update(['status' => 'COMPLETED', 'updated_at' => now()]);
             DB::table('vendor_organizations')->where('id', $organizationId)->update(['store_setup_status' => 'COMPLETED', 'lock_version' => (int) $organization->lock_version + 1, 'updated_at' => now()]);
@@ -750,7 +778,7 @@ final class VendorOnboardingService
     public function uploadMedia(Request $request, UploadedFile $file, string $kind, ?string $altText = null): array
     {
         $this->requireVendorPermission($request, 'vendor.onboarding.manage');
-        if (! in_array($kind, ['LOGO', 'BANNER', 'PROMOTIONAL_IMAGE', 'PROMOTIONAL_VIDEO'], true)) {
+        if (! in_array($kind, ['LOGO', 'BANNER', 'PROMOTIONAL_IMAGE', 'PROMOTIONAL_VIDEO', 'VEHICLE_IMAGE'], true)) {
             throw new AuthenticationException('MEDIA_TYPE_UNAVAILABLE', 'This store-media type is unavailable.', 422);
         }
         $allowed = $kind === 'PROMOTIONAL_VIDEO' ? ['video/mp4'] : ['image/jpeg', 'image/png', 'image/webp'];
@@ -760,24 +788,58 @@ final class VendorOnboardingService
         $organizationId = $this->organizationId($request);
 
         $profile = DB::table('store_profiles')->where('vendor_organization_id', $organizationId)->first();
-        if ($profile === null) {
+        if ($profile === null && $kind !== 'VEHICLE_IMAGE') {
             throw new AuthenticationException('STORE_PROFILE_REQUIRED', 'Save the public store profile before uploading media.', 422);
         }
-        $fileId = $this->storeUploadedFile($request, $file, $organizationId, 'STORE_MEDIA');
+        $fileId = $this->storeUploadedFile($request, $file, $organizationId, $kind === 'VEHICLE_IMAGE' ? 'VEHICLE_IMAGE' : 'STORE_MEDIA');
+        if ($kind === 'VEHICLE_IMAGE') {
+            $this->audit->account($request, 'VENDOR_VEHICLE_IMAGE_UPLOADED', 'FILE', $fileId);
+
+            return ['id' => $fileId, 'file_id' => $fileId, 'kind' => $kind, 'status' => 'READY'];
+        }
 
         return DB::transaction(function () use ($request, $fileId, $profile, $kind, $altText, $organizationId): array {
             DB::table('vendor_organizations')->where('id', $organizationId)->lockForUpdate()->first();
             $mediaId = (string) Str::uuid7();
+            if (in_array($kind, ['LOGO', 'BANNER'], true)) {
+                DB::table('store_media')->where('store_profile_id', $profile->id)->where('kind', $kind)->where('status', 'READY')->update(['status' => 'REPLACED', 'updated_at' => now()]);
+            }
             DB::table('store_media')->insert(['id' => $mediaId, 'store_profile_id' => $profile->id, 'file_id' => $fileId, 'kind' => $kind, 'alt_text' => $altText, 'sort_order' => 0, 'status' => 'READY', 'created_at' => now(), 'updated_at' => now()]);
             $update = $kind === 'LOGO' ? ['logo_file_id' => $fileId] : ($kind === 'BANNER' ? ['banner_file_id' => $fileId] : []);
             if ($update !== []) {
                 DB::table('store_profiles')->where('id', $profile->id)->update($update + ['updated_at' => now()]);
             }
-            $this->setStep($organizationId, 'STORE_SETUP', 'store_media', 'IN_PROGRESS');
+            DB::table('vendor_organizations')->where('id', $organizationId)->increment('lock_version');
             $this->audit->account($request, 'VENDOR_STORE_MEDIA_UPLOADED', 'STORE_MEDIA', $mediaId, after: ['kind' => $kind]);
 
             return ['id' => $mediaId, 'kind' => $kind, 'status' => 'READY'];
         });
+    }
+
+    /** @return array<string, mixed> */
+    public function removeMedia(Request $request, string $mediaId): array
+    {
+        $this->requireVendorPermission($request, 'vendor.onboarding.manage');
+        $organizationId = $this->organizationId($request);
+        DB::transaction(function () use ($request, $organizationId, $mediaId): void {
+            DB::table('vendor_organizations')->where('id', $organizationId)->lockForUpdate()->first();
+            $media = DB::table('store_media as m')->join('store_profiles as p', 'p.id', '=', 'm.store_profile_id')
+                ->where('p.vendor_organization_id', $organizationId)->where('m.id', $mediaId)
+                ->first(['m.id', 'm.file_id', 'm.kind', 'm.status', 'p.id as profile_id', 'p.logo_file_id', 'p.banner_file_id']);
+            if ($media === null || ! in_array($media->kind, ['LOGO', 'BANNER'], true)) {
+                throw new AuthenticationException('RESOURCE_NOT_FOUND', 'The Store Logo or Banner is unavailable.', 404);
+            }
+            $field = $media->kind === 'LOGO' ? 'logo_file_id' : 'banner_file_id';
+            if ($media->status !== 'READY' || $media->{$field} !== $media->file_id) {
+                throw new AuthenticationException('RESOURCE_VERSION_CONFLICT', 'This image has already been replaced or removed. Refresh Store Setup.', 409);
+            }
+            DB::table('store_profiles')->where('id', $media->profile_id)->update([$field => null, 'updated_at' => now()]);
+            DB::table('store_media')->where('id', $mediaId)->update(['status' => 'REMOVED', 'updated_at' => now()]);
+            DB::table('vendor_organizations')->where('id', $organizationId)->increment('lock_version');
+            $this->audit->account($request, 'VENDOR_STORE_MEDIA_REMOVED', 'STORE_MEDIA', $mediaId, after: ['kind' => $media->kind]);
+        });
+
+        return $this->snapshot($request);
     }
 
     /** @return array{url: string, expires_at: string} */
@@ -808,83 +870,152 @@ final class VendorOnboardingService
         }, $file->original_name ?: 'private-evidence', ['Content-Type' => $file->content_type, 'Cache-Control' => 'private, no-store', 'X-Content-Type-Options' => 'nosniff']);
     }
 
-    /**
-     * @param  array<string, mixed>  $input
-     * @return array<string, mixed>
-     */
-    public function capturePaymentConnection(Request $request, array $input): array
+    /** @return array<string, mixed> */
+    public function connectPayment(Request $request): array
+    {
+        $this->requirePaymentOwner($request);
+        $this->requireIdempotencyKey($request);
+        $organizationId = $this->organizationId($request);
+        $account = DB::transaction(function () use ($request, $organizationId): object {
+            DB::table('vendor_organizations')->where('id', $organizationId)->lockForUpdate()->firstOrFail();
+            $this->authority->assertAttestation($request, $organizationId, 'PAYMENT_CONFIGURATION');
+            $this->ensureBlueprint($organizationId);
+            $account = DB::table('vendor_payment_accounts')->where('vendor_organization_id', $organizationId)->first();
+            if ($account?->provider_associated_at !== null) {
+                return $account;
+            }
+            if ($account?->onboarding_requested_at !== null) {
+                throw new AuthenticationException('PROVIDER_ONBOARDING_UNCERTAIN', 'The previous Xendit request has no confirmed result. MateryalPH paused another account creation to prevent a duplicate. The saved attempt must be checked before retrying.', 409);
+            }
+            $values = ['onboarding_requested_at' => now(), 'connection_status' => 'CONNECTING', 'last_error_code' => null, 'updated_at' => now()];
+            if ($account === null) {
+                DB::table('vendor_payment_accounts')->insert($values + ['id' => (string) Str::uuid7(), 'vendor_organization_id' => $organizationId, 'provider' => 'XENDIT', 'environment' => 'TEST', 'created_at' => now()]);
+            } else {
+                DB::table('vendor_payment_accounts')->where('id', $account->id)->update($values);
+            }
+            $this->setStep($organizationId, 'STORE_SETUP', 'payment_connection', 'IN_PROGRESS');
+            $this->audit->account($request, 'VENDOR_PAYMENT_CONNECTION_ATTEMPT', 'VENDOR_PAYMENT_ACCOUNT', (string) DB::table('vendor_payment_accounts')->where('vendor_organization_id', $organizationId)->value('id'));
+
+            return DB::table('vendor_payment_accounts')->where('vendor_organization_id', $organizationId)->firstOrFail();
+        });
+        if ($account->provider_associated_at !== null) {
+            return $this->paymentOnboardingResult($account);
+        }
+        $organization = DB::table('vendor_organizations')->where('id', $organizationId)->firstOrFail();
+        try {
+            $accountEmail = $organization->store_email_verified_at !== null && is_string($organization->store_email) && $organization->store_email !== ''
+                ? $organization->store_email : (string) $request->user()->email;
+            $result = $this->xendit->initiate($accountEmail, (string) $organization->store_name);
+            if (! preg_match('/^[A-Za-z0-9_-]{3,128}$/', $result['provider_account_id']) || ! in_array($result['status'], ['REGISTERED', 'LIVE'], true)) {
+                throw new XenditProviderUnavailable('The TEST provider response was invalid.');
+            }
+        } catch (XenditProviderUnavailable $error) {
+            $accountAccessDenied = $error->providerHttpStatus === 403 && $error->providerErrorCode === 'DISALLOWED_OPERATION';
+            $accountConflict = $error->providerHttpStatus === 409;
+            $code = $accountAccessDenied ? 'PROVIDER_ACCOUNT_ACCESS_REQUIRED' : ($accountConflict ? 'PROVIDER_ACCOUNT_CONFLICT' : ($error->creationRejected ? 'PROVIDER_UNAVAILABLE' : 'PROVIDER_ONBOARDING_UNCERTAIN'));
+            DB::transaction(function () use ($request, $account, $error, $code): void {
+                DB::table('vendor_payment_accounts')->where('id', $account->id)->update([
+                    'connection_status' => $error->creationRejected ? 'CONNECTION_FAILED' : 'CONNECTING',
+                    'onboarding_requested_at' => $error->creationRejected ? null : $account->onboarding_requested_at,
+                    'last_error_code' => $code, 'updated_at' => now(),
+                ]);
+                $this->audit->account($request, 'VENDOR_PAYMENT_CONNECTION_FAILED', 'VENDOR_PAYMENT_ACCOUNT', (string) $account->id, after: ['code' => $code, 'environment' => 'TEST', 'provider_http_status' => $error->providerHttpStatus, 'provider_error_code' => $error->providerErrorCode, 'provider_request_id' => $error->providerRequestId], succeeded: false);
+            });
+            throw new AuthenticationException($code, $accountAccessDenied
+                ? 'Xendit denied TEST sub-account creation. Confirm that the TEST master key has Account Write permission and xenPlatform access.'.($error->providerRequestId ? ' Xendit request ID: '.$error->providerRequestId.'.' : '')
+                : ($accountConflict
+                    ? 'Xendit rejected TEST sub-account creation with a conflict. Check whether the verified Store Email or Owner email is already used by a Xendit account.'.($error->providerRequestId ? ' Xendit request ID: '.$error->providerRequestId.'.' : '')
+                : ($error->creationRejected
+                    ? 'MateryalPH could not connect your store to Xendit. Please try again.'
+                    : 'MateryalPH could not confirm the Xendit connection. Contact support to check the existing attempt before retrying.')), $accountConflict ? 409 : 503);
+        }
+        DB::transaction(function () use ($request, $organizationId, $account, $result): void {
+            DB::table('vendor_organizations')->where('id', $organizationId)->lockForUpdate()->firstOrFail();
+            DB::table('vendor_payment_accounts')->where('id', $account->id)->update([
+                'provider_account_id' => $result['provider_account_id'], 'provider_associated_at' => now(),
+                'provider_status' => $result['status'], 'connection_status' => 'PENDING',
+                'provider_created_at' => $result['provider_created_at'], 'last_reconciled_at' => now(),
+                'invitation_url_encrypted' => null, 'invitation_url_hash' => null, 'invitation_url_masked' => null,
+                'capabilities' => json_encode(['test_account_provisioned' => false], JSON_THROW_ON_ERROR),
+                'last_error_code' => null, 'lock_version' => (int) $account->lock_version + 1, 'updated_at' => now(),
+            ]);
+            $this->setStep($organizationId, 'STORE_SETUP', 'payment_connection', 'IN_PROGRESS');
+            $this->audit->account($request, 'VENDOR_PAYMENT_CREATED_TEST', 'VENDOR_PAYMENT_ACCOUNT', (string) $account->id, after: ['environment' => 'TEST', 'provider_status' => $result['status'], 'status' => 'PENDING']);
+        });
+
+        $associated = DB::table('vendor_payment_accounts')->where('id', $account->id)->firstOrFail();
+        $this->reconcileProviderAccount($associated);
+
+        return $this->paymentOnboardingResult(DB::table('vendor_payment_accounts')->where('id', $account->id)->firstOrFail());
+    }
+
+    /** @return array<string, mixed> */
+    private function paymentOnboardingResult(object $account): array
+    {
+        return ['status' => $account->connection_status === 'CONNECTED_TEST' && $account->environment === 'TEST' && $account->provider_status === 'LIVE' ? 'CONNECTED_TEST' : ($account->connection_status === 'PENDING' && $account->provider_associated_at !== null ? 'PENDING' : 'NOT_CONNECTED'), 'environment' => 'TEST'];
+    }
+
+    private function requirePaymentOwner(Request $request): void
     {
         $this->requireVendorPermission($request, 'vendor.payment.configure');
         if ($this->vendorScope($request)['role'] !== 'OWNER') {
-            throw new AuthenticationException('PERMISSION_DENIED', 'Only the Vendor Owner can configure the payment connection.', 403);
+            throw new AuthenticationException('PERMISSION_DENIED', 'Only the Vendor Owner can configure the Xendit connection.', 403);
         }
-        $link = trim((string) ($input['invitation_url'] ?? ''));
-        $accountId = trim((string) ($input['provider_account_id'] ?? ''));
-        $parts = parse_url($link);
-        $host = mb_strtolower(rtrim((string) ($parts['host'] ?? ''), '.'));
-        $hostAllowed = preg_match('/(^|\.)xendit\.(?:co|com)$/i', $host) === 1;
-        if ($link === '' || strlen($link) > 2048 || ($parts['scheme'] ?? null) !== 'https' || ! $hostAllowed || isset($parts['port'], $parts['user'], $parts['pass']) || $accountId === '' || ! preg_match('/^[A-Za-z0-9_-]{3,128}$/', $accountId)) {
-            throw new AuthenticationException('PAYMENT_CONNECTION_INVALID', 'Enter the exact HTTPS Xendit invitation link and TEST sub-account ID.', 422);
-        }
-        $key = $this->requireIdempotencyKey($request);
-        $organizationId = $this->organizationId($request);
-        $masked = 'https://'.$host.'/…';
-        DB::transaction(function () use ($request, $link, $accountId, $organizationId, $key, $masked): void {
-            $organization = DB::table('vendor_organizations')->where('id', $organizationId)->lockForUpdate()->firstOrFail();
-            if ($this->idempotent($request, 'VENDOR_PAYMENT_CONNECTION_CAPTURE', $key, $organizationId)) {
-                return;
-            }
-            $this->authority->assertAttestation($request, $organizationId, 'PAYMENT_CONFIGURATION');
-            $existing = DB::table('vendor_payment_accounts')->where('vendor_organization_id', $organizationId)->lockForUpdate()->first();
-            $paymentId = $existing === null ? (string) Str::uuid7() : (string) $existing->id;
-            $values = [
-                'provider' => 'XENDIT', 'environment' => 'TEST', 'provider_account_id' => $accountId, 'connection_status' => 'PENDING',
-                'invitation_url_encrypted' => Crypt::encryptString($link), 'invitation_url_hash' => hash_hmac('sha256', $link, (string) config('app.key')), 'invitation_url_masked' => $masked,
-                'last_error_code' => null, 'lock_version' => ($existing === null ? 0 : (int) $existing->lock_version) + 1, 'updated_at' => now(),
-            ];
-            if ($existing === null) {
-                DB::table('vendor_payment_accounts')->insert($values + ['id' => $paymentId, 'vendor_organization_id' => $organizationId, 'created_at' => now()]);
-            } else {
-                DB::table('vendor_payment_accounts')->where('id', $existing->id)->update($values);
-            }
-            $this->setStep($organizationId, 'STORE_SETUP', 'payment_connection', 'IN_PROGRESS');
-            DB::table('vendor_organizations')->where('id', $organizationId)->update(['lock_version' => (int) $organization->lock_version + 1, 'updated_at' => now()]);
-            $this->claimIdempotency($request, 'VENDOR_PAYMENT_CONNECTION_CAPTURE', $key, $organizationId, 200);
-            $this->audit->account($request, 'VENDOR_PAYMENT_CONNECTION_CAPTURED', 'VENDOR_PAYMENT_ACCOUNT', $paymentId, after: ['provider' => 'XENDIT', 'environment' => 'TEST', 'provider_account_id' => $accountId, 'invitation_url' => 'REDACTED']);
-        });
-
-        return $this->snapshot($request);
     }
 
     /** @return array<string, mixed> */
     public function reconcilePaymentConnection(Request $request): array
     {
-        $this->requireVendorPermission($request, 'vendor.payment.configure');
-        if ($this->vendorScope($request)['role'] !== 'OWNER') {
-            throw new AuthenticationException('PERMISSION_DENIED', 'Only the Vendor Owner can reconcile the payment connection.', 403);
+        $this->requirePaymentOwner($request);
+        $account = DB::table('vendor_payment_accounts')->where('vendor_organization_id', $this->organizationId($request))->first();
+        if ($account === null || $account->provider_associated_at === null) {
+            throw new AuthenticationException('PAYMENT_CONNECTION_REQUIRED', 'Connect Xendit first. Manually entered references cannot prove a Vendor connection.', 422);
         }
-        $organizationId = $this->organizationId($request);
-        $account = DB::table('vendor_payment_accounts')->where('vendor_organization_id', $organizationId)->lockForUpdate()->first();
-        if ($account === null || $account->provider_account_id === null) {
-            throw new AuthenticationException('PAYMENT_CONNECTION_REQUIRED', 'Capture the Xendit TEST sub-account before reconciling it.', 422);
+
+        return $this->reconcileProviderAccount($account);
+    }
+
+    /** @return array<string, mixed> */
+    private function reconcileProviderAccount(object $account): array
+    {
+        if ($account->environment !== 'TEST' || $account->provider_associated_at === null) {
+            throw new AuthenticationException('PAYMENT_CONNECTION_REQUIRED', 'A backend-associated TEST sub-account is required.', 422);
         }
         try {
-            $result = $this->xendit->reconcile($account->provider_account_id);
+            $result = $this->xendit->reconcile((string) $account->provider_account_id);
         } catch (XenditProviderUnavailable) {
-            DB::table('vendor_payment_accounts')->where('id', $account->id)->update(['connection_status' => 'PENDING', 'last_error_code' => 'PROVIDER_UNAVAILABLE', 'updated_at' => now()]);
+            DB::table('vendor_payment_accounts')->where('id', $account->id)->where('lock_version', $account->lock_version)->update(['last_error_code' => 'PROVIDER_UNAVAILABLE', 'updated_at' => now()]);
 
-            return ['status' => 'PENDING', 'provider_available' => false, 'message' => 'Xendit TEST reconciliation is unavailable. The connection remains unverified.'];
+            return ['status' => $account->connection_status, 'provider_available' => false, 'message' => 'Xendit is temporarily unavailable. The saved connection state is unchanged.'];
         }
         if ($result['provider_account_id'] !== $account->provider_account_id) {
-            DB::table('vendor_payment_accounts')->where('id', $account->id)->update(['connection_status' => 'FAILED', 'last_error_code' => 'PROVIDER_ACCOUNT_MISMATCH', 'updated_at' => now()]);
             throw new AuthenticationException('PROVIDER_ACCOUNT_MISMATCH', 'The provider account does not match this Vendor organization.', 422);
         }
-        $status = strtoupper($result['status']);
-        $connection = in_array($status, ['PASSED', 'VERIFIED', 'ACTIVE'], true) ? 'CONNECTED' : (in_array($status, ['FAILED'], true) ? 'FAILED' : 'PENDING');
-        DB::table('vendor_payment_accounts')->where('id', $account->id)->update(['connection_status' => $connection, 'provider_status' => $status, 'capabilities' => json_encode($this->safeMetadata($result['capabilities']), JSON_THROW_ON_ERROR), 'last_reconciled_at' => now(), 'last_error_code' => null, 'updated_at' => now()]);
-        $this->setStep($organizationId, 'STORE_SETUP', 'payment_connection', $connection === 'CONNECTED' ? 'COMPLETED' : 'IN_PROGRESS');
+        $status = $result['status'];
+        $connection = $status === 'LIVE' ? 'CONNECTED_TEST' : 'PENDING';
 
-        return ['status' => $connection, 'provider_status' => $status, 'provider_available' => true];
+        return DB::transaction(function () use ($account, $status, $connection): array {
+            DB::table('vendor_organizations')->where('id', $account->vendor_organization_id)->lockForUpdate()->firstOrFail();
+            $current = DB::table('vendor_payment_accounts')->where('id', $account->id)->lockForUpdate()->firstOrFail();
+            if ((int) $current->lock_version !== (int) $account->lock_version) {
+                return ['status' => $current->connection_status, 'provider_available' => true];
+            }
+            DB::table('vendor_payment_accounts')->where('id', $account->id)->update([
+                'connection_status' => $connection, 'provider_status' => $status,
+                'capabilities' => json_encode(['test_account_provisioned' => $connection === 'CONNECTED_TEST'], JSON_THROW_ON_ERROR),
+                'invitation_url_encrypted' => null,
+                'last_reconciled_at' => now(), 'last_error_code' => null, 'lock_version' => (int) $current->lock_version + 1, 'updated_at' => now(),
+            ]);
+            $this->setStep((string) $account->vendor_organization_id, 'STORE_SETUP', 'payment_connection', $connection === 'CONNECTED_TEST' ? 'COMPLETED' : 'IN_PROGRESS');
+            if ($current->connection_status !== $connection) {
+                $this->audit->account(request(), 'VENDOR_PAYMENT_REGISTRATION_RECONCILED', 'VENDOR_PAYMENT_ACCOUNT', (string) $account->id, before: ['status' => $current->connection_status], after: ['status' => $connection, 'provider_status' => $status, 'environment' => 'TEST']);
+                if ($connection === 'CONNECTED_TEST') {
+                    $this->notifyOrganization(request(), (string) $account->vendor_organization_id, 'Xendit — Connected', 'The xenPlatform TEST sub-account is connected. You can now proceed to the next step.', 'VENDOR_PAYMENT_CONNECTION');
+                }
+            }
+
+            return ['status' => $connection, 'provider_status' => $status, 'provider_available' => true];
+        });
     }
 
     /**
@@ -900,26 +1031,30 @@ final class VendorOnboardingService
         if (! hash_equals($expected, (string) $verificationToken)) {
             throw new AuthenticationException('WEBHOOK_INVALID', 'The provider notification could not be verified.', 401);
         }
-        $eventId = $payload['id'] ?? null;
-        $accountId = $payload['for_user_id'] ?? $payload['account_id'] ?? $payload['subaccount_id'] ?? null;
-        $status = $payload['status'] ?? $payload['verification_status'] ?? null;
-        if (! is_string($eventId) || ! is_string($accountId) || ! is_string($status)) {
-            throw new AuthenticationException('WEBHOOK_INVALID', 'The provider notification is incomplete.', 422);
+        $event = $payload['event'] ?? null;
+        $data = $payload['data'] ?? null;
+        $accountId = is_array($data) ? ($data['user_id'] ?? null) : null;
+        $created = $payload['created'] ?? null;
+        if (! in_array($event, ['account.registered', 'account.activated'], true) || ! is_string($accountId) || ! preg_match('/^[A-Za-z0-9_-]{3,128}$/', $accountId) || ! is_string($created) || strlen($created) > 64 || strtotime($created) === false) {
+            throw new AuthenticationException('WEBHOOK_INVALID', 'The provider notification is incomplete or unsupported.', 422);
         }
-        if (DB::table('webhook_events')->where('provider', 'XENDIT')->where('provider_event_id', $eventId)->exists()) {
+        // Managed account events do not have a required event ID.
+        $eventId = hash('sha256', $event.'|'.$accountId.'|'.$created);
+        DB::table('webhook_events')->insertOrIgnore(['id' => (string) Str::uuid7(), 'provider' => 'XENDIT', 'provider_event_id' => $eventId, 'payload_hash' => hash('sha256', json_encode($payload, JSON_THROW_ON_ERROR)), 'state' => 'RECEIVED', 'created_at' => now(), 'updated_at' => now()]);
+        $events = DB::table('webhook_events')->where('provider', 'XENDIT')->where('provider_event_id', $eventId);
+        if ((clone $events)->value('state') === 'PROCESSED') {
             return ['accepted' => true, 'duplicate' => true];
         }
-        DB::transaction(function () use ($eventId, $accountId, $status, $payload): void {
-            DB::table('webhook_events')->insert(['id' => (string) Str::uuid7(), 'provider' => 'XENDIT', 'provider_event_id' => $eventId, 'payload_hash' => hash('sha256', json_encode($payload, JSON_THROW_ON_ERROR)), 'state' => 'RECEIVED', 'created_at' => now(), 'updated_at' => now()]);
-            $account = DB::table('vendor_payment_accounts')->where('provider', 'XENDIT')->where('environment', 'TEST')->where('provider_account_id', $accountId)->lockForUpdate()->first();
-            if ($account === null) {
-                return;
-            }
-            $connection = strtoupper($status) === 'PASSED' ? 'CONNECTED' : (strtoupper($status) === 'FAILED' ? 'FAILED' : 'PENDING');
-            DB::table('vendor_payment_accounts')->where('id', $account->id)->update(['connection_status' => $connection, 'provider_status' => strtoupper($status), 'last_provider_event_at' => now(), 'updated_at' => now()]);
-            $this->setStep((string) $account->vendor_organization_id, 'STORE_SETUP', 'payment_connection', $connection === 'CONNECTED' ? 'COMPLETED' : 'IN_PROGRESS');
-            DB::table('webhook_events')->where('provider', 'XENDIT')->where('provider_event_id', $eventId)->update(['state' => 'PROCESSED', 'processed_at' => now(), 'updated_at' => now()]);
-        });
+        $account = DB::table('vendor_payment_accounts')->where('provider', 'XENDIT')->where('environment', 'TEST')->where('provider_account_id', $accountId)->whereNotNull('provider_associated_at')->first();
+        if ($account === null) {
+            return ['accepted' => true, 'duplicate' => false];
+        }
+        $result = $this->reconcileProviderAccount($account);
+        if (! $result['provider_available'] || $result['status'] !== 'CONNECTED_TEST') {
+            throw new AuthenticationException('PROVIDER_CONFIRMATION_PENDING', 'The registration event is awaiting authoritative reconciliation.', 503);
+        }
+        DB::table('vendor_payment_accounts')->where('id', $account->id)->update(['last_provider_event_at' => now()]);
+        $events->update(['state' => 'PROCESSED', 'processed_at' => now(), 'updated_at' => now()]);
 
         return ['accepted' => true, 'duplicate' => false];
     }
@@ -1056,7 +1191,8 @@ final class VendorOnboardingService
                 'S2' => ['bulk_capability', 'fulfillment_method', 'delivery_configuration'],
                 'S3' => ['payment_connection'],
                 'S4' => [],
-                'S5' => ['public_store_profile', 'bulk_capability', 'fulfillment_method', 'delivery_configuration', 'payment_connection'],
+                'S5' => ['store_operation'],
+                'S6' => ['public_store_profile', 'bulk_capability', 'fulfillment_method', 'delivery_configuration', 'payment_connection', 'store_operation'],
             ],
         ];
         $result = [];
@@ -1208,6 +1344,11 @@ final class VendorOnboardingService
             return [
                 'id' => $vehicle->id,
                 'vehicle_type' => $vehicle->vehicle_type,
+                'vehicle_category' => $vehicle->vehicle_category,
+                'custom_type_name' => $vehicle->custom_type_name,
+                'brand' => $vehicle->brand,
+                'mixer_capacity_m3' => $vehicle->mixer_capacity_m3 === null ? null : (float) $vehicle->mixer_capacity_m3,
+                'active' => (bool) $vehicle->active,
                 'name' => $vehicle->name,
                 'capacity_kg' => (float) $vehicle->capacity_kg,
                 'number_available' => (int) $vehicle->number_available,
@@ -1239,10 +1380,31 @@ final class VendorOnboardingService
 
             return ['key' => $step->requirement_key, 'label' => $stepLabel, 'level' => $step->level, 'status' => $step->status, 'applicability_reason' => $step->applicability_reason, 'reason' => $step->last_reason, 'version' => (int) $step->version, 'lock_version' => (int) $step->lock_version];
         })->all();
+        if ($key === 'STORE_SETUP') {
+            $byKey = collect($rows)->keyBy('key');
+            $fulfillment = $byKey->get('fulfillment_method');
+            $delivery = $byKey->get('delivery_configuration');
+            $fulfillmentStatus = $fulfillment['status'] ?? 'NOT_STARTED';
+            if ($fulfillmentStatus === 'COMPLETED' && ! in_array($delivery['status'] ?? '', ['COMPLETED', 'NOT_APPLICABLE'], true)) {
+                $fulfillmentStatus = 'IN_PROGRESS';
+            }
+            $rows = collect(['public_store_profile', 'bulk_capability', 'fulfillment_method', 'payment_connection', 'store_operation'])
+                ->map(function (string $requirementKey) use ($byKey, $fulfillmentStatus): ?array {
+                    $row = $byKey->get($requirementKey);
+                    if ($row !== null && $requirementKey === 'fulfillment_method') {
+                        $row['status'] = $fulfillmentStatus;
+                    }
+
+                    return $row;
+                })->filter()->values()->all();
+        }
         $applicable = array_values(array_filter($rows, fn (array $row): bool => $row['level'] !== 'OPTIONAL' && $row['status'] !== 'NOT_APPLICABLE'));
         $done = count(array_filter($applicable, fn (array $row): bool => in_array($row['status'], ['APPROVED', 'COMPLETED'], true)));
 
-        return ['key' => $key, 'label' => $label, 'status' => $rows === [] ? 'NOT_STARTED' : (count($applicable) > 0 && $done >= count($applicable) ? 'COMPLETE' : 'IN_PROGRESS'), 'complete' => min($done, count($applicable)), 'total' => count($applicable), 'progress' => ['complete' => min($done, count($applicable)), 'total' => count($applicable)], 'steps' => $rows];
+        $status = $rows === [] || ($done === 0 && collect($rows)->every(fn (array $row): bool => in_array($row['status'], ['NOT_STARTED', 'NOT_APPLICABLE'], true)))
+            ? 'NOT_STARTED' : (count($applicable) > 0 && $done >= count($applicable) ? 'COMPLETE' : 'IN_PROGRESS');
+
+        return ['key' => $key, 'label' => $label, 'status' => $status, 'complete' => min($done, count($applicable)), 'total' => count($applicable), 'progress' => ['complete' => min($done, count($applicable)), 'total' => count($applicable)], 'steps' => $rows];
     }
 
     /** @param array<string, mixed> $classification */
@@ -1496,6 +1658,16 @@ final class VendorOnboardingService
     }
 
     /** @return array<string, mixed> */
+    private function setupFormState(string $organizationId): array
+    {
+        $payload = DB::table('vendor_onboarding_drafts')->where('vendor_organization_id', $organizationId)->where('workstream', 'STORE_SETUP')->value('payload_encrypted');
+        $draft = is_string($payload) ? json_decode(Crypt::decryptString($payload), true, flags: JSON_THROW_ON_ERROR) : [];
+        $state = json_decode($draft['form_state'] ?? '{}', true, flags: JSON_THROW_ON_ERROR);
+
+        return is_array($state) ? $state : [];
+    }
+
+    /** @return array<string, mixed> */
     private function verificationFormState(string $organizationId, bool $masked = false): array
     {
         $payload = DB::table('vendor_onboarding_drafts')->where('vendor_organization_id', $organizationId)->where('workstream', 'STORE_VERIFICATION')->value('payload_encrypted');
@@ -1714,12 +1886,16 @@ final class VendorOnboardingService
     /** @param array<string, mixed> $delivery */
     private function saveDelivery(string $organizationId, array $delivery): void
     {
-        $distance = (int) ($delivery['maximum_distance_km'] ?? 0);
+        $existing = DB::table('delivery_service_areas')->where('vendor_organization_id', $organizationId)->first();
+        $distance = (int) ($delivery['maximum_distance_km'] ?? $existing->maximum_distance_km ?? 50);
         if ($distance < 1 || $distance > 1000) {
             throw new AuthenticationException('DELIVERY_CONFIGURATION_INVALID', 'Choose a delivery distance between 1 and 1000 km.', 422);
         }
-        $existing = DB::table('delivery_service_areas')->where('vendor_organization_id', $organizationId)->first();
-        $values = ['area_type' => 'RADIUS', 'maximum_distance_km' => $distance, 'coverage_notes' => $delivery['coverage_notes'] ?? null, 'active' => true, 'version' => ($existing === null ? 0 : (int) $existing->version) + 1, 'lock_version' => ($existing === null ? 0 : (int) $existing->lock_version) + 1, 'updated_at' => now()];
+        $notes = array_key_exists('coverage_notes', $delivery) ? $delivery['coverage_notes'] : ($existing->coverage_notes ?? null);
+        if ($existing !== null && $existing->area_type === 'RADIUS' && (int) $existing->maximum_distance_km === $distance && $existing->coverage_notes === $notes && $existing->active) {
+            return;
+        }
+        $values = ['area_type' => 'RADIUS', 'maximum_distance_km' => $distance, 'coverage_notes' => $notes, 'active' => true, 'version' => ($existing === null ? 0 : (int) $existing->version) + 1, 'lock_version' => ($existing === null ? 0 : (int) $existing->lock_version) + 1, 'updated_at' => now()];
         if ($existing === null) {
             DB::table('delivery_service_areas')->insert($values + ['id' => (string) Str::uuid7(), 'vendor_organization_id' => $organizationId, 'created_at' => now()]);
         } else {
@@ -1744,7 +1920,7 @@ final class VendorOnboardingService
 
             return (int) $value;
         };
-        foreach ($vehicles as $vehicle) {
+        foreach ($vehicles as $index => $vehicle) {
             if (! is_array($vehicle)) {
                 throw new AuthenticationException('VEHICLE_CONFIGURATION_INVALID', 'Each vehicle must be a structured configuration.', 422);
             }
@@ -1754,6 +1930,12 @@ final class VendorOnboardingService
             if ($hasId && ($existing === null || (string) $existing->vendor_organization_id !== $organizationId)) {
                 throw new AuthenticationException('RESOURCE_NOT_FOUND', 'The requested vehicle configuration is unavailable.', 404);
             }
+            if ($existing !== null && ($vehicle['active'] ?? true) === false) {
+                DB::table('vendor_vehicles')->where('id', $id)->update(['active' => false, 'lock_version' => (int) $existing->lock_version + 1, 'updated_at' => now()]);
+
+                continue;
+            }
+            $configuration = VehicleConfiguration::normalize($vehicle, $index);
             $vehicleType = trim((string) ($vehicle['vehicle_type'] ?? ''));
             $name = trim((string) ($vehicle['name'] ?? ''));
             $capacity = $vehicle['capacity_kg'] ?? null;
@@ -1763,7 +1945,7 @@ final class VendorOnboardingService
             }
             $dimensions = [];
             foreach (['cargo_length_m', 'cargo_width_m', 'cargo_height_m'] as $dimension) {
-                $value = $vehicle[$dimension] ?? null;
+                $value = $vehicleType === 'CONCRETE_MIXER' ? null : ($vehicle[$dimension] ?? null);
                 if ($value === null || $value === '') {
                     $dimensions[$dimension] = null;
 
@@ -1775,6 +1957,15 @@ final class VendorOnboardingService
                 $dimensions[$dimension] = (float) $value;
             }
             $values = ['vehicle_type' => $vehicleType, 'name' => $name, 'capacity_kg' => (float) $capacity, 'number_available' => (int) $numberAvailable, 'cargo_length_m' => $dimensions['cargo_length_m'], 'cargo_width_m' => $dimensions['cargo_width_m'], 'cargo_height_m' => $dimensions['cargo_height_m'], 'heavy_classification' => isset($vehicle['heavy_classification']) ? trim((string) $vehicle['heavy_classification']) : null, 'active' => true, 'lock_version' => ($existing === null ? 0 : (int) $existing->lock_version) + 1, 'updated_at' => now()];
+            $values = array_merge($values, $configuration);
+            $values['active'] = $vehicle['active'] ?? ($existing->active ?? true);
+            if (array_key_exists('image_file_id', $vehicle)) {
+                $imageId = $vehicle['image_file_id'];
+                if ($imageId !== null && ! DB::table('files')->where('id', $imageId)->where('owner_type', 'VENDOR_ORGANIZATION')->where('owner_id', $organizationId)->where('purpose', 'VEHICLE_IMAGE')->where('scan_state', 'CLEAN')->exists()) {
+                    throw new AuthenticationException('RESOURCE_NOT_FOUND', 'The vehicle image is unavailable.', 404);
+                }
+                $values['image_file_id'] = $imageId;
+            }
             if ($existing === null) {
                 DB::table('vendor_vehicles')->insert($values + ['id' => $id, 'vendor_organization_id' => $organizationId, 'created_at' => now()]);
             } else {
@@ -1800,17 +1991,7 @@ final class VendorOnboardingService
 
     private function vehicleConfigurationReady(string $organizationId): bool
     {
-        return DB::table('vendor_vehicles as vehicle')
-            ->join('vehicle_rate_versions as rate', 'rate.vendor_vehicle_id', '=', 'vehicle.id')
-            ->where('vehicle.vendor_organization_id', $organizationId)
-            ->where('vehicle.active', true)
-            ->where('vehicle.number_available', '>', 0)
-            ->where('vehicle.capacity_kg', '>', 0)
-            ->where('rate.base_fee_centavos', '>=', 0)
-            ->where('rate.per_km_centavos', '>=', 0)
-            ->where('rate.maximum_distance_km', '>', 0)
-            ->where('rate.effective_at', '<=', now())
-            ->exists();
+        return app(DeliveryRecommendationService::class)->eligibleVehicles($organizationId) !== [];
     }
 
     private function storeUploadedFile(Request $request, UploadedFile $file, string $organizationId, string $purpose): string
@@ -1846,7 +2027,7 @@ final class VendorOnboardingService
             }
             $query->where('f.owner_type', 'VENDOR_ORGANIZATION')->where('f.owner_id', $scope['organization_id'])
                 ->where(function ($owned) use ($scope): void {
-                    $owned->where(fn ($submitted) => $submitted->where('d.vendor_organization_id', $scope['organization_id'])->where('d.review_submitted', true))
+                    $owned->where('f.purpose', 'VEHICLE_IMAGE')->orWhere(fn ($submitted) => $submitted->where('d.vendor_organization_id', $scope['organization_id'])->where('d.review_submitted', true))
                         ->orWhereIn('f.id', DB::table('vendor_pending_documents')->where('vendor_organization_id', $scope['organization_id'])->select('file_id'))
                         ->orWhere(function ($media) use ($scope): void {
                             $media->where('p.vendor_organization_id', $scope['organization_id'])->where('f.purpose', 'STORE_MEDIA')->where('m.status', 'READY');
@@ -2017,6 +2198,6 @@ final class VendorOnboardingService
     /** @return array<string, mixed> */
     private function payment(object $payment): array
     {
-        return ['environment' => $payment->environment, 'provider' => $payment->provider, 'provider_account_id' => $payment->provider_account_id, 'connection_status' => $payment->connection_status, 'provider_status' => $payment->provider_status, 'capabilities' => is_string($payment->capabilities) ? (json_decode($payment->capabilities, true) ?: []) : ($payment->capabilities ?? []), 'invitation_url_masked' => $payment->invitation_url_masked, 'last_reconciled_at' => $payment->last_reconciled_at, 'last_error_code' => $payment->last_error_code, 'lock_version' => (int) $payment->lock_version];
+        return ['environment' => $payment->environment, 'provider' => $payment->provider, 'account_suffix' => $payment->provider_associated_at === null ? null : substr((string) $payment->provider_account_id, -4), 'connection_status' => $payment->provider_associated_at === null ? (in_array($payment->connection_status, ['CONNECTING', 'CONNECTION_FAILED'], true) ? $payment->connection_status : 'NOT_CONNECTED') : (in_array($payment->connection_status, ['CONNECTED_TEST', 'PENDING'], true) ? $payment->connection_status : 'NOT_CONNECTED'), 'provider_status' => $payment->provider_status, 'capabilities' => is_string($payment->capabilities) ? (json_decode($payment->capabilities, true) ?: []) : ($payment->capabilities ?? []), 'last_reconciled_at' => $payment->last_reconciled_at, 'last_error_code' => $payment->last_error_code, 'lock_version' => (int) $payment->lock_version];
     }
 }

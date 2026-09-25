@@ -27,6 +27,12 @@ void main() {
       // TODO
     });
 
+    // Current lock version of every applicable underlying requirement when deciding a grouped review item.
+    // BuiltMap<String, int> requirementVersions
+    test('to test the property `requirementVersions`', () async {
+      // TODO
+    });
+
     // String reason
     test('to test the property `reason`', () async {
       // TODO

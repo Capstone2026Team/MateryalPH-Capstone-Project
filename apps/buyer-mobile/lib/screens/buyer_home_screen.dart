@@ -5,6 +5,7 @@ import '../widgets/brand_lockup.dart';
 import '../widgets/auth_content.dart';
 import '../auth/auth_repository.dart';
 import 'buyer_profile_screen.dart';
+import 'buyer_store_browse_screen.dart';
 import '../widgets/buyer_account_widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -63,6 +64,9 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
         ),
         bottomNavigationBar: _navigation(),
       );
+    }
+    if (_destination == 1) {
+      return Scaffold(appBar: AppBar(title: const Text('Explore stores')), body: const BuyerStoreBrowseScreen(), bottomNavigationBar: _navigation());
     }
     if (_destination > 0) {
       const titles = ['Map', 'Explore', 'Projects', 'Message', 'Profile'];

@@ -18,7 +18,7 @@ final class VendorMediaUploadRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'kind' => ['required', Rule::in(['LOGO', 'BANNER', 'PROMOTIONAL_IMAGE', 'PROMOTIONAL_VIDEO'])],
+            'kind' => ['required', Rule::in(['LOGO', 'BANNER', 'PROMOTIONAL_IMAGE', 'PROMOTIONAL_VIDEO', 'VEHICLE_IMAGE'])],
             'file' => ['required', 'file', 'max:20480'],
             'alt_text' => ['sometimes', 'nullable', 'string', 'max:160'],
         ];

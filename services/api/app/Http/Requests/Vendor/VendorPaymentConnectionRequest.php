@@ -17,8 +17,8 @@ final class VendorPaymentConnectionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'invitation_url' => ['required', 'url:https', 'max:2048'],
-            'provider_account_id' => ['required', 'regex:/^[A-Za-z0-9_-]{3,128}$/'],
+            'invitation_url' => ['prohibited'],
+            'provider_account_id' => ['prohibited'],
         ];
     }
 }

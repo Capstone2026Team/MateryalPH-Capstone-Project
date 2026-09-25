@@ -9,7 +9,6 @@ use App\Http\ApiResponse;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rules\Password;
 
 final class AcceptVendorInvitationController extends Controller
 {
@@ -17,7 +16,7 @@ final class AcceptVendorInvitationController extends Controller
     {
         $input = $request->validate([
             'token' => ['required', 'string', 'max:256'], 'email' => ['required', 'email:rfc', 'max:254'],
-            'full_name' => ['required', 'string', 'max:160'], 'password' => ['required', 'confirmed', Password::min(14)->mixedCase()->numbers()],
+            'full_name' => ['required', 'string', 'max:160'], 'password' => ['required', 'string', 'confirmed', 'max:1024'],
             'role' => ['prohibited'], 'organization_id' => ['prohibited'], 'can_manage_staff' => ['prohibited'], 'account_type' => ['prohibited'],
         ]);
         $accept->handle($request, $input['token'], $input['email'], $input['full_name'], $input['password']);

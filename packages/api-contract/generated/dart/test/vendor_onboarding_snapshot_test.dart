@@ -42,7 +42,7 @@ void main() {
       // TODO
     });
 
-    // BuiltMap<String, JsonObject> setup
+    // VendorOnboardingSnapshotSetup setup
     test('to test the property `setup`', () async {
       // TODO
     });

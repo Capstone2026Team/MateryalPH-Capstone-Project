@@ -23,7 +23,8 @@ final class ResendVerificationController extends Controller
             ->whereRaw('LOWER(email) = ?', [mb_strtolower(trim($validated['email']))])
             ->whereIn('account_type', $accountTypes)
             ->first();
-        if ($user !== null && $user->account_status === 'PENDING_VERIFICATION') {
+        if ($user !== null && ($user->account_status === 'PENDING_VERIFICATION'
+            || ($user->account_status === 'ACTIVE' && $user->email_verified_at === null))) {
             $otps->issue($user->email, 'EMAIL_VERIFICATION', $user);
         }
 

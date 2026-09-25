@@ -12,6 +12,7 @@ export const setupSteps: OnboardingStep[] = [
   { label: 'Fulfillment Configuration', requirements: ['bulk_capability', 'fulfillment_method', 'delivery_configuration'] },
   { label: 'Xendit TEST Connection', requirements: ['payment_connection'] },
   { label: 'Team Accounts', requirements: ['team'] },
+  { label: 'Store Operation', requirements: ['store_operation'] },
   { label: 'Review and Complete', requirements: [] },
 ]
 

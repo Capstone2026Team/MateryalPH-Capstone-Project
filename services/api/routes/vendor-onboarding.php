@@ -24,9 +24,10 @@ Route::prefix('vendors/onboarding')->middleware([
     Route::delete('/documents/pending/{requirementKey}', [VendorOnboardingController::class, 'removePendingDocument']);
     Route::post('/documents', [VendorOnboardingController::class, 'uploadDocument'])->middleware('throttle:account-upload');
     Route::post('/media', [VendorOnboardingController::class, 'uploadMedia'])->middleware('throttle:account-upload');
+    Route::delete('/media/{mediaId}', [VendorOnboardingController::class, 'removeMedia'])->whereUuid('mediaId');
     Route::get('/files/{fileId}', [VendorOnboardingController::class, 'signedFile'])->whereUuid('fileId');
-    Route::post('/payment-connection', [VendorOnboardingController::class, 'capturePaymentConnection'])->middleware('throttle:account-security');
-    Route::post('/payment-connection/reconcile', [VendorOnboardingController::class, 'reconcilePaymentConnection'])->middleware('throttle:account-security');
+    Route::post('/payment-connection', [VendorOnboardingController::class, 'connectPayment'])->middleware('throttle:account-security');
+    Route::post('/payment-connection/reconcile', [VendorOnboardingController::class, 'reconcilePaymentConnection'])->middleware('throttle:vendor-payment-status');
     Route::post('/activation', [VendorOnboardingController::class, 'activate'])->middleware('throttle:account-security');
 });
 

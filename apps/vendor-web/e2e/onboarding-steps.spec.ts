@@ -3,8 +3,35 @@ import { randomUUID } from 'node:crypto'
 import { mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 
+test('Store Operation schedule stays readable at every viewport', async ({ page }, testInfo) => {
+  await page.goto('/onboarding/setup')
+  await page.getByRole('button', { name: '5 Store Operation' }).click()
+  const schedule = page.getByRole('region', { name: 'Weekly operating schedule' })
+  await expect(schedule).toBeVisible()
+  await page.getByRole('combobox', { name: 'Monday status' }).selectOption('OPEN')
+  await page.getByLabel('Monday opening time').fill('08:00')
+  await page.getByLabel('Monday closing time').fill('17:00')
+  await page.getByRole('checkbox', { name: 'Tuesday', exact: true }).check()
+  await page.getByRole('button', { name: 'Apply to Selected Days' }).click()
+  await expect(page.getByLabel('Tuesday opening time')).toHaveValue('08:00')
+  await page.getByRole('combobox', { name: 'Sunday status' }).selectOption('CLOSED')
+  await expect(page.getByLabel('Sunday opening time')).toBeDisabled()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  const fields = await schedule.locator('input[type="time"], select').evaluateAll(elements => elements.map(element => {
+    const rect = element.getBoundingClientRect()
+    return { left: rect.left, right: rect.right, height: rect.height }
+  }))
+  for (const field of fields) {
+    expect(field.left).toBeGreaterThanOrEqual(0)
+    expect(field.right).toBeLessThanOrEqual(page.viewportSize()!.width)
+    expect(field.height).toBeGreaterThanOrEqual(44)
+  }
+  await schedule.screenshot({ path: testInfo.outputPath('store-operation.png') })
+})
+
 test.beforeEach(async ({ page }) => {
   let commissionAccepted = false
+  let xenditConnected = false
   await page.route('**/api/v1/**', async route => {
     const path = new URL(route.request().url()).pathname
     let data: unknown = {}
@@ -12,20 +39,27 @@ test.beforeEach(async ({ page }) => {
       expect(route.request().postDataJSON()).toMatchObject({ organization_lock_version: 1, agreement_version_id: '01990000-0000-7000-8000-000000000001', accepted: true })
       commissionAccepted = true
     }
+    if (path.endsWith('/payment-connection')) { xenditConnected = true; data = { status: 'CONNECTED_TEST', environment: 'TEST' } }
     if (path.endsWith('/auth/csrf')) data = { csrf_token: randomUUID() }
     if (path.endsWith('/profile')) data = { id: 'preview-account', full_name: 'Vendor Owner', email: 'owner@example.test', account_type: 'VENDOR', account_status: 'ACTIVE', lock_version: 1, created_at: '2026-09-01T00:00:00Z', role: 'OWNER' }
-    if (path.endsWith('/onboarding') || path.endsWith('/verification') || path.endsWith('/verification/commission') || path.includes('/documents/pending/')) data = {
+    if (path.endsWith('/onboarding/setup') || path.endsWith('/onboarding') || path.endsWith('/verification') || path.endsWith('/verification/commission') || path.includes('/documents/pending/')) data = {
       step_completion: [], requirements: [], drafts: [], lock_version: 1,
       organization: { store_name: 'Sample Building Supply', registered_name: 'Sample Building Supply', business_type: 'CORPORATION', store_email: 'store@example.test', store_email_verified: true, lock_version: 1 },
-      welcome_required: false, permissions: ['vendor.onboarding.manage', 'vendor.onboarding.submit'],
+      welcome_required: false, permissions: ['vendor.onboarding.manage', 'vendor.onboarding.submit', 'vendor.payment.configure'],
       verification: { status: 'IN_PROGRESS', commission_terms: { can_accept: true, accepted: commissionAccepted, agreement: { id: '01990000-0000-7000-8000-000000000001', version: 1, content: ('Published TEST/DEMO commission terms. Vendor-paid 2% on completed materials after discounts excluding materials VAT. Monthly billing and credits follow the versioned policy.\n\n').repeat(12) } }, privacy_notice: { version: 1, content: 'Published TEST privacy notice.' }, documents: [{ id: 'registration-version', requirement_key: 'business_registration', document_type: 'SEC_REGISTRATION', status: 'APPROVED', version: 1, scan_state: 'CLEAN', original_name: 'registration.pdf', file_id: 'private-cross-vendor' }], address: { city_municipality: 'Sample City', province: 'Sample Province' } },
-      setup: { status: 'IN_PROGRESS', profile: { public_store_name: 'Sample Building Supply', description: 'Construction materials for projects of every size.', public_email: 'store@example.test', public_phone: '+639170000000' }, media: [{ kind: 'BANNER', file_id: 'banner', alt_text: 'Sample store banner' }, { kind: 'LOGO', file_id: 'logo', alt_text: 'Sample store logo' }] },
+      setup: { status: 'IN_PROGRESS', payment: xenditConnected ? { connection_status: 'CONNECTED_TEST', environment: 'TEST', account_suffix: '8763' } : null, profile: { public_store_name: 'Sample Building Supply', description: 'Construction materials for projects of every size.', public_email: 'store@example.test', public_phone: '+639170000000' }, media: [{ kind: 'BANNER', file_id: 'banner', alt_text: 'Sample store banner' }, { kind: 'LOGO', file_id: 'logo', alt_text: 'Sample store logo' }] },
       activation: { status: 'NOT_READY' }, sections: {
         STORE_VERIFICATION: { key: 'STORE_VERIFICATION', label: 'Store Verification', status: 'IN_PROGRESS', complete: 0, total: 10, progress: { complete: 0, total: 10 }, steps: [] },
         STORE_SETUP: { key: 'STORE_SETUP', label: 'Store Setup', status: 'IN_PROGRESS', complete: 0, total: 6, progress: { complete: 0, total: 6 }, steps: [] },
       },
     }
+    if (path.endsWith('/media')) data = { file_id: 'vehicle-image' }
     if (path.includes('/files/')) data = { url: `http://127.0.0.1:4173/preview-media/${path.includes('banner') ? 'banner' : 'logo'}.svg`, expires_at: '2026-09-20T15:00:00Z' }
+    if (path.includes('/files/vehicle-image')) data = { url: `${new URL(route.request().url()).origin}/api/v1/vendor-onboarding-files/vehicle-image/content` }
+    if (path.endsWith('/vendor-onboarding-files/vehicle-image/content')) {
+      await route.fulfill({ contentType: 'image/png', body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aM1sAAAAASUVORK5CYII=', 'base64') })
+      return
+    }
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data, meta: {}, errors: [] }) })
   })
   await page.route('**/preview-media/*.svg', async route => {
@@ -101,7 +135,7 @@ test('verification steps reflow and keep only the selected requirement area visi
   await expect(page.getByRole('button', { name: 'Submit for Admin Review' })).toBeEnabled()
   await expect(page.getByRole('button', { name: 'Save verification draft' })).toHaveCount(0)
   await expect(page.getByRole('checkbox', { name: /I acknowledge/ })).toBeVisible()
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
   expect(errors).toEqual([])
 })
 
@@ -110,7 +144,14 @@ test('setup previews media and switches every operational section without page o
   const preview = page.getByRole('complementary', { name: 'Store Profile Preview' })
   await expect(preview.getByRole('img', { name: 'Sample store banner' })).toBeVisible()
   await expect(preview.getByRole('img', { name: 'Sample store logo' })).toBeVisible()
+  await expect(preview.getByText('Store location', { exact: true })).toHaveCount(0)
+  await expect(preview.locator('dl')).toHaveCount(0)
   await page.getByRole('textbox', { name: 'Public store name' }).fill('Updated Supply Store')
+  await expect(page.getByRole('textbox', { name: 'Public email' })).toHaveCount(0)
+  await expect(page.getByRole('textbox', { name: 'Public phone' })).toHaveCount(0)
+  const nameBox = await page.getByRole('textbox', { name: 'Public store name' }).boundingBox()
+  const descriptionBox = await page.getByRole('textbox', { name: 'Store description' }).boundingBox()
+  expect(nameBox?.width).toBe(descriptionBox?.width)
   await expect(preview.getByRole('heading', { name: 'Updated Supply Store' })).toBeVisible()
   await page.screenshot({ path: testInfo.outputPath('setup-public-preview.png'), fullPage: true })
   await assertStepperFits(page, 'Store Setup', 5)
@@ -121,12 +162,55 @@ test('setup previews media and switches every operational section without page o
     await expect(page.locator('#onboarding-section-title')).toHaveText(label)
     await expect(preview).not.toBeVisible()
     if (label === 'Fulfillment Configuration') {
-      await expect(page.getByRole('radio', { name: 'Not currently' })).toBeVisible()
-      await expect(page.getByRole('combobox', { name: 'Fulfillment method' })).toBeVisible()
-      await expect(page.getByRole('spinbutton', { name: 'Delivery radius (km)' })).toBeVisible()
-      await expect(page.getByRole('textbox', { name: 'Vehicle name' })).toBeVisible()
+      await expect(page.getByRole('radio', { name: 'No', exact: true })).toBeVisible()
+      await expect(page.getByRole('group', { name: 'Services Capability' })).toBeVisible()
+      await expect(page.getByRole('textbox', { name: 'Vehicle Name' })).toHaveCount(0)
+      await page.getByRole('radio', { name: 'Self-Pickup', exact: true }).check()
+      await expect(page.getByRole('region', { name: 'Delivery Configuration' })).toHaveCount(0)
+      await page.getByRole('radio', { name: 'Vendor Delivery', exact: true }).check()
+      await expect(page.getByRole('spinbutton', { name: 'Delivery radius (km)' })).toHaveCount(0)
+      await expect(page.getByRole('spinbutton', { name: 'Vehicle maximum distance (km)' })).toHaveCount(0)
+      await page.getByRole('combobox', { name: 'Vehicle Category' }).selectOption('TRUCK')
+      await expect(page.getByRole('textbox', { name: 'Vehicle Name' })).toHaveCount(0)
+      await page.getByRole('combobox', { name: 'Vehicle Type' }).selectOption('FLATBED_TRUCK')
+      await expect(page.getByRole('textbox', { name: 'Vehicle Name' })).toBeVisible()
+      await page.getByRole('textbox', { name: 'Vehicle Name' }).fill('Store truck')
+      const categoryBox = await page.getByRole('combobox', { name: 'Vehicle Category' }).boundingBox()
+      const typeBox = await page.getByRole('combobox', { name: 'Vehicle Type' }).boundingBox()
+      const brandBox = await page.getByRole('textbox', { name: 'Vehicle Brand' }).boundingBox()
+      const selectImage = page.getByRole('button', { name: 'Select image', exact: true })
+      await expect(selectImage).toBeVisible()
+      const imageBox = await selectImage.boundingBox()
+      expect(typeBox!.y).toBeGreaterThan(categoryBox!.y + categoryBox!.height)
+      expect(Math.abs(typeBox!.x - categoryBox!.x)).toBeLessThan(2)
+      if (page.viewportSize()!.width >= 768) expect(imageBox!.x).toBeGreaterThan(categoryBox!.x + categoryBox!.width)
+      else expect(imageBox!.y).toBeGreaterThan(brandBox!.y + brandBox!.height)
+      await expect(page.getByRole('region', { name: 'Vehicle 1 delivery rates' })).toContainText('Delivery rate calculator')
+      await page.screenshot({ path: testInfo.outputPath('vehicle-upload-placeholder.png'), fullPage: true })
+
+      await expect(page.getByLabel('Available for delivery')).toHaveCount(0)
+      await expect(page.getByText(/Configured delivery coverage/)).toHaveCount(0)
+      await expect(page.getByRole('button', { name: 'Save setup draft' })).toHaveCount(0)
+      await page.getByRole('textbox', { name: 'Base Fee (₱)', exact: true }).fill('500')
+      await page.getByRole('textbox', { name: 'Per-Kilometer Rate (₱/km)', exact: true }).fill('25.50')
+      await page.getByRole('spinbutton', { name: 'Sample delivery distance (km)' }).fill('10')
+      await page.getByRole('spinbutton', { name: 'Total vehicle trips' }).fill('2')
+      await expect(page.getByText(/Estimated delivery charge/)).toContainText('1,510.00')
+      await page.getByLabel('Vehicle Image', { exact: true }).setInputFiles({ name: 'vehicle.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aM1sAAAAASUVORK5CYII=', 'base64') })
+      await expect(page.getByRole('img', { name: 'Vehicle image preview: Store truck' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Change image', exact: true })).toBeVisible()
+      await expect(page.getByText(/Image preview unavailable/)).toHaveCount(0)
+      await page.screenshot({ path: testInfo.outputPath('delivery-calculator-preview.png'), fullPage: true })
+
+      await page.getByRole('radio', { name: 'Self-Pickup', exact: true }).check()
+      await expect(page.getByRole('textbox', { name: 'Vehicle Name' })).toHaveCount(0)
+      await page.getByRole('radio', { name: 'Both', exact: true }).check()
+      await expect(page.getByRole('textbox', { name: 'Vehicle Name' })).toHaveValue('Store truck')
+      await page.getByRole('combobox', { name: 'Vehicle Type' }).selectOption('CONCRETE_MIXER')
+      await expect(page.getByRole('spinbutton', { name: 'Mixer Capacity (m³)' })).toBeVisible()
+      await expect(page.getByRole('spinbutton', { name: 'Cargo Length (m)' })).toHaveCount(0)
     }
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
   }
   await expect(page.getByRole('button', { name: 'Complete Store Setup' })).toBeDisabled()
   await page.getByRole('button', { name: '1 Public Store Profile' }).click()
@@ -279,7 +363,7 @@ test('supplier custom categories can be added and removed without duplicate subt
   await page.getByRole('radio', { name: 'Specialized Supplier' }).check()
   await page.getByRole('button', { name: 'Finish Later' }).click()
   await expect.poll(() => classification).toMatchObject({ supplier_type: ['SPECIALIZED_SUPPLIER'], niches: ['Other Category'], custom_labels: ['Reclaimed bricks'] })
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
   await page.screenshot({ path: testInfo.outputPath('supplier-classification.png'), fullPage: true })
 })
 
@@ -296,7 +380,7 @@ test('pending evidence stays in its card without resizing tax columns and can be
   await expect(page.getByAltText('Government ID — front selected preview')).toBeVisible()
   await expect(page.getByText(longName, { exact: false })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Upload reviewed file' })).toHaveCount(0)
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
   await input.setInputFiles({ name: 'replacement.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 test preview') })
   await expect(page.getByText('replacement.pdf', { exact: false })).toBeVisible()
   await expect(page.getByAltText('Government ID — front selected preview')).toHaveCount(0)
@@ -311,7 +395,7 @@ test('pending evidence stays in its card without resizing tax columns and can be
   expect(after!.x).toBe(initial!.x)
   if (page.viewportSize()!.width >= 1024) expect(after!.y).toBe(initial!.y)
   expect((await tin.boundingBox())!.y).toBeLessThan((await bir.boundingBox())!.y)
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
   await bir.scrollIntoViewIfNeeded()
   await page.screenshot({ path: testInfo.outputPath('pending-evidence-tax-layout.png') })
 })
@@ -334,9 +418,42 @@ test('commission panel is above Privacy with explicit scroll-gated acceptance an
   await checkbox.check()
   await commission.getByRole('button', { name: 'Accept commission terms' }).click()
   await expect(commission.getByRole('status')).toHaveText('Current commission terms accepted for this organization.')
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
   await page.screenshot({ path: testInfo.outputPath('commission-panel.png'), fullPage: true })
   await page.goto('/onboarding/setup')
   await expect(page.getByRole('navigation', { name: 'Store Setup steps' }).getByRole('button')).toHaveCount(5)
   await expect(page.getByRole('heading', { name: '2% Commission Terms', exact: true })).toHaveCount(0)
+})
+
+
+test('Xendit panel connects inline and preserves connection on reload', async ({ page }, testInfo) => {
+  await page.goto('/onboarding/setup')
+  await page.getByRole('button', { name: '3 Xendit TEST Connection' }).click()
+  const panel = page.getByRole('region', { name: 'Xendit connection', exact: true })
+  await expect(panel.getByText(/No separate Xendit login/)).toBeVisible()
+  await expect(panel.getByRole('textbox')).toHaveCount(0)
+  await panel.getByRole('button', { name: 'Connect Xendit' }).click()
+  await expect(panel.getByText('Xendit — Connected', { exact: true })).toBeVisible()
+  await expect(panel.getByText('The xenPlatform TEST sub-account is connected. You can now proceed to the next step.')).toBeVisible()
+  expect(page.context().pages()).toHaveLength(1)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+  await page.screenshot({ path: testInfo.outputPath('xendit-connection.png'), fullPage: true })
+  await page.getByRole('button', { name: 'Next', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Team Accounts', exact: true })).toBeVisible()
+  await page.reload()
+  await page.getByRole('button', { name: '3 Xendit TEST Connection' }).click()
+  await expect(panel.getByText('Xendit — Connected', { exact: true })).toBeVisible()
+})
+
+test('Xendit panel handles provider failure and retry', async ({ page }) => {
+  await page.route('**/api/v1/vendors/onboarding/payment-connection', route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ data: null, meta: {}, errors: [{ code: 'PROVIDER_UNAVAILABLE', message: 'MateryalPH could not connect your store to Xendit. Please try again.' }] }) }), { times: 1 })
+  await page.goto('/onboarding/setup')
+  await page.getByRole('button', { name: '3 Xendit TEST Connection' }).click()
+  const panel = page.getByRole('region', { name: 'Xendit connection', exact: true })
+  await panel.getByRole('button', { name: 'Connect Xendit' }).click()
+  await expect(panel.getByRole('alert')).toContainText('Please try again.')
+  await expect(panel.getByText('Not Connected', { exact: true })).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+  await panel.getByRole('button', { name: 'Connect Xendit' }).click()
+  await expect(panel.getByText('Xendit — Connected', { exact: true })).toBeVisible()
 })

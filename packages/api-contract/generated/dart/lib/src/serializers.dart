@@ -97,12 +97,18 @@ import 'package:materyalph_api_client/src/model/password_reset_request.dart';
 import 'package:materyalph_api_client/src/model/psgc_area.dart';
 import 'package:materyalph_api_client/src/model/psgc_search_envelope.dart';
 import 'package:materyalph_api_client/src/model/psgc_search_envelope_data.dart';
+import 'package:materyalph_api_client/src/model/public_store_list_envelope.dart';
+import 'package:materyalph_api_client/src/model/public_store_list_envelope_meta.dart';
+import 'package:materyalph_api_client/src/model/public_store_profile.dart';
+import 'package:materyalph_api_client/src/model/public_store_profile_envelope.dart';
+import 'package:materyalph_api_client/src/model/public_store_summary.dart';
 import 'package:materyalph_api_client/src/model/register_request.dart';
 import 'package:materyalph_api_client/src/model/registration_envelope.dart';
 import 'package:materyalph_api_client/src/model/registration_envelope_all_of_data.dart';
 import 'package:materyalph_api_client/src/model/resend_bot_challenge_request.dart';
 import 'package:materyalph_api_client/src/model/store_activation_blocker.dart';
 import 'package:materyalph_api_client/src/model/store_activation_readiness.dart';
+import 'package:materyalph_api_client/src/model/store_operating_day.dart';
 import 'package:materyalph_api_client/src/model/success_envelope.dart';
 import 'package:materyalph_api_client/src/model/user_identity.dart';
 import 'package:materyalph_api_client/src/model/vendor_activation_snapshot.dart';
@@ -123,8 +129,10 @@ import 'package:materyalph_api_client/src/model/vendor_media_envelope.dart';
 import 'package:materyalph_api_client/src/model/vendor_onboarding_envelope.dart';
 import 'package:materyalph_api_client/src/model/vendor_onboarding_section.dart';
 import 'package:materyalph_api_client/src/model/vendor_onboarding_snapshot.dart';
+import 'package:materyalph_api_client/src/model/vendor_onboarding_snapshot_setup.dart';
 import 'package:materyalph_api_client/src/model/vendor_onboarding_step.dart';
-import 'package:materyalph_api_client/src/model/vendor_payment_connection.dart';
+import 'package:materyalph_api_client/src/model/vendor_payment_onboarding.dart';
+import 'package:materyalph_api_client/src/model/vendor_payment_onboarding_envelope.dart';
 import 'package:materyalph_api_client/src/model/vendor_payment_reconciliation_envelope.dart';
 import 'package:materyalph_api_client/src/model/vendor_restriction.dart';
 import 'package:materyalph_api_client/src/model/vendor_restriction_envelope.dart';
@@ -132,8 +140,15 @@ import 'package:materyalph_api_client/src/model/vendor_setup_complete.dart';
 import 'package:materyalph_api_client/src/model/vendor_setup_draft.dart';
 import 'package:materyalph_api_client/src/model/vendor_setup_draft_delivery.dart';
 import 'package:materyalph_api_client/src/model/vendor_setup_draft_vehicles_inner.dart';
+import 'package:materyalph_api_client/src/model/vendor_staff_dispute_setting.dart';
+import 'package:materyalph_api_client/src/model/vendor_staff_update.dart';
 import 'package:materyalph_api_client/src/model/vendor_store_email_confirmation.dart';
 import 'package:materyalph_api_client/src/model/vendor_store_email_envelope.dart';
+import 'package:materyalph_api_client/src/model/vendor_team_activity.dart';
+import 'package:materyalph_api_client/src/model/vendor_team_activity_envelope.dart';
+import 'package:materyalph_api_client/src/model/vendor_team_activity_envelope_meta.dart';
+import 'package:materyalph_api_client/src/model/vendor_team_invitation_list_envelope.dart';
+import 'package:materyalph_api_client/src/model/vendor_team_invitation_record.dart';
 import 'package:materyalph_api_client/src/model/vendor_verification_draft.dart';
 import 'package:materyalph_api_client/src/model/vendor_verification_draft_classification.dart';
 import 'package:materyalph_api_client/src/model/vendor_verification_draft_legal_identity.dart';
@@ -144,6 +159,8 @@ import 'package:materyalph_api_client/src/model/vendor_webhook_envelope.dart';
 import 'package:materyalph_api_client/src/model/verify_bot_challenge_request.dart';
 import 'package:materyalph_api_client/src/model/verify_email_request.dart';
 import 'package:materyalph_api_client/src/model/xendit_account_verification_webhook.dart';
+import 'package:materyalph_api_client/src/model/xendit_account_verification_webhook_data.dart';
+import 'package:materyalph_api_client/src/model/xendit_account_verification_webhook_data_account_info.dart';
 
 part 'serializers.g.dart';
 
@@ -232,12 +249,18 @@ part 'serializers.g.dart';
   PsgcArea,
   PsgcSearchEnvelope,
   PsgcSearchEnvelopeData,
+  PublicStoreListEnvelope,
+  PublicStoreListEnvelopeMeta,
+  PublicStoreProfile,
+  PublicStoreProfileEnvelope,
+  PublicStoreSummary,
   RegisterRequest,
   RegistrationEnvelope,
   RegistrationEnvelopeAllOfData,
   ResendBotChallengeRequest,
   StoreActivationBlocker,
   StoreActivationReadiness,
+  StoreOperatingDay,
   SuccessEnvelope,$SuccessEnvelope,
   UserIdentity,
   VendorActivationSnapshot,
@@ -258,8 +281,10 @@ part 'serializers.g.dart';
   VendorOnboardingEnvelope,
   VendorOnboardingSection,
   VendorOnboardingSnapshot,
+  VendorOnboardingSnapshotSetup,
   VendorOnboardingStep,
-  VendorPaymentConnection,
+  VendorPaymentOnboarding,
+  VendorPaymentOnboardingEnvelope,
   VendorPaymentReconciliationEnvelope,
   VendorRestriction,
   VendorRestrictionEnvelope,
@@ -267,8 +292,15 @@ part 'serializers.g.dart';
   VendorSetupDraft,
   VendorSetupDraftDelivery,
   VendorSetupDraftVehiclesInner,
+  VendorStaffDisputeSetting,
+  VendorStaffUpdate,
   VendorStoreEmailConfirmation,
   VendorStoreEmailEnvelope,
+  VendorTeamActivity,
+  VendorTeamActivityEnvelope,
+  VendorTeamActivityEnvelopeMeta,
+  VendorTeamInvitationListEnvelope,
+  VendorTeamInvitationRecord,
   VendorVerificationDraft,
   VendorVerificationDraftClassification,
   VendorVerificationDraftLegalIdentity,
@@ -279,35 +311,13 @@ part 'serializers.g.dart';
   VerifyBotChallengeRequest,
   VerifyEmailRequest,
   XenditAccountVerificationWebhook,
+  XenditAccountVerificationWebhookData,
+  XenditAccountVerificationWebhookDataAccountInfo,
 ])
 Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(AccountAdministrator)]),
-        () => ListBuilder<AccountAdministrator>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltSet, [FullType(String)]),
-        () => SetBuilder<String>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(OnboardingDraftVersion)]),
-        () => ListBuilder<OnboardingDraftVersion>(),
-      )
-      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(BotStepUpErrorEnvelopeAllOfErrors)]),
         () => ListBuilder<BotStepUpErrorEnvelopeAllOfErrors>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(OnboardingStepCompletion)]),
-        () => ListBuilder<OnboardingStepCompletion>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType.nullable(JsonObject)]),
-        () => ListBuilder<JsonObject>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(OnboardingRequirement)]),
-        () => ListBuilder<OnboardingRequirement>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(AccountMembership)]),
@@ -330,12 +340,12 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<PsgcArea>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
-        () => MapBuilder<String, JsonObject?>(),
+        const FullType(BuiltList, [FullType(VendorTeamInvitationRecord)]),
+        () => ListBuilder<VendorTeamInvitationRecord>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(AccountRole)]),
-        () => ListBuilder<AccountRole>(),
+        const FullType(BuiltMap, [FullType(String), FullType(int)]),
+        () => MapBuilder<String, int>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(AccountAgreement)]),
@@ -354,6 +364,58 @@ Serializers serializers = (_$serializers.toBuilder()
         () => MapBuilder<String, BuiltMap<String, JsonObject>>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(AdminVendorVerificationQueueItem)]),
+        () => ListBuilder<AdminVendorVerificationQueueItem>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(StoreActivationBlocker)]),
+        () => ListBuilder<StoreActivationBlocker>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(AccountAdministrator)]),
+        () => ListBuilder<AccountAdministrator>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltSet, [FullType(String)]),
+        () => SetBuilder<String>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(OnboardingDraftVersion)]),
+        () => ListBuilder<OnboardingDraftVersion>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(PublicStoreSummary)]),
+        () => ListBuilder<PublicStoreSummary>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(VendorTeamActivity)]),
+        () => ListBuilder<VendorTeamActivity>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(OnboardingStepCompletion)]),
+        () => ListBuilder<OnboardingStepCompletion>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType.nullable(JsonObject)]),
+        () => ListBuilder<JsonObject>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(OnboardingRequirement)]),
+        () => ListBuilder<OnboardingRequirement>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(StoreOperatingDay)]),
+        () => ListBuilder<StoreOperatingDay>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
+        () => MapBuilder<String, JsonObject?>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(AccountRole)]),
+        () => ListBuilder<AccountRole>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(AccountSession)]),
         () => ListBuilder<AccountSession>(),
       )
@@ -364,14 +426,6 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltMap, [FullType(String), FullType(VendorOnboardingSection)]),
         () => MapBuilder<String, VendorOnboardingSection>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(AdminVendorVerificationQueueItem)]),
-        () => ListBuilder<AdminVendorVerificationQueueItem>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(StoreActivationBlocker)]),
-        () => ListBuilder<StoreActivationBlocker>(),
       )
       ..add(SuccessEnvelope.serializer)
       ..add(const OneOfSerializer())

@@ -17,6 +17,7 @@ part 'admin_vendor_verification_decision.g.dart';
 /// * [authorityScopes]
 /// * [decision]
 /// * [lockVersion]
+/// * [requirementVersions] - Current lock version of every applicable underlying requirement when deciding a grouped review item.
 /// * [reason]
 /// * [verifiedDocumentNumber]
 /// * [verifiedIssueDate]
@@ -40,6 +41,10 @@ abstract class AdminVendorVerificationDecision implements Built<AdminVendorVerif
 
   @BuiltValueField(wireName: r'lock_version')
   int? get lockVersion;
+
+  /// Current lock version of every applicable underlying requirement when deciding a grouped review item.
+  @BuiltValueField(wireName: r'requirement_versions')
+  BuiltMap<String, int>? get requirementVersions;
 
   @BuiltValueField(wireName: r'reason')
   String? get reason;
@@ -114,6 +119,13 @@ class _$AdminVendorVerificationDecisionSerializer implements PrimitiveSerializer
       yield serializers.serialize(
         object.lockVersion,
         specifiedType: const FullType(int),
+      );
+    }
+    if (object.requirementVersions != null) {
+      yield r'requirement_versions';
+      yield serializers.serialize(
+        object.requirementVersions,
+        specifiedType: const FullType(BuiltMap, [FullType(String), FullType(int)]),
       );
     }
     if (object.reason != null) {
@@ -225,6 +237,14 @@ class _$AdminVendorVerificationDecisionSerializer implements PrimitiveSerializer
           ) as int?;
           if (valueDes == null) continue;
           result.lockVersion = valueDes;
+          break;
+        case r'requirement_versions':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltMap, [FullType(String), FullType(int)]),
+          ) as BuiltMap<String, int>?;
+          if (valueDes == null) continue;
+          result.requirementVersions.replace(valueDes);
           break;
         case r'reason':
           final valueDes = serializers.deserialize(

@@ -22,6 +22,7 @@ final class VendorInvitationRequest extends FormRequest
             'invitee_name' => ['required', 'string', 'max:160'],
             'invitee_mobile' => ['sometimes', 'nullable', 'string', 'max:24'],
             'role' => ['required', Rule::in(['STORE_MANAGER', 'STORE_STAFF', 'CUSTOMER_SERVICE', 'INVENTORY', 'FULFILLMENT'])],
+            'can_manage_staff' => ['sometimes', 'boolean'],
         ];
     }
 }
