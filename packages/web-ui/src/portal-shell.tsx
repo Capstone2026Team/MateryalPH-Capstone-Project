@@ -15,6 +15,7 @@ export function PortalShell({
   activeHref,
   accountLabel,
   accountStatus,
+  accountAvatarUrl,
   children,
   headerActions,
   homeHref = '/dashboard',
@@ -31,6 +32,7 @@ export function PortalShell({
   activeHref: string
   accountLabel: string
   accountStatus?: string
+  accountAvatarUrl?: string | null
   children: ReactNode
   headerActions?: ReactNode
   homeHref?: string
@@ -43,11 +45,13 @@ export function PortalShell({
     try { return window.sessionStorage.getItem(sidebarPreferenceKey) === 'true' } catch { return false }
   })
   const [profile, setProfile] = useState<AccountProfile | null>(null)
+  const [avatarFailed, setAvatarFailed] = useState(false)
   const [tooltip, setTooltip] = useState<{ label: string; top: number; left: number } | null>(null)
   const storeIdentity = !isAdmin && profile?.role === 'OWNER'
   const footerName = storeIdentity ? profile.organizationName || accountLabel : profile?.fullName || accountLabel
   const footerStatus = isAdmin ? profile?.role.replaceAll('_', ' ') || accountStatus : accountStatus
   const initials = footerName.trim().split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase()
+  useEffect(() => { setAvatarFailed(false) }, [accountAvatarUrl])
   function showTooltip(element: HTMLElement, label: string) {
     const box = element.getBoundingClientRect()
     setTooltip({ label, top: Math.min(box.top + box.height / 2, window.innerHeight - 24), left: box.right + 12 })
@@ -112,7 +116,7 @@ export function PortalShell({
           </nav>
           <div className="portal-sidebar-footer">
             <a className="portal-footer-account" href={isAdmin ? '/workspace#Profile' : '/settings#Profile'} aria-label={`Account profile: ${footerName}${footerStatus ? `, ${footerStatus}` : ''}`} onClick={event => follow(event, isAdmin ? '/workspace#Profile' : '/settings#Profile')} onMouseEnter={event => showTooltip(event.currentTarget, footerName)} onMouseLeave={() => setTooltip(null)} onFocus={event => showTooltip(event.currentTarget, footerName)} onBlur={() => setTooltip(null)}>
-              <span className="portal-footer-avatar" aria-hidden="true">{initials || '…'}</span>
+              <span className="portal-footer-avatar" aria-hidden="true">{accountAvatarUrl && !avatarFailed ? <img src={accountAvatarUrl} alt="" onError={() => setAvatarFailed(true)} /> : initials || '…'}</span>
               <span className="portal-footer-details"><span className="portal-footer-name" title={footerName}>{footerName}</span>{footerStatus && <span className="portal-footer-status" title={footerStatus}>{footerStatus}</span>}</span>
             </a>
           </div>

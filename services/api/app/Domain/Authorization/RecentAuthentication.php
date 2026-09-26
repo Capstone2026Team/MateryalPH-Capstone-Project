@@ -39,18 +39,20 @@ final class RecentAuthentication
     {
         $user = $request->user();
         $privileged = $this->mfa->requiredFor($user);
+        $totpOnly = $password === null && $emailCode === null && $code !== null
+            && $user->account_type !== 'BUYER' && $this->totp->hasConfirmedFactor($user);
         $verified = $password !== null && Hash::check($password, $user->password);
-        $method = 'PASSWORD';
+        $method = $totpOnly ? 'TOTP' : 'PASSWORD';
         if ($emailCode !== null && $this->session($request)->reauthentication_email_otp_id !== null) {
             $otp = $this->otp->verifyForRequest($user->email, 'ACCOUNT_REAUTHENTICATION', $emailCode, $this->session($request)->reauthentication_email_otp_id);
             $verified = (string) $otp->getKey() === $this->session($request)->reauthentication_email_otp_id && (string) $otp->user_id === (string) $user->getKey();
             $method = 'EMAIL';
         }
-        if (! $verified || ($privileged && ! $this->totp->verify($user, $code ?? ''))) {
+        if ((! $verified && ! $totpOnly) || (($privileged || $totpOnly) && ! $this->totp->verify($user, $code ?? ''))) {
             $this->audit->account($request, 'REAUTHENTICATION_FAILED', 'AUTH_SESSION', (string) $this->session($request)->getKey(), succeeded: false);
             throw new AuthenticationException('REAUTHENTICATION_FAILED', 'The verification details are incorrect.', 422);
         }
-        $this->session($request)->update(['reauthenticated_at' => now(), 'reauthentication_method' => $method.($privileged ? '_TOTP' : ''), 'reauthentication_email_otp_id' => null]);
+        $this->session($request)->update(['reauthenticated_at' => now(), 'reauthentication_method' => $method.($privileged && ! $totpOnly ? '_TOTP' : ''), 'reauthentication_email_otp_id' => null]);
         $this->audit->account($request, 'REAUTHENTICATION_SUCCEEDED', 'AUTH_SESSION', (string) $this->session($request)->getKey());
     }
 
@@ -59,7 +61,7 @@ final class RecentAuthentication
         $session = $this->session($request)->refresh();
         if ($session->revoked_at !== null || $session->expires_at->isPast() || $session->reauthenticated_at === null
             || $session->reauthenticated_at->addMinutes(15)->isPast()
-            || ($this->mfa->requiredFor($request->user()) && ! in_array($session->reauthentication_method, ['PASSWORD_TOTP', 'EMAIL_TOTP'], true))) {
+            || ($this->mfa->requiredFor($request->user()) && ! in_array($session->reauthentication_method, ['PASSWORD_TOTP', 'EMAIL_TOTP', 'TOTP'], true))) {
             throw new AuthenticationException('RECENT_AUTHENTICATION_REQUIRED', 'Verify your identity again to continue.', 403);
         }
     }

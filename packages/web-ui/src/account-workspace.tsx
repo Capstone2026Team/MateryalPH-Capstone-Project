@@ -8,6 +8,7 @@ import { rateLimitMessage, clearWebSessionTransport, createWebApiConfiguration }
 
 type Section = 'Profile' | 'Account' | 'Security' | 'Sessions' | 'Agreements' | 'Staff access' | 'Admin invitations' | 'Admin accounts'
 type Props = { portal: 'vendors' | 'admin'; basePath: string; loginPath: string; renderQr: (uri: string) => ReactNode; embedded?: boolean }
+type PendingSecurityAction = { title: string; run: (client: AccountsApi) => Promise<void>; success: string; reload: boolean }
 
 export function AccountWorkspace({ portal: accountPortal, basePath, loginPath, renderQr, embedded = false }: Props) {
   const [profile, setProfile] = useState<AccountProfile | null>(null)
@@ -29,22 +30,30 @@ export function AccountWorkspace({ portal: accountPortal, basePath, loginPath, r
   const [invitationKey, setInvitationKey] = useState(() => crypto.randomUUID())
   const actionLock = useRef(false)
   const [totp, setTotp] = useState(false)
+  const [pendingSecurityAction, setPendingSecurityAction] = useState<PendingSecurityAction | null>(null)
+  const [verificationMode, setVerificationMode] = useState<'password' | 'email'>('password')
+  const [verificationError, setVerificationError] = useState('')
+  const verificationRef = useRef<HTMLDivElement>(null)
+  const returnFocusRef = useRef<HTMLElement | null>(null)
 
   const api = useCallback(() => new AccountsApi(createWebApiConfiguration(basePath, { refreshSession: true })), [basePath])
 
-  const failure = useCallback(async (error: unknown) => {
+  const errorText = useCallback(async (error: unknown) => {
     let text = 'The request could not finish. Check your connection and retry.'
     if (error instanceof ResponseError) {
       if (error.response.status === 401) { setProfile(null); setDenied(true); text = 'Your session has expired. Sign in again.' }
-      if (error.response.status === 429 && error.response.headers.has('Retry-After')) { setMessage({ error: true, text: rateLimitMessage(error.response) }); return }
+      if (error.response.status === 429 && error.response.headers.has('Retry-After')) return rateLimitMessage(error.response)
       const body: unknown = await error.response.clone().json().catch(() => null)
       if (typeof body === 'object' && body !== null && 'errors' in body && Array.isArray(body.errors)) {
         const first: unknown = body.errors[0]
         if (typeof first === 'object' && first !== null && 'message' in first && typeof first.message === 'string') text = first.message
       }
     }
-    setMessage({ error: true, text })
+    return text
   }, [])
+  const failure = useCallback(async (error: unknown) => {
+    setMessage({ error: true, text: await errorText(error) })
+  }, [errorText])
 
   const load = useCallback(async () => {
     setBusy(true)
@@ -90,6 +99,56 @@ export function AccountWorkspace({ portal: accountPortal, basePath, loginPath, r
   function submit(event: FormEvent<HTMLFormElement>, action: (data: FormData) => Promise<void>) {
     event.preventDefault(); const form = event.currentTarget; const data = new FormData(form); if (form.querySelector('input[type="password"],input[autocomplete="one-time-code"]')) form.reset(); void action(data)
   }
+  function closeVerification() {
+    if (busy) return
+    setPendingSecurityAction(null)
+    setVerificationError('')
+    returnFocusRef.current?.focus()
+  }
+  function promptVerification(action: PendingSecurityAction) {
+    if (busy || actionLock.current) return
+    returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    setVerificationMode('password')
+    setVerificationError('')
+    setPendingSecurityAction(action)
+  }
+  useEffect(() => {
+    if (!pendingSecurityAction) return
+    verificationRef.current?.querySelector<HTMLInputElement>('input')?.focus()
+  }, [pendingSecurityAction, verificationMode])
+  async function verifyAndRun(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!pendingSecurityAction || actionLock.current) return
+    const form = event.currentTarget
+    const values = new FormData(form)
+    form.reset()
+    actionLock.current = true
+    setBusy(true)
+    setVerificationError('')
+    try {
+      const client = api()
+      await client.reauthenticateAccount({ accountPortal, accountReauthentication: totp
+        ? { code: String(values.get('code')) }
+        : verificationMode === 'email' ? { emailCode: String(values.get('email_code')) } : { password: String(values.get('password')) } })
+      setPendingSecurityAction(null)
+      try {
+        await pendingSecurityAction.run(client)
+        setMessage({ error: false, text: pendingSecurityAction.success })
+        if (pendingSecurityAction.reload) { await load(); window.dispatchEvent(new Event('materyalph:profile-updated')) }
+      } catch (error) { await failure(error) }
+      returnFocusRef.current?.focus()
+    } catch (error) { setVerificationError(await errorText(error)) }
+    finally { actionLock.current = false; setBusy(false) }
+  }
+  async function sendVerificationEmail() {
+    setBusy(true)
+    setVerificationError('')
+    try {
+      await api().sendAccountReauthenticationEmail({ accountPortal })
+      setVerificationMode('email')
+    } catch (error) { setVerificationError(await errorText(error)) }
+    finally { setBusy(false) }
+  }
   const date = (value: string | null) => value ? new Date(value).toLocaleString('en-PH', { timeZone: 'Asia/Manila' }) + ' (Asia/Manila)' : 'Not available'
   const nav: Section[] = ['Profile', 'Account', 'Security', 'Sessions', 'Agreements']
   if (profile?.permissions.includes('staff.manage')) nav.push('Staff access')
@@ -105,20 +164,14 @@ export function AccountWorkspace({ portal: accountPortal, basePath, loginPath, r
       <section aria-busy={busy} className="min-w-0 rounded-surface border border-border-default bg-surface-primary p-5 sm:p-8"><h2 className="mb-6 border-b border-border-default pb-5 text-xl font-semibold">{section}</h2>
         {section === 'Profile' && <><div className="mb-6 flex flex-wrap items-center gap-5 border-b border-border-default pb-6"><div className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-full bg-brand-orange-100 text-2xl font-semibold text-action-primary">{profile.avatarUrl ? <img src={profile.avatarUrl} alt="Your personal profile" className="h-full w-full object-cover" /> : profile.fullName.trim().split(/\s+/).slice(0, 2).map(part => part[0]).join('')}</div><div><h3 className="font-semibold">Profile picture</h3><p className="mt-1 max-w-lg text-sm leading-6 text-text-secondary">Personal account photo, separate from your store logo. JPEG, PNG or WebP up to 2 MB. The image is security-scanned and cropped to a square.</p><label className="mt-3 inline-flex min-h-11 cursor-pointer items-center rounded-control border border-border-default px-4 text-sm font-semibold"><ImagePlus size={18} className="mr-2" aria-hidden="true" />{busy ? 'Processing…' : 'Upload profile picture'}<input type="file" className="sr-only" accept="image/jpeg,image/png,image/webp" disabled={busy} onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; if (!file) return; if (file.size > 2 * 1024 * 1024 || !['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) { setMessage({ error: true, text: 'Choose a JPEG, PNG or WebP image up to 2 MB.' }); return } void act(client => client.uploadAccountPhoto({ webAccountPortal: accountPortal, photo: file, lockVersion: profile.lockVersion }), 'Profile picture saved.') }} /></label></div></div><form className="grid max-w-xl gap-5" onSubmit={event => submit(event, data => act(client => client.updateAccountProfile({ accountPortal, accountProfileUpdate: { fullName: String(data.get('full_name')), lockVersion: profile.lockVersion } }), 'Profile saved.'))}><Field key={profile.lockVersion} label="Full name" name="full_name" defaultValue={profile.fullName} required maxLength={160} /><Button type="submit" disabled={busy}>Save profile</Button></form></>}
         {section === 'Account' && <dl className="grid gap-6 sm:grid-cols-2"><div><dt>Email</dt><dd className="break-all">{profile.email}</dd></div><div><dt>Fixed role</dt><dd>{profile.role.replaceAll('_',' ')}</dd></div>{profile.organizationName && <div><dt>Store membership</dt><dd>{profile.organizationName}</dd></div>}<div><dt>Account created</dt><dd>{date(profile.createdAt)}</dd></div><div><dt>Permissions</dt><dd className="mt-2 text-sm text-text-secondary"><details><summary className="cursor-pointer">View assigned permissions</summary><ul className="mt-3 grid gap-2">{profile.permissions.map(permission => <li className="break-words" key={permission}>{permission}</li>)}</ul></details></dd></div></dl>}
-        {section === 'Security' && <div className="grid max-w-2xl gap-6 [&>form]:rounded-control [&>form]:border [&>form]:border-border-default [&>form]:p-5">
-          <form className="grid gap-4" onSubmit={event => submit(event, data => act(client => client.reauthenticateAccount({ accountPortal, accountReauthentication: { password: String(data.get('password')), code: String(data.get('code') || '') || null } }), 'Identity verified for 15 minutes.'))}><h3 className="text-lg font-semibold">Verify your identity</h3><p>Verify before changing your password, email, authenticator or access settings.</p><Field label="Current password" name="password" type="password" autoComplete="current-password" required />{totp && <Field label="Authenticator code" name="code" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} autoComplete="one-time-code" required />}<Button type="submit" disabled={busy}>Verify identity</Button></form>
-          <form className="grid gap-4" onSubmit={event => submit(event, data => act(client => client.reauthenticateAccount({ accountPortal, accountReauthentication: { emailCode: String(data.get('reauth_email_code')), code: String(data.get('reauth_totp') || '') || null } }), 'Identity verified for 15 minutes.'))}>
-            <Button type="button" variant="secondary" disabled={busy} onClick={() => void act(client => client.sendAccountReauthenticationEmail({ accountPortal }), 'A verification code was sent to your current email.', false)}>Send email verification instead</Button>
-            <Field label="Current-email verification code" name="reauth_email_code" inputMode="numeric" pattern="[0-9]{6}" autoComplete="one-time-code" required />
-            {totp && <Field label="Authenticator code for email verification" name="reauth_totp" inputMode="numeric" pattern="[0-9]{6}" required />}
-            <Button type="submit" disabled={busy}>Verify email code</Button>
-          </form>
-          <form className="grid gap-4 border-t border-border-default pt-6" onSubmit={event => submit(event, data => act(async client => { const result = await client.changeAccountPassword({ accountPortal, accountPasswordChange: { password: String(data.get('new_password')), passwordConfirmation: String(data.get('password_confirmation')) } }); if(result.data.signInRequired) window.location.assign(loginPath) }, 'Password changed.'))}><h3 className="text-lg font-semibold">Change password</h3><Field label="New password" name="new_password" type="password" autoComplete="new-password" minLength={14} required /><Field label="Confirm new password" name="password_confirmation" type="password" autoComplete="new-password" minLength={14} required /><p>Changing your password signs out your web sessions.</p><Button type="submit" disabled={busy}>Change password</Button></form>
-          <form className="grid gap-4 border-t border-border-default pt-6" onSubmit={event => submit(event, data => act(async client => { setEmailChange((await client.startAccountEmailChange({accountPortal,accountEmailChange:{email:String(data.get('email'))}})).data) }, 'Verification sent to the new email.', false))}><h3 className="text-lg font-semibold">Change primary email</h3><Field label="New email" name="email" type="email" required /><Button type="submit" disabled={busy}>Send verification</Button></form>
+        {section === 'Security' && <div className="grid max-w-2xl gap-6">
+          <form className="grid gap-4" onSubmit={event => { event.preventDefault(); const form = event.currentTarget; const data = new FormData(form); promptVerification({ title: 'Change password', run: async client => { const result = await client.changeAccountPassword({ accountPortal, accountPasswordChange: { password: String(data.get('new_password')), passwordConfirmation: String(data.get('password_confirmation')) } }); form.reset(); if (result.data.signInRequired) window.location.assign(loginPath) }, success: 'Password changed.', reload: false }) }}><h3 className="text-lg font-semibold">Change password</h3><Field label="New password" name="new_password" type="password" autoComplete="new-password" minLength={14} required /><Field label="Confirm new password" name="password_confirmation" type="password" autoComplete="new-password" minLength={14} required /><p>Changing your password signs out your web sessions.</p><Button type="submit" disabled={busy}>Change password</Button></form>
+          <form className="grid gap-4 border-t border-border-default pt-6" onSubmit={event => { event.preventDefault(); const email = String(new FormData(event.currentTarget).get('email')); promptVerification({ title: 'Change primary email', run: async client => { setEmailChange((await client.startAccountEmailChange({ accountPortal, accountEmailChange: { email } })).data) }, success: 'Verification sent to the new email.', reload: false }) }}><h3 className="text-lg font-semibold">Change primary email</h3><Field label="New email" name="email" type="email" required /><Button type="submit" disabled={busy}>Send verification</Button></form>
           {emailChange && <form className="grid gap-4" onSubmit={event => submit(event, data => act(async client => { await client.confirmAccountEmailChange({accountPortal,accountCodeConfirmation:{id:emailChange.id,code:String(data.get('email_code'))}}); window.location.assign(loginPath) }, 'Email changed.', false))}><p>Expires {date(emailChange.expiresAt)}. Completing this change signs out all sessions.</p><Field label="New-email verification code" name="email_code" inputMode="numeric" pattern="[0-9]{6}" required /><Button type="submit" disabled={busy}>Confirm email change</Button></form>}
-          {totp && <div className="grid gap-4 border-t border-border-default pt-6"><h3 className="text-lg font-semibold">Authenticator and recovery codes</h3><p>Your authenticator remains mandatory. Replacement keeps your existing factor active until the new code is confirmed.</p><Button variant="secondary" disabled={busy} onClick={() => void act(async client => setFactor((await client.startAccountFactorReplacement({accountPortal})).data), 'Scan the new authenticator setup.', false)}>Replace authenticator</Button><Button variant="secondary" disabled={busy} onClick={() => { if(window.confirm('Replace all recovery codes? Previous codes will stop working.')) void act(async client => setCodes((await client.replaceAccountRecoveryCodes({accountPortal})).data.recoveryCodes), 'Save these codes securely. They are shown once.', false) }}>Replace recovery codes</Button></div>}
+          {totp && <div className="grid gap-4 border-t border-border-default pt-6"><h3 className="text-lg font-semibold">Authenticator and recovery codes</h3><p>Your authenticator remains mandatory. Replacement keeps your existing factor active until the new code is confirmed.</p><Button variant="secondary" disabled={busy} onClick={() => promptVerification({ title: 'Replace authenticator', run: async client => { setFactor((await client.startAccountFactorReplacement({ accountPortal })).data) }, success: 'Scan the new authenticator setup.', reload: false })}>Replace authenticator</Button><Button variant="secondary" disabled={busy} onClick={() => { if (window.confirm('Replace all recovery codes? Previous codes will stop working.')) promptVerification({ title: 'Replace recovery codes', run: async client => { setCodes((await client.replaceAccountRecoveryCodes({ accountPortal })).data.recoveryCodes) }, success: 'Save these codes securely. They are shown once.', reload: false }) }}>Replace recovery codes</Button></div>}
           {factor && <form className="grid gap-4" onSubmit={event => submit(event, data => act(async client => { const result=await client.confirmAccountFactorReplacement({accountPortal,accountCodeConfirmation:{id:factor.id,code:String(data.get('factor_code'))}}); setFactor(null);setCodes(result.data.recoveryCodes);setSignInAfterCodes(true) }, 'Authenticator replaced. Save the new recovery codes, then sign in.', false))}>{renderQr(factor.provisioningUri)}<p className="break-all">Manual setup key: {factor.secret}</p><p>Expires {date(factor.expiresAt)}</p><Field label="New authenticator code" name="factor_code" inputMode="numeric" pattern="[0-9]{6}" required /><Button type="submit" disabled={busy}>Confirm replacement and sign out</Button></form>}
           {codes.length > 0 && <section aria-label="One-time recovery codes"><h3 className="text-lg font-semibold">Save your recovery codes</h3><ul className="my-4 grid gap-2">{codes.map(code => <li key={code}>{code}</li>)}</ul><Button onClick={() => {setCodes([]);if(signInAfterCodes)window.location.assign(loginPath)}}>I saved my codes</Button></section>}
+          <div className="grid gap-3 border-t border-border-default pt-6"><h3 className="text-base font-semibold">Other protected settings</h3><p className="text-sm text-text-secondary">Staff access, invitations, and protected store settings require a recent security check.</p><Button className="justify-self-start" variant="secondary" disabled={busy} onClick={() => promptVerification({ title: 'other protected settings', run: async () => {}, success: 'Security verification is valid for 15 minutes.', reload: false })}>Verify for other settings</Button></div>
         </div>}
         {section === 'Sessions' && <><p className="mb-4">Times are shown in Asia/Manila. Revocation immediately removes backend access.</p>{sessions.length === 0 && <p>No active sessions.</p>}<ul className="divide-y divide-border-default">{sessions.map(session => <li key={session.id} className="flex flex-wrap items-center justify-between gap-4 py-5"><div><h3 className="font-semibold">{session.description}{session.current ? ' · Current session' : ''}</h3><p>Signed in {date(session.createdAt)}</p><p>Last active {date(session.lastActiveAt)}</p></div><Button variant="secondary" disabled={busy} onClick={() => {if(window.confirm('Sign out this session?')) void act(async client => {await client.revokeAccountSession({accountPortal,sessionId:session.id});if(session.current)window.location.assign(loginPath)},'Session revoked.')}}>Revoke session</Button></li>)}</ul><Button variant="secondary" disabled={busy} onClick={() => {if(window.confirm('Sign out all other sessions?')) void act(client => client.revokeAccountSessions({accountPortal,accountSessionRevocation:{scope:'OTHERS'}}),'Other sessions signed out.')}}>Sign out other sessions</Button></>}
         {section === 'Agreements' && <div className="grid gap-6"><p className="text-sm leading-6 text-text-secondary">Review the published terms for your account. Acceptance is recorded separately for each version.</p>{agreements.length === 0 && <p>No agreements are available.</p>}{agreements.map(agreement => <section key={agreement.id} className="overflow-hidden rounded-control border border-border-default"><header className="flex flex-wrap items-start justify-between gap-4 border-b border-border-default bg-surface-canvas p-5"><div className="flex items-start gap-3"><FileCheck2 className="mt-1 shrink-0 text-text-secondary" size={20} aria-hidden="true" /><div><h3 className="text-lg font-semibold">{agreement.title}</h3><p className="mt-1 text-xs text-text-secondary">Version {agreement.version}</p></div></div><span className="rounded-pill border border-border-default bg-surface-primary px-3 py-1 text-xs font-semibold">{agreement.acceptedAt ? 'Accepted' : agreement.requiresAcceptance ? 'Acceptance required' : 'Not yet accepted'}</span></header><div className="p-5 sm:p-6">{agreement.acceptedAt && <p className="mb-4 text-xs text-text-secondary">Accepted {date(agreement.acceptedAt)}</p>}{agreement.contentAvailable ? <><div className="whitespace-pre-wrap break-words text-sm leading-7 text-text-strong">{agreement.content}</div>{!agreement.acceptedAt && <div className="mt-6 border-t border-border-default pt-5"><Button disabled={busy} onClick={() => void act(client=>client.acceptAccountAgreements({accountPortal,accountAgreementAcceptance:{versionIds:[agreement.id]}}),'Agreement recorded.')}>{agreement.code === 'PRIVACY_NOTICE' ? 'Acknowledge Privacy Notice' : 'Accept this version'}</Button></div>}</> : <p className="text-sm leading-6 text-text-secondary">Approved agreement text is not available yet. Contact support for the published copy.</p>}</div></section>)}</div>}
@@ -144,5 +197,26 @@ export function AccountWorkspace({ portal: accountPortal, basePath, loginPath, r
         {embedded && section === 'Sessions' && <Button className="mt-6" variant="secondary" disabled={busy || !profile} onClick={() => window.confirm('Sign out every device, including this one?') && void act(async client => { await client.revokeAccountSessions({ accountPortal, accountSessionRevocation: { scope: 'ALL' } }); clearWebSessionTransport(basePath); window.location.assign(loginPath) }, 'Signed out.', false)}>Sign out all devices</Button>}
         <Button className="mt-6" variant="secondary" disabled={busy} onClick={()=>void load()}>{busy?'Updating…':'Refresh'}</Button>
       </section></div></>}
+    {pendingSecurityAction && <div className="fixed inset-0 z-50 grid place-items-center bg-text-strong/60 p-4" onMouseDown={event => { if (event.target === event.currentTarget) closeVerification() }}>
+      <div ref={verificationRef} role="dialog" aria-modal="true" aria-labelledby="security-verification-title" aria-describedby="security-verification-description" className="w-full max-w-md rounded-surface border border-border-default bg-surface-primary p-6 shadow-xl" onKeyDown={event => {
+        if (event.key === 'Escape') { event.preventDefault(); closeVerification() }
+        if (event.key === 'Tab') {
+          const controls = Array.from(verificationRef.current?.querySelectorAll<HTMLElement>('input:not(:disabled), button:not(:disabled)') ?? [])
+          const first = controls[0], last = controls.at(-1)
+          if (!first || !last) return
+          if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus() }
+          else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() }
+        }
+      }}>
+        <h2 id="security-verification-title" className="text-xl font-semibold">Confirm {pendingSecurityAction.title.toLowerCase()}</h2>
+        <p id="security-verification-description" className="mt-2 text-sm text-text-secondary">{totp ? 'Enter a fresh code from your authenticator app to continue.' : 'Verify your account to continue.'}</p>
+        <form className="mt-5 grid gap-4" onSubmit={event => void verifyAndRun(event)}>
+          {totp ? <Field label="Authenticator code" name="code" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} autoComplete="one-time-code" required /> : verificationMode === 'email' ? <Field label="Current-email verification code" name="email_code" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} autoComplete="one-time-code" required /> : <Field label="Current password" name="password" type="password" autoComplete="current-password" required />}
+          {verificationError && <StatusMessage tone="error">{verificationError}</StatusMessage>}
+          <div className="flex flex-wrap justify-end gap-3"><Button variant="secondary" disabled={busy} onClick={closeVerification}>Cancel</Button><Button type="submit" disabled={busy}>{busy ? 'Verifying…' : 'Verify and continue'}</Button></div>
+        </form>
+        {!totp && verificationMode === 'password' && <Button className="mt-4 w-full" variant="quiet" disabled={busy} onClick={() => void sendVerificationEmail()}>Send email verification instead</Button>}
+      </div>
+    </div>}
   </div>
 }

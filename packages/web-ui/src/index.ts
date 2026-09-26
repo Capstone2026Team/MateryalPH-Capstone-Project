@@ -34,3 +34,5 @@ export { ChoiceField } from './choice-field'
 export { DeliveryVehicles, emptyDeliveryVehicle, type DeliveryVehicleDraft } from './delivery-vehicles'
 export { XenditConnection, type XenditConnectionProps } from './xendit-connection'
 export { StoreOperationSchedule, StoreHours, emptyStoreSchedule, storeScheduleErrors, type StoreOperatingDay } from './store-operation-schedule'
+
+export { ProfileDetails, ProfileSplitPanel } from './profile-details'

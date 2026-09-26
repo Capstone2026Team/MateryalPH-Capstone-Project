@@ -27,6 +27,7 @@
 .portal-footer-account { display: flex; align-items: center; gap: 10px; min-height: 48px; border-radius: 8px; padding: 4px 8px; text-decoration: none; }
 .portal-footer-account:hover { background: var(--mp-color-surface-canvas); }
 .portal-footer-avatar { display: grid; flex: 0 0 32px; width: 32px; height: 32px; place-items: center; border-radius: 9px; background: var(--mp-color-brand-orange-100); color: var(--mp-color-action-primary); font-size: 12px; font-weight: 700; }
+.portal-footer-avatar img { width: 100%; height: 100%; border-radius: inherit; object-fit: contain; }
 .portal-footer-details { display: grid; min-width: 0; gap: 3px; transition: opacity 140ms ease; }
 .portal-footer-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; line-height: 18px; font-weight: 650; }
 .portal-footer-status { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; line-height: 16px; color: var(--mp-color-text-secondary); }

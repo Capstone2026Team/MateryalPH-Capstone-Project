@@ -871,3 +871,12 @@ Tax and fee source references are maintained with FIN-01–FIN-12 in [the System
 ### Future Enhancements
 
 Multi-branch management, custom Vendor roles, a Vendor RFQ bidding queue, live GPS tracking, MateryalPH wallet or escrow, automated tax-invoice issuance, and construction-vehicle rental are outside the current capstone scope.
+
+
+### Store Profile and Vacation Mode (approved September 26, 2026)
+
+Store Information contains the public email and phone; there is no duplicate Primary Contact tab. Business Information presents private business details beside applicable evidence and the latest Admin-verified metadata. The Owner can prepare updates and replacement evidence here using the existing verification draft and explicit review-submission workflow. Admin review fields remain read-only; prior evidence remains versioned. Store Location shows the registered coordinates and complete address with an accessible text alternative.
+
+Vacation Mode is an Owner-controlled immediate on/off setting, off by default. It pauses all new Item-Based orders, Project-Based inquiries and quotation acceptance. Existing work, fulfillment obligations and messaging remain available. It does not change activation, the weekly operating schedule or document approval. Changes require optimistic concurrency and an attributed audit event. Public store responses disclose the setting. No automatic chat reply or scheduled vacation period is included.
+
+Implementation boundary: checkout, inquiry and quotation-acceptance endpoints are not implemented in the current phase. Those future transactions must call `NewProcurementAvailability::assertAvailable` while holding the organization lock; existing-work transitions must not use this new-procurement guard.

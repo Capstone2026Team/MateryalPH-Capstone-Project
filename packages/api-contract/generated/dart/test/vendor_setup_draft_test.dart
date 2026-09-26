@@ -24,6 +24,12 @@ void main() {
       // TODO
     });
 
+    // Owner-only immediate pause of all new procurement. Existing work and messaging remain available. Does not alter weekly hours or activation.
+    // bool vacationMode
+    test('to test the property `vacationMode`', () async {
+      // TODO
+    });
+
     // String publicStoreName
     test('to test the property `publicStoreName`', () async {
       // TODO

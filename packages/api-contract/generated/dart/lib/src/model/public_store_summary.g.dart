@@ -10,6 +10,8 @@ class _$PublicStoreSummary extends PublicStoreSummary {
   @override
   final String id;
   @override
+  final bool vacationMode;
+  @override
   final String publicStoreName;
   @override
   final String? description;
@@ -19,7 +21,10 @@ class _$PublicStoreSummary extends PublicStoreSummary {
       (PublicStoreSummaryBuilder()..update(updates))._build();
 
   _$PublicStoreSummary._(
-      {required this.id, required this.publicStoreName, this.description})
+      {required this.id,
+      required this.vacationMode,
+      required this.publicStoreName,
+      this.description})
       : super._();
   @override
   PublicStoreSummary rebuild(
@@ -35,6 +40,7 @@ class _$PublicStoreSummary extends PublicStoreSummary {
     if (identical(other, this)) return true;
     return other is PublicStoreSummary &&
         id == other.id &&
+        vacationMode == other.vacationMode &&
         publicStoreName == other.publicStoreName &&
         description == other.description;
   }
@@ -43,6 +49,7 @@ class _$PublicStoreSummary extends PublicStoreSummary {
   int get hashCode {
     var _$hash = 0;
     _$hash = $jc(_$hash, id.hashCode);
+    _$hash = $jc(_$hash, vacationMode.hashCode);
     _$hash = $jc(_$hash, publicStoreName.hashCode);
     _$hash = $jc(_$hash, description.hashCode);
     _$hash = $jf(_$hash);
@@ -53,6 +60,7 @@ class _$PublicStoreSummary extends PublicStoreSummary {
   String toString() {
     return (newBuiltValueToStringHelper(r'PublicStoreSummary')
           ..add('id', id)
+          ..add('vacationMode', vacationMode)
           ..add('publicStoreName', publicStoreName)
           ..add('description', description))
         .toString();
@@ -66,6 +74,10 @@ class PublicStoreSummaryBuilder
   String? _id;
   String? get id => _$this._id;
   set id(String? id) => _$this._id = id;
+
+  bool? _vacationMode;
+  bool? get vacationMode => _$this._vacationMode;
+  set vacationMode(bool? vacationMode) => _$this._vacationMode = vacationMode;
 
   String? _publicStoreName;
   String? get publicStoreName => _$this._publicStoreName;
@@ -84,6 +96,7 @@ class PublicStoreSummaryBuilder
     final $v = _$v;
     if ($v != null) {
       _id = $v.id;
+      _vacationMode = $v.vacationMode;
       _publicStoreName = $v.publicStoreName;
       _description = $v.description;
       _$v = null;
@@ -109,6 +122,8 @@ class PublicStoreSummaryBuilder
         _$PublicStoreSummary._(
           id: BuiltValueNullFieldError.checkNotNull(
               id, r'PublicStoreSummary', 'id'),
+          vacationMode: BuiltValueNullFieldError.checkNotNull(
+              vacationMode, r'PublicStoreSummary', 'vacationMode'),
           publicStoreName: BuiltValueNullFieldError.checkNotNull(
               publicStoreName, r'PublicStoreSummary', 'publicStoreName'),
           description: description,

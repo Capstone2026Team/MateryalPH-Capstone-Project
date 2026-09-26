@@ -12,6 +12,7 @@ use App\Domain\Identity\TokenSessionService;
 use App\Domain\Vendors\AddressGeocoder;
 use App\Domain\Vendors\ConfirmedDeliverySnapshot;
 use App\Domain\Vendors\DeliveryRecommendationService;
+use App\Domain\Vendors\NewProcurementAvailability;
 use App\Domain\Vendors\OnboardingDrafts;
 use App\Domain\Vendors\OnboardingRequirementResolver;
 use App\Domain\Vendors\PhilippineRegionDirectory;
@@ -44,6 +45,39 @@ use Tests\TestCase;
 final class PhaseThreeVendorOnboardingTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_vacation_mode_is_audited_versioned_and_preserves_store_hours(): void
+    {
+        [$organization, $owner] = $this->vendorFixture('OWNER');
+        $this->signInVendor($owner);
+        $this->patchJson('/api/v1/vendors/onboarding/setup', ['organization_lock_version' => 1, 'description' => 'Sample store', 'bulk_capability' => false, 'fulfillment_method' => 'SELF_PICKUP', 'operating_schedule' => $this->weeklyOperatingSchedule()])->assertOk();
+        foreach (['LOGO', 'BANNER'] as $kind) {
+            $this->post('/api/v1/vendors/onboarding/media', ['kind' => $kind, 'file' => UploadedFile::fake()->image(strtolower($kind).'.png')])->assertCreated();
+        }
+        DB::table('vendor_payment_accounts')->insert(['id' => (string) Str::uuid7(), 'vendor_organization_id' => $organization->id, 'provider' => 'XENDIT', 'environment' => 'TEST', 'provider_associated_at' => now(), 'connection_status' => 'CONNECTED_TEST', 'provider_status' => 'LIVE', 'provider_account_id' => 'fixture-account', 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('store_profiles')->where('vendor_organization_id', $organization->id)->update(['status' => 'COMPLETED']);
+        DB::table('vendor_organizations')->where('id', $organization->id)->update(['store_setup_status' => 'COMPLETED', 'store_activation_status' => 'ACTIVE', 'marketplace_discoverability_status' => 'DISCOVERABLE']);
+        $version = $organization->refresh()->lock_version;
+        $this->patchJson('/api/v1/vendors/onboarding/setup', ['organization_lock_version' => $version, 'vacation_mode' => true])->assertOk()->assertJsonPath('data.setup.vacation_mode', true)->assertJsonPath('data.setup.status', 'COMPLETED')->assertJsonCount(7, 'data.setup.operating_schedule');
+        $this->assertDatabaseHas('audit_logs', ['action' => 'VENDOR_VACATION_MODE_UPDATED', 'actor_user_id' => $owner->id]);
+        $this->getJson('/api/v1/stores/'.$organization->id.'/profile')->assertOk()->assertJsonPath('data.vacation_mode', true);
+        $this->patchJson('/api/v1/vendors/onboarding/setup', ['organization_lock_version' => $version, 'vacation_mode' => false])->assertConflict();
+        try {
+            DB::transaction(fn () => app(NewProcurementAvailability::class)->assertAvailable($organization->id));
+            self::fail('Vacation Mode must reject new procurement.');
+        } catch (AuthenticationException $exception) {
+            self::assertSame('STORE_ON_VACATION', $exception->errorCode);
+        }
+        $this->patchJson('/api/v1/vendors/onboarding/setup', ['organization_lock_version' => $organization->refresh()->lock_version, 'vacation_mode' => false])->assertOk()->assertJsonPath('data.setup.vacation_mode', false);
+        DB::transaction(fn () => app(NewProcurementAvailability::class)->assertAvailable($organization->id));
+    }
+
+    public function test_staff_cannot_change_vacation_mode(): void
+    {
+        [$organization, $staff] = $this->vendorFixture('STORE_STAFF');
+        $this->signInVendor($staff);
+        $this->patchJson('/api/v1/vendors/onboarding/setup', ['organization_lock_version' => 1, 'vacation_mode' => true])->assertForbidden();
+    }
 
     public function test_delivery_vehicles_support_categories_images_mixer_capacity_and_default_coverage(): void
     {
@@ -1015,6 +1049,29 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
         self::assertTrue(collect($readiness['blockers'])->contains('key', 'owner_email_verification'));
     }
 
+    public function test_verified_google_identity_satisfies_owner_email_activation_condition_for_matching_current_address(): void
+    {
+        [$organization, $owner] = $this->activationReadyFixture();
+        DB::table('users')->where('id', $owner->id)->update(['email_verified_at' => null]);
+        DB::table('external_identities')->insert([
+            'id' => (string) Str::uuid7(),
+            'user_id' => $owner->id,
+            'provider' => 'GOOGLE',
+            'provider_subject' => 'verified-google-owner',
+            'email_at_link' => $owner->email,
+            'linked_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        self::assertTrue(app(StoreActivationGate::class)->evaluate($organization->id)['ready']);
+
+        DB::table('users')->where('id', $owner->id)->update(['email' => 'different@example.test']);
+        $readiness = app(StoreActivationGate::class)->evaluate($organization->id);
+        self::assertFalse($readiness['ready']);
+        self::assertTrue(collect($readiness['blockers'])->contains('key', 'owner_email_verification'));
+    }
+
     public function test_each_applicable_mandatory_requirement_blocks_activation_when_incomplete(): void
     {
         [$organization] = $this->activationReadyFixture();
@@ -1190,6 +1247,10 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
             'verified_issue_date' => now()->subYear()->toDateString(),
             'verified_expiration_date' => now()->addDay()->toDateString(),
         ], ['Idempotency-Key' => (string) Str::uuid7()])->assertOk();
+        $this->signInVendor($owner);
+        $document = collect($this->getJson('/api/v1/vendors/onboarding')->assertOk()->json('data.verification.documents'))->firstWhere('id', $versionId);
+        self::assertSame('DATE', $document['review']['expiration_kind']);
+        self::assertSame(now()->addDay()->toDateString(), $document['review']['verified_expiration_date']);
         DB::table('vendor_organizations')->where('id', $organization->getKey())->update(['store_activation_status' => 'ACTIVE']);
 
         $this->travel(2)->days();

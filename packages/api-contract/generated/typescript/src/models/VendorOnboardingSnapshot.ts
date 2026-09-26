@@ -87,7 +87,7 @@ export interface VendorOnboardingSnapshot {
      */
     sections: { [key: string]: VendorOnboardingSection; };
     /**
-     *
+     * Private verification snapshot. Each documents entry includes its latest Admin review (decision, reason, verified_document_number, verified_issue_date, expiration_kind, verified_expiration_date, evidence_source, remarks, reviewed_at), or null when not reviewed.
      */
     verification: { [key: string]: any; };
     /**

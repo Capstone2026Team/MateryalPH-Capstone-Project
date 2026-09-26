@@ -188,7 +188,7 @@ final class VendorOnboardingService
                     $versions = DB::table('vendor_document_versions as v')->join('files as f', 'f.id', '=', 'v.file_id')->where('v.business_document_id', $row->business_document_id)->orderByDesc('v.version')->limit(5)->get(['v.id', 'v.file_id', 'v.version', 'v.scan_state', 'f.original_name'])->map(fn (object $version): array => (array) $version)->all();
                     unset($row->business_document_id);
 
-                    return (array) $row + ['recent_versions' => $versions];
+                    return (array) $row + ['recent_versions' => $versions, 'review' => DB::table('business_document_reviews')->where('business_document_version_id', $row->id)->orderByDesc('reviewed_at')->first(['decision', 'reason', 'verified_document_number', 'verified_issue_date', 'expiration_kind', 'verified_expiration_date', 'evidence_source', 'remarks', 'reviewed_at'])];
                 })->all(),
                 'form_state' => $this->verificationFormState($organizationId, true),
                 'pending_documents' => DB::table('vendor_pending_documents as p')->join('files as f', 'f.id', '=', 'p.file_id')->where('p.vendor_organization_id', $organizationId)->get(['p.requirement_key', 'p.file_id', 'f.original_name', 'f.byte_size', 'f.content_type'])->map(fn (object $row): array => (array) $row + ['status' => 'PENDING_SUBMISSION'])->all(),
@@ -206,6 +206,7 @@ final class VendorOnboardingService
                 'form_state' => $this->setupFormState($organizationId),
                 'status' => $organization->store_setup_status,
                 'operating_schedule' => $operatingSchedule,
+                'vacation_mode' => (bool) ($profile->vacation_mode ?? false),
                 'profile' => $profile === null ? null : ['public_store_name' => $profile->public_store_name, 'description' => $profile->description, 'bulk_capability' => $profile->bulk_capability === null ? null : (bool) $profile->bulk_capability, 'fulfillment_method' => $profile->fulfillment_method, 'public_email' => $profile->public_email, 'public_phone' => $profile->public_phone, 'status' => $profile->status, 'version' => (int) $profile->version, 'lock_version' => (int) $profile->lock_version],
                 'delivery' => $delivery === null ? null : (array) $delivery,
                 'vehicles' => $vehicles,
@@ -422,6 +423,12 @@ final class VendorOnboardingService
         DB::transaction(function () use ($request, $input, $organizationId): void {
             $organization = DB::table('vendor_organizations')->where('id', $organizationId)->lockForUpdate()->first();
             $this->assertVersion($organization, $input['organization_lock_version'] ?? null);
+            if (array_key_exists('vacation_mode', $input)) {
+                $this->requireVendorPermission($request, 'vendor.onboarding.submit');
+                if ($this->vendorScope($request)['role'] !== 'OWNER') {
+                    throw new AuthenticationException('ACTION_NOT_ALLOWED', 'Only the Vendor Owner can change Vacation Mode.', 403);
+                }
+            }
             $this->drafts->save($organizationId, 'STORE_SETUP', $input, (int) $request->user()->getKey(), isset($input['draft_lock_version']) ? (int) $input['draft_lock_version'] : null);
             if (array_key_exists('form_state', $input) && array_diff(array_keys($input), ['organization_lock_version', 'draft_lock_version', 'form_state']) === []) {
                 DB::table('vendor_organizations')->where('id', $organizationId)->update(['store_setup_status' => $organization->store_setup_status === 'COMPLETED' ? 'COMPLETED' : 'IN_PROGRESS', 'lock_version' => (int) $organization->lock_version + 1, 'updated_at' => now()]);
@@ -431,8 +438,9 @@ final class VendorOnboardingService
             }
             $existing = DB::table('store_profiles')->where('vendor_organization_id', $organizationId)->first();
             $publicProfileOnly = $existing !== null && $organization->store_setup_status === 'COMPLETED'
-                && array_diff(array_keys($input), ['organization_lock_version', 'draft_lock_version', 'public_store_name', 'description', 'public_email', 'public_phone', 'operating_schedule']) === [];
+                && array_diff(array_keys($input), ['organization_lock_version', 'draft_lock_version', 'public_store_name', 'description', 'public_email', 'public_phone', 'operating_schedule', 'vacation_mode']) === [];
             $profile = [
+                'vacation_mode' => array_key_exists('vacation_mode', $input) ? (bool) $input['vacation_mode'] : (bool) ($existing->vacation_mode ?? false),
                 'public_store_name' => trim((string) ($input['public_store_name'] ?? ($existing === null ? $organization->store_name : $existing->public_store_name))),
                 'description' => array_key_exists('description', $input) ? $input['description'] : ($existing === null ? null : $existing->description),
                 'bulk_capability' => array_key_exists('bulk_capability', $input) ? (bool) $input['bulk_capability'] : ($existing === null ? null : $existing->bulk_capability),
@@ -453,6 +461,9 @@ final class VendorOnboardingService
                 DB::table('store_profiles')->where('id', $existing->id)->update($profile);
             }
             $profileId = (string) ($existing->id ?? $profile['id']);
+            if (array_key_exists('vacation_mode', $input) && (bool) ($existing->vacation_mode ?? false) !== $profile['vacation_mode']) {
+                $this->audit->account($request, 'VENDOR_VACATION_MODE_UPDATED', 'STORE_PROFILE', $profileId, after: ['vacation_mode' => $profile['vacation_mode']]);
+            }
             if (isset($input['operating_schedule'])) {
                 $schedule = app(StoreOperatingSchedule::class);
                 $before = $schedule->weekly($profileId);

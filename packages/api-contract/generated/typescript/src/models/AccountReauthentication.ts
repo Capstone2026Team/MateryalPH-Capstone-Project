@@ -14,7 +14,7 @@
 
 import { mapValues } from '../runtime';
 /**
- *
+ * An enrolled Vendor or Admin web account may reauthenticate with a fresh authenticator code alone. Buyer accounts continue to use password or current-email OTP. Privileged password and email OTP reauthentication also require TOTP.
  * @export
  * @interface AccountReauthentication
  */

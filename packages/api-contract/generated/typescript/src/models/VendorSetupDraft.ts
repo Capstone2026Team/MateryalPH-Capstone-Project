@@ -55,6 +55,10 @@ export interface VendorSetupDraft {
      */
     formState?: string;
     /**
+     * Owner-only immediate pause of all new procurement. Existing work and messaging remain available. Does not alter weekly hours or activation.
+     */
+    vacationMode?: boolean;
+    /**
      *
      */
     publicStoreName?: string;
@@ -126,6 +130,7 @@ export function VendorSetupDraftFromJSONTyped(json: any, ignoreDiscriminator: bo
         'draftLockVersion': json['draft_lock_version'] == null ? undefined : json['draft_lock_version'],
         'organizationLockVersion': json['organization_lock_version'],
         'formState': json['form_state'] == null ? undefined : json['form_state'],
+        'vacationMode': json['vacation_mode'] == null ? undefined : json['vacation_mode'],
         'publicStoreName': json['public_store_name'] == null ? undefined : json['public_store_name'],
         'description': json['description'] === undefined ? undefined : json['description'] === null ? null : json['description'],
         'bulkCapability': json['bulk_capability'] == null ? undefined : json['bulk_capability'],
@@ -153,6 +158,7 @@ export function VendorSetupDraftToJSONTyped(value?: VendorSetupDraft | null, ign
         'draft_lock_version': value['draftLockVersion'],
         'organization_lock_version': value['organizationLockVersion'],
         'form_state': value['formState'],
+        'vacation_mode': value['vacationMode'],
         'public_store_name': value['publicStoreName'],
         'description': value['description'],
         'bulk_capability': value['bulkCapability'],

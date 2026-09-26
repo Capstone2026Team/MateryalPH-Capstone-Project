@@ -25,6 +25,7 @@ final class VendorSetupDraftRequest extends FormRequest
             'organization_lock_version' => ['required', 'integer', 'min:1'],
             'public_store_name' => ['sometimes', 'string', 'max:180'],
             'form_state' => ['sometimes', 'string', 'json', 'max:65536'],
+            'vacation_mode' => ['sometimes', 'boolean'],
             'description' => ['sometimes', 'nullable', 'string', 'max:3000'],
             'bulk_capability' => ['sometimes', 'boolean'],
             'fulfillment_method' => ['sometimes', Rule::in(['SELF_PICKUP', 'VENDOR_DELIVERY', 'BOTH'])],

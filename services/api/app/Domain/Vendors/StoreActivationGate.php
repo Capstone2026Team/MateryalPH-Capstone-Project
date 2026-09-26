@@ -29,11 +29,16 @@ final class StoreActivationGate
         $block = static function (int $condition, string $key, string $reason) use (&$blockers): void {
             $blockers[] = ['key' => $key, 'condition' => $condition, 'reason' => $reason];
         };
-        $owner = DB::table('vendor_memberships as m')->join('users as u', 'u.id', '=', 'm.user_id')->where('m.vendor_organization_id', $organizationId)->where('m.role', 'OWNER')->where('m.status', 'ACTIVE')->first(['u.id', 'u.account_status', 'u.email_verified_at']);
+        $owner = DB::table('vendor_memberships as m')->join('users as u', 'u.id', '=', 'm.user_id')->where('m.vendor_organization_id', $organizationId)->where('m.role', 'OWNER')->where('m.status', 'ACTIVE')->first(['u.id', 'u.email', 'u.account_status', 'u.email_verified_at']);
         if ($owner === null || $owner->account_status !== 'ACTIVE') {
             $block(1, 'owner_account', 'An active Vendor Owner account is required.');
         } else {
-            if ($owner->email_verified_at === null) {
+            $verifiedGoogleEmail = $owner->email_verified_at === null && DB::table('external_identities')
+                ->where('user_id', $owner->id)
+                ->where('provider', 'GOOGLE')
+                ->whereRaw('LOWER(email_at_link) = ?', [mb_strtolower((string) $owner->email)])
+                ->exists();
+            if ($owner->email_verified_at === null && ! $verifiedGoogleEmail) {
                 $block(1, 'owner_email_verification', 'Verify the Vendor Owner account email address.');
             }
             if (! $this->accepted($organizationId, (int) $owner->id, 'TERMS_OF_SERVICE')) {

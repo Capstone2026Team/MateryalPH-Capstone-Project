@@ -7,6 +7,7 @@
 Name | Type
 ------------ | -------------
 `id` | string
+`vacationMode` | boolean
 `publicStoreName` | string
 `description` | string
 `publicEmail` | string
@@ -25,6 +26,7 @@ import type { PublicStoreProfile } from '@materyalph/api-client-ts'
 // TODO: Update the object below with actual values
 const example = {
   "id": null,
+  "vacationMode": null,
   "publicStoreName": null,
   "description": null,
   "publicEmail": null,

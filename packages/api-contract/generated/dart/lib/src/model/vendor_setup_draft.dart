@@ -18,6 +18,7 @@ part 'vendor_setup_draft.g.dart';
 /// * [draftLockVersion] - Workstream draft version; zero on first save. Send together with the required organization guard. Omission retains legacy behavior without draft-level comparison. A stale draft returns 409 STALE_VERSION; a stale organization returns 409 RESOURCE_VERSION_CONFLICT.
 /// * [organizationLockVersion]
 /// * [formState] - Encrypted JSON setup form progress. Unfinished vehicle entries are not operational configurations. Returned privately as setup.form_state.
+/// * [vacationMode] - Owner-only immediate pause of all new procurement. Existing work and messaging remain available. Does not alter weekly hours or activation.
 /// * [publicStoreName]
 /// * [description]
 /// * [bulkCapability]
@@ -39,6 +40,10 @@ abstract class VendorSetupDraft implements Built<VendorSetupDraft, VendorSetupDr
   /// Encrypted JSON setup form progress. Unfinished vehicle entries are not operational configurations. Returned privately as setup.form_state.
   @BuiltValueField(wireName: r'form_state')
   String? get formState;
+
+  /// Owner-only immediate pause of all new procurement. Existing work and messaging remain available. Does not alter weekly hours or activation.
+  @BuiltValueField(wireName: r'vacation_mode')
+  bool? get vacationMode;
 
   @BuiltValueField(wireName: r'public_store_name')
   String? get publicStoreName;
@@ -109,6 +114,13 @@ class _$VendorSetupDraftSerializer implements PrimitiveSerializer<VendorSetupDra
       yield serializers.serialize(
         object.formState,
         specifiedType: const FullType(String),
+      );
+    }
+    if (object.vacationMode != null) {
+      yield r'vacation_mode';
+      yield serializers.serialize(
+        object.vacationMode,
+        specifiedType: const FullType(bool),
       );
     }
     if (object.publicStoreName != null) {
@@ -219,6 +231,14 @@ class _$VendorSetupDraftSerializer implements PrimitiveSerializer<VendorSetupDra
           ) as String?;
           if (valueDes == null) continue;
           result.formState = valueDes;
+          break;
+        case r'vacation_mode':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.vacationMode = valueDes;
           break;
         case r'public_store_name':
           final valueDes = serializers.deserialize(

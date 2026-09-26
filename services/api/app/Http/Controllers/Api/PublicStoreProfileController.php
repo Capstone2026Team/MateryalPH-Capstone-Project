@@ -24,7 +24,7 @@ final class PublicStoreProfileController extends Controller
             ->whereRaw('(SELECT COUNT(*) FROM operating_hours h WHERE h.store_profile_id = p.id) = 7')
             ->whereRaw('NOT EXISTS (SELECT 1 FROM operating_hours h WHERE h.store_profile_id = p.id AND (h.day_of_week NOT BETWEEN 1 AND 7 OR NOT ((h.is_closed AND h.opens_at IS NULL AND h.closes_at IS NULL) OR (NOT h.is_closed AND h.opens_at IS NOT NULL AND h.closes_at IS NOT NULL AND h.closes_at > h.opens_at))))')
             ->orderBy('p.public_store_name')->orderBy('o.id')
-            ->paginate(20, ['o.id', 'p.public_store_name', 'p.description'], 'page', $page);
+            ->paginate(20, ['o.id', 'p.public_store_name', 'p.description', 'p.vacation_mode'], 'page', $page);
 
         return ApiResponse::success($stores->items(), ['current_page' => $stores->currentPage(), 'last_page' => $stores->lastPage(), 'total' => $stores->total()]);
     }
@@ -36,7 +36,7 @@ final class PublicStoreProfileController extends Controller
             ->where('o.id', $storeId)->where('o.store_activation_status', 'ACTIVE')
             ->where('o.marketplace_discoverability_status', 'DISCOVERABLE')
             ->where('p.status', 'COMPLETED')
-            ->first(['o.id', 'p.id as profile_id', 'p.public_store_name', 'p.description', 'p.public_email', 'p.public_phone']);
+            ->first(['o.id', 'p.id as profile_id', 'p.public_store_name', 'p.description', 'p.public_email', 'p.public_phone', 'p.vacation_mode']);
         if ($store === null) {
             return ApiResponse::error('STORE_NOT_FOUND', 'Store Profile is unavailable.', 404);
         }
@@ -58,6 +58,7 @@ final class PublicStoreProfileController extends Controller
             'description' => $store->description,
             'public_email' => $store->public_email,
             'public_phone' => $store->public_phone,
+            'vacation_mode' => (bool) $store->vacation_mode,
             'operating_schedule' => $weekly,
             'effective_today' => $effective,
             'effective_date' => $today,

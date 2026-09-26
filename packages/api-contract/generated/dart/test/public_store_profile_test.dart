@@ -12,6 +12,12 @@ void main() {
       // TODO
     });
 
+    // True when all new procurement is paused; existing work remains available.
+    // bool vacationMode
+    test('to test the property `vacationMode`', () async {
+      // TODO
+    });
+
     // String publicStoreName
     test('to test the property `publicStoreName`', () async {
       // TODO

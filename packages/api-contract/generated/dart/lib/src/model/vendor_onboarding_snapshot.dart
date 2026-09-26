@@ -25,7 +25,7 @@ part 'vendor_onboarding_snapshot.g.dart';
 /// * [drafts]
 /// * [organization]
 /// * [sections]
-/// * [verification]
+/// * [verification] - Private verification snapshot. Each documents entry includes its latest Admin review (decision, reason, verified_document_number, verified_issue_date, expiration_kind, verified_expiration_date, evidence_source, remarks, reviewed_at), or null when not reviewed.
 /// * [setup]
 /// * [activation]
 /// * [welcomeRequired]
@@ -50,6 +50,7 @@ abstract class VendorOnboardingSnapshot implements Built<VendorOnboardingSnapsho
   @BuiltValueField(wireName: r'sections')
   BuiltMap<String, VendorOnboardingSection> get sections;
 
+  /// Private verification snapshot. Each documents entry includes its latest Admin review (decision, reason, verified_document_number, verified_issue_date, expiration_kind, verified_expiration_date, evidence_source, remarks, reviewed_at), or null when not reviewed.
   @BuiltValueField(wireName: r'verification')
   BuiltMap<String, JsonObject?> get verification;
 

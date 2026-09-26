@@ -126,7 +126,9 @@ class _BuyerStoreBrowseScreenState extends State<BuyerStoreBrowseScreen> {
               final store = _stores[index];
               return ListTile(
                 title: Text(store.publicStoreName),
-                subtitle: store.description == null
+                subtitle: store.vacationMode == true
+                    ? const Text('Vacation Mode · New procurement paused')
+                    : store.description == null
                     ? null
                     : Text(
                         store.description!,
@@ -224,6 +226,10 @@ class _BuyerPublicStoreProfileScreenState
               profile.publicStoreName,
               style: Theme.of(context).textTheme.headlineMedium,
             ),
+            if (profile.vacationMode == true) ...[
+              const SizedBox(height: 12),
+              const Text('Vacation Mode · This store has paused new procurement. Existing orders and messaging remain available.'),
+            ],
             if (profile.description != null) ...[
               const SizedBox(height: 12),
               Text(profile.description!),

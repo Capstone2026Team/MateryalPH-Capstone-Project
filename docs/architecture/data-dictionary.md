@@ -4928,6 +4928,7 @@ Vendor organization, access, onboarding, or storefront record.
 | `lock_version` | `integer` | No | `1` | Lock version. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+| `vacation_mode` | `boolean` | No | `false` | Vacation mode. |
 
 **Constraints**
 

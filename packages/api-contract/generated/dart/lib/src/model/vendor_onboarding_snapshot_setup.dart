@@ -10,7 +10,7 @@ import 'package:built_value/serializer.dart';
 
 part 'vendor_onboarding_snapshot_setup.g.dart';
 
-/// Private Store Setup snapshot, including the canonical weekly Store Operation schedule.
+/// Private Store Setup snapshot, including the canonical weekly Store Operation schedule and vacation_mode boolean.
 ///
 /// Properties:
 /// * [operatingSchedule]

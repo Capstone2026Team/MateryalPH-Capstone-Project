@@ -9,6 +9,7 @@ Name | Type
 `draftLockVersion` | number
 `organizationLockVersion` | number
 `formState` | string
+`vacationMode` | boolean
 `publicStoreName` | string
 `description` | string
 `bulkCapability` | boolean
@@ -29,6 +30,7 @@ const example = {
   "draftLockVersion": null,
   "organizationLockVersion": null,
   "formState": null,
+  "vacationMode": null,
   "publicStoreName": null,
   "description": null,
   "bulkCapability": null,

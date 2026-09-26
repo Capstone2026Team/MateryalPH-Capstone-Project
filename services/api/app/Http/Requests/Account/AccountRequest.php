@@ -29,7 +29,7 @@ final class AccountRequest extends FormRequest
                 'buyer_type' => ['sometimes', Rule::in(['INDIVIDUAL', 'BUSINESS'])],
                 'company_name' => ['sometimes', 'nullable', 'string', 'max:180'],
             ],
-            'reauthenticate' => ['password' => ['required_without:email_code', 'nullable', 'string', 'max:1024'], 'email_code' => ['required_without:password', 'nullable', 'digits:6'], 'code' => ['nullable', 'digits:6']],
+            'reauthenticate' => ['password' => ['nullable', 'string', 'max:1024', 'required_without_all:email_code,code'], 'email_code' => ['nullable', 'digits:6', 'required_without_all:password,code'], 'code' => ['nullable', 'digits:6', 'required_without_all:password,email_code']],
             'changePassword' => ['password' => $password, 'password_confirmation' => ['required', 'string']],
             'startEmailChange' => ['email' => ['required', 'email:rfc', 'max:254']],
             'confirmEmailChange', 'confirmFactor' => ['id' => ['required', 'uuid'], 'code' => ['required', 'digits:6']],

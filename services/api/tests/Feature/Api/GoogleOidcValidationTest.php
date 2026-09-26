@@ -143,6 +143,33 @@ final class GoogleOidcValidationTest extends TestCase
         ]);
     }
 
+    public function test_existing_vendor_email_is_verified_when_a_valid_google_identity_is_linked(): void
+    {
+        $this->configureOidc();
+        $user = User::factory()->create([
+            'email' => 'vendor-google@example.test',
+            'account_type' => 'VENDOR',
+            'account_status' => 'ACTIVE',
+            'email_verified_at' => null,
+        ]);
+
+        $service = app(GoogleOidcService::class);
+        $url = $service->authorizationUrl('VENDOR', 'WEB', false, false, 'SIGN_IN', null, null, null, null);
+        $flow = $this->flowFromAuthorizationUrl($url);
+        parse_str((string) parse_url($url, PHP_URL_QUERY), $query);
+        $this->fakeGoogleIdentity($flow['nonce'], 'vendor-google@example.test');
+
+        $result = $service->complete($query['state'], 'authorization-code');
+
+        self::assertSame($user->id, $result->user->id);
+        self::assertNotNull($user->fresh()->email_verified_at);
+        $this->assertDatabaseHas('external_identities', [
+            'user_id' => $user->id,
+            'provider' => 'GOOGLE',
+            'email_at_link' => 'vendor-google@example.test',
+        ]);
+    }
+
     public function test_non_allowlisted_google_callback_failure_uses_the_sanitized_api_error_path(): void
     {
         $this->configureOidc();

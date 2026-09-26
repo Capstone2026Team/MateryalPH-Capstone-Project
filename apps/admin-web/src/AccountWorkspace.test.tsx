@@ -10,22 +10,25 @@ const profile = {
   role: 'ADMIN_SUPPORT', can_manage_staff: false, permissions: [],
 }
 let status = 200
-const requests: { path: string; method: string }[] = []
+let verificationStatus = 200
+const requests: { path: string; method: string; body: string | undefined }[] = []
 const envelope = (data: unknown) => new Response(JSON.stringify({ data, meta: {}, errors: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } })
 
 describe('Account workspace access and security', () => {
   beforeEach(() => {
     status = 200
+    verificationStatus = 200
     requests.length = 0
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const path = String(input)
-      requests.push({ path, method: init?.method ?? 'GET' })
+      requests.push({ path, method: init?.method ?? 'GET', body: typeof init?.body === 'string' ? init.body : undefined })
       if (path.includes('/csrf')) return envelope({ csrf_token: 'test-csrf' })
       if (path.endsWith('/profile')) {
         if (status !== 200) return new Response(JSON.stringify({ data: null, meta: {}, errors: [{ code: 'UNAUTHENTICATED', message: 'Sign in again.' }] }), { status })
         return envelope(profile)
       }
       if (path.endsWith('/security')) return envelope({ totp_enrolled: true, recent_authentication_expires_at: null })
+      if (path.endsWith('/reauthentication') && verificationStatus !== 200) return new Response(JSON.stringify({ data: null, meta: {}, errors: [{ code: 'REAUTHENTICATION_FAILED', message: 'The verification details are incorrect.' }] }), { status: verificationStatus, headers: { 'Content-Type': 'application/json' } })
       if (path.includes('/sessions')) return envelope([])
       return envelope({ queued: true })
     }))
@@ -51,16 +54,54 @@ describe('Account workspace access and security', () => {
     expect(screen.getByRole('link', { name: 'Return to sign in' })).toHaveAttribute('href', '/login')
   })
 
-  test('email verification retains the required authenticator input', async () => {
+  test('email change opens an authenticator dialog and runs only after verification', async () => {
     open()
     await screen.findByRole('heading', { name: 'Settings' })
     fireEvent.click(screen.getByRole('button', { name: 'Security' }))
-    const send = await screen.findByRole('button', { name: 'Send email verification instead' })
-    await waitFor(() => expect(send).toBeEnabled())
-    fireEvent.click(send)
-    expect(await screen.findByText('A verification code was sent to your current email.')).toBeVisible()
-    expect(screen.getByRole('textbox', { name: 'Authenticator code for email verification' })).toBeRequired()
-    expect(requests.some(request => request.path.endsWith('/reauthentication/email') && request.method === 'POST')).toBe(true)
+    const email = await screen.findByRole('textbox', { name: 'New email' })
+    fireEvent.change(email, { target: { value: 'new@example.test' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Send verification' }))
+    const dialog = screen.getByRole('dialog', { name: 'Confirm change primary email' })
+    expect(screen.queryByRole('heading', { name: 'Verify your identity' })).not.toBeInTheDocument()
+    expect(requests.some(request => request.path.endsWith('/account/email') && request.method === 'POST')).toBe(false)
+    const code = screen.getByRole('textbox', { name: 'Authenticator code' })
+    expect(code).toBeRequired()
+    fireEvent.change(code, { target: { value: '123456' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Verify and continue' }))
+    await waitFor(() => expect(dialog).not.toBeInTheDocument())
+    const reauth = requests.find(request => request.path.endsWith('/reauthentication') && request.method === 'POST')
+    expect(JSON.parse(reauth?.body ?? '{}')).toMatchObject({ code: '123456' })
+    expect(requests.some(request => request.path.endsWith('/account/email') && request.method === 'POST')).toBe(true)
+  })
+
+  test('failed authenticator verification leaves the email change unsent', async () => {
+    verificationStatus = 422
+    open()
+    await screen.findByRole('heading', { name: 'Settings' })
+    fireEvent.click(screen.getByRole('button', { name: 'Security' }))
+    fireEvent.change(await screen.findByRole('textbox', { name: 'New email' }), { target: { value: 'new@example.test' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Send verification' }))
+    fireEvent.change(screen.getByRole('textbox', { name: 'Authenticator code' }), { target: { value: '123456' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Verify and continue' }))
+    expect(await screen.findByText('The verification details are incorrect.')).toBeVisible()
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(requests.some(request => request.path.endsWith('/account/email') && request.method === 'POST')).toBe(false)
+  })
+
+  test('password and authenticator replacement each wait for the popup', async () => {
+    open()
+    await screen.findByRole('heading', { name: 'Settings' })
+    fireEvent.click(screen.getByRole('button', { name: 'Security' }))
+    fireEvent.change(await screen.findByLabelText(/^New password/), { target: { value: 'AnewPassword12345' } })
+    fireEvent.change(screen.getByLabelText(/^Confirm new password/), { target: { value: 'AnewPassword12345' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Change password' }))
+    expect(screen.getByRole('dialog', { name: 'Confirm change password' })).toBeInTheDocument()
+    expect(requests.some(request => request.path.endsWith('/account/password') && request.method === 'POST')).toBe(false)
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Replace authenticator' }))
+    expect(screen.getByRole('dialog', { name: 'Confirm replace authenticator' })).toBeInTheDocument()
+    expect(requests.some(request => request.path.endsWith('/account/factor') && request.method === 'POST')).toBe(false)
   })
 
   test('canceling revoke-all sends no session mutation', async () => {

@@ -1,7 +1,7 @@
 
 # VendorOnboardingSnapshotSetup
 
-Private Store Setup snapshot, including the canonical weekly Store Operation schedule.
+Private Store Setup snapshot, including the canonical weekly Store Operation schedule and vacation_mode boolean.
 
 ## Properties
 

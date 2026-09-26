@@ -32,6 +32,10 @@ export interface PublicStoreProfile {
      */
     id: string;
     /**
+     * True when all new procurement is paused; existing work remains available.
+     */
+    vacationMode: boolean;
+    /**
      *
      */
     publicStoreName: string;
@@ -93,6 +97,7 @@ export type PublicStoreProfileTimeZoneEnum = typeof PublicStoreProfileTimeZoneEn
  */
 export function instanceOfPublicStoreProfile(value: object): value is PublicStoreProfile {
     if (!('id' in value) || value['id'] === undefined) return false;
+    if ((!('vacationMode' in (value as Record<string, any>)) && !('vacation_mode' in (value as Record<string, any>))) || ((value as Record<string, any>)['vacationMode'] === undefined && (value as Record<string, any>)['vacation_mode'] === undefined)) return false;
     if ((!('publicStoreName' in (value as Record<string, any>)) && !('public_store_name' in (value as Record<string, any>))) || ((value as Record<string, any>)['publicStoreName'] === undefined && (value as Record<string, any>)['public_store_name'] === undefined)) return false;
     if (!('description' in value) || value['description'] === undefined) return false;
     if ((!('publicEmail' in (value as Record<string, any>)) && !('public_email' in (value as Record<string, any>))) || ((value as Record<string, any>)['publicEmail'] === undefined && (value as Record<string, any>)['public_email'] === undefined)) return false;
@@ -118,6 +123,7 @@ export function PublicStoreProfileFromJSONTyped(json: any, ignoreDiscriminator: 
     return {
 
         'id': json['id'],
+        'vacationMode': json['vacation_mode'],
         'publicStoreName': json['public_store_name'],
         'description': json['description'],
         'publicEmail': json['public_email'],
@@ -142,6 +148,7 @@ export function PublicStoreProfileToJSONTyped(value?: PublicStoreProfile | null,
     return {
 
         'id': value['id'],
+        'vacation_mode': value['vacationMode'],
         'public_store_name': value['publicStoreName'],
         'description': value['description'],
         'public_email': value['publicEmail'],

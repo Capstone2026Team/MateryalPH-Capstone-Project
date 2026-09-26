@@ -9,6 +9,7 @@ import 'package:materyalph_api_client/api.dart';
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **id** | **String** |  |
+**vacationMode** | **bool** | True when all new procurement is paused; existing work remains available. |
 **publicStoreName** | **String** |  |
 **description** | **String** |  |
 

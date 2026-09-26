@@ -9,6 +9,7 @@ class _StoreRepository extends BuyerStoreRepository {
     (b) => b
       ..id = id
       ..publicStoreName = 'Sample Store'
+      ..vacationMode = true
       ..operatingSchedule.replace([
         for (var day = 1; day <= 7; day++)
           StoreOperatingDay(
@@ -48,9 +49,11 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(find.textContaining('This store has paused new procurement'), findsOneWidget);
     expect(find.text('Store Hours'), findsOneWidget);
     expect(find.text('Monday'), findsOneWidget);
-    expect(find.text('8:00 AM – 5:00 PM'), findsNWidgets(6));
+    expect(find.text('8:00 AM – 5:00 PM'), findsWidgets);
+    await tester.scrollUntilVisible(find.text('Sunday'), 150, scrollable: find.byType(Scrollable));
     expect(find.text('Sunday'), findsOneWidget);
     expect(find.text('Closed'), findsOneWidget);
     await tester.scrollUntilVisible(
@@ -59,6 +62,7 @@ void main() {
       scrollable: find.byType(Scrollable),
     );
     expect(find.text('Today’s hours: Closed'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Date-specific schedule'), 100, scrollable: find.byType(Scrollable));
     expect(find.text('Date-specific schedule'), findsOneWidget);
   });
 }

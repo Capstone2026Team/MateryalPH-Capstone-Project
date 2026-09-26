@@ -24,6 +24,10 @@ export interface PublicStoreSummary {
      */
     id: string;
     /**
+     * True when all new procurement is paused; existing work remains available.
+     */
+    vacationMode: boolean;
+    /**
      *
      */
     publicStoreName: string;
@@ -38,6 +42,7 @@ export interface PublicStoreSummary {
  */
 export function instanceOfPublicStoreSummary(value: object): value is PublicStoreSummary {
     if (!('id' in value) || value['id'] === undefined) return false;
+    if ((!('vacationMode' in (value as Record<string, any>)) && !('vacation_mode' in (value as Record<string, any>))) || ((value as Record<string, any>)['vacationMode'] === undefined && (value as Record<string, any>)['vacation_mode'] === undefined)) return false;
     if ((!('publicStoreName' in (value as Record<string, any>)) && !('public_store_name' in (value as Record<string, any>))) || ((value as Record<string, any>)['publicStoreName'] === undefined && (value as Record<string, any>)['public_store_name'] === undefined)) return false;
     if (!('description' in value) || value['description'] === undefined) return false;
     return true;
@@ -54,6 +59,7 @@ export function PublicStoreSummaryFromJSONTyped(json: any, ignoreDiscriminator: 
     return {
 
         'id': json['id'],
+        'vacationMode': json['vacation_mode'],
         'publicStoreName': json['public_store_name'],
         'description': json['description'],
     };
@@ -71,6 +77,7 @@ export function PublicStoreSummaryToJSONTyped(value?: PublicStoreSummary | null,
     return {
 
         'id': value['id'],
+        'vacation_mode': value['vacationMode'],
         'public_store_name': value['publicStoreName'],
         'description': value['description'],
     };

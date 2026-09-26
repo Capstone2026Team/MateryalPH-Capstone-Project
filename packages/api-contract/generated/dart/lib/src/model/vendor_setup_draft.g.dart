@@ -84,6 +84,8 @@ class _$VendorSetupDraft extends VendorSetupDraft {
   @override
   final String? formState;
   @override
+  final bool? vacationMode;
+  @override
   final String? publicStoreName;
   @override
   final String? description;
@@ -110,6 +112,7 @@ class _$VendorSetupDraft extends VendorSetupDraft {
       {this.draftLockVersion,
       required this.organizationLockVersion,
       this.formState,
+      this.vacationMode,
       this.publicStoreName,
       this.description,
       this.bulkCapability,
@@ -135,6 +138,7 @@ class _$VendorSetupDraft extends VendorSetupDraft {
         draftLockVersion == other.draftLockVersion &&
         organizationLockVersion == other.organizationLockVersion &&
         formState == other.formState &&
+        vacationMode == other.vacationMode &&
         publicStoreName == other.publicStoreName &&
         description == other.description &&
         bulkCapability == other.bulkCapability &&
@@ -152,6 +156,7 @@ class _$VendorSetupDraft extends VendorSetupDraft {
     _$hash = $jc(_$hash, draftLockVersion.hashCode);
     _$hash = $jc(_$hash, organizationLockVersion.hashCode);
     _$hash = $jc(_$hash, formState.hashCode);
+    _$hash = $jc(_$hash, vacationMode.hashCode);
     _$hash = $jc(_$hash, publicStoreName.hashCode);
     _$hash = $jc(_$hash, description.hashCode);
     _$hash = $jc(_$hash, bulkCapability.hashCode);
@@ -171,6 +176,7 @@ class _$VendorSetupDraft extends VendorSetupDraft {
           ..add('draftLockVersion', draftLockVersion)
           ..add('organizationLockVersion', organizationLockVersion)
           ..add('formState', formState)
+          ..add('vacationMode', vacationMode)
           ..add('publicStoreName', publicStoreName)
           ..add('description', description)
           ..add('bulkCapability', bulkCapability)
@@ -201,6 +207,10 @@ class VendorSetupDraftBuilder
   String? _formState;
   String? get formState => _$this._formState;
   set formState(String? formState) => _$this._formState = formState;
+
+  bool? _vacationMode;
+  bool? get vacationMode => _$this._vacationMode;
+  set vacationMode(bool? vacationMode) => _$this._vacationMode = vacationMode;
 
   String? _publicStoreName;
   String? get publicStoreName => _$this._publicStoreName;
@@ -259,6 +269,7 @@ class VendorSetupDraftBuilder
       _draftLockVersion = $v.draftLockVersion;
       _organizationLockVersion = $v.organizationLockVersion;
       _formState = $v.formState;
+      _vacationMode = $v.vacationMode;
       _publicStoreName = $v.publicStoreName;
       _description = $v.description;
       _bulkCapability = $v.bulkCapability;
@@ -297,6 +308,7 @@ class VendorSetupDraftBuilder
                 r'VendorSetupDraft',
                 'organizationLockVersion'),
             formState: formState,
+            vacationMode: vacationMode,
             publicStoreName: publicStoreName,
             description: description,
             bulkCapability: bulkCapability,

@@ -12,12 +12,17 @@ part 'public_store_summary.g.dart';
 ///
 /// Properties:
 /// * [id]
+/// * [vacationMode] - True when all new procurement is paused; existing work remains available.
 /// * [publicStoreName]
 /// * [description]
 @BuiltValue()
 abstract class PublicStoreSummary implements Built<PublicStoreSummary, PublicStoreSummaryBuilder> {
   @BuiltValueField(wireName: r'id')
   String get id;
+
+  /// True when all new procurement is paused; existing work remains available.
+  @BuiltValueField(wireName: r'vacation_mode')
+  bool get vacationMode;
 
   @BuiltValueField(wireName: r'public_store_name')
   String get publicStoreName;
@@ -52,6 +57,11 @@ class _$PublicStoreSummarySerializer implements PrimitiveSerializer<PublicStoreS
     yield serializers.serialize(
       object.id,
       specifiedType: const FullType(String),
+    );
+    yield r'vacation_mode';
+    yield serializers.serialize(
+      object.vacationMode,
+      specifiedType: const FullType(bool),
     );
     yield r'public_store_name';
     yield serializers.serialize(
@@ -92,6 +102,13 @@ class _$PublicStoreSummarySerializer implements PrimitiveSerializer<PublicStoreS
             specifiedType: const FullType(String),
           ) as String;
           result.id = valueDes;
+          break;
+        case r'vacation_mode':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(bool),
+          ) as bool;
+          result.vacationMode = valueDes;
           break;
         case r'public_store_name':
           final valueDes = serializers.deserialize(
