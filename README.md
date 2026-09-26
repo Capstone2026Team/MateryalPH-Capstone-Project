@@ -91,8 +91,6 @@ php artisan test
 # isolated PostgreSQL 16/PostGIS Phase 2 gate
 powershell -ExecutionPolicy Bypass -File scripts/run-tests-isolated.ps1
 
-# The former Phase 3 implementation and its tests have been removed.
-
 # each React portal
 npm run typecheck
 npm run lint

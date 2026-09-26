@@ -154,9 +154,9 @@ test('setup previews media and switches every operational section without page o
   expect(nameBox?.width).toBe(descriptionBox?.width)
   await expect(preview.getByRole('heading', { name: 'Updated Supply Store' })).toBeVisible()
   await page.screenshot({ path: testInfo.outputPath('setup-public-preview.png'), fullPage: true })
-  await assertStepperFits(page, 'Store Setup', 5)
+  await assertStepperFits(page, 'Store Setup', 6)
   await expect(page.getByLabel('Upload image')).toHaveCount(2)
-  const labels = ['Fulfillment Configuration', 'Xendit TEST Connection', 'Team Accounts', 'Review and Complete']
+  const labels = ['Fulfillment Configuration', 'Xendit TEST Connection', 'Team Accounts', 'Store Operation', 'Review and Complete']
   for (const label of labels) {
     await page.getByRole('button', { name: 'Next', exact: true }).click()
     await expect(page.locator('#onboarding-section-title')).toHaveText(label)
@@ -209,6 +209,11 @@ test('setup previews media and switches every operational section without page o
       await page.getByRole('combobox', { name: 'Vehicle Type' }).selectOption('CONCRETE_MIXER')
       await expect(page.getByRole('spinbutton', { name: 'Mixer Capacity (m³)' })).toBeVisible()
       await expect(page.getByRole('spinbutton', { name: 'Cargo Length (m)' })).toHaveCount(0)
+    }
+    if (label === 'Store Operation') {
+      for (const day of ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']) {
+        await page.getByRole('combobox', { name: `${day} status` }).selectOption('CLOSED')
+      }
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
   }
@@ -421,7 +426,7 @@ test('commission panel is above Privacy with explicit scroll-gated acceptance an
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
   await page.screenshot({ path: testInfo.outputPath('commission-panel.png'), fullPage: true })
   await page.goto('/onboarding/setup')
-  await expect(page.getByRole('navigation', { name: 'Store Setup steps' }).getByRole('button')).toHaveCount(5)
+  await expect(page.getByRole('navigation', { name: 'Store Setup steps' }).getByRole('button')).toHaveCount(6)
   await expect(page.getByRole('heading', { name: '2% Commission Terms', exact: true })).toHaveCount(0)
 })
 
@@ -430,7 +435,7 @@ test('Xendit panel connects inline and preserves connection on reload', async ({
   await page.goto('/onboarding/setup')
   await page.getByRole('button', { name: '3 Xendit TEST Connection' }).click()
   const panel = page.getByRole('region', { name: 'Xendit connection', exact: true })
-  await expect(panel.getByText(/No separate Xendit login/)).toBeVisible()
+  await expect(panel.getByText(/Xendit will not send a Vendor registration invitation in TEST/)).toBeVisible()
   await expect(panel.getByRole('textbox')).toHaveCount(0)
   await panel.getByRole('button', { name: 'Connect Xendit' }).click()
   await expect(panel.getByText('Xendit — Connected', { exact: true })).toBeVisible()

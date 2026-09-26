@@ -156,7 +156,7 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
         self::assertTrue($snapshot['verification']['commission_terms']['can_accept']);
         self::assertFalse($snapshot['verification']['commission_terms']['accepted']);
         self::assertSame('STORE_VERIFICATION', collect($snapshot['requirements'])->firstWhere('key', 'commission_terms')['workstream']);
-        self::assertCount(9, $snapshot['step_completion']);
+        self::assertCount(10, $snapshot['step_completion']);
         $version = $snapshot['verification']['commission_terms']['agreement']['id'];
         $input = ['organization_lock_version' => $snapshot['organization']['lock_version'], 'agreement_version_id' => $version, 'accepted' => true];
         $this->withHeader('Idempotency-Key', (string) Str::uuid7());
@@ -194,12 +194,13 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
         $this->signInVendor($owner);
         $this->getJson('/api/v1/vendors/onboarding')->assertOk();
         DB::table('store_profiles')->insert(['id' => (string) Str::uuid7(), 'vendor_organization_id' => $organization->id, 'public_store_name' => 'Setup test store', 'description' => 'Construction materials', 'fulfillment_method' => 'SELF_PICKUP', 'bulk_capability' => true, 'status' => 'IN_PROGRESS', 'created_at' => now(), 'updated_at' => now()]);
-        $this->withHeader('Idempotency-Key', (string) Str::uuid7())->postJson('/api/v1/vendors/onboarding/setup/complete', ['organization_lock_version' => $organization->fresh()->lock_version])->assertUnprocessable()->assertJsonPath('errors.0.code', 'STORE_OPERATION_REQUIRED');
-        app(StoreOperatingSchedule::class)->replaceWeekly((string) DB::table('store_profiles')->where('vendor_organization_id', $organization->id)->value('id'), $this->weeklyOperatingSchedule());
-        DB::table('vendor_payment_accounts')->insert(['id' => (string) Str::uuid7(), 'vendor_organization_id' => $organization->id, 'provider_associated_at' => now(), 'connection_status' => 'CONNECTED_TEST', 'provider_status' => 'LIVE', 'provider_account_id' => 'acct_test_commission', 'capabilities' => json_encode(['account_verification' => true]), 'created_at' => now(), 'updated_at' => now()]);
         $this->withHeader('Idempotency-Key', (string) Str::uuid7())->postJson('/api/v1/vendors/onboarding/setup/complete', ['organization_lock_version' => $organization->fresh()->lock_version])->assertUnprocessable()->assertJsonPath('errors.0.code', 'STORE_PROFILE_MEDIA_REQUIRED');
         $this->post('/api/v1/vendors/onboarding/media', ['kind' => 'LOGO', 'file' => UploadedFile::fake()->image('logo.png')])->assertCreated();
         $banner = $this->post('/api/v1/vendors/onboarding/media', ['kind' => 'BANNER', 'file' => UploadedFile::fake()->image('banner.png')])->assertCreated()->json('data.id');
+        $this->withHeader('Idempotency-Key', (string) Str::uuid7())->postJson('/api/v1/vendors/onboarding/setup/complete', ['organization_lock_version' => $organization->fresh()->lock_version])->assertUnprocessable()->assertJsonPath('errors.0.code', 'STORE_OPERATION_REQUIRED');
+        app(StoreOperatingSchedule::class)->replaceWeekly((string) DB::table('store_profiles')->where('vendor_organization_id', $organization->id)->value('id'), $this->weeklyOperatingSchedule());
+        $this->withHeader('Idempotency-Key', (string) Str::uuid7())->postJson('/api/v1/vendors/onboarding/setup/complete', ['organization_lock_version' => $organization->fresh()->lock_version])->assertUnprocessable()->assertJsonPath('errors.0.code', 'PAYMENT_CONNECTION_REQUIRED');
+        DB::table('vendor_payment_accounts')->insert(['id' => (string) Str::uuid7(), 'vendor_organization_id' => $organization->id, 'environment' => 'TEST', 'provider_associated_at' => now(), 'connection_status' => 'CONNECTED_TEST', 'provider_status' => 'LIVE', 'provider_account_id' => 'acct_test_commission', 'capabilities' => json_encode(['account_verification' => true]), 'created_at' => now(), 'updated_at' => now()]);
         $result = $this->withHeader('Idempotency-Key', (string) Str::uuid7())->postJson('/api/v1/vendors/onboarding/setup/complete', ['organization_lock_version' => $organization->fresh()->lock_version])->assertAccepted();
         $result->assertJsonPath('data.setup.status', 'COMPLETED')->assertJsonPath('data.verification.commission_terms.accepted', false);
         self::assertSame(0, DB::table('agreement_acceptances')->where('vendor_organization_id', $organization->id)->count());
@@ -228,7 +229,11 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
         $this->assertDatabaseHas('audit_logs', ['action' => 'VENDOR_STORE_OPERATION_UPDATED', 'actor_user_id' => $owner->id]);
         $this->getJson('/api/v1/stores/'.$organization->id.'/profile')->assertNotFound();
         $this->getJson('/api/v1/stores')->assertOk()->assertJsonCount(0, 'data');
-        DB::table('store_profiles')->where('vendor_organization_id', $organization->id)->update(['status' => 'COMPLETED']);
+        $this->patchJson('/api/v1/vendors/onboarding/setup', ['organization_lock_version' => $organization->refresh()->lock_version, 'public_store_name' => 'Schedule test store', 'description' => 'Building materials', 'bulk_capability' => false, 'fulfillment_method' => 'SELF_PICKUP'])->assertOk();
+        $this->post('/api/v1/vendors/onboarding/media', ['kind' => 'LOGO', 'file' => UploadedFile::fake()->image('schedule-logo.png')])->assertCreated();
+        $this->post('/api/v1/vendors/onboarding/media', ['kind' => 'BANNER', 'file' => UploadedFile::fake()->image('schedule-banner.png')])->assertCreated();
+        DB::table('vendor_payment_accounts')->insert(['id' => (string) Str::uuid7(), 'vendor_organization_id' => $organization->id, 'environment' => 'TEST', 'provider_associated_at' => now(), 'connection_status' => 'CONNECTED_TEST', 'provider_status' => 'LIVE', 'provider_account_id' => 'acct_test_schedule', 'capabilities' => json_encode(['account_verification' => true]), 'created_at' => now(), 'updated_at' => now()]);
+        $this->postJson('/api/v1/vendors/onboarding/setup/complete', ['organization_lock_version' => $organization->fresh()->lock_version], ['Idempotency-Key' => (string) Str::uuid7()])->assertAccepted();
         DB::table('vendor_organizations')->where('id', $organization->id)->update(['store_activation_status' => 'ACTIVE', 'marketplace_discoverability_status' => 'DISCOVERABLE']);
         $this->getJson('/api/v1/stores/'.$organization->id.'/profile')->assertOk()->assertJsonPath('data.operating_schedule.6.status', 'CLOSED');
         $this->getJson('/api/v1/stores')->assertOk()->assertJsonCount(1, 'data');
@@ -1021,7 +1026,7 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
                     break;
                 case 5: DB::table('vendor_tax_profiles')->where('vendor_organization_id', $organization->id)->update(['status' => 'INCOMPLETE']);
                     break;
-                case 6: DB::table('vendor_onboarding_requirements')->where('vendor_organization_id', $organization->id)->where('requirement_key', 'public_store_profile')->update(['status' => 'IN_PROGRESS']);
+                case 6: DB::table('store_profiles')->where('vendor_organization_id', $organization->id)->update(['description' => '']);
                     break;
                 case 7: DB::table('store_profiles')->where('vendor_organization_id', $organization->id)->update(['fulfillment_method' => 'VENDOR_DELIVERY']);
                     break;
@@ -1081,7 +1086,18 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
             if ($requirement->requirement_key === 'commission_terms') {
                 DB::table('agreement_versions')->whereIn('agreement_document_id', DB::table('agreement_documents')->where('code', 'VENDOR_COMMISSION_TEST')->select('id'))->update(['retired_at' => now()]);
             }
-            DB::table('vendor_onboarding_requirements')->where('id', $requirement->id)->update(['status' => 'IN_PROGRESS']);
+            if ($requirement->section === 'STORE_SETUP') {
+                match ($requirement->requirement_key) {
+                    'public_store_profile' => DB::table('store_profiles')->where('vendor_organization_id', $organization->id)->update(['description' => '']),
+                    'bulk_capability' => DB::table('store_profiles')->where('vendor_organization_id', $organization->id)->update(['bulk_capability' => null]),
+                    'fulfillment_method' => DB::table('store_profiles')->where('vendor_organization_id', $organization->id)->update(['fulfillment_method' => null]),
+                    'payment_connection' => DB::table('vendor_payment_accounts')->where('vendor_organization_id', $organization->id)->update(['connection_status' => 'NOT_CONNECTED']),
+                    'store_operation' => DB::table('operating_hours')->where('store_profile_id', DB::table('store_profiles')->where('vendor_organization_id', $organization->id)->value('id'))->where('day_of_week', 7)->delete(),
+                    default => self::fail('No source-data mutation for '.$requirement->requirement_key),
+                };
+            } else {
+                DB::table('vendor_onboarding_requirements')->where('id', $requirement->id)->update(['status' => 'IN_PROGRESS']);
+            }
             $result = $gate->evaluate($organization->id);
             self::assertFalse($result['ready'], $requirement->requirement_key);
             self::assertContains($requirement->requirement_key, array_column($result['blockers'], 'key'));
@@ -1209,16 +1225,22 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
         foreach (['business_registration', 'lgu_permit', 'bir_cor', 'identity_evidence'] as $key) {
             $this->submittedEvidenceFixture($key, $key.'.pdf');
         }
-        DB::table('store_profiles')->insert(['id' => (string) Str::uuid7(), 'vendor_organization_id' => $organization->id, 'public_store_name' => 'Ready store', 'fulfillment_method' => 'SELF_PICKUP', 'bulk_capability' => true, 'description' => 'Test store', 'status' => 'COMPLETED', 'created_at' => now(), 'updated_at' => now()]);
+        $profileId = (string) Str::uuid7();
+        DB::table('store_profiles')->insert(['id' => $profileId, 'vendor_organization_id' => $organization->id, 'public_store_name' => 'Ready store', 'fulfillment_method' => 'SELF_PICKUP', 'bulk_capability' => true, 'description' => 'Test store', 'status' => 'IN_PROGRESS', 'created_at' => now(), 'updated_at' => now()]);
+        app(StoreOperatingSchedule::class)->replaceWeekly($profileId, $this->weeklyOperatingSchedule());
+        $this->post('/api/v1/vendors/onboarding/media', ['kind' => 'LOGO', 'file' => UploadedFile::fake()->image('ready-logo.png')])->assertCreated();
+        $this->post('/api/v1/vendors/onboarding/media', ['kind' => 'BANNER', 'file' => UploadedFile::fake()->image('ready-banner.png')])->assertCreated();
         app(OnboardingRequirementResolver::class)->synchronize($organization->id);
         DB::table('vendor_onboarding_requirements')->where('vendor_organization_id', $organization->id)->where('status', '!=', 'NOT_APPLICABLE')->where('section', 'STORE_VERIFICATION')->update(['status' => 'APPROVED', 'submitted_at' => now(), 'submitted_by_user_id' => $owner->id]);
-        DB::table('vendor_onboarding_requirements')->where('vendor_organization_id', $organization->id)->where('status', '!=', 'NOT_APPLICABLE')->where('section', 'STORE_SETUP')->update(['status' => 'COMPLETED']);
+        $this->assertDatabaseHas('vendor_onboarding_requirements', ['vendor_organization_id' => $organization->id, 'requirement_key' => 'public_store_profile', 'status' => 'COMPLETED']);
+        $this->assertDatabaseHas('vendor_onboarding_requirements', ['vendor_organization_id' => $organization->id, 'requirement_key' => 'store_operation', 'status' => 'COMPLETED']);
         DB::table('vendor_documents')->where('vendor_organization_id', $organization->id)->update(['status' => 'APPROVED']);
         DB::table('vendor_organizations')->where('id', $organization->id)->update(['store_verification_status' => 'APPROVED', 'store_setup_status' => 'COMPLETED']);
         $tax = DB::table('vendor_tax_profiles')->where('vendor_organization_id', $organization->id)->first();
         DB::table('vendor_tax_profiles')->where('id', $tax->id)->update(['status' => 'APPROVED']);
         DB::table('vendor_tax_profile_versions')->where('id', $tax->current_version_id)->update(['vat_verified_category' => 'NON_VAT']);
-        DB::table('vendor_payment_accounts')->insert(['id' => (string) Str::uuid7(), 'vendor_organization_id' => $organization->id, 'provider_associated_at' => now(), 'connection_status' => 'CONNECTED_TEST', 'provider_status' => 'LIVE', 'provider_account_id' => 'acct_test_ready', 'capabilities' => json_encode(['account_verification' => true]), 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('vendor_payment_accounts')->insert(['id' => (string) Str::uuid7(), 'vendor_organization_id' => $organization->id, 'environment' => 'TEST', 'provider_associated_at' => now(), 'connection_status' => 'CONNECTED_TEST', 'provider_status' => 'LIVE', 'provider_account_id' => 'acct_test_ready', 'capabilities' => json_encode(['account_verification' => true]), 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('store_profiles')->where('id', $profileId)->update(['status' => 'COMPLETED']);
         foreach (['TERMS_OF_SERVICE', 'VENDOR_CODE_OF_CONDUCT', 'VENDOR_COMMISSION_TEST'] as $code) {
             $version = DB::table('agreement_versions as v')->join('agreement_documents as d', 'd.id', '=', 'v.agreement_document_id')->where('d.code', $code)->whereNull('v.retired_at')->orderByDesc('v.version')->value('v.id');
             DB::table('agreement_acceptances')->insert(['id' => (string) Str::uuid7(), 'user_id' => $owner->id, 'vendor_organization_id' => $organization->id, 'agreement_version_id' => $version, 'source' => 'VENDOR_ONBOARDING', 'accepted_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
@@ -1730,7 +1752,7 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
             'decision' => 'APPROVED', 'requirement_versions' => ['representative_identity' => $identity['lock_version']], 'expiration_kind' => 'NO_EXPIRATION',
         ], ['Idempotency-Key' => (string) Str::uuid7()])->assertOk();
         $this->assertDatabaseHas('vendor_documents', ['vendor_organization_id' => $organization->id, 'requirement_key' => 'representative_identity', 'status' => 'APPROVED']);
-        $this->assertDatabaseHas('vendor_documents', ['vendor_organization_id' => $organization->id, 'requirement_key' => 'bir_cor', 'status' => 'PENDING_VERIFICATION']);
+        $this->assertDatabaseHas('vendor_documents', ['vendor_organization_id' => $organization->id, 'requirement_key' => 'bir_cor', 'status' => 'SUBMITTED']);
     }
 
     public function test_submission_promotes_multiple_files_and_only_replacement_reopens_review(): void

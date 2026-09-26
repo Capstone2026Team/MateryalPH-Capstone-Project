@@ -41,5 +41,10 @@ test('optional team setup invites employees and fits the viewport', async ({ pag
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   await page.screenshot({ path: testInfo.outputPath('team-setup.png'), fullPage: true })
   await page.getByRole('button', { name: 'Next', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Store Operation', exact: true })).toBeVisible()
+  for (const day of ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']) {
+    await page.getByRole('combobox', { name: `${day} status` }).selectOption('CLOSED')
+  }
+  await page.getByRole('button', { name: 'Next', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Review and Complete', exact: true })).toBeVisible()
 })

@@ -176,136 +176,6 @@ Every onboarding requirement has a **Requirement Level** and a separate **Requir
 
 Admin-reviewed Store Verification requirements normally satisfy activation only at `APPROVED`. Non-reviewed Store Setup requirements may satisfy activation at `COMPLETED`. Document metadata may separately record **Expiration Date: Not Applicable** when the document legitimately has no expiration; that metadata value is not the onboarding status `NOT_APPLICABLE`.
 
-## 1. Store Verification
-
-Store Verification is the first primary section of Vendor Onboarding. It is completed through manual Admin review supported by server-side validation, file-safety checks, and applicable document-verification tools. Uploading information or a document never changes it to `APPROVED` automatically.
-
-The Vendor Portal distinguishes information entered by the Vendor, information submitted for review, information pending Admin verification, information requiring correction, and information approved by the Admin.
-
-**Business Information and Document Verification**
-
-Business Information is separate from the public Store Profile. It includes the fields and evidence applicable to the selected Business Type and Vendor configuration.
-
-### Business Type
-
-The Vendor selects exactly one legal Business Type:
-
-1. **Sole Proprietorship**
-2. **Partnership**
-3. **Corporation**
-4. **One Person Corporation (OPC)**
-5. **Cooperative**
-
-Each value is stored as a distinct business classification. An OPC may be treated internally as a corporate subtype for applicable registration, tax, and integration rules while remaining a separate selectable value in the Vendor interface.
-
-The selected Business Type determines the applicable legal-name fields, registration authority, primary registration document, supporting identity evidence, and tax or verification requirements. Changing the Business Type after submission re-evaluates all applicable requirements. If the change affects previously submitted or approved information, the affected requirements are versioned and reopened for Admin review.
-
-### Legal Identity
-
-**Individual Registered Name** applies to a Sole Proprietorship and to other verification cases in which an individual proprietor, incorporator, authorized representative, or taxpayer must be identified. The Vendor provides the complete legal name exactly as it appears on the applicable government-issued ID and registration records:
-
-- Surname.
-- First Name.
-- Middle Name.
-- Suffix, where applicable.
-
-The interface provides **Same as Vendor Owner's full legal name**. When selected, the system pre-fills the fields from the Owner's registered or verified account information, but the Vendor must review and confirm that it matches the supporting records. Helper text explains that the Individual Registered Name is the complete legal name shown on the applicable identification and registration records.
-
-Where an organization name is required, **Company Registered Name** applies to a Partnership, Corporation, One Person Corporation (OPC), or Cooperative. It is the official legal name recorded by the applicable registration authority. The Vendor enters one Company Registered Name and must keep it consistent with the submitted registration evidence. An OPC may therefore require both the incorporator/Owner identity and the registered corporate name.
-
-Where identification of an individual is applicable, the Vendor submits the required government-issued identification. The form may require ID Type, ID Number where applicable, front image, and back image when both sides contain relevant information. The document must correspond to the individual identified in the legal-identity section.
-
-Government-issued identification is private verification information. It is never displayed on the public Store Profile, Buyer search, public Vendor listings, to other Vendors, or to Vendor staff without the required permission.
-
-### Business Information
-
-**Business or Store Name** is the Vendor's public-facing marketplace identity. The Store Name entered during account creation is pre-populated here. The Vendor may review or change it before final Store Verification submission. It may appear in the storefront, Buyer search, listings, quotations, orders, messages, and marketplace recommendations. If no separate trade name is used, the applicable registered taxpayer or legal-business name may be used where permitted.
-
-Public Store Name and Legal Business Name remain separate data fields. The Store Name never replaces the Individual Registered Name or Company Registered Name.
-
-**Date of Establishment** records when the business was established or officially registered. The date must be valid, not in the future, and consistent with applicable registration evidence where Admin review requires comparison. The Vendor-entered value remains subject to Admin verification when treated as a verified business fact.
-
-**Store Email** is the primary address for store communication, business notifications, marketplace notices, and Vendor administration. A verified Google email may be pre-filled and does not require duplicate ownership verification. The Vendor may select **Use a different Store Email**. A replacement email is format-validated, receives a short-lived OTP, and becomes active only after successful OTP verification. If verification fails or expires, the existing verified Store Email remains unchanged.
-
-**Store Phone Number** is the primary store contact. **Same as Vendor Owner phone number** pre-fills the Owner's registered number. It remains a contact field and is not treated as SMS-verified because the capstone does not use an SMS provider.
-
-### Business communication
-
-Store Contact Information (verified Store Email and Store Phone) is the single source for business communication. The separate Primary Business Contact collection, API, database table and submission requirement were removed by the approved 23 September 2026 change. Owner identity, Authorized Representative / Authority to Act and Vendor Team permissions remain independent. Existing audit and compliance history is retained.
-
-### Registered Business Address
-
-The Vendor provides the registered or principal operating address through either **Manual Address Entry** or **Interactive Map Selection**. Structured fields include street, building, unit, or establishment; barangay; city or municipality; province or applicable independent-city classification; and postal code.
-
-The approved Google Maps integration may resolve a map pin into structured address information. The interface displays, where available, street/building, barangay, city or municipality, province or administrative area, postal code, latitude, and longitude. Latitude and longitude are displayed in their designated location fields after map selection. The Vendor reviews the resolved address before saving and must complete missing fields when geocoding cannot confidently provide them.
-
-Location validation occurs before the location is used for discovery, location-based search, distance calculations, delivery coverage, delivery-fee calculation, supplier recommendation, Vendor Materials Analytics scope, or geographic reporting. Coordinates are stored separately from the human-readable address. A critical change to an approved address creates a new version or review event rather than silently overwriting the verified value. Google API keys and provider credentials remain protected and are not committed or unnecessarily exposed to the client.
-
-### Supplier Type / Classification
-
-The Vendor selects one applicable Supplier Type:
-
-1. **Wholesaler / Distributor**
-2. **Retail Hardware Store**
-3. **Specialized Supplier**
-
-The Vendor selects one or more Supplier Niches. Canonical niches may include Construction Materials; Electrical Supplies; Plumbing and Sanitary; Tools and Equipment; Finishing Materials; Fasteners and Hardware; Cement and Concrete; Roofing Materials; Formworks and Scaffolding; Wood and Lumber; Landscaping and Exterior; Steel and Reinforcement; Tools and Accessories; Masonry; Insulation and Waterproofing; Aggregates; Drainage and Septic Materials; Construction Chemicals; Flooring Materials; Wall and Ceiling Materials; HVAC Materials; Sanitary Fixtures; Fire Protection Materials; Paints and Finishes; Adhesives and Sealants; and Doors, Windows, and Glass. Substantially equivalent labels are consolidated into one canonical taxonomy.
-
-The Vendor may select **Others — Specify Category**. The supplied text is stored as a Vendor-provided custom classification label and does not automatically create a new canonical MateryalPH category. A valid Other label does not require separate Admin approval solely because it is custom, provided it does not violate a prohibited-category rule. Canonical taxonomy mapping may be reviewed later.
-
-MateryalPH does not support construction-vehicle or equipment-rental services as marketplace inventory. Category validation rejects entries such as Construction Vehicle Rental, Vehicle Rental, Construction Equipment Rental, Equipment Rental, or Rental, case-insensitively and after reasonable normalization. Selecting Tools and Equipment does not make construction-vehicle rental a supported service.
-
-### Business and Compliance Verification
-
-The required primary registration evidence is determined by Business Type:
-
-| **Business Type** | **Required Primary Registration Evidence** |
-| --- | --- |
-| Sole Proprietorship | Applicable DTI Business Name Registration |
-| Partnership | Applicable SEC Registration |
-| Corporation | Applicable SEC Registration |
-| One Person Corporation (OPC) | Applicable SEC Registration |
-| Cooperative | Applicable CDA Registration |
-
-The system shows only requirements applicable to the selected Business Type. All Vendors provide applicable LGU-issued Business Permit, BIR Certificate of Registration, TIN, declared VAT or Non-VAT status, and other regulatory evidence required by the business type, location, or marketplace activity. Optional ISO, industry, professional, or regulatory certifications do not block activation unless a product, law, or selected capability makes them mandatory.
-
-### Tax Information and Vendor Tax Profile
-
-Tax information is collected once in Store Verification and is the source for the Vendor Tax Profile. Payment Configuration references the approved or effective Vendor Tax Profile and must not collect duplicate legal tax information.
-
-The Vendor provides the applicable TIN and branch code exactly as shown on BIR records. The system validates structure, rejects clearly malformed values, stores the full value as private business-tax information, and masks it in authorized displays. The full TIN is never exposed on public Store Profiles, Buyer search, Vendor maps, public listings, public analytics, or another Vendor's interface.
-
-The Vendor declares **VAT Registered** or **Non-VAT Registered**. The system keeps **Declared VAT Status** separate from **Verified VAT Status**. Admin verifies the declaration against the BIR evidence. An inconsistency produces `CHANGES_REQUIRED` or another documented review decision; it does not silently change the Vendor's declaration.
-
-The Vendor uploads the applicable BIR Certificate of Registration in an allowed format such as JPG, JPEG, PNG, or PDF. Content type, maximum size, MIME/content, file-safety, malware scan, private-storage, and access rules apply. Admin compares the COR's legal or taxpayer name, TIN, branch, registration status, and VAT/Non-VAT information where shown. Uploading a COR does not verify the tax profile.
-
-The Vendor is asked whether to **Submit applicable Sworn Declaration or withholding-supporting declaration?** with **Yes** or **No**. A declaration may affect withholding only when the Vendor qualifies under the applicable tax rules and submits valid evidence. Selecting Yes never automatically grants exemption, reduced withholding, threshold relief, or another tax treatment. Selecting No records that no applicable declaration was submitted for the period; where permitted by FIN-04, standard withholding applies and activation is not blocked solely by an optional relief declaration. Missing mandatory BIR registration remains an activation blocker.
-
-Where applicable, declaration evidence records declaration year, type, threshold position, BIR-received or other document, receipt/reference, prior-year position, outside-platform remittance scope, submission date, effective period, verification status, and Admin remarks. The Vendor Owner attests the declaration. A Store Manager may prepare a correction draft when authorized but cannot replace the Owner's required attestation.
-
-The Vendor Tax Profile maintains taxpayer identity, legal-entity classification, TIN and branch information, VAT or Non-VAT classification, fiscal or tax period, evidence, declaration evidence, effective period, environment, evidence origin, verification decision, withholding assignment/scenario, and version history. Corrections create a new version or audited change and never rewrite prior accepted prices, payments, immutable financial snapshots, or posted financial records.
-
-The Vendor may view **Submit declaration**, **View withholding status**, **Explain missing evidence**, and **Report threshold exceeded** actions. All withholding, remittance, commission, provider, and tax responsibilities remain governed by FIN-01 through FIN-12. TEST/DEMO evidence is visibly sample evidence and never becomes production approval. A Sworn Declaration is not automatic tax treatment, and Xendit connection is not proof of withholding responsibility.
-
-### Document Metadata and Verification
-
-For every business or compliance document, the Vendor supplies the file and any entered metadata. Metadata includes, where applicable, document type, document number, upload timestamp, uploading user, organization, file reference, submission status, verification status, reviewer, remarks, verified issue date, verified expiration date, replacement/superseded-document reference, and audit reference.
-
-Vendor-entered metadata is never treated as officially verified. Admin review records the verified document number, issue date, expiration date or **Expiration Date: Not Applicable**, document source, remarks, reviewer, review timestamp, decision, and reason. The system distinguishes no expiration, expiration not yet verified, verified expiration, and expired document. It prevents an expiration date earlier than the issue date.
-
-Each Admin-reviewed requirement uses `APPROVED`, `CHANGES_REQUIRED`, or `REJECTED` as applicable. Rejected, expired, or replacement evidence requires correction or replacement and a new review where applicable. A previously approved document may remain effective while a replacement is reviewed when the compliance rule permits; an expired or materially invalid document may create an immediate restriction.
-
-### Submission Validation
-
-Before Store Verification can be submitted, the system validates the applicable Business Type, legal-name and identity fields, business/store name, establishment date, verified Store Email, Store Phone Number, registered address and coordinates where required, Supplier Type and niches, registration evidence, LGU and BIR information, TIN, VAT/Non-VAT declaration, Vendor Tax Profile fields, applicable declarations, document numbers, supported file type and size, malware/file-safety state, acknowledgments, and other conditional requirements.
-
-If a required item is missing or invalid, submission is blocked and the exact requirement is identified. A conditionally required item that does not apply is recorded at level `CONDITIONALLY_REQUIRED` and status `NOT_APPLICABLE` with its applicability reason. Submission does not mean verification.
-
-### Privacy Notice
-
-Before submission of personal, legal-business, identity, tax, or compliance information, the system presents the applicable Privacy Notice. It explains collected categories, purposes, processing activities, authorized recipients/processors, retention basis, data-subject rights, privacy-request process, and other required information. The system records the Vendor/User, organization, Privacy Notice version, timestamp, processing activity, source/interface, and acknowledgment.
-
-Privacy Notice acknowledgment is stored separately from Terms of Service, Vendor Code of Conduct, Commission Agreement, payment agreements, and other commercial terms. It does not automatically accept unrelated agreements or optional processing.
 
 ### Store Verification Submission Confirmation
 
@@ -335,98 +205,6 @@ Store Setup is the second primary section of Vendor Onboarding. It may begin aft
 
 Store Operation is the public weekly schedule for Monday through Sunday. Each day is explicitly Open with a same-day opening and later closing time, or Closed without times. A valid schedule completes S5 but does not activate the Store, approve verification, or change fulfillment or Xendit status. The Vendor can update hours later in Store Profile; changes are audit-attributed. Buyers see the saved schedule only when the Store is publicly discoverable. An explicit date-specific entry, when configured, overrides the weekly schedule for that date; no holiday schedule is inferred.
 
-**Business Store Profile Setup**
-
-The Business Store Profile is a draft marketplace profile until Store Activation. It contains:
-
-- Logo or profile image.
-- Store Name pre-populated from Business Information.
-- Store Banner.
-- Store Description.
-- Promotional images and optional promotional video.
-- Approved public business contact information.
-
-Legal-business fields remain separate and cannot be changed through the public Store Profile editor. Media is validated for supported type, maximum size, safety, appropriate content, intellectual-property requirements, accessibility metadata, and other configured rules. Government ID, TIN, business-verification documents, private tax records, payout credentials, authentication information, and private employee information never appear publicly.
-
-## 3. Fulfillment Configuration
-
-## Bulk Order Capability
-
-| **Declared capability** | **Procurement eligibility** |
-| --- | --- |
-| Yes — can accommodate bulk orders | Item-Based Procurement + Project-Based Procurement |
-| No — cannot accommodate bulk orders | Item-Based Procurement only |
-
-The selected capability controls future procurement eligibility and Project-Based matching. It does not create a separate competitive RFQ bidding queue. A later authorized change affects future marketplace eligibility and does not rewrite accepted orders or quotations.
-
-**Services Capability**
-
-- Self-Pickup.
-- Vendor Delivery.
-- Both.
-
-If **Self-Pickup only** is selected, Delivery Configuration has requirement level `CONDITIONALLY_REQUIRED` and status `NOT_APPLICABLE` because Vendor Delivery is not enabled. If **Vendor Delivery** or **Both** is selected, Delivery Configuration becomes conditionally required and must be completed before Store Activation. Physical payment methods are configured separately: COD may be enabled for eligible Vendor Delivery orders and In-Store Payment for eligible Self-Pickup orders. Online Xendit onboarding remains mandatory regardless of physical-payment settings.
-
-## 4. Delivery Configuration
-
-Delivery Configuration applies only when Vendor Delivery is selected. The Vendor records vehicles it actually operates or legitimately controls for Vendor Delivery. Categories include Motorcycle, Pickup, Van, Truck, and Custom Vehicle Type. Truck subtypes may include Open Truck, Flatbed Truck, and Wing Van. Unconfigured vehicles must not appear as available fulfillment options.
-
-| **Field** | **Description** |
-| --- | --- |
-| Vehicle image | Operational image shown where relevant |
-| Number of Vehicles | Positive integer representing usable vehicles |
-| Capacity per Vehicle (kg) | Maximum cargo payload |
-| Cargo Length, Width, and Height (m) | Usable cargo-space dimensions |
-| Heavy Vehicle Classification | Used for site-accessibility rules |
-| Base Fee (₱) | Fixed amount applied per applicable trip |
-| Per-Kilometer Rate (₱/km) | Distance-based delivery amount |
-| Maximum Delivery Distance (km) | Maximum supported service distance |
-
-The system validates positive quantities, valid numeric ranges, non-negative rates, required dimensions where applicable, and a required distance limit. It may provide an initial heavy-vehicle classification based on vehicle type while allowing an authorized correction when the actual vehicle differs.
-
-The system recommends a suitable vehicle; it does not dispatch automatically. The Vendor confirms or changes the recommendation and confirms any multiple vehicles or trips before the Buyer pays the final delivery fee. Existing accepted-order delivery snapshots are not changed when a vehicle configuration is later edited, deactivated, or removed.
-
-## 5. Payment Configuration (Using Xendit Activation)
-
-Every Vendor seeking Store Activation and marketplace participation must complete **Xendit xenPlatform sub-account onboarding**, regardless of supported Business Type. For the current capstone, Xendit remains TEST/DEMO-only. TEST/DEMO connection does not prove live payment processing, production KYC, BIR registration, statutory withholding responsibility, remittance, or government approval. MateryalPH stores only the required account identifier, capabilities, connection status, environment, evidence origin, and reconciliation references. Payment credentials and secret keys remain with Xendit or protected server configuration.
-
-MateryalPH applies the 2% Vendor-paid commission under FIN-03, earned on completed materials value after discounts and excluding materials VAT, and billed monthly for every payment method. It is not deducted from Buyer payments in this capstone release. The Buyer pays the separately disclosed order Payment Processing Fee in the demo; live pass-through requires validated channel/provider terms. The Vendor reviews transaction records and uses the Xendit dashboard for provider balances and withdrawals. MateryalPH has no internal Vendor wallet or escrow.
-
-Enabled payment channels come from the actual Xendit environment. Each channel must have documented limits, expiry, settlement, and refund capability. A channel without native refund support remains disabled unless an approved Vendor-managed refund process is implemented and disclosed. Online full-order payments and NRPC assurance payments for COD or In-Store Payment use separate payment purposes and references. An NRPC assurance payment expires after 45 minutes and is credited against the remaining physical-payment balance; it is not an additional charge.
-
-The Payment Configuration screen separates **Xendit TEST/DEMO connection**, **Vendor Tax Profile summary**, **Withholding arrangement**, **Commission Terms**, **Online payment channels**, **Physical payments**, and **Refund capability**. Unknown actual withholding responsibility is displayed as **Production assignment unconfirmed**. The default teaching scenario is `DEMO_PLATFORM_WITHHOLDER`; a second scenario exercises provider reconciliation. Neither claims a real tax deduction by Xendit. All payment references retain their environment and evidence origin.
-
-The Owner accepts the 2% fee schedule, its exclusive materials base, monthly collection, VAT-inclusive fee treatment where applicable, cancellation/partial-refund credits, statement due-date rule and dispute process. Store these as a versioned agreement. No fee is added to an existing accepted order by changing settings. The monthly bill uses `PLATFORM_FEE_PAYMENT` to the platform test account, not the Vendor's Buyer-payment sub-account.
-
-COD and In-Store amounts are collected directly by the Vendor. Authorized Store Staff may record cash received and evidence; Fulfillment Staff may record handover evidence but cannot independently mark cash collected without the relevant payment-record permission. A record stores amount, time, recorder, source and Buyer acknowledgment. It does not fabricate a Xendit webhook. Partial collection leaves an outstanding obligation. Changes use correction events; the outstanding amount may not become negative. NRPC principal is deducted from the remaining balance exactly once under FIN-02.
-
-Payment Configuration reaches `COMPLETED` only when the required Xendit connection and onboarding state are confirmed, required payment capabilities and settings are complete, the effective Vendor Tax Profile is compatible with activation, Commission Terms are accepted by the Vendor Owner, and no applicable payment or provider requirement remains unresolved. A provider outage, unavailable capability, unconfirmed outcome, or unsupported refund route keeps the applicable requirement pending or blocked.
-
-## 6. Vendor Team Account Management
-
-Team Accounts are optional and never block Store Activation. During Store Setup, the Owner may invite staff even when Store Verification is still pending. Invitations do not require setup completion. The Owner may also create Team Accounts after Store Activation. Every invitation identifies the employee, email, contact number where required, exactly one fixed role, organization, expiry, and inviting actor. The employee accepts through an individual account and never receives or uses the Owner's credentials.
-
-The fixed Vendor Team roles are **Store Manager**, **Store Staff**, **Customer Service Staff**, **Inventory Staff**, and **Fulfillment Staff**. Each employee has one fixed role and individual audit history. A Team Account belongs to the Vendor organization and does not repeat Vendor Onboarding, create another store, or bypass Store Activation. A staff member may sign in before activation only in the limited-access state permitted by the organization's state and the staff member's role.
-
-When the Owner creates or edits a Store Manager, the system presents an off-by-default toggle: **Allow this Store Manager to manage staff accounts**. A delegated Store Manager may manage only Store Staff, Customer Service Staff, Inventory Staff, and Fulfillment Staff. The Manager cannot manage another Store Manager, create or deactivate another Store Manager, change the Owner, transfer ownership, grant delegation to self or another person, change their own role or access, edit payout credentials, or delete or alter audit records. The Owner is notified of every delegated staff-management action. Access is revoked when the staff account, Vendor account, or delegation is deactivated; active sessions are revoked and historical attribution is retained.
-
-### Finish Later and Limited Dashboard
-
-The Vendor may select **Finish Later** at any permitted point in Store Verification or Store Setup. The system saves the current progress, preserves each requirement's level and status, and returns the Vendor to the limited Vendor Dashboard.
-
-After Store Verification is submitted, the confirmation page provides **Proceed to Store Setup**. The Vendor may continue Store Setup while Store Verification is `PENDING_VERIFICATION`. Store Setup may reach `COMPLETED` while Store Verification remains `PENDING_VERIFICATION`, `CHANGES_REQUIRED`, `REJECTED`, `EXPIRED`, or incomplete. Store Setup completion never changes a Store Verification item to `APPROVED`.
-
-While Vendor Onboarding is incomplete or Store Activation has not occurred, the limited Dashboard exposes only functions needed to continue onboarding and manage the account. It provides:
-
-- Store Profile.
-- Store Account Settings.
-- Continue Store Verification.
-- Continue Store Setup.
-- Review Pending Verification.
-- Correct Changes Required.
-- Review onboarding progress.
-
-The Dashboard displays separate Store Verification and Store Setup checklists, overall onboarding progress, requirement level, status, pending verification, changes required, rejected or expired blockers, dedicated Continue actions, and current Store Activation status. It clearly states that the Vendor may continue permitted Store Setup work while Admin review is pending. Marketplace operations remain locked until Store Activation. Optional Team Account access follows the rule above.
 
 ### Vendor Activation Requirements
 
@@ -441,7 +219,7 @@ A Vendor is eligible for **Store Activation** only when every applicable mandato
 7. Delivery Configuration is `COMPLETED` when Vendor Delivery or Both is selected, and is `NOT_APPLICABLE` only when the condition does not apply because the Vendor selected Self-Pickup only.
 8. Required Xendit xenPlatform sub-account onboarding is complete for this Vendor, with the required TEST/DEMO connection and capabilities confirmed. Xendit onboarding is mandatory for every Vendor seeking Store Activation and marketplace participation, regardless of Business Type. It does not prove live payment processing or production withholding responsibility.
 9. Commission Terms have been accepted by the Vendor Owner as a versioned agreement, including the approved 2% Vendor-paid commission under FIN-03.
-10. No blocking payment, refund, compliance, or administrative restriction remains; the Vendor is not suspended and is not under an administrative hold.
+10. No blocking paymnt, refund, compliance, or administrative restriction remains; the Vendor is not suspended and is not under an administrative hold.
 
 Team Accounts are optional and do not block activation. Product listing, product inventory, and product-level compliance submission are not prerequisites for Store Activation. Activation eligibility is evaluated by the backend and every activation, restriction, rejection, expiration, and restoration is recorded with the actor or system process, checklist result, rule version, timestamp, previous and new marketplace state, and reason.
 
@@ -484,11 +262,9 @@ Tier 2 Vendors receive a digital storefront with active listings, public availab
 
 **Navigation Topbar**
 
-- Current page and Asia/Manila system date.
-- Notifications.
+- Asia/Manila system date.
 - Accessible light or dark theme.
 - Personal account and security settings.
-- Sign Out.
 
 Email changes require verification, notice to the previous email, session revocation, and audit. Vendor Owner and Store Manager security settings include TOTP and recovery-code management. Theme and notification preferences are per user, not per organization.
 

@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [switch] $GuardOnly,
-    [switch] $KeepRunning
+    [switch] $KeepRunning,
+    [switch] $SkipComposer
 )
 
 $ErrorActionPreference = 'Stop'
@@ -68,11 +69,22 @@ if (-not $testPasswordLine -or ($testPasswordLine.Substring('TEST_DB_PASSWORD='.
 Push-Location $repoRoot
 try {
     Invoke-TestCompose config --quiet
-    Invoke-TestCompose up -d --build --wait postgres-test api-test
+    Invoke-TestCompose up -d --build postgres-test redis-test api-test
 
-    $postgresContainer = (Invoke-TestCompose ps -q postgres-test | Select-Object -Last 1).Trim()
-    $apiContainer = (Invoke-TestCompose ps -q api-test | Select-Object -Last 1).Trim()
+    # Simple wait: check containers exist and are running, then sleep for healthchecks to pass
+    Write-Host 'Waiting for containers to start...' -ForegroundColor Cyan
+    $maxAttempts = 30
+    for ($i = 0; $i -lt $maxAttempts; $i++) {
+        $postgresContainer = (Invoke-TestCompose ps -q postgres-test 2>$null).Trim()
+        $apiContainer = (Invoke-TestCompose ps -q api-test 2>$null).Trim()
+        if ($postgresContainer -and $apiContainer) { break }
+        Write-Host "  Waiting... ($($i+1)/$maxAttempts)" -ForegroundColor Gray
+        Start-Sleep -Seconds 1
+    }
     if (-not $postgresContainer -or -not $apiContainer) { throw 'The isolated test containers are not running.' }
+
+    # Wait a bit more for healthchecks to pass
+    Start-Sleep -Seconds 5
 
     $postgresInspect = @(& $dockerCommand inspect $postgresContainer | ConvertFrom-Json)
     $apiInspect = @(& $dockerCommand inspect $apiContainer | ConvertFrom-Json)
@@ -82,15 +94,24 @@ try {
         throw 'Container labels do not match the isolated Phase 1 project.'
     }
 
-    Invoke-TestCompose exec -T api-test composer install --no-interaction --prefer-dist --no-progress
+    if (-not $SkipComposer) {
+        Write-Host 'Installing Composer dependencies...' -ForegroundColor Cyan
+        Invoke-TestCompose exec -T api-test sh -c 'test -f vendor/autoload.php || composer install --no-interaction --prefer-dist --no-progress' 2>&1
+    }
+
+    Write-Host 'Setting up Passport keys...' -ForegroundColor Cyan
     Invoke-TestCompose exec -T api-test sh /workspace/scripts/prepare-passport-keys.sh
     Invoke-TestCompose exec -T api-test php /workspace/scripts/verify-passport-keys.php
     Invoke-TestCompose exec -T api-test sh /workspace/scripts/test-passport-key-preparation.sh
+
+    Write-Host 'Setting up isolation guard...' -ForegroundColor Cyan
     Invoke-TestCompose exec -T postgres-test psql -U materyalph_test_runner -d materyalph_test --set=ON_ERROR_STOP=1 -c 'CREATE TABLE IF NOT EXISTS isolation_guard_sentinel (id integer PRIMARY KEY);' | Out-Null
     Invoke-TestCompose exec -T postgres-test psql -U materyalph_test_runner -d materyalph_test --set=ON_ERROR_STOP=1 -c 'INSERT INTO isolation_guard_sentinel (id) VALUES (1) ON CONFLICT DO NOTHING;' | Out-Null
 
+    Write-Host 'Verifying test schema (guard mode)...' -ForegroundColor Cyan
     Invoke-TestCompose exec -T api-test php /workspace/scripts/verify-test-schema.php --guard-only
 
+    Write-Host 'Running isolation guard negative cases...' -ForegroundColor Cyan
     $negativeCases = @(
         @('-e', 'APP_ENV=development'),
         @('-e', 'DB_DATABASE=materyalph_dev'),
@@ -111,17 +132,25 @@ try {
     $sentinelCount = (Invoke-TestCompose exec -T postgres-test psql -U materyalph_test_runner -d materyalph_test -tA -c 'SELECT count(*) FROM isolation_guard_sentinel;').Trim()
     if ($sentinelCount -ne '1') { throw 'A negative isolation check changed the sentinel database.' }
 
-    Write-Host 'All static and live isolation checks passed.'
+    Write-Host 'All static and live isolation checks passed.' -ForegroundColor Green
     if ($GuardOnly) { return }
 
+    Write-Host 'Running full schema verification...' -ForegroundColor Cyan
     Invoke-TestCompose exec -T api-test php /workspace/scripts/verify-test-schema.php
+    
+    Write-Host 'Running Pint (code style)...' -ForegroundColor Cyan
     Invoke-TestCompose exec -T api-test vendor/bin/pint --test
+    
+    Write-Host 'Running PHPStan (static analysis)...' -ForegroundColor Cyan
     Invoke-TestCompose exec -T api-test vendor/bin/phpstan analyse --memory-limit=1G
+    
+    Write-Host 'Running PHPUnit tests...' -ForegroundColor Cyan
     Invoke-TestCompose exec -T api-test php artisan test
 }
 finally {
     Pop-Location
     if (-not $KeepRunning) {
+        Write-Host 'Cleaning up test containers...' -ForegroundColor Cyan
         & $dockerCommand compose --env-file $testEnvironment -f $composeFile -p $projectName stop api-test postgres-test redis-test | Out-Null
     }
 }
