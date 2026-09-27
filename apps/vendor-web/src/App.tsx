@@ -25,6 +25,7 @@ import {
 } from './pages/AuthSupportPages'
 import { VendorLandingPage } from './pages/VendorLandingPage'
 import { VendorLegalPage } from './pages/VendorLegalPage'
+import { VendorCatalogImportPage, VendorCatalogPage, VendorListingEditorPage } from './pages/CatalogPages'
 import { VendorAccountPage, VendorStoreProfilePage, VendorDashboardPage, VendorSetupPage, VendorTeamPage, VendorVerificationPage, VendorWelcomePage } from './pages/PhaseThreeVendorPages'
 
 function App() {
@@ -51,6 +52,10 @@ function App() {
           <Route path="/team" element={<VendorTeamPage />} />
           <Route path="/settings" element={<VendorAccountPage />} />
           <Route path="/store-profile" element={<VendorStoreProfilePage />} />
+          <Route path="/products" element={<VendorCatalogPage />} />
+          <Route path="/products/new" element={<VendorListingEditorPage />} />
+          <Route path="/products/import" element={<VendorCatalogImportPage />} />
+          <Route path="/products/:listingId" element={<VendorListingEditorPage />} />
         </Route>
         <Route path="/fees" element={<InfoPage title="Payments and fees"><FeesContent /></InfoPage>} />
         <Route path="/verification" element={<InfoPage title="Vendor verification"><VerificationContent /></InfoPage>} />

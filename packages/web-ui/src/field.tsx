@@ -4,7 +4,7 @@ export const FormErrors = createContext<Record<string, string>>({})
 
 export interface FieldProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string
-  error?: string
+  error?: string | undefined
   hint?: ReactNode
 }
 

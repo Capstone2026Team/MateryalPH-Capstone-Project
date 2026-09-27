@@ -12,3 +12,4 @@ Schedule::command('materyalph:outbox-dispatch')->everyMinute()->withoutOverlappi
 Schedule::command('materyalph:vendor-evidence-evaluate')->hourly()->withoutOverlapping();
 Schedule::command('materyalph:vendor-media-recover')->everyFifteenMinutes()->withoutOverlapping();
 Schedule::command('materyalph:vendor-expiry-scan')->dailyAt('01:00')->withoutOverlapping();
+Schedule::command('materyalph:discoverability-evaluate')->hourly()->withoutOverlapping();

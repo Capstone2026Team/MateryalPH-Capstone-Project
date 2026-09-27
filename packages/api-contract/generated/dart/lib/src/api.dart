@@ -10,11 +10,13 @@ import 'package:materyalph_api_client/src/auth/basic_auth.dart';
 import 'package:materyalph_api_client/src/auth/bearer_auth.dart';
 import 'package:materyalph_api_client/src/auth/oauth.dart';
 import 'package:materyalph_api_client/src/api/accounts_api.dart';
+import 'package:materyalph_api_client/src/api/admin_product_compliance_api.dart';
 import 'package:materyalph_api_client/src/api/admin_vendor_verification_api.dart';
 import 'package:materyalph_api_client/src/api/agreements_api.dart';
 import 'package:materyalph_api_client/src/api/authentication_api.dart';
 import 'package:materyalph_api_client/src/api/stores_api.dart';
 import 'package:materyalph_api_client/src/api/system_api.dart';
+import 'package:materyalph_api_client/src/api/vendor_catalog_api.dart';
 import 'package:materyalph_api_client/src/api/vendor_onboarding_api.dart';
 
 class MateryalphApiClient {
@@ -117,6 +119,12 @@ class MateryalphApiClient {
     return AccountsApi(dio, serializers);
   }
 
+  /// Get AdminProductComplianceApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  AdminProductComplianceApi getAdminProductComplianceApi() {
+    return AdminProductComplianceApi(dio, serializers);
+  }
+
   /// Get AdminVendorVerificationApi instance, base route and serializer can be overridden by a given but be careful,
   /// by doing that all interceptors will not be executed
   AdminVendorVerificationApi getAdminVendorVerificationApi() {
@@ -145,6 +153,12 @@ class MateryalphApiClient {
   /// by doing that all interceptors will not be executed
   SystemApi getSystemApi() {
     return SystemApi(dio, serializers);
+  }
+
+  /// Get VendorCatalogApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  VendorCatalogApi getVendorCatalogApi() {
+    return VendorCatalogApi(dio, serializers);
   }
 
   /// Get VendorOnboardingApi instance, base route and serializer can be overridden by a given but be careful,

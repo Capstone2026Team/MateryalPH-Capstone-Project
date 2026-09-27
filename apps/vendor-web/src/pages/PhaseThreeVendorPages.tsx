@@ -47,6 +47,7 @@ import { vehicleDraft, vehiclePayload, vehicleErrors } from '../lib/delivery-veh
 import { vendorLoginDestination } from '../lib/vendor-destination'
 import type { VendorOnboardingSection } from '@materyalph/api-client-ts'
 import { OnboardingFlow, OnboardingStepContent } from '../components/OnboardingFlow'
+import { statusLabel, statusTone, useOnboardingSnapshot } from '../lib/vendor-status'
 import { verificationSteps, setupSteps } from '../lib/onboarding-steps'
 import { StoreBusinessInformation, StoreLocation, StoreVacationMode } from '../components/StoreProfileSections'
 import { VendorBusinessAddress } from '../components/VendorBusinessAddress'
@@ -79,7 +80,7 @@ const vendorModules: Record<string, string> = { orders: 'Orders', fulfillment: '
 const vendorModuleIcons = { orders: FileText, fulfillment: Truck, messages: MessageSquare, invoices: ReceiptText, notifications: Bell, disputes: Scale, products: Package, vehicles: Truck, wallet: Wallet, performance: ChartNoAxesCombined, earnings: CreditCard }
 const vendorNavigation: PortalNavSection[] = [
   { label: 'Overview', items: [{ label: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard size={16} aria-hidden="true" /> }] },
-  ...[['Store Operations', ['orders', 'fulfillment', 'messages', 'invoices', 'notifications', 'disputes']], ['Store Management', ['products', 'vehicles', 'wallet']], ['Analytics', ['performance', 'earnings']]].map(([label, keys]) => ({ label: label as string, items: (keys as string[]).map(key => ({ label: vendorModules[key] ?? key, href: `/preview/${key}`, icon: (() => { const Icon = vendorModuleIcons[key as keyof typeof vendorModuleIcons]; return <Icon size={18} aria-hidden="true" /> })() })) })),
+  ...[['Store Operations', ['orders', 'fulfillment', 'messages', 'invoices', 'notifications', 'disputes']], ['Store Management', ['products', 'vehicles', 'wallet']], ['Analytics', ['performance', 'earnings']]].map(([label, keys]) => ({ label: label as string, items: (keys as string[]).map(key => ({ label: vendorModules[key] ?? key, href: key === 'products' ? '/products' : `/preview/${key}`, icon: (() => { const Icon = vendorModuleIcons[key as keyof typeof vendorModuleIcons]; return <Icon size={18} aria-hidden="true" /> })() })) })),
   { label: 'Vendor Team Accounts', items: [{ label: 'Team Accounts', href: '/team', icon: <Users size={16} aria-hidden="true" /> }, { label: 'Team Tracking', href: '/preview/tracking', icon: <Activity size={16} aria-hidden="true" /> }] },
   { label: 'Store Profile', items: [{ label: 'Store Profile', href: '/store-profile', icon: <Store size={16} aria-hidden="true" /> }] },
 ]
@@ -140,32 +141,20 @@ function sectionFor(snapshot: VendorOnboardingSnapshot, key: OnboardingSectionKe
   return snapshot.sections[key] ?? { key, label: key === 'STORE_VERIFICATION' ? 'Store Verification' : 'Store Setup', status: 'NOT_STARTED', complete: 0, total: 0, progress: { complete: 0, total: 0 }, steps: [] }
 }
 
-function statusTone(status: string): 'neutral' | 'warning' | 'success' | 'error' | 'info' {
-  if (['APPROVED', 'COMPLETED', 'COMPLETE', 'ACTIVE', 'CONNECTED', 'CONNECTED_TEST', 'READY'].includes(status)) return 'success'
-  if (['CHANGES_REQUIRED', 'IN_PROGRESS', 'PENDING_VERIFICATION', 'PENDING', 'NOT_READY', 'UNVERIFIED'].includes(status)) return 'warning'
-  if (['REJECTED', 'EXPIRED', 'FAILED', 'RESTRICTED', 'SUSPENDED'].includes(status)) return 'error'
-  if (['SUBMITTED', 'SUBMITTED'].includes(status)) return 'info'
-  return 'neutral'
-}
-
-function statusLabel(status: string): string {
-  return status.replaceAll('_', ' ').toLowerCase().replace(/(^|\s)\S/g, (letter) => letter.toUpperCase())
-}
-
 function dateInput(value: unknown): string {
   const raw = stringValue(value)
   return raw.length >= 10 ? raw.slice(0, 10) : raw
 }
 
-function LoadingState({ label = 'Loading onboarding workspace…' }: { label?: string }) {
+export function LoadingState({ label = 'Loading onboarding workspace…' }: { label?: string }) {
   return <div className="grid min-h-64 place-items-center rounded-surface border border-border-default bg-surface-primary p-8 text-center"><RefreshCw className="animate-spin text-action-primary" size={24} aria-hidden="true" /><p className="mt-3 text-sm text-text-secondary">{label}</p></div>
 }
 
-function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
+export function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
   return <div className="grid gap-4 rounded-surface border border-status-error/30 bg-red-50 p-6 text-sm text-red-900" role="alert"><div className="flex items-start gap-3"><AlertCircle className="mt-0.5 shrink-0" size={20} aria-hidden="true" /><p>{message}</p></div><Button className="w-fit" variant="secondary" onClick={onRetry}><RefreshCw size={16} aria-hidden="true" /> Try again</Button></div>
 }
 
-function PageHeader({ eyebrow, title, description, status, actions }: { eyebrow: string; title: string; description: string; status?: string; actions?: ReactNode }) {
+export function PageHeader({ eyebrow, title, description, status, actions }: { eyebrow: string; title: string; description: string; status?: string; actions?: ReactNode }) {
   return <div className="flex flex-col gap-5 border-b border-border-default pb-7 lg:flex-row lg:items-end lg:justify-between"><div className="max-w-3xl"><p className="text-xs font-semibold uppercase tracking-[0.14em] text-action-primary">{eyebrow}</p><div className="mt-3 flex flex-wrap items-center gap-3"><h1 className="text-3xl font-semibold tracking-tight text-text-strong sm:text-4xl">{title}</h1>{status && <StatusBadge label={statusLabel(status)} tone={statusTone(status)} />}</div><p className="mt-3 max-w-2xl text-base leading-7 text-text-secondary">{description}</p></div>{actions && <div className="flex shrink-0 flex-wrap gap-3">{actions}</div>}</div>
 }
 
@@ -193,10 +182,11 @@ export function VendorShell({ activeHref, accountLabel, accountStatus, children,
     ...section, items: section.items.filter(item => {
       if (!navigationSnapshot) return item.href === '/dashboard'
       if (item.href === '/team') return navigationSnapshot.permissions.includes('staff.manage')
+      if (item.href === '/products') return navigationSnapshot.permissions.includes('portal.products')
       if (item.href.startsWith('/preview/')) return navigationSnapshot.permissions.includes(`portal.${item.href.split('/').at(-1)}`)
       return true
     }).map(item => ({
-      ...item, disabled: item.disabled || (item.href.startsWith('/preview/') && item.href !== '/preview/tracking' && record(navigationSnapshot?.activation).status !== 'ACTIVE'),
+      ...item, disabled: item.disabled || ((item.href.startsWith('/preview/') || item.href === '/products') && item.href !== '/preview/tracking' && record(navigationSnapshot?.activation).status !== 'ACTIVE'),
     })),
   })).filter(section => section.items.length > 0)
   const [logoutError, setLogoutError] = useState<string | null>(null)
@@ -209,32 +199,6 @@ export function VendorShell({ activeHref, accountLabel, accountStatus, children,
   }
   if (activeHref === '/welcome' || activeHref.startsWith('/onboarding')) return <div className="min-h-screen bg-surface-canvas text-text-strong"><header className="flex flex-wrap items-center justify-between gap-3 border-b border-border-default bg-surface-primary px-6 py-4"><Link to="/dashboard" className="text-xl font-bold">Materyal<span className="text-action-primary">PH</span></Link><p className="text-xs text-text-secondary" aria-label="System date">{portalDate()}</p><PortalAccountMenu portal="vendors" basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} onNavigate={navigate} onSignOut={logout} /></header><main className="mx-auto max-w-7xl p-5 sm:p-8">{refreshError && <StatusMessage tone="error">{refreshError}</StatusMessage>}{children}</main></div>
   return <PortalShell apiBasePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} onSignOut={logout} onNavigate={navigate} portalLabel="VENDOR PORTAL" pageTitle={activeHref === '/settings' ? 'Settings' : activeHref === '/store-profile' ? 'Store Profile' : activeHref.includes('onboarding') ? 'Vendor Onboarding' : vendorNavigation.flatMap(section => section.items).find(item => item.href === activeHref)?.label ?? 'Dashboard'} dateLabel={portalDate()} sections={navigation} activeHref={activeHref} accountLabel={accountLabel} accountStatus={accountStatus ?? 'Vendor account'} accountAvatarUrl={storeLogoUrl} headerActions={<><Link className="inline-flex min-h-11 items-center px-3 text-sm font-semibold" to="/settings">Account</Link><Button variant="secondary" disabled={signingOut} onClick={() => void logout()}>{signingOut ? 'Signing out…' : 'Sign out'}</Button></>}>{logoutError && <StatusMessage tone="error">{logoutError}</StatusMessage>}{refreshError && navigationSnapshot && <StatusMessage tone="error">{refreshError}</StatusMessage>}{children}</PortalShell>
-}
-
-function useOnboardingSnapshot(enabled = true) {
-  const navigate = useNavigate()
-  const [snapshot, setSnapshot] = useState<VendorOnboardingSnapshot | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const publish = useCallback((updated: VendorOnboardingSnapshot) => {
-    setSnapshot(current => current && numberValue(current.lockVersion, 0) > numberValue(updated.lockVersion, 0) ? current : updated)
-  }, [])
-
-  const refresh = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      publish(await getVendorOnboarding())
-    } catch (cause) {
-      if (cause instanceof ResponseError && cause.response.status === 401) navigate('/login', { replace: true })
-      else setError(await readableOnboardingError(cause))
-    } finally {
-      setLoading(false)
-    }
-  }, [navigate, publish])
-
-  useEffect(() => { if (enabled) void refresh() }, [refresh, enabled])
-  return { snapshot, loading, error, refresh, setSnapshot: publish }
 }
 
 export function VendorWelcomePage() {

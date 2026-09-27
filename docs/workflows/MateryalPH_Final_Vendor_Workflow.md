@@ -740,7 +740,7 @@ FIN-07 governs the financial consequences. No commission is earned on cancellati
 2. The system normalizes the name, performs exact alias and `pg_trgm` fuzzy matching, suggests a canonical category and read-only platform code, and permits reviewed unmatched names.
 3. The user selects one to three approved search tags.
 4. The user enters display name, brand, manufacturer name and address, country of manufacture, description, unit, Vendor SKU, base price, internal quantity, public availability, base weight, and base dimensions.
-5. Optional variants define their own attributes, price modifier, weight, dimensions, and inventory.
+5. Optional variants define their own attributes, price modifier, weight, dimensions, and inventory. Each variant may add up to five volume tiers (minimum quantity and lower unit price) under CAT-PRICE-01 in the System Workflow.
 6. Category-specific technical fields are loaded.
 7. At least one general product photo is uploaded.
 8. A regulated product completes the applicable PS/ICC evidence path.

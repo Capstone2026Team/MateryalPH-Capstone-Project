@@ -162,7 +162,7 @@ Laravel remains one deployable application, but code is separated by business do
 | Vendors | Vendor organization, public store, contacts, onboarding, classification, activation, staff, and Xendit connection state |
 | Geography | Coordinates, radius rules, PSGC hierarchy, Google directory suppliers, geocoding, routing, and aggregation dimensions |
 | Taxonomy | Canonical materials, aliases, categories, tags, compatible units, technical attributes, and regulated mappings |
-| Catalog | Products, listings, variants, media, price snapshots, public availability, and publication gates |
+| Catalog | Products, listings, variants, media, price snapshots including `VOLUME_TIER` versions (CAT-PRICE-01, resolved by `VolumePricing`), public availability, and publication gates |
 | Compliance | Business documents, PS/ICC evidence, OCR/QR assistance, official-source comparison, and Admin decisions |
 | Inventory | On-hand stock, reservations, soft holds, movements, stale-stock confirmation, and auto-accept policies |
 | Procurement | Carts, checkouts, projects, Work Packages, compiled estimates, SRS, FMS, ranking preferences, and budget controls |

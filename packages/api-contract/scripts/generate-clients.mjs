@@ -109,6 +109,7 @@ for (const args of generations) {
         "lib/src/model/vendor_onboarding_snapshot.dart": ["setup"],
         "lib/src/model/vendor_verification_submit.dart": ["draft"],
         "lib/src/model/vendor_verification_draft.dart": ["legalIdentity", "taxProfile", "classification"],
+        "lib/src/model/catalog_listing_summary_list_envelope.dart": ["meta"],
       }[relativePath] ?? [];
       for (const field of nestedFields) {
         contents = contents.replace(`result.${field} = valueDes;`, `result.${field} = valueDes.toBuilder();`);

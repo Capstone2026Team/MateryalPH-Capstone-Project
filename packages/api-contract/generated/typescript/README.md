@@ -1,4 +1,4 @@
-# @materyalph/api-client-ts@1.0.0-phase.3
+# @materyalph/api-client-ts@1.0.0-phase.4
 
 A TypeScript SDK client for the localhost API.
 
@@ -87,6 +87,14 @@ All URIs are relative to */api/v1*
 *AccountsApi* | [**updateAccountProfile**](docs/AccountsApi.md#updateaccountprofile) | **PATCH** /{accountPortal}/account/profile |
 *AccountsApi* | [**updateVendorStaff**](docs/AccountsApi.md#updatevendorstaff) | **PATCH** /vendors/account/memberships/{membershipId} |
 *AccountsApi* | [**uploadAccountPhoto**](docs/AccountsApi.md#uploadaccountphoto) | **POST** /{webAccountPortal}/account/photo |
+*AdminProductComplianceApi* | [**activateComplianceRegister**](docs/AdminProductComplianceApi.md#activatecomplianceregister) | **POST** /admin/product-compliance/registers/{registerId}/activate |
+*AdminProductComplianceApi* | [**createComparableGroup**](docs/AdminProductComplianceApi.md#createcomparablegroup) | **POST** /admin/taxonomy/comparable-groups |
+*AdminProductComplianceApi* | [**decideProductCompliance**](docs/AdminProductComplianceApi.md#decideproductcompliance) | **POST** /admin/product-compliance/{submissionId}/decision |
+*AdminProductComplianceApi* | [**getProductComplianceCase**](docs/AdminProductComplianceApi.md#getproductcompliancecase) | **GET** /admin/product-compliance/{submissionId} |
+*AdminProductComplianceApi* | [**getProductComplianceFileUrl**](docs/AdminProductComplianceApi.md#getproductcompliancefileurl) | **GET** /admin/product-compliance/files/{fileId} |
+*AdminProductComplianceApi* | [**importComplianceRegister**](docs/AdminProductComplianceApi.md#importcomplianceregister) | **POST** /admin/product-compliance/registers |
+*AdminProductComplianceApi* | [**listComplianceRegisters**](docs/AdminProductComplianceApi.md#listcomplianceregisters) | **GET** /admin/product-compliance/registers |
+*AdminProductComplianceApi* | [**listProductComplianceQueue**](docs/AdminProductComplianceApi.md#listproductcompliancequeue) | **GET** /admin/product-compliance |
 *AdminVendorVerificationApi* | [**decideVendorVerificationRequirement**](docs/AdminVendorVerificationApi.md#decidevendorverificationrequirement) | **POST** /admin/vendor-verification/{organizationId}/requirements/{requirementKey}/decision |
 *AdminVendorVerificationApi* | [**getAdminDashboard**](docs/AdminVendorVerificationApi.md#getadmindashboard) | **GET** /admin/dashboard |
 *AdminVendorVerificationApi* | [**getAdminVendorEvidenceUrl**](docs/AdminVendorVerificationApi.md#getadminvendorevidenceurl) | **GET** /admin/vendor-verification/files/{fileId} |
@@ -132,6 +140,26 @@ All URIs are relative to */api/v1*
 *StoresApi* | [**getPublicStoreProfile**](docs/StoresApi.md#getpublicstoreprofile) | **GET** /stores/{storeId}/profile |
 *StoresApi* | [**listPublicStores**](docs/StoresApi.md#listpublicstores) | **GET** /stores |
 *SystemApi* | [**getApiHealth**](docs/SystemApi.md#getapihealth) | **GET** /health |
+*VendorCatalogApi* | [**applyCatalogImport**](docs/VendorCatalogApi.md#applycatalogimport) | **POST** /vendor/catalog/imports/{jobId}/apply |
+*VendorCatalogApi* | [**createVendorCatalogListing**](docs/VendorCatalogApi.md#createvendorcataloglisting) | **POST** /vendor/catalog/listings |
+*VendorCatalogApi* | [**deactivateVendorCatalogListing**](docs/VendorCatalogApi.md#deactivatevendorcataloglisting) | **POST** /vendor/catalog/listings/{listingId}/deactivate |
+*VendorCatalogApi* | [**downloadCatalogFile**](docs/VendorCatalogApi.md#downloadcatalogfile) | **GET** /catalog-files/{fileId}/content |
+*VendorCatalogApi* | [**getCatalogImport**](docs/VendorCatalogApi.md#getcatalogimport) | **GET** /vendor/catalog/imports/{jobId} |
+*VendorCatalogApi* | [**getCatalogImportTemplate**](docs/VendorCatalogApi.md#getcatalogimporttemplate) | **GET** /vendor/catalog/imports/template |
+*VendorCatalogApi* | [**getCatalogMaterial**](docs/VendorCatalogApi.md#getcatalogmaterial) | **GET** /vendor/catalog/materials/{materialId} |
+*VendorCatalogApi* | [**getVendorCatalogFileUrl**](docs/VendorCatalogApi.md#getvendorcatalogfileurl) | **GET** /vendor/catalog/files/{fileId} |
+*VendorCatalogApi* | [**getVendorCatalogListing**](docs/VendorCatalogApi.md#getvendorcataloglisting) | **GET** /vendor/catalog/listings/{listingId} |
+*VendorCatalogApi* | [**getVendorCatalogTaxonomy**](docs/VendorCatalogApi.md#getvendorcatalogtaxonomy) | **GET** /vendor/catalog/taxonomy |
+*VendorCatalogApi* | [**listVendorCatalogListings**](docs/VendorCatalogApi.md#listvendorcataloglistings) | **GET** /vendor/catalog/listings |
+*VendorCatalogApi* | [**publishVendorCatalogListing**](docs/VendorCatalogApi.md#publishvendorcataloglisting) | **POST** /vendor/catalog/listings/{listingId}/publish |
+*VendorCatalogApi* | [**removeVendorListingMedia**](docs/VendorCatalogApi.md#removevendorlistingmedia) | **DELETE** /vendor/catalog/listings/{listingId}/media/{mediaId} |
+*VendorCatalogApi* | [**saveVendorCatalogVariants**](docs/VendorCatalogApi.md#savevendorcatalogvariants) | **PUT** /vendor/catalog/listings/{listingId}/variants |
+*VendorCatalogApi* | [**searchCatalogMaterials**](docs/VendorCatalogApi.md#searchcatalogmaterials) | **GET** /vendor/catalog/materials/search |
+*VendorCatalogApi* | [**submitListingCompliance**](docs/VendorCatalogApi.md#submitlistingcompliance) | **POST** /vendor/catalog/listings/{listingId}/compliance |
+*VendorCatalogApi* | [**updateVendorCatalogListing**](docs/VendorCatalogApi.md#updatevendorcataloglisting) | **PATCH** /vendor/catalog/listings/{listingId} |
+*VendorCatalogApi* | [**uploadCatalogImport**](docs/VendorCatalogApi.md#uploadcatalogimport) | **POST** /vendor/catalog/imports |
+*VendorCatalogApi* | [**uploadListingComplianceEvidence**](docs/VendorCatalogApi.md#uploadlistingcomplianceevidence) | **POST** /vendor/catalog/listings/{listingId}/compliance/evidence |
+*VendorCatalogApi* | [**uploadVendorListingMedia**](docs/VendorCatalogApi.md#uploadvendorlistingmedia) | **POST** /vendor/catalog/listings/{listingId}/media |
 *VendorOnboardingApi* | [**acceptVendorCommission**](docs/VendorOnboardingApi.md#acceptvendorcommission) | **POST** /vendors/onboarding/verification/commission |
 *VendorOnboardingApi* | [**activateVendorStore**](docs/VendorOnboardingApi.md#activatevendorstore) | **POST** /vendors/onboarding/activation |
 *VendorOnboardingApi* | [**changeVendorStaffDisputes**](docs/VendorOnboardingApi.md#changevendorstaffdisputes) | **PATCH** /vendors/account/staff-disputes |
@@ -222,6 +250,57 @@ All URIs are relative to */api/v1*
 - [BuyerMobilePasswordRecoveryRequest](docs/BuyerMobilePasswordRecoveryRequest.md)
 - [BuyerMobileRefreshRequest](docs/BuyerMobileRefreshRequest.md)
 - [BuyerMobileRegisterRequest](docs/BuyerMobileRegisterRequest.md)
+- [CatalogAttributeDefinition](docs/CatalogAttributeDefinition.md)
+- [CatalogBlocker](docs/CatalogBlocker.md)
+- [CatalogCompletion](docs/CatalogCompletion.md)
+- [CatalogCompletionStep](docs/CatalogCompletionStep.md)
+- [CatalogDeactivation](docs/CatalogDeactivation.md)
+- [CatalogImportJob](docs/CatalogImportJob.md)
+- [CatalogImportJobEnvelope](docs/CatalogImportJobEnvelope.md)
+- [CatalogImportRowError](docs/CatalogImportRowError.md)
+- [CatalogImportTemplate](docs/CatalogImportTemplate.md)
+- [CatalogImportTemplateEnvelope](docs/CatalogImportTemplateEnvelope.md)
+- [CatalogInventory](docs/CatalogInventory.md)
+- [CatalogLimits](docs/CatalogLimits.md)
+- [CatalogListing](docs/CatalogListing.md)
+- [CatalogListingCreate](docs/CatalogListingCreate.md)
+- [CatalogListingEnvelope](docs/CatalogListingEnvelope.md)
+- [CatalogListingListMeta](docs/CatalogListingListMeta.md)
+- [CatalogListingMaterial](docs/CatalogListingMaterial.md)
+- [CatalogListingPermissions](docs/CatalogListingPermissions.md)
+- [CatalogListingSummary](docs/CatalogListingSummary.md)
+- [CatalogListingSummaryListEnvelope](docs/CatalogListingSummaryListEnvelope.md)
+- [CatalogListingUpdate](docs/CatalogListingUpdate.md)
+- [CatalogLockVersion](docs/CatalogLockVersion.md)
+- [CatalogMaterial](docs/CatalogMaterial.md)
+- [CatalogMaterialEnvelope](docs/CatalogMaterialEnvelope.md)
+- [CatalogMaterialMatch](docs/CatalogMaterialMatch.md)
+- [CatalogMaterialMatchListEnvelope](docs/CatalogMaterialMatchListEnvelope.md)
+- [CatalogMedia](docs/CatalogMedia.md)
+- [CatalogPrice](docs/CatalogPrice.md)
+- [CatalogReference](docs/CatalogReference.md)
+- [CatalogTaxonomy](docs/CatalogTaxonomy.md)
+- [CatalogTaxonomyEnvelope](docs/CatalogTaxonomyEnvelope.md)
+- [CatalogUnit](docs/CatalogUnit.md)
+- [CatalogVariant](docs/CatalogVariant.md)
+- [CatalogVariantInput](docs/CatalogVariantInput.md)
+- [CatalogVariantsSave](docs/CatalogVariantsSave.md)
+- [CatalogVolumeTier](docs/CatalogVolumeTier.md)
+- [CatalogVolumeTierInput](docs/CatalogVolumeTierInput.md)
+- [ComparableGroupCreate](docs/ComparableGroupCreate.md)
+- [ComparableGroupEnvelope](docs/ComparableGroupEnvelope.md)
+- [ComparableGroupEnvelopeData](docs/ComparableGroupEnvelopeData.md)
+- [ComplianceEvidence](docs/ComplianceEvidence.md)
+- [ComplianceEvidenceEnvelope](docs/ComplianceEvidenceEnvelope.md)
+- [ComplianceExtraction](docs/ComplianceExtraction.md)
+- [CompliancePath](docs/CompliancePath.md)
+- [ComplianceReferenceResult](docs/ComplianceReferenceResult.md)
+- [ComplianceRegister](docs/ComplianceRegister.md)
+- [ComplianceRegisterEnvelope](docs/ComplianceRegisterEnvelope.md)
+- [ComplianceRegisterListEnvelope](docs/ComplianceRegisterListEnvelope.md)
+- [ComplianceReviewSummary](docs/ComplianceReviewSummary.md)
+- [ComplianceSubmission](docs/ComplianceSubmission.md)
+- [ComplianceSubmissionSummary](docs/ComplianceSubmissionSummary.md)
 - [CsrfEnvelope](docs/CsrfEnvelope.md)
 - [CsrfEnvelopeAllOfData](docs/CsrfEnvelopeAllOfData.md)
 - [EmailRequest](docs/EmailRequest.md)
@@ -233,7 +312,11 @@ All URIs are relative to */api/v1*
 - [GoogleOidcStartRequest](docs/GoogleOidcStartRequest.md)
 - [HealthEnvelope](docs/HealthEnvelope.md)
 - [HealthEnvelopeAllOfData](docs/HealthEnvelopeAllOfData.md)
+- [ListingComplianceStatus](docs/ListingComplianceStatus.md)
+- [ListingStatus](docs/ListingStatus.md)
+- [ListingStatusChange](docs/ListingStatusChange.md)
 - [LoginRequest](docs/LoginRequest.md)
+- [MarkingType](docs/MarkingType.md)
 - [MaterialPriceObservation](docs/MaterialPriceObservation.md)
 - [MfaCodeRequest](docs/MfaCodeRequest.md)
 - [MfaEnrollmentEnvelope](docs/MfaEnrollmentEnvelope.md)
@@ -246,6 +329,11 @@ All URIs are relative to */api/v1*
 - [OnboardingStepCompletion](docs/OnboardingStepCompletion.md)
 - [PasswordRecoveryRequest](docs/PasswordRecoveryRequest.md)
 - [PasswordResetRequest](docs/PasswordResetRequest.md)
+- [ProductComplianceCaseEnvelope](docs/ProductComplianceCaseEnvelope.md)
+- [ProductComplianceCaseEnvelopeData](docs/ProductComplianceCaseEnvelopeData.md)
+- [ProductComplianceDecision](docs/ProductComplianceDecision.md)
+- [ProductComplianceQueueEnvelope](docs/ProductComplianceQueueEnvelope.md)
+- [ProductComplianceQueueItem](docs/ProductComplianceQueueItem.md)
 - [PsgcArea](docs/PsgcArea.md)
 - [PsgcSearchEnvelope](docs/PsgcSearchEnvelope.md)
 - [PsgcSearchEnvelopeData](docs/PsgcSearchEnvelopeData.md)
@@ -257,11 +345,13 @@ All URIs are relative to */api/v1*
 - [RegisterRequest](docs/RegisterRequest.md)
 - [RegistrationEnvelope](docs/RegistrationEnvelope.md)
 - [RegistrationEnvelopeAllOfData](docs/RegistrationEnvelopeAllOfData.md)
+- [RegulatedMaterialRule](docs/RegulatedMaterialRule.md)
 - [ResendBotChallengeRequest](docs/ResendBotChallengeRequest.md)
 - [StoreActivationBlocker](docs/StoreActivationBlocker.md)
 - [StoreActivationReadiness](docs/StoreActivationReadiness.md)
 - [StoreOperatingDay](docs/StoreOperatingDay.md)
 - [SuccessEnvelope](docs/SuccessEnvelope.md)
+- [TaxCategory](docs/TaxCategory.md)
 - [UserIdentity](docs/UserIdentity.md)
 - [VendorActivationSnapshot](docs/VendorActivationSnapshot.md)
 - [VendorAddressGeocode](docs/VendorAddressGeocode.md)
@@ -358,8 +448,8 @@ This TypeScript SDK client supports the [Fetch API](https://fetch.spec.whatwg.or
 and is automatically generated by the
 [OpenAPI Generator](https://openapi-generator.tech) project:
 
-- API version: `1.0.0-phase.3`
-- Package version: `1.0.0-phase.3`
+- API version: `1.0.0-phase.4`
+- Package version: `1.0.0-phase.4`
 - Generator version: `7.25.0`
 - Build package: `org.openapitools.codegen.languages.TypeScriptFetchClientCodegen`
 

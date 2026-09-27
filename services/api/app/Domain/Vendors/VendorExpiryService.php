@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Vendors;
 
+use App\Domain\Catalog\MarketplaceDiscoverability;
 use App\Domain\Operations\OutboxPublisher;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -58,6 +59,7 @@ final class VendorExpiryService
                     if ($organization !== null && in_array($organization->store_activation_status, ['ACTIVE', 'READY'], true)) {
                         DB::table('vendor_activation_history')->insert(['id' => (string) Str::uuid7(), 'vendor_organization_id' => $organizationId, 'state_before' => $organization->store_activation_status, 'state_after' => 'RESTRICTED', 'result' => 'RESTRICTED', 'reason' => 'Required evidence expired.', 'blockers' => json_encode([['key' => $version->requirement_key, 'reason' => 'Evidence expired.']], JSON_THROW_ON_ERROR), 'readiness_snapshot' => json_encode(['status' => 'NOT_READY'], JSON_THROW_ON_ERROR), 'actor_user_id' => null, 'source' => 'SYSTEM', 'recorded_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
                     }
+                    app(MarketplaceDiscoverability::class)->evaluate($organizationId);
                 }
                 $owner = DB::table('vendor_memberships as m')->join('users as u', 'u.id', '=', 'm.user_id')->where('m.vendor_organization_id', $organizationId)->where('m.role', 'OWNER')->where('m.status', 'ACTIVE')->first(['u.id', 'u.email']);
                 if ($owner !== null) {

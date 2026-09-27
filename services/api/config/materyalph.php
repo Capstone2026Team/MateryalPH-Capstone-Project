@@ -35,4 +35,9 @@ return [
         'max_document_kb' => (int) env('VENDOR_DOCUMENT_MAX_KB', 10240),
         'max_media_kb' => (int) env('VENDOR_MEDIA_MAX_KB', 20480),
     ],
+    'catalog' => [
+        'max_listing_image_kb' => (int) env('CATALOG_LISTING_IMAGE_MAX_KB', 5120),
+        'max_compliance_evidence_kb' => (int) env('CATALOG_COMPLIANCE_EVIDENCE_MAX_KB', 10240),
+        'max_import_kb' => (int) env('CATALOG_IMPORT_MAX_KB', 2048),
+    ],
 ];
