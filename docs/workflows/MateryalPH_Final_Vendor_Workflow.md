@@ -90,7 +90,7 @@ After a successful reset, the system invalidates the recovery credential, revoke
 
 # 1.3 Authentication and Session Management
 
-The Vendor Portal uses the shared JWT architecture. Short-lived access tokens and rotated refresh tokens are transmitted through `Secure`, `HttpOnly` cookies with CSRF protection and an appropriate `SameSite` policy. Tokens are not stored in browser local storage.
+The Vendor Portal uses the shared Laravel Passport authentication. Short-lived access tokens and rotated refresh tokens are transmitted through `Secure`, `HttpOnly` cookies with CSRF protection and an appropriate `SameSite` policy. Tokens are not stored in browser local storage.
 
 Sessions are revoked after logout, password reset, password change, email change, factor recovery, account suspension, membership deactivation, or organization ban. After authentication, the system evaluates account status, Vendor organization, role, delegation flags, email verification, business verification, onboarding, marketplace activation, and required reauthentication.
 

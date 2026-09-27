@@ -97,7 +97,7 @@ This applies to every phase. A phase's own UI section adds screen-specific struc
 | Phase | Increment | Status |
 | ---: | --- | --- |
 | 1 | Baseline schema, three-platform authentication, Vendor landing page | **Accepted.** Passport issuance/rotation, web CSRF + HttpOnly cookies, native bearer transport, Google OIDC, login, TOTP enrollment/challenge, recovery-code hashing, logout |
-| 2 | Authorization, profiles, agreements, sessions, account security | **Accepted 13 September 2026.** 86 tests / 1,096 assertions; full gate record in `docs/reports/phase-two-implementation.md` |
+| 2 | Authorization, profiles, agreements, sessions, account security | **Accepted 13 September 2026.** 86 tests / 1,096 assertions; full gate record in `docs/test-plans/phase-two-implementation.md` |
 
 Foundations that exist and must be extended rather than replaced: `user_profiles`, `buyer_profiles`, `auth_sessions`, agreement documents/versions/acceptances, Vendor and Admin memberships and invitations, permissions, `audit_logs`, the transactional outbox, the shared React account workspace, the Buyer account screens, the shared portal sidebar, and the generated TypeScript/Dart clients.
 

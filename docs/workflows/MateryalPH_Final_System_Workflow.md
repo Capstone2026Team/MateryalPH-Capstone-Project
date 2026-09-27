@@ -504,7 +504,7 @@ RR No. 11-2025 and RR No. 26-2025 distinguish electronic invoicing from electron
 | `vendor-tax-profiles` and evidence versions | Vendor, taxpayer identity, registration/classification, fiscal year, declaration/exemption evidence, validity, reviewer, origin |
 | `financial-snapshots` | Order/quotation version, exact line amounts, discount/VAT allocation, M/V/E/D/F/N, policy IDs, calculation hash |
 | `remittance-assessments` | Environment, source collections, unique group, assigned entity, C/R/D_r/V_r/P/G/W, threshold before/after, evidence and reconciliation state |
-| `tax-year-accumulators` | Environment, taxpayer and year unique key; local total, external declaration scope, breach flag and last locked event |
+| `vendor-withholding-accumulators` | FIN-04A `vendor_withholding_accumulators`: environment, taxpayer and taxable-year unique key; local total, external declaration and overlap, effective total, withholding status, crossing reference and lock version, with append-only status events |
 | `fee-assessments` / `fee-statements` | Unique source order/policy, earned target, credits, billing period, issue/due dates, outstanding amount and fee payment references |
 | `physical-payment-records` | Order, remaining obligation, method, amount, Vendor recorder, time, evidence, Buyer acknowledgment, correction history |
 | `tax-adjustments` / `tax-report-packages` | Original event/period, reason, before/after, preparer/reviewer, evidence, export hash, filing calendar/version |
