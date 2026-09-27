@@ -90,7 +90,7 @@ After a successful reset, the system invalidates the recovery credential, revoke
 
 # 1.3 Authentication and Session Management
 
-The Vendor Portal uses the shared JWT architecture. Short-lived access tokens and rotated refresh tokens are transmitted through `Secure`, `HttpOnly` cookies with CSRF protection and an appropriate `SameSite` policy. Tokens are not stored in browser local storage.
+The Vendor Portal uses the shared Laravel Passport authentication. Short-lived access tokens and rotated refresh tokens are transmitted through `Secure`, `HttpOnly` cookies with CSRF protection and an appropriate `SameSite` policy. Tokens are not stored in browser local storage.
 
 Sessions are revoked after logout, password reset, password change, email change, factor recovery, account suspension, membership deactivation, or organization ban. After authentication, the system evaluates account status, Vendor organization, role, delegation flags, email verification, business verification, onboarding, marketplace activation, and required reauthentication.
 
@@ -740,7 +740,7 @@ FIN-07 governs the financial consequences. No commission is earned on cancellati
 2. The system normalizes the name, performs exact alias and `pg_trgm` fuzzy matching, suggests a canonical category and read-only platform code, and permits reviewed unmatched names.
 3. The user selects one to three approved search tags.
 4. The user enters display name, brand, manufacturer name and address, country of manufacture, description, unit, Vendor SKU, base price, internal quantity, public availability, base weight, and base dimensions.
-5. Optional variants define their own attributes, price modifier, weight, dimensions, and inventory.
+5. Optional variants define their own attributes, price modifier, weight, dimensions, and inventory. Each variant may add up to five volume tiers (minimum quantity and lower unit price) under CAT-PRICE-01 in the System Workflow.
 6. Category-specific technical fields are loaded.
 7. At least one general product photo is uploaded.
 8. A regulated product completes the applicable PS/ICC evidence path.

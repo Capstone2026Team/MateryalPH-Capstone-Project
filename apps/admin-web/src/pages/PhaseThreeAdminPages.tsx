@@ -37,59 +37,25 @@ import {
   type VerificationDetail,
 } from '../lib/vendor-verification-api'
 
-type JsonRecord = Record<string, unknown>
+import { formatDate, numberValue, record, records, statusLabel, statusTone, stringValue, type JsonRecord } from '../lib/admin-format'
 
 const adminModuleIcons: Record<string, typeof FileText> = { 'marketplace-analytics': ChartNoAxesCombined, 'buyer-management': Users, taxonomy: ListTree, 'product-compliance': ShieldCheck, disputes: Scale, enforcement: ShieldAlert, scores: BadgeCheck, moderation: ClipboardCheck, transactions: CreditCard, invoices: ReceiptText, 'budget-overrides': History, settings: Settings, privacy: ShieldCheck, integrations: Activity }
 const adminNavigation: PortalNavSection[] = [
   { label: 'Overview', items: [{ label: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard size={16} aria-hidden="true" /> }] },
   { label: 'User Management', items: [{ label: 'Vendor Management', href: '/vendor-verification', icon: <Store size={16} aria-hidden="true" /> }] },
-  ...[['Marketplace', [['Marketplace Analytics', 'marketplace-analytics'], ['Buyer Management', 'buyer-management'], ['Taxonomy Management', 'taxonomy']]], ['Compliance & quality', [['Product Compliance Queue', 'product-compliance'], ['Disputes & Appeals', 'disputes'], ['Vendor Enforcement', 'enforcement'], ['Score & Badge Monitoring', 'scores'], ['Review Moderation', 'moderation']]], ['Finance', [['Transaction Log', 'transactions'], ['Invoice Request Log', 'invoices'], ['Budget Override Audit Log', 'budget-overrides']]], ['Platform', [['Platform Settings', 'settings'], ['Privacy Requests', 'privacy'], ['Integration & Job Health', 'integrations']]]].map(([label, entries]) => ({ label: label as string, items: (entries as string[][]).map(([label = '', key = '']) => ({ label, href: `/preview/${key}`, icon: (() => { const Icon = adminModuleIcons[key] ?? FileText; return <Icon size={18} aria-hidden="true" /> })() })) })),
+  ...[['Marketplace', [['Marketplace Analytics', 'marketplace-analytics'], ['Buyer Management', 'buyer-management'], ['Taxonomy Management', 'taxonomy']]], ['Compliance & quality', [['Product Compliance Queue', 'product-compliance'], ['Disputes & Appeals', 'disputes'], ['Vendor Enforcement', 'enforcement'], ['Score & Badge Monitoring', 'scores'], ['Review Moderation', 'moderation']]], ['Finance', [['Transaction Log', 'transactions'], ['Invoice Request Log', 'invoices'], ['Budget Override Audit Log', 'budget-overrides']]], ['Platform', [['Platform Settings', 'settings'], ['Privacy Requests', 'privacy'], ['Integration & Job Health', 'integrations']]]].map(([label, entries]) => ({ label: label as string, items: (entries as string[][]).map(([label = '', key = '']) => ({ label, href: key === 'product-compliance' ? '/product-compliance' : `/preview/${key}`, icon: (() => { const Icon = adminModuleIcons[key] ?? FileText; return <Icon size={18} aria-hidden="true" /> })() })) })),
   { label: 'Tracking', items: [{ label: 'Audit Log', href: '/audit', icon: <History size={16} aria-hidden="true" /> }] },
 ]
-
-function record(value: unknown): JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value) ? value as JsonRecord : {}
-}
-
-function records(value: unknown): JsonRecord[] {
-  return Array.isArray(value) ? value.map(record) : []
-}
-
-function stringValue(value: unknown, fallback = ''): string {
-  return typeof value === 'string' ? value : fallback
-}
-
-function numberValue(value: unknown, fallback = 0): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback
-}
-
-function statusTone(status: string): 'neutral' | 'warning' | 'success' | 'error' | 'info' {
-  if (['APPROVED', 'COMPLETED', 'COMPLETE', 'ACTIVE', 'CONNECTED', 'READY'].includes(status)) return 'success'
-  if (['CHANGES_REQUIRED', 'IN_PROGRESS', 'PENDING_VERIFICATION', 'PENDING', 'NOT_READY', 'UNVERIFIED'].includes(status)) return 'warning'
-  if (['REJECTED', 'EXPIRED', 'FAILED', 'RESTRICTED', 'SUSPENDED'].includes(status)) return 'error'
-  if (status === 'SUBMITTED') return 'info'
-  return 'neutral'
-}
-
-function statusLabel(status: string): string {
-  return status.replaceAll('_', ' ').toLowerCase().replace(/(^|\s)\S/g, (letter) => letter.toUpperCase())
-}
 
 function adminDate(): string {
   return new Intl.DateTimeFormat('en-PH', { dateStyle: 'full', timeZone: 'Asia/Manila' }).format(new Date())
 }
 
-function formatDate(value: unknown): string {
-  if (value instanceof Date && !Number.isNaN(value.valueOf())) return new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium', timeZone: 'Asia/Manila' }).format(value)
-  if (typeof value === 'string' && value) return new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium', timeZone: 'Asia/Manila' }).format(new Date(value))
-  return 'Not recorded'
-}
-
-function LoadingState() {
+export function LoadingState() {
   return <div className="grid min-h-64 place-items-center rounded-surface border border-border-default bg-surface-primary p-8 text-center"><RefreshCw className="animate-spin text-action-primary" size={24} aria-hidden="true" /><p className="mt-3 text-sm text-text-secondary">Loading verification workspace…</p></div>
 }
 
-function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
+export function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
   return <div className="grid gap-4 rounded-surface border border-status-error/30 bg-red-50 p-6 text-sm text-red-900" role="alert"><div className="flex items-start gap-3"><AlertCircle className="mt-0.5 shrink-0" size={20} aria-hidden="true" /><p>{message}</p></div><Button className="w-fit" variant="secondary" onClick={onRetry}><RefreshCw size={16} aria-hidden="true" /> Try again</Button></div>
 }
 
@@ -98,7 +64,7 @@ export function AdminShell({ activeHref, children }: { activeHref: string; child
   return <PortalShell apiBasePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} onNavigate={navigate} headerActions={<Link className="inline-flex min-h-11 items-center text-sm font-semibold" to="/workspace">Account settings</Link>} homeHref="/dashboard" portalLabel="ADMIN PORTAL" pageTitle={activeHref === '/dashboard' ? 'Dashboard' : activeHref === '/workspace' ? 'Settings' : activeHref === '/audit' ? 'Audit tracking' : adminNavigation.flatMap(section => section.items).find(item => item.href === activeHref)?.label ?? 'Vendor Management'} dateLabel={adminDate()} sections={adminNavigation} activeHref={activeHref} accountLabel="Admin review team" accountStatus="Audited access">{children}</PortalShell>
 }
 
-function PageHeader({ eyebrow, title, description, actions, compact = false }: { eyebrow: string; title: string; description: string; actions?: ReactNode; compact?: boolean }) {
+export function PageHeader({ eyebrow, title, description, actions, compact = false }: { eyebrow: string; title: string; description: string; actions?: ReactNode; compact?: boolean }) {
   return <div className={`flex flex-col gap-4 border-b border-border-default lg:flex-row lg:items-end lg:justify-between ${compact ? 'pb-4' : 'pb-7'}`}><div className="max-w-3xl"><p className="text-xs font-semibold uppercase tracking-[0.14em] text-action-primary">{eyebrow}</p><h1 className={`font-semibold tracking-tight text-text-strong ${compact ? 'mt-1 text-2xl' : 'mt-3 text-3xl sm:text-4xl'}`}>{title}</h1><p className={`max-w-2xl text-text-secondary ${compact ? 'mt-1 text-sm leading-5' : 'mt-3 text-base leading-7'}`}>{description}</p></div>{actions && <div className="flex shrink-0 flex-wrap gap-3">{actions}</div>}</div>
 }
 

@@ -1,9 +1,9 @@
 openapi: 3.1.0
 info:
   title: MateryalPH API
-  version: 1.0.0-phase.3
+  version: 1.0.0-phase.4
   description: >-
-    Versioned Phase 1–3 contract. Vendor onboarding, verification, activation readiness, private evidence, and team invitations are server-authorized.
+    Versioned Phase 1–4 contract. Vendor onboarding, verification, activation readiness, private evidence, team invitations, the Vendor catalog and product PS/ICC compliance are server-authorized.
     Browser credentials are isolated by configured frontend origin using _vendor and _admin suffixes on access, refresh, CSRF, MFA and bot-proof cookies.
     Existing unsuffixed browser sessions require sign-in again; cookie selection never replaces account authorization. Native Buyer transport is unchanged.
 servers:
@@ -15,6 +15,8 @@ tags:
   - name: Vendor Onboarding
   - name: Stores
   - name: Admin Vendor Verification
+  - name: Vendor Catalog
+  - name: Admin Product Compliance
 paths:
   /{webAccountPortal}/account/photo:
     parameters:
@@ -2853,6 +2855,423 @@ paths:
         "401": { $ref: "#/components/responses/ErrorResponse" }
         "422": { $ref: "#/components/responses/ErrorResponse" }
         "503": { $ref: "#/components/responses/ErrorResponse" }
+  /vendor/catalog/taxonomy:
+    get:
+      operationId: getVendorCatalogTaxonomy
+      description: Canonical categories, units, approved search tags, category technical attributes, FIN-02 tax classifications and the classifications permitted by the Vendor's reviewed VAT profile. An empty allowed list means payable publication is blocked.
+      tags: [ Vendor Catalog ]
+      security: [ { accessCookie: [] } ]
+      responses:
+        "200": { description: "Reference taxonomy for the listing wizard.", content: { application/json: { schema: { $ref: "#/components/schemas/CatalogTaxonomyEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+  /vendor/catalog/materials/search:
+    get:
+      operationId: searchCatalogMaterials
+      description: Normalizes the query, returns exact canonical or alias matches first and pg_trgm suggestions after them. A FUZZY suggestion must be confirmed by the Vendor and never establishes comparability.
+      tags: [ Vendor Catalog ]
+      security: [ { accessCookie: [] } ]
+      parameters:
+        - { name: q, in: query, required: true, schema: { type: string, minLength: 2, maxLength: 120 } }
+      responses:
+        "200": { description: "Up to eight ranked material matches.", content: { application/json: { schema: { $ref: "#/components/schemas/CatalogMaterialMatchListEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /vendor/catalog/materials/{materialId}:
+    get:
+      operationId: getCatalogMaterial
+      tags: [ Vendor Catalog ]
+      security: [ { accessCookie: [] } ]
+      parameters:
+        - { name: materialId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: "Canonical material with compatible units and any current DTI-BPS regulated-material rule.", content: { application/json: { schema: { $ref: "#/components/schemas/CatalogMaterialEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+  /vendor/catalog/listings:
+    get:
+      operationId: listVendorCatalogListings
+      description: Paginated organization listings. Customer Service Staff receive the sales stock view; Fulfillment Staff receive only assigned products (meta.scope ASSIGNED_ONLY).
+      tags: [ Vendor Catalog ]
+      security: [ { accessCookie: [] } ]
+      parameters:
+        - { name: status, in: query, required: false, schema: { $ref: "#/components/schemas/ListingStatus" } }
+        - { name: compliance_status, in: query, required: false, schema: { $ref: "#/components/schemas/ListingComplianceStatus" } }
+        - { name: category_id, in: query, required: false, schema: { type: string, format: uuid } }
+        - { name: q, in: query, required: false, schema: { type: string, maxLength: 120 } }
+        - { name: page, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 1000 } }
+      responses:
+        "200": { description: "Listing summaries.", content: { application/json: { schema: { $ref: "#/components/schemas/CatalogListingSummaryListEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+    post:
+      operationId: createVendorCatalogListing
+      description: Creates a DRAFT listing. Requires catalog.manage and Store Activation. Rental services are rejected.
+      tags: [ Vendor Catalog ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      parameters:
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CatalogListingCreate" } } }
+      responses:
+        "201": { description: "Draft listing created.", content: { application/json: { schema: { $ref: "#/components/schemas/CatalogListingEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /vendor/catalog/listings/{listingId}:
+    get:
+      operationId: getVendorCatalogListing
+      tags: [ Vendor Catalog ]
+      security: [ { accessCookie: [] } ]
+      parameters:
+        - { name: listingId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: "Listing with server-derived wizard completion, publication blockers, variants, media and compliance history.", content: { application/json: { schema: { $ref: "#/components/schemas/CatalogListingEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+    patch:
+      operationId: updateVendorCatalogListing
+      description: Saves listing details as a draft. Other labels are listing text only and never create taxonomy. A compliance-sensitive edit of a regulated listing withdraws verification and returns it to PENDING_COMPLIANCE. An edit that would leave an ACTIVE listing incomplete is rejected.
+      tags: [ Vendor Catalog ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      parameters:
+        - { name: listingId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CatalogListingUpdate" } } }
+      responses:
+        "200": { description: "Draft saved.", content: { application/json: { schema: { $ref: "#/components/schemas/CatalogListingEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /vendor/catalog/listings/{listingId}/variants:
+    put:
+      operationId: saveVendorCatalogVariants
+      description: Replaces the variant row group atomically. All row errors return together keyed variants.{index}.{field}. Price changes create a new immutable ordinary price version; omitted variants are deactivated, never deleted.
+      tags: [ Vendor Catalog ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      parameters:
+        - { name: listingId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CatalogVariantsSave" } } }
+      responses:
+        "200": { description: "Variant rows saved.", content: { application/json: { schema: { $ref: "#/components/schemas/CatalogListingEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /vendor/catalog/listings/{listingId}/media:
+    post:
+      operationId: uploadVendorListingMedia
+      description: Uploads a public product photo (JPG, PNG or WebP, content-sniffed, malware-scanned fail-closed). A replacement increments the media version. Private verification or compliance evidence can never be attached as listing media.
+      tags: [ Vendor Catalog ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      parameters:
+        - { name: listingId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema: { $ref: "#/components/schemas/CatalogMediaUpload" }
+      responses:
+        "201": { description: "Photo stored.", content: { application/json: { schema: { $ref: "#/components/schemas/CatalogListingEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+        "503": { $ref: "#/components/responses/ErrorResponse" }
+  /vendor/catalog/listings/{listingId}/media/{mediaId}:
+    delete:
+      operationId: removeVendorListingMedia
+      tags: [ Vendor Catalog ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      parameters:
+        - { name: listingId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: mediaId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: "Photo removed; history retained.", content: { application/json: { schema: { $ref: "#/components/schemas/CatalogListingEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /vendor/catalog/listings/{listingId}/publish:
+    post:
+      operationId: publishVendorCatalogListing
+      description: Requests publication. The backend evaluates every blocker; a regulated listing moves to PENDING_COMPLIANCE or PENDING_ADMIN_REVIEW until its PS/ICC evidence is VERIFIED and only then becomes ACTIVE.
+      tags: [ Vendor Catalog ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      parameters:
+        - { name: listingId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CatalogLockVersion" } } }
+      responses:
+        "200": { description: "Publication evaluated.", content: { application/json: { schema: { $ref: "#/components/schemas/CatalogListingEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /vendor/catalog/listings/{listingId}/deactivate:
+    post:
+      operationId: deactivateVendorCatalogListing
+      tags: [ Vendor Catalog ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      parameters:
+        - { name: listingId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CatalogDeactivation" } } }
+      responses:
+        "200": { description: "Listing moved to INACTIVE.", content: { application/json: { schema: { $ref: "#/components/schemas/CatalogListingEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+  /vendor/catalog/listings/{listingId}/compliance/evidence:
+    post:
+      operationId: uploadListingComplianceEvidence
+      description: Stores a private PS Mark/ICC marking photo or QR image and returns editable extraction assistance. OCR and QR values are suggestions only; UNAVAILABLE means the Vendor enters the values on Review and Confirm.
+      tags: [ Vendor Catalog ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      parameters:
+        - { name: listingId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema: { $ref: "#/components/schemas/ComplianceEvidenceUpload" }
+      responses:
+        "201": { description: "Private evidence stored with extraction assistance.", content: { application/json: { schema: { $ref: "#/components/schemas/ComplianceEvidenceEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+        "503": { $ref: "#/components/responses/ErrorResponse" }
+  /vendor/catalog/listings/{listingId}/compliance:
+    post:
+      operationId: submitListingCompliance
+      description: Review and Confirm for all three paths. An exact match with the active DTI-BPS register snapshot (rule compliance.register-exact.v1) is VERIFIED as an audited system decision; uncertain, unavailable or unmatched results become PENDING_ADMIN_REVIEW, never a counterfeit finding.
+      tags: [ Vendor Catalog ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      parameters:
+        - { name: listingId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/ComplianceSubmission" } } }
+      responses:
+        "201": { description: "Compliance submission recorded.", content: { application/json: { schema: { $ref: "#/components/schemas/CatalogListingEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /vendor/catalog/files/{fileId}:
+    get:
+      operationId: getVendorCatalogFileUrl
+      tags: [ Vendor Catalog ]
+      security: [ { accessCookie: [] } ]
+      parameters:
+        - { name: fileId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: "Five-minute authorized URL for listing media or, with compliance.submit, private compliance evidence.", content: { application/json: { schema: { $ref: "#/components/schemas/VendorFileEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+  /vendor/catalog/imports/template:
+    get:
+      operationId: getCatalogImportTemplate
+      tags: [ Vendor Catalog ]
+      security: [ { accessCookie: [] } ]
+      responses:
+        "200": { description: "CSV template columns.", content: { application/json: { schema: { $ref: "#/components/schemas/CatalogImportTemplateEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+  /vendor/catalog/imports:
+    post:
+      operationId: uploadCatalogImport
+      description: Validates every CSV row and applies nothing. Rows with errors are reported; HAS_ERRORS is never a success state.
+      tags: [ Vendor Catalog ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema: { $ref: "#/components/schemas/CatalogImportUpload" }
+      responses:
+        "201": { description: "Validation report.", content: { application/json: { schema: { $ref: "#/components/schemas/CatalogImportJobEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+        "503": { $ref: "#/components/responses/ErrorResponse" }
+  /vendor/catalog/imports/{jobId}:
+    get:
+      operationId: getCatalogImport
+      tags: [ Vendor Catalog ]
+      security: [ { accessCookie: [] } ]
+      parameters:
+        - { name: jobId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: page, in: query, required: false, description: Page of the row-error table., schema: { type: integer, minimum: 1, maximum: 1000 } }
+      responses:
+        "200": { description: "Import job with paginated row errors.", content: { application/json: { schema: { $ref: "#/components/schemas/CatalogImportJobEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+  /vendor/catalog/imports/{jobId}/apply:
+    post:
+      operationId: applyCatalogImport
+      description: Revalidates and creates DRAFT listings from every valid row in one transaction; any failure applies nothing. APPLIED_WITH_REJECTIONS reports rows that were not imported.
+      tags: [ Vendor Catalog ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      parameters:
+        - { name: jobId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: "Import applied.", content: { application/json: { schema: { $ref: "#/components/schemas/CatalogImportJobEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /admin/product-compliance:
+    get:
+      operationId: listProductComplianceQueue
+      tags: [ Admin Product Compliance ]
+      security: [ { accessCookie: [] } ]
+      parameters:
+        - { name: status, in: query, required: false, schema: { type: string, enum: [ PENDING_ADMIN_REVIEW, VERIFIED, CHANGES_REQUIRED, REJECTED, SUPERSEDED, ALL ], default: PENDING_ADMIN_REVIEW } }
+        - { name: path, in: query, required: false, schema: { $ref: "#/components/schemas/CompliancePath" } }
+        - { name: reference_result, in: query, required: false, schema: { $ref: "#/components/schemas/ComplianceReferenceResult" } }
+        - { name: sort, in: query, required: false, schema: { type: string, enum: [ oldest, newest ], default: oldest } }
+        - { name: page, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 1000 } }
+      responses:
+        "200": { description: "Oldest-first product compliance queue.", content: { application/json: { schema: { $ref: "#/components/schemas/ProductComplianceQueueEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+  /admin/product-compliance/registers:
+    get:
+      operationId: listComplianceRegisters
+      tags: [ Admin Product Compliance ]
+      security: [ { accessCookie: [] } ]
+      parameters:
+        - { name: page, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 1000 } }
+      responses:
+        "200": { description: "Register snapshots.", content: { application/json: { schema: { $ref: "#/components/schemas/ComplianceRegisterListEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+    post:
+      operationId: importComplianceRegister
+      description: Imports a CSV snapshot of the DTI-BPS PS licensee or ICC certificate register as an immutable DRAFT. It is used for matching only after activation.
+      tags: [ Admin Product Compliance ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema: { $ref: "#/components/schemas/ComplianceRegisterUpload" }
+      responses:
+        "201": { description: "Draft snapshot imported.", content: { application/json: { schema: { $ref: "#/components/schemas/ComplianceRegisterEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+        "503": { $ref: "#/components/responses/ErrorResponse" }
+  /admin/product-compliance/registers/{registerId}/activate:
+    post:
+      operationId: activateComplianceRegister
+      tags: [ Admin Product Compliance ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      parameters:
+        - { name: registerId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: "Snapshot activated; the previous active snapshot of the same kind is superseded.", content: { application/json: { schema: { $ref: "#/components/schemas/ComplianceRegisterEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+  /admin/product-compliance/files/{fileId}:
+    get:
+      operationId: getProductComplianceFileUrl
+      tags: [ Admin Product Compliance ]
+      security: [ { accessCookie: [] } ]
+      parameters:
+        - { name: fileId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: "Five-minute authorized URL for submitted compliance evidence or listing media. Access is audited.", content: { application/json: { schema: { $ref: "#/components/schemas/VendorFileEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+  /admin/product-compliance/{submissionId}:
+    get:
+      operationId: getProductComplianceCase
+      tags: [ Admin Product Compliance ]
+      security: [ { accessCookie: [] } ]
+      parameters:
+        - { name: submissionId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: "Submission, listing, regulated rule, evidence metadata, extraction assistance, register comparison and immutable review history.", content: { application/json: { schema: { $ref: "#/components/schemas/ProductComplianceCaseEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+  /admin/product-compliance/{submissionId}/decision:
+    post:
+      operationId: decideProductCompliance
+      description: Approve, Return for Correction or Reject the named submission version. A reason is required unless approving; a stale lock_version is rejected with STALE_REVIEW. The decision never changes Store Activation.
+      tags: [ Admin Product Compliance ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      parameters:
+        - { name: submissionId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/ProductComplianceDecision" } } }
+      responses:
+        "200": { description: "Immutable decision recorded.", content: { application/json: { schema: { $ref: "#/components/schemas/ProductComplianceCaseEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /admin/taxonomy/comparable-groups:
+    post:
+      operationId: createComparableGroup
+      description: MAT-03. Creates an approved comparable group version from an exact controlled key (material, brand, model, every controlled specification, canonical unit and conversion version) and maps exactly matching active variants.
+      tags: [ Admin Product Compliance ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/ComparableGroupCreate" } } }
+      responses:
+        "201": { description: "Group created and mapped.", content: { application/json: { schema: { $ref: "#/components/schemas/ComparableGroupEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /catalog-files/{fileId}/content:
+    get:
+      operationId: downloadCatalogFile
+      tags: [ Vendor Catalog ]
+      security: [ { accessCookie: [] } ]
+      parameters:
+        - { name: fileId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: "Authorized signed catalog file stream.", content: { application/octet-stream: { schema: { type: string, format: binary } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
 
 components:
   securitySchemes:
@@ -4372,3 +4791,645 @@ components:
         ordinary_payable_centavos: { type: integer, format: int64, minimum: 1 }
         normalized_php_price: { type: string, pattern: '^\d+(\.\d{1,8})?$' }
         eligibility_version: { type: string }
+    ListingStatus:
+      type: string
+      description: Vendor Workflow listing states. TEMPORARILY_HIDDEN_STOCK_NOT_CONFIRMED is set by the Phase 5 stale-stock rule.
+      enum: [ DRAFT, PENDING_COMPLIANCE, PENDING_ADMIN_REVIEW, ACTIVE, INACTIVE, TEMPORARILY_HIDDEN_STOCK_NOT_CONFIRMED, REJECTED ]
+    ListingComplianceStatus:
+      type: string
+      enum: [ NOT_REQUIRED, NOT_SUBMITTED, PENDING_ADMIN_REVIEW, VERIFIED, CHANGES_REQUIRED, REJECTED ]
+    TaxCategory:
+      type: string
+      description: FIN-02 line classification. Zero-rated and exempt lines require a tax basis.
+      enum: [ VAT_12, VAT_ZERO, VAT_EXEMPT, NON_VAT ]
+    CompliancePath:
+      type: string
+      enum: [ PHOTO_OCR, QR, MANUAL ]
+    ComplianceReferenceResult:
+      type: string
+      enum: [ MATCHED, UNMATCHED, UNCERTAIN, UNAVAILABLE ]
+    MarkingType:
+      type: string
+      enum: [ PS_MARK, ICC_STICKER ]
+    CatalogReference:
+      type: object
+      required: [ id, code, name ]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
+    CatalogUnit:
+      type: object
+      required: [ id, code, name, dimension, precision ]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
+        dimension: { type: string }
+        precision: { type: integer }
+    CatalogAttributeDefinition:
+      type: object
+      required: [ id, material_category_id, code, label, value_type, required, comparability_key ]
+      properties:
+        id: { type: string, format: uuid }
+        material_category_id: { type: string, format: uuid }
+        code: { type: string }
+        label: { type: string }
+        value_type: { type: string, enum: [ TEXT, NUMBER, ENUM ] }
+        required: { type: boolean }
+        allowed_values: { type: [ array, 'null' ], items: { type: string } }
+        unit_code: { type: [ string, 'null' ] }
+        comparability_key: { type: boolean, description: Part of the MAT-03 exact comparable-group key. }
+    CatalogLimits:
+      type: object
+      required: [ max_variants, max_media, max_listing_image_kb, image_types ]
+      properties:
+        max_variants: { type: integer }
+        max_media: { type: integer }
+        max_listing_image_kb: { type: integer }
+        image_types: { type: array, items: { type: string } }
+    CatalogTaxonomy:
+      type: object
+      required: [ categories, units, tags, attribute_definitions, tax_categories, allowed_tax_categories, limits ]
+      properties:
+        categories: { type: array, items: { $ref: "#/components/schemas/CatalogReference" } }
+        units: { type: array, items: { $ref: "#/components/schemas/CatalogUnit" } }
+        tags: { type: array, items: { $ref: "#/components/schemas/CatalogReference" } }
+        attribute_definitions: { type: array, items: { $ref: "#/components/schemas/CatalogAttributeDefinition" } }
+        tax_categories: { type: array, items: { $ref: "#/components/schemas/TaxCategory" } }
+        allowed_tax_categories: { type: array, description: Empty when the reviewed VAT classification is unknown., items: { $ref: "#/components/schemas/TaxCategory" } }
+        limits: { $ref: "#/components/schemas/CatalogLimits" }
+    CatalogTaxonomyEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { $ref: "#/components/schemas/CatalogTaxonomy" }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    CatalogMaterialMatch:
+      type: object
+      required: [ id, code, name, category_id, category_name, regulated, match_type, matched_text, similarity ]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
+        category_id: { type: string, format: uuid }
+        category_name: { type: string }
+        regulated: { type: boolean }
+        match_type: { type: string, enum: [ EXACT, ALIAS, FUZZY ] }
+        matched_text: { type: string }
+        similarity: { type: number, minimum: 0, maximum: 1 }
+    CatalogMaterialMatchListEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/CatalogMaterialMatch" } }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    RegulatedMaterialRule:
+      type: object
+      description: Transcribed from the DTI-BPS list of regulated building and construction products with marking requirements.
+      required: [ id, version, required_marking, marking_requirements, source_reference ]
+      properties:
+        id: { type: string, format: uuid }
+        version: { type: integer }
+        required_marking: { type: string, enum: [ PS_MARK, ICC_STICKER, PS_OR_ICC ] }
+        product_name: { type: [ string, 'null' ] }
+        reference_standard: { type: [ string, 'null' ] }
+        technical_regulation: { type: [ string, 'null' ] }
+        scope: { type: [ string, 'null' ] }
+        marking_requirements: { type: array, items: { type: string } }
+        source_reference: { type: string }
+    CatalogMaterial:
+      type: object
+      required: [ id, code, name, regulated, category_id, category_name, canonical_unit_id, compatible_unit_ids, suggested_tag_ids ]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
+        regulated: { type: boolean }
+        category_id: { type: string, format: uuid }
+        category_name: { type: string }
+        canonical_unit_id: { type: string, format: uuid }
+        compatible_unit_ids: { type: array, items: { type: string, format: uuid } }
+        suggested_tag_ids: { type: array, items: { type: string, format: uuid } }
+        regulated_rule: { oneOf: [ { $ref: "#/components/schemas/RegulatedMaterialRule" }, { type: 'null' } ] }
+    CatalogMaterialEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { $ref: "#/components/schemas/CatalogMaterial" }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    CatalogListingSummary:
+      type: object
+      required: [ id, display_name, vendor_sku, status, compliance_status, regulated, lock_version, variant_count, public_availability ]
+      properties:
+        id: { type: string, format: uuid }
+        display_name: { type: string }
+        vendor_sku: { type: string }
+        status: { $ref: "#/components/schemas/ListingStatus" }
+        compliance_status: { $ref: "#/components/schemas/ListingComplianceStatus" }
+        regulated: { type: boolean }
+        category_name: { type: [ string, 'null' ] }
+        material_name: { type: [ string, 'null' ] }
+        other_label: { type: [ string, 'null' ] }
+        lock_version: { type: integer }
+        updated_at: { type: [ string, 'null' ] }
+        variant_count: { type: integer }
+        min_price_centavos: { type: [ integer, 'null' ], format: int64 }
+        max_price_centavos: { type: [ integer, 'null' ], format: int64 }
+        public_availability: { type: string, enum: [ IN_STOCK, OUT_OF_STOCK ], description: The only availability a Buyer would see. }
+        primary_image_file_id: { type: [ string, 'null' ], format: uuid }
+        primary_image_url: { type: [ string, 'null' ], description: 'Short-lived signed URL of the first ready product photo; expires within minutes.' }
+        unit_code: { type: [ string, 'null' ], description: Sale unit code when every active variant uses the same unit. }
+        available_quantity: { type: [ string, 'null' ], description: 'Vendor-only summed available-to-sell quantity when every active variant shares one unit and has a stock count. Never returned to Buyers.' }
+    CatalogListingListMeta:
+      type: object
+      additionalProperties: true
+      properties:
+        current_page: { type: integer }
+        last_page: { type: integer }
+        total: { type: integer }
+        scope: { type: string, enum: [ ORGANIZATION, ASSIGNED_ONLY ] }
+        status_counts: { type: object, additionalProperties: { type: integer }, description: 'Listing count per status within the current search and category scope, ignoring the status filter.' }
+        active_out_of_stock: { type: integer, description: Active listings in the same scope with no available-to-sell stock. }
+    CatalogListingSummaryListEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/CatalogListingSummary" } }
+        meta: { $ref: "#/components/schemas/CatalogListingListMeta" }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    CatalogPrice:
+      type: object
+      description: Immutable ordinary public price version, VAT-inclusive payable amount in centavos.
+      required: [ price_version_id, version, amount_centavos, tax_category, included_vat_centavos ]
+      properties:
+        price_version_id: { type: string, format: uuid }
+        version: { type: integer }
+        amount_centavos: { type: integer, format: int64 }
+        tax_category: { $ref: "#/components/schemas/TaxCategory" }
+        tax_basis: { type: [ string, 'null' ] }
+        included_vat_centavos: { type: integer, format: int64 }
+        effective_at: { type: [ string, 'null' ] }
+    CatalogVolumeTier:
+      type: object
+      description: 'CAT-PRICE-01 immutable volume tier price version. Applies to an order line whose quantity reaches minimum_quantity; the highest reached tier wins.'
+      required: [ price_version_id, version, minimum_quantity, amount_centavos, included_vat_centavos ]
+      properties:
+        price_version_id: { type: string, format: uuid }
+        version: { type: integer }
+        minimum_quantity: { type: string, description: Minimum line quantity in the variant sale unit (four decimals). }
+        amount_centavos: { type: integer, format: int64, description: VAT-inclusive unit price in centavos. }
+        included_vat_centavos: { type: integer, format: int64 }
+    CatalogVolumeTierInput:
+      type: object
+      required: [ minimum_quantity, price_centavos ]
+      properties:
+        minimum_quantity: { type: string, pattern: '^\d{1,14}(\.\d{1,4})?$', description: 'Greater than 1 and higher than the previous tier.' }
+        price_centavos: { type: integer, format: int64, minimum: 1, description: 'VAT-inclusive unit price, lower than the ordinary price and the previous tier.' }
+    CatalogInventory:
+      type: object
+      description: Vendor-only exact stock. Never returned to Buyers.
+      required: [ quantity_on_hand, hard_reserved_quantity, available_to_sell ]
+      properties:
+        quantity_on_hand: { type: string }
+        hard_reserved_quantity: { type: string }
+        available_to_sell: { type: string }
+        confirmed_at: { type: [ string, 'null' ] }
+    CatalogVariant:
+      type: object
+      required: [ id, sku, unit_id, unit_code, pack_quantity, attributes, active, lock_version, volume_tiers, public_availability, comparability ]
+      properties:
+        id: { type: string, format: uuid }
+        sku: { type: string }
+        label: { type: [ string, 'null' ] }
+        unit_id: { type: string, format: uuid }
+        unit_code: { type: string }
+        pack_quantity: { type: string }
+        attributes: { type: object, additionalProperties: { type: string } }
+        active: { type: boolean }
+        weight_kg: { type: [ string, 'null' ] }
+        length_cm: { type: [ string, 'null' ] }
+        width_cm: { type: [ string, 'null' ] }
+        height_cm: { type: [ string, 'null' ] }
+        lock_version: { type: integer }
+        price: { oneOf: [ { $ref: "#/components/schemas/CatalogPrice" }, { type: 'null' } ] }
+        volume_tiers: { type: array, maxItems: 5, items: { $ref: "#/components/schemas/CatalogVolumeTier" } }
+        inventory: { oneOf: [ { $ref: "#/components/schemas/CatalogInventory" }, { type: 'null' } ] }
+        public_availability: { type: string, enum: [ IN_STOCK, OUT_OF_STOCK ] }
+        comparability: { type: string, enum: [ COMPARABLE, NOT_YET_COMPARABLE ] }
+    CatalogMedia:
+      type: object
+      required: [ id, file_id, status, version, content_type, byte_size, scan_state ]
+      properties:
+        id: { type: string, format: uuid }
+        file_id: { type: string, format: uuid }
+        alt_text: { type: [ string, 'null' ] }
+        status: { type: string, enum: [ READY, REPLACED, REMOVED ] }
+        version: { type: integer }
+        replaces_media_id: { type: [ string, 'null' ], format: uuid }
+        content_type: { type: string }
+        byte_size: { type: integer }
+        scan_state: { type: string }
+        uploaded_at: { type: [ string, 'null' ] }
+    ComplianceReviewSummary:
+      type: object
+      required: [ decision, source ]
+      properties:
+        decision: { type: string, enum: [ APPROVED, CHANGES_REQUIRED, REJECTED ] }
+        reason: { type: [ string, 'null' ] }
+        reviewed_at: { type: [ string, 'null' ] }
+        source: { type: string, enum: [ ADMIN, SYSTEM_REGISTER_MATCH ] }
+    ComplianceSubmissionSummary:
+      type: object
+      required: [ id, version, path, status ]
+      properties:
+        id: { type: string, format: uuid }
+        version: { type: integer }
+        path: { $ref: "#/components/schemas/CompliancePath" }
+        status: { type: string, enum: [ PENDING_ADMIN_REVIEW, VERIFIED, CHANGES_REQUIRED, REJECTED, SUPERSEDED ] }
+        marking_type: { type: [ string, 'null' ] }
+        submitted_at: { type: [ string, 'null' ] }
+        decided_at: { type: [ string, 'null' ] }
+        latest_review: { oneOf: [ { $ref: "#/components/schemas/ComplianceReviewSummary" }, { type: 'null' } ] }
+    ListingStatusChange:
+      type: object
+      required: [ to_status, source ]
+      properties:
+        from_status: { type: [ string, 'null' ] }
+        to_status: { type: string }
+        source: { type: string }
+        reason_code: { type: [ string, 'null' ] }
+        reason: { type: [ string, 'null' ] }
+        publication_version: { type: [ integer, 'null' ] }
+        created_at: { type: [ string, 'null' ] }
+    CatalogCompletionStep:
+      type: object
+      required: [ key, label, level, status ]
+      properties:
+        key: { type: string }
+        label: { type: string }
+        level: { type: string, enum: [ REQUIRED, CONDITIONALLY_REQUIRED ] }
+        status: { type: string }
+        reason: { type: [ string, 'null' ] }
+    CatalogCompletion:
+      type: object
+      description: Server-derived wizard completion. The browser never submits completion as truth.
+      required: [ key, label, steps ]
+      properties:
+        key: { type: string }
+        label: { type: string }
+        steps: { type: array, items: { $ref: "#/components/schemas/CatalogCompletionStep" } }
+    CatalogBlocker:
+      type: object
+      required: [ key, step, reason ]
+      properties:
+        key: { type: string, description: Field key matching the wizard input, e.g. variants.0.tax_category. }
+        step: { type: string }
+        reason: { type: string }
+    CatalogListingPermissions:
+      type: object
+      required: [ can_manage, can_submit_compliance ]
+      properties:
+        can_manage: { type: boolean }
+        can_submit_compliance: { type: boolean }
+    CatalogListingMaterial:
+      type: object
+      required: [ id, code, name, regulated ]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
+        regulated: { type: boolean }
+    CatalogListing:
+      type: object
+      required: [ id, status, lock_version, display_name, vendor_sku, material_match, tag_ids, technical_attributes, regulated, compliance_status, publication_version, variants, media, compliance_submissions, status_history, completion, blockers, permissions ]
+      properties:
+        id: { type: string, format: uuid }
+        status: { $ref: "#/components/schemas/ListingStatus" }
+        lock_version: { type: integer }
+        display_name: { type: string }
+        vendor_sku: { type: string }
+        description: { type: [ string, 'null' ] }
+        material: { oneOf: [ { $ref: "#/components/schemas/CatalogListingMaterial" }, { type: 'null' } ] }
+        material_match: { type: string, enum: [ EXACT, ALIAS, FUZZY_CONFIRMED, UNMATCHED ] }
+        material_category_id: { type: [ string, 'null' ], format: uuid }
+        other_label: { type: [ string, 'null' ], description: Listing-only text; never a shared taxonomy entry. }
+        tag_ids: { type: array, maxItems: 3, items: { type: string, format: uuid } }
+        technical_attributes: { type: object, additionalProperties: { type: string } }
+        brand: { type: [ string, 'null' ] }
+        model: { type: [ string, 'null' ] }
+        manufacturer: { type: [ string, 'null' ] }
+        manufacturer_address: { type: [ string, 'null' ] }
+        country_of_manufacture: { type: [ string, 'null' ] }
+        regulated: { type: boolean }
+        compliance_status: { $ref: "#/components/schemas/ListingComplianceStatus" }
+        regulated_rule: { oneOf: [ { $ref: "#/components/schemas/RegulatedMaterialRule" }, { type: 'null' } ] }
+        publication_version: { type: integer }
+        published_at: { type: [ string, 'null' ] }
+        publication_requested_at: { type: [ string, 'null' ] }
+        variants: { type: array, items: { $ref: "#/components/schemas/CatalogVariant" } }
+        media: { type: array, items: { $ref: "#/components/schemas/CatalogMedia" } }
+        compliance_submissions: { type: array, items: { $ref: "#/components/schemas/ComplianceSubmissionSummary" } }
+        status_history: { type: array, items: { $ref: "#/components/schemas/ListingStatusChange" } }
+        completion: { $ref: "#/components/schemas/CatalogCompletion" }
+        blockers: { type: array, items: { $ref: "#/components/schemas/CatalogBlocker" } }
+        permissions: { $ref: "#/components/schemas/CatalogListingPermissions" }
+        uploaded_media_id: { type: string, format: uuid }
+    CatalogListingEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { $ref: "#/components/schemas/CatalogListing" }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    CatalogListingCreate:
+      type: object
+      required: [ display_name, vendor_sku ]
+      properties:
+        display_name: { type: string, minLength: 2, maxLength: 180 }
+        vendor_sku: { type: string, minLength: 1, maxLength: 96 }
+    CatalogListingUpdate:
+      type: object
+      required: [ lock_version ]
+      properties:
+        lock_version: { type: integer, minimum: 1 }
+        display_name: { type: string, minLength: 2, maxLength: 180 }
+        vendor_sku: { type: string, minLength: 1, maxLength: 96 }
+        description: { type: [ string, 'null' ], maxLength: 4000 }
+        material_id: { type: [ string, 'null' ], format: uuid }
+        material_match: { type: string, enum: [ EXACT, ALIAS, FUZZY_CONFIRMED ] }
+        other_label: { type: [ string, 'null' ], maxLength: 60 }
+        material_category_id: { type: [ string, 'null' ], format: uuid }
+        tag_ids: { type: array, maxItems: 3, items: { type: string, format: uuid } }
+        brand: { type: [ string, 'null' ], maxLength: 180 }
+        model: { type: [ string, 'null' ], maxLength: 180 }
+        manufacturer: { type: [ string, 'null' ], maxLength: 200 }
+        manufacturer_address: { type: [ string, 'null' ], maxLength: 500 }
+        country_of_manufacture: { type: [ string, 'null' ], pattern: '^[A-Z]{2}$' }
+        technical_attributes: { type: object, additionalProperties: { type: string } }
+    CatalogVariantInput:
+      type: object
+      required: [ sku, unit_id, pack_quantity, price_centavos, tax_category ]
+      properties:
+        id: { type: [ string, 'null' ], format: uuid }
+        sku: { type: string, maxLength: 96 }
+        label: { type: [ string, 'null' ], maxLength: 120 }
+        unit_id: { type: string, format: uuid }
+        pack_quantity: { type: string }
+        price_centavos: { type: integer, format: int64, minimum: 1, description: Ordinary single-sale VAT-inclusive payable price in centavos. }
+        tax_category: { $ref: "#/components/schemas/TaxCategory" }
+        tax_basis: { type: [ string, 'null' ], maxLength: 500 }
+        weight_kg: { type: [ string, 'null' ] }
+        length_cm: { type: [ string, 'null' ] }
+        width_cm: { type: [ string, 'null' ] }
+        height_cm: { type: [ string, 'null' ] }
+        quantity_on_hand: { type: [ string, 'null' ], description: Counted physical stock; recording it confirms stock now. }
+        active: { type: boolean }
+        attributes: { type: object, additionalProperties: { type: string } }
+        volume_tiers: { type: array, maxItems: 5, items: { $ref: "#/components/schemas/CatalogVolumeTierInput" }, description: 'Replaces the variant volume tiers when present (an empty list removes them); omitted keeps the current tiers.' }
+    CatalogVariantsSave:
+      type: object
+      required: [ lock_version, variants ]
+      properties:
+        lock_version: { type: integer, minimum: 1 }
+        variants: { type: array, maxItems: 50, items: { $ref: "#/components/schemas/CatalogVariantInput" } }
+    CatalogMediaUpload:
+      type: object
+      required: [ file ]
+      properties:
+        file: { type: string, format: binary }
+        alt_text: { type: [ string, 'null' ], maxLength: 160 }
+        replaces_media_id: { type: [ string, 'null' ], format: uuid }
+    CatalogLockVersion:
+      type: object
+      required: [ lock_version ]
+      properties:
+        lock_version: { type: integer, minimum: 1 }
+    CatalogDeactivation:
+      type: object
+      required: [ lock_version ]
+      properties:
+        lock_version: { type: integer, minimum: 1 }
+        reason: { type: [ string, 'null' ], maxLength: 500 }
+    ComplianceEvidenceUpload:
+      type: object
+      required: [ path, file ]
+      properties:
+        path: { $ref: "#/components/schemas/CompliancePath" }
+        file: { type: string, format: binary }
+        qr_payload: { type: [ string, 'null' ], maxLength: 2048, description: Text decoded by the browser from the QR image; untrusted. }
+    ComplianceExtraction:
+      type: object
+      required: [ status, suggestions ]
+      properties:
+        source: { type: [ string, 'null' ], enum: [ OCR, QR, null ] }
+        status: { type: string, enum: [ EXTRACTED, UNAVAILABLE, FAILED, NOT_REQUESTED ] }
+        confidence: { type: [ number, 'null' ] }
+        suggestions: { type: object, additionalProperties: { type: string } }
+        assistance_only: { type: boolean }
+    ComplianceEvidence:
+      type: object
+      required: [ evidence_id, file_id, path, evidence_kind, content_type, byte_size, scan_state, extraction ]
+      properties:
+        evidence_id: { type: string, format: uuid }
+        file_id: { type: string, format: uuid }
+        path: { $ref: "#/components/schemas/CompliancePath" }
+        evidence_kind: { type: string, enum: [ MARKING_PHOTO, QR_IMAGE ] }
+        content_type: { type: string }
+        byte_size: { type: integer }
+        scan_state: { type: string }
+        extraction: { $ref: "#/components/schemas/ComplianceExtraction" }
+    ComplianceEvidenceEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { $ref: "#/components/schemas/ComplianceEvidence" }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    ComplianceSubmission:
+      type: object
+      description: Vendor-confirmed declaration from Review and Confirm. Extraction output is never submitted as truth.
+      required: [ listing_lock_version, path, evidence_ids, marking_type, certificate_number, confirmed ]
+      properties:
+        listing_lock_version: { type: integer, minimum: 1 }
+        path: { $ref: "#/components/schemas/CompliancePath" }
+        evidence_ids: { type: array, minItems: 1, maxItems: 5, items: { type: string, format: uuid } }
+        marking_type: { $ref: "#/components/schemas/MarkingType" }
+        certificate_number: { type: string, minLength: 3, maxLength: 60 }
+        manufacturer_name: { type: [ string, 'null' ], maxLength: 200, description: Required for a PS Mark. }
+        manufacturer_address: { type: [ string, 'null' ], maxLength: 500 }
+        importer_name: { type: [ string, 'null' ], maxLength: 200, description: Required for an ICC sticker. }
+        importer_address: { type: [ string, 'null' ], maxLength: 500 }
+        country_of_manufacture: { type: [ string, 'null' ], maxLength: 60 }
+        brand: { type: [ string, 'null' ], maxLength: 180 }
+        batch_number: { type: [ string, 'null' ], maxLength: 60 }
+        confirmed: { type: boolean, const: true }
+    CatalogImportUpload:
+      type: object
+      required: [ file ]
+      properties:
+        file: { type: string, format: binary }
+    CatalogImportRowError:
+      type: object
+      required: [ row_number, errors ]
+      properties:
+        row_number: { type: integer, description: Spreadsheet row number including the header row. }
+        vendor_sku: { type: [ string, 'null' ] }
+        variant_sku: { type: [ string, 'null' ] }
+        errors: { type: object, additionalProperties: { type: array, items: { type: string } } }
+    CatalogImportJob:
+      type: object
+      required: [ id, status, template_version, total_rows, valid_rows, error_rows, applied_rows, row_errors, row_errors_meta ]
+      properties:
+        id: { type: string, format: uuid }
+        status: { type: string, enum: [ VALIDATED, HAS_ERRORS, APPLIED, APPLIED_WITH_REJECTIONS, FAILED ] }
+        template_version: { type: string }
+        total_rows: { type: integer }
+        valid_rows: { type: integer }
+        error_rows: { type: integer }
+        applied_rows: { type: integer }
+        applied_at: { type: [ string, 'null' ] }
+        created_at: { type: [ string, 'null' ] }
+        row_errors: { type: array, items: { $ref: "#/components/schemas/CatalogImportRowError" } }
+        row_errors_meta: { type: object, additionalProperties: true }
+    CatalogImportJobEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { $ref: "#/components/schemas/CatalogImportJob" }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    CatalogImportTemplate:
+      type: object
+      required: [ template_version, columns, required_columns, max_rows ]
+      properties:
+        template_version: { type: string }
+        columns: { type: array, items: { type: string } }
+        required_columns: { type: array, items: { type: string } }
+        max_rows: { type: integer }
+    CatalogImportTemplateEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { $ref: "#/components/schemas/CatalogImportTemplate" }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    ProductComplianceQueueItem:
+      type: object
+      required: [ id, version, path, status, listing_id, display_name, vendor_sku ]
+      properties:
+        id: { type: string, format: uuid }
+        version: { type: integer }
+        path: { $ref: "#/components/schemas/CompliancePath" }
+        status: { type: string }
+        marking_type: { type: [ string, 'null' ] }
+        submitted_at: { type: [ string, 'null' ] }
+        listing_id: { type: string, format: uuid }
+        display_name: { type: string }
+        vendor_sku: { type: string }
+        public_store_name: { type: [ string, 'null' ] }
+        material_name: { type: [ string, 'null' ] }
+        product_name: { type: [ string, 'null' ] }
+        reference_standard: { type: [ string, 'null' ] }
+        reference_result: { type: [ string, 'null' ] }
+    ProductComplianceQueueEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/ProductComplianceQueueItem" } }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    ProductComplianceCaseEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data:
+          type: object
+          required: [ submission, listing, rule, evidence, extractions, reference_match, previous_submissions, reviews, official_references ]
+          properties:
+            submission: { type: object, additionalProperties: true }
+            listing: { type: [ object, 'null' ], additionalProperties: true }
+            rule: { oneOf: [ { $ref: "#/components/schemas/RegulatedMaterialRule" }, { type: 'null' } ] }
+            evidence: { type: array, items: { type: object, additionalProperties: true } }
+            extractions: { type: array, items: { type: object, additionalProperties: true } }
+            reference_match: { type: [ object, 'null' ], additionalProperties: true }
+            previous_submissions: { type: array, items: { type: object, additionalProperties: true } }
+            reviews: { type: array, items: { type: object, additionalProperties: true } }
+            official_references: { type: array, items: { type: object, additionalProperties: true } }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    ProductComplianceDecision:
+      type: object
+      required: [ decision, lock_version ]
+      properties:
+        decision: { type: string, enum: [ APPROVED, CHANGES_REQUIRED, REJECTED ] }
+        lock_version: { type: integer, minimum: 1, description: Lock version of the submission being decided; stale values are rejected. }
+        reason: { type: [ string, 'null' ], minLength: 3, maxLength: 2000, description: Required for CHANGES_REQUIRED and REJECTED. }
+        remarks: { type: [ string, 'null' ], maxLength: 2000 }
+        source_reference: { type: [ string, 'null' ], maxLength: 500 }
+    ComplianceRegister:
+      type: object
+      required: [ id, register_kind, source_reference, snapshot_date, status, row_count, rejected_row_count ]
+      properties:
+        id: { type: string, format: uuid }
+        register_kind: { type: string, enum: [ PS_LICENSE, ICC_CERTIFICATE ] }
+        source_reference: { type: string }
+        snapshot_date: { type: string, format: date }
+        status: { type: string, enum: [ DRAFT, ACTIVE, SUPERSEDED ] }
+        row_count: { type: integer }
+        rejected_row_count: { type: integer }
+        activated_at: { type: [ string, 'null' ] }
+        superseded_at: { type: [ string, 'null' ] }
+        created_at: { type: [ string, 'null' ] }
+        column_mapping: { type: [ object, 'null' ], additionalProperties: true }
+        rejected_rows: { type: array, items: { type: object, additionalProperties: true } }
+    ComplianceRegisterEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { $ref: "#/components/schemas/ComplianceRegister" }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    ComplianceRegisterListEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/ComplianceRegister" } }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    ComplianceRegisterUpload:
+      type: object
+      required: [ register_kind, source_reference, snapshot_date, file ]
+      properties:
+        register_kind: { type: string, enum: [ PS_LICENSE, ICC_CERTIFICATE ] }
+        source_reference: { type: string, minLength: 3, maxLength: 500 }
+        snapshot_date: { type: string, format: date }
+        file: { type: string, format: binary }
+    ComparableGroupCreate:
+      type: object
+      required: [ material_id, code, display_name, specification, canonical_unit_id ]
+      properties:
+        material_id: { type: string, format: uuid }
+        code: { type: string, pattern: '^[A-Z0-9_]+$', maxLength: 96 }
+        display_name: { type: string, maxLength: 180 }
+        brand: { type: [ string, 'null' ], maxLength: 180 }
+        model: { type: [ string, 'null' ], maxLength: 180 }
+        specification: { type: object, additionalProperties: { type: string } }
+        canonical_unit_id: { type: string, format: uuid }
+        conversion_version: { type: [ string, 'null' ], maxLength: 48 }
+    ComparableGroupEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data:
+          type: object
+          required: [ group_id, group_version_id, mapped_variants ]
+          properties:
+            group_id: { type: string, format: uuid }
+            group_version_id: { type: string, format: uuid }
+            mapped_variants: { type: integer }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }

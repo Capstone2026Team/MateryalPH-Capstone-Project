@@ -162,7 +162,7 @@ Laravel remains one deployable application, but code is separated by business do
 | Vendors | Vendor organization, public store, contacts, onboarding, classification, activation, staff, and Xendit connection state |
 | Geography | Coordinates, radius rules, PSGC hierarchy, Google directory suppliers, geocoding, routing, and aggregation dimensions |
 | Taxonomy | Canonical materials, aliases, categories, tags, compatible units, technical attributes, and regulated mappings |
-| Catalog | Products, listings, variants, media, price snapshots, public availability, and publication gates |
+| Catalog | Products, listings, variants, media, price snapshots including `VOLUME_TIER` versions (CAT-PRICE-01, resolved by `VolumePricing`), public availability, and publication gates |
 | Compliance | Business documents, PS/ICC evidence, OCR/QR assistance, official-source comparison, and Admin decisions |
 | Inventory | On-hand stock, reservations, soft holds, movements, stale-stock confirmation, and auto-accept policies |
 | Procurement | Carts, checkouts, projects, Work Packages, compiled estimates, SRS, FMS, ranking preferences, and budget controls |
@@ -261,7 +261,7 @@ The Phase 1 schema creates the complete baseline below. Later phases may add add
 | --- | --- |
 | Tax profiles/evidence | `vendor_tax_profiles`, `vendor_tax_profile_versions`, `tax_evidence`, `tax_rule_versions`, `withholding_assignments`; taxpayer key, entity class, environment, registration/VAT category, fiscal year, evidence/effective period, source and independent approval |
 | Immutable money | `financial_snapshots`, `financial_snapshot_lines`, `financial_allocations`; order/quote version, integer M/V/E/D/F/N, line discounts/VAT and principal/refund allocation, calculation hash, rule/policy IDs |
-| Merchant CWT | `remittance_groups`, `remittance_collections`, `remittance_assessments`, `tax_year_accumulators`; assignment, collection allocation, C/R/D_r/V_r/P/G/W, taxable-year totals, outside-evidence scope, sticky breach, deduction/reconciliation states |
+| Merchant CWT | `remittance_groups`, `remittance_collections`, `remittance_assessments`, `vendor_withholding_accumulators`, `vendor_withholding_status_events` (FIN-04A); assignment, collection allocation, C/R/D_r/V_r/P/G/W, taxable-year totals, outside-evidence scope, sticky breach, deduction/reconciliation states |
 | Commission | `fee_policy_versions`, `fee_assessments`, `fee_adjustments`, `fee_statements`, `fee_statement_lines`, `fee_payment_allocations`; order unique earning, target/credit, dispute hold, period, issue/due dates, receivable and original payment link |
 | Refund/accounting links | Extend `refunds` with target type ORDER or PLATFORM_FEE, source payment and adjustment links; `physical_reimbursements`, `tax_adjustments`, `financial_posting_batches`, `financial_ledger_entries`; evidence, preparer/reviewer, balanced centavo accounts, original reversal links |
 | Documents/calendar | `tax_report_packages`, `tax_report_package_lines`, `tax_certificates`, `invoice_records`, `filing_calendar_versions`, `filing_deadlines`, `external_filing_evidence`; type/issuer, period/ATC, private file/hash, due-date source and demo versus authentic evidence |
@@ -427,7 +427,7 @@ Use `SELECT ... FOR UPDATE`, deterministic row ordering, database constraints, a
 | `/admin` | queues, users, settings, audits, integrations, exports, aggregate analytics |
 | `/webhooks/xendit` | raw provider events with verification, replay protection, and idempotency |
 
-**Financial API contract.** All paths below are under `/api/v1`; GET list/detail is scoped, commands are idempotent POST actions with resource state/version checks. Use the System FIN-10 resource names: `/vendor-tax-profiles`, `/financial-snapshots`, `/remittance-assessments`, `/tax-year-accumulators`, `/fee-assessments`, `/fee-statements`, `/physical-payment-records`, `/tax-adjustments`, `/tax-report-packages`, `/tax-certificates`, `/invoice-records`, `/financial-ledger-entries`. Scope non-Admin calls to the authenticated organization; taxpayer IDs are never caller-controlled authorization. Read-only resources have no arbitrary PATCH of amounts or states.
+**Financial API contract.** All paths below are under `/api/v1`; GET list/detail is scoped, commands are idempotent POST actions with resource state/version checks. Use the System FIN-10 resource names: `/vendor-tax-profiles`, `/financial-snapshots`, `/remittance-assessments`, `/vendor-withholding-accumulators`, `/fee-assessments`, `/fee-statements`, `/physical-payment-records`, `/tax-adjustments`, `/tax-report-packages`, `/tax-certificates`, `/invoice-records`, `/financial-ledger-entries`. Scope non-Admin calls to the authenticated organization; taxpayer IDs are never caller-controlled authorization. Read-only resources have no arbitrary PATCH of amounts or states.
 
 | Command | Authority and output |
 | --- | --- |
@@ -446,34 +446,36 @@ Validate Buyer saved-location ownership or finite Philippine origin coordinates,
 
 Vendor responses are separately constructed from aggregates; do not fetch Buyer detail then hide fields in React. Suppressed competitor points have null price/change/count and a reason; own-store values use a distinct DTO. Admin aggregate payloads do not contain sources without inspect permission. Reject undocumented filters instead of creating inference-friendly arbitrary groupings. Cache keys include environment, dataset, audience/permission version, Vendor organization for own-store exclusion, canonical scope, filters, run revision and algorithm version. Use a 60-second current-count cache with event invalidation; daily history cache is invalidated on publication/correction. Check authorization on every cache hit and keep exact-origin cache keys private. A revoked role cannot retrieve previously authorized exports.
 
-**Detailed onboarding API contract.** These paths are under `/api/v1`; align them with an existing equivalent route before adding another family. Organization identity is derived/authorized from the authenticated membership, not trusted from a request body. Mutations require current revision and record actor/source. Recent authentication applies to legal, representative, payment and staff-delegation actions. All responses use the existing `{data, meta, errors}` envelope.
+**Detailed onboarding API contract.** These paths are under `/api/v1` and match the implemented routes (`services/api/routes/vendor-onboarding.php`, `admin-vendor-verification.php`) and `packages/api-contract/openapi.yaml`, which are authoritative for exact names. Extend an existing route before adding another family. Organization identity is derived/authorized from the authenticated membership, not trusted from a request body. Vendor/Admin portal routes use the web cookie transport with CSRF. Mutations require current revision and record actor/source. Recent authentication applies to legal, representative, payment and staff-delegation actions. All responses use the existing `{data, meta, errors}` envelope.
 
 | **Method / route** | **Authority, validation and result** |
 | --- | --- |
-| GET `/vendors/me/onboarding` | Owner or role-scoped limited viewer; returns safe effective/draft status, requirement levels, checklist, blockers, `next_action`, revision; no staff access to private evidence by default |
-| POST `/vendors/me/onboarding/welcome-acknowledgment` | New Owner; idempotent acknowledgment, next route Verification; not activation |
-| PATCH `/vendors/me/verification` | Owner saves applicable business/identity/contact/address/classification drafts; validates supplied fields but allows incomplete draft; returns dependency changes and saved revision |
-| POST `/vendors/me/verification/submit` | Owner; complete applicable evidence, safe files and Privacy Notice acknowledgment; creates immutable submission and manual review state |
-| POST `/vendors/me/store-email/challenges` | Owner; normalized candidate email, purpose-scoped throttling; response never contains OTP |
-| POST `/vendors/me/store-email/verify` | Owner; valid latest code/attempt/version; atomically promotes candidate; invalid/expired leaves old address unchanged |
-| POST `/vendors/me/representatives` and `/representatives/{id}/submit` | Owner drafts/submits versioned person/capacity/evidence; no implicit approval or new staff account |
-| GET/POST `/admin/vendor-verifications/{submission}/decisions` | Assigned Verification reviewer; version-scoped group/document selection, decision, reason, verified metadata and dependencies; stale review returns 409 |
-| PATCH `/vendors/me/store-profile` | Owner; public fields only, version check, shared public-name save; returns preview and recalculated profile checklist |
-| POST/DELETE `/vendors/me/store-media/{purpose}` | Owner; scoped upload/activation/removal of LOGO/BANNER or optional media; validates file ownership, safety and purpose; returns changed checklist and preview DTO |
-| PATCH `/vendors/me/fulfillment-configuration` | Owner/Manager for authorized operational configuration after activation; Owner during onboarding; changes bulk/services and recomputes conditional delivery |
-| GET/POST/PATCH/DELETE `/vendors/me/vehicles[/{id}]` | Owner/Manager operational permission, store-state guard; validates typed vehicle data, preserves accepted snapshots; assigned Fulfillment viewers use restricted order vehicle DTO instead |
-| POST `/orders/{id}/delivery-recommendations` | Authorized order participant; server resolves Vendor, products and measurements, endpoint and eligible vehicles; advisory result with limitations/reasons, never dispatch |
-| POST `/orders/{id}/delivery-confirmation` | Owner/Manager; confirms eligible arrangement, counts/trips and disclosed fee; routes commercial change through existing Buyer acceptance/state rules |
-| PUT `/vendors/me/operating-hours` | Owner or Store Manager's explicit schedule permission; validates complete seven-day revision atomically; returns saved schedule, version and checklist |
-| PUT/DELETE `/vendors/me/operating-hours/exceptions/{date}` | Same authority; explicit local-date override, validated same-day times; deletion falls back to weekly rule |
-| POST `/vendors/me/payment-connection` | Owner with recent authentication and applicable authority; creates/reuses durable TEST provisioning attempt; never accepts provider success/ID from browser; normally 202 while pending |
-| GET `/vendors/me/payment-connection` and POST `/payment-connection/reconcile` | Owner; safe status/check request, throttled/idempotent; worker uses provider credentials, readiness depends on evidence |
-| POST `/vendors/me/setup/complete` | Owner; S6 expected revision, current saved mandatory requirements; returns Completed or precise blockers, independent Verification and activation states |
-| POST `/vendors/me/team-invitations` | Owner/delegated Manager for permitted non-manager roles; optional before/after activation, email-bound expiring one-use invitation |
-| PATCH `/vendors/me/team/{membership}` | Authorized Owner/delegated Manager, same scope restrictions; setting/role changes audited, sessions/channels reevaluated |
-| PATCH `/vendors/me/team-settings` | Owner only; dispute flag/version; Manager delegation remains separately scoped to a specific membership |
-| GET `/orders/{id}/fulfillment-conversation` | Buyer/Owner/Manager/current assigned Fulfillment Staff after eligible stage; scoped thread or not-yet-available status; generic sales access is not granted |
-| GET `/vendors/{id}/public-store` | Public/Buyer-allowed projection with saved effective public profile/hours, capability and eligibility; no private onboarding/provider/tax fields |
+| GET `/vendors/onboarding` | Owner or role-scoped limited viewer; returns safe effective/draft status for both workstreams, requirement levels, checklist, blockers, next action, `lock_version` and draft versions; no staff access to private evidence by default. GET `/vendor/onboarding` is a retained Phase 3A alias returning the same snapshot; clients use `/vendors/onboarding` |
+| GET `/vendors/onboarding/requirements` | Preview of the applicable requirement set for a Business Type/configuration; no mutation |
+| POST `/vendors/onboarding/welcome/dismiss` | New Owner; idempotent Welcome acknowledgment; not activation |
+| PATCH `/vendors/onboarding/verification` | Owner saves applicable business/identity/representative/contact/address/classification/tax drafts with `lock_version` plus `draft_lock_version`; allows incomplete draft; returns dependency changes and saved revision |
+| POST `/vendors/onboarding/verification/submit` | Owner; complete applicable evidence, safe files and Privacy Notice acknowledgment; creates immutable submission and manual review state |
+| POST `/vendors/onboarding/verification/commission` | Owner with approved `COMMISSION_AGREEMENT` authority where applicable; records the single versioned V4 Commission Terms acceptance |
+| POST `/vendors/onboarding/store-email` | Owner; normalized candidate email, purpose-scoped throttling; response never contains OTP |
+| POST `/vendors/onboarding/store-email/confirm` | Owner; valid latest code/attempt/version; atomically promotes candidate; invalid/expired leaves old address unchanged |
+| GET `/vendors/onboarding/address/areas`; POST `/address/pin`, `/address/resolve`, `/address/geocode` | Owner; PSGC area lookup and backend geocode proxy; raw coordinates stay hidden in the Vendor UI; stale responses are discarded client-side |
+| POST `/vendors/onboarding/documents`; DELETE `/documents/pending/{requirementKey}` | Owner; private evidence upload with content validation and fail-closed scanning; only an unsubmitted pending file can be removed |
+| GET `/vendors/onboarding/files/{fileId}` | Authorized organization member; issues a short-lived signed link served by GET `/vendor-onboarding-files/{fileId}/content` |
+| PATCH `/vendors/onboarding/setup` | Owner (Manager for permitted operational fields such as hours after activation) saves S1 profile, S2 fulfillment/delivery/vehicles and S5 weekly hours/date overrides with `organization_lock_version` plus `draft_lock_version`; validates typed vehicles and complete seven-day revisions; returns recalculated checklist and preview |
+| POST `/vendors/onboarding/media`; DELETE `/media/{mediaId}` | Owner; LOGO/BANNER or optional public media; validates ownership, safety and purpose; returns changed checklist and preview DTO |
+| POST `/vendors/onboarding/payment-connection` and `/payment-connection/reconcile` | Owner with recent authentication and applicable authority; creates/reuses the durable TEST provisioning attempt or checks status; never accepts provider success/ID from the browser |
+| POST `/vendors/onboarding/setup/complete` | Owner; S6 expected revision and current saved mandatory requirements; returns Completed or precise blockers, independent Verification and activation states |
+| POST `/vendors/onboarding/activation` | Owner; runs `StoreActivationGate` under lock; returns ACTIVE or the exact blocking list |
+| GET/POST `/vendors/account/invitations` | Owner/delegated Manager for permitted non-manager roles; optional before/after activation, email-bound expiring one-use invitation |
+| PATCH `/vendors/account/memberships/{membershipId}` | Authorized Owner/delegated Manager, same scope restrictions; role/status/delegation changes audited, sessions/channels reevaluated |
+| GET `/vendors/account/activity` | Team Tracking: Owner, or Manager within enabled delegation scope |
+| PATCH `/vendors/account/staff-disputes` | Owner only; Store Staff/Customer Service dispute flag and version |
+| GET `/admin/vendor-verification`; GET `/{organizationId}` | Assigned Verification reviewer; queue and sectioned case detail |
+| POST `/admin/vendor-verification/{organizationId}/requirements/{requirementKey}/decision` | Version-scoped decision, reason, verified metadata and authority scopes; stale review returns 409 |
+| GET `/admin/vendor-verification/files/{fileId}`; POST `/{organizationId}/restrict`, `/restore` | Authorized reviewer; signed private preview; reasoned restriction/restoration |
+| GET `/stores`, `/stores/{storeId}/profile` | Public/Buyer-allowed projection with saved effective public profile/hours, capability and eligibility; no private onboarding/provider/tax fields |
+| POST `/orders/{id}/delivery-recommendations`, `/orders/{id}/delivery-confirmation` | *Planned, Phase 5/8.* Advisory recommendation for an authorized participant; Owner/Manager confirmation routed through Buyer acceptance rules |
+| GET `/orders/{id}/fulfillment-conversation` | *Planned, Phase 9/12.* Buyer/Owner/Manager/current assigned Fulfillment Staff after eligible stage only |
 
 Checklist responses contain stable keys, requirement level, applicability reason, derived status, missing-field reasons, source revision and `as_of`; clients never submit `COMPLETED`, `APPROVED`, `CONNECTED_TEST` or `ACTIVE` as authoritative values. Routes returning private previews issue short-lived links only after access checks. Form draft, saved data and pending upload states are explicit. Requesting an unsupported field such as a secret key, arbitrary permission set or public full TIN returns a validation error.
 
@@ -589,7 +591,7 @@ ORDER refunds keep the existing CANCELLATION, DISPUTE_CONCLUSION and TECHNICAL_C
 
 ### 12.3 Quotation
 
-`DRAFT → PUBLISHED → ACCEPTED | REJECTED | COUNTERED | EXPIRED | WITHDRAWN`.
+`DRAFT → PUBLISHED → VIEWED → ACCEPTED | REJECTED | COUNTERED | EXPIRED | WITHDRAWN`, plus `STOCK_REVALIDATION_REQUIRED` when acceptance finds insufficient stock for any line. `VIEWED` records the Buyer's first view and does not change the deadline. From `STOCK_REVALIDATION_REQUIRED` no line is reserved and the Vendor must republish a new version.
 
 Editing a published quotation creates a new version, supersedes the prior version, resets the displayed deadline, and prevents stale acceptance. A pending soft hold never guarantees stock. Acceptance revalidates stock atomically before a hard reservation and order are created.
 
@@ -849,7 +851,7 @@ RR No. 11-2025 and RR No. 26-2025 distinguish electronic invoicing from electron
 | `vendor-tax-profiles` and evidence versions | Vendor, taxpayer identity, registration/classification, fiscal year, declaration/exemption evidence, validity, reviewer, origin |
 | `financial-snapshots` | Order/quotation version, exact line amounts, discount/VAT allocation, M/V/E/D/F/N, policy IDs, calculation hash |
 | `remittance-assessments` | Environment, source collections, unique group, assigned entity, C/R/D_r/V_r/P/G/W, threshold before/after, evidence and reconciliation state |
-| `tax-year-accumulators` | Environment, taxpayer and year unique key; local total, external declaration scope, breach flag and last locked event |
+| `vendor-withholding-accumulators` | FIN-04A `vendor_withholding_accumulators`: environment, taxpayer and taxable-year unique key; local total, external declaration and overlap, effective total, withholding status, crossing reference and lock version, with append-only status events |
 | `fee-assessments` / `fee-statements` | Unique source order/policy, earned target, credits, billing period, issue/due dates, outstanding amount and fee payment references |
 | `physical-payment-records` | Order, remaining obligation, method, amount, Vendor recorder, time, evidence, Buyer acknowledgment, correction history |
 | `tax-adjustments` / `tax-report-packages` | Original event/period, reason, before/after, preparer/reviewer, evidence, export hash, filing calendar/version |

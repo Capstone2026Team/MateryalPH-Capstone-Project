@@ -7,6 +7,7 @@ namespace App\Domain\Operations;
 use App\Mail\AccountSecurityMail;
 use App\Mail\AdminInvitationMail;
 use App\Mail\EmailOtpMail;
+use App\Mail\ProductComplianceNoticeMail;
 use App\Mail\VendorInvitationMail;
 use App\Mail\VendorOnboardingNoticeMail;
 use Illuminate\Support\Facades\Cache;
@@ -77,6 +78,9 @@ final class OutboxProcessor
                 $this->requiredString($payload, 'invitation_url'),
             )),
             'VENDOR_ONBOARDING_NOTICE' => Mail::to($recipient)->send(new VendorOnboardingNoticeMail(
+                $this->requiredString($payload, 'message'),
+            )),
+            'PRODUCT_COMPLIANCE_NOTICE' => Mail::to($recipient)->send(new ProductComplianceNoticeMail(
                 $this->requiredString($payload, 'message'),
             )),
             default => throw new RuntimeException('Unsupported outbox event type.'),

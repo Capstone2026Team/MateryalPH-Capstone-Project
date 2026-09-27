@@ -138,7 +138,7 @@ export function PortalShell({
   )
 }
 
-export function StatusBadge({ label, tone = 'neutral' }: { label: string; tone?: 'neutral' | 'warning' | 'success' | 'error' | 'info' }) {
+export function StatusBadge({ label, tone = 'neutral', icon }: { label: string; tone?: 'neutral' | 'warning' | 'success' | 'error' | 'info'; icon?: ReactNode }) {
   const styles = {
     neutral: 'border-border-default bg-surface-primary text-text-secondary',
     warning: 'border-amber-300 bg-amber-50 text-amber-900',
@@ -146,7 +146,7 @@ export function StatusBadge({ label, tone = 'neutral' }: { label: string; tone?:
     error: 'border-red-300 bg-red-50 text-red-900',
     info: 'border-blue-300 bg-blue-50 text-blue-900',
   } as const
-  return <span className={`inline-flex min-h-8 items-center gap-2 rounded-pill border px-3 text-xs font-semibold ${styles[tone]}`}><span className="h-2 w-2 rounded-full bg-current" aria-hidden="true" />{label}</span>
+  return <span className={`inline-flex min-h-8 items-center gap-2 rounded-pill border px-3 text-xs font-semibold ${styles[tone]}`}>{icon ?? <span className="h-2 w-2 rounded-full bg-current" aria-hidden="true" />}{label}</span>
 }
 
 export function ProgressBar({ value, label }: { value: number; label: string }) {

@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use App\Domain\Authorization\AccountAccess;
+use App\Domain\Compliance\ComplianceReferenceProvider;
+use App\Domain\Compliance\ComplianceTextExtractor;
 use App\Domain\Identity\AccessTokenIssuer;
 use App\Domain\Identity\OtpCodeGenerator;
 use App\Domain\Identity\PassportAccessTokenIssuer;
@@ -12,6 +14,8 @@ use App\Domain\Vendors\AddressGeocoder;
 use App\Domain\Vendors\PsgcProvider;
 use App\Domain\Vendors\PublicStoreMediaStorage;
 use App\Domain\Vendors\XenditAccountVerificationGateway;
+use App\Infrastructure\Compliance\RegisterComplianceReferenceProvider;
+use App\Infrastructure\Compliance\UnavailableComplianceTextExtractor;
 use App\Infrastructure\Geography\ConfiguredGoogleMapsGeocoder;
 use App\Infrastructure\Geography\PsgcCloudProvider;
 use App\Infrastructure\Identity\GoogleRecaptchaEnterpriseGateway;
@@ -37,6 +41,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(AddressGeocoder::class, ConfiguredGoogleMapsGeocoder::class);
         $this->app->bind(PsgcProvider::class, PsgcCloudProvider::class);
         $this->app->bind(XenditAccountVerificationGateway::class, ConfiguredXenditAccountVerificationGateway::class);
+        $this->app->bind(ComplianceReferenceProvider::class, RegisterComplianceReferenceProvider::class);
+        $this->app->bind(ComplianceTextExtractor::class, UnavailableComplianceTextExtractor::class);
     }
 
     /**

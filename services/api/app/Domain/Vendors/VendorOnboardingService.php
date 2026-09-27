@@ -6,6 +6,8 @@ namespace App\Domain\Vendors;
 
 use App\Domain\Agreements\AccountAgreements;
 use App\Domain\Authorization\AccountAccess;
+use App\Domain\Catalog\MarketplaceDiscoverability;
+use App\Domain\Catalog\RentalServicePolicy;
 use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Identity\EmailOtpService;
@@ -1100,7 +1102,8 @@ final class VendorOnboardingService
             DB::table('vendor_organizations')->where('id', $organizationId)->update(['store_activation_status' => 'ACTIVE', 'lock_version' => (int) $organization->lock_version + 1, 'updated_at' => now()]);
             $this->recordActivation($organizationId, $organization->store_activation_status, 'ACTIVE', 'ACTIVATED', null, $readiness, $request->user()->getKey(), 'VENDOR');
             $this->claimIdempotency($request, 'VENDOR_ACTIVATION', $key, $organizationId, 200);
-            $this->audit->account($request, 'VENDOR_ACTIVATED', 'VENDOR_ORGANIZATION', $organizationId, after: ['status' => 'ACTIVE', 'discoverability' => 'NOT_DISCOVERABLE']);
+            $discoverability = app(MarketplaceDiscoverability::class)->evaluate($organizationId, $request->user()->getKey(), 'VENDOR');
+            $this->audit->account($request, 'VENDOR_ACTIVATED', 'VENDOR_ORGANIZATION', $organizationId, after: ['status' => 'ACTIVE', 'discoverability' => $discoverability['status']]);
             $this->notifyOrganization($request, $organizationId, 'Store activated', 'Your Store is activated. Marketplace discoverability is evaluated separately.', 'VENDOR_ACTIVATION');
 
             return null;
@@ -1124,6 +1127,7 @@ final class VendorOnboardingService
             DB::table('vendor_organizations')->where('id', $organizationId)->update(['store_activation_status' => 'RESTRICTED', 'activation_hold_code' => 'ADMIN_RESTRICTION', 'activation_hold_reason' => $reason, 'lock_version' => (int) $organization->lock_version + 1, 'updated_at' => now()]);
             $this->recordActivation($organizationId, $organization->store_activation_status, 'RESTRICTED', 'RESTRICTED', $reason, $this->readinessForOrganization($organizationId), $request->user()->getKey(), 'ADMIN');
             $this->claimIdempotency($request, 'ADMIN_VENDOR_RESTRICT', $key, $organizationId, 200);
+            app(MarketplaceDiscoverability::class)->evaluate($organizationId, $request->user()->getKey(), 'ADMIN');
             $this->notifyOrganization($request, $organizationId, 'Store activation restricted', 'An Admin placed a restriction on Store activation. Review the reason in your onboarding dashboard.', 'VENDOR_ACTIVATION');
             $this->audit->account($request, 'VENDOR_ACTIVATION_RESTRICTED', 'VENDOR_ORGANIZATION', $organizationId, reason: $reason);
         });
@@ -1148,6 +1152,7 @@ final class VendorOnboardingService
             DB::table('vendor_organizations')->where('id', $organizationId)->update(['store_activation_status' => 'READY', 'activation_hold_code' => null, 'activation_hold_reason' => null, 'lock_version' => (int) $organization->lock_version + 1, 'updated_at' => now()]);
             $this->recordActivation($organizationId, $organization->store_activation_status, 'READY', 'RESTORED', $reason, $readiness, $request->user()->getKey(), 'ADMIN');
             $this->claimIdempotency($request, 'ADMIN_VENDOR_RESTORE', $key, $organizationId, 200);
+            app(MarketplaceDiscoverability::class)->evaluate($organizationId, $request->user()->getKey(), 'ADMIN');
             $this->notifyOrganization($request, $organizationId, 'Store activation restriction restored', 'Your Store activation restriction was restored after Admin review.', 'VENDOR_ACTIVATION');
             $this->audit->account($request, 'VENDOR_ACTIVATION_RESTORED', 'VENDOR_ORGANIZATION', $organizationId, reason: $reason);
         });
@@ -1436,12 +1441,10 @@ final class VendorOnboardingService
             throw new AuthenticationException('CLASSIFICATION_INVALID', 'Use distinct custom labels of 2–60 characters.', 422, ['blockers' => [['key' => 'classification.custom_labels', 'reason' => 'Use distinct custom labels of 2–60 characters.']]]);
         }
         $labels = array_merge($niches, $customLabels);
+        $rentalPolicy = app(RentalServicePolicy::class);
         foreach ($labels as $label) {
-            $normalized = trim((string) preg_replace('/[^a-z0-9]+/i', ' ', Str::ascii($label)));
-            $compact = str_replace(' ', '', strtolower($normalized));
-            if (preg_match('/\b(?:rent(?:al|als|ing|ed)?|for hire|hire|leasing|lease)\b/i', $normalized) === 1 || preg_match('/^(?:(?:construction)?(?:vehicles?|equipment|tools?|machinery))?(?:rentals?|forhire|hire|leasing)(?:services?)?$/', $compact) === 1) {
-                $message = 'Vehicle and equipment rental services are not currently supported by MateryalPH. The marketplace currently supports construction materials, supplies, tools, equipment offered as supported products, and other approved procurement categories.';
-                throw new AuthenticationException('CLASSIFICATION_UNSUPPORTED', $message, 422, ['blockers' => [['key' => 'classification.custom_labels', 'reason' => '“'.$label.'”: '.$message]]]);
+            if ($rentalPolicy->describesRental($label)) {
+                throw new AuthenticationException('CLASSIFICATION_UNSUPPORTED', RentalServicePolicy::MESSAGE, 422, ['blockers' => [['key' => 'classification.custom_labels', 'reason' => '“'.$label.'”: '.RentalServicePolicy::MESSAGE]]]);
             }
         }
         if (array_diff($niches, self::SUPPLIER_NICHES) !== []) {
