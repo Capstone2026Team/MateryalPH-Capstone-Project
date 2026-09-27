@@ -39,6 +39,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        $exceptions->dontFlash(['invitation_url', 'provider_account_id', 'x-callback-token']);
         $exceptions->render(function (IdentityAuthenticationException $exception) {
             return ApiResponse::error(
                 $exception->errorCode,

@@ -29,9 +29,24 @@ final class StoreActivationGate
         $block = static function (int $condition, string $key, string $reason) use (&$blockers): void {
             $blockers[] = ['key' => $key, 'condition' => $condition, 'reason' => $reason];
         };
-        $owner = DB::table('vendor_memberships as m')->join('users as u', 'u.id', '=', 'm.user_id')->where('m.vendor_organization_id', $organizationId)->where('m.role', 'OWNER')->where('m.status', 'ACTIVE')->first(['u.id', 'u.account_status', 'u.email_verified_at']);
-        if ($owner === null || $owner->account_status !== 'ACTIVE' || $owner->email_verified_at === null || ! $this->accepted($organizationId, (int) $owner->id, 'TERMS_OF_SERVICE') || ! $this->accepted($organizationId, (int) $owner->id, 'VENDOR_CODE_OF_CONDUCT')) {
-            $block(1, 'owner_account', 'An active email-verified Owner with current Vendor Terms and Code of Conduct is required.');
+        $owner = DB::table('vendor_memberships as m')->join('users as u', 'u.id', '=', 'm.user_id')->where('m.vendor_organization_id', $organizationId)->where('m.role', 'OWNER')->where('m.status', 'ACTIVE')->first(['u.id', 'u.email', 'u.account_status', 'u.email_verified_at']);
+        if ($owner === null || $owner->account_status !== 'ACTIVE') {
+            $block(1, 'owner_account', 'An active Vendor Owner account is required.');
+        } else {
+            $verifiedGoogleEmail = $owner->email_verified_at === null && DB::table('external_identities')
+                ->where('user_id', $owner->id)
+                ->where('provider', 'GOOGLE')
+                ->whereRaw('LOWER(email_at_link) = ?', [mb_strtolower((string) $owner->email)])
+                ->exists();
+            if ($owner->email_verified_at === null && ! $verifiedGoogleEmail) {
+                $block(1, 'owner_email_verification', 'Verify the Vendor Owner account email address.');
+            }
+            if (! $this->accepted($organizationId, (int) $owner->id, 'TERMS_OF_SERVICE')) {
+                $block(1, 'vendor_terms', 'Accept the current Vendor Terms of Service.');
+            }
+            if (! $this->accepted($organizationId, (int) $owner->id, 'VENDOR_CODE_OF_CONDUCT')) {
+                $block(1, 'vendor_code_of_conduct', 'Accept the current Vendor Code of Conduct.');
+            }
         }
         $submitted = DB::table('vendor_onboarding_requirements')->where('vendor_organization_id', $organizationId)->where('section', 'STORE_VERIFICATION')->where('is_current', true)->whereNotNull('submitted_at')->exists();
         if (! $submitted || $organization === null || ! in_array($organization->store_verification_status, ['PENDING_VERIFICATION', 'APPROVED', 'CHANGES_REQUIRED', 'REJECTED', 'EXPIRED'], true)) {
@@ -90,7 +105,8 @@ final class StoreActivationGate
         }
         foreach ($setup as $requirement) {
             if (! $this->satisfied($requirement, 'COMPLETED')) {
-                $block(6, $requirement->requirement_key, 'Complete '.$requirement->requirement_key.'.');
+                $label = VendorOnboardingService::STEP_CATALOG['STORE_SETUP'][$requirement->requirement_key]['label'] ?? str_replace('_', ' ', $requirement->requirement_key);
+                $block(6, $requirement->requirement_key, 'Complete '.$label.'.');
             }
         }
         $method = DB::table('store_profiles')->where('vendor_organization_id', $organizationId)->value('fulfillment_method');
@@ -101,9 +117,8 @@ final class StoreActivationGate
             $block(7, 'delivery_configuration', 'Complete delivery configuration, or select Self-Pickup only.');
         }
         $payment = DB::table('vendor_payment_accounts')->where('vendor_organization_id', $organizationId)->first();
-        $capabilities = json_decode($payment->capabilities ?? '{}', true, flags: JSON_THROW_ON_ERROR);
-        if ($payment === null || ! in_array($payment->environment, ['TEST', 'DEMO'], true) || $payment->connection_status !== 'CONNECTED' || empty($payment->provider_account_id) || ($capabilities['account_verification'] ?? false) !== true) {
-            $block(8, 'payment_connection', 'A confirmed Xendit TEST/DEMO account and capability are required.');
+        if ($payment === null || $payment->environment !== 'TEST' || $payment->provider_associated_at === null || $payment->connection_status !== 'CONNECTED_TEST' || empty($payment->provider_account_id) || $payment->provider_status !== 'LIVE') {
+            $block(8, 'payment_connection', 'A backend-provisioned Xendit TEST sub-account is required.');
         }
         if ($owner === null || ! $this->commissionAccepted($organizationId, (int) $owner->id)) {
             $block(9, 'commission_terms', 'The Owner must accept the current versioned 2% commission agreement.');
@@ -139,7 +154,6 @@ final class StoreActivationGate
 
     private function deliveryReady(string $organizationId): bool
     {
-        return DB::table('delivery_service_areas')->where('vendor_organization_id', $organizationId)->where('active', true)->exists()
-            && DB::table('vendor_vehicles as v')->join('vehicle_rate_versions as r', 'r.vendor_vehicle_id', '=', 'v.id')->where('v.vendor_organization_id', $organizationId)->where('v.active', true)->where('v.number_available', '>', 0)->where('v.capacity_kg', '>', 0)->where('r.maximum_distance_km', '>', 0)->where('r.effective_at', '<=', now())->exists();
+        return app(DeliveryRecommendationService::class)->eligibleVehicles($organizationId) !== [];
     }
 }

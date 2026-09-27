@@ -14,6 +14,12 @@ use stdClass;
 
 final class AdminVendorVerificationService
 {
+    private const REVIEW_GROUPS = [
+        'business_information_group' => ['business_type', 'business_information', 'legal_identity', 'registered_business_address', 'supplier_classification', 'tax_profile', 'privacy_acknowledgement'],
+        'legal_identity_id' => ['identity_evidence', 'identity_back_evidence'],
+        'representative_id' => ['representative_identity', 'representative_identity_back'],
+    ];
+
     public function __construct(
         private readonly AuditRecorder $audit,
         private readonly OutboxPublisher $outbox,
@@ -97,7 +103,7 @@ final class AdminVendorVerificationService
         $companyIdentityRequired = in_array($businessType, ['PARTNERSHIP', 'CORPORATION', 'ONE_PERSON_CORPORATION', 'COOPERATIVE'], true);
         $individualIdentityRequired = in_array($businessType, ['SOLE_PROPRIETORSHIP', 'ONE_PERSON_CORPORATION'], true);
 
-        return ['representative' => $this->authority->snapshot($organizationId), 'representative_history' => DB::table('vendor_representative_versions')->where('vendor_organization_id', $organizationId)->orderByDesc('version')->get(['id', 'version', 'created_at', 'created_by_user_id'])->map(fn (object $row): array => (array) $row)->all(), 'authority_reviews' => DB::table('vendor_authority_reviews as r')->join('vendor_representative_versions as v', 'v.id', '=', 'r.representative_version_id')->where('v.vendor_organization_id', $organizationId)->orderByDesc('r.reviewed_at')->get(['r.*', 'v.version'])->map(fn (object $row): array => (array) $row)->all(), 'organization' => ['id' => $organization->id, 'store_name' => $organization->store_name, 'registered_name' => $organization->registered_name, 'legal_name' => $organization->legal_name, 'business_type' => $organization->business_type, 'date_established' => $organization->date_established, 'store_email' => $organization->store_email, 'store_phone' => $organization->store_phone, 'verification_status' => $organization->store_verification_status, 'setup_status' => $organization->store_setup_status, 'activation_status' => $organization->store_activation_status, 'lock_version' => (int) $organization->lock_version], 'sections' => ['STORE_VERIFICATION' => $steps->where('section', 'STORE_VERIFICATION')->values()->map(fn (object $step): array => $this->step($step, $organization->business_type))->all(), 'STORE_SETUP' => $steps->where('section', 'STORE_SETUP')->values()->map(fn (object $step): array => $this->step($step, $organization->business_type))->all()], 'legal_identity' => ['individual_required' => $individualIdentityRequired, 'company_required' => $companyIdentityRequired, 'same_as_owner' => (bool) ($organization->legal_identity_same_as_owner ?? false), 'surname' => $organization->individual_registered_surname ?? null, 'first_name' => $organization->individual_registered_first_name ?? null, 'middle_name' => $organization->individual_registered_middle_name ?? null, 'suffix' => $organization->individual_registered_suffix ?? null, 'company_registered_name' => $organization->company_registered_name ?? $organization->registered_name ?? null, 'id_type' => $organization->identity_id_type ?? null, 'id_number_last4' => $organization->identity_id_number_last4 ?? null], 'address' => $address === null ? null : ['street' => $address->street, 'unit' => $address->unit, 'barangay' => $address->barangay, 'city_municipality' => $address->city_municipality, 'province' => $address->province, 'postal_code' => $address->postal_code, 'formatted_address' => $address->formatted_address, 'latitude' => $address->latitude === null ? null : (float) $address->latitude, 'longitude' => $address->longitude === null ? null : (float) $address->longitude, 'review_state' => $address->review_state, 'version' => (int) $address->version], 'classification' => $classification === null ? null : ['supplier_type' => $classification->supplier_type, 'niches' => $this->jsonArray($classification->niches), 'custom_label' => $classification->custom_label], 'tax_profile' => $tax === null ? null : ['status' => $tax->status, 'environment' => $tax->environment, 'version' => $tax->version === null ? null : (int) $tax->version, 'entity_class' => $tax->entity_class, 'registration_category' => $tax->registration_category, 'vat_category' => $tax->vat_category, 'vat_verified_category' => $tax->vat_verified_category, 'bir_cor_reference' => $tax->bir_cor_reference, 'fiscal_year_start_month' => $tax->fiscal_year_start_month, 'taxpayer_key_last4' => $tax->taxpayer_key_last4, 'tin_last4' => $tax->tin_last4, 'details' => array_diff_key(is_string($tax->tax_details) ? (json_decode($tax->tax_details, true) ?: []) : [], array_flip(['head_office', 'branch_code_length'])), 'owner_attested' => $tax->owner_attested_at !== null], 'payment' => $payment === null ? null : ['provider' => $payment->provider, 'environment' => $payment->environment, 'provider_account_id' => $payment->provider_account_id, 'connection_status' => $payment->connection_status, 'provider_status' => $payment->provider_status, 'capabilities' => is_string($payment->capabilities) ? (json_decode($payment->capabilities, true) ?: []) : [], 'invitation_url_masked' => $payment->invitation_url_masked, 'last_reconciled_at' => $payment->last_reconciled_at, 'last_error_code' => $payment->last_error_code], 'documents' => $documents->map(fn (object $document): array => ['id' => $document->id, 'requirement_key' => $document->requirement_key, 'document_type' => $document->document_type, 'status' => $document->status, 'lock_version' => (int) $document->lock_version, 'version_id' => $document->version_id, 'version' => $document->version === null ? null : (int) $document->version, 'scan_state' => $document->scan_state, 'file_id' => $document->file_id])->all(), 'reviews' => $reviews->map(fn (object $review): array => (array) $review)->all(), 'readiness' => $this->onboarding->readinessForOrganization($organizationId)];
+        return ['representative' => $this->authority->snapshot($organizationId), 'representative_history' => DB::table('vendor_representative_versions')->where('vendor_organization_id', $organizationId)->orderByDesc('version')->get(['id', 'version', 'created_at', 'created_by_user_id'])->map(fn (object $row): array => (array) $row)->all(), 'authority_reviews' => DB::table('vendor_authority_reviews as r')->join('vendor_representative_versions as v', 'v.id', '=', 'r.representative_version_id')->where('v.vendor_organization_id', $organizationId)->orderByDesc('r.reviewed_at')->get(['r.*', 'v.version'])->map(fn (object $row): array => (array) $row)->all(), 'organization' => ['id' => $organization->id, 'store_name' => $organization->store_name, 'registered_name' => $organization->registered_name, 'legal_name' => $organization->legal_name, 'business_type' => $organization->business_type, 'date_established' => $organization->date_established, 'store_email' => $organization->store_email, 'store_phone' => $organization->store_phone, 'verification_status' => $organization->store_verification_status, 'setup_status' => $organization->store_setup_status, 'activation_status' => $organization->store_activation_status, 'lock_version' => (int) $organization->lock_version], 'sections' => ['STORE_VERIFICATION' => $steps->where('section', 'STORE_VERIFICATION')->values()->map(fn (object $step): array => $this->step($step, $organization->business_type))->all(), 'STORE_SETUP' => $steps->where('section', 'STORE_SETUP')->values()->map(fn (object $step): array => $this->step($step, $organization->business_type))->all()], 'legal_identity' => ['individual_required' => $individualIdentityRequired, 'company_required' => $companyIdentityRequired, 'same_as_owner' => (bool) ($organization->legal_identity_same_as_owner ?? false), 'surname' => $organization->individual_registered_surname ?? null, 'first_name' => $organization->individual_registered_first_name ?? null, 'middle_name' => $organization->individual_registered_middle_name ?? null, 'suffix' => $organization->individual_registered_suffix ?? null, 'company_registered_name' => $organization->company_registered_name ?? $organization->registered_name ?? null, 'id_type' => $organization->identity_id_type ?? null, 'id_number_last4' => $organization->identity_id_number_last4 ?? null], 'address' => $address === null ? null : ['street' => $address->street, 'unit' => $address->unit, 'barangay' => $address->barangay, 'city_municipality' => $address->city_municipality, 'province' => $address->province, 'postal_code' => $address->postal_code, 'formatted_address' => $address->formatted_address, 'latitude' => $address->latitude === null ? null : (float) $address->latitude, 'longitude' => $address->longitude === null ? null : (float) $address->longitude, 'review_state' => $address->review_state, 'version' => (int) $address->version], 'classification' => $classification === null ? null : ['supplier_type' => $classification->supplier_type, 'niches' => $this->jsonArray($classification->niches), 'custom_label' => $classification->custom_label, 'custom_labels' => $this->jsonArray($classification->custom_labels)], 'tax_profile' => $tax === null ? null : ['status' => $tax->status, 'environment' => $tax->environment, 'version' => $tax->version === null ? null : (int) $tax->version, 'entity_class' => $tax->entity_class, 'registration_category' => $tax->registration_category, 'vat_category' => $tax->vat_category, 'vat_verified_category' => $tax->vat_verified_category, 'bir_cor_reference' => $tax->bir_cor_reference, 'fiscal_year_start_month' => $tax->fiscal_year_start_month, 'taxpayer_key_last4' => $tax->taxpayer_key_last4, 'tin_last4' => $tax->tin_last4, 'details' => array_diff_key(is_string($tax->tax_details) ? (json_decode($tax->tax_details, true) ?: []) : [], array_flip(['head_office', 'branch_code_length'])), 'owner_attested' => $tax->owner_attested_at !== null], 'payment' => $payment === null ? null : ['provider' => $payment->provider, 'environment' => $payment->environment, 'provider_account_id' => $payment->provider_account_id, 'connection_status' => $payment->connection_status, 'provider_status' => $payment->provider_status, 'capabilities' => is_string($payment->capabilities) ? (json_decode($payment->capabilities, true) ?: []) : [], 'invitation_url_masked' => $payment->invitation_url_masked, 'last_reconciled_at' => $payment->last_reconciled_at, 'last_error_code' => $payment->last_error_code], 'documents' => $documents->map(fn (object $document): array => ['id' => $document->id, 'requirement_key' => $document->requirement_key, 'document_type' => $document->document_type, 'status' => $document->status, 'lock_version' => (int) $document->lock_version, 'version_id' => $document->version_id, 'version' => $document->version === null ? null : (int) $document->version, 'scan_state' => $document->scan_state, 'file_id' => $document->file_id])->all(), 'reviews' => $reviews->map(fn (object $review): array => (array) $review)->all(), 'readiness' => $this->onboarding->readinessForOrganization($organizationId)];
     }
 
     /**
@@ -110,6 +116,9 @@ final class AdminVendorVerificationService
         $decision = strtoupper((string) ($input['decision'] ?? ''));
         if (! in_array($decision, ['APPROVED', 'CHANGES_REQUIRED', 'REJECTED'], true)) {
             throw new AuthenticationException('DECISION_INVALID', 'Choose an approved verification decision.', 422);
+        }
+        if (isset(self::REVIEW_GROUPS[$requirementKey])) {
+            return $this->decideGroup($request, $organizationId, $requirementKey, $input, $decision);
         }
         $key = $this->requireIdempotencyKey($request);
         DB::transaction(function () use ($request, $organizationId, $requirementKey, $input, $decision, $key): void {
@@ -208,6 +217,92 @@ final class AdminVendorVerificationService
             $this->claimIdempotency($request, 'ADMIN_VENDOR_DECISION', $key, $organizationId.'|'.$requirementKey, 200);
             $this->notifyOwner($request, $organizationId, $decision, $reason);
             $this->audit->account($request, 'VENDOR_VERIFICATION_DECISION_RECORDED', 'VENDOR_ONBOARDING_STEP', (string) $step->id, after: ['requirement_key' => $requirementKey, 'decision' => $decision], reason: $reason);
+        });
+
+        return $this->detail($request, $organizationId);
+    }
+
+    /**
+     * @param  array<string, mixed>  $input
+     * @return array<string, mixed>
+     */
+    private function decideGroup(Request $request, string $organizationId, string $groupKey, array $input, string $decision): array
+    {
+        $idempotencyKey = $this->requireIdempotencyKey($request);
+        DB::transaction(function () use ($request, $organizationId, $groupKey, $input, $decision, $idempotencyKey): void {
+            DB::table('vendor_organizations')->where('id', $organizationId)->lockForUpdate()->firstOrFail();
+            if ($this->idempotent($request, 'ADMIN_VENDOR_DECISION', $organizationId.'|'.$groupKey)) {
+                return;
+            }
+            $steps = DB::table('vendor_onboarding_steps')->where('vendor_organization_id', $organizationId)
+                ->where('section', 'STORE_VERIFICATION')->where('is_current', true)
+                ->whereIn('requirement_key', self::REVIEW_GROUPS[$groupKey])->orderBy('requirement_key')->lockForUpdate()->get()
+                ->filter(fn (object $step): bool => $step->status !== 'NOT_APPLICABLE' && $step->level !== 'OPTIONAL');
+            if ($steps->isEmpty()) {
+                throw new AuthenticationException('REQUIREMENT_NOT_FOUND', 'The verification requirement is unavailable.', 404);
+            }
+            $versions = $input['requirement_versions'] ?? null;
+            foreach ($steps as $step) {
+                if (! is_array($versions) || ! isset($versions[$step->requirement_key]) || (int) $versions[$step->requirement_key] !== (int) $step->lock_version) {
+                    throw new AuthenticationException('RESOURCE_VERSION_CONFLICT', 'This requirement changed. Reload the review.', 409);
+                }
+                if (! in_array($step->status, ['SUBMITTED', 'PENDING_VERIFICATION', 'APPROVED', 'CHANGES_REQUIRED', 'REJECTED', 'EXPIRED'], true)) {
+                    throw new AuthenticationException('REQUIREMENT_NOT_SUBMITTED', 'The Vendor must submit this requirement before Admin review.', 422);
+                }
+            }
+            $reason = isset($input['reason']) ? trim((string) $input['reason']) : null;
+            if ($decision !== 'APPROVED' && ($reason === null || strlen($reason) < 3)) {
+                throw new AuthenticationException('DECISION_REASON_REQUIRED', 'A reason is required for correction or rejection.', 422);
+            }
+            if ($groupKey === 'business_information_group' && $decision === 'APPROVED' && $steps->contains('requirement_key', 'tax_profile')) {
+                $tax = DB::table('vendor_tax_profiles as p')->join('vendor_tax_profile_versions as v', 'v.id', '=', 'p.current_version_id')->where('p.vendor_organization_id', $organizationId)->first(['v.owner_attested_at', 'v.vat_category', 'v.vat_verified_category']);
+                if ($tax === null || $tax->owner_attested_at === null || $tax->vat_verified_category === null || $tax->vat_verified_category !== $tax->vat_category) {
+                    throw new AuthenticationException('TAX_REVIEW_INCOMPLETE', 'Owner attestation and a matching VAT classification verified against BIR evidence are required.', 422);
+                }
+            }
+            $documentGroup = $groupKey !== 'business_information_group';
+            $expirationKind = strtoupper((string) ($input['expiration_kind'] ?? 'UNVERIFIED'));
+            $issueDate = $input['verified_issue_date'] ?? null;
+            $expirationDate = $input['verified_expiration_date'] ?? null;
+            if ($documentGroup && (! in_array($expirationKind, ['DATE', 'NO_EXPIRATION', 'UNVERIFIED'], true)
+                || ($expirationKind === 'DATE' && (! is_string($expirationDate) || trim($expirationDate) === ''))
+                || ($expirationKind !== 'DATE' && $expirationDate !== null && $expirationDate !== '')
+                || (is_string($issueDate) && is_string($expirationDate) && $expirationDate < $issueDate)
+                || ($decision === 'APPROVED' && ($expirationKind === 'UNVERIFIED' || ($expirationKind === 'DATE' && (! is_string($issueDate) || $expirationDate < now()->toDateString())))))) {
+                throw new AuthenticationException('EXPIRATION_METADATA_INVALID', 'Record valid issue and expiration details before approving this evidence.', 422);
+            }
+            foreach ($steps as $step) {
+                if ($documentGroup) {
+                    $document = DB::table('vendor_documents')->where('vendor_organization_id', $organizationId)->where('requirement_key', $step->requirement_key)->lockForUpdate()->first();
+                    if ($decision === 'APPROVED' && ($document === null || $document->superseded_at !== null || $document->current_version_id === null)) {
+                        throw new AuthenticationException('EVIDENCE_NOT_CLEAN', 'Only current validated clean evidence can be approved.', 422);
+                    }
+                    if ($document !== null && $document->current_version_id !== null) {
+                        $version = DB::table('vendor_document_versions')->where('id', $document->current_version_id)->first();
+                        if ($decision === 'APPROVED' && ($version === null || $version->scan_state !== 'CLEAN' || $version->content_validation_state !== 'VALID' || DB::table('files')->where('id', $version->file_id)->value('scan_state') !== 'CLEAN')) {
+                            throw new AuthenticationException('EVIDENCE_NOT_CLEAN', 'Only validated clean evidence can be approved.', 422);
+                        }
+                        if ($version !== null) {
+                            DB::table('business_document_reviews')->insert(['id' => (string) Str::uuid7(), 'business_document_version_id' => $version->id, 'reviewer_user_id' => $request->user()->getKey(), 'decision' => $decision, 'reason' => $reason, 'verified_document_number' => $input['verified_document_number'] ?? null, 'verified_issue_date' => $issueDate, 'expiration_kind' => $expirationKind, 'verified_expiration_date' => $expirationDate, 'evidence_source' => $input['evidence_source'] ?? null, 'remarks' => $input['remarks'] ?? null, 'reviewed_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
+                            DB::table('vendor_documents')->where('id', $document->id)->update(['status' => $decision, 'lock_version' => (int) $document->lock_version + 1, 'updated_at' => now()]);
+                        }
+                    }
+                }
+                DB::table('vendor_onboarding_steps')->where('id', $step->id)->update(['status' => $decision, 'reviewed_by_user_id' => $request->user()->getKey(), 'reviewed_at' => now(), 'last_reason' => $reason, 'lock_version' => (int) $step->lock_version + 1, 'updated_at' => now()]);
+            }
+            if ($groupKey === 'business_information_group' && $steps->contains('requirement_key', 'tax_profile')) {
+                DB::table('vendor_tax_profiles')->where('vendor_organization_id', $organizationId)->update(['status' => $decision, 'updated_at' => now()]);
+                if ($decision === 'APPROVED') {
+                    $taxVersionId = DB::table('vendor_tax_profiles')->where('vendor_organization_id', $organizationId)->value('current_version_id');
+                    if (is_string($taxVersionId)) {
+                        DB::table('vendor_tax_profile_versions')->where('id', $taxVersionId)->update(['approved_by_user_id' => $request->user()->getKey(), 'approved_at' => now(), 'updated_at' => now()]);
+                    }
+                }
+            }
+            DB::table('vendor_organizations')->where('id', $organizationId)->update(['store_verification_status' => $this->recomputeVerificationStatus($organizationId), 'updated_at' => now()]);
+            $this->claimIdempotency($request, 'ADMIN_VENDOR_DECISION', $idempotencyKey, $organizationId.'|'.$groupKey, 200);
+            $this->notifyOwner($request, $organizationId, $decision, $reason);
+            $this->audit->account($request, 'VENDOR_VERIFICATION_DECISION_RECORDED', 'VENDOR_ORGANIZATION', $organizationId, after: ['requirement_key' => $groupKey, 'underlying_keys' => $steps->pluck('requirement_key')->all(), 'decision' => $decision], reason: $reason);
         });
 
         return $this->detail($request, $organizationId);

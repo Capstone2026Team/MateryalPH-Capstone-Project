@@ -32,5 +32,10 @@ void main() {
       // TODO
     });
 
+    // int lockVersion
+    test('to test the property `lockVersion`', () async {
+      // TODO
+    });
+
   });
 }

@@ -57,6 +57,14 @@ final class PhaseTwoAccountSecurityTest extends TestCase
         $this->getJson('/api/v1/buyers/account/profile')->assertOk()->assertJsonPath('data.email_masked', true);
     }
 
+    public function test_buyer_cannot_reauthenticate_with_an_authenticator_code_alone(): void
+    {
+        $this->buyer();
+        $this->postJson('/api/v1/buyers/account/reauthentication', ['code' => '123456'])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.0.code', 'REAUTHENTICATION_FAILED');
+    }
+
     public function test_recent_authentication_is_session_bound_and_password_change_revokes_others(): void
     {
         [$user, $current] = $this->buyer();

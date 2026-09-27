@@ -11,6 +11,7 @@ Name | Type
 `role` | string
 `status` | string
 `canManageStaff` | boolean
+`lockVersion` | number
 
 ## Example
 
@@ -24,6 +25,7 @@ const example = {
   "role": null,
   "status": null,
   "canManageStaff": null,
+  "lockVersion": null,
 } satisfies AccountMembership
 
 console.log(example)

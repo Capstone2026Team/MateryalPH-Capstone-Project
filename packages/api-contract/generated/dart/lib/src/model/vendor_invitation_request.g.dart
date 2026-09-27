@@ -99,6 +99,8 @@ class _$VendorInvitationRequest extends VendorInvitationRequest {
   final String? inviteeMobile;
   @override
   final VendorInvitationRequestRoleEnum role;
+  @override
+  final bool? canManageStaff;
 
   factory _$VendorInvitationRequest(
           [void Function(VendorInvitationRequestBuilder)? updates]) =>
@@ -108,7 +110,8 @@ class _$VendorInvitationRequest extends VendorInvitationRequest {
       {required this.email,
       required this.inviteeName,
       this.inviteeMobile,
-      required this.role})
+      required this.role,
+      this.canManageStaff})
       : super._();
   @override
   VendorInvitationRequest rebuild(
@@ -126,7 +129,8 @@ class _$VendorInvitationRequest extends VendorInvitationRequest {
         email == other.email &&
         inviteeName == other.inviteeName &&
         inviteeMobile == other.inviteeMobile &&
-        role == other.role;
+        role == other.role &&
+        canManageStaff == other.canManageStaff;
   }
 
   @override
@@ -136,6 +140,7 @@ class _$VendorInvitationRequest extends VendorInvitationRequest {
     _$hash = $jc(_$hash, inviteeName.hashCode);
     _$hash = $jc(_$hash, inviteeMobile.hashCode);
     _$hash = $jc(_$hash, role.hashCode);
+    _$hash = $jc(_$hash, canManageStaff.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -146,7 +151,8 @@ class _$VendorInvitationRequest extends VendorInvitationRequest {
           ..add('email', email)
           ..add('inviteeName', inviteeName)
           ..add('inviteeMobile', inviteeMobile)
-          ..add('role', role))
+          ..add('role', role)
+          ..add('canManageStaff', canManageStaff))
         .toString();
   }
 }
@@ -173,6 +179,11 @@ class VendorInvitationRequestBuilder
   VendorInvitationRequestRoleEnum? get role => _$this._role;
   set role(VendorInvitationRequestRoleEnum? role) => _$this._role = role;
 
+  bool? _canManageStaff;
+  bool? get canManageStaff => _$this._canManageStaff;
+  set canManageStaff(bool? canManageStaff) =>
+      _$this._canManageStaff = canManageStaff;
+
   VendorInvitationRequestBuilder() {
     VendorInvitationRequest._defaults(this);
   }
@@ -184,6 +195,7 @@ class VendorInvitationRequestBuilder
       _inviteeName = $v.inviteeName;
       _inviteeMobile = $v.inviteeMobile;
       _role = $v.role;
+      _canManageStaff = $v.canManageStaff;
       _$v = null;
     }
     return this;
@@ -212,6 +224,7 @@ class VendorInvitationRequestBuilder
           inviteeMobile: inviteeMobile,
           role: BuiltValueNullFieldError.checkNotNull(
               role, r'VendorInvitationRequest', 'role'),
+          canManageStaff: canManageStaff,
         );
     replace(_$result);
     return _$result;

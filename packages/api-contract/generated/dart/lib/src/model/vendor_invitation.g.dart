@@ -12,7 +12,7 @@ class _$VendorInvitation extends VendorInvitation {
   @override
   final String? invitationId;
   @override
-  final String role;
+  final String? role;
   @override
   final DateTime? expiresAt;
 
@@ -21,10 +21,7 @@ class _$VendorInvitation extends VendorInvitation {
       (VendorInvitationBuilder()..update(updates))._build();
 
   _$VendorInvitation._(
-      {required this.queued,
-      this.invitationId,
-      required this.role,
-      this.expiresAt})
+      {required this.queued, this.invitationId, this.role, this.expiresAt})
       : super._();
   @override
   VendorInvitation rebuild(void Function(VendorInvitationBuilder) updates) =>
@@ -121,8 +118,7 @@ class VendorInvitationBuilder
           queued: BuiltValueNullFieldError.checkNotNull(
               queued, r'VendorInvitation', 'queued'),
           invitationId: invitationId,
-          role: BuiltValueNullFieldError.checkNotNull(
-              role, r'VendorInvitation', 'role'),
+          role: role,
           expiresAt: expiresAt,
         );
     replace(_$result);

@@ -14,6 +14,11 @@ test('business information retains authority and unknown required gates while om
   expect(groups[0]?.requirements.map(value => value.key)).toEqual(['business_information', 'authority_to_act', 'future_required_gate'])
   expect(groups[0]?.status).not.toBe('COMPLETED')
 })
+test('Admin review separates scoped authority and future document requirements', () => {
+  const groups = verificationChecklist([item('business_information', 'PENDING_VERIFICATION'), item('authority_to_act', 'PENDING_VERIFICATION'), item('future_document', 'PENDING_VERIFICATION')], { separateAuthority: true })
+  expect(groups.map(group => group.key)).toEqual(['business_information_group', 'authority_to_act', 'future_document'])
+  expect(groups[0]?.requirements.map(value => value.key)).toEqual(['business_information'])
+})
 test('passport identity page can complete without a non-applicable back', () => {
   const groups = verificationChecklist([item('identity_evidence', 'APPROVED'), item('identity_back_evidence', 'NOT_APPLICABLE')])
   expect(groups[0]).toMatchObject({ status: 'COMPLETED' })

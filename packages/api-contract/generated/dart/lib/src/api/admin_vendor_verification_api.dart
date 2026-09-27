@@ -27,7 +27,7 @@ class AdminVendorVerificationApi {
   const AdminVendorVerificationApi(this._dio, this._serializers);
 
   /// decideVendorVerificationRequirement
-  ///
+  /// Business information and each Government ID can be decided as a grouped review item. Grouped requests supply requirement_versions for every applicable underlying step; BIR COR, business registration, LGU permit, and other documents retain separate decisions.
   ///
   /// Parameters:
   /// * [organizationId]

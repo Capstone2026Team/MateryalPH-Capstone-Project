@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Tests\Feature\Api;
 
 use App\Domain\Authorization\AccountAccess;
+use App\Domain\Authorization\CurrentVendorTeamAuthority;
 use App\Domain\Authorization\FinancePolicy;
+use App\Domain\Identity\AuthenticationException;
 use App\Domain\Identity\TokenSessionService;
 use App\Models\AuthSession;
 use App\Models\User;
@@ -13,8 +15,10 @@ use App\Models\VendorMembership;
 use App\Models\VendorOrganization;
 use Database\Seeders\SystemFoundationSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Laravel\Passport\AccessToken;
 use Tests\TestCase;
@@ -100,6 +104,89 @@ final class PhaseTwoAdministrationTest extends TestCase
         $owner->update(['account_status' => 'SUSPENDED']);
         $this->postJson('/api/v1/auth/vendor-invitations/accept', $payload)->assertUnprocessable();
         self::assertFalse(User::query()->where('email', $payload['email'])->exists());
+    }
+
+    public function test_invitation_acceptance_requires_strong_new_password_but_allows_an_existing_vendor_password(): void
+    {
+        [$token, $id] = $this->vendorInvitation();
+        $payload = ['token' => $token, 'email' => 'invited@example.test', 'full_name' => 'Invited employee', 'password' => 'legacy-pass1', 'password_confirmation' => 'legacy-pass1'];
+        $this->postJson('/api/v1/auth/vendor-invitations/accept', $payload)
+            ->assertUnprocessable()->assertJsonPath('errors.0.code', 'VALIDATION_FAILED')->assertJsonStructure(['errors' => [['details' => ['password']]]]);
+        self::assertFalse(User::query()->where('email', $payload['email'])->exists());
+
+        $existing = User::factory()->create(['email' => $payload['email'], 'account_type' => 'VENDOR', 'account_status' => 'ACTIVE', 'password' => Hash::make($payload['password'])]);
+        $this->postJson('/api/v1/auth/vendor-invitations/accept', $payload)->assertCreated();
+        $this->assertDatabaseHas('vendor_memberships', ['user_id' => $existing->getKey(), 'vendor_organization_id' => DB::table('vendor_invitations')->where('id', $id)->value('vendor_organization_id')]);
+        self::assertNotNull(DB::table('vendor_invitations')->where('id', $id)->value('accepted_at'));
+    }
+
+    public function test_acceptance_rechecks_manager_delegation_and_preserves_role_at_acceptance(): void
+    {
+        [$token, $id] = $this->vendorInvitation();
+        $organizationId = DB::table('vendor_invitations')->where('id', $id)->value('vendor_organization_id');
+        $manager = User::factory()->create(['account_type' => 'VENDOR', 'account_status' => 'ACTIVE']);
+        $membership = VendorMembership::query()->create(['vendor_organization_id' => $organizationId, 'user_id' => $manager->getKey(), 'role' => 'STORE_MANAGER', 'can_manage_staff' => true, 'status' => 'ACTIVE']);
+        DB::table('vendor_invitations')->where('id', $id)->update(['invited_by_user_id' => $manager->getKey()]);
+        $payload = ['token' => $token, 'email' => 'invited@example.test', 'full_name' => 'Invited employee', 'password' => 'InvitationPassword123', 'password_confirmation' => 'InvitationPassword123'];
+
+        $membership->update(['can_manage_staff' => false]);
+        $this->postJson('/api/v1/auth/vendor-invitations/accept', $payload)->assertUnprocessable();
+        self::assertFalse(User::query()->where('email', $payload['email'])->exists());
+
+        $membership->update(['can_manage_staff' => true, 'status' => 'SUSPENDED']);
+        $this->postJson('/api/v1/auth/vendor-invitations/accept', $payload)->assertUnprocessable();
+        self::assertFalse(User::query()->where('email', $payload['email'])->exists());
+
+        $membership->update(['status' => 'ACTIVE', 'role' => 'STORE_STAFF', 'can_manage_staff' => false]);
+        $this->postJson('/api/v1/auth/vendor-invitations/accept', $payload)->assertUnprocessable();
+        self::assertFalse(User::query()->where('email', $payload['email'])->exists());
+
+        $membership->update(['role' => 'STORE_MANAGER', 'can_manage_staff' => true]);
+        $this->postJson('/api/v1/auth/vendor-invitations/accept', $payload)->assertCreated();
+        $this->assertDatabaseHas('audit_logs', ['action' => 'VENDOR_MEMBERSHIP_ACTIVATED', 'actor_role' => 'STORE_STAFF', 'vendor_organization_id' => $organizationId]);
+        self::assertNotNull(DB::table('vendor_invitations')->where('id', $id)->value('accepted_at'));
+    }
+
+    public function test_locked_team_authority_ignores_stale_request_scope_and_user_state(): void
+    {
+        [, $invitationId] = $this->vendorInvitation();
+        $organizationId = DB::table('vendor_invitations')->where('id', $invitationId)->value('vendor_organization_id');
+        $manager = User::factory()->create(['account_type' => 'VENDOR', 'account_status' => 'ACTIVE']);
+        $membership = VendorMembership::query()->create(['vendor_organization_id' => $organizationId, 'user_id' => $manager->getKey(), 'role' => 'STORE_MANAGER', 'can_manage_staff' => true, 'status' => 'ACTIVE']);
+        $request = Request::create('/api/v1/vendors/account/invitations', 'POST');
+        $request->setUserResolver(fn () => $manager);
+        $oldScope = app(AccountAccess::class)->resolve($manager);
+        $request->attributes->set('account_scope', $oldScope);
+        $authority = app(CurrentVendorTeamAuthority::class);
+
+        $membership->update(['can_manage_staff' => false]);
+        $current = DB::transaction(fn () => $authority->lock($request, $organizationId));
+        self::assertNotContains('staff.manage', $current['permissions']);
+        self::assertFalse($current['can_manage_staff']);
+
+        $membership->update(['can_manage_staff' => false, 'role' => 'STORE_STAFF']);
+        $current = DB::transaction(fn () => $authority->lock($request, $organizationId));
+        self::assertSame('STORE_STAFF', $current['role']);
+        self::assertNotContains('staff.manage', $current['permissions']);
+
+        $membership->update(['role' => 'STORE_MANAGER', 'can_manage_staff' => true, 'status' => 'SUSPENDED']);
+        try {
+            DB::transaction(fn () => $authority->lock($request, $organizationId));
+            self::fail('A suspended membership was accepted.');
+        } catch (AuthenticationException $exception) {
+            self::assertSame('PERMISSION_DENIED', $exception->errorCode);
+        }
+
+        $membership->update(['status' => 'ACTIVE']);
+        DB::table('users')->where('id', $manager->getKey())->update(['account_status' => 'SUSPENDED']);
+        try {
+            DB::transaction(fn () => $authority->lock($request, $organizationId));
+            self::fail('A suspended account was accepted.');
+        } catch (AuthenticationException $exception) {
+            self::assertSame('PERMISSION_DENIED', $exception->errorCode);
+        }
+        self::assertSame('STORE_MANAGER', $oldScope['role']);
+        self::assertTrue($oldScope['can_manage_staff']);
     }
 
     public function test_admin_invitation_creates_pending_security_setup_and_is_single_use(): void

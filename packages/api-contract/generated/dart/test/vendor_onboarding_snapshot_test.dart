@@ -37,12 +37,13 @@ void main() {
       // TODO
     });
 
+    // Private verification snapshot. Each documents entry includes its latest Admin review (decision, reason, verified_document_number, verified_issue_date, expiration_kind, verified_expiration_date, evidence_source, remarks, reviewed_at), or null when not reviewed.
     // BuiltMap<String, JsonObject> verification
     test('to test the property `verification`', () async {
       // TODO
     });
 
-    // BuiltMap<String, JsonObject> setup
+    // VendorOnboardingSnapshotSetup setup
     test('to test the property `setup`', () async {
       // TODO
     });

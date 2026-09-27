@@ -12,8 +12,41 @@ void main() {
       // TODO
     });
 
+    // Separate category and type. Categorized configurations require applicable cargo dimensions or mixer capacity and heavy classification.
+    // String vehicleCategory
+    test('to test the property `vehicleCategory`', () async {
+      // TODO
+    });
+
     // String vehicleType
     test('to test the property `vehicleType`', () async {
+      // TODO
+    });
+
+    // String customTypeName
+    test('to test the property `customTypeName`', () async {
+      // TODO
+    });
+
+    // String brand
+    test('to test the property `brand`', () async {
+      // TODO
+    });
+
+    // num mixerCapacityM3
+    test('to test the property `mixerCapacityM3`', () async {
+      // TODO
+    });
+
+    // Clean VEHICLE_IMAGE file owned by this Vendor.
+    // String imageFileId
+    test('to test the property `imageFileId`', () async {
+      // TODO
+    });
+
+    // Disabled configurations are retained for history and excluded from recommendations.
+    // bool active
+    test('to test the property `active`', () async {
       // TODO
     });
 
@@ -62,6 +95,7 @@ void main() {
       // TODO
     });
 
+    // Omission retains the saved limit; new coverage defaults to the approved 50 km procurement limit. New vehicle rates inherit coverage.
     // int maximumDistanceKm
     test('to test the property `maximumDistanceKm`', () async {
       // TODO

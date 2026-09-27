@@ -106,6 +106,7 @@ for (const args of generations) {
       // currently assigns the deserialized value to the builder field directly.
       const nestedFields = {
         "lib/src/model/vendor_setup_draft.dart": ["delivery"],
+        "lib/src/model/vendor_onboarding_snapshot.dart": ["setup"],
         "lib/src/model/vendor_verification_submit.dart": ["draft"],
         "lib/src/model/vendor_verification_draft.dart": ["legalIdentity", "taxProfile", "classification"],
       }[relativePath] ?? [];

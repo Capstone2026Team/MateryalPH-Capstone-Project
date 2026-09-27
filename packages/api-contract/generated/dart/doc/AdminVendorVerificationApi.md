@@ -24,6 +24,8 @@ Method | HTTP request | Description
 
 
 
+Business information and each Government ID can be decided as a grouped review item. Grouped requests supply requirement_versions for every applicable underlying step; BIR COR, business registration, LGU permit, and other documents retain separate decisions.
+
 ### Example
 ```dart
 import 'package:materyalph_api_client/api.dart';

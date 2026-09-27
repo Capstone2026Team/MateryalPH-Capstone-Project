@@ -32,6 +32,10 @@ foreach (['buyers' => ['BUYER', 'MOBILE'], 'vendors' => ['VENDOR', 'WEB'], 'admi
             Route::post('/recovery-codes', [AccountController::class, 'recoveryCodes'])->middleware('throttle:account-security');
         }
         if ($portal === 'VENDOR') {
+            Route::get('/invitations', [AccountAdministrationController::class, 'vendorInvitations']);
+            Route::get('/activity', [AccountAdministrationController::class, 'vendorActivity']);
+            Route::patch('/staff-disputes', [AccountAdministrationController::class, 'staffDisputes']);
+            Route::patch('/memberships/{membershipId}', [AccountAdministrationController::class, 'updateStaff'])->whereUuid('membershipId');
             Route::get('/memberships', [AccountAdministrationController::class, 'memberships']);
             Route::patch('/memberships/{membershipId}/delegation', [AccountAdministrationController::class, 'delegate'])->whereUuid('membershipId');
             Route::patch('/memberships/{membershipId}/status', [AccountAdministrationController::class, 'changeMembership'])->whereUuid('membershipId');

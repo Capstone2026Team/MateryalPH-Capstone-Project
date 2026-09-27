@@ -22,7 +22,7 @@ class _$VendorOnboardingSnapshot extends VendorOnboardingSnapshot {
   @override
   final BuiltMap<String, JsonObject?> verification;
   @override
-  final BuiltMap<String, JsonObject?> setup;
+  final VendorOnboardingSnapshotSetup setup;
   @override
   final VendorActivationSnapshot activation;
   @override
@@ -154,10 +154,11 @@ class VendorOnboardingSnapshotBuilder
   set verification(MapBuilder<String, JsonObject?>? verification) =>
       _$this._verification = verification;
 
-  MapBuilder<String, JsonObject?>? _setup;
-  MapBuilder<String, JsonObject?> get setup =>
-      _$this._setup ??= MapBuilder<String, JsonObject?>();
-  set setup(MapBuilder<String, JsonObject?>? setup) => _$this._setup = setup;
+  VendorOnboardingSnapshotSetupBuilder? _setup;
+  VendorOnboardingSnapshotSetupBuilder get setup =>
+      _$this._setup ??= VendorOnboardingSnapshotSetupBuilder();
+  set setup(VendorOnboardingSnapshotSetupBuilder? setup) =>
+      _$this._setup = setup;
 
   VendorActivationSnapshotBuilder? _activation;
   VendorActivationSnapshotBuilder get activation =>

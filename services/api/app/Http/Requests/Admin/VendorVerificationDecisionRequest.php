@@ -20,6 +20,8 @@ final class VendorVerificationDecisionRequest extends FormRequest
         return [
             'decision' => ['required', Rule::in(['APPROVED', 'CHANGES_REQUIRED', 'REJECTED'])],
             'lock_version' => ['sometimes', 'integer', 'min:1'],
+            'requirement_versions' => ['sometimes', 'array'],
+            'requirement_versions.*' => ['required', 'integer', 'min:1'],
             'reason' => ['required_unless:decision,APPROVED', 'nullable', 'string', 'min:3', 'max:2000'],
             'verified_document_number' => ['sometimes', 'nullable', 'string', 'max:180'],
             'verified_issue_date' => ['sometimes', 'nullable', 'date'],

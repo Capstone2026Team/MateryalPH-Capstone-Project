@@ -14,6 +14,11 @@
 
 import * as runtime from '../runtime';
 import {
+    type AccountMutationResultEnvelope,
+    AccountMutationResultEnvelopeFromJSON,
+    AccountMutationResultEnvelopeToJSON,
+} from '../models/AccountMutationResultEnvelope';
+import {
     type EmailRequest,
     EmailRequestFromJSON,
     EmailRequestToJSON,
@@ -84,10 +89,10 @@ import {
     VendorOnboardingEnvelopeToJSON,
 } from '../models/VendorOnboardingEnvelope';
 import {
-    type VendorPaymentConnection,
-    VendorPaymentConnectionFromJSON,
-    VendorPaymentConnectionToJSON,
-} from '../models/VendorPaymentConnection';
+    type VendorPaymentOnboardingEnvelope,
+    VendorPaymentOnboardingEnvelopeFromJSON,
+    VendorPaymentOnboardingEnvelopeToJSON,
+} from '../models/VendorPaymentOnboardingEnvelope';
 import {
     type VendorPaymentReconciliationEnvelope,
     VendorPaymentReconciliationEnvelopeFromJSON,
@@ -104,6 +109,11 @@ import {
     VendorSetupDraftToJSON,
 } from '../models/VendorSetupDraft';
 import {
+    type VendorStaffDisputeSetting,
+    VendorStaffDisputeSettingFromJSON,
+    VendorStaffDisputeSettingToJSON,
+} from '../models/VendorStaffDisputeSetting';
+import {
     type VendorStoreEmailConfirmation,
     VendorStoreEmailConfirmationFromJSON,
     VendorStoreEmailConfirmationToJSON,
@@ -113,6 +123,16 @@ import {
     VendorStoreEmailEnvelopeFromJSON,
     VendorStoreEmailEnvelopeToJSON,
 } from '../models/VendorStoreEmailEnvelope';
+import {
+    type VendorTeamActivityEnvelope,
+    VendorTeamActivityEnvelopeFromJSON,
+    VendorTeamActivityEnvelopeToJSON,
+} from '../models/VendorTeamActivityEnvelope';
+import {
+    type VendorTeamInvitationListEnvelope,
+    VendorTeamInvitationListEnvelopeFromJSON,
+    VendorTeamInvitationListEnvelopeToJSON,
+} from '../models/VendorTeamInvitationListEnvelope';
 import {
     type VendorVerificationDraft,
     VendorVerificationDraftFromJSON,
@@ -152,15 +172,11 @@ export interface ActivateVendorStoreRequest {
     idempotencyKey: string;
 }
 
-export interface CaptureVendorPaymentConnectionRequest {
+export interface ChangeVendorStaffDisputesRequest {
     /**
      *
      */
-    idempotencyKey: string;
-    /**
-     *
-     */
-    vendorPaymentConnection: VendorPaymentConnection;
+    vendorStaffDisputeSetting: VendorStaffDisputeSetting;
 }
 
 export interface CompleteVendorSetupRequest {
@@ -179,6 +195,13 @@ export interface ConfirmVendorStoreEmailVerificationRequest {
      *
      */
     vendorStoreEmailConfirmation: VendorStoreEmailConfirmation;
+}
+
+export interface ConnectVendorPaymentRequest {
+    /**
+     *
+     */
+    idempotencyKey: string;
 }
 
 export interface DownloadVendorOnboardingFileRequest {
@@ -204,6 +227,20 @@ export interface InviteVendorTeamMemberRequest {
      *
      */
     vendorInvitationRequest: VendorInvitationRequest;
+}
+
+export interface ListVendorTeamActivityRequest {
+    /**
+     *
+     */
+    page?: number;
+}
+
+export interface ListVendorTeamInvitationsRequest {
+    /**
+     *
+     */
+    page?: number;
 }
 
 export interface PreviewVendorRequirementsRequest {
@@ -249,6 +286,13 @@ export interface RemovePendingVendorDocumentRequest {
      *
      */
     requirementKey: string;
+}
+
+export interface RemoveVendorStoreMediaRequest {
+    /**
+     *
+     */
+    mediaId: string;
 }
 
 export interface RequestVendorStoreEmailVerificationRequest {
@@ -471,20 +515,13 @@ export class VendorOnboardingApi extends runtime.BaseAPI {
     }
 
     /**
-     * Creates request options for captureVendorPaymentConnection without sending the request
+     * Creates request options for changeVendorStaffDisputes without sending the request
      */
-    async captureVendorPaymentConnectionRequestOpts(requestParameters: CaptureVendorPaymentConnectionRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['idempotencyKey'] == null) {
+    async changeVendorStaffDisputesRequestOpts(requestParameters: ChangeVendorStaffDisputesRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['vendorStaffDisputeSetting'] == null) {
             throw new runtime.RequiredError(
-                'idempotencyKey',
-                'Required parameter "idempotencyKey" was null or undefined when calling captureVendorPaymentConnection().'
-            );
-        }
-
-        if (requestParameters['vendorPaymentConnection'] == null) {
-            throw new runtime.RequiredError(
-                'vendorPaymentConnection',
-                'Required parameter "vendorPaymentConnection" was null or undefined when calling captureVendorPaymentConnection().'
+                'vendorStaffDisputeSetting',
+                'Required parameter "vendorStaffDisputeSetting" was null or undefined when calling changeVendorStaffDisputes().'
             );
         }
 
@@ -494,39 +531,35 @@ export class VendorOnboardingApi extends runtime.BaseAPI {
 
         headerParameters['Content-Type'] = 'application/json';
 
-        if (requestParameters['idempotencyKey'] != null) {
-            headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
-        }
-
         if (this.configuration && this.configuration.apiKey) {
             headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
         }
 
 
-        let urlPath = `/vendors/onboarding/payment-connection`;
+        let urlPath = `/vendors/account/staff-disputes`;
 
         return {
             path: urlPath,
-            method: 'POST',
+            method: 'PATCH',
             headers: headerParameters,
             query: queryParameters,
-            body: VendorPaymentConnectionToJSON(requestParameters['vendorPaymentConnection']),
+            body: VendorStaffDisputeSettingToJSON(requestParameters['vendorStaffDisputeSetting']),
         };
     }
 
     /**
      */
-    async captureVendorPaymentConnectionRaw(requestParameters: CaptureVendorPaymentConnectionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorOnboardingEnvelope>> {
-        const requestOptions = await this.captureVendorPaymentConnectionRequestOpts(requestParameters);
+    async changeVendorStaffDisputesRaw(requestParameters: ChangeVendorStaffDisputesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AccountMutationResultEnvelope>> {
+        const requestOptions = await this.changeVendorStaffDisputesRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => VendorOnboardingEnvelopeFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => AccountMutationResultEnvelopeFromJSON(jsonValue));
     }
 
     /**
      */
-    async captureVendorPaymentConnection(requestParameters: CaptureVendorPaymentConnectionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorOnboardingEnvelope> {
-        const response = await this.captureVendorPaymentConnectionRaw(requestParameters, initOverrides);
+    async changeVendorStaffDisputes(requestParameters: ChangeVendorStaffDisputesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AccountMutationResultEnvelope> {
+        const response = await this.changeVendorStaffDisputesRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -575,6 +608,7 @@ export class VendorOnboardingApi extends runtime.BaseAPI {
     }
 
     /**
+     * Requires a valid seven-day Store Operation schedule, applicable setup configuration and confirmed TEST payment connection. Missing or invalid hours return STORE_OPERATION_REQUIRED. Completion does not activate the store or approve verification.
      */
     async completeVendorSetupRaw(requestParameters: CompleteVendorSetupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorOnboardingEnvelope>> {
         const requestOptions = await this.completeVendorSetupRequestOpts(requestParameters);
@@ -584,6 +618,7 @@ export class VendorOnboardingApi extends runtime.BaseAPI {
     }
 
     /**
+     * Requires a valid seven-day Store Operation schedule, applicable setup configuration and confirmed TEST payment connection. Missing or invalid hours return STORE_OPERATION_REQUIRED. Completion does not activate the store or approve verification.
      */
     async completeVendorSetup(requestParameters: CompleteVendorSetupRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorOnboardingEnvelope> {
         const response = await this.completeVendorSetupRaw(requestParameters, initOverrides);
@@ -636,6 +671,58 @@ export class VendorOnboardingApi extends runtime.BaseAPI {
      */
     async confirmVendorStoreEmailVerification(requestParameters: ConfirmVendorStoreEmailVerificationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorOnboardingEnvelope> {
         const response = await this.confirmVendorStoreEmailVerificationRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for connectVendorPayment without sending the request
+     */
+    async connectVendorPaymentRequestOpts(requestParameters: ConnectVendorPaymentRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['idempotencyKey'] == null) {
+            throw new runtime.RequiredError(
+                'idempotencyKey',
+                'Required parameter "idempotencyKey" was null or undefined when calling connectVendorPayment().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (requestParameters['idempotencyKey'] != null) {
+            headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
+        }
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/vendors/onboarding/payment-connection`;
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Owner and current PAYMENT_CONFIGURATION authority only. Creates a platform-controlled TEST OWNED sub-account through backend POST /v2/accounts for simulated payments, without a Vendor invitation or separate Xendit login. A validated create response is PENDING until backend GET /v2/accounts/{id} confirms LIVE, which yields CONNECTED_TEST. Reuses existing associations and rejects uncertain duplicate attempts. No client-supplied account ID or URL is accepted. Responses are private and no-store.
+     */
+    async connectVendorPaymentRaw(requestParameters: ConnectVendorPaymentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorPaymentOnboardingEnvelope>> {
+        const requestOptions = await this.connectVendorPaymentRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => VendorPaymentOnboardingEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * Owner and current PAYMENT_CONFIGURATION authority only. Creates a platform-controlled TEST OWNED sub-account through backend POST /v2/accounts for simulated payments, without a Vendor invitation or separate Xendit login. A validated create response is PENDING until backend GET /v2/accounts/{id} confirms LIVE, which yields CONNECTED_TEST. Reuses existing associations and rejects uncertain duplicate attempts. No client-supplied account ID or URL is accepted. Responses are private and no-store.
+     */
+    async connectVendorPayment(requestParameters: ConnectVendorPaymentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorPaymentOnboardingEnvelope> {
+        const response = await this.connectVendorPaymentRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -899,6 +986,86 @@ export class VendorOnboardingApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates request options for listVendorTeamActivity without sending the request
+     */
+    async listVendorTeamActivityRequestOpts(requestParameters: ListVendorTeamActivityRequest): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        if (requestParameters['page'] != null) {
+            queryParameters['page'] = requestParameters['page'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/vendors/account/activity`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     */
+    async listVendorTeamActivityRaw(requestParameters: ListVendorTeamActivityRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorTeamActivityEnvelope>> {
+        const requestOptions = await this.listVendorTeamActivityRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => VendorTeamActivityEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async listVendorTeamActivity(requestParameters: ListVendorTeamActivityRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorTeamActivityEnvelope> {
+        const response = await this.listVendorTeamActivityRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for listVendorTeamInvitations without sending the request
+     */
+    async listVendorTeamInvitationsRequestOpts(requestParameters: ListVendorTeamInvitationsRequest): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        if (requestParameters['page'] != null) {
+            queryParameters['page'] = requestParameters['page'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/vendors/account/invitations`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Paginated organization-scoped invitation history. Delegated Managers cannot view Manager invitations. Invitation status is derived from acceptance, revocation and expiry.
+     */
+    async listVendorTeamInvitationsRaw(requestParameters: ListVendorTeamInvitationsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorTeamInvitationListEnvelope>> {
+        const requestOptions = await this.listVendorTeamInvitationsRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => VendorTeamInvitationListEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * Paginated organization-scoped invitation history. Delegated Managers cannot view Manager invitations. Invitation status is derived from acceptance, revocation and expiry.
+     */
+    async listVendorTeamInvitations(requestParameters: ListVendorTeamInvitationsRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorTeamInvitationListEnvelope> {
+        const response = await this.listVendorTeamInvitationsRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Creates request options for previewVendorRequirements without sending the request
      */
     async previewVendorRequirementsRequestOpts(requestParameters: PreviewVendorRequirementsRequest): Promise<runtime.RequestOpts> {
@@ -1103,6 +1270,55 @@ export class VendorOnboardingApi extends runtime.BaseAPI {
      */
     async removePendingVendorDocument(requestParameters: RemovePendingVendorDocumentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorOnboardingEnvelope> {
         const response = await this.removePendingVendorDocumentRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for removeVendorStoreMedia without sending the request
+     */
+    async removeVendorStoreMediaRequestOpts(requestParameters: RemoveVendorStoreMediaRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['mediaId'] == null) {
+            throw new runtime.RequiredError(
+                'mediaId',
+                'Required parameter "mediaId" was null or undefined when calling removeVendorStoreMedia().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/vendors/onboarding/media/{mediaId}`;
+        urlPath = urlPath.replace('{mediaId}', encodeURIComponent(String(requestParameters['mediaId'])));
+
+        return {
+            path: urlPath,
+            method: 'DELETE',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Removes the current Store Logo or Banner record. A stale media ID cannot remove its replacement; the returned onboarding snapshot recalculates the profile checklist.
+     */
+    async removeVendorStoreMediaRaw(requestParameters: RemoveVendorStoreMediaRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorOnboardingEnvelope>> {
+        const requestOptions = await this.removeVendorStoreMediaRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => VendorOnboardingEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * Removes the current Store Logo or Banner record. A stale media ID cannot remove its replacement; the returned onboarding snapshot recalculates the profile checklist.
+     */
+    async removeVendorStoreMedia(requestParameters: RemoveVendorStoreMediaRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorOnboardingEnvelope> {
+        const response = await this.removeVendorStoreMediaRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -1336,7 +1552,7 @@ export class VendorOnboardingApi extends runtime.BaseAPI {
     }
 
     /**
-     * Saves version-checked setup progress. Public-name, description and public-contact-only edits preserve completed setup and activation; operational changes reopen setup requirements. Every successful save advances the organization lock version.
+     * Saves version-checked setup progress. Public profile and weekly operating schedule edits preserve completed setup and activation; fulfillment changes reopen setup requirements. Every successful save advances the organization lock version.
      */
     async saveVendorSetupDraftRaw(requestParameters: SaveVendorSetupDraftRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorOnboardingEnvelope>> {
         const requestOptions = await this.saveVendorSetupDraftRequestOpts(requestParameters);
@@ -1346,7 +1562,7 @@ export class VendorOnboardingApi extends runtime.BaseAPI {
     }
 
     /**
-     * Saves version-checked setup progress. Public-name, description and public-contact-only edits preserve completed setup and activation; operational changes reopen setup requirements. Every successful save advances the organization lock version.
+     * Saves version-checked setup progress. Public profile and weekly operating schedule edits preserve completed setup and activation; fulfillment changes reopen setup requirements. Every successful save advances the organization lock version.
      */
     async saveVendorSetupDraft(requestParameters: SaveVendorSetupDraftRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorOnboardingEnvelope> {
         const response = await this.saveVendorSetupDraftRaw(requestParameters, initOverrides);
@@ -1726,6 +1942,7 @@ export const UploadVendorStoreMediaKindEnum = {
     Banner: 'BANNER',
     PromotionalImage: 'PROMOTIONAL_IMAGE',
     PromotionalVideo: 'PROMOTIONAL_VIDEO',
+    VehicleImage: 'VEHICLE_IMAGE',
 } as const;
 export type UploadVendorStoreMediaKindEnum = typeof UploadVendorStoreMediaKindEnum[keyof typeof UploadVendorStoreMediaKindEnum];
 /**

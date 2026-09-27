@@ -20,6 +20,13 @@ import {
     VendorSetupDraftDeliveryToJSON,
     VendorSetupDraftDeliveryToJSONTyped,
 } from './VendorSetupDraftDelivery';
+import type { StoreOperatingDay } from './StoreOperatingDay';
+import {
+    StoreOperatingDayFromJSON,
+    StoreOperatingDayFromJSONTyped,
+    StoreOperatingDayToJSON,
+    StoreOperatingDayToJSONTyped,
+} from './StoreOperatingDay';
 import type { VendorSetupDraftVehiclesInner } from './VendorSetupDraftVehiclesInner';
 import {
     VendorSetupDraftVehiclesInnerFromJSON,
@@ -44,6 +51,14 @@ export interface VendorSetupDraft {
      */
     organizationLockVersion: number;
     /**
+     * Encrypted JSON setup form progress. Unfinished vehicle entries are not operational configurations. Returned privately as setup.form_state.
+     */
+    formState?: string;
+    /**
+     * Owner-only immediate pause of all new procurement. Existing work and messaging remain available. Does not alter weekly hours or activation.
+     */
+    vacationMode?: boolean;
+    /**
      *
      */
     publicStoreName?: string;
@@ -67,6 +82,10 @@ export interface VendorSetupDraft {
      *
      */
     publicPhone?: string | null;
+    /**
+     * Complete replacement of the normal weekly schedule. All seven distinct weekdays are required. Closed days have null times; Open days need a same-day opening and later closing time.
+     */
+    operatingSchedule?: Array<StoreOperatingDay>;
     /**
      *
      */
@@ -110,12 +129,15 @@ export function VendorSetupDraftFromJSONTyped(json: any, ignoreDiscriminator: bo
             ...json,
         'draftLockVersion': json['draft_lock_version'] == null ? undefined : json['draft_lock_version'],
         'organizationLockVersion': json['organization_lock_version'],
+        'formState': json['form_state'] == null ? undefined : json['form_state'],
+        'vacationMode': json['vacation_mode'] == null ? undefined : json['vacation_mode'],
         'publicStoreName': json['public_store_name'] == null ? undefined : json['public_store_name'],
         'description': json['description'] === undefined ? undefined : json['description'] === null ? null : json['description'],
         'bulkCapability': json['bulk_capability'] == null ? undefined : json['bulk_capability'],
         'fulfillmentMethod': json['fulfillment_method'] == null ? undefined : json['fulfillment_method'],
         'publicEmail': json['public_email'] === undefined ? undefined : json['public_email'] === null ? null : json['public_email'],
         'publicPhone': json['public_phone'] === undefined ? undefined : json['public_phone'] === null ? null : json['public_phone'],
+        'operatingSchedule': json['operating_schedule'] == null ? undefined : ((json['operating_schedule'] as Array<any>).map(StoreOperatingDayFromJSON)),
         'delivery': json['delivery'] == null ? undefined : VendorSetupDraftDeliveryFromJSON(json['delivery']),
         'vehicles': json['vehicles'] == null ? undefined : ((json['vehicles'] as Array<any>).map(VendorSetupDraftVehiclesInnerFromJSON)),
     };
@@ -135,12 +157,15 @@ export function VendorSetupDraftToJSONTyped(value?: VendorSetupDraft | null, ign
             ...value,
         'draft_lock_version': value['draftLockVersion'],
         'organization_lock_version': value['organizationLockVersion'],
+        'form_state': value['formState'],
+        'vacation_mode': value['vacationMode'],
         'public_store_name': value['publicStoreName'],
         'description': value['description'],
         'bulk_capability': value['bulkCapability'],
         'fulfillment_method': value['fulfillmentMethod'],
         'public_email': value['publicEmail'],
         'public_phone': value['publicPhone'],
+        'operating_schedule': value['operatingSchedule'] == null ? undefined : ((value['operatingSchedule'] as Array<any>).map(StoreOperatingDayToJSON)),
         'delivery': VendorSetupDraftDeliveryToJSON(value['delivery']),
         'vehicles': value['vehicles'] == null ? undefined : ((value['vehicles'] as Array<any>).map(VendorSetupDraftVehiclesInnerToJSON)),
     };

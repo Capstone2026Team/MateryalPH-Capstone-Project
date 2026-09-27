@@ -50,6 +50,7 @@ return [
         'cloud_name' => env('CLOUDINARY_CLOUD_NAME'),
         'api_key' => env('CLOUDINARY_API_KEY'),
         'api_secret' => env('CLOUDINARY_API_SECRET'),
+        'asset_folder' => env('CLOUDINARY_ASSET_FOLDER', 'marketplace'),
     ],
 
     'google_maps' => [
@@ -58,7 +59,7 @@ return [
     ],
 
     'xendit' => [
-        'mode' => env('XENDIT_MODE', 'TEST'),
+        'mode' => strtoupper((string) env('XENDIT_MODE', 'TEST')),
         'secret_key' => env('XENDIT_SECRET_KEY'),
         'webhook_token' => env('XENDIT_WEBHOOK_VERIFICATION_TOKEN'),
         'base_url' => env('XENDIT_API_BASE_URL', 'https://api.xendit.co'),

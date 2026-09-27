@@ -215,11 +215,25 @@ The refund preview uses original paid amounts and earlier refunds. It does not d
 - **Flow.** The Buyer may respond to clarification, accept a proposed resolution, add permitted evidence, or appeal once with new relevant evidence. A refund awarded at conclusion is displayed as a separate linked process.
 - **Logic.** Case events are append-only. The Buyer cannot change the original complaint after the Vendor responds but may submit labeled supplemental evidence. Deadline calculations use Asia/Manila time.
 
+**Order-specific fulfillment thread.** When the Buyer's order reaches `READY_FOR_PICKUP` or `OUT_FOR_DELIVERY`, Order Details provides **Fulfillment Messages** for pickup/delivery coordination. This is separate from the normal sales/quotation conversation. Assigned Fulfillment Staff may clarify arrival, route access, alternative drop-off, unloading, delays and evidence; they do not gain access to all Buyer inquiries. Owner and Store Manager retain authorized oversight.
+
+Each message shows the store and actual employee's public name, role and avatar. A handler transfer keeps earlier attribution visible and removes a former employee's future access. Private employee contacts, IDs and business-verification evidence remain hidden. A fulfillment message proposing a new fee or endpoint is only a communication; it cannot revise accepted commercial terms or mark payment successful. An order state transition, payment confirmation or commercial amendment must still use its formal authorized action. An unavailable realtime channel falls back to the existing REST message synchronization without duplicating the thread or losing saved messages.
+
 **Vendor Store Profile**
 
 - **Design.** The storefront displays verified business identity, address/service area, categories, active listings, fulfillment and payment methods, eligible badges, rating summary, compliance indicators, business hours, Favorite, Message, and Report actions.
 - **Flow.** The Buyer may browse eligible products, start a general inquiry, save the Vendor, open directions, or report inaccurate information. Purchasing always begins from a Tier 2 listing, accepted quotation, or formal order request.
 - **Logic.** Private business documents, payout data, internal stock, and staff contact information remain hidden. Suspended or inactive stores show an appropriate restriction and block new transactions while preserving existing-order access.
+
+**Store Profile data from the new Vendor onboarding.** Use the active store's saved Public Store Name, Logo, Banner, description, approved public contacts, structured store address, Supplier Type/niches, procurement capability, supported fulfillment methods and saved Store Operation schedule. Public Store Name is synchronized across the Vendor's profile and Business Information; it does not replace the separately reviewed legal identity. Present only the allowlisted public legal/business fields. Government ID front/back, full TIN, authority documents, representative private contacts, BIR COR, sworn declarations, provider account identifiers, credentials and internal review remarks are never returned to Buyer browsing APIs.
+
+**Store Hours.** Display Monday–Sunday with opening/closing times and explicit Closed days, using Asia/Manila. Where configured, a date-specific Open/Closed entry overrides only that date. Group days only when their schedules match. An optional Open Now/Closed Today/next-opening label is derived from the saved schedule and server time; it is informational, not proof of staff attendance, immediate response or stock. Never infer holiday closures. If schedule data cannot be loaded, show Hours Unavailable with retry rather than inventing Open/Closed. A cached view shows its freshness and refreshes on resume.
+
+Public hours do not alter accepted fulfillment dates, payment windows, quotation expiry or dispute deadlines. A Buyer may continue permitted browsing and messaging outside hours; the existing order rules still determine whether a request is accepted. A Vendor schedule edit cannot rewrite an accepted pickup/delivery commitment.
+
+**Verification, activation and discovery.** Uploading onboarding documents, completing profile media, setting hours or connecting a TEST account does not independently create a verified public store. The backend first applies the Vendor's approval and activation gates. A store can be active with zero eligible listings; it is then excluded from offering-Vendor discovery and the Explore vendor/product counts until it has eligible available listings. A store's Closed-hours indicator is separate from activation and inventory eligibility and does not by itself remove it from Materials Analytics. A later listing, inventory or compliance restriction is reflected when the Buyer opens an old card; do not permit checkout from stale discovery data. Existing-order history and support remain accessible under the order's permissions.
+
+An active store's bulk-capability Yes supports both Item-Based and Project-Based eligibility; No supports Item-Based only. Changing the capability affects future matching, never an already accepted Work Package order. Tier 1 Directory Suppliers retain their attributed provider details and do not inherit Tier 2 onboarding, checkout, staff messaging or analytics inventory.
 
 **Invoice Request**
 
@@ -354,6 +368,12 @@ Accepting one Vendor quotation or completing one direct Vendor selection assigns
 ## 5. Checkout and Payment Processing
 
 ### Delivery Fee Calculation
+
+**Destination and access information shared by both procurement modes.** During Site Delivery, ask whether the Buyer knows of a Heavy-Vehicle Restriction. A Yes answer requires an alternative drop-off address/pin and essential access/unloading instructions. Retain the intended project/delivery address separately, show both on review, and explicitly identify the alternative as the delivery endpoint used for route distance and fee calculation. A No answer uses the intended delivery location but does not guarantee unrestricted access. A saved Project site is never overwritten with the alternate drop-off. If an alternate lies outside Vendor coverage or a route cannot be confirmed, show a fulfillment-review blocker instead of a fictitious distance or zero delivery fee.
+
+**Vehicle and trip recommendation.** Use the fulfilling Vendor's currently configured eligible vehicles. Conventional materials use actual weight, cargo dimensions and capacity checks. Ready-mixed concrete uses required m³ and mixer capacity, with payload/access checks; bagged cement remains conventional cargo. Mixed loads may require separate compatible groups. The suggestion is advisory and must identify missing physical data or the need for manual arrangement. The Vendor confirms vehicles, counts, trips, endpoint, expected fulfillment date and final fee before Buyer acceptance/payment. Display material fee changes through the existing quotation/revision summary, including any alternate drop-off and additional trip. Do not silently accept a new location or price for the Buyer.
+
+The accepted order preserves its delivery and financial snapshot. Later vehicle deletion, capacity/rate changes, profile edits or schedule changes cannot change that record. A further commercial revision follows the existing approval rules. There is no automatic dispatch or live GPS tracking.
 
 For Site Delivery, the system recommends the most suitable configured vehicle. If the load exceeds one vehicle or trip, the Vendor confirms the number of vehicles or trips before the final delivery fee is presented. The final fee uses the Vendor's base fee, per-kilometer rate, route distance, confirmed trips, capacity, and documented access restrictions.
 

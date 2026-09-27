@@ -27,6 +27,7 @@
 .portal-footer-account { display: flex; align-items: center; gap: 10px; min-height: 48px; border-radius: 8px; padding: 4px 8px; text-decoration: none; }
 .portal-footer-account:hover { background: var(--mp-color-surface-canvas); }
 .portal-footer-avatar { display: grid; flex: 0 0 32px; width: 32px; height: 32px; place-items: center; border-radius: 9px; background: var(--mp-color-brand-orange-100); color: var(--mp-color-action-primary); font-size: 12px; font-weight: 700; }
+.portal-footer-avatar img { width: 100%; height: 100%; border-radius: inherit; object-fit: contain; }
 .portal-footer-details { display: grid; min-width: 0; gap: 3px; transition: opacity 140ms ease; }
 .portal-footer-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; line-height: 18px; font-weight: 650; }
 .portal-footer-status { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; line-height: 16px; color: var(--mp-color-text-secondary); }
@@ -35,10 +36,11 @@
 /* 36px desktop rows use the documented dense-navigation exception (WCAG minimum 24px).
    Touch/tablet drawers retain 44px targets; header/footer remain fixed at every height. */
 @media (min-width: 1024px) {
-  .portal-layout { display: grid; grid-template-columns: var(--portal-sidebar-width) minmax(0, 1fr); height: 100dvh; overflow: hidden; transition: grid-template-columns 180ms ease; }
+  html:has(.portal-layout), body:has(.portal-layout) { overflow: hidden; }
+  .portal-layout { display: grid; position: relative; grid-template-columns: var(--portal-sidebar-width) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); height: 100dvh; min-height: 0; overflow: hidden; transition: grid-template-columns 180ms ease; }
   .portal-layout.is-collapsed { --portal-sidebar-width: 4.5rem; }
   .portal-sidebar, .portal-sidebar.is-open { display: block; position: static; height: 100%; min-height: 0; min-width: 0; overflow: hidden; border-right: 1px solid var(--mp-color-border-default); }
-  .portal-workspace { overflow-y: auto; min-height: 0; }
+  .portal-workspace { overflow-y: auto; min-height: 0; overscroll-behavior-y: contain; }
   .portal-drawer-toggle { display: none; }
   .portal-collapse-toggle { display: inline-flex; width: 32px; height: 32px; }
   .portal-nav-row { min-height: 36px; padding-block: 8px; }
@@ -50,7 +52,7 @@
   .portal-nav-text { white-space: nowrap; }
   .portal-nav-row { overflow: hidden; }
   .portal-nav-text { overflow: hidden; text-overflow: ellipsis; }
-  .portal-nav-tooltip { display: block; position: fixed; transform: translateY(-50%); z-index: 60; max-width: min(20rem, 60vw); padding: 8px 12px; border: 1px solid var(--mp-color-border-default); border-radius: 6px; background: var(--mp-color-surface-primary); color: var(--mp-color-text-strong); box-shadow: 0 2px 8px var(--mp-color-border-default); font-size: 12px; pointer-events: none; }
+  .is-collapsed .portal-nav-tooltip { display: block; position: fixed; transform: translateY(-50%); z-index: 60; max-width: min(20rem, 60vw); padding: 8px 12px; border: 1px solid var(--mp-color-border-default); border-radius: 6px; background: var(--mp-color-surface-primary); color: var(--mp-color-text-strong); box-shadow: 0 2px 8px var(--mp-color-border-default); font-size: 12px; pointer-events: none; }
   .is-collapsed .portal-sidebar-header { flex-direction: column; justify-content: center; padding: 8px; gap: 4px; }
   .is-collapsed .portal-wordmark { flex: 0 0 auto; }
   .is-collapsed .portal-brand-full { display: none; }

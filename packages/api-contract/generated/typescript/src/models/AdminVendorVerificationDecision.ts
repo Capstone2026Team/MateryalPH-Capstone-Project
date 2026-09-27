@@ -36,6 +36,10 @@ export interface AdminVendorVerificationDecision {
      */
     lockVersion?: number;
     /**
+     * Current lock version of every applicable underlying requirement when deciding a grouped review item.
+     */
+    requirementVersions?: { [key: string]: number; };
+    /**
      *
      */
     reason?: string | null;
@@ -134,6 +138,7 @@ export function AdminVendorVerificationDecisionFromJSONTyped(json: any, ignoreDi
         'authorityScopes': json['authority_scopes'] == null ? undefined : json['authority_scopes'],
         'decision': json['decision'],
         'lockVersion': json['lock_version'] == null ? undefined : json['lock_version'],
+        'requirementVersions': json['requirement_versions'] == null ? undefined : json['requirement_versions'],
         'reason': json['reason'] === undefined ? undefined : json['reason'] === null ? null : json['reason'],
         'verifiedDocumentNumber': json['verified_document_number'] === undefined ? undefined : json['verified_document_number'] === null ? null : json['verified_document_number'],
         'verifiedIssueDate': json['verified_issue_date'] === undefined ? undefined : json['verified_issue_date'] === null ? null : (parseDate(json['verified_issue_date'])),
@@ -160,6 +165,7 @@ export function AdminVendorVerificationDecisionToJSONTyped(value?: AdminVendorVe
         'authority_scopes': value['authorityScopes'],
         'decision': value['decision'],
         'lock_version': value['lockVersion'],
+        'requirement_versions': value['requirementVersions'],
         'reason': value['reason'],
         'verified_document_number': value['verifiedDocumentNumber'],
         'verified_issue_date': value['verifiedIssueDate'] == null ? value['verifiedIssueDate'] : serializeDate(value['verifiedIssueDate']),

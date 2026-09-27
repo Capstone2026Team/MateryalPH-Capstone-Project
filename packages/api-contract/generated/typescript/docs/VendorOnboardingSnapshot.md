@@ -13,7 +13,7 @@ Name | Type
 `organization` | { [key: string]: any; }
 `sections` | [{ [key: string]: VendorOnboardingSection; }](VendorOnboardingSection.md)
 `verification` | { [key: string]: any; }
-`setup` | { [key: string]: any; }
+`setup` | [VendorOnboardingSnapshotSetup](VendorOnboardingSnapshotSetup.md)
 `activation` | [VendorActivationSnapshot](VendorActivationSnapshot.md)
 `welcomeRequired` | boolean
 `permissions` | Array&lt;string&gt;

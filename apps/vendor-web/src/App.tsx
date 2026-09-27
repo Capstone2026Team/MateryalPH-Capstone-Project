@@ -1,9 +1,9 @@
 import { VendorPlaceholderPage } from './pages/PhaseThreeVendorPages'
 import { AcceptStaffInvitation } from './pages/AcceptStaffInvitation'
-import { Button, Field, PhoneField, StatusMessage } from '@materyalph/web-ui'
+import { Button, Field, PhoneField, StatusMessage, PortalIdentityProvider } from '@materyalph/web-ui'
 import { ArrowRight } from 'lucide-react'
 import { type FormEvent, type ReactNode, useEffect, useRef, useState } from 'react'
-import { BrowserRouter, Link, Route, Routes, useNavigate, useSearchParams } from 'react-router-dom'
+import { BrowserRouter, Link, Outlet, Route, Routes, useNavigate, useSearchParams } from 'react-router-dom'
 
 import './App.css'
 import { AuthenticatedPublicPage } from './pages/AuthenticatedPublicPage'
@@ -24,6 +24,7 @@ import {
   VendorVerifyEmailPage,
 } from './pages/AuthSupportPages'
 import { VendorLandingPage } from './pages/VendorLandingPage'
+import { VendorLegalPage } from './pages/VendorLegalPage'
 import { VendorAccountPage, VendorStoreProfilePage, VendorDashboardPage, VendorSetupPage, VendorTeamPage, VendorVerificationPage, VendorWelcomePage } from './pages/PhaseThreeVendorPages'
 
 function App() {
@@ -41,19 +42,21 @@ function App() {
         <Route path="/auth/mfa" element={<VendorMfaPage />} />
         <Route path="/auth/callback" element={<VendorAuthCallbackPage />} />
         <Route path="/entry" element={<VendorEntryPage />} />
-        <Route path="/welcome" element={<VendorWelcomePage />} />
-        <Route path="/preview/:module" element={<VendorPlaceholderPage />} />
-        <Route path="/dashboard" element={<VendorDashboardPage />} />
-        <Route path="/onboarding/verification" element={<VendorVerificationPage />} />
-        <Route path="/onboarding/setup" element={<VendorSetupPage />} />
-        <Route path="/team" element={<VendorTeamPage />} />
-        <Route path="/settings" element={<VendorAccountPage />} />
-        <Route path="/store-profile" element={<VendorStoreProfilePage />} />
+        <Route element={<PortalIdentityProvider portal="vendors" basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'}><Outlet /></PortalIdentityProvider>}>
+          <Route path="/welcome" element={<VendorWelcomePage />} />
+          <Route path="/preview/:module" element={<VendorPlaceholderPage />} />
+          <Route path="/dashboard" element={<VendorDashboardPage />} />
+          <Route path="/onboarding/verification" element={<VendorVerificationPage />} />
+          <Route path="/onboarding/setup" element={<VendorSetupPage />} />
+          <Route path="/team" element={<VendorTeamPage />} />
+          <Route path="/settings" element={<VendorAccountPage />} />
+          <Route path="/store-profile" element={<VendorStoreProfilePage />} />
+        </Route>
         <Route path="/fees" element={<InfoPage title="Payments and fees"><FeesContent /></InfoPage>} />
         <Route path="/verification" element={<InfoPage title="Vendor verification"><VerificationContent /></InfoPage>} />
         <Route path="/opportunities" element={<InfoPage title="Marketplace opportunities"><OpportunitiesContent /></InfoPage>} />
         <Route path="/support" element={<InfoPage title="Vendor support"><SupportContent /></InfoPage>} />
-        <Route path="/legal/:document" element={<InfoPage title="Legal and privacy"><LegalContent /></InfoPage>} />
+        <Route path="/legal/:document" element={<VendorLegalPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
@@ -119,10 +122,10 @@ function LoginPage() {
       : null
 
   return (
-    <VendorAuthShell title="Welcome back" description="Sign in to your Vendor account. Store activation is reviewed separately.">
+    <VendorAuthShell login title="Welcome back" description="Sign in to your Vendor account. Store activation is reviewed separately.">
       {challenge && pending
         ? <RiskOtpPanel challenge={challenge} email={pending.email} onCancel={() => { setChallenge(null); setPending(null) }} onVerified={() => attempt(pending, true)} />
-        : <form className="auth-form" onSubmit={submit}>
+        : <form className="auth-form" aria-busy={busy} onSubmit={submit}>
             {successMessage && <StatusMessage tone="success">{successMessage}</StatusMessage>}
             {message && <StatusMessage tone="error">{message}</StatusMessage>}
             <Button className="w-full" variant="secondary" onClick={() => void googleSignIn()} disabled={busy}>Continue with Google</Button>
@@ -224,7 +227,7 @@ function RegisterPage() {
   }
 
   return (
-    <VendorAuthShell title="Register your store" description="Create the Vendor Owner account first. Store activation follows a separate reviewed process.">
+    <VendorAuthShell scrollPanel title="Register your store" description="Create the Vendor Owner account first. Store activation follows a separate reviewed process.">
       {challenge && pending
         ? <RiskOtpPanel challenge={challenge} email={pending.email} onCancel={() => { setChallenge(null); setPending(null) }} onVerified={() => attempt(pending, true)} />
         : <form className="auth-form" onSubmit={submit}>
@@ -238,11 +241,11 @@ function RegisterPage() {
             <Field error={fieldError('password')} label="Password" name="password" type="password" autoComplete="new-password" minLength={12} hint="At least 12 characters with uppercase, lowercase, and a number." onChange={() => clearFieldErrors('password', 'password_confirmation')} required />
             <Field error={fieldError('password_confirmation')} label="Confirm password" name="password_confirmation" type="password" autoComplete="new-password" minLength={12} onChange={() => clearFieldErrors('password_confirmation', 'password')} required />
             <div className="grid gap-2">
-              <label className="consent"><input aria-describedby={fieldError('terms_accepted') ? 'terms_accepted-error' : undefined} aria-invalid={fieldError('terms_accepted') ? true : undefined} id="terms_accepted" name="terms_accepted" type="checkbox" onChange={() => clearFieldErrors('terms_accepted')} required /><span>I accept the versioned <Link to="/legal/terms-of-service">Terms of Service</Link>.</span></label>
+              <label className="consent"><input aria-describedby={fieldError('terms_accepted') ? 'terms_accepted-error' : undefined} aria-invalid={fieldError('terms_accepted') ? true : undefined} id="terms_accepted" name="terms_accepted" type="checkbox" onChange={() => clearFieldErrors('terms_accepted')} required /><span>I accept the versioned <Link to="/legal/terms-of-service" target="_blank" rel="noopener noreferrer" aria-label="Terms of Service (opens in a new tab)">Terms of Service</Link>.</span></label>
               {fieldError('terms_accepted') && <p className="text-sm text-status-error" id="terms_accepted-error" role="alert">{fieldError('terms_accepted')}</p>}
             </div>
             <div className="grid gap-2">
-              <label className="consent"><input aria-describedby={fieldError('privacy_accepted') ? 'privacy_accepted-error' : undefined} aria-invalid={fieldError('privacy_accepted') ? true : undefined} id="privacy_accepted" name="privacy_accepted" type="checkbox" onChange={() => clearFieldErrors('privacy_accepted')} required /><span>I acknowledge the separate <Link to="/legal/privacy-notice">Privacy Notice</Link>.</span></label>
+              <label className="consent"><input aria-describedby={fieldError('privacy_accepted') ? 'privacy_accepted-error' : undefined} aria-invalid={fieldError('privacy_accepted') ? true : undefined} id="privacy_accepted" name="privacy_accepted" type="checkbox" onChange={() => clearFieldErrors('privacy_accepted')} required /><span>I acknowledge the separate <Link to="/legal/privacy-notice" target="_blank" rel="noopener noreferrer" aria-label="Privacy Notice (opens in a new tab)">Privacy Notice</Link>.</span></label>
               {fieldError('privacy_accepted') && <p className="text-sm text-status-error" id="privacy_accepted-error" role="alert">{fieldError('privacy_accepted')}</p>}
             </div>
             <button className="accessible-fallback" type="button" aria-pressed={useEmailCheck} onClick={() => { captchaRef.current?.reset(); clearFieldErrors('bot_protection', 'bot_protection.recaptcha_token'); setUseEmailCheck((value) => !value) }}>{useEmailCheck ? 'Email security check selected' : 'Use an email security check instead'}</button>
@@ -306,10 +309,6 @@ function OpportunitiesContent() {
 
 function SupportContent() {
   return <div className="info-copy"><p>Account recovery uses a short-lived, single-use email code. Never send passwords, OTPs, access tokens, payment details, or private documents through support messages.</p><p>If login is unavailable, use the recovery action on the sign-in page. Operational support routes will be added with their authorized workflow.</p></div>
-}
-
-function LegalContent() {
-  return <div className="info-copy"><StatusMessage>Version metadata is served by the API. Final legal text and production approval remain a release gate.</StatusMessage><p>Terms acceptance and Privacy Notice acknowledgment are recorded separately with version, user, timestamp, and source.</p></div>
 }
 
 function NotFound() {

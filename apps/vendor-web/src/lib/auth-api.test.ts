@@ -180,6 +180,69 @@ describe('Vendor auth API transport', () => {
     await expect(getSession()).rejects.toMatchObject({ response: { status: 429 } })
     expect(fetchMock).toHaveBeenCalledOnce()
   })
+
+  test('later protected requests honor a throttled refresh without resending it', async () => {
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(100000)
+    const base = 'http://localhost:8080/api/v1'
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      if (String(input).endsWith('/auth/csrf')) return jsonResponse({ data: { csrf_token: 'refresh-cooldown-test' } })
+      if (String(input).endsWith('/auth/refresh')) return new Response('{}', { status: 429, headers: { 'Retry-After': '30' } })
+      return new Response('{}', { status: 401 })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const transport = createWebApiConfiguration(base, { refreshSession: true }).fetchApi!
+    try {
+      for (const path of ['/auth/session', '/vendors/account/profile', '/admin/account/profile']) {
+        expect((await transport(`${base}${path}`)).status).toBe(429)
+      }
+      expect(fetchMock.mock.calls.filter(([input]) => String(input).endsWith('/auth/refresh'))).toHaveLength(1)
+      clock.mockReturnValue(131000)
+      await transport(`${base}/auth/session`)
+      expect(fetchMock.mock.calls.filter(([input]) => String(input).endsWith('/auth/refresh'))).toHaveLength(2)
+    } finally { clock.mockRestore() }
+  })
+
+  test('a rejected CSRF bootstrap is not repeatedly requested by subsequent clicks', async () => {
+    const fetchMock = vi.fn(async () => new Response('{}', { status: 429, headers: { 'Retry-After': '30' } }))
+    vi.stubGlobal('fetch', fetchMock)
+    await expect(signOut()).rejects.toMatchObject({ response: { status: 429 } })
+    await expect(signOut()).rejects.toMatchObject({ response: { status: 429 } })
+    expect(fetchMock).toHaveBeenCalledOnce()
+  })
+
+  test('a refresh with persistent CSRF failure stops after one token renewal', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => String(input).endsWith('/auth/csrf')
+      ? jsonResponse({ data: { csrf_token: 'renewed-csrf-test' } })
+      : new Response('{}', { status: String(input).endsWith('/auth/refresh') ? 419 : 401 }))
+    vi.stubGlobal('fetch', fetchMock)
+    await expect(getSession()).rejects.toMatchObject({ response: { status: 419 } })
+    expect(fetchMock.mock.calls.filter(([input]) => String(input).endsWith('/auth/refresh'))).toHaveLength(2)
+    expect(fetchMock.mock.calls.filter(([input]) => String(input).endsWith('/auth/csrf'))).toHaveLength(2)
+  })
+
+  test('a late old-session 401 reuses the completed refresh and retries only once', async () => {
+    const base = 'http://localhost:8080/api/v1'
+    let releaseLate: (response: Response) => void = () => { throw new Error('Missing late request') }
+    let fastCalls = 0
+    let slowCalls = 0
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.endsWith('/auth/csrf')) return jsonResponse({ data: { csrf_token: 'late-session-csrf' } })
+      if (url.endsWith('/auth/refresh')) return jsonResponse({ data: {} })
+      if (url.endsWith('/slow') && ++slowCalls === 1) return new Promise<Response>(resolve => { releaseLate = resolve })
+      if (url.endsWith('/fast') && ++fastCalls === 1) return new Response('{}', { status: 401 })
+      return new Response('{}', { status: 401 })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const transport = createWebApiConfiguration(base, { refreshSession: true }).fetchApi!
+    const slow = transport(`${base}/slow`)
+    expect((await transport(`${base}/fast`)).status).toBe(401)
+    releaseLate(new Response('{}', { status: 401 }))
+    expect((await slow).status).toBe(401)
+    expect(fetchMock.mock.calls.filter(([input]) => String(input).endsWith('/auth/refresh'))).toHaveLength(1)
+    expect(fastCalls).toBe(2)
+    expect(slowCalls).toBe(2)
+  })
 })
 
 function jsonResponse(body: unknown, status = 200): Response {

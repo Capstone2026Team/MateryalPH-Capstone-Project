@@ -22,7 +22,27 @@ describe('Vendor public portal', () => {
     delete window.grecaptcha
     resetEnterpriseLoaderForTests()
     vi.unstubAllEnvs()
+    vi.unstubAllGlobals()
     vi.restoreAllMocks()
+  })
+
+  test('shows invitation acceptance validation beside the affected field', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: { csrf_token: 'test-csrf-token' }, meta: {}, errors: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+      .mockResolvedValueOnce(validationError({ password: ['The password must contain at least one uppercase and one lowercase letter.'] }).response)
+    vi.stubGlobal('fetch', fetchMock)
+    window.history.replaceState({}, '', '/accept-invite?token=test-token')
+    render(<App />)
+
+    fireEvent.change(screen.getByLabelText(/Invited email/i), { target: { value: 'employee@example.test' } })
+    fireEvent.change(screen.getByLabelText(/Full name/i), { target: { value: 'Test Employee' } })
+    fireEvent.change(screen.getByLabelText(/^Password/i, { selector: 'input' }), { target: { value: 'ValidPassword123' } })
+    fireEvent.change(screen.getByLabelText(/^Confirm password/i, { selector: 'input' }), { target: { value: 'ValidPassword123' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Accept invitation' }))
+
+    expect(await screen.findByText('The password must contain at least one uppercase and one lowercase letter.')).toBeVisible()
+    expect(screen.getByLabelText(/^Password/i, { selector: 'input' })).toHaveAttribute('aria-invalid', 'true')
+    expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
   test('renders the approved opportunity, verification, and fee disclosures', () => {
@@ -61,6 +81,20 @@ describe('Vendor public portal', () => {
     expect(screen.getByRole('heading', { name: 'Register your store' })).toBeVisible()
     expect(screen.getByRole('button', { name: /create owner account/i })).toBeEnabled()
     expect(screen.getByRole('link', { name: 'Register with Google' })).toHaveAttribute('href', '/register/google')
+  })
+
+  test.each(['/register', '/register/google'])('opens sign-up documents in a separate tab on %s', (path) => {
+    window.history.replaceState({}, '', path)
+    render(<App />)
+    for (const [name, href] of [
+      ['Terms of Service', '/legal/terms-of-service'],
+      ['Privacy Notice', '/legal/privacy-notice'],
+    ]) {
+      const link = screen.getByRole('link', { name: `${name} (opens in a new tab)` })
+      expect(link).toHaveAttribute('href', href)
+      expect(link).toHaveAttribute('target', '_blank')
+      expect(link).toHaveAttribute('rel', 'noopener noreferrer')
+    }
   })
 
   test('shows a friendly portal-isolation error after a denied Google callback', () => {

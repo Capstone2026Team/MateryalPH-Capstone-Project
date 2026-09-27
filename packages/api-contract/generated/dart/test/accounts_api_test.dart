@@ -180,6 +180,11 @@ void main() {
       // TODO
     });
 
+    //Future<AccountMutationResultEnvelope> updateVendorStaff(String membershipId, VendorStaffUpdate vendorStaffUpdate) async
+    test('test updateVendorStaff', () async {
+      // TODO
+    });
+
     // Owner-only personal photo. Maximum 2 MB JPEG/PNG/WebP and 4096 pixels per dimension. Malware-scanned, re-encoded to 256px PNG, privately stored. Five uploads/minute within the overall account budget. Fails closed if scanning or processing is unavailable.
     //
     //Future<AccountProfileEnvelope> uploadAccountPhoto(String webAccountPortal, MultipartFile photo, int lockVersion) async

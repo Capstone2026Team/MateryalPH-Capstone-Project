@@ -8,7 +8,7 @@ import * as api from '../lib/onboarding-api'
 import { ResponseError } from '@materyalph/api-client-ts'
 import { vendorLoginDestination } from '../lib/vendor-destination'
 
-vi.mock('../lib/onboarding-api', async original => ({ ...await original<typeof import('../lib/onboarding-api')>(), getVendorOnboarding: vi.fn(), previewVendorRequirements: vi.fn(), dismissVendorWelcome: vi.fn(), saveVendorVerificationDraft: vi.fn(), saveVendorSetupDraft: vi.fn(), submitVendorVerification: vi.fn(), completeVendorSetup: vi.fn(), getVendorPrivateFileUrl: vi.fn(), uploadVendorMedia: vi.fn(), uploadVendorDocument: vi.fn(), removePendingVendorDocument: vi.fn(), requestStoreEmailVerification: vi.fn(), confirmStoreEmailVerification: vi.fn() }))
+vi.mock('../lib/onboarding-api', async original => ({ ...await original<typeof import('../lib/onboarding-api')>(), getVendorOnboarding: vi.fn(), previewVendorRequirements: vi.fn(), dismissVendorWelcome: vi.fn(), saveVendorVerificationDraft: vi.fn(), saveVendorSetupDraft: vi.fn(), submitVendorVerification: vi.fn(), completeVendorSetup: vi.fn(), getVendorPrivateFileUrl: vi.fn(), uploadVendorMedia: vi.fn(), removeVendorMedia: vi.fn(), uploadVendorDocument: vi.fn(), removePendingVendorDocument: vi.fn(), requestStoreEmailVerification: vi.fn(), confirmStoreEmailVerification: vi.fn() }))
 let snapshot: api.VendorOnboardingSnapshot
 beforeEach(() => {
   vi.clearAllMocks()
@@ -131,6 +131,7 @@ test('first login persists Continue then permits later login to resume onboardin
 })
 test('Finish Later saves each standalone onboarding form before returning to limited dashboard', async () => {
   open('/onboarding/verification')
+  fireEvent.change(await screen.findByRole('textbox', { name: 'Public Store Name' }), { target: { value: 'Edited Supply' } })
   fireEvent.click(await screen.findByRole('button', { name: 'Finish Later' }))
   expect(await screen.findByText('Limited-Access Vendor Dashboard')).toBeVisible()
   fireEvent.click(screen.getByRole('link', { name: 'Continue Store Setup' }))
@@ -138,8 +139,7 @@ test('Finish Later saves each standalone onboarding form before returning to lim
   expect(api.saveVendorVerificationDraft).toHaveBeenCalledOnce()
   fireEvent.click(screen.getByRole('button', { name: 'Finish Later' }))
   expect(await screen.findByText('Limited-Access Vendor Dashboard')).toBeVisible()
-  expect(api.saveVendorSetupDraft).toHaveBeenCalledOnce()
-  expect(vi.mocked(api.saveVendorSetupDraft).mock.calls[0]?.[0]).not.toHaveProperty('fulfillmentMethod')
+  expect(api.saveVendorSetupDraft).not.toHaveBeenCalled()
 })
 test('Store Profile is separate and logo returns to the authenticated dashboard', async () => {
   snapshot.activation.status = 'ACTIVE'
@@ -150,6 +150,33 @@ test('Store Profile is separate and logo returns to the authenticated dashboard'
   expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeVisible()
   expect(screen.queryByText('Personal account settings')).not.toBeInTheDocument()
 })
+
+test('leaving unchanged verification sends no draft mutation or redundant snapshot read', async () => {
+  open('/onboarding/verification')
+  await screen.findByRole('heading', { name: 'Store Verification', level: 1 })
+  fireEvent.click(screen.getByRole('link', { name: 'Back to dashboard' }))
+  await screen.findByText('Limited-Access Vendor Dashboard')
+  expect(api.saveVendorVerificationDraft).not.toHaveBeenCalled()
+  expect(api.getVendorOnboarding).toHaveBeenCalledTimes(2)
+  for (let visit = 0; visit < 8; visit++) {
+    fireEvent.click(screen.getByRole('link', { name: 'Continue Store Verification / Review requirements' }))
+    await screen.findByRole('heading', { name: 'Store Verification', level: 1 })
+    fireEvent.click(screen.getByRole('link', { name: 'Back to dashboard' }))
+    await screen.findByText('Limited-Access Vendor Dashboard')
+  }
+  expect(api.saveVendorVerificationDraft).not.toHaveBeenCalled()
+  expect(api.getVendorOnboarding).toHaveBeenCalledTimes(18)
+})
+
+test('Vendor sidebar uses the uploaded store logo and falls back to initials if it fails', async () => {
+  snapshot.setup = { ...snapshot.setup, media: [{ id: 'logo-media', kind: 'LOGO', file_id: 'logo-file', status: 'READY' }] }
+  open('/dashboard')
+  const footer = await screen.findByRole('link', { name: /Account profile:/ })
+  await waitFor(() => expect(footer.querySelector('.portal-footer-avatar img')).toHaveAttribute('src', 'https://example.test/private/logo-file'))
+  expect(api.getVendorPrivateFileUrl).toHaveBeenCalledWith('logo-file')
+  fireEvent.error(footer.querySelector('.portal-footer-avatar img')!)
+  expect(footer.querySelector('.portal-footer-avatar')).toHaveTextContent('TS')
+})
 test('pending review with complete setup and activated stores have distinct dashboard states', () => {
   snapshot.setup.status = 'COMPLETED'
   snapshot.verification.status = 'PENDING_VERIFICATION'
@@ -157,10 +184,21 @@ test('pending review with complete setup and activated stores have distinct dash
   snapshot.activation.status = 'ACTIVE'
   expect(vendorLoginDestination(snapshot)).toBe('/dashboard')
 })
-test('staff cannot enter the Owner Store Profile', async () => {
+test('staff see only the minimal Store Profile', async () => {
   snapshot.permissions = []
   open('/store-profile')
-  expect(await screen.findByRole('heading', { name: 'Personal account settings' })).toBeVisible()
+  expect(await screen.findByText(/Protected business and ownership details/)).toBeVisible()
+})
+
+test('employee dashboard hides Owner finance, onboarding controls and unrelated navigation', async () => {
+  snapshot.permissions = ['catalog.manage', 'inventory.manage', 'portal.orders', 'portal.products', 'portal.notifications']
+  open('/dashboard')
+  expect(await screen.findByRole('heading', { name: 'Your team dashboard' })).toBeVisible()
+  expect(screen.getByText(/This store is not yet active/)).toBeVisible()
+  expect(screen.queryByRole('link', { name: 'Continue Store Setup' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('link', { name: 'Wallet' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('link', { name: 'Team Accounts' })).not.toBeInTheDocument()
+  expect(screen.queryByText('Sales & Revenue')).not.toBeInTheDocument()
 })
 
 test('an unavailable API keeps entry recoverable instead of routing to login', async () => {
@@ -173,6 +211,7 @@ test('an unavailable API keeps entry recoverable instead of routing to login', a
 test('Finish Later does not leave the form when saving fails', async () => {
   vi.mocked(api.saveVendorVerificationDraft).mockRejectedValueOnce(new TypeError('Network unavailable'))
   open('/onboarding/verification')
+  fireEvent.change(await screen.findByRole('textbox', { name: 'Public Store Name' }), { target: { value: 'Edited Supply' } })
   fireEvent.click(await screen.findByRole('button', { name: 'Finish Later' }))
   await waitFor(() => expect(api.saveVendorVerificationDraft).toHaveBeenCalledOnce())
   expect(await screen.findByRole('alert')).toBeVisible()
@@ -186,9 +225,48 @@ test('limited dashboard retains both workstreams without extra next-step content
   expect(await screen.findByText('Limited-Access Vendor Dashboard')).toBeVisible()
   expect(screen.getByRole('link', { name: /Continue Store Verification/ })).toBeVisible()
   expect(screen.getByRole('link', { name: 'Continue Store Setup' })).toBeVisible()
+  expect(screen.queryByText('Activation gate')).not.toBeInTheDocument()
+  expect(screen.queryByText('Activation still needs attention.')).not.toBeInTheDocument()
+  expect(screen.queryByText('No activation blockers are currently reported.')).not.toBeInTheDocument()
   for (const label of ['What happens next', 'Keep both tracks moving.', 'Invite fixed-role teammates']) expect(screen.queryByText(label)).not.toBeInTheDocument()
   expect(document.querySelector('aside details')).toBeNull()
   expect(screen.getByRole('link', { name: 'Dashboard' })).toHaveAttribute('aria-current', 'page')
+})
+
+test('five completed checklist items still show the final setup state and activation blocker', async () => {
+  const verificationSteps = ['business_information', 'identity_evidence', 'bir_cor', 'business_registration', 'lgu_permit'].map(key => ({ id: key, key, label: key.replaceAll('_', ' '), level: 'REQUIRED' as const, status: 'APPROVED' as const, lockVersion: 1 }))
+  const setupSteps = ['public_store_profile', 'bulk_capability', 'fulfillment_method', 'payment_connection', 'store_operation'].map(key => ({ id: key, key, label: key.replaceAll('_', ' '), level: 'REQUIRED' as const, status: 'COMPLETED' as const, lockVersion: 1 }))
+  snapshot.sections = {
+    STORE_VERIFICATION: { key: 'STORE_VERIFICATION', label: 'Store Verification', status: 'COMPLETE', complete: 5, total: 5, progress: { complete: 5, total: 5 }, steps: verificationSteps },
+    STORE_SETUP: { key: 'STORE_SETUP', label: 'Store Setup', status: 'COMPLETE', complete: 5, total: 5, progress: { complete: 5, total: 5 }, steps: setupSteps },
+  }
+  snapshot.verification = { ...snapshot.verification, status: 'APPROVED' }
+  snapshot.setup = { ...snapshot.setup, status: 'IN_PROGRESS' }
+  snapshot.activation = { ...snapshot.activation, readiness: { ready: false, status: 'NOT_READY', ruleVersion: 'phase3a.v1', blockers: [{ key: 'store_setup', condition: 6, reason: 'Complete Store Setup.' }] } }
+  open('/dashboard')
+  expect(await screen.findAllByText('5 of 5 checklist items complete.')).toHaveLength(2)
+  expect(screen.getByText('Review status:')).toHaveTextContent('Approved')
+  expect(screen.getByText('Setup status:')).toHaveTextContent('In Progress')
+  expect(screen.getByRole('link', { name: 'Complete Store Setup' })).toBeVisible()
+  expect(within(screen.getByRole('region', { name: 'Store activation requirements' })).getByText('Complete Store Setup.')).toBeVisible()
+  expect(screen.queryByRole('button', { name: 'Request Store Activation' })).not.toBeInTheDocument()
+})
+
+test('unverified Owner email has no duplicate verification action on the limited dashboard', async () => {
+  snapshot.activation = { ...snapshot.activation, readiness: { ready: false, status: 'NOT_READY', ruleVersion: 'phase3a.v1', blockers: [{ key: 'owner_email_verification', condition: 1, reason: 'Verify the Vendor Owner account email address.' }] } }
+  open('/dashboard')
+  expect(await screen.findByText('Verify the Vendor Owner account email address.')).toBeVisible()
+  expect(screen.queryByRole('link', { name: 'Verify Owner email' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Request Store Activation' })).not.toBeInTheDocument()
+})
+
+test('ready store can still request activation from the limited dashboard', async () => {
+  snapshot.activation = { ...snapshot.activation, readiness: { ready: true, blockers: [], status: 'READY', ruleVersion: 'phase3a.v1' } }
+  vi.spyOn(api, 'activateVendorStore').mockImplementation(async () => ({ ...snapshot, activation: { ...snapshot.activation, status: 'ACTIVE' } }))
+  open('/dashboard')
+  fireEvent.click(await screen.findByRole('button', { name: 'Request Store Activation' }))
+  await waitFor(() => expect(api.activateVendorStore).toHaveBeenCalledOnce())
+  expect(await screen.findByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible()
 })
 
 test('verification shows one step, retains draft fields and adapts legal identity before saving', async () => {
@@ -235,21 +313,42 @@ test('setup preview updates public content and keeps private contact details out
   const preview = await screen.findByRole('complementary', { name: 'Store Profile Preview' })
   fireEvent.change(screen.getByRole('textbox', { name: 'Public store name' }), { target: { value: 'New Store' } })
   fireEvent.change(screen.getByRole('textbox', { name: 'Store description' }), { target: { value: 'Materials for your next project.' } })
-  fireEvent.change(screen.getByRole('textbox', { name: 'Public email' }), { target: { value: 'public@example.test' } })
+  expect(screen.queryByRole('textbox', { name: 'Public email' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('textbox', { name: 'Public phone' })).not.toBeInTheDocument()
   expect(within(preview).getByRole('heading', { name: 'New Store' })).toBeVisible()
   expect(preview).toHaveTextContent('Materials for your next project.')
-  expect(preview).toHaveTextContent('public@example.test')
-  expect(preview).toHaveTextContent('Sample City, Sample Province')
+  expect(preview).not.toHaveTextContent('public@example.test')
+  expect(preview).not.toHaveTextContent('Store location')
+  expect(preview).not.toHaveTextContent('Sample City, Sample Province')
   expect(preview).not.toHaveTextContent('private@example.test')
   expect(preview).not.toHaveTextContent('Private Owner')
   fireEvent.click(screen.getByRole('button', { name: '2 Fulfillment Configuration' }))
-  expect(preview).not.toBeVisible()
+  await waitFor(() => expect(preview).not.toBeVisible())
   expect(screen.queryByRole('textbox', { name: 'Public store name' })).not.toBeInTheDocument()
-  fireEvent.click(screen.getByRole('radio', { name: 'Not currently' }))
+  fireEvent.click(screen.getByRole('radio', { name: 'No' }))
   fireEvent.click(screen.getByRole('button', { name: '1 Public Store Profile' }))
-  expect(screen.getByRole('textbox', { name: 'Public store name' })).toHaveValue('New Store')
-  fireEvent.click(screen.getByRole('button', { name: 'Save setup draft' }))
-  await waitFor(() => expect(api.saveVendorSetupDraft).toHaveBeenCalledWith(expect.objectContaining({ publicStoreName: 'New Store', description: 'Materials for your next project.', bulkCapability: false, publicEmail: 'public@example.test' })))
+  await waitFor(() => expect(screen.getByRole('textbox', { name: 'Public store name' })).toHaveValue('New Store'))
+  fireEvent.submit(document.getElementById('setup-draft')!)
+  await waitFor(() => expect(api.saveVendorSetupDraft).toHaveBeenCalledWith(expect.objectContaining({ publicStoreName: 'New Store', description: 'Materials for your next project.', bulkCapability: false })))
+})
+
+test('setup keeps the persisted setup name when the verification draft differs', async () => {
+  snapshot.verification = { ...snapshot.verification, form_state: { store_name: ['Current Verification Store'] } }
+  snapshot.setup = { ...snapshot.setup, profile: { public_store_name: 'Previous setup name' } }
+  open('/onboarding/setup')
+  expect(await screen.findByRole('textbox', { name: 'Public store name' })).toHaveValue('Previous setup name')
+  const preview = screen.getByRole('complementary', { name: 'Store Profile Preview' })
+  expect(within(preview).getByRole('heading', { name: 'Previous setup name' })).toBeVisible()
+  fireEvent.submit(document.getElementById('setup-draft')!)
+  expect(api.saveVendorSetupDraft).not.toHaveBeenCalled()
+})
+
+test('setup prefills the submitted organization name when no public profile name is saved', async () => {
+  snapshot.organization = { ...snapshot.organization, store_name: 'Submitted Store' }
+  snapshot.setup = { ...snapshot.setup, profile: { public_store_name: '' } }
+  open('/onboarding/setup')
+  expect(await screen.findByRole('textbox', { name: 'Public store name' })).toHaveValue('Submitted Store')
+  expect(within(screen.getByRole('complementary', { name: 'Store Profile Preview' })).getByRole('heading', { name: 'Submitted Store' })).toBeVisible()
 })
 
 test('media uploads refresh the profile preview without losing edited public fields', async () => {
@@ -271,30 +370,120 @@ test('media uploads refresh the profile preview without losing edited public fie
   expect(within(preview).getByRole('button', { name: 'Reload banner' })).toBeVisible()
 })
 
-test('setup review requires saved edits, does not collect commission consent, and does not unlock Team Accounts', async () => {
+test('failed logo uploads can retry the same file without losing profile edits', async () => {
+  vi.mocked(api.uploadVendorMedia).mockRejectedValueOnce(new Error('Storage unavailable')).mockResolvedValueOnce({ uploaded: true })
+  open('/onboarding/setup')
+  fireEvent.change(await screen.findByRole('textbox', { name: 'Public store name' }), { target: { value: 'Unsaved store' } })
+  const file = new File(['fixture'], 'logo.png', { type: 'image/png' })
+  fireEvent.change(screen.getAllByLabelText('Upload image')[0]!, { target: { files: [file] } })
+  fireEvent.click(await screen.findByRole('button', { name: 'Retry logo upload' }))
+  await screen.findByText('Logo uploaded.')
+  expect(api.uploadVendorMedia).toHaveBeenNthCalledWith(2, 'LOGO', file, 'Store logo')
+  expect(screen.getByRole('textbox', { name: 'Public store name' })).toHaveValue('Unsaved store')
+  expect(screen.queryByRole('button', { name: 'Retry logo upload' })).not.toBeInTheDocument()
+})
+
+test('setup review requires saved edits and team setup remains optional', async () => {
+  snapshot.setup = { status: 'NOT_STARTED', operating_schedule: Array.from({ length: 7 }, (_, index) => ({ day_of_week: index + 1, status: index === 6 ? 'CLOSED' : 'OPEN', opens_at: index === 6 ? null : '08:00', closes_at: index === 6 ? null : '17:00' })) }
   open('/onboarding/setup')
   fireEvent.change(await screen.findByRole('textbox', { name: 'Public store name' }), { target: { value: 'Draft name' } })
   expect(screen.queryByRole('button', { name: /Commission Terms/ })).not.toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: '4 Team Accounts' }))
-  expect(screen.getByText(/Team Accounts do not block/)).toBeVisible()
+  await waitFor(() => expect(screen.getByText(/Team Accounts are optional/)).toBeVisible())
   expect(screen.queryByRole('link', { name: 'Manage Team Accounts' })).not.toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: 'Next' }))
-  expect(screen.getByRole('button', { name: 'Complete Store Setup' })).toBeDisabled()
+  expect(api.saveVendorSetupDraft).toHaveBeenCalled()
+  await waitFor(() => expect(screen.getByRole('combobox', { name: 'Sunday status' })).toHaveValue('CLOSED'))
+  fireEvent.click(screen.getByRole('button', { name: 'Next' }))
   expect(screen.queryByRole('button', { name: 'Next' })).not.toBeInTheDocument()
-  fireEvent.click(screen.getByRole('button', { name: 'Save setup draft' }))
   await waitFor(() => expect(screen.getByRole('button', { name: 'Complete Store Setup' })).toBeEnabled())
   fireEvent.click(screen.getByRole('button', { name: 'Complete Store Setup' }))
   await waitFor(() => expect(api.completeVendorSetup).toHaveBeenCalledWith({ organizationLockVersion: 1 }))
 })
 
+test('removing a persisted logo refreshes media from the backend', async () => {
+  snapshot.setup = { ...snapshot.setup, media: [{ id: '0199a000-0000-7000-8000-000000000001', kind: 'LOGO', file_id: 'logo-file', status: 'READY' }] }
+  vi.mocked(api.removeVendorMedia).mockImplementation(async () => {
+    snapshot = { ...snapshot, lockVersion: 2, setup: { ...snapshot.setup, media: [] } }
+    return snapshot
+  })
+  open('/onboarding/setup')
+  fireEvent.click(await screen.findByRole('button', { name: 'Remove logo' }))
+  await waitFor(() => expect(api.removeVendorMedia).toHaveBeenCalledWith('0199a000-0000-7000-8000-000000000001'))
+  await waitFor(() => expect(screen.queryByRole('button', { name: 'Remove logo' })).not.toBeInTheDocument())
+  expect(screen.getAllByText('No asset uploaded').length).toBeGreaterThan(0)
+})
+
+test('Store Operation rejects invalid hours and copies days without locking individual edits', async () => {
+  open('/onboarding/setup')
+  fireEvent.click(await screen.findByRole('button', { name: '5 Store Operation' }))
+  fireEvent.change(screen.getByRole('combobox', { name: 'Monday status' }), { target: { value: 'OPEN' } })
+  fireEvent.change(screen.getByLabelText('Monday opening time'), { target: { value: '17:00' } })
+  fireEvent.change(screen.getByLabelText('Monday closing time'), { target: { value: '08:00' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+  expect(screen.getByText('Enter an opening time and a later closing time.')).toBeVisible()
+  expect(api.saveVendorSetupDraft).not.toHaveBeenCalled()
+  fireEvent.change(screen.getByLabelText('Monday opening time'), { target: { value: '08:00' } })
+  fireEvent.change(screen.getByLabelText('Monday closing time'), { target: { value: '17:00' } })
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Tuesday' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Apply to Selected Days' }))
+  expect(screen.getByLabelText('Tuesday opening time')).toHaveValue('08:00')
+  fireEvent.change(screen.getByLabelText('Tuesday closing time'), { target: { value: '15:00' } })
+  expect(screen.getByLabelText('Monday closing time')).toHaveValue('17:00')
+})
+
+test('Finish Later keeps an incomplete Store Operation schedule private', async () => {
+  open('/onboarding/setup')
+  fireEvent.click(await screen.findByRole('button', { name: '5 Store Operation' }))
+  fireEvent.change(screen.getByRole('combobox', { name: 'Monday status' }), { target: { value: 'OPEN' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Finish Later' }))
+  await waitFor(() => expect(api.saveVendorSetupDraft).toHaveBeenCalledWith(expect.objectContaining({ formState: expect.stringContaining('operatingScheduleDraft') })))
+  expect(vi.mocked(api.saveVendorSetupDraft).mock.calls.at(-1)?.[0]).not.toHaveProperty('operatingSchedule')
+})
+
 test('visited sections are not represented as completed without server confirmation', async () => {
-  snapshot.sections.STORE_SETUP = { key: 'STORE_SETUP', label: 'Store Setup', status: 'IN_PROGRESS', complete: 1, total: 6, progress: { complete: 1, total: 6 }, steps: [{ id: 'profile-step', lockVersion: 1, key: 'public_store_profile', label: 'Public store profile', level: 'REQUIRED', status: 'COMPLETED' }, { id: 'media-step', lockVersion: 1, key: 'store_media', label: 'Store media', level: 'OPTIONAL', status: 'COMPLETED' }] }
+  snapshot.sections.STORE_SETUP = { key: 'STORE_SETUP', label: 'Store Setup', status: 'IN_PROGRESS', complete: 1, total: 5, progress: { complete: 1, total: 5 }, steps: [
+    { id: 'profile-step', lockVersion: 1, key: 'public_store_profile', label: 'Public Store Profile', level: 'REQUIRED', status: 'COMPLETED' },
+    ...(['bulk_capability', 'fulfillment_method', 'payment_connection', 'store_operation'] as const).map(key => ({ id: key, lockVersion: 1, key, label: key === 'store_operation' ? 'Store Operation' : key.replaceAll('_', ' '), level: 'REQUIRED' as const, status: 'NOT_STARTED' as const })),
+  ] }
   open('/onboarding/setup')
   const nav = await screen.findByRole('navigation', { name: 'Store Setup steps' })
+  expect(within(nav).getByText('1 of 5 checklist items complete')).toBeVisible()
+  expect(within(nav).queryByText('Store Media')).not.toBeInTheDocument()
   expect(within(nav).getByRole('button', { name: /Completed, Public Store Profile/ })).toHaveAttribute('aria-current', 'step')
   fireEvent.click(within(nav).getByRole('button', { name: '2 Fulfillment Configuration' }))
   fireEvent.click(screen.getByRole('button', { name: 'Next' }))
   expect(within(nav).getByRole('button', { name: '2 Fulfillment Configuration' })).not.toHaveTextContent('Completed')
+})
+
+test('setup autosave serializes edits and keeps the newer value after an older response', async () => {
+  let finishFirst!: (value: api.VendorOnboardingSnapshot) => void
+  vi.mocked(api.saveVendorSetupDraft)
+    .mockImplementationOnce(() => new Promise(resolve => { finishFirst = resolve }))
+    .mockImplementationOnce(async draft => ({ ...snapshot, lockVersion: 3, organization: { ...snapshot.organization, lock_version: 3 }, setup: { ...snapshot.setup, profile: { public_store_name: draft.publicStoreName } } }))
+  open('/onboarding/setup')
+  const name = await screen.findByRole('textbox', { name: 'Public store name' })
+  fireEvent.change(name, { target: { value: 'ABC Hardware' } })
+  await waitFor(() => expect(api.saveVendorSetupDraft).toHaveBeenCalledTimes(1))
+  fireEvent.change(name, { target: { value: 'ABC Hardware Trading' } })
+  finishFirst({ ...snapshot, lockVersion: 2, organization: { ...snapshot.organization, lock_version: 2 }, setup: { ...snapshot.setup, profile: { public_store_name: 'ABC Hardware' } } })
+  await waitFor(() => expect(api.saveVendorSetupDraft).toHaveBeenCalledTimes(2))
+  expect(vi.mocked(api.saveVendorSetupDraft).mock.calls[1]?.[0].publicStoreName).toBe('ABC Hardware Trading')
+  expect(name).toHaveValue('ABC Hardware Trading')
+  await screen.findByText('Saved')
+})
+
+test('failed setup autosave retains input and retries without reentry', async () => {
+  vi.mocked(api.saveVendorSetupDraft).mockRejectedValueOnce(new Error('Offline')).mockImplementationOnce(async () => snapshot)
+  open('/onboarding/setup')
+  const name = await screen.findByRole('textbox', { name: 'Public store name' })
+  fireEvent.change(name, { target: { value: 'Retry Supply' } })
+  await screen.findByText(/Failed to save/)
+  expect(name).toHaveValue('Retry Supply')
+  fireEvent.click(screen.getByRole('button', { name: 'Retry save' }))
+  await waitFor(() => expect(api.saveVendorSetupDraft).toHaveBeenCalledTimes(2))
+  expect(vi.mocked(api.saveVendorSetupDraft).mock.calls[1]?.[0].publicStoreName).toBe('Retry Supply')
+  await screen.findByText('Saved')
 })
 
 
@@ -356,6 +545,10 @@ test.each(['123', '1234', '12345'])('autosave retains combined TIN and separate 
   expect(saved).toMatchObject({ lockVersion: 7, draftLockVersion: 4 })
   expect(JSON.parse(saved.formState!)).toMatchObject({ store_name: ['Public Supply'], legal_business_name: ['Legal Trading Name'], tin: [`123-456-789-${code}`] })
   fireEvent.click(screen.getByRole('button', { name: 'Back' }))
+  await screen.findByRole('textbox', { name: 'Registered Business Name' })
+  expect(api.saveVendorVerificationDraft).toHaveBeenCalledOnce()
+  fireEvent.change(screen.getByRole('textbox', { name: 'Registered Business Name' }), { target: { value: 'Updated Trading Name' } })
+  fireEvent.click(screen.getByRole('button', { name: '2 Registered Business Address' }))
   await waitFor(() => expect(api.saveVendorVerificationDraft).toHaveBeenLastCalledWith(expect.objectContaining({ lockVersion: 8, draftLockVersion: 5 })))
 })
 
@@ -619,4 +812,152 @@ test('submitted information is read-only but its document previews remain availa
   expect(screen.getByRole('textbox', { name: 'Public Store Name' })).toBeDisabled()
   expect(screen.getByRole('button', { name: 'View submitted document' })).toBeEnabled()
   expect(screen.queryByLabelText('Select Business Registration')).not.toBeInTheDocument()
+})
+
+
+test('fulfillment hides delivery for pickup and retains progressive vehicle edits', async () => {
+  open('/onboarding/setup')
+  fireEvent.click(await screen.findByRole('button', { name: '2 Fulfillment Configuration' }))
+  fireEvent.click(screen.getByRole('radio', { name: 'Yes' }))
+  fireEvent.click(screen.getByRole('radio', { name: 'Vendor Delivery' }))
+  expect(screen.queryByRole('textbox', { name: 'Vehicle Name' })).not.toBeInTheDocument()
+  fireEvent.change(screen.getByRole('combobox', { name: 'Vehicle Category' }), { target: { value: 'TRUCK' } })
+  expect(screen.queryByRole('textbox', { name: 'Vehicle Name' })).not.toBeInTheDocument()
+  fireEvent.change(screen.getByRole('combobox', { name: 'Vehicle Type' }), { target: { value: 'FLATBED_TRUCK' } })
+  fireEvent.change(screen.getByRole('textbox', { name: 'Vehicle Name' }), { target: { value: 'Delivery truck' } })
+  fireEvent.click(screen.getByRole('radio', { name: 'Self-Pickup' }))
+  expect(screen.queryByRole('region', { name: 'Delivery Configuration' })).not.toBeInTheDocument()
+  fireEvent.click(screen.getByRole('radio', { name: 'No' }))
+  fireEvent.submit(document.getElementById('setup-draft')!)
+  await waitFor(() => expect(api.saveVendorSetupDraft).toHaveBeenCalledOnce())
+  const pickup = vi.mocked(api.saveVendorSetupDraft).mock.calls[0]?.[0]
+  expect(pickup).toMatchObject({ bulkCapability: false, fulfillmentMethod: 'SELF_PICKUP' })
+  expect(pickup).not.toHaveProperty('delivery')
+  expect(pickup).not.toHaveProperty('vehicles')
+  fireEvent.click(screen.getByRole('radio', { name: 'Both' }))
+  expect(screen.getByRole('textbox', { name: 'Vehicle Name' })).toHaveValue('Delivery truck')
+  expect(screen.queryByLabelText('Delivery radius (km)')).not.toBeInTheDocument()
+  expect(screen.queryByLabelText('Vehicle maximum distance (km)')).not.toBeInTheDocument()
+  fireEvent.change(screen.getByRole('combobox', { name: 'Vehicle Type' }), { target: { value: 'CONCRETE_MIXER' } })
+  expect(screen.getByRole('spinbutton', { name: 'Mixer Capacity (m³)' })).toBeVisible()
+  expect(screen.queryByRole('spinbutton', { name: 'Cargo Length (m)' })).not.toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: 'Add delivery vehicle' }))
+  expect(screen.getAllByRole('combobox', { name: 'Vehicle Category' })).toHaveLength(2)
+  fireEvent.click(screen.getByRole('button', { name: 'Remove vehicle 2' }))
+  expect(screen.getAllByRole('combobox', { name: 'Vehicle Category' })).toHaveLength(1)
+  fireEvent.submit(document.getElementById('setup-draft')!)
+  await waitFor(() => expect(api.saveVendorSetupDraft).toHaveBeenCalledTimes(2))
+  expect(vi.mocked(api.saveVendorSetupDraft).mock.calls[1]?.[0].formState).toContain('CONCRETE_MIXER')
+  expect(screen.queryByRole('button', { name: 'Save setup draft' })).not.toBeInTheDocument()
+})
+
+test.each(['SELF_PICKUP', 'VENDOR_DELIVERY', 'BOTH'])('saved %s selection controls delivery visibility on return', async method => {
+  snapshot.setup = { ...snapshot.setup, profile: { fulfillment_method: method, bulk_capability: true } }
+  open('/onboarding/setup')
+  fireEvent.click(await screen.findByRole('button', { name: '2 Fulfillment Configuration' }))
+  expect(screen.getByRole('radio', { name: 'Yes' })).toBeChecked()
+  if (method === 'SELF_PICKUP') expect(screen.queryByRole('region', { name: 'Delivery Configuration' })).not.toBeInTheDocument()
+  else expect(screen.getByRole('region', { name: 'Delivery Configuration' })).toBeVisible()
+})
+
+
+test('Finish Later saves and restores an unfinished vehicle and failed dashboard saving stays on setup', async () => {
+  vi.mocked(api.saveVendorSetupDraft).mockImplementation(async draft => {
+    snapshot = { ...snapshot, setup: { ...snapshot.setup, profile: { ...snapshot.setup.profile, fulfillment_method: draft.fulfillmentMethod }, form_state: JSON.parse(draft.formState ?? '{}') } }
+    return snapshot
+  })
+  open('/onboarding/setup')
+  fireEvent.click(await screen.findByRole('button', { name: '2 Fulfillment Configuration' }))
+  fireEvent.click(screen.getByRole('radio', { name: 'Vendor Delivery' }))
+  fireEvent.change(screen.getByRole('combobox', { name: 'Vehicle Category' }), { target: { value: 'TRUCK' } })
+  fireEvent.change(screen.getByRole('combobox', { name: 'Vehicle Type' }), { target: { value: 'FLATBED_TRUCK' } })
+  fireEvent.change(screen.getByRole('textbox', { name: 'Vehicle Name' }), { target: { value: 'Unfinished truck' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Finish Later' }))
+  await screen.findByText('Limited-Access Vendor Dashboard')
+  expect(vi.mocked(api.saveVendorSetupDraft).mock.calls.at(-1)?.[0]).not.toHaveProperty('vehicles')
+  fireEvent.click(screen.getByRole('link', { name: 'Continue Store Setup' }))
+  fireEvent.click(await screen.findByRole('button', { name: '2 Fulfillment Configuration' }))
+  expect(screen.getByRole('textbox', { name: 'Vehicle Name' })).toHaveValue('Unfinished truck')
+  fireEvent.change(screen.getByRole('textbox', { name: 'Vehicle Name' }), { target: { value: 'Still unfinished' } })
+  vi.mocked(api.saveVendorSetupDraft).mockRejectedValueOnce(new Error('Offline'))
+  fireEvent.click(screen.getByRole('link', { name: 'Back to dashboard' }))
+  await screen.findByRole('alert')
+  expect(screen.getByRole('heading', { level: 1, name: 'Store Setup' })).toBeVisible()
+})
+
+
+test('Store Profile combines business evidence, removes duplicate tabs and persists Vacation Mode', async () => {
+  snapshot.activation.status = 'ACTIVE'
+  snapshot.organization = { store_name: 'Sample Supply', lock_version: 7, business_type: 'CORPORATION' }
+  snapshot.verification = { status: 'APPROVED', documents: [{ requirement_key: 'lgu_permit', file_id: 'file-1', original_name: 'permit.pdf', version: 1, review: { expiration_kind: 'DATE', verified_expiration_date: '2027-12-31', remarks: 'Verified by Admin' } }], address: { street: 'Example street', city_municipality: 'Quezon City', postal_code: '1100' } }
+  snapshot.sections = { STORE_VERIFICATION: { key: 'STORE_VERIFICATION', label: 'Verification', status: 'APPROVED', complete: 1, total: 1, progress: { complete: 1, total: 1 }, steps: [{ id: 'permit', key: 'lgu_permit', label: 'LGU permit', level: 'REQUIRED', status: 'APPROVED', lockVersion: 1 }] } }
+  snapshot.setup = { status: 'COMPLETED', vacation_mode: false }
+  vi.mocked(api.saveVendorSetupDraft).mockImplementation(async () => ({ ...snapshot, setup: { ...snapshot.setup, vacation_mode: true } }))
+  open('/store-profile')
+  await screen.findByRole('heading', { name: 'Sample Supply' })
+  expect(screen.queryByRole('button', { name: 'Primary Contact' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Documents' })).not.toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: 'Business Information' }))
+  expect(screen.getByRole('complementary', { name: 'Business documents' })).toBeVisible()
+  expect(screen.getByText('2027-12-31')).toBeVisible()
+  expect(screen.getByRole('button', { name: 'View document' })).toBeVisible()
+  fireEvent.click(screen.getByRole('button', { name: 'Store Location' }))
+  expect(screen.getByText('No registered map pin is available. Update your registered address in Business Information.')).toBeVisible()
+  fireEvent.click(screen.getByRole('button', { name: 'Vacation Mode' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Turn on Vacation Mode' }))
+  await waitFor(() => expect(api.saveVendorSetupDraft).toHaveBeenCalledWith({ organizationLockVersion: 7, vacationMode: true }))
+  expect(await screen.findByRole('button', { name: 'Turn off Vacation Mode' })).toBeVisible()
+})
+
+test('Store Profile edits fulfillment directly and saves before switching sections', async () => {
+  snapshot.activation.status = 'ACTIVE'
+  snapshot.organization = { store_name: 'Sample Supply', lock_version: 7 }
+  snapshot.setup = { status: 'COMPLETED', profile: { bulk_capability: false, fulfillment_method: 'SELF_PICKUP' } }
+  open('/store-profile')
+  fireEvent.click(await screen.findByRole('button', { name: 'Fulfillment Configuration' }))
+  expect(screen.queryByRole('link', { name: 'Update fulfillment configuration' })).not.toBeInTheDocument()
+  expect(screen.getByRole('radio', { name: 'No' })).toBeChecked()
+  fireEvent.click(screen.getByRole('radio', { name: 'Yes' }))
+  fireEvent.click(screen.getByRole('radio', { name: 'Both' }))
+  fireEvent.change(screen.getByRole('textbox', { name: 'Coverage notes' }), { target: { value: 'Quezon City service area' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Vehicles Management' }))
+  await waitFor(() => expect(api.saveVendorSetupDraft).toHaveBeenCalledWith(expect.objectContaining({ organizationLockVersion: 7, bulkCapability: true, fulfillmentMethod: 'BOTH', delivery: { coverageNotes: 'Quezon City service area' } })))
+  expect(await screen.findByRole('heading', { name: 'Registered vehicles' })).toBeVisible()
+})
+
+test('Store Profile vehicle edits stay in place on save failure and can be retried', async () => {
+  snapshot.activation.status = 'ACTIVE'
+  snapshot.organization = { store_name: 'Sample Supply', lock_version: 7 }
+  snapshot.setup = { status: 'COMPLETED', profile: { fulfillment_method: 'VENDOR_DELIVERY' }, vehicles: [{ id: 'vehicle-1', vehicle_category: 'TRUCK', vehicle_type: 'FLATBED_TRUCK', name: 'Old truck', capacity_kg: 1000, number_available: 1, cargo_length_m: 3, cargo_width_m: 2, cargo_height_m: 2, heavy_classification: 'HEAVY', base_fee_centavos: 50000, per_km_centavos: 2500, image_file_id: 'image-1', active: true }] }
+  vi.mocked(api.saveVendorSetupDraft).mockRejectedValueOnce(new Error('Offline'))
+  open('/store-profile')
+  fireEvent.click(await screen.findByRole('button', { name: 'Vehicles Management' }))
+  expect(screen.queryByRole('link', { name: 'Update vehicle configuration' })).not.toBeInTheDocument()
+  fireEvent.change(screen.getByRole('textbox', { name: 'Vehicle Name' }), { target: { value: 'Updated truck' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Save vehicles' }))
+  expect(await screen.findByText('Offline')).toBeVisible()
+  expect(screen.getByRole('textbox', { name: 'Vehicle Name' })).toHaveValue('Updated truck')
+  fireEvent.click(screen.getByRole('button', { name: 'Save vehicles' }))
+  await waitFor(() => expect(api.saveVendorSetupDraft).toHaveBeenCalledTimes(2))
+  expect(vi.mocked(api.saveVendorSetupDraft).mock.calls[1]?.[0]).toMatchObject({ organizationLockVersion: 7, vehicles: [expect.objectContaining({ id: 'vehicle-1', name: 'Updated truck', baseFeeCentavos: 50000, perKmCentavos: 2500 })] })
+})
+
+
+test('business updates unlock approved fields and save before changing profile sections', async () => {
+  snapshot.activation.status = 'ACTIVE'
+  snapshot.organization = { store_name: 'Sample Supply', lock_version: 2, business_type: 'CORPORATION' }
+  snapshot.verification = { status: 'APPROVED' }
+  open('/store-profile')
+  fireEvent.click(await screen.findByRole('button', { name: 'Business Information' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Update information or documents' }))
+  const name = await screen.findByRole('textbox', { name: 'Public Store Name' })
+  expect(name).not.toBeDisabled()
+  fireEvent.change(name, { target: { value: 'Updated Supply' } })
+  let finishSave: ((value: api.VendorOnboardingSnapshot) => void) | undefined
+  vi.mocked(api.saveVendorVerificationDraft).mockImplementation(() => new Promise(resolve => { finishSave = resolve }))
+  fireEvent.click(screen.getByRole('button', { name: 'Store Location' }))
+  await waitFor(() => expect(api.saveVendorVerificationDraft).toHaveBeenCalled())
+  expect(screen.queryByRole('heading', { name: 'Store location' })).not.toBeInTheDocument()
+  finishSave?.(snapshot)
+  expect(await screen.findByRole('heading', { name: 'Store location' })).toBeVisible()
 })

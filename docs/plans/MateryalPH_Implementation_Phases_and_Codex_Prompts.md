@@ -1,9 +1,9 @@
-# MateryalPH Implementation Phases and Codex Prompt Pack — Phases 3 to 20
+# MateryalPH Implementation Phases and Prompt Pack — Phases 3 to 20
 
-**Revision:** 21 September 2026. Replaces the 4 September pack.
+**Revision:** 27 September 2026. Synchronizes the new Vendor onboarding across the 21 September pack and its later edits; retains the accepted Phase 1–2 record and Phases 3–20 numbering.
 **Removed:** Phases 1 and 2. Both are accepted and verified; see §1.
-**Added:** Phase 3 is split into six buildable sub-phases · every phase carries an explicit surface breakdown and a UI/UX layout architecture section · FIN-04A withholding-threshold counter.
-**Place at:** `docs/plans/MateryalPH_Implementation_Phases_and_Codex_Prompts.md`
+**Added:** Phase 3 retains six buildable sub-phases · detailed S1–S6 Setup · dynamic profile/media checklist · public Store Operation · backend-owned Xendit TEST connection · optional fixed-role teams · fulfillment messaging · synchronized later-phase prompts and acceptance gates · FIN-04A retained.
+**Place at:** `docs/plans/MateryalPH_Implementation_Phases_and_Prompts.md`
 **Repository model:** monorepo. **Reference hosting:** Render.
 
 ---
@@ -16,11 +16,15 @@ Every copy-paste prompt in this pack begins with a line that references this sec
 
 `AGENTS.md` → the relevant file in `docs/workflows/` → `docs/architecture/MateryalPH_Technical_System_Design.md` → `docs/design/MateryalPH_UI_UX_Implementation_Planner.md` → `packages/api-contract/openapi.yaml` → existing migrations and tests → relevant ADRs. Figma is visual reference only.
 
+For onboarding, use the four Final Workflows and Technical System Design synchronized on **27 September 2026**, including **ONB-01–ONB-10**, Vendor Onboarding/Team Account Management, Admin Vendor Verification, Buyer Store Profile/delivery/messaging and the Technical Design's persistence, API, authorization, state, integration and test contracts. Put those revised files at their existing canonical repository paths before running a prompt; downloaded date/copy suffixes do not create new modules.
+
+The existing repository build specification remains the source for implemented field/route names and FIN-04A for its financial extension. Apply the synchronized behavior in this pack when an older onboarding instruction conflicts: no manual Xendit link/ID collection, no separate Store Media or Team Accounts completion row, S5 required hours, S6 review and the current fixed-role permissions. Resolve actual schema names by inspection and record their mapping to the Technical Design's conceptual names. Never create parallel tables/routes merely to match prose. If a referenced file is missing, report it rather than inventing its contents or claiming it was reviewed.
+
 ### §0.2 Rules applied to every phase
 
 - Inspect existing code and migration history first. Never recreate a completed feature or restart an earlier phase. For an existing implementation, audit the delta and add migrations/tests for the gap only.
 - State any material unresolved assumption and ask before implementing it.
-- Keep secrets out of code, tests, fixtures, logs, screenshots, generated clients and Git. `.env.example` gets names and safe defaults only.
+- Keep secrets out of code, tests, fixtures, logs, screenshots, generated clients and Git. `.env.example` contains variable names without populated values; real values remain in the environment-specific ignored `.env` files.
 - Server-side authorization, transactions, state-transition validation, idempotency, audit events and accessible UI patterns wherever relevant.
 - Update OpenAPI and regenerate clients in the same change. Never hand-edit generated files.
 - Run the phase's validation commands and report exact results. A generated test is not a passed test.
@@ -28,6 +32,13 @@ Every copy-paste prompt in this pack begins with a line that references this sec
 - Finish with: changed files and migrations, API contract changes, security/authorization decisions, commands run and exact results, manual setup or key names still required, known limitations, suggested conventional commit.
 - FIN-01–FIN-12 and MAT-01–MAT-07 in the System Workflow and Technical Design are the approved financial and Materials Analytics contracts: 2% Vendor-paid commission, simulated withholding, direct physical payments, aggregate-only competitor analytics, daily public-price history. Earlier zero-commission or mixed listing/transaction-price instructions are superseded. `LIVE_COMMERCE_ENABLED` stays false for the capstone.
 - Each phase must leave the product usable. An unfinished entry point sits behind a disabled feature flag until its phase delivers the feature.
+- ONB-01–ONB-10 apply to every affected phase. Verification, Setup, provider readiness, activation, discovery, product compliance and payment remain separate states. Saved backend data determines checklist completion; a browser cannot submit approval or completion as truth.
+- Preserve the existing Vendor/Admin Navigation Sidebar layout, dimensions, ordering and collapse behavior. Filter existing items by role without redesigning the shell. Store Profile opens the actual profile; branding never clears a session or acts as Logout.
+- Use additive migrations and isolated test databases. Never refresh/reset development, staging or user data. Extend accepted services, components, contracts and clients rather than rebuilding accepted phases.
+- Store Email ownership verification is separate from login security. Reuse the same already verified Google email without duplicate ownership verification; do not change Phase 1–2 login/session behavior.
+- The former Wallet label maps to the existing read-only Transaction History module. MateryalPH has no internal wallet or escrow. Earnings and protected storewide Transaction History/finance are Owner-only. Manager operational order/invoice access and Materials Analytics do not grant protected finance access.
+- Keep versioned Commission Terms in V4 above the separate Privacy Notice. Initial authority-evidence submission is possible before authority approval. Binding Owner attestations require applicable approved authority. S3/S6 display or link to the existing acceptance, never collect another consent.
+- Preserve approved FIN/MAT formulas and FIN-04A. Update access checks where the new role policy narrows disclosure; uploads, TEST placeholders and optional declaration claims are not real legal verification.
 - FIN-04A (`docs/architecture/MateryalPH_Technical_Design_Delta_FIN-04A_Withholding_Threshold.md`) is binding wherever gross remittances, relief declarations or withholding status appear.
 
 ### §0.3 Surface boundary convention
@@ -101,7 +112,7 @@ Approved authorization facts to preserve: six fixed Vendor roles; only Owner and
 | 3A | Onboarding domain, requirement registry, activation gate, evidence pipeline | — | — | — | Private object storage |
 | 3B | Store Verification V1 — Business Information | — | ● | — | Email outside local dev |
 | 3C | Store Verification V2–V4 — address, classification, privacy/submit | — | ● | — | Google Maps keys |
-| 3D | Store Setup S1–S5 | — | ● | — | Xendit Test Mode |
+| 3D | Store Setup S1–S6, public hours, optional Team guidance | — | ● | — | Xendit Test Mode |
 | 3E | Admin Vendor Verification queue, case review, authority decisions | — | — | ● | None |
 | 3F | Activation gate UI, limited dashboard, expiry, Team Accounts, E2E | — | ● | ● | None |
 | 4 | Taxonomy, listings, media, PS/ICC compliance | — | ● | ● | Object storage; OCR/QR if enabled |
@@ -144,6 +155,10 @@ A requirement registry, a draft/version model, an immutable evidence pipeline, a
 
 ### Required implementation
 
+**Onboarding synchronization.** Implement the ONB-01–ONB-10 domain foundation: canonical public store name; required saved Logo/Banner dependencies; versioned seven-day schedules/date overrides; typed normal/mixer vehicles; provider association and durable attempt records; Owner dispute setting and Manager delegation; immutable submitted/effective evidence; and the S6 reviewed revision. Later phases add the relevant screens and operational features. Do not implement checkout or dispatch here.
+
+Map this pack's `vendor_onboarding_requirements`, `vendor_documents`, `vendor_addresses` and authority relations to existing migrations and the Technical Design concepts. Extend the canonical records; do not duplicate tables because the prose uses another label. Optional teams and products are excluded from activation/progress. Conditional delivery differs from missing required data. Lock activation against simultaneous evidence expiry, media removal or holds, and audit the exact saved dependency revisions.
+
 - `vendor_onboarding_requirements` with independent `level` (`REQUIRED`, `OPTIONAL`, `CONDITIONALLY_REQUIRED`) and `status` (`NOT_STARTED`, `IN_PROGRESS`, `SUBMITTED`, `PENDING_VERIFICATION`, `APPROVED`, `COMPLETED`, `CHANGES_REQUIRED`, `REJECTED`, `EXPIRED`, `NOT_APPLICABLE`), plus `applicability_reason`, `blocking` and `lock_version`. `NOT_APPLICABLE` requires a reason and can never mask an incomplete `REQUIRED` item.
 - A requirement-resolver service that computes the applicable set from Business Type, supplier configuration, fulfillment selection and representative role. Changing an input recalculates the set and reopens affected approved requirements.
 - `vendor_onboarding_drafts` per workstream with optimistic `lock_version`; stale writes return a conflict.
@@ -166,6 +181,8 @@ Configure Development private object storage from `MateryalPH_Environment_and_AP
 
 ### Acceptance gate
 
+Verify deterministic dependency evaluation, no separate Store Media/Team Accounts completion rows, seven-day/override constraints, public-name linkage, evidence/authority versions, unique provider association, S6 invalidation, product-free activation versus discovery, and concurrent activation/invalidation. Migration checks use isolated empty/current-schema test databases.
+
 Migrations run from an empty database and on the current schema, and roll back safely. Requirement resolution is deterministic and covered for all five Business Types. A stale draft write returns a conflict. Scan-pending and scan-failed documents cannot satisfy a requirement. Cross-Vendor and unauthorized-staff document access return a safe `403`/`404`. The activation gate refuses activation for every individually missing mandatory requirement and returns the exact blocking list.
 
 ### Copy-paste prompt
@@ -174,6 +191,8 @@ Migrations run from an empty database and on the current schema, and roll back s
 Apply §0 Standing Contract from docs/plans/MateryalPH_Implementation_Phases_and_Codex_Prompts.md and AGENTS.md. Do not restate them back to me.
 
 Implement MateryalPH Phase 3A: the Vendor onboarding domain foundation in services/api and packages/api-contract only. Do not edit apps/vendor-web, apps/admin-web or apps/buyer-mobile.
+
+Apply ONB-01–ONB-10 and map actual schema/routes to the Technical Design rather than creating parallel modules. Extend canonical public identity, saved Logo/Banner, weekly/date schedules, typed mixer/normal vehicles, provider version/environment/attempt association, Owner settings, effective evidence and S6 revision. Optional teams/products never block activation. Preserve immutable history; Setup cannot approve Verification. Use short transactions, optimistic/row locks and outbox events; external calls stay outside locks. Test dependency invalidation, unique association and activation races on isolated databases.
 
 Read docs/workflows/Vendor_Onboarding_Store_Verification_and_Store_Setup.md, the Final Vendor and Admin Workflows, Technical Design 12.5, and docs/architecture/MateryalPH_Technical_Design_Delta_FIN-04A_Withholding_Threshold.md. Inspect existing migrations, policies and OpenAPI paths first, then present a short plan.
 
@@ -202,6 +221,10 @@ The Vendor completes the entire Business Information step: Business Type, legal 
 
 ### Required implementation
 
+**Shared identity and authority.** Keep public store name canonical across Business Information/S1 and separate from legal names. Sole Proprietorship uses DTI, Partnership/Corporation/OPC use SEC and Cooperative uses CDA under the conditional policy. Distinguish account Owner, primary business contact and legal signatory. Reuse contacts; one primary designation does not create a membership. Approved existing records may establish authority; otherwise request the applicable authorization, not every document type simultaneously. Record scope, effective period and reviewed version. Initial evidence submission must work before authority approval; binding tax/commission/payment attestations wait for applicable approved authority and required Owner action.
+
+One readonly Store Email field becomes editable through Change, then Send Code and OTP. Bind the latest challenge to actor, organization, normalized candidate and purpose; enforce expiry, attempts and single use. Failure retains the prior verified email. Reuse verified Google ownership for the same address without changing login security. Replacing Store Email does not change login/provider email or historical agreements. Phone has no SMS verification. Optional declaration absence is not itself a mandatory-document blocker; mandatory tax registration remains required.
+
 Build every subsection in the build specification §5, exactly as specified, including: the five Business Types with `ONE_PERSON_CORPORATION` presented as its own option; conditional individual versus company legal identity with the Owner prefill that creates no verified fact; government ID front/back as private evidence; the conditional authority model and its three scopes; separate `store_name` and `legal_business_name` columns that never overwrite each other; date established validated as a real non-future date; the single named `store_email` input with its read-only ⇄ editable ⇄ Send Code ⇄ OTP ⇄ verified lifecycle; Store Phone with Owner prefill and no OTP; Core TIN of exactly 9 digits and a 3- or 5-digit Branch Code with Head Office prefill of `000`/`00000`; declared versus verified VAT; BIR COR upload that does not verify the profile and accepts Expiration: Not Applicable; the Sworn Declaration claim with taxable year and PDF that grants no relief; and Business Type-driven primary registration evidence plus the LGU permit and optional certifications.
 
 FIN-04A: the declaration is captured as a claim only. Show the plain-language notice that cumulative gross remittances reaching ₱500,000.01 in the taxable year move the account to withholding regardless of the uploaded document. Implement no counter here.
@@ -227,6 +250,8 @@ Email delivery outside local development needs the configured provider; Mailpit 
 
 ### Acceptance gate
 
+Test all five registration paths, current versus historical authority, initial pending-authority submission, Owner-only attestation, canonical-name synchronization, exactly one email input, expired/replayed/superseded/cross-organization OTPs, unchanged old email on failure, independent login/provider identity, no phone OTP and optional declaration treatment.
+
 Build specification §14 for structure/navigation, Business Type, legal identity, representative and authority, TIN, Store Email, Store Phone and Tax. Plus: exactly one named `store_email` input exists in the DOM; a pending replacement never inherits verification; a stale draft write returns a conflict; private evidence is unreachable across Vendors; browser checks pass at all eight widths.
 
 ### Copy-paste prompt
@@ -235,6 +260,8 @@ Build specification §14 for structure/navigation, Business Type, legal identity
 Apply §0 Standing Contract from docs/plans/MateryalPH_Implementation_Phases_and_Codex_Prompts.md and AGENTS.md. Do not restate them back to me.
 
 Implement MateryalPH Phase 3B: Store Verification step 1, Business Information, in apps/vendor-web with the matching services/api and packages/api-contract extensions. Do not edit apps/admin-web or apps/buyer-mobile.
+
+Apply the current canonical-name, business-contact and representative-authority rules. Keep legal names independent; do not create staff accounts from contacts. Use accepted-record references or applicable authority uploads conditionally, retain scope/effective versions and allow initial submission before approval; final Owner attestations require approved relevant authority. Enforce the latest identity/organization/candidate/purpose-bound single-use Store Email challenge and preserve the old verified address on failure. Reuse already verified Google ownership for the same address without altering authentication or provider identity. Phone has no SMS OTP. Optional declaration absence alone is not an activation blocker. Test these paths and keep private evidence out of public serializers.
 
 docs/workflows/Vendor_Onboarding_Store_Verification_and_Store_Setup.md section 5 is the field-level authority and section 4 is the layout authority. Build every subsection exactly as written: B1 Business Type, B2 Registered Legal Identity, B3 Government-Issued Identification, B4 Authorized Representative and Authority to Act, B5 business identity fields, B6 Store Email and Store Phone, B7 retired duplicate contact collection, B8 Tax Information, B9 Business and Compliance Evidence. Use the Phase 3A requirement registry, draft model, evidence pipeline and authority model; do not build a parallel one.
 
@@ -267,21 +294,27 @@ The Vendor completes the Registered Business Address with map or manual entry, s
 
 ### Required implementation
 
-Build specification §6, §7 and §8 in full: structured PH address fields plus interactive map selection with pin placement, structured resolution, displayed latitude and longitude, manual completion for unresolved components, review before save, stale-response rejection and an accessible non-map alternative; coordinates stored separately from the structured address; a critical address change creating a new version and reopening review. Three Supplier Types, 27 canonical niches with scope descriptions, multiple custom Other labels stored as Vendor-provided classification labels that never create taxonomy entries, and case-insensitive normalized rejection of prohibited rental categories. Privacy Notice presentation and acknowledgment recorded separately from commercial agreements. The full submission validation list returning exact failing requirement keys. `PENDING_VERIFICATION` on success and the confirmation page with **Proceed to Store Setup**.
+**Saved-state routing and noncircular consent.** Verification Continue later saves a permitted draft and opens Setup. Finish Later saves and exits to the limited Dashboard. Submission opens the dedicated confirmation with Proceed to Store Setup. Save failures preserve input and cannot show success. Keep raw coordinates hidden, while validating/storing geography and structured address separately. Manual entry needs no map interaction; unresolved mandatory geography is a named blocker, with draft saving available rather than invented coordinates.
+
+V4 places versioned 2% Commission Terms above the separate Privacy Notice. Pending authority must not block the initial evidence submission needed for its own approval. Applicable Owner acceptance waits for approved `COMMISSION_AGREEMENT` authority and remains an activation condition. Autosave or evidence submission never implies consent. S3/S6 display/link to this single acceptance.
+
+Build specification §6, §7 and §8 in full: structured PH address fields plus interactive map selection with pin placement, structured resolution with raw latitude and longitude hidden from the Vendor form, manual completion for unresolved components, review before save, stale-response rejection and an accessible non-map alternative; coordinates stored separately from the structured address; a critical address change creating a new version and reopening review. Three Supplier Types, 27 canonical niches with scope descriptions, multiple custom Other labels stored as Vendor-provided classification labels that never create taxonomy entries, and case-insensitive normalized rejection of prohibited rental categories. Privacy Notice presentation and acknowledgment recorded separately from commercial agreements. The full submission validation list returning exact failing requirement keys. `PENDING_VERIFICATION` on success and the confirmation page with **Proceed to Store Setup**.
 
 ### UI/UX and layout architecture
 
-V2 uses a two-column desktop layout: structured fields on the left, map on the right, collapsing to fields-above-map on tablet and mobile. The map initializes only when V2 is selected. Latitude and longitude render in their own read-only-until-resolved fields. A provider failure replaces the map area with a clear message, a retry and the manual path — never a blocked step.
+V2 uses a two-column desktop layout: structured fields on the left, map on the right, collapsing to fields-above-map on tablet and mobile. The map initializes only when V2 is selected. Raw latitude and longitude stay hidden from the Vendor form; the Vendor confirms the map pin and structured address. The backend still validates and stores both coordinates separately. A provider failure replaces the map area with a clear message, retry and manual address path. Draft saving remains available; unresolved mandatory geography must be resolved through an approved validated path before submission, without fabricated coordinates.
 
 V3 renders the Supplier Type as a radio group, then niches as a responsive multi-select grid with a short description per entry, then the repeatable custom-label input revealed by Other Category. Prohibited-term errors name the offending label.
 
-V4 is the only place the requirement checklist lives: grouped by step, each item showing level, status, blocking reason and a jump link, with unsaved edits listed explicitly above the Privacy Notice acknowledgment and a single dominant Submit action.
+V4 contains the Verification wizard review checklist; the limited Dashboard also shows the separate authoritative workstream checklists. Within the wizard, use the V4 checklist: grouped by step, each item showing level, status, blocking reason and a jump link, with unsaved edits listed explicitly above the Privacy Notice acknowledgment and a single dominant Submit action.
 
 ### API/key step
 
 Restricted Google Maps keys: a browser key for the client and a separate server key for the backend geocode proxy. The backend key never appears in Vite configuration.
 
 ### Acceptance gate
+
+Verify both draft-exit routes, failed-save retention, manual address/map failure and hidden-but-stored geography, multiple Other labels without taxonomy promotion, rental exclusion, pending-authority submission and later scoped/versioned terms acceptance without duplicate consent.
 
 Build specification §14 for address, classification, privacy and submission. Plus: manual-only completion succeeds with zero map interaction; a stale resolve response is discarded; submission without acknowledgment is refused; every missing requirement is named exactly; the confirmation page renders and Store Setup becomes reachable while review is pending.
 
@@ -292,24 +325,28 @@ Apply §0 Standing Contract from docs/plans/MateryalPH_Implementation_Phases_and
 
 Implement MateryalPH Phase 3C: Store Verification steps 2, 3 and 4 in apps/vendor-web with the matching services/api and packages/api-contract extensions. Do not edit apps/admin-web or apps/buyer-mobile. Phase 3B must already be accepted.
 
-Sections 6, 7 and 8 of docs/workflows/MateryalPH_Store_Verification_Onboarding_Spec.md are authoritative.
+Implement the synchronized route distinctions: Verification Continue later saves and opens Setup; Finish Later saves and returns to the limited Dashboard; successful submit opens confirmation with Proceed to Store Setup. Preserve input on failure. Hide raw coordinates but validate/store geography; manual address entry works without map interaction and unresolved location never becomes fabricated success.
 
-Step V2 Registered Business Address: structured Philippine fields for street or building or unit, barangay, city or municipality, province or independent-city classification and postal code, plus interactive Google Maps selection. The Vendor places or moves a pin, the system resolves structured components, latitude and longitude are displayed in their designated fields, the Vendor reviews the resolved address before saving, and any component the geocoder cannot confidently supply must be completable manually. Discard stale resolve responses so a late reply for an earlier pin cannot overwrite the current one. A provider failure degrades to manual entry with a retry, never a blocked step. Provide an accessible non-map alternative that is sufficient on its own. Store coordinates separately from the human-readable structured address using the Phase 3A geography column. A critical change to a previously approved address creates a new version and reopens review instead of overwriting a verified value. Initialize the map only when this step is selected. Use a restricted browser key in the client and a separate restricted server key in a backend geocode proxy; never place a backend key in Vite configuration.
+Place V4 Commission Terms above Privacy Notice, reuse the single versioned acceptance and require Owner/applicable approved authority for binding consent. Allow initial authority evidence submission while review is pending; autosave/submission never implies acceptance. Test both noncircular submission and later consent, plus classification and routing cases.
+
+Read sections 6, 7 and 8 of the existing Store Verification build specification at its actual repository path under §0.1. Apply the synchronized workflows for current behavior; do not create another specification under a guessed filename.
+
+Step V2 Registered Business Address: structured Philippine fields for street or building or unit, barangay, city or municipality, province or independent-city classification and postal code, plus interactive Google Maps selection. The Vendor places or moves a pin, the system resolves structured components, raw latitude and longitude stay hidden in the Vendor UI while remaining separately validated and stored, the Vendor reviews the resolved address before saving, and any component the geocoder cannot confidently supply must be completable manually. Discard stale resolve responses so a late reply for an earlier pin cannot overwrite the current one. A provider failure degrades to manual address entry with retry and draft saving. Provide an accessible non-map path; if required geography remains unresolved, name that submission blocker instead of fabricating a point or claiming the address is validated. Store coordinates separately from the human-readable structured address using the Phase 3A geography column. A critical change to a previously approved address creates a new version and reopens review instead of overwriting a verified value. Initialize the map only when this step is selected. Use a restricted browser key in the client and a separate restricted server key in a backend geocode proxy; never place a backend key in Vite configuration.
 
 Step V3 Supplier Type and Classification: exactly three Supplier Types — Wholesaler or Distributor, Retail Hardware Store, Specialized Supplier — and the 27 canonical niches listed in specification section 7, each with a short scope description. Allow multiple niches. Other Category reveals a repeatable text input accepting several custom labels, each stored as a Vendor-provided custom classification label that never creates a canonical taxonomy category; marketplace search, matching, analytics and product classification keep using the approved taxonomy. Reject prohibited construction-vehicle and equipment-rental entries case-insensitively after normalizing whitespace, capitalization, punctuation and equivalent wording, and show the approved message. Selecting Tools and Equipment must not make rental inventory acceptable. A custom label does not by itself require separate Admin approval.
 
-Step V4 Privacy, Review and Submit: present the current published Privacy Notice, require acknowledgment before submission, and record user, organization, notice version, timestamp, applicable processing activity, source and acknowledgment record separately from Terms of Service, the Vendor Code of Conduct, the Commission Agreement and other commercial agreements. Block submission with a clear operational message when no current Privacy Notice is published. Show the requirement checklist here and nowhere else: grouped by step with level, status, blocking reason and jump links, with unsaved edits listed explicitly. Automatically save progress on navigation and atomically save the final package on submission; do not require a manual Save Verification Draft action. Keep private pending documents separate from Admin submissions. Validate the complete submission list in specification section 8 server-side and return the exact failing requirement keys rather than a generic failure. On success set Store Verification to PENDING_VERIFICATION and show the dedicated confirmation page with the approved message and a Proceed to Store Setup action; Store Setup must be reachable while Admin review is pending.
+Step V4 Privacy, Review and Submit: present the current published Privacy Notice, require acknowledgment before submission, and record user, organization, notice version, timestamp, applicable processing activity, source and acknowledgment record separately from Terms of Service, the Vendor Code of Conduct, the Commission Agreement and other commercial agreements. Block submission with a clear operational message when no current Privacy Notice is published. Show the Verification wizard review checklist here, while retaining the separate Dashboard workstream checklists: grouped by step with level, status, blocking reason and jump links, with unsaved edits listed explicitly. Automatically save progress on navigation and atomically save the final package on submission; do not require a manual Save Verification Draft action. Keep private pending documents separate from Admin submissions. Validate the complete submission list in specification section 8 server-side and return the exact failing requirement keys rather than a generic failure. On success set Store Verification to PENDING_VERIFICATION and show the dedicated confirmation page with the approved message and a Proceed to Store Setup action; Store Setup must be reachable while Admin review is pending.
 
 Layout: V2 uses structured fields beside the map at desktop widths and fields above map below that; V3 uses a radio group then a responsive niche grid then the revealed custom-label inputs; V4 uses the grouped checklist, the unsaved-edit list, the acknowledgment and one dominant Submit action.
 
-Update OpenAPI and regenerate clients. Add component tests and browser checks at the eight standard widths for: manual-only completion with no map interaction; pin resolution and displayed coordinates; incomplete geocode requiring manual completion; discarded stale responses; provider failure fallback; separate coordinate and address storage; address versioning and reopened review; multi-niche persistence; multiple custom Other labels; prohibited-term rejection variants; refused submission without acknowledgment; exact missing-requirement identification; the confirmation page; and no horizontal page or stepper overflow.
+Update OpenAPI and regenerate clients. Add component tests and browser checks at the eight standard widths for: manual-only completion with no map interaction; pin resolution and hidden-but-stored coordinates; incomplete geocode requiring manual completion; discarded stale responses; provider failure fallback; separate coordinate and address storage; address versioning and reopened review; multi-niche persistence; multiple custom Other labels; prohibited-term rejection variants; refused submission without acknowledgment; exact missing-requirement identification; the confirmation page; and no horizontal page or stepper overflow.
 
 Run the Vendor and API check suites, OpenAPI validation, the contract checker, client generation and a gitleaks scan. Capture desktop and mobile screenshots. Never print or commit any provider key. Do not deploy or commit.
 ```
 
 ---
 
-**Current V4 commission placement (September 24, 2026):** The versioned 2% Commission Terms panel appears directly above Privacy Notice in Privacy, Review and Submit. Explicit acceptance is separate from automatic draft saving and evidence submission. The Owner must have current `COMMISSION_AGREEMENT` authority where applicable; initial evidence submission must remain available so Admin can approve that authority. Acceptance remains an activation condition. Store Setup has five steps and no longer collects commission consent.
+**Current V4 commission placement (September 24, 2026):** The versioned 2% Commission Terms panel appears directly above Privacy Notice in Privacy, Review and Submit. Explicit acceptance is separate from automatic draft saving and evidence submission. The Owner must have current `COMMISSION_AGREEMENT` authority where applicable; initial evidence submission must remain available so Admin can approve that authority. Acceptance remains an activation condition. Store Setup has six steps: S1 Public Store Profile, S2 Fulfillment/conditional Delivery, S3 Payment Configuration, S4 Optional Team guidance, S5 Store Operation and S6 Review and Complete. It does not collect duplicate commission consent.
 
 ## Phase 3D — Store Setup S1 to S6
 
@@ -317,9 +354,21 @@ Run the Vendor and API check suites, OpenAPI validation, the contract checker, c
 
 ### Outcome
 
-The Vendor completes the Public Store Profile and media, Fulfillment Configuration and conditional Delivery Configuration, the mandatory Xendit TEST connection, optional Team Accounts setup, Store Operation schedule, and Store Setup review and completion. Store Setup remains a separate workstream from Store Verification and its completion never approves, overrides, or rewrites a Store Verification item.
+The Vendor completes the Public Store Profile and media, Fulfillment Configuration and conditional Delivery Configuration, the mandatory Xendit TEST connection, optional Team Accounts guidance, Store Operation schedule, and Store Setup review and completion. Store Setup remains a separate workstream from Store Verification and its completion never approves, overrides, or rewrites a Store Verification item.
 
 ### Required implementation
+
+**Saved checklist contract.** S1 Public Store Profile, S2 Fulfillment/conditional Delivery, S3 Payment Configuration, S4 Optional Team guidance, S5 Store Operation and S6 Review and Complete are the six screens. Required checklist rows are Public Store Profile, Fulfillment Configuration, Payment Configuration and Store Operation, plus conditionally applicable Delivery Configuration. Store Media belongs inside Public Store Profile. Team Accounts is absent from the checklist and mandatory denominator. S6 reviews the saved revision rather than duplicating a requirement.
+
+**S1 completion.** Use the same canonical public store name as Business Information. Every required field and saved valid Logo AND Banner must exist for `COMPLETED`; both files alone cannot compensate for missing fields. Successful upload/removal returns the backend-recalculated checklist and refreshes preview without erasing unsaved text. Pending, failed, unsafe or unsaved media does not count. Failed replacement retains the old valid image. Removing either saved required image returns the profile to `IN_PROGRESS`, invalidates stale Setup/S6 completion and triggers activation re-evaluation without reopening unrelated legal evidence.
+
+**S2 advisory boundary.** Retain the full vehicle field set below with validated count/payload/dimensions, availability and non-negative fees. Missing weight/dimensions/conversion factors require manual review, never zero assumptions or a packing guarantee. Mixed ready-mixed/ordinary materials need compatible separate groups; bagged cement is ordinary cargo. Owner/Manager confirms eligible vehicle(s), counts, trips, endpoint, distance and final fee before Buyer acceptance; Fulfillment Staff reads the confirmed assignment only. Heavy restriction Yes requires an alternative drop-off/address/map point while preserving the intended destination/Project site. Later phases implement the Buyer journey and immutable accepted snapshots using this same model.
+
+**S3 provider boundary.** Resolve verified Store Email or verified Owner fallback server-side, recording the source. Persist organization/environment/API-version association, scoped attempt and outbox before provisioning. Repeated clicks reuse the attempt; uncertain timeout becomes reconciliation-required, not another blind Create Account. Keep raw provider status, technical connection, KYC and payment/refund capabilities separate. Preserve a verified legacy v2 adapter or implement the approved new v3 contract explicitly; never mix readiness/callback assumptions or silently migrate accounts. TEST technical entity placeholders do not replace actual Business Type, and raw TEST `LIVE` never means production approval. Required unsupported readiness remains a visible blocker. Phase 11 owns transactions/refunds.
+
+**S4 optional guidance.** Explain the five employee roles, individual accounts and Owner fallback, with Skip/Continue. Reuse an existing working invitation route; Phase 3F completes remaining lifecycle work, without dead actions or duplicate membership infrastructure. Invitations work before/after activation once implemented. Manager delegation defaults off; Store Staff/Customer Service dispute access defaults on through the Owner setting. Protected finance/Earnings remains Owner-only.
+
+**S5 saved public schedule.** Require explicit Open/Closed for all seven days in Asia/Manila. Open needs opening < closing on the same day. Closed has null/disabled times. Reject equal/reversed ranges rather than inferring overnight/24-hour service; all-Closed is valid. Copy Hours affects selected days only. Save a complete weekly revision atomically; incomplete drafts remain `IN_PROGRESS`. Optional unique-date overrides use the same validation and replace the weekly rule for that local date. A missing override uses the week; a blank override is not closure. Never generate holiday closures. Owner/Manager may edit this operational schedule only; other protected profile fields remain Owner-controlled. S6/public DTOs read this same saved source. Informational Open/Closed cannot change stock, staff presence, discovery, deadlines or accepted commitments.
 
 Build specification §9 in full. Public Store Profile with live marketplace-style preview and a Store Media subsection whose successful upload refreshes the preview without discarding unsaved fields. Bulk Order Capability drives Item-Based versus Item-Based plus Project-Based eligibility with no competitive RFQ queue, auction, or automatic Vendor competition mechanism.
 
@@ -333,7 +382,7 @@ Concrete Mixer Truck / Transit Mixer applies specifically to ready-mixed concret
 
 Xendit xenPlatform TEST sub-account connection is mandatory for Store Activation. The Vendor explicitly initiates the connection through MateryalPH using a Connect Xendit action. After confirmation, the backend uses the officially supported Xendit TEST Account/Create Account API flow with server-side credentials to provision the Vendor's TEST sub-account under the MateryalPH platform account. Do not require the Vendor to manually create the TEST sub-account in the Xendit Dashboard, copy and paste an invitation link, or supply a Dashboard URL. Capture and securely store the provider-issued sub-account identifier and reconcile it through permitted backend-only Xendit mechanisms before marking the connection `CONNECTED_TEST` or the equivalent approved status. A locally stored identifier, URL, or client-side success state alone never proves connection. Where the provider's TEST environment does not support production onboarding, representative invitations, KYC, activation, or verification behavior, report the limitation accurately instead of fabricating success.
 
-Team Accounts remain optional and never block Store Activation. Support the five fixed roles: Store Manager, Store Staff, Customer Service Staff, Inventory Staff and Fulfillment Staff. Each employee has exactly one fixed role at a time. Store Staff combines the approved Customer Service and Inventory work scopes for small and medium stores without automatically receiving Fulfillment, Wallet, Earnings, Team Account administration or Owner authority. Store Manager staff-management delegation is off by default and, when enabled by the Vendor Owner, applies only to permitted non-manager roles. Sidebar visibility, direct-route access, API authorization and resource authorization must follow the predefined role scope. Wallet and Earnings remain Vendor Owner only. If no Team Accounts exist, the Vendor Owner retains all applicable operational functions.
+Team Accounts remain optional and never block Store Activation. Support the five fixed roles: Store Manager, Store Staff, Customer Service Staff, Inventory Staff and Fulfillment Staff. Each employee has exactly one fixed role at a time. Store Staff combines the approved Customer Service and Inventory work scopes for small and medium stores without automatically receiving Fulfillment, protected Transaction History, Earnings, Team Account administration or Owner authority. Store Manager staff-management delegation is off by default and, when enabled by the Vendor Owner, applies only to permitted non-manager roles. Sidebar visibility, direct-route access, API authorization and resource authorization must follow the predefined role scope. Protected Transaction History (the existing module corresponding to the former Wallet label) and Earnings remain Vendor Owner only. No internal wallet or withdrawal control is introduced. If no Team Accounts exist, the Vendor Owner retains all applicable operational functions.
 
 Store Operation allows the Vendor to configure the store's operating days and opening and closing times, including marking applicable days as Closed. Enabled operating periods require valid opening and closing values. Do not fabricate holiday schedules, special hours or multiple operating windows unless explicitly supported by the authoritative workflow.
 
@@ -343,7 +392,9 @@ Commission Terms remain part of the authoritative Store Verification flow and ar
 
 ### UI/UX and layout architecture
 
-S1 splits into an editable form column and a preview column at ≥1024px and stacks below that; the preview shows banner, overlapping logo, name, description, public contact details and city/province summary, updates text immediately, uses structured placeholders for missing media and offers retry on a failed preview. Operating hours and gallery media are not implemented in S1 and must not be fabricated. Public Store media uses the Cloudinary adapter while private evidence remains on private storage.
+Preserve the sidebar. Vehicle Remove is upper right; Category, Type, Name and Brand stack left; image/upload/preview sits right on wide screens and stacks logically on narrow screens. Delivery-rate controls form one clear section. S5 has seven labeled rows, enabled/disabled time inputs, targeted Copy Hours, inline errors and date-override precedence. S6 distinguishes saved data from unsaved changes. S3 uses Connect/check-status/retry with safe state descriptions, never manual link/ID fields.
+
+S1 splits into an editable form column and a preview column at ≥1024px and stacks below that; the preview shows banner, overlapping logo, name, description, public contact details and city/province summary, updates text immediately, uses structured placeholders for missing media and offers retry on a failed preview. S5 owns operating-hours editing; the S1 preview may read its saved schedule without maintaining a second editable copy. Do not fabricate unsaved hours or unimplemented gallery media. Public Store media uses the Cloudinary adapter while private evidence remains on private storage.
 
 S2 reveals Delivery Configuration only when Vendor Delivery or Both is selected and explains the `NOT_APPLICABLE` outcome when Self-Pickup only is selected. The vehicle form supports the complete field set, Category and Type descriptions, Custom Vehicle Type, conditional Mixer Capacity for Concrete Mixer Truck / Transit Mixer, and the Maximum Delivery Distance map/radius visualization. Normal cargo-dimension fields are hidden and marked `NOT_APPLICABLE` for mixer trucks where they are not meaningful.
 
@@ -363,7 +414,23 @@ The API and contract model must also support the current Fulfillment Configurati
 
 Team Account authorization must be enforced server-side. Hidden navigation does not constitute authorization.
 
+**Contract extensions.** Preserve the existing PATCH `/api/v1/vendors/onboarding/setup` route and its `organization_lock_version` plus `draft_lock_version`; Verification retains its separate `lock_version` plus `draft_lock_version`. Map Technical Design §9.2's conceptual `/vendors/me/...` family to established equivalents before introducing routes. Add the following capabilities to the canonical contract, with idempotent commands and current revisions:
+
+| Capability | Required request and response boundary |
+| --- | --- |
+| Save public profile / upload, activate or remove media | Owner; safe public fields and same-Vendor valid media purpose; return saved preview, canonical name, revision and recalculated checklist |
+| Save fulfillment / vehicle configuration | Authorized Owner during onboarding; Owner/Manager operational scope with state guard; typed validation, delivery applicability and no accepted-snapshot mutation |
+| Save weekly operating hours | Owner or explicit Manager schedule permission; complete seven-day revision atomically; return saved schedule, revision and checklist |
+| Save/remove dated hours override | Same authority; unique local date and validated Open/Closed range; removal returns weekly fallback |
+| Connect/check/reconcile Xendit | Owner, recent authentication and applicable authority; organization/environment/API-version-bound attempt; safe pending/status payload, no browser-provided provider success/ID or secret |
+| Complete Setup | Owner and expected current S6/setup revision; saved mandatory dependency revalidation; return completed state or exact linked blockers, plus separate Verification/activation state |
+| Read public store projection | Saved allowed public name/media/contact/hours/capabilities and eligibility only; no draft, tax, authority, provider or private staff data |
+
+Checklist entries carry stable key, level, status, applicability reason, missing-field reasons, source revision and `as_of`. Reject client-authoritative `APPROVED`, `COMPLETED`, `CONNECTED_TEST` or `ACTIVE`. Preserve 409 for stale/idempotency conflict, 422 for invalid fields, 403/non-disclosing 404 for denied resources, 429 with safe retry guidance for throttling and a durable pending attempt or external-unavailable response for provider uncertainty. A check-status/reload does not create another account. Generated clients preserve all independent state enums.
+
 ### Acceptance gate
+
+Verify both required-media removals, missing fields despite two files, failed replacement retaining old media and no media/team checklist row. Cover seven explicit days, all-Closed, invalid/equal/reversed times, timezone/closing boundary and override removal; normal/mixer/bagged cargo; vehicle scope; duplicated/uncertain Connect without duplicate accounts; pinned API-version readiness; TEST raw LIVE labeling; unchanged sidebar/session and no unlisted application edits. Fake tests and actual provider connectivity are reported separately.
 
 Setup reaches `COMPLETED` only when all required Store Setup requirements are satisfied. This includes the applicable Public Store Profile requirements, applicable Fulfillment and Delivery Configuration requirements, required Store Operation information, and a successfully reconciled Xendit TEST connection.
 
@@ -382,25 +449,37 @@ Legal fields cannot be edited through the Public Store Profile editor. Private s
 ```text
 Apply §0 Standing Contract from docs/plans/MateryalPH_Implementation_Phases_and_Codex_Prompts.md and AGENTS.md. Do not restate them back to me.
 
-Implement MateryalPH Phase 3D: the six Store Setup steps in apps/vendor-web with the matching services/api and packages/api-contract extensions. Do not edit apps/admin-web or apps/buyer-mobile. Phases 3A to 3C must already be accepted.
+Implement MateryalPH Phase 3D: Store Setup S1 to S6 in apps/vendor-web, services/api and packages/api-contract. Do not edit apps/admin-web or apps/buyer-mobile. Audit current work and implement only missing changes; accepted Phases 3A–3C remain intact. Use the 27 September workflows, ONB-01–ONB-10, Technical Design and existing build specification, with the existing organization/draft optimistic guards and schema/route names.
 
-Section 9 of docs/workflows/Vendor_Onboarding_Store_Verification_and_Store_Setup.md and the Final Vendor Workflow sections 2 to 6 are authoritative. Keep Store Setup a separate workstream with its own checklist, draft record, progress and completion state; it must remain available while Store Verification is PENDING_VERIFICATION, CHANGES_REQUIRED, REJECTED or EXPIRED, and its completion must never change a Store Verification item to APPROVED.
+Keep Setup independent from Verification approval. It opens after Verification submission or Continue later while Verification is still a draft, and remains editable during review/corrections. Checklist rows are Public Store Profile, Fulfillment Configuration, Payment Configuration and Store Operation, plus conditionally applicable Delivery Configuration. No separate Store Media row; no Team Accounts row, blocker or mandatory-count contribution. S6 reviews the saved revision, not a duplicate checklist requirement.
 
-S1 Public Store Profile: editable form plus a marketplace-style preview with banner, overlapping logo, name, description, public contact details and city or province summary. Text changes appear immediately. Store Media is a subsection beside the editor and preview; a successful upload refreshes the preview without discarding unsaved fields. Missing media shows structured placeholders and a failed preview offers retry. Legal fields are not editable here. Private staff contacts, tax data and evidence are excluded. Do not fabricate operating hours or gallery media that the surface does not implement. Public Store media uses the Cloudinary adapter; private evidence stays on the private disk.
+S1 Public Store Profile: use one canonical public name synchronized with Business Information, separate from legal names. Require all saved mandatory fields plus valid Logo AND Banner for automatic COMPLETED. No manual completion button. Render the established marketplace preview with banner, overlapping logo, name, description, allowed contacts and city/province. Draft text updates immediately. Successful media upload/removal refreshes preview and checklist without clearing unsaved text. Pending/failed/unsafe uploads do not count; failed replacement retains the old valid file. Removing either saved required image returns IN_PROGRESS and invalidates Setup/S6. Optional promotional media never blocks completion. Keep legal, tax, authority, provider and staff-private data absent. Use public Cloudinary derivatives; private evidence cannot be copied into public media. S5 owns schedule editing; preview may read saved hours only.
 
-S2 Fulfillment Configuration: Bulk Order Capability Yes enables Item-Based and Project-Based eligibility and No enables Item-Based only, without creating any competitive RFQ bidding queue and without rewriting accepted orders. Services Capability is Self-Pickup, Vendor Delivery or Both. Self-Pickup only sets Delivery Configuration to CONDITIONALLY_REQUIRED with status NOT_APPLICABLE and an applicability reason. Vendor Delivery or Both requires vehicle category, number of vehicles, capacity in kilograms, cargo length, width and height in metres, heavy-vehicle classification, base fee, per-kilometre rate and maximum delivery distance, validated as positive quantities, valid ranges, non-negative rates and a required distance limit. Unconfigured vehicles never appear as fulfillment options, and editing a vehicle later never changes an accepted order's delivery snapshot.
+S2 Fulfillment: Bulk Yes enables Item-Based plus Project-Based, No enables Item-Based only, without RFQ queues or rewriting accepted work. Self-Pickup keeps Delivery CONDITIONALLY_REQUIRED with valid NOT_APPLICABLE reason and hides its form. Vendor Delivery/Both requires an eligible complete saved configuration.
 
-S3 Xendit TEST Connection: xenPlatform sub-account onboarding is mandatory for every Vendor seeking Store Activation regardless of Business Type. The Vendor creates the sub-account and Authorized Representative invitation through the Xendit Dashboard. Guide the Vendor to the provider flow and capture the exact HTTPS link the provider returns; never construct an undocumented Dashboard URL and never silently create the account. Capture the provider sub-account identifier and reconcile it through permitted backend-only API or webhook mechanisms. A saved link alone never proves connection. Treat invitation links as sensitive, mask them in the UI where possible and redact them from logs. Use Test Mode only and implement no live transactions, refunds or other Phase 11 payment behavior. If the provider cannot support the required link or reconciliation operation in the configured environment, keep the connection unverified and report the provider limitation instead of fabricating success. Follow the current Xendit sub-account, Create Account v3 and XenPlatform setup documentation before choosing request fields.
+Support multiple vehicles with Category, Type, Name, Brand where applicable, required Image, positive integer usable count, positive payload kg, applicable positive cargo length/width/height in metres, heavy classification, non-negative base/per-km fees, positive maximum delivery distance and enabled/availability state. Categories are Motorcycle, Pickup, Van and Truck. Truck types include Box, Wing, Flatbed, Concrete Mixer/Transit Mixer and Custom; Van types Compact/Mini Panel, Mid-Size Cargo, Full-Size Cargo and Custom; Pickup types Compact, Mid-Size, Heavy-Duty and Custom. Keep category/type distinct and show descriptions. Custom type never bypasses validation or permits rental inventory. Show the distance-limit map/radius around the configured store/fulfillment location.
 
-S4 Team Accounts: optional, never blocks activation, and explains the existing post-setup invitation route with the five fixed roles and the off-by-default Store Manager delegation limits.
+Concrete Mixer/Transit Mixer requires positive Mixer Capacity m3 for ready-mixed concrete; hide conventional cargo dimensions as NOT_APPLICABLE. Bagged cement uses ordinary cargo rules. Prepare the shared advisory service for actual weight, relevant dimensions/dimensional-weight formula version, volume, payload, count, trips, route distance, availability and access. Unknown measurements require named manual review, never zero assumptions or exact-fit guarantees. Mixed ready-mixed/ordinary loads need compatible groups. No automatic dispatch or final charge from an unconfirmed recommendation. Preserve intended address and required heavy-restriction alternative drop-off foundations. Owner/Manager confirms vehicles/counts/trips/endpoint/final fee before Buyer acceptance in later phases; Fulfillment Staff reads confirmed assignments only. Phase 5 extends this same service.
 
-S5 Review and Complete: setup summary, explicit unsaved-edit list, and completion only when the required Xendit connection and onboarding state are confirmed, required payment capabilities and settings are complete, the effective Vendor Tax Profile is compatible with activation, commission acceptance is captured separately in Store Verification and no payment or provider requirement remains unresolved.
+S3 Payment Configuration: Owner selects Connect Xendit and confirms, with current authentication/applicable authority. Backend uses verified Store Email or verified Owner fallback, records the source, creates under the configured master using backend TEST credentials, stores the provider ID and reconciles authoritative evidence before CONNECTED_TEST. Do not ask for manual account creation, a pasted ID/URL, secret key or unsupported representative invitation. A local ID, browser redirect or fake result is not connection evidence.
 
-Layout: S1 uses form beside preview at 1024px and above and stacked below that; S2 reveals delivery fields only when applicable and explains the NOT_APPLICABLE outcome in text; S3 shows connection state, the masked provider link and a plain statement that TEST capability is not live payment approval; S5 mirrors the V4 summary pattern.
+Read official Xendit references in Technical Design 13.2 before implementing the selected adapter. Preserve a working verified legacy v2 integration and its readiness contract, or implement the approved v3 contract for a new integration. Record version/environment/raw status/connection/KYC/capabilities separately. Never mix payload or callback assumptions, silently migrate versions or create a second account on errors. If the chosen TEST contract uses a CORPORATION technical placeholder, retain the actual MateryalPH Business Type separately. A raw TEST LIVE state can only be displayed as Connected — TEST after reconciliation, never live-business/payment approval. Unsupported required readiness/capability remains blocked with an accurate explanation.
 
-Update OpenAPI and regenerate clients. Add component tests and browser checks at the eight standard widths for: live preview text updates; upload-to-preview refresh without losing unsaved fields; failed-image fallback; conditional delivery fields and the NOT_APPLICABLE outcome; bulk-capability eligibility mapping; rejection of a link-only Xendit connection; link masking and log redaction; gated Commission Terms acceptance and signatory-scope enforcement; Team Accounts gating; setup completion not approving a verification item; and no horizontal page overflow.
+Persist the organization-bound attempt and outbox before calling the provider. Repeated clicks reuse it. Timeout with uncertain outcome requires reconciliation, not blind create retry; prevent cross-Vendor reuse of an account. Keep secrets and sensitive payloads out of clients/logs/fixtures/screenshots. Technical association does not independently satisfy payment/refund or legal/tax requirements. Implement no Phase 11 checkout/funds movement/refund here. The public landing page remains free of sandbox disclosures.
 
-Run the Vendor and API check suites, OpenAPI validation, the contract checker, client generation and a gitleaks scan. Capture desktop and mobile screenshots. Never print a provider key or token. Do not deploy or commit.
+S3 references the effective Vendor Tax Profile and existing versioned V4 Commission Terms acceptance/authority, with links for correction. Never recollect legal/tax identity or duplicate commission consent. Preserve all FIN/FIN-04A formulas and DEMO versus actual provider evidence.
+
+S4 Optional Team guidance: explain Store Manager, Store Staff, Customer Service Staff, Inventory Staff and Fulfillment Staff, one role per employee and individual credentials. Owner retains operations with no staff. Provide Skip/Continue; reuse a working invite route or leave remaining lifecycle to Phase 3F without dead buttons. Invitations may happen before/after activation and require no Setup completion. Explain Manager delegation off by default and non-manager-only; Owner dispute flag defaults on for Store Staff/Customer Service; protected Transaction History/Earnings is Owner-only. Do not redesign navigation or create arbitrary permission combinations.
+
+S5 Store Operation: require explicit Open/Closed for Monday–Sunday in Asia/Manila. Open requires valid opening and closing times with closing later that same day; Closed disables inputs and stores no active range. Reject equal/reversed times; do not infer overnight/24-hour service. All-Closed is valid. Copy Hours affects selected days only. Save a complete weekly revision atomically. Optional unique-date overrides replace the weekly rule for the local date with the same validation; omitted override uses the week and blank does not imply closure. Do not auto-generate holidays. Owner/Manager may edit this specific operational setting; protected profile/legal/financial fields remain restricted. Audit old/new version and actor. Expose saved public schedule for later Buyer rendering, with exact closing-time behavior. Informational hours never prove staffing/stock, cancel orders, pause deadlines or change discovery automatically.
+
+S6 Review and Complete: summarize current saved profile/media, capabilities, applicable vehicles/rates, payment/tax/authority/terms and full schedule; list unsaved edits separately. Revalidate mandatory saved dependencies server-side under current versions and return field-linked blockers on stale/incomplete data. Store the reviewed setup revision; later invalidating changes reopen it. Completion never approves Verification or activates the store. Existing required payment/tax/commission readiness must pass, but unrelated pending legal review remains an activation gate rather than a fabricated Setup approval.
+
+Verification Continue later saves and opens Setup. Setup Continue later or Finish Later saves and opens the limited Dashboard; failure retains input. First/later-login routing is completed in Phase 3F. Fix Store Profile routing and branding/session retention without changing the Sidebar layout. Keep vehicle Remove top right, fields stacked left, image/upload/preview right and rates grouped; stack accessibly on narrow screens. S5 uses labeled day rows and S6 the existing review pattern.
+
+Preserve PATCH /api/v1/vendors/onboarding/setup with organization_lock_version and draft_lock_version; Verification keeps lock_version plus draft_lock_version. Map Technical Design 9.2 conceptual routes to actual equivalents before adding APIs. Extend profile/media mutations, atomic weekly/date schedules, typed fulfillment/vehicles, Owner Connect/status/reconcile and current-revision Setup completion. Return checklist stable key, level/status, applicability/missing reasons, source revision/as_of and safe preview; public-store DTO exposes only saved allowed values. Reject client-submitted authoritative approval/connection/activation states. Use consistent 409 stale conflicts, 422 validation, denied-resource responses and safe throttled/pending provider behavior. GET/check never creates accounts.
+
+Update OpenAPI and generated clients through the established tooling. Test conditional delivery, public-name/media completion and invalidation, failed replacement, weekly/override/timezone cases, mixer/bagged cargo, roles, provider attempt uniqueness/timeouts/version boundaries, S6 stale revisions and unchanged sidebar/session. Use isolated test data and distinguish fake tests from actual Xendit TEST observations. Report exact commands/results, changed files and remaining provider blockers. Do not deploy, commit, use live keys, rebuild accepted phases or edit unlisted app surfaces.
 ```
 
 ---
@@ -415,13 +494,19 @@ Authorized Admins open submitted Store Verification cases, inspect structured se
 
 ### Required implementation
 
+**Grouped information, separate evidence.** Combine information-only Business Information for convenient review; IDs, registration, permit, COR, declaration and authority remain independently versioned requirements. Selecting Legal Identity automatically loads the associated government ID front/applicable back in context but never approves it. Record Decision names every target and immutable version. If batch review exists, enumerate included items and record per-item decisions atomically; unselected files stay unchanged. OCR is assistance only. Distinguish no-expiry from unknown expiry.
+
+Activation Restrictions consumes the current setup/authority/terms/provider projection: saved Logo/Banner, seven-day schedule, conditional vehicles/mixer, required TEST capability and valid evidence. No teams/products blocker. Admin cannot fabricate provider connection or override absent mandatory saved data. Corrections/reverification target affected requirements and retain all previous evidence.
+
 Build specification §10 in full: the queue with its columns, filters, sorting and pagination; the sectioned case detail mirroring the Store Verification steps rather than an unstructured document list; per-requirement Approve, Return for Correction and Reject with required reasons; authority decisions with approved scopes; Admin-recorded verified document number, issue date, expiration date or Not Applicable, remarks, source, reviewer and timestamp with `expiration_date < issue_date` rejected; OCR as review assistance only; correction and resubmission preserving prior file, metadata, decision, remarks and replacement relationship without resetting unrelated valid requirements; and the reverification trigger list. Every decision carries the evidence version it was made against; a decision with a stale step `lock_version` is rejected. Every decision writes an audit event and a notification.
 
 ### UI/UX and layout architecture
 
-Two-pane case layout at ≥1280px: a left section navigator showing each verification section with its status, and a right detail pane. Single column below 1024px with the navigator as a collapsible list. The evidence viewer opens a private document through an authenticated short-lived URL beside the fields it supports, with scan state, version chain and a replace-history link. Decision controls sit at the foot of each section with the reason field required and inline for `Return for Correction` and `Reject`. A stale decision surfaces a conflict banner with a refresh action rather than a silent failure. The Tax Profile panel displays legal and trade identity, VAT status, tax year, prior-year position, declaration year and receipt, outside-platform disclosure scope, current local total, threshold-breach flag and withholding reason — masked TIN only.
+Compact three-panel case layout at wide desktop widths: requirements/status navigation on the left, combined Business Information and related evidence in the middle, and Record Decision stacked above Activation Restrictions on the right. Reflow to two readable regions at tablet widths and stack requirements, information/evidence and decision/restrictions on narrow screens. Preserve the existing sidebar. Selecting Legal Identity loads the linked government ID front and applicable back in the selected review context, with zoom and loading/error states. Information-only approval does not automatically approve separately tracked documents. Name the target requirement(s), submission and evidence versions in Record Decision. Stale decisions show a conflict banner and refresh action. Keep Tax Profile values masked and permission-scoped; retain its legal/trade identity, VAT status, tax/declaration year, prior-year position, receipt, disclosure scope, local total, threshold flag and withholding reason.
 
 ### Acceptance gate
+
+Verify grouped information cannot approve documents implicitly, correct ID front/back linkage, exact batch targets, stale review conflicts, private viewer authorization, authority scope, missing media/hours blockers and responsive three-panel layout without sidebar changes.
 
 The Admin review page is required Phase 3 acceptance evidence; backend review logic alone is insufficient. An Admin cannot override a missing mandatory requirement from the frontend. Vendor Verification Staff cannot authorize a statutory rate or mark a tax return filed. Cross-role and cross-scope access returns a safe `403`/`404`.
 
@@ -431,6 +516,10 @@ The Admin review page is required Phase 3 acceptance evidence; backend review lo
 Apply §0 Standing Contract from docs/plans/MateryalPH_Implementation_Phases_and_Codex_Prompts.md and AGENTS.md. Do not restate them back to me.
 
 Implement MateryalPH Phase 3E: the Admin Portal Vendor Management to Vendor Verification queue and case review in apps/admin-web with the matching services/api and packages/api-contract extensions. Do not edit apps/buyer-mobile, and edit apps/vendor-web only where a notification or status payload requires it. Phases 3A to 3D must already be accepted.
+
+Use combined information-only Business Information review with separate document decisions. Legal Identity loads its linked private government ID front/back; every decision names exact current requirement/submission/evidence versions. Batch review, if supported, lists targets and creates independent decisions without approving unselected documents. Keep no-expiry, OCR and stale-review semantics distinct.
+
+Consume current saved setup/media/hours, conditional delivery, provider readiness, authority and V4 terms for activation restrictions; optional teams/products do not block. No manual fake provider-ready override. Test linked preview, grouping-versus-evidence, stale versions, private access and responsive three-region layout.
 
 Section 10 of docs/workflows/Vendor_Onboarding_Store_Verification_and_Store_Setup.md and the Final Admin Workflow section Vendor Verification and Activation Workflow are authoritative.
 
@@ -446,7 +535,7 @@ Implement correction and resubmission: CHANGES_REQUIRED to SUBMITTED to PENDING_
 
 Show the Tax Profile panel with legal and trade identity, VAT status, tax year, prior-year position, declaration year and receipt, outside-platform disclosure scope, current local total, threshold-breach flag and withholding reason, using masked TIN values only.
 
-Layout: two-pane case view with a left section navigator carrying per-section status at 1280px and above, single column with a collapsible navigator below 1024px, the evidence viewer opening authenticated short-lived private URLs beside the fields it supports, and decision controls at the foot of each section with inline required reasons.
+Layout: Compact three-panel case layout at wide desktop widths: requirements/status navigation on the left, combined Business Information and related evidence in the middle, and Record Decision stacked above Activation Restrictions on the right. Reflow to two readable regions at tablet widths and stack requirements, information/evidence and decision/restrictions on narrow screens. Preserve the existing sidebar. Selecting Legal Identity loads the linked government ID front and applicable back in the selected review context, with zoom and loading/error states. Information-only approval does not automatically approve separately tracked documents. Name the target requirement(s), submission and evidence versions in Record Decision. Stale decisions show a conflict banner and refresh action. Keep Tax Profile values masked and permission-scoped; retain its legal/trade identity, VAT status, tax/declaration year, prior-year position, receipt, disclosure scope, local total, threshold flag and withholding reason.
 
 Enforce that an Admin cannot override a missing mandatory requirement from the frontend, that Vendor Verification Staff cannot authorize a statutory rate or mark a tax return filed, and that cross-role and cross-scope access returns a safe 403 or 404.
 
@@ -467,13 +556,43 @@ Activation readiness is visible and enforced, the limited dashboard works end to
 
 ### Required implementation
 
-The welcome page for a newly verified Vendor Owner offering **Begin Store Verification** and **Finish Later**, an entry surface only — never a third onboarding section and never an activation bypass; after dismissal, later access returns through the limited dashboard. The limited dashboard exposing Store Profile, Store Account Settings, Continue Store Verification, Continue Store Setup, Review Pending Verification, Correct Changes Required and onboarding progress, with separate checklists, requirement level and status, blockers, dedicated Continue actions and the current Store Activation status, and a clear statement that permitted Store Setup work may continue while review is pending. Marketplace operations stay locked until activation. Scheduled expiry warnings and the documented restriction behavior. Team invitation lifecycle with the five fixed roles, one fixed role per membership, off-by-default Store Manager delegation that cannot reach another Store Manager, ownership, payout credentials, its own role or audit records, Owner notification on every delegated action, and session revocation with retained historical attribution. Store Activation and Marketplace Discoverability evaluated separately, with every transition appended to `vendor_activation_history` and the audit log.
+**Entry/resume.** First successful Owner login shows Welcome; Continue opens Verification. Verification Continue later saves and opens Setup; Setup Continue later saves and opens the limited Dashboard. Finish Later exits either workstream after saving. Persist acknowledgment; subsequent sign-ins use state-aware Dashboard. Staff never repeat organization onboarding. Store Profile/branding links preserve correct routing/session.
+
+**Optional teams and revocation.** Reuse Phase 2 memberships/invitations and Phase 3D guidance. Invitations record full name, email, contact where required, organization, one fixed role, expiry, inviter, status and created/accepted timestamps with identity-bound single-use tokens. Allow before/after activation without unlocking marketplace operations. Manager delegation defaults false and covers four non-manager roles only; no self/Manager/Owner elevation, payout changes or audit deletion. Team Tracking uses that same delegated scope. Owner is notified of every delegated action.
+
+Owner's dispute flag defaults true for Store Staff/Customer Service. Disable navigation, cases, actions, files/exports and realtime immediately when revoked; route current work to Owner/Manager and retain history. Protected storewide finance/Earnings is Owner-only. Customer Service may prepare quotation drafts but not publish commercial revisions/NRPC; unchanged-order confirmation remains allowed. Product PS/ICC follows the authorized fixed roles. Apply this matrix to existing navigation, APIs and serializers without changing Sidebar design:
+
+| **Section** | **Owner** | **Store Manager** | **Store Staff** | **Customer Service Staff** | **Inventory Staff** | **Fulfillment Staff** |
+| --- | --- | --- | --- | --- | --- | --- |
+| Dashboard | Full | Operational | Operational | Role-specific | Role-specific | Assigned work |
+| Orders | Full | Operational | Permitted sales | Permitted sales | Stock-allocation view | Assigned only |
+| Fulfillment | Full | Manage | Relevant status | Relevant status | No control | Assigned management |
+| Messages | All authorized store threads | Operational | Sales | Sales | No normal chat | Assigned fulfillment thread only |
+| E-Invoices | Full | Operational | Permitted sales | Assigned sales | No | Only necessary assigned-delivery view |
+| Notifications | All | Relevant operations | Relevant | Relevant | Inventory/compliance | Fulfillment |
+| Disputes & Appeals | Full | Operational | Owner-toggle controlled | Owner-toggle controlled | No | No management |
+| My Products | Full | Manage | Manage | Sales stock view | Manage | Assigned product view |
+| Vehicles | Full | Manage | No configuration | No | No | Assigned vehicle view |
+| Transaction History / former Wallet label | Owner financial view | No protected financial view | No | No | No | No |
+| Store Performance / Materials Analytics | Full | Operational / authorized aggregates | No section access | No | No | No |
+| Earnings | Full | No | No | No | No | No |
+| Team Accounts | Full | Delegated non-manager staff only | No | No | No | No |
+| Team Tracking | Full | Delegated staff scope only | No | No | No | No |
+| Store Profile | Full | Operational view; schedule edit only | Limited view | Limited view | Limited view | Limited view |
+
+Activation locks/evaluates current mandatory saved revisions, including media, schedule, S6, authority/agreements, Verification, tax/provider readiness and restrictions, then records the transition/outbox atomically. No staff/product requirement. Discovery/count caches use eligible listings separately. Later invalidation restricts affected new operations while preserving authorized existing-order fulfillment, disputes and refunds; ordinary valid edits do not reopen all approvals.
+
+The welcome page for a newly verified Vendor Owner offering **Continue** to Store Verification and **Finish Later** to the limited Dashboard, an entry surface only — never a third onboarding section and never an activation bypass; after dismissal, later access returns through the limited dashboard. The limited dashboard exposing Store Profile, Store Account Settings, Continue Store Verification, Continue Store Setup, Review Pending Verification, Correct Changes Required and onboarding progress, with separate checklists, requirement level and status, blockers, dedicated Continue actions and the current Store Activation status, and a clear statement that permitted Store Setup work may continue while review is pending. Marketplace operations stay locked until activation. Scheduled expiry warnings and the documented restriction behavior. Team invitation lifecycle with the five fixed roles, one fixed role per membership, off-by-default Store Manager delegation that cannot reach another Store Manager, ownership, payout credentials, its own role or audit records, Owner notification on every delegated action, and session revocation with retained historical attribution. Store Activation and Marketplace Discoverability evaluated separately, with every transition appended to `vendor_activation_history` and the audit log.
 
 ### UI/UX and layout architecture
+
+Dashboard Setup rows exclude separate Store Media/Team Accounts, link media blockers to S1 and hours blockers to S5, and show current S6 review. Explain optional staff, fixed role, Manager delegation and Owner dispute toggle. Do not leak finance through staff dashboard cards. Preserve existing sidebar geometry/order.
 
 The limited dashboard leads with an activation status band that states the current state in text plus icon, then two side-by-side workstream cards at ≥1024px — each with its own progress, blocking count and one Continue action — then an action-required list ordered by blocking severity. No marketplace widgets, no fabricated metrics and no decorative collage. Expiry warnings appear as a dismissible-but-persistent band with the exact Asia/Manila date and time alongside any relative countdown. The Team Accounts screen lists members with role, status and last activity, and the delegation toggle carries a confirmation dialog naming the exact consequence.
 
 ### Acceptance gate
+
+Test first/later login, all continuation paths, invite login, profile/branding session retention, media/schedule/S6 invalidation, product-free activation, optional early invitations, each fixed role, default flags, self/Manager/Owner escalation denial, scoped Team Tracking, immediate channel/export revocation and retained existing-order remedies.
 
 The backend refuses activation when any mandatory requirement is missing and names the blocking items. A hidden or re-enabled button cannot activate a store. Private documents are inaccessible across Vendors and to unauthorized staff. Team Accounts never block activation. Store Setup completion never approves a verification item. The full Phase 3 journey passes across Vendor and Admin: register → welcome → verification draft → Finish Later → resume → submit → Admin returns one item for correction → Vendor corrects → Admin approves all → Store Setup completes → activation succeeds → an expired document later restricts as documented.
 
@@ -484,7 +603,13 @@ Apply §0 Standing Contract from docs/plans/MateryalPH_Implementation_Phases_and
 
 Implement MateryalPH Phase 3F: activation readiness, the limited Vendor dashboard, document expiry behavior, Team Accounts and the Phase 3 end-to-end acceptance journey, across apps/vendor-web, apps/admin-web and services/api. Phases 3A to 3E must already be accepted.
 
-Add a one-time authenticated welcome page for a newly verified Vendor Owner offering Begin Store Verification and Finish Later. It is an entry surface, not a third onboarding section and not an activation bypass; after dismissal, later access returns through the limited Vendor dashboard.
+Complete ONB routing: first Owner login Welcome → Continue → Verification; Verification Continue later → saved Setup; Setup Continue later/Finish Later → saved limited Dashboard; later logins use state-aware Dashboard. Invited staff never repeat onboarding. Preserve Store Profile routing, branding/session and Sidebar design.
+
+Complete optional identity-bound invitations before/after activation using existing membership records, required metadata and expiring single-use tokens. Apply the full role matrix in this phase. Manager delegation defaults false, manages only non-managers and gates scoped Team Tracking. Owner dispute flag defaults true for Store Staff/Customer Service; disabling immediately revokes case/API/channel/export/notification access and routes work to Owner/Manager without erasing history. Keep Owner-only protected finance/Earnings, Owner/Manager Materials Analytics, Customer Service draft-only commercial quotation powers and authorized product PS/ICC scopes.
+
+Evaluate current saved media/hours/S6, Verification, authority/terms/tax, conditional delivery and reconciled TEST readiness under activation locks. Optional teams/products never block activation; no eligible listings means no offering-Vendor discovery. Invalidation restricts affected new activity while retaining accepted-order remedies. Test races, all roles/routes and actual flags; report only executed test results.
+
+Add a one-time authenticated welcome page for a newly verified Vendor Owner offering Continue to Store Verification and Finish Later to the limited Dashboard. It is an entry surface, not a third onboarding section and not an activation bypass; after dismissal, later access returns through the limited Vendor dashboard.
 
 Build the limited dashboard exposing Store Profile, Store Account Settings, Continue Store Verification, Continue Store Setup, Review Pending Verification, Correct Changes Required and onboarding progress. Display separate Store Verification and Store Setup checklists with requirement level and status, overall progress, pending verification, changes required, rejected and expired blockers, dedicated Continue actions and the current Store Activation status, and state clearly that permitted Store Setup work may continue while Admin review is pending. Keep marketplace operations locked until Store Activation.
 
@@ -513,6 +638,10 @@ Vendors create structured materials and variants while the platform enforces cat
 
 ## Required implementation
 
+**Onboarding integration.** Consume canonical public identity and the saved classification source. Vendor Other labels are free text, never shared-taxonomy writes; rentals remain excluded. Activation does not require products. Discovery requires eligible active, available, compliant listings as well as the current organization gate. Required onboarding media and product media remain separate; private verification evidence cannot be reused as a public listing image.
+
+Allow product PS/ICC submission/replacement/monitoring to Owner, Store Manager, Store Staff and Inventory Staff within their organization. This permission never grants business/tax evidence approval, Owner attestation or Admin decisions. Reuse the Phase 3E evidence-review pattern without merging document decisions.
+
 **FIN/MAT integration.** Add comparable material and group mapping using exact brand, model, specification, variant and unit; versioned authorized unit conversions; immutable ordinary public price and tax-category records. Custom unmapped listings stay Not Yet Comparable. Never average fuzzy material names or private quotations.
 
 - Canonical categories, materials, aliases, `pg_trgm` search, units, conversions, tags and technical attributes.
@@ -523,13 +652,15 @@ Vendors create structured materials and variants while the platform enforces cat
 
 ## UI/UX and layout architecture
 
-Vendor catalog uses a filterable table at ≥1024px and cards below, with status shown as text plus icon. The create/edit wizard mirrors the onboarding step pattern: numbered steps, one surface, server-derived completion, Save Draft and a single dominant action. Variant management is a repeatable row group with per-row validation, never a modal stack. Media upload shows accepted types, size, scan state and version. The compliance path selector is a three-option radio that leads to one shared Review and Confirm screen so all three paths converge visually. Bulk import shows a row-error table with jump-to-row links and never reports partial success as success. Admin compliance review uses the Phase 3E two-pane pattern: section navigator, evidence beside fields, decision with required reason.
+Vendor catalog uses a filterable table at ≥1024px and cards below, with status shown as text plus icon. The create/edit wizard mirrors the onboarding step pattern: numbered steps, one surface, server-derived completion, Save Draft and a single dominant action. Variant management is a repeatable row group with per-row validation, never a modal stack. Media upload shows accepted types, size, scan state and version. The compliance path selector is a three-option radio that leads to one shared Review and Confirm screen so all three paths converge visually. Bulk import shows a row-error table with jump-to-row links and never reports partial success as success. Admin compliance review uses the Phase 3E responsive requirements/information/decision pattern: section navigator, evidence beside fields, decision with required reason.
 
 ## API/key step
 
 Use local OCR where feasible. If Google ML Kit or another service is enabled, configure only its Development credential. OCR output is never treated as approval.
 
 ## Acceptance gate
+
+Test product-free activation, eligible-listing discovery and later loss of eligibility, each fixed role's PS/ICC access, Other-label isolation, rental exclusion and private-evidence/public-media separation.
 
 Different grades, diameters, brands or pack units cannot merge without validated equivalence. Unknown payable tax classification blocks payable publication. Unmapped but otherwise eligible listings stay usable outside aggregates. A regulated listing cannot become Active without the applicable verified evidence. A nonmatch becomes pending review, never an automatic counterfeit accusation.
 
@@ -540,13 +671,21 @@ Apply §0 Standing Contract from docs/plans/MateryalPH_Implementation_Phases_and
 
 Implement MateryalPH Phase 4: taxonomy, Vendor listings and variants, listing media, price versions and the complete PS/ICC compliance workflow. Surfaces are apps/vendor-web, apps/admin-web, services/api and packages/api-contract. Buyer stays unchanged.
 
+Integrate the synchronized Vendor onboarding contract into this phase as follows.
+
+Onboarding integration. Consume canonical public identity and the saved classification source. Vendor Other labels are free text, never shared-taxonomy writes; rentals remain excluded. Activation does not require products. Discovery requires eligible active, available, compliant listings as well as the current organization gate. Required onboarding media and product media remain separate; private verification evidence cannot be reused as a public listing image.
+
+Allow product PS/ICC submission/replacement/monitoring to Owner, Store Manager, Store Staff and Inventory Staff within their organization. This permission never grants business/tax evidence approval, Owner attestation or Admin decisions. Reuse the Phase 3E evidence-review pattern without merging document decisions.
+
+Add these acceptance checks to the existing phase suite: Test product-free activation, eligible-listing discovery and later loss of eligibility, each fixed role's PS/ICC access, Other-label isolation, rental exclusion and private-evidence/public-media separation.
+
 Implement MAT-03 comparable groups, versioned mapping and normalized ordinary VAT-inclusive public prices. Exclude promotional, volume-tier and negotiated amounts from the analytics source. Retain financial classifications VAT_12, VAT_ZERO, VAT_EXEMPT and NON_VAT distinctly under FIN-02. Price, mapping, tax and publication changes preserve source versions for later snapshots and accepted orders.
 
 Implement canonical materials, aliases with PostgreSQL pg_trgm fuzzy matching, categories, one to three tags, compatible units, technical attribute definitions, regulated-material mappings, products, Vendor listings, variants, price history, media and status history.
 
 Implement Photo/OCR, QR and Manual Entry compliance paths that converge on one Review and Confirm screen. Treat OCR and QR as editable extraction assistance. Store evidence privately and route uncertain, unavailable or unmatched results to PENDING_ADMIN_REVIEW. Add Admin Approve, Return for Correction and Reject with required reasons and source and version attribution. Enforce the regulated publication gate in the backend.
 
-Build the Vendor catalog as a filterable table at 1024px and above and cards below, a numbered create/edit wizard reusing the onboarding step pattern with server-derived completion and Save Draft, variants as a repeatable row group with per-row validation rather than stacked modals, media fields showing accepted types, size, scan state and version, and a bulk spreadsheet import with a row-error table, jump-to-row links, transactional validated rows and no partial success reported as success. Build Admin compliance review with the Phase 3E two-pane pattern.
+Build the Vendor catalog as a filterable table at 1024px and above and cards below, a numbered create/edit wizard reusing the onboarding step pattern with server-derived completion and Save Draft, variants as a repeatable row group with per-row validation rather than stacked modals, media fields showing accepted types, size, scan state and version, and a bulk spreadsheet import with a row-error table, jump-to-row links, transactional validated rows and no partial success reported as success. Build Admin compliance review with the Phase 3E responsive requirements/information/decision pattern.
 
 Update OpenAPI and generated clients. Add permission, state, file-abuse, compliance-gate, fuzzy-search and historical-snapshot tests plus browser checks at the eight standard widths. Run all relevant checks and report the acceptance gate. Do not deploy or commit.
 ```
@@ -563,6 +702,12 @@ Vendors manage exact private stock, public availability, price history, delivery
 
 ## Required implementation
 
+**Extend the Phase 3D delivery model.** Reuse its configurations and advisory service; do not create duplicate vehicle/settings records. Owner/Manager manage multiple typed vehicles, image, count, payload, applicable dimensions/m³, heavy flag, base/per-km fees, maximum distance and availability. Fulfillment Staff reads confirmed assigned vehicles only. Exclude incomplete, disabled, unavailable or foreign-Vendor configurations.
+
+Evaluate actual weight, physical fit, versioned dimensional-weight inputs, volume, payload, available count, trips, distance and access. A summed box or total volume does not prove a mixed load fits. Unknown measurements/conversions require named manual review, not zero load/fee. Ready-mixed concrete uses positive mixer m³ capacity plus payload/access; bagged cement uses ordinary cargo. Mixed groups remain compatible and separate. Recommendations are advisory, never dispatch or exact packing guarantees.
+
+Heavy restriction Yes requires an alternative drop-off, preserving intended destination/Project site. Record the alternative as the vehicle endpoint and distance basis where applicable. Owner/Manager confirms vehicle(s), count, trips, endpoint, fulfillment date and final fee before Buyer acceptance. Preserve existing approved fee computation; suggestions cannot add undisclosed charges. Snapshot source versions and confirmation later; setting changes affect future proposals only.
+
 **FIN/MAT integration.** Implement `EligibleOfferQuery` shared by Explore counts, current offers and daily capture: active approved Tier 2 listing and variant, valid ordinary price, category and compliance, confirmed non-stale inventory and positive sellable quantity. Current-count and cache invalidation follows stock, reservation, listing, price and Vendor eligibility changes. Exact stock stays private.
 
 - Inventory balances, movements, reconciliation, reserved and soft-held reporting.
@@ -578,6 +723,8 @@ The inventory ledger is a dense table with sticky header and horizontal scroll c
 
 ## Acceptance gate
 
+Test normal/mixer/bagged cargo, missing measurements, insufficient payload/count, multiple trips, unavailable vehicles, range and alternate drop-off. Deny staff commercial vehicle changes. Verify immutable accepted rate/vehicle/address snapshots and manual fallback; retain existing Inventory allotment/auto-accept rules.
+
 A listing with multiple variants counts once; unavailable or stale variants contribute neither a current count nor a new eligible daily observation. Duplicate source offers cannot give one Vendor more aggregate weight. Buyers never receive exact stock. Inventory cannot go negative. Auto-accept never applies to Project-Based procurement or any NRPC order.
 
 ## Copy-paste prompt
@@ -586,6 +733,16 @@ A listing with multiple variants counts once; unavailable or stale variants cont
 Apply §0 Standing Contract from docs/plans/MateryalPH_Implementation_Phases_and_Codex_Prompts.md and AGENTS.md. Do not restate them back to me.
 
 Implement MateryalPH Phase 5: exact Vendor inventory, price and version controls, vehicle and delivery configuration, stale-stock confirmation and Item-Based auto-accept policy configuration. Surfaces are apps/vendor-web, services/api and packages/api-contract.
+
+Integrate the synchronized Vendor onboarding contract into this phase as follows.
+
+Extend the Phase 3D delivery model. Reuse its configurations and advisory service; do not create duplicate vehicle/settings records. Owner/Manager manage multiple typed vehicles, image, count, payload, applicable dimensions/m³, heavy flag, base/per-km fees, maximum distance and availability. Fulfillment Staff reads confirmed assigned vehicles only. Exclude incomplete, disabled, unavailable or foreign-Vendor configurations.
+
+Evaluate actual weight, physical fit, versioned dimensional-weight inputs, volume, payload, available count, trips, distance and access. A summed box or total volume does not prove a mixed load fits. Unknown measurements/conversions require named manual review, not zero load/fee. Ready-mixed concrete uses positive mixer m³ capacity plus payload/access; bagged cement uses ordinary cargo. Mixed groups remain compatible and separate. Recommendations are advisory, never dispatch or exact packing guarantees.
+
+Heavy restriction Yes requires an alternative drop-off, preserving intended destination/Project site. Record the alternative as the vehicle endpoint and distance basis where applicable. Owner/Manager confirms vehicle(s), count, trips, endpoint, fulfillment date and final fee before Buyer acceptance. Preserve existing approved fee computation; suggestions cannot add undisclosed charges. Snapshot source versions and confirmation later; setting changes affect future proposals only.
+
+Add these acceptance checks to the existing phase suite: Test normal/mixer/bagged cargo, missing measurements, insufficient payload/count, multiple trips, unavailable vehicles, range and alternate drop-off. Deny staff commercial vehicle changes. Verify immutable accepted rate/vehicle/address snapshots and manual fallback; retain existing Inventory allotment/auto-accept rules.
 
 Add the shared MAT-02 eligibility predicate and MAT-03 source version fields to the inventory and pricing services. Preserve historical observation sources rather than updating old prices in place. Wire bounded current-count invalidation to existing outbox events. Do not add a market-data call and do not expose quantity_on_hand through analytics.
 
@@ -612,6 +769,10 @@ Buyers create profiles and saved locations, browse an accessible map and list, u
 
 ## Required implementation
 
+**Public identity and discovery.** Directory/map/preview consume the same canonical public name, valid public media, approved contact/address summary and shared activation/listing eligibility projection. Keep legal names where private, IDs/TIN, authority evidence, staff login details and private Buyer coordinates out of public payloads. Reuse saved structured geography rather than re-collecting Vendor coordinates.
+
+Saved Open/Closed information is descriptive and does not independently remove a Vendor, change radius/ranking or imply stock/staff availability. Offering-Vendor discovery requires eligible listings even after activation. Invalidate/revalidate relevant caches on source changes and discard stale async results.
+
 **FIN/MAT integration.** Carry the active Buyer location and the selected exact radius into Explore and future Materials Analytics; the Project origin is explicit. Support own-store-centered Vendor scope and PSGC Admin scope in shared Geography queries. Snapshot records retain the captured address and geography version.
 
 - Buyer onboarding, primary location, saved locations, coordinate and PSGC resolution, consent and permissions.
@@ -635,6 +796,8 @@ Create restricted Development keys for Android, iOS, browser and backend. Never 
 
 ## Acceptance gate
 
+Test renamed store consistency across map/list/preview, private-field exclusion, active-with-no-offerings predicates, stale eligibility/cache responses and schedule-only changes leaving discovery unchanged.
+
 50 km is the maximum Buyer and Vendor scope, not an automatic expansion from 5 km and not an Admin national limit. Exact-boundary and just-outside results are tested with PostGIS geography. The Buyer can complete every discovery action with GPS denied. Tier 1 Suppliers have no in-platform transaction action.
 
 ## Copy-paste prompt
@@ -643,6 +806,14 @@ Create restricted Development keys for Android, iOS, browser and backend. Never 
 Apply §0 Standing Contract from docs/plans/MateryalPH_Implementation_Phases_and_Codex_Prompts.md and AGENTS.md. Do not restate them back to me.
 
 Implement MateryalPH Phase 6: Buyer onboarding and saved locations, PSGC-aware address storage, Flutter map and list discovery, Tier 1 directory suppliers, Tier 2 Verified Vendors, Favorite Supplier labels, radius controls and route/ETA adapters. Surfaces are apps/buyer-mobile, services/api and packages/api-contract.
+
+Integrate the synchronized Vendor onboarding contract into this phase as follows.
+
+Public identity and discovery. Directory/map/preview consume the same canonical public name, valid public media, approved contact/address summary and shared activation/listing eligibility projection. Keep legal names where private, IDs/TIN, authority evidence, staff login details and private Buyer coordinates out of public payloads. Reuse saved structured geography rather than re-collecting Vendor coordinates.
+
+Saved Open/Closed information is descriptive and does not independently remove a Vendor, change radius/ranking or imply stock/staff availability. Offering-Vendor discovery requires eligible listings even after activation. Invalidate/revalidate relevant caches on source changes and discard stale async results.
+
+Add these acceptance checks to the existing phase suite: Test renamed store consistency across map/list/preview, private-field exclusion, active-with-no-offerings predicates, stale eligibility/cache responses and schedule-only changes leaving discovery unchanged.
 
 Implement MAT-01 scope resolution and a stable origin and radius context. Use ST_DWithin on geography in metres; never use route distance for membership. A Vendor market request cannot select a competitor origin. Keep location ownership, privacy and optional-GPS rules, and reject unsupported radius values on the backend.
 
@@ -667,6 +838,10 @@ Buyers search comparable active listings, understand Best Price and ranking, per
 
 ## Required implementation
 
+**Public Store Operation.** Buyer Store Profile reads the saved S5 seven-day schedule in Asia/Manila, applying the unique dated override before the recurring week. Show today and the full week with explicit Closed days. At exact closing time the interval is closed. All-Closed is valid; absent legacy data displays unavailable information, never fabricated hours. Vendor draft edits do not appear publicly. The schedule is not a claim of staff presence, stock or guaranteed response, and never changes ranking/discovery or deadlines automatically.
+
+**Delivery preview.** Collect the known heavy-access answer and require alternative address/map location for Yes. Preserve and label both intended destination/Project site and actual vehicle drop-off. Use the correct route/distance basis and Phase 5 advisory service. Clearly distinguish estimated count/trips/fee from an authorized confirmed offer; unknown capacity/site/routing data remains manual-review state. Do not erase valid cart groups or silently move the intended address.
+
 **FIN/MAT integration.** Add Nearby Verified Vendors and Available Products above the Explore categories using current distinct eligible organization and listing counts, before category filters. Prepare the View Materials Analytics entry point with explicit availability gating until Phase 14. Checkout preview follows FIN-02 included VAT and the M/D/F/N components and excludes Vendor commission and CWT.
 
 - Search, filters, product and vendor detail, active-stock rules, price normalization and pagination.
@@ -682,6 +857,8 @@ Explore leads with two accessible summary cards built from **one** server snapsh
 
 ## Acceptance gate
 
+Use a fake Asia/Manila clock for open/close boundaries, all-Closed, dated override/removal, phone timezone and saved-versus-draft values. Test heavy restriction without/with alternate, original-address retention, route basis and advisory-versus-confirmed delivery displays.
+
 Counts handle variants, duplicate materials across stores, stale stock and radius changes correctly. No broken analytics navigation ships before its feature is enabled. Buyer totals never include the 2% commission or merchant CWT. Ranking is deterministic and explainable. All weight sets total 100%. A cart preview detects stale price, stock, serviceability and Vendor status without creating an order or a reservation.
 
 ## Copy-paste prompt
@@ -690,6 +867,14 @@ Counts handle variants, duplicate materials across stores, stale stock and radiu
 Apply §0 Standing Contract from docs/plans/MateryalPH_Implementation_Phases_and_Codex_Prompts.md and AGENTS.md. Do not restate them back to me.
 
 Implement MateryalPH Phase 7: Item-Based marketplace search and product detail, deterministic SRS, Buyer ranking preferences, Best Price, Favorite Suppliers, cart, Vendor grouping and checkout preview. Surfaces are apps/buyer-mobile, services/api and packages/api-contract.
+
+Integrate the synchronized Vendor onboarding contract into this phase as follows.
+
+Public Store Operation. Buyer Store Profile reads the saved S5 seven-day schedule in Asia/Manila, applying the unique dated override before the recurring week. Show today and the full week with explicit Closed days. At exact closing time the interval is closed. All-Closed is valid; absent legacy data displays unavailable information, never fabricated hours. Vendor draft edits do not appear publicly. The schedule is not a claim of staff presence, stock or guaranteed response, and never changes ranking/discovery or deadlines automatically.
+
+Delivery preview. Collect the known heavy-access answer and require alternative address/map location for Yes. Preserve and label both intended destination/Project site and actual vehicle drop-off. Use the correct route/distance basis and Phase 5 advisory service. Clearly distinguish estimated count/trips/fee from an authorized confirmed offer; unknown capacity/site/routing data remains manual-review state. Do not erase valid cart groups or silently move the intended address.
+
+Add these acceptance checks to the existing phase suite: Use a fake Asia/Manila clock for open/close boundaries, all-Closed, dated override/removal, phone timezone and saved-versus-draft values. Test heavy restriction without/with alternate, original-address retention, route basis and advisory-versus-confirmed delivery displays.
 
 Build the Explore dashboard with current_as_of, visible scope and accessible summary cards. Use one server request snapshot for both counts, label the Product count as Vendor listings, and show no false zero while loading. Preserve filters and scroll and reject stale async responses. Keep Materials Analytics disabled until the Phase 14 end-to-end feature is installed. Use a FinancialSnapshotService-compatible included-VAT preview and never normalize a market average into an order price.
 
@@ -712,6 +897,10 @@ Item-Based order submission creates one parent checkout and Vendor child orders.
 
 ## Required implementation
 
+**Current eligibility and immutable delivery.** At confirmation/acceptance revalidate current applicable organization/restriction, payment capability, inventory and delivery revisions. Snapshot intended and alternative destination, selected endpoint, route distance/basis, configuration IDs/versions, category/type/name/brand, displayed image, capacity/dimensions, count, trips, heavy flag, rates, fee formula version, final fee, fulfillment date, confirming Owner/Manager and time with the commercial version. Buyer sees the actual drop-off before acceptance.
+
+An advisory suggestion is not confirmation. Unknown cargo/access data, missing mandatory alternate or unconfirmed commercial delivery choices route to manual review without partial auto-accept. Keep existing auto-accept/allotment rules and do not derive another enable/disable policy from public hours. Profile, schedule, vehicle and rate changes cannot mutate accepted snapshots. Later restrictions preserve authorized fulfillment/remedies for existing orders.
+
 **FIN/MAT integration.** Snapshot FIN-02 amounts, line discounts and VAT, the fee-policy version, NRPC affected-line allocation and the accepted version and hash. Add an immutable ESTIMATED fee assessment and an audited completion-event contract. Physical obligations stay separate from online payment state; all-or-none stock remains atomic.
 
 - Order, line, price, fee, delivery, payment-method and policy snapshots.
@@ -728,6 +917,8 @@ The Buyer order timeline shows order, payment, fulfillment, refund and dispute a
 
 ## Acceptance gate
 
+Race restriction/media invalidation against confirmation, test unauthorized delivery confirmation, manual fallback, exact accepted snapshot retention and intended/alternate address separation. Preserve original stock, NRPC, money and auto-accept concurrency cases.
+
 Largest-remainder discounts and partial principal VAT allocation sum exactly. NRPC reduces only principal, once. An accepted order retains its original prices, tax and fee policy when a listing or market average changes. Concurrency tests prove no overselling. NRPC can never be introduced after Buyer acceptance or payment and never participates in auto-accept.
 
 ## Copy-paste prompt
@@ -736,6 +927,14 @@ Largest-remainder discounts and partial principal VAT allocation sum exactly. NR
 Apply §0 Standing Contract from docs/plans/MateryalPH_Implementation_Phases_and_Codex_Prompts.md and AGENTS.md. Do not restate them back to me.
 
 Implement MateryalPH Phase 8 end to end: Item-Based order submission, parent checkout and per-Vendor child orders, Vendor confirmation, revision and decline, Buyer approval, manual NRPC, atomic hard reservations, auto-accept and 45-minute payment expiry preparation. Surfaces are apps/buyer-mobile, apps/vendor-web, services/api and packages/api-contract.
+
+Integrate the synchronized Vendor onboarding contract into this phase as follows.
+
+Current eligibility and immutable delivery. At confirmation/acceptance revalidate current applicable organization/restriction, payment capability, inventory and delivery revisions. Snapshot intended and alternative destination, selected endpoint, route distance/basis, configuration IDs/versions, category/type/name/brand, displayed image, capacity/dimensions, count, trips, heavy flag, rates, fee formula version, final fee, fulfillment date, confirming Owner/Manager and time with the commercial version. Buyer sees the actual drop-off before acceptance.
+
+An advisory suggestion is not confirmation. Unknown cargo/access data, missing mandatory alternate or unconfirmed commercial delivery choices route to manual review without partial auto-accept. Keep existing auto-accept/allotment rules and do not derive another enable/disable policy from public hours. Profile, schedule, vehicle and rate changes cannot mutate accepted snapshots. Later restrictions preserve authorized fulfillment/remedies for existing orders.
+
+Add these acceptance checks to the existing phase suite: Race restriction/media invalidation against confirmation, test unauthorized delivery confirmation, manual fallback, exact accepted snapshot retention and intended/alternate address separation. Preserve original stock, NRPC, money and auto-accept concurrency cases.
 
 Implement FIN-02 centavo Money and immutable financial snapshots, including VAT_12 included tax L*12/112, E=M-V and the full online, direct cash and mixed NRPC amount matrix. Validate 0 < N <= the eligible prepared-material subtotal without introducing a numeric platform NRPC cap. Prepare unique fee estimation and completion events for FIN-03 without earning a fee on payment or confirmation. Add allocation, rounding and snapshot-version tests.
 
@@ -762,6 +961,10 @@ Tier 2 Buyers and Vendor staff communicate securely. Vendors create versioned It
 
 ## Required implementation
 
+**Purpose-scoped messaging.** Separate sales/quotation conversations from order-linked fulfillment conversations. Sales handlers remain Owner, Manager, Store Staff and Customer Service. Customer Service may prepare/revise quotation drafts and confirm permitted unchanged orders, but cannot publish quotations/commercial changes or set NRPC. Handler transfer cannot grant another role's powers. Fulfillment Staff never gains general sales conversation or private financial attachment access.
+
+Build the reusable order-fulfillment thread service now; Phase 12 opens it only at `READY_FOR_PICKUP` or `OUT_FOR_DELIVERY`. Keep the entry action unavailable until that integration exists. One thread per order is idempotent. Participants are the Buyer, active assigned Fulfillment Staff and permitted Owner/Manager for that order. Show actual staff public name/avatar/fixed role beside store identity, excluding private contacts. Reassignment/role change/deactivation immediately revokes REST/Reverb/file access, retains message attribution and records transfer history. A message itself cannot change payment, milestone or commercial state.
+
 **FIN/MAT integration.** Use the same financial snapshot calculator for Item and Project quotation publication and acceptance. The accepted version records line tax, discount, NRPC and the estimated fee-policy version. Public market analytics never ingest quotation prices or Work Package contents.
 
 - Authorized conversations, participants, handlers, transfer system messages, receipts and attachments.
@@ -778,6 +981,8 @@ The conversation header shows the store logo, store name and Verified badge plus
 
 ## Acceptance gate
 
+Test sales-versus-fulfillment APIs/channels, no early thread, cross-order/cross-Vendor access, draft-only Customer Service authority, transfer/revocation, preserved history and absence of private contacts. Keep Phase 12 milestone entry disabled until delivered.
+
 Private negotiated quotation price changes never alter a public market average. Quotation acceptance still requires the latest version and atomic stock validation. An old version cannot be accepted after revision. Unauthorized users cannot subscribe to or retrieve another conversation.
 
 ## Copy-paste prompt
@@ -786,6 +991,14 @@ Private negotiated quotation price changes never alter a public market average. 
 Apply §0 Standing Contract from docs/plans/MateryalPH_Implementation_Phases_and_Codex_Prompts.md and AGENTS.md. Do not restate them back to me.
 
 Implement MateryalPH Phase 9: secure real-time messaging and the single shared Order-from-Chat quotation engine for ITEM_BASED and PROJECT_BASED conversations. Surfaces are apps/buyer-mobile, apps/vendor-web, services/api and packages/api-contract.
+
+Integrate the synchronized Vendor onboarding contract into this phase as follows.
+
+Purpose-scoped messaging. Separate sales/quotation conversations from order-linked fulfillment conversations. Sales handlers remain Owner, Manager, Store Staff and Customer Service. Customer Service may prepare/revise quotation drafts and confirm permitted unchanged orders, but cannot publish quotations/commercial changes or set NRPC. Handler transfer cannot grant another role's powers. Fulfillment Staff never gains general sales conversation or private financial attachment access.
+
+Build the reusable order-fulfillment thread service now; Phase 12 opens it only at READY_FOR_PICKUP or OUT_FOR_DELIVERY. Keep the entry action unavailable until that integration exists. One thread per order is idempotent. Participants are the Buyer, active assigned Fulfillment Staff and permitted Owner/Manager for that order. Show actual staff public name/avatar/fixed role beside store identity, excluding private contacts. Reassignment/role change/deactivation immediately revokes REST/Reverb/file access, retains message attribution and records transfer history. A message itself cannot change payment, milestone or commercial state.
+
+Add these acceptance checks to the existing phase suite: Test sales-versus-fulfillment APIs/channels, no early thread, cross-order/cross-Vendor access, draft-only Customer Service authority, transfer/revocation, preserved history and absence of private contacts. Keep Phase 12 milestone entry disabled until delivered.
 
 Integrate FIN-02 into the shared quotation engine and preserve source tax and price versions in the accepted order. Reject an unknown payable tax category before publication. Mark quotation and completed transaction prices as private transaction sources and exclude them from MAT snapshot queries and competitor payloads. Preserve the existing deadline, counter-offer and NRPC audit logic.
 
@@ -812,6 +1025,10 @@ Buyers manage Projects and versioned Work Packages, receive compiled one-Vendor 
 
 ## Required implementation
 
+**Project eligibility and vehicle context.** Consume saved Bulk Yes and normal Tier 2/organization/listing gates for new Project-Based work. Bulk No or later restriction affects future eligibility without rewriting accepted Work Packages/quotes. A heavy-restricted site uses a separate alternative vehicle drop-off; retain intended Project site and its documented discovery origin. Display endpoint/rate basis instead of silently moving the Project.
+
+Reuse the shared advisor for ready-mixed m³, ordinary cargo, count, trips, distance and access. Missing fit/measurements require manual review. Estimates retain their advisory label and saved source revisions; only Owner/Manager-confirmed accepted quotation creates the immutable delivery arrangement. Store hours do not change 48-hour estimate validity, quotation deadlines, FMS or FIN budgets.
+
 **FIN/MAT integration.** Apply FIN-11 disjoint budget buckets: pending incomplete obligations, completed or retained actual cost, and paid cancelled amounts awaiting recovery. Committed Spend is their sum; Remaining Budget = Budget − Committed Spend. Include actual materials VAT, delivery and Buyer fees and count NRPC once. Analytics planning never mutates a Project budget.
 
 - Project, site, budget and Work Package draft, activate and version lifecycle.
@@ -830,6 +1047,8 @@ The Work Package editor shows version state prominently: Draft is editable, Acti
 
 ## Acceptance gate
 
+Test Bulk/capability changes with retained history, mixer versus bagged cement, alternate endpoint without Project mutation, stale vehicle/rate estimates and confirmed snapshots. Schedule edits leave estimate expiry and budget arithmetic unchanged.
+
 Paid cancellation releases refundable budget only after successful recovery; unpaid obligations release at cancellation. Vendor CWT, commission and fee payment never affect Buyer budgets. The locked original never changes. Every Vendor change is visible before acceptance. A Work Package ends with one selected Vendor, not split competitive awards.
 
 ## Copy-paste prompt
@@ -838,6 +1057,14 @@ Paid cancellation releases refundable budget only after successful recovery; unp
 Apply §0 Standing Contract from docs/plans/MateryalPH_Implementation_Phases_and_Codex_Prompts.md and AGENTS.md. Do not restate them back to me.
 
 Implement MateryalPH Phase 10: Projects, project sites, versioned Work Packages, system-compiled Vendor estimates, FMS comparison, multi-Vendor inquiries, one-Vendor selection and budget monitoring. Surfaces are apps/buyer-mobile, apps/vendor-web, services/api and packages/api-contract.
+
+Integrate the synchronized Vendor onboarding contract into this phase as follows.
+
+Project eligibility and vehicle context. Consume saved Bulk Yes and normal Tier 2/organization/listing gates for new Project-Based work. Bulk No or later restriction affects future eligibility without rewriting accepted Work Packages/quotes. A heavy-restricted site uses a separate alternative vehicle drop-off; retain intended Project site and its documented discovery origin. Display endpoint/rate basis instead of silently moving the Project.
+
+Reuse the shared advisor for ready-mixed m³, ordinary cargo, count, trips, distance and access. Missing fit/measurements require manual review. Estimates retain their advisory label and saved source revisions; only Owner/Manager-confirmed accepted quotation creates the immutable delivery arrangement. Store hours do not change 48-hour estimate validity, quotation deadlines, FMS or FIN budgets.
+
+Add these acceptance checks to the existing phase suite: Test Bulk/capability changes with retained history, mixer versus bagged cement, alternate endpoint without Project mutation, stale vehicle/rate estimates and confirmed snapshots. Schedule edits leave estimate expiry and budget arithmetic unchanged.
 
 Implement FIN-11 using Committed Spend = pending incomplete order cost + actual completed or retained cost + paid cancelled amount awaiting recovery, and Remaining Budget = Budget - Committed Spend. Keep the buckets disjoint and never subtract Actual Spend twice. Link market-analysis navigation to the explicitly selected Project site only; never replace accepted quotes or set project costs from historical averages.
 
@@ -864,6 +1091,10 @@ Buyers pay in Xendit Test Mode through Vendor sub-accounts. The platform records
 
 ## Required implementation
 
+**Reuse onboarding connection; protect finance.** Reuse the organization-bound reconciled Phase 3D TEST association. Checkout must not provision another account, ask for pasted link/ID or silently change API version. Separate uncertain provisioning attempts from uncertain payment attempts and their idempotency/reconciliation scopes. Revalidate environment, association, purpose and actual required capability through the selected adapter. TEST raw `LIVE` is not production capability.
+
+Vendor Earnings, protected storewide Transaction History, withholding/commission statements and finance exports/notifications/dashboard DTOs are Owner-only. Manager operational order/invoice access does not grant storewide finance. Retain the existing Transaction History module; no internal wallet, stored balance or escrow. Admin Finance permissions/preparer-reviewer separation remain unchanged. Reuse applicable authority and single V4 Commission Terms acceptance; no duplicate consent or retroactive financial snapshot changes. All original FIN/FIN-04A formulas, thresholds, ledgers and fixtures remain binding.
+
 **FIN/MAT integration.** Implement FIN-01 to FIN-06 and FIN-10 in the Finance domain: exact amounts, tax profiles and threshold locks, canonical remittance groups, the simulated responsibility adapter, the 0.5% qualified base, the 2% completed-material commission service, monthly statements, platform fee payments, separate ledgers, physical collection records and reconciliation. Add APIs for review and approval; later Admin pages consume them.
 
 **FIN-04A — withholding threshold counter.** Implement `vendor_withholding_accumulators` keyed on `(environment, taxpayer_key, taxable_year)` with `g_accumulated_centavos`, declared external amount, overlap, the generated `g_effective_centavos`, `withholding_status`, `crossed_at`, `crossing_assessment_id`, `prior_year_total_centavos` and `lock_version`, plus append-only `vendor_withholding_status_events`. At every assessable remittance, lock the accumulator row with `FOR UPDATE`, add the whole canonical group, and when `g_effective` exceeds 50,000,000 centavos — that is, reaches ₱500,000.01 — flip the status to `SUBJECT_THRESHOLD_BREACHED`, tax the crossing remittance in full and keep the status for the remainder of the taxable year regardless of any uploaded, approved or still-valid Sworn Declaration. A refund or a lower running total never restores relief; it opens an adjustment review. Year rollover creates a new accumulator that starts at `SUBJECT_PRIOR_YEAR` when the previous year closed above the threshold. Never hold the lock across a provider call. Full rules and the exact centavo fixtures are in `MateryalPH_Technical_Design_Delta_FIN-04A_Withholding_Threshold.md`.
@@ -887,6 +1118,8 @@ Follow the Xendit Test Mode section of the environment guide. The secret key and
 
 ## Acceptance gate
 
+Test existing association reuse, wrong Vendor/environment/purpose denial, version-specific evidence, separate provisioning/payment idempotency, Owner-only direct routes/exports/queued notices/dashboard fields and actual versus fake TEST results. Preserve every original arithmetic and concurrency gate.
+
 Execute all FIN-06 exact arithmetic cases plus concurrent crossing, missing declaration, year rollover, duplicate group, external-total overlap, mismatched account or purpose, balance constraints and paid-fee credit. Execute every FIN-04A fixture, including the exactly-at-limit case that stays in relief, the ₱500,000.01 case that breaches, the full taxation of the crossing remittance, the post-crossing declaration that changes nothing, and the two-concurrent-settlement case run against live PostgreSQL. Payment success alone never proves withheld tax or fee earning. A forged, duplicate, reordered, mismatched-amount or unknown webhook cannot create a paid order. A browser redirect never marks `PAID`.
 
 ## Copy-paste prompt
@@ -895,6 +1128,14 @@ Execute all FIN-06 exact arithmetic cases plus concurrent crossing, missing decl
 Apply §0 Standing Contract from docs/plans/MateryalPH_Implementation_Phases_and_Codex_Prompts.md and AGENTS.md. Do not restate them back to me.
 
 Implement MateryalPH Phase 11 using Xendit Test Mode: checkout payment creation for Vendor sub-accounts, payment-processing-fee snapshots, payment purposes, verified webhooks, idempotency, expiry, reconciliation, safe client return pages, and the FIN-04A gross-remittance threshold engine. Surfaces are services/api, packages/api-contract, apps/buyer-mobile, apps/vendor-web and apps/admin-web.
+
+Integrate the synchronized Vendor onboarding contract into this phase as follows.
+
+Reuse onboarding connection; protect finance. Reuse the organization-bound reconciled Phase 3D TEST association. Checkout must not provision another account, ask for pasted link/ID or silently change API version. Separate uncertain provisioning attempts from uncertain payment attempts and their idempotency/reconciliation scopes. Revalidate environment, association, purpose and actual required capability through the selected adapter. TEST raw LIVE is not production capability.
+
+Vendor Earnings, protected storewide Transaction History, withholding/commission statements and finance exports/notifications/dashboard DTOs are Owner-only. Manager operational order/invoice access does not grant storewide finance. Retain the existing Transaction History module; no internal wallet, stored balance or escrow. Admin Finance permissions/preparer-reviewer separation remain unchanged. Reuse applicable authority and single V4 Commission Terms acceptance; no duplicate consent or retroactive financial snapshot changes. All original FIN/FIN-04A formulas, thresholds, ledgers and fixtures remain binding.
+
+Add these acceptance checks to the existing phase suite: Test existing association reuse, wrong Vendor/environment/purpose denial, version-specific evidence, separate provisioning/payment idempotency, Owner-only direct routes/exports/queued notices/dashboard fields and actual versus fake TEST results. Preserve every original arithmetic and concurrency gate.
 
 Implement the full embedded FIN contract in Technical Design 13.2. G = C - R - D_r - V_r - P; W = half-up(G * 0.005); expected Vendor cash = C - R - P - W; commission_deducted_in_remittance = 0. Tax the full crossing remittance; a missing declaration is subject unless valid other relief applies; retain prior-year and breach evidence and do not double count external declarations. Lock taxpayer and year and enforce unique group and obligation, then post and enqueue the outbox without network calls under the lock. The DEMO tax adapter is separate from actual Xendit TEST payment evidence, including the provider-withholder alternate that never deducts twice. EARNED fee is 2 percent of completed nonrefunded exclusive materials; implement ESTIMATED and EARNED plus original-target credits without premature earning. Draft monthly statements at 00:05 on the first day, approved by the third, due on the fifteenth or twelve days after late issue. The Owner pays positive bills to the platform TEST account with PLATFORM_FEE_PAYMENT, 45-minute attempts, no auto debit or splits, and the platform absorbs its own bill processing fees. Persist FIN-10 states, ledgers, physical-payment evidence, installment allocation and reconciliation exceptions.
 
@@ -923,6 +1164,10 @@ Vendors process orders through pickup or delivery milestones with proof. Permitt
 
 ## Required implementation
 
+**Milestone-gated communication and accepted delivery.** Wire the Phase 9 thread service to first valid `READY_FOR_PICKUP` or `OUT_FOR_DELIVERY`, creating/reusing one thread with the milestone/outbox boundary. Participant checks are Buyer, currently assigned active Fulfillment Staff and permitted Owner/Manager for that order. No sales-thread exposure. Display public sender identity/role, redact private contacts and immediately remove revoked/reassigned access while retaining history. Closed/cancelled thread access follows documented retention/lifecycle rules.
+
+Fulfillment screens read the accepted vehicle/count/trip/fee and intended/alternative address snapshot. Fulfillment Staff performs permitted milestones/evidence and reports vehicle issues; it cannot edit configuration or independently choose another commercial arrangement. A material change uses existing authorized revision/Buyer approval rules. Later public hours/vehicle settings do not recalculate fees or accepted commitments.
+
 **FIN/MAT integration.** Wire `COMPLETED` to exactly one fee earning, and a finalized cancellation to the immediate online refund outbox, unpaid-physical release or evidenced cash reimbursement, fee cancellation or credit, and a tax-review reference. Tax and commission never reduce a Buyer refund target. Add an own-platform fee-credit refund target separate from order refunds.
 
 - `CONFIRMED → PROCESSING → READY_FOR_PICKUP/OUT_FOR_DELIVERY → PICKED_UP/DELIVERED → COMPLETED`.
@@ -939,6 +1184,8 @@ The fulfillment workspace is a milestone stepper whose completed states come fro
 
 ## Acceptance gate
 
+Test both milestones, duplicate/reordered events, no premature thread, one thread per order, exact assignment scope, realtime/file revocation and history retention. Verify operational delivery matches accepted snapshots and staff cannot alter commercial terms.
+
 A Vendor cancellation of a mixed paid NRPC order refunds the original online payment including the disclosed processor fee, forfeits NRPC and earns no commission. No cash Refund API is invented. Failed funding stays visible. Completion replay does not earn twice. Cancellation is blocked at Ready for Pickup and Out for Delivery while Report a Problem and statutory remedies remain accessible.
 
 ## Copy-paste prompt
@@ -947,6 +1194,14 @@ A Vendor cancellation of a mixed paid NRPC order refunds the original online pay
 Apply §0 Standing Contract from docs/plans/MateryalPH_Implementation_Phases_and_Codex_Prompts.md and AGENTS.md. Do not restate them back to me.
 
 Implement MateryalPH Phase 12: fulfillment milestones and evidence, delivery and pickup tracking without live GPS, Buyer receipt confirmation, cancellation rules, reservation release and automatic Cancellation Refunds for already-paid finalized cancellations. Surfaces are apps/buyer-mobile, apps/vendor-web, apps/admin-web, services/api and packages/api-contract.
+
+Integrate the synchronized Vendor onboarding contract into this phase as follows.
+
+Milestone-gated communication and accepted delivery. Wire the Phase 9 thread service to first valid READY_FOR_PICKUP or OUT_FOR_DELIVERY, creating/reusing one thread with the milestone/outbox boundary. Participant checks are Buyer, currently assigned active Fulfillment Staff and permitted Owner/Manager for that order. No sales-thread exposure. Display public sender identity/role, redact private contacts and immediately remove revoked/reassigned access while retaining history. Closed/cancelled thread access follows documented retention/lifecycle rules.
+
+Fulfillment screens read the accepted vehicle/count/trip/fee and intended/alternative address snapshot. Fulfillment Staff performs permitted milestones/evidence and reports vehicle issues; it cannot edit configuration or independently choose another commercial arrangement. A material change uses existing authorized revision/Buyer approval rules. Later public hours/vehicle settings do not recalculate fees or accepted commitments.
+
+Add these acceptance checks to the existing phase suite: Test both milestones, duplicate/reordered events, no premature thread, one thread per order, exact assignment scope, realtime/file revocation and history retention. Verify operational delivery matches accepted snapshots and staff cannot alter commercial terms.
 
 Apply FIN-07 with target-type-aware refunds and FIN-03 completion earning. Use the original line, discount and VAT allocations, cap successful and in-flight refund totals, and separate VENDOR_REIMBURSEMENT_PENDING and REIMBURSEMENT_CONFIRMED from provider states. Queue the supported online Refund API immediately after commit. Create ADJUSTMENT_REQUIRED for posted CWT instead of automatically recovering tax from the BIR, and never reset a FIN-04A threshold status because a refund occurred. Preserve the cancellation cutoff and statutory remedies. For a paid fee credit use PLATFORM_FEE and FEE_CREDIT tied to the original fee capture and never take unrelated Buyer funds.
 
@@ -973,6 +1228,10 @@ Buyers and Vendors resolve documented cases through timed steps. A refund is cre
 
 ## Required implementation
 
+**Owner-controlled staff disputes.** The Owner's dispute flag defaults enabled for Store Staff/Customer Service and grants only their permitted case tasks. It never grants Admin adjudication, Owner attestation or protected finance. Only Owner changes the flag. Disabling revokes navigation/direct route/API/Reverb/file/export/queued-notification access, routes open work to Owner/Manager and retains original submissions/authors. Re-enable restores only current permitted scope. Inventory/Fulfillment do not gain case-management power through this setting.
+
+Operational invoice/order evidence follows its narrow role permissions; do not expose unrelated protected financial records. Owner/Manager/Store Staff may upload the official invoice as documented; Customer Service can communicate/view permitted status but does not gain official-file upload authority. Owner-only storewide Earnings/Transaction History remains separate. Preserve voluntary-refund authority and existing Admin-decision execution rules.
+
 **FIN/MAT integration.** At an enforceable dispute conclusion, apply the awarded online and physical components, original VAT and discount allocations, the commission target credit and a reviewed tax correction. Keep the Vendor goods invoice, platform service invoice, processor invoice and Form 2307 separate. An invoice copy request never postpones legally due issuance.
 
 - Structured dispute and refund-request form, evidence, Case ID, masked original method, no alternative destination.
@@ -988,6 +1247,8 @@ The case timeline is one chronological surface with actor, role, timestamp and e
 
 ## Acceptance gate
 
+Test default/toggle permissions, revocation during open case/export job, transfer to Owner/Manager, retained history, re-enable, invoice upload scope and absence of protected finance. Preserve dispute/appeal/refund computations.
+
 Filing a dispute cannot trigger a refund or create `REFUND_PENDING`. An awarded partial refund cannot exceed the original lines or refund twice; a dispute hold does not overwrite earned-fee state. A generic PDF is never labelled structured e-invoicing compliance. A concluded refund award creates exactly one linked refund and the case stays open until the remedy reaches a terminal state.
 
 ## Copy-paste prompt
@@ -996,6 +1257,14 @@ Filing a dispute cannot trigger a refund or create `REFUND_PENDING`. An awarded 
 Apply §0 Standing Contract from docs/plans/MateryalPH_Implementation_Phases_and_Codex_Prompts.md and AGENTS.md. Do not restate them back to me.
 
 Implement MateryalPH Phase 13: transaction disputes, mutual resolution, Admin clarification and decision, one appeal, remedy tracking, Dispute-Conclusion Refunds, returns and the Vendor invoice request and upload workflow. Surfaces are apps/buyer-mobile, apps/vendor-web, apps/admin-web, services/api and packages/api-contract.
+
+Integrate the synchronized Vendor onboarding contract into this phase as follows.
+
+Owner-controlled staff disputes. The Owner's dispute flag defaults enabled for Store Staff/Customer Service and grants only their permitted case tasks. It never grants Admin adjudication, Owner attestation or protected finance. Only Owner changes the flag. Disabling revokes navigation/direct route/API/Reverb/file/export/queued-notification access, routes open work to Owner/Manager and retains original submissions/authors. Re-enable restores only current permitted scope. Inventory/Fulfillment do not gain case-management power through this setting.
+
+Operational invoice/order evidence follows its narrow role permissions; do not expose unrelated protected financial records. Owner/Manager/Store Staff may upload the official invoice as documented; Customer Service can communicate/view permitted status but does not gain official-file upload authority. Owner-only storewide Earnings/Transaction History remains separate. Preserve voluntary-refund authority and existing Admin-decision execution rules.
+
+Add these acceptance checks to the existing phase suite: Test default/toggle permissions, revocation during open case/export job, transfer to Owner/Manager, retained history, re-enable, invoice upload scope and absence of protected finance. Preserve dispute/appeal/refund computations.
 
 Implement FIN-07 and FIN-09 dispute and invoice details. Make invoice records available when received or legally due rather than only after completion or a Buyer request; the three-business-day copy target is not an issuance extension. Validate issuer and type and reconcile document differences without changing accepted Buyer totals. Refund awards create linked fee adjustments and tax review, with no automatic filed-return amendment, no alternate online refund destination and no removal of statutory remedies.
 
@@ -1024,6 +1293,10 @@ Verified completed purchases produce controlled reviews, daily Vendor scores, au
 
 ## Required implementation
 
+**Analytics permission and hours.** Vendor Materials Analytics remains Owner/Store Manager only under the approved aggregate market-data contract. Store Staff, Customer Service, Inventory and Fulfillment do not obtain it through dispute flags, delegation or combined role scope. This permission does not reveal protected Earnings/Transaction History or competitors' private quotations/transactions.
+
+Hours may inform public profile display, but cannot independently change eligible-vendor counts, review/score formulas, discovery or response metrics. Keep all existing FIN/MAT rules and captured source semantics.
+
 **FIN/MAT integration.** Deliver MAT-01 to MAT-07 end to end for Buyer and Vendor using the shared daily snapshot service and source observations. Enable the Explore navigation entry only now. Build categorized lists, canonical Material Price Details, an exact-date graph and table, current offers for Buyers and own-price versus suppressed competitor averages for Owner and Manager. Trust-score inputs stay separate.
 
 - 14-day review window, double-blind reveal, 24-hour edit, dispute withholding, moderation.
@@ -1038,6 +1311,8 @@ Materials Analytics navigation is enabled only when the feature is installed; no
 
 ## Acceptance gate
 
+Test all fixed roles at analytics route/API/export/serializer level and absence of protected finance. A schedule-only edit leaves eligibility, score and MAT calculations unchanged.
+
 Pass every MAT-07 fixture and inspect the actual JSON for competitor identity leakage. Test duplicates, unit and specification mismatches, equal weighting, tax-inclusive amounts, exact endpoints, missing data, changed participants, daily job replay, revoked roles and cached response isolation. Cancelled, test, duplicate, fraudulent or otherwise ineligible activity cannot affect scores.
 
 ## Copy-paste prompt
@@ -1046,6 +1321,14 @@ Pass every MAT-07 fixture and inspect the actual JSON for competitor identity le
 Apply §0 Standing Contract from docs/plans/MateryalPH_Implementation_Phases_and_Codex_Prompts.md and AGENTS.md. Do not restate them back to me.
 
 Implement MateryalPH Phase 14: verified-purchase reviews, moderation, MQS, VCS, OHS, VPS and operational metrics, automatic badges, and local price-trend insights. Surfaces are apps/buyer-mobile, apps/vendor-web, apps/admin-web, services/api and packages/api-contract.
+
+Integrate the synchronized Vendor onboarding contract into this phase as follows.
+
+Analytics permission and hours. Vendor Materials Analytics remains Owner/Store Manager only under the approved aggregate market-data contract. Store Staff, Customer Service, Inventory and Fulfillment do not obtain it through dispute flags, delegation or combined role scope. This permission does not reveal protected Earnings/Transaction History or competitors' private quotations/transactions.
+
+Hours may inform public profile display, but cannot independently change eligible-vendor counts, review/score formulas, discovery or response metrics. Keep all existing FIN/MAT rules and captured source semantics.
+
+Add these acceptance checks to the existing phase suite: Test all fixed roles at analytics route/API/export/serializer level and absence of protected finance. A schedule-only edit leaves eligibility, score and MAT calculations unchanged.
 
 Implement MAT-01 to MAT-07 exactly, replacing any older mixed listing and completed-sale insight logic. Capture eligible public ordinary prices daily at 00:10 Asia/Manila into immutable published runs, retain the actual time and geography and never fabricate a missed day. Deduplicate one Vendor per group by latest published ordinary-price effective timestamp then stable variant identifier, and average equally without inventory weighting. Buyer Explore to Materials Analytics to Material Price Details to current Vendor Product Details must be fully functional and accessible. Provide 7, 30 and 90-day and up to 365-day custom ranges, PHP per unit, current versus historical timestamps, graph gaps and table, counts, null insufficient-data states and ((end-start)/start)*100 from unrounded means. A one-seller Buyer average is limited data and a trend needs two sellers at each exact endpoint. Vendor Owner and Manager requests exclude the own organization and suppress every competitor point, variant and endpoint below three distinct competitors, with no exact small count and no individual store or offer identifiers. Use separate backend serializers, policies and cache keys; no Vendor token can request Buyer offer output. An own listing edit is an explicit normal authorized edit. Seed clearly labelled isolated DEMO history and test the 100/110/120 to 110 and 100 to 110 equals plus 10 percent fixtures plus all MAT-07 cases. Add no market-data API, forecast, automatic price change or private quote source.
 
@@ -1070,6 +1353,10 @@ Users receive reliable in-app, push and email notices. The system produces autho
 
 ## Required implementation
 
+**Onboarding notices and current authorization.** Reuse idempotent events for review/correction, authority/terms blockers, connection/reconciliation failure, Setup invalidation, activation/restriction, expiry and team invitation/delegation changes. Resume links target the relevant existing requirement/screen. Never include private evidence, provider payloads or tokens in notification text/logs. Invitations remain identity-bound, expiring and single-use.
+
+Authorize export/notice request, generation, delivery and download against current membership, dispute flag, delegation and assignment. Revocation while a job is queued removes access without deleting audit history. Vendor protected finance/Earnings/Transaction History/commission/withholding notices and exports are Owner-only; operational order/invoice notifications remain narrowly scoped. Public Closed hours do not pause deadlines/reminders.
+
 **FIN/MAT integration.** Add FIN-08 and FIN-09 sample invoice, certificate and return support packages, monthly statement PDFs and legal-date reminders. Reconcile issuer, payee, month, quarter and ATC and include required zero and exempt payee rows. Export MAT aggregates under the same audience restrictions; a Vendor export can never contain individual competitors or suppressed samples.
 
 - Notification templates, preferences, mandatory classes, device tokens, delivery attempts, deep links and retry rules.
@@ -1089,6 +1376,8 @@ Configure Firebase Development credentials and non-local email credentials from 
 
 ## Acceptance gate
 
+Test deduplication, correct resume links, secret redaction, expired/reused invitation, revoked queued jobs/downloads and exact finance recipients. Preserve required expiry/refund/dispute reminder timing despite Closed hours.
+
 Only `DRAFT`, `REVIEWED`, `EXPORTED` and `SIMULATED_SUBMISSION_RECORDED` are possible for demo tax reporting. Missing legal-date review blocks review readiness. Export alone cannot mark `FILED` or `BIR_PAID`; a spoofed issuer and same-user approval fail. A notification-provider failure never rolls back a committed order. Deep links recheck authorization. Mandatory notices cannot be disabled.
 
 ## Copy-paste prompt
@@ -1097,6 +1386,14 @@ Only `DRAFT`, `REVIEWED`, `EXPORTED` and `SIMULATED_SUBMISSION_RECORDED` are pos
 Apply §0 Standing Contract from docs/plans/MateryalPH_Implementation_Phases_and_Codex_Prompts.md and AGENTS.md. Do not restate them back to me.
 
 Implement MateryalPH Phase 15: authoritative in-app notifications, FCM Buyer push, web push where approved, email delivery, mandatory reminders, PDFs, CSV exports and authorized deep links. Surfaces are apps/buyer-mobile, apps/vendor-web, apps/admin-web, services/api and packages/api-contract.
+
+Integrate the synchronized Vendor onboarding contract into this phase as follows.
+
+Onboarding notices and current authorization. Reuse idempotent events for review/correction, authority/terms blockers, connection/reconciliation failure, Setup invalidation, activation/restriction, expiry and team invitation/delegation changes. Resume links target the relevant existing requirement/screen. Never include private evidence, provider payloads or tokens in notification text/logs. Invitations remain identity-bound, expiring and single-use.
+
+Authorize export/notice request, generation, delivery and download against current membership, dispute flag, delegation and assignment. Revocation while a job is queued removes access without deleting audit history. Vendor protected finance/Earnings/Transaction History/commission/withholding notices and exports are Owner-only; operational order/invoice notifications remain narrowly scoped. Public Closed hours do not pause deadlines/reminders.
+
+Add these acceptance checks to the existing phase suite: Test deduplication, correct resume links, secret redaction, expired/reused invitation, revoked queued jobs/downloads and exact finance recipients. Preserve required expiry/refund/dispute reminder timing despite Closed hours.
 
 Implement tax packages for 2307, 0619-E support, 1601-EQ and QAP, and annual 1604-E and alphalist using FIN-08 effective ATCs WI820 and WC820 versus WI830 and WC830, calendar-quarter grouping and the versioned non-eFPS demo deadline calendar. Keep taxable-year threshold counters separate from the filing calendar. Watermark every sample artifact, store export hashes and exact source versions, and require an independent reviewer. Unknown or overridden due dates show DUE_DATE_REVIEW_REQUIRED with source and reviewer. Distinguish external Vendor goods invoices, platform fee invoices and processor documents; a PDF upload alone is not compliant structured e-invoicing. No live BIR API submission or fabricated government receipt. Apply MAT suppression and scope to authorized exports, neutralize spreadsheet-formula injection and revoke access when permissions change.
 
@@ -1121,6 +1418,10 @@ Authorized Admin roles operate all review queues and see privacy-controlled supp
 
 ## Required implementation
 
+**Extend Phase 3E rather than duplicate review.** Reuse case identity, services and three-region requirements/information/decision-restrictions layout. Add operations queues/filters without another approval engine. Show separate Verification, Setup, technical TEST readiness, activation and discovery state. Blockers identify source revisions: missing media/hours, authority/terms, conditional delivery or provider capability. Optional teams/products do not block activation.
+
+Grouped Business Information stays distinct from individual versioned document decisions. Reconciliation investigations show safe evidence/retry state, never manual fabricated connection or blind replacement account. Admin Finance stays least-privilege with preparer/reviewer separation; Vendor Manager is not an Admin permission. Other classifications are not automatically taxonomy changes and private evidence/Buyer coordinates never enter geographic analytics.
+
 **FIN/MAT integration.** Embed Materials Analytics in the Philippine Geographic Marketplace Analytics section with nationwide and PSGC scope, compatible category and date filters, limited-sample labels and separately authorized source inspection. Add FIN tax, fee, evidence, adjustment, statement and package queues and independent review controls to Admin and the existing Vendor finance pages, including the FIN-04A threshold-review and overlap queues.
 
 - Vendor verification, product compliance, dispute and appeal, review moderation, user enforcement, invoice, privacy, job health and refund-monitoring queues.
@@ -1133,9 +1434,11 @@ Authorized Admin roles operate all review queues and see privacy-controlled supp
 
 ## UI/UX and layout architecture
 
-Queues share one layout: filter bar, dense table with sticky header, row detail in the Phase 3E two-pane pattern, and decisions requiring a reason. The analytics dashboard puts the map and the synchronized sortable table side by side at ≥1280px and stacked below, with geography filtering the whole dashboard, keyboard-selectable regions, breadcrumbs, a legend, exact focused values and non-color meaning. Suppressed cells state the suppression reason. Exact Buyer coordinates never render. Platform Settings show the current version, the validation rule and the previous value for every field.
+Queues share one layout: filter bar, dense table with sticky header, row detail in the Phase 3E responsive requirements/information/decision pattern, and decisions requiring a reason. The analytics dashboard puts the map and the synchronized sortable table side by side at ≥1280px and stacked below, with geography filtering the whole dashboard, keyboard-selectable regions, breadcrumbs, a legend, exact focused values and non-color meaning. Suppressed cells state the suppression reason. Exact Buyer coordinates never render. Platform Settings show the current version, the validation rule and the previous value for every field.
 
 ## Acceptance gate
+
+Test preserved case/history identity, exact decision targets, stale conflicts, source-specific restrictions, no provider-ready override, permissions and private-data suppression across new queues.
 
 Admin aggregate access cannot inspect source listings without the separate permission; finance is separately authorized. Payment and order filters do not change listed-price observations. Source and export reviews are attributable and test data never mixes with live figures. Aggregate permission never exposes exact Buyer coordinates. Auto-accept and app opens alone do not count as human Vendor activity.
 
@@ -1145,6 +1448,14 @@ Admin aggregate access cannot inspect source listings without the separate permi
 Apply §0 Standing Contract from docs/plans/MateryalPH_Implementation_Phases_and_Codex_Prompts.md and AGENTS.md. Do not restate them back to me.
 
 Implement MateryalPH Phase 16: all Admin operational queues, non-secret Platform Settings, append-only audit search, integration and job health, and the privacy-controlled Philippine geographic analytics dashboard. Surfaces are apps/admin-web, apps/vendor-web, services/api and packages/api-contract.
+
+Integrate the synchronized Vendor onboarding contract into this phase as follows.
+
+Extend Phase 3E rather than duplicate review. Reuse case identity, services and three-region requirements/information/decision-restrictions layout. Add operations queues/filters without another approval engine. Show separate Verification, Setup, technical TEST readiness, activation and discovery state. Blockers identify source revisions: missing media/hours, authority/terms, conditional delivery or provider capability. Optional teams/products do not block activation.
+
+Grouped Business Information stays distinct from individual versioned document decisions. Reconciliation investigations show safe evidence/retry state, never manual fabricated connection or blind replacement account. Admin Finance stays least-privilege with preparer/reviewer separation; Vendor Manager is not an Admin permission. Other classifications are not automatically taxonomy changes and private evidence/Buyer coordinates never enter geographic analytics.
+
+Add these acceptance checks to the existing phase suite: Test preserved case/history identity, exact decision targets, stale conflicts, source-specific restrictions, no provider-ready override, permissions and private-data suppression across new queues.
 
 Implement MAT Admin lists, details and charts inside the existing geographic section, with source inspection only for materials_analytics.inspect_sources and a recorded reason. Nation, region, province, city and municipality filters use PSGC; do not impose a national 50 km circle. Mark transaction-only filters inapplicable to price panels. Add FIN-10 queues and scoped screens for evidence, remittance reconciliation, fee approval and payment status, overdue debt, tax adjustments, sample report readiness and the FIN-04A threshold-review and unresolved-overlap queues. Use two distinct named finance users for required preparation and review. Display gross and net GMV independently from CWT, commissions, platform revenue, collected cash and receivables. Add materials snapshot health and labelled demo datasets. No Admin rate or edit control may bypass source or effective-date review or the LIVE gates.
 
@@ -1169,6 +1480,10 @@ The complete feature system is hardened against common abuse, privacy leaks, aut
 
 ## Required implementation
 
+**Onboarding threat and accessibility cases.** Cover organization/draft optimistic-lock conflicts, activation races with media removal/evidence expiry/holds, OTP replay/expiry/latest-challenge and cross-actor/org/candidate/purpose substitution, effective authority scope, private ID front/back and document-version URLs, safe public-media replacement and classification validation. Store Email cannot silently change login/provider identity or agreement history.
+
+Exercise provider timeout/replay/duplicate prevention, cross-Vendor association and TEST/live separation with redacted evidence. Test all six roles at navigation/route/API/DTO/realtime/export layers, including dispute flag, delegated Team Tracking, assigned fulfillment chat and Owner-only finance. Validate accessible seven-day/override controls, narrow-screen vehicles and compact Admin review without sidebar redesign. Public DTOs contain only permitted saved fields.
+
 **FIN/MAT integration.** Harden finance evidence and ledger export and market responses against cross-organization access, role spoofing, cache leakage, arbitrary grouping, scraping amplification, SQL injection and sensitive logging. Check responsive Explore cards and graph and table keyboard, screen reader, contrast, touch and reduced-motion behavior. Confirm that TIN, declaration evidence and threshold counters never leave an authorized audience.
 
 - Threat model and data-flow review.
@@ -1189,6 +1504,8 @@ If risk-based reCAPTCHA and Sentry are approved, create separate Development and
 
 ## Acceptance gate
 
+No stale/forged completion activates; private evidence/provider data does not leak; OTP/authority cannot be swapped; uncertain Create cannot duplicate accounts; revoked staff loses channels/downloads. Confirm supported widths, keyboard access, text scaling and reduced motion alongside original security/performance gates.
+
 Raw payloads, logs and exports never contain unauthorized competitor identity, exact stock, TIN or tax evidence. Server checks survive a hidden-button bypass. No binary-float money drift and no unbounded date or radius query is accepted. Critical and high security findings are fixed or formally blocked from release. No accessibility blocker exists on a critical journey.
 
 ## Copy-paste prompt
@@ -1197,6 +1514,14 @@ Raw payloads, logs and exports never contain unauthorized competitor identity, e
 Apply §0 Standing Contract from docs/plans/MateryalPH_Implementation_Phases_and_Codex_Prompts.md and AGENTS.md. Do not restate them back to me.
 
 Implement and verify MateryalPH Phase 17: security, privacy, accessibility, observability and performance hardening across Laravel, both React portals, Flutter, containers, CI and deployment configuration.
+
+Integrate the synchronized Vendor onboarding contract into this phase as follows.
+
+Onboarding threat and accessibility cases. Cover organization/draft optimistic-lock conflicts, activation races with media removal/evidence expiry/holds, OTP replay/expiry/latest-challenge and cross-actor/org/candidate/purpose substitution, effective authority scope, private ID front/back and document-version URLs, safe public-media replacement and classification validation. Store Email cannot silently change login/provider identity or agreement history.
+
+Exercise provider timeout/replay/duplicate prevention, cross-Vendor association and TEST/live separation with redacted evidence. Test all six roles at navigation/route/API/DTO/realtime/export layers, including dispute flag, delegated Team Tracking, assigned fulfillment chat and Owner-only finance. Validate accessible seven-day/override controls, narrow-screen vehicles and compact Admin review without sidebar redesign. Public DTOs contain only permitted saved fields.
+
+Add these acceptance checks to the existing phase suite: No stale/forged completion activates; private evidence/provider data does not leak; OTP/authority cannot be swapped; uncertain Create cannot duplicate accounts; revoked staff loses channels/downloads. Confirm supported widths, keyboard access, text scaling and reduced motion alongside original security/performance gates.
 
 Add threat-focused tests for FIN-10, FIN-04A and MAT-05 with authenticated audience, organization and permission isolation, rejected role and filter overrides and revoked cached downloads. Exercise exact origin and radius validation, bounded 365-day queries, run publication and count invalidation. Measure seeded query plans with Technical Design section 14 fixtures and report actual hardware and timings. Preserve the stated limitation that public Buyer listings can reveal stores, without claiming complete anonymization. Audit all financial and analytics UI states and exports for accessibility and for secret, TIN, declaration-evidence or threshold-counter leakage.
 
@@ -1223,6 +1548,12 @@ The complete system is proven through repeatable automated and manual scenarios,
 
 ## Required implementation
 
+**Expanded ONB-01–ONB-10 acceptance matrix.** Cover first Owner Welcome/Continue, Verification Continue later to Setup while draft, Setup Continue later/Finish Later to Dashboard, later login/resume and invited staff without repeat onboarding. Include five Business Types, conditional registration/authority, pending-authority initial submission then V4 consent, one-field Store Email, private evidence, hidden geography/manual entry, multiple Other labels and rental exclusion.
+
+Exercise S1 shared name and both-image completion/removal/failed replacement; S2 applicability, normal/mixer cargo and unknown fit; S3 actual TEST versus fake evidence, duplicate clicks and timeout recovery; optional S4 and no-team activation; S5 seven days/all-Closed/overrides/timezone boundaries; S6 stale/current revisions. Admin grouping must not mass-approve documents and linked ID previews must respect versions. Activation without listings succeeds only with all required gates, while offering discovery remains separate.
+
+Run the six-role matrix, off-by-default Manager delegation/scoped Team Tracking, enabled-by-default dispute flag/revocation, Owner-only finance, Owner/Manager Materials Analytics and milestone-gated assigned fulfillment threads. Continue through heavy-access alternative drop-off, confirmed vehicle/count/trip/fee snapshots, role reassignment and later restriction preserving accepted-order remedies. Retain all original financial/payment/refund/procurement UAT.
+
 **FIN/MAT integration.** Run a complete capstone scenario across Buyer, Vendor Owner and Manager, denied staff and two named Admin reviewers, including FIN-06, FIN-04A, FIN-12 and MAT-07, with real Xendit TEST evidence where supported and clearly distinct simulated deductions and history.
 
 - Cross-client end-to-end suite for Buyer, Vendor roles and Admin roles.
@@ -1239,6 +1570,8 @@ UAT scripts must include the accessibility and responsive passes as numbered ste
 
 ## Acceptance gate
 
+Record case-to-build/environment/fixture/expected/actual evidence and unresolved blockers. Keep actual provider observations distinct from fakes/seeded approvals. No skipped/blocked case is a pass. Clean repeats create no duplicate accounts, threads, orders or postings; use isolated test databases.
+
 Record actual test results, screenshots and expected-versus-actual centavo values. Demonstrate three-competitor visibility and two-competitor suppression, then cancellation and dispute finance separation and a blocked LIVE gate. No document-only validation is reported as implemented success. All critical journeys pass, no unresolved Severity 1 or 2 defect remains, and restore and rollback are demonstrated rather than assumed.
 
 ## Copy-paste prompt
@@ -1247,6 +1580,16 @@ Record actual test results, screenshots and expected-versus-actual centavo value
 Apply §0 Standing Contract from docs/plans/MateryalPH_Implementation_Phases_and_Codex_Prompts.md and AGENTS.md. Do not restate them back to me.
 
 Implement MateryalPH Phase 18: complete automated end-to-end coverage, deterministic UAT data and scripts, provider failure simulation, concurrency and load checks, backup and restore validation, and requirements-to-test traceability.
+
+Integrate the synchronized Vendor onboarding contract into this phase as follows.
+
+Expanded ONB-01–ONB-10 acceptance matrix. Cover first Owner Welcome/Continue, Verification Continue later to Setup while draft, Setup Continue later/Finish Later to Dashboard, later login/resume and invited staff without repeat onboarding. Include five Business Types, conditional registration/authority, pending-authority initial submission then V4 consent, one-field Store Email, private evidence, hidden geography/manual entry, multiple Other labels and rental exclusion.
+
+Exercise S1 shared name and both-image completion/removal/failed replacement; S2 applicability, normal/mixer cargo and unknown fit; S3 actual TEST versus fake evidence, duplicate clicks and timeout recovery; optional S4 and no-team activation; S5 seven days/all-Closed/overrides/timezone boundaries; S6 stale/current revisions. Admin grouping must not mass-approve documents and linked ID previews must respect versions. Activation without listings succeeds only with all required gates, while offering discovery remains separate.
+
+Run the six-role matrix, off-by-default Manager delegation/scoped Team Tracking, enabled-by-default dispute flag/revocation, Owner-only finance, Owner/Manager Materials Analytics and milestone-gated assigned fulfillment threads. Continue through heavy-access alternative drop-off, confirmed vehicle/count/trip/fee snapshots, role reassignment and later restriction preserving accepted-order remedies. Retain all original financial/payment/refund/procurement UAT.
+
+Add these acceptance checks to the existing phase suite: Record case-to-build/environment/fixture/expected/actual evidence and unresolved blockers. Keep actual provider observations distinct from fakes/seeded approvals. No skipped/blocked case is a pass. Clean repeats create no duplicate accounts, threads, orders or postings; use isolated test databases.
 
 Create a reproducible demo and UAT script: Vendor onboarding from welcome through Store Verification submission, Admin correction, approval and activation, then Explore counts, categorized material and variant averages, exact-date graph, Buyer named Vendor offers, Owner and Manager aggregate-only competitor comparisons, denied staff and Admin geography and source permission. Then run VAT and non-VAT, valid and missing declaration, FIN-04A threshold crossing under concurrency including the exactly-at-limit and 500000.01 cases, physical cash, mixed NRPC, completion and monthly fee payment, Vendor cancellation and partial dispute refund, report review and export, and the disabled live gate. Use separate isolated financial and market fixtures so no synthetic history or tax certificate is represented as actual market data or BIR evidence. Replay duplicate and out-of-order events and failed daily capture and refund funding, and capture real results and unresolved provider capability separately.
 
@@ -1271,6 +1614,10 @@ GitHub Actions validates every change and a fully isolated Staging environment r
 
 ## Required implementation
 
+**Safe onboarding rollout.** Apply additive migrations/backfills for canonical identity, saved schedules/date overrides, typed/mixer vehicles, Owner settings, versioned review/activation dependencies and durable provider attempts. Map existing tables/routes explicitly. Never backfill fabricated completion, authority approval, verified email, operating hours or provider capability. Legacy unresolved records retain actionable incomplete/review status; preserve documents, agreements and accepted orders.
+
+Pin the approved provider adapter version/environment and master-account readiness. Backend-only secrets, Asia/Manila schedule evaluation, outbox/reconciliation workers and permission revocation must agree across clients/API. Back up before data migration, rehearse forward/rollback, retain provider attempt/association IDs through redeploy and never create another uncertain account. Feature flags expose only complete end-to-end paths.
+
 **FIN/MAT integration.** Deploy to an explicitly TEST/DEMO environment with the finance and analytics schemas, scheduler and worker, dataset-separated cache, queues and storage, and known-good demo fixtures. Register the monthly billing job at 00:05, daily prices at 00:10, the FIN-04A year-rollover job and bounded reconciliation jobs. New finance and analytics settings contain no secrets.
 
 - Path-aware GitHub Actions for Laravel, React, Flutter, contract, security and container jobs.
@@ -1291,6 +1638,8 @@ Enter Staging secrets directly into the GitHub, Render, Firebase, Google and Xen
 
 ## Acceptance gate
 
+Staging upgrade preserves identities/history and truthfully flags incomplete legacy records. Test fresh/migrated journeys, interrupted provisioning, workers, permission revocation and rollback/redeploy without duplicate association. Record real provider blockers; do not enable live payments or redesign hosting for onboarding.
+
 After deployment, verify one published daily run, snapshot failure visibility, a demo statement draft, API audience restrictions, sample export access, payment-mode labels and one FIN-04A threshold event visible in the finance queue. The environment cannot activate LIVE from a flag alone. Staging deploys only after CI passes. Migration, health, worker, scheduler, Reverb, payment webhook, private storage and critical smoke tests succeed. A rollback is rehearsed.
 
 ## Copy-paste prompt
@@ -1299,6 +1648,14 @@ After deployment, verify one published daily run, snapshot failure visibility, a
 Apply §0 Standing Contract from docs/plans/MateryalPH_Implementation_Phases_and_Codex_Prompts.md and AGENTS.md. Do not restate them back to me.
 
 Prepare MateryalPH Phase 19: production-grade CI/CD configuration and the isolated Staging deployment on Render Singapore. Do not perform an external deployment until I explicitly authorize it after reviewing the diff and the required secret checklist.
+
+Integrate the synchronized Vendor onboarding contract into this phase as follows.
+
+Safe onboarding rollout. Apply additive migrations/backfills for canonical identity, saved schedules/date overrides, typed/mixer vehicles, Owner settings, versioned review/activation dependencies and durable provider attempts. Map existing tables/routes explicitly. Never backfill fabricated completion, authority approval, verified email, operating hours or provider capability. Legacy unresolved records retain actionable incomplete/review status; preserve documents, agreements and accepted orders.
+
+Pin the approved provider adapter version/environment and master-account readiness. Backend-only secrets, Asia/Manila schedule evaluation, outbox/reconciliation workers and permission revocation must agree across clients/API. Back up before data migration, rehearse forward/rollback, retain provider attempt/association IDs through redeploy and never create another uncertain account. Feature flags expose only complete end-to-end paths.
+
+Add these acceptance checks to the existing phase suite: Staging upgrade preserves identities/history and truthfully flags incomplete legacy records. Test fresh/migrated journeys, interrupted provisioning, workers, permission revocation and rollback/redeploy without duplicate association. Record real provider blockers; do not enable live payments or redesign hosting for onboarding.
 
 Extend CI/CD and staging runbooks for the Finance and Analytics additive migrations, schema and contract checks, worker queues, shared scheduler locks and database uniqueness. Register the monthly billing job at 00:05, daily price capture at 00:10, the FIN-04A taxable-year rollover job and bounded reconciliation jobs. Use finance dry-run or tested command equivalents for job verification without fake provider success, and implement or document any command before invoking it. Keep new configuration backend-only, preserve quarterly secret rotation and separate environments, and do not request a BIR key. Smoke-test count, list and graph, Owner and Manager suppression, Admin source permission, ledger reconciliation, one threshold event and failed-job alerts before accepting staging.
 
@@ -1323,6 +1680,10 @@ The approved deliverable is a controlled capstone demonstration release in TEST/
 
 ## Required implementation
 
+**Updated demonstration journey.** Show first Owner Welcome, saved Verification into Setup, required Logo/Banner and checklist, typed vehicle/mixer/access configuration, honest backend TEST connection, optional teams, required S5 week/override and S6 review. Include one correction and separate Admin information/document decisions before activation. Explain product/team-free activation and separate eligible-listing discovery. Use synthetic demo identities/evidence and distinguish seeded approval from actual external verification.
+
+Buyer demonstration reads the same public name/media/hours, uses a heavy-access alternative drop-off and accepts an Owner/Manager-confirmed vehicle/trip/fee snapshot. Open assigned fulfillment chat only after a qualifying milestone. Demonstrate individual staff attribution, Customer Service draft-only commercial powers, dispute revocation, limited Manager delegation/Team Tracking and Owner-only protected finance. Keep original finance/refund/MAT cases; disclose unsupported provider capability as a blocker, never success.
+
 **FIN/MAT integration.** Complete the capstone release using existing TEST credentials and watermarked simulated finance and market fixtures. Record future LIVE prerequisites without blocking the academic delivery and without treating demo evidence as production approval.
 
 - A formal go/no-go checklist with named approval owners.
@@ -1339,6 +1700,8 @@ The release audit includes a visual pass: the environment and DEMO labels are pr
 
 ## Acceptance gate
 
+Map every new requirement to an implemented screen/API and actual acceptance evidence. Check saved public values, links and role routes. Distinguish synthetic seeds/fake tests, real Xendit TEST observations and production-unimplemented capability without inventing approvals.
+
 Demo UAT, security, accessibility, restore and deployment gates pass with actual evidence. Xendit and finance remain TEST/DEMO; unconfirmed registration, withholder or funding prevents real commerce. No real BIR filing, test-to-live promotion or live credential request is part of this release. No capstone release occurs with unresolved critical or high findings, exposed secrets, default credentials, unverified TEST refund behavior, misleading real-money claims or untested restore or rollback.
 
 ## Copy-paste prompt
@@ -1347,6 +1710,14 @@ Demo UAT, security, accessibility, restore and deployment gates pass with actual
 Apply §0 Standing Contract from docs/plans/MateryalPH_Implementation_Phases_and_Codex_Prompts.md and AGENTS.md. Do not restate them back to me.
 
 Prepare the MateryalPH Phase 20 capstone demonstration release from accepted Staging. Complete the TEST/DEMO release path only.
+
+Integrate the synchronized Vendor onboarding contract into this phase as follows.
+
+Updated demonstration journey. Show first Owner Welcome, saved Verification into Setup, required Logo/Banner and checklist, typed vehicle/mixer/access configuration, honest backend TEST connection, optional teams, required S5 week/override and S6 review. Include one correction and separate Admin information/document decisions before activation. Explain product/team-free activation and separate eligible-listing discovery. Use synthetic demo identities/evidence and distinguish seeded approval from actual external verification.
+
+Buyer demonstration reads the same public name/media/hours, uses a heavy-access alternative drop-off and accepts an Owner/Manager-confirmed vehicle/trip/fee snapshot. Open assigned fulfillment chat only after a qualifying milestone. Demonstrate individual staff attribution, Customer Service draft-only commercial powers, dispute revocation, limited Manager delegation/Team Tracking and Owner-only protected finance. Keep original finance/refund/MAT cases; disclose unsupported provider capability as a blocker, never success.
+
+Add these acceptance checks to the existing phase suite: Map every new requirement to an implemented screen/API and actual acceptance evidence. Check saved public values, links and role routes. Distinguish synthetic seeds/fake tests, real Xendit TEST observations and production-unimplemented capability without inventing approvals.
 
 Start with a readiness audit and a concrete release and rollback package. Audit FIN-12 and MAT-07 evidence, scheduled snapshots, reviewed sample finance packages, the FIN-04A threshold demonstration labelled SIMULATED, permission tests, restore and rollback and visible environment labels. Keep LIVE_COMMERCE_ENABLED false and record unresolved authentic registration, last-facility assignment, fee and tax classification, invoice and refund-funding requirements as future deployment gates. Do not ask for production keys and do not claim a simulated certificate or return is filed.
 

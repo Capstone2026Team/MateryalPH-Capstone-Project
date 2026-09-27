@@ -124,6 +124,8 @@ void main() {
       // TODO
     });
 
+    // Issues a new code for a pending Vendor account or an active Vendor account whose Owner email is still unverified. The response does not reveal whether an eligible account exists.
+    //
     //Future<SuccessEnvelope> resendEmailVerification(EmailRequest emailRequest) async
     test('test resendEmailVerification', () async {
       // TODO

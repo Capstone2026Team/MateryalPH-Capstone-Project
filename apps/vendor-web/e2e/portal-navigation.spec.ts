@@ -13,6 +13,7 @@ for (const portal of ['vendors', 'admin'] as const) {
         organization_name: 'Preview hardware', can_manage_staff: false, permissions: ['vendor.onboarding.submit', 'staff.manage'],
       }
       if (path.endsWith('/onboarding')) data = {
+        step_completion: [], requirements: [], drafts: [], lock_version: 1,
         organization: { store_name: 'Preview hardware', lock_version: 1 }, welcome_required: false,
         permissions: ['vendor.onboarding.submit', 'staff.manage'], verification: { status: 'APPROVED' },
         setup: { status: 'COMPLETED' }, activation: { status: 'ACTIVE' }, sections: {},
@@ -46,6 +47,13 @@ for (const portal of ['vendors', 'admin'] as const) {
     expect(await sidebar.evaluate(el => getComputedStyle(el).overflowY)).toBe('hidden')
     await page.screenshot({ path: testInfo.outputPath(`${portal}-navigation.png`) })
     if (desktop) {
+      await expect(page.locator('html')).toHaveCSS('overflow-y', 'hidden')
+      await expect(page.locator('body')).toHaveCSS('overflow-y', 'hidden')
+      await expect(page.locator('.portal-workspace')).toHaveCSS('overflow-y', 'auto')
+      expect(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight)).toBe(true)
+      await menu.locator('.portal-nav-row').last().hover()
+      await expect(page.getByRole('tooltip')).toHaveCount(0)
+      await expect(sidebar.locator('[title]')).toHaveCount(0)
       const expanded = await sidebar.boundingBox()
       const destinations = await menu.locator('.portal-nav-row').evaluateAll(rows => rows.map(row => row.getAttribute('href')))
       await page.getByRole('button', { name: 'Collapse sidebar' }).click()
@@ -65,6 +73,8 @@ for (const portal of ['vendors', 'admin'] as const) {
       for (const divider of geometry.dividers) expect(divider).toEqual({ height: '1px', opacity: '1' })
       const last = sidebar.locator('.portal-nav-row').last()
       await last.focus()
+      await expect(page.getByRole('tooltip')).toHaveCount(0)
+      await last.hover()
       await expect(page.getByRole('tooltip')).toContainText(await last.getAttribute('aria-label') ?? '')
       await page.keyboard.press('Escape')
       await expect(page.getByRole('tooltip')).toHaveCount(0)
@@ -75,6 +85,10 @@ for (const portal of ['vendors', 'admin'] as const) {
       await expect(footer).toContainText(portal === 'vendors' ? 'Preview hardware' : 'Account preview')
       await page.getByRole('button', { name: 'Expand sidebar' }).click()
       await expect(sidebar).toHaveCSS('width', `${expanded!.width}px`)
+      await menu.locator('.portal-nav-row').last().hover()
+      await expect(page.getByRole('tooltip')).toHaveCount(0)
+      await footer.locator('a').hover()
+      await expect(page.getByRole('tooltip')).toHaveCount(0)
       await page.emulateMedia({ reducedMotion: 'reduce' })
       await expect(page.locator('.portal-layout')).toHaveCSS('transition-duration', '0s')
       await page.screenshot({ path: testInfo.outputPath(`${portal}-expanded.png`) })
@@ -88,6 +102,14 @@ for (const portal of ['vendors', 'admin'] as const) {
       await page.keyboard.press('Escape')
       await expect(page.getByRole('button', { name: 'Open navigation' })).toBeFocused()
       await expect(sidebar).not.toBeVisible()
+    }
+    if (portal === 'vendors' && desktop) {
+      await page.goto('/store-profile')
+      await expect(page.getByRole('heading', { name: 'Public store information' })).toBeVisible()
+      expect(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight)).toBe(true)
+      await page.getByRole('button', { name: 'Save Store Profile' }).focus()
+      await expect(page.getByRole('button', { name: 'Save Store Profile' })).toBeInViewport()
+      expect(await page.evaluate(() => scrollY)).toBe(0)
     }
     await page.getByRole('button', { name: 'Account profile options' }).click()
     await expect(topbar.getByRole('link', { name: 'Settings', exact: true })).toHaveAttribute('href', `${portal === 'vendors' ? '/settings' : '/workspace'}#Account`)

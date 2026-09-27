@@ -10,6 +10,7 @@ Name | Type
 `authorityScopes` | Array&lt;string&gt;
 `decision` | string
 `lockVersion` | number
+`requirementVersions` | { [key: string]: number; }
 `reason` | string
 `verifiedDocumentNumber` | string
 `verifiedIssueDate` | Date
@@ -30,6 +31,7 @@ const example = {
   "authorityScopes": null,
   "decision": null,
   "lockVersion": null,
+  "requirementVersions": null,
   "reason": null,
   "verifiedDocumentNumber": null,
   "verifiedIssueDate": null,

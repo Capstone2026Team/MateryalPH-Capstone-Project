@@ -133,6 +133,11 @@ import {
     VendorInvitationAcceptanceFromJSON,
     VendorInvitationAcceptanceToJSON,
 } from '../models/VendorInvitationAcceptance';
+import {
+    type VendorStaffUpdate,
+    VendorStaffUpdateFromJSON,
+    VendorStaffUpdateToJSON,
+} from '../models/VendorStaffUpdate';
 
 export interface AcceptAccountAgreementsRequest {
     /**
@@ -403,6 +408,17 @@ export interface UpdateAccountProfileRequest {
      *
      */
     accountProfileUpdate: AccountProfileUpdate;
+}
+
+export interface UpdateVendorStaffRequest {
+    /**
+     *
+     */
+    membershipId: string;
+    /**
+     *
+     */
+    vendorStaffUpdate: VendorStaffUpdate;
 }
 
 export interface UploadAccountPhotoRequest {
@@ -2018,6 +2034,63 @@ export class AccountsApi extends runtime.BaseAPI {
      */
     async updateAccountProfile(requestParameters: UpdateAccountProfileRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AccountProfileEnvelope> {
         const response = await this.updateAccountProfileRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for updateVendorStaff without sending the request
+     */
+    async updateVendorStaffRequestOpts(requestParameters: UpdateVendorStaffRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['membershipId'] == null) {
+            throw new runtime.RequiredError(
+                'membershipId',
+                'Required parameter "membershipId" was null or undefined when calling updateVendorStaff().'
+            );
+        }
+
+        if (requestParameters['vendorStaffUpdate'] == null) {
+            throw new runtime.RequiredError(
+                'vendorStaffUpdate',
+                'Required parameter "vendorStaffUpdate" was null or undefined when calling updateVendorStaff().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/vendors/account/memberships/{membershipId}`;
+        urlPath = urlPath.replace('{membershipId}', encodeURIComponent(String(requestParameters['membershipId'])));
+
+        return {
+            path: urlPath,
+            method: 'PATCH',
+            headers: headerParameters,
+            query: queryParameters,
+            body: VendorStaffUpdateToJSON(requestParameters['vendorStaffUpdate']),
+        };
+    }
+
+    /**
+     */
+    async updateVendorStaffRaw(requestParameters: UpdateVendorStaffRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AccountMutationResultEnvelope>> {
+        const requestOptions = await this.updateVendorStaffRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => AccountMutationResultEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async updateVendorStaff(requestParameters: UpdateVendorStaffRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AccountMutationResultEnvelope> {
+        const response = await this.updateVendorStaffRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

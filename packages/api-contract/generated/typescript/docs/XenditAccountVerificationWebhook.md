@@ -6,12 +6,9 @@
 
 Name | Type
 ------------ | -------------
-`id` | string
-`forUserId` | string
-`accountId` | string
-`subaccountId` | string
-`status` | string
-`verificationStatus` | string
+`event` | string
+`created` | Date
+`data` | [XenditAccountVerificationWebhookData](XenditAccountVerificationWebhookData.md)
 
 ## Example
 
@@ -20,12 +17,9 @@ import type { XenditAccountVerificationWebhook } from '@materyalph/api-client-ts
 
 // TODO: Update the object below with actual values
 const example = {
-  "id": null,
-  "forUserId": null,
-  "accountId": null,
-  "subaccountId": null,
-  "status": null,
-  "verificationStatus": null,
+  "event": null,
+  "created": null,
+  "data": null,
 } satisfies XenditAccountVerificationWebhook
 
 console.log(example)

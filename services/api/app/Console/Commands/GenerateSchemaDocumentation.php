@@ -168,7 +168,7 @@ final class GenerateSchemaDocumentation extends Command
             $lines[] = '';
         }
 
-        return implode("\n", $lines)."\n";
+        return rtrim(implode("\n", $lines))."\n";
     }
 
     /**
@@ -208,7 +208,7 @@ final class GenerateSchemaDocumentation extends Command
         $lines[] = '';
         $lines[] = 'The diagram intentionally shows database ownership and referential integrity, not application workflow transitions. FIN and MAT state transitions remain defined in the approved workflows and enforced by domain services plus database checks.';
 
-        return implode("\n", $lines)."\n";
+        return rtrim(implode("\n", $lines))."\n";
     }
 
     private function purpose(string $table): string

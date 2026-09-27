@@ -24,7 +24,7 @@ abstract class VendorInvitation implements Built<VendorInvitation, VendorInvitat
   String? get invitationId;
 
   @BuiltValueField(wireName: r'role')
-  String get role;
+  String? get role;
 
   @BuiltValueField(wireName: r'expires_at')
   DateTime? get expiresAt;
@@ -64,11 +64,13 @@ class _$VendorInvitationSerializer implements PrimitiveSerializer<VendorInvitati
         specifiedType: const FullType(String),
       );
     }
-    yield r'role';
-    yield serializers.serialize(
-      object.role,
-      specifiedType: const FullType(String),
-    );
+    if (object.role != null) {
+      yield r'role';
+      yield serializers.serialize(
+        object.role,
+        specifiedType: const FullType(String),
+      );
+    }
     if (object.expiresAt != null) {
       yield r'expires_at';
       yield serializers.serialize(
@@ -117,8 +119,9 @@ class _$VendorInvitationSerializer implements PrimitiveSerializer<VendorInvitati
         case r'role':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(String),
-          ) as String;
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
           result.role = valueDes;
           break;
         case r'expires_at':

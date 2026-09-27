@@ -17,6 +17,8 @@ class _$AccountMembership extends AccountMembership {
   final String status;
   @override
   final bool canManageStaff;
+  @override
+  final int? lockVersion;
 
   factory _$AccountMembership(
           [void Function(AccountMembershipBuilder)? updates]) =>
@@ -27,7 +29,8 @@ class _$AccountMembership extends AccountMembership {
       required this.name,
       required this.role,
       required this.status,
-      required this.canManageStaff})
+      required this.canManageStaff,
+      this.lockVersion})
       : super._();
   @override
   AccountMembership rebuild(void Function(AccountMembershipBuilder) updates) =>
@@ -45,7 +48,8 @@ class _$AccountMembership extends AccountMembership {
         name == other.name &&
         role == other.role &&
         status == other.status &&
-        canManageStaff == other.canManageStaff;
+        canManageStaff == other.canManageStaff &&
+        lockVersion == other.lockVersion;
   }
 
   @override
@@ -56,6 +60,7 @@ class _$AccountMembership extends AccountMembership {
     _$hash = $jc(_$hash, role.hashCode);
     _$hash = $jc(_$hash, status.hashCode);
     _$hash = $jc(_$hash, canManageStaff.hashCode);
+    _$hash = $jc(_$hash, lockVersion.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -67,7 +72,8 @@ class _$AccountMembership extends AccountMembership {
           ..add('name', name)
           ..add('role', role)
           ..add('status', status)
-          ..add('canManageStaff', canManageStaff))
+          ..add('canManageStaff', canManageStaff)
+          ..add('lockVersion', lockVersion))
         .toString();
   }
 }
@@ -97,6 +103,10 @@ class AccountMembershipBuilder
   set canManageStaff(bool? canManageStaff) =>
       _$this._canManageStaff = canManageStaff;
 
+  int? _lockVersion;
+  int? get lockVersion => _$this._lockVersion;
+  set lockVersion(int? lockVersion) => _$this._lockVersion = lockVersion;
+
   AccountMembershipBuilder() {
     AccountMembership._defaults(this);
   }
@@ -109,6 +119,7 @@ class AccountMembershipBuilder
       _role = $v.role;
       _status = $v.status;
       _canManageStaff = $v.canManageStaff;
+      _lockVersion = $v.lockVersion;
       _$v = null;
     }
     return this;
@@ -140,6 +151,7 @@ class AccountMembershipBuilder
               status, r'AccountMembership', 'status'),
           canManageStaff: BuiltValueNullFieldError.checkNotNull(
               canManageStaff, r'AccountMembership', 'canManageStaff'),
+          lockVersion: lockVersion,
         );
     replace(_$result);
     return _$result;

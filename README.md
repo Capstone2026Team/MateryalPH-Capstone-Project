@@ -86,12 +86,11 @@ Run the checks relevant to a change from the owning directory:
 composer validate --strict
 vendor/bin/pint --test
 vendor/bin/phpstan analyse --memory-limit=1G
-php artisan test
 
-# isolated PostgreSQL 16/PostGIS Phase 2 gate
-powershell -ExecutionPolicy Bypass -File scripts/run-tests-isolated.ps1
-
-# The former Phase 3 implementation and its tests have been removed.
+# repository root: isolated PostgreSQL 16/PostGIS API test gate (PowerShell 7)
+pwsh -File scripts/run-tests-isolated.ps1
+# Keep the isolated services available for follow-up test runs:
+# pwsh -File scripts/run-tests-isolated.ps1 -KeepRunning
 
 # each React portal
 npm run typecheck
@@ -101,7 +100,13 @@ npm run build
 # apps/buyer-mobile
 flutter analyze
 flutter test
+```
 
+The API test runner finds Docker Desktop on PATH or in its standard user/system
+installation folder, waits for the test services to be healthy, and runs Laravel
+checks inside `api-test`. Do not run `php artisan test` directly from Windows:
+`postgres-test` resolves inside the isolated Compose network. The runner validates
+the test database before migrations and leaves the development database separate.
 
 Real provider credentials belong only n ignored local files. See
 `docs/architecture/MateryalPH_Environment_and_API_Key_Setup.md` for Google OIDC

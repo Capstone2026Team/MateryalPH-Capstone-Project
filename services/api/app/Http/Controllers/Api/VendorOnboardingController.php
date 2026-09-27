@@ -139,6 +139,11 @@ final class VendorOnboardingController extends Controller
         return ApiResponse::success($onboarding->uploadMedia($request, $file, (string) $request->validated('kind'), $request->validated('alt_text')), status: 201);
     }
 
+    public function removeMedia(Request $request, string $mediaId, VendorOnboardingService $onboarding): JsonResponse
+    {
+        return ApiResponse::success($onboarding->removeMedia($request, $mediaId));
+    }
+
     public function signedFile(Request $request, string $fileId, VendorOnboardingService $onboarding): JsonResponse
     {
         return ApiResponse::success($onboarding->signedFile($request, $fileId));
@@ -149,9 +154,9 @@ final class VendorOnboardingController extends Controller
         return $onboarding->streamFile($request, $fileId);
     }
 
-    public function capturePaymentConnection(VendorPaymentConnectionRequest $request, VendorOnboardingService $onboarding): JsonResponse
+    public function connectPayment(VendorPaymentConnectionRequest $request, VendorOnboardingService $onboarding): JsonResponse
     {
-        return ApiResponse::success($onboarding->capturePaymentConnection($request, $request->validated()));
+        return ApiResponse::success($onboarding->connectPayment($request))->header('Cache-Control', 'private, no-store')->header('Referrer-Policy', 'no-referrer');
     }
 
     public function reconcilePaymentConnection(Request $request, VendorOnboardingService $onboarding): JsonResponse

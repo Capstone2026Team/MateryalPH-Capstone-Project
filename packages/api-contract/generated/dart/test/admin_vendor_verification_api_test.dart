@@ -7,6 +7,8 @@ void main() {
   final instance = MateryalphApiClient().getAdminVendorVerificationApi();
 
   group(AdminVendorVerificationApi, () {
+    // Business information and each Government ID can be decided as a grouped review item. Grouped requests supply requirement_versions for every applicable underlying step; BIR COR, business registration, LGU permit, and other documents retain separate decisions.
+    //
     //Future<AdminVendorVerificationDetailEnvelope> decideVendorVerificationRequirement(String organizationId, String requirementKey, String idempotencyKey, AdminVendorVerificationDecision adminVendorVerificationDecision) async
     test('test decideVendorVerificationRequirement', () async {
       // TODO

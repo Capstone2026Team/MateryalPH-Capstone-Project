@@ -156,6 +156,10 @@ Verification uses HTTPS, secure OIDC handling, adaptive password hashing, expiri
 
 ## Vendor Onboarding
 
+**First successful Owner sign-in and continuation.** After account verification and the required account agreements, a newly created Vendor Owner first enters the **Welcome** page. **Continue** opens Store Verification. Persist the welcome acknowledgment on the organization/Owner onboarding record; refreshes and later successful sign-ins use the Dashboard appropriate to the current store state rather than repeatedly displaying Welcome. A staff invitation leads to a role-aware Dashboard and never repeats organization onboarding.
+
+**Continue later** in Store Verification saves the permitted draft and proceeds to Store Setup, even when Verification has not been submitted. **Continue later** in Store Setup saves progress and proceeds to the Limited-Access Vendor Dashboard. The separate **Finish Later** action exits either workstream to that Dashboard. Submission is still required for verification review and activation; skipping a screen never satisfies a requirement. When a draft cannot be saved, display the exact error and retain entered values rather than reporting successful progress. Store Profile links open the store profile; branding/navigation must not revoke the session or behave as Logout.
+
 Onboarding collects the legal, operational, compliance, storefront, fulfillment, and payment information required for activation. It has two separate primary sections with separate progress and review states:
 
 1. **Store Verification** — establishes the Vendor's legal, business, tax, regulatory, contact, classification, and registered-location information and submits applicable requirements for manual Admin review.
@@ -184,7 +188,7 @@ The Vendor Portal distinguishes information entered by the Vendor, information s
 
 **Business Information and Document Verification**
 
-Business Information is separate from the public Store Profile. It includes the fields and evidence applicable to the selected Business Type and Vendor configuration.
+The combined **Business Information** UI step contains the applicable identity, business/compliance and tax sections, with visually separated panels and document uploads. The existing document headings below remain the detailed specification, not extra mandatory wizard steps. Business Information is separate from the public Store Profile. It includes the fields and evidence applicable to the selected Business Type and Vendor configuration.
 
 ### Business Type
 
@@ -217,6 +221,16 @@ Where identification of an individual is applicable, the Vendor submits the requ
 
 Government-issued identification is private verification information. It is never displayed on the public Store Profile, Buyer search, public Vendor listings, to other Vendors, or to Vendor staff without the required permission.
 
+**Authorized Representative and Authority to Act.** The Vendor Owner is a MateryalPH account role; an Authorized Representative acts for the legal entity; an Authorized Signatory may execute particular agreements. One person may hold all three, but account access alone establishes neither legal authority nor signatory capacity.
+
+For Partnership, Corporation, OPC and Cooperative, identify the person acting for the organization. Record full legal name, position/title, professional or personal email, mobile/telephone, relationship to the business, applicable government identification, authority scope and supporting evidence. The name and organization must match the authority record. A business contact or staff role does not automatically confer this authority.
+
+Authority evidence is conditional. Accepted existing records may establish an officer/signatory's authority under the verification policy; reference and review those records instead of demanding duplicate uploads. Otherwise require an applicable Secretary's Certificate, Board Resolution, Special Power of Attorney, partnership authorization, cooperative board resolution, or equivalent approved evidence. Do not require every document simultaneously. Record why evidence is sufficient, additionally required, or genuinely not applicable. Absence of an additional upload is not absence of the underlying authority check.
+
+Where needed, display **Authority to Act for the Organization**, accepting approved PDF/JPG/JPEG/PNG files subject to size, content/MIME, safety, private-storage, versioning and audit controls. Store Verification may be submitted with pending authority evidence review. A draft commission or payment configuration may be prepared, but an organization-binding attestation cannot become effective until the required authority is approved. Account Terms acceptance and acknowledgment of a Privacy Notice remain separate acts. The current capstone keeps final tax declarations and commission acceptance Owner-only; an Owner acting for an entity must also satisfy its authority check. Staff may not become signatories merely through delegation.
+
+Admin reviews representative name, organization, capacity, authority scope, document date, signatures/certifications where applicable and consistency with business records. Approve, Return for Correction and Reject preserve the submitted version, remarks, actor and timestamp. Changing the representative creates a new version and effective period; previous agreements retain the person and authority evidence effective when signed. Authority files and personal contacts remain private and absent from Buyer, competitor and public analytics responses.
+
 ### Business Information
 
 **Business or Store Name** is the Vendor's public-facing marketplace identity. The Store Name entered during account creation is pre-populated here. The Vendor may review or change it before final Store Verification submission. It may appear in the storefront, Buyer search, listings, quotations, orders, messages, and marketplace recommendations. If no separate trade name is used, the applicable registered taxpayer or legal-business name may be used where permitted.
@@ -225,19 +239,30 @@ Public Store Name and Legal Business Name remain separate data fields. The Store
 
 **Date of Establishment** records when the business was established or officially registered. The date must be valid, not in the future, and consistent with applicable registration evidence where Admin review requires comparison. The Vendor-entered value remains subject to Admin verification when treated as a verified business fact.
 
-**Store Email** is the primary address for store communication, business notifications, marketplace notices, and Vendor administration. A verified Google email may be pre-filled and does not require duplicate ownership verification. The Vendor may select **Use a different Store Email**. A replacement email is format-validated, receives a short-lived OTP, and becomes active only after successful OTP verification. If verification fails or expires, the existing verified Store Email remains unchanged.
+**Store Email** is the primary address for store communication, business notifications, marketplace notices, and Vendor administration. A verified Google email may be pre-filled and does not require duplicate ownership verification. Use one read-only Store Email field showing the current value and its Verified state, with a **Change** action. Selecting Change makes that same field editable and displays **Send Code** beside it; do not introduce a second ‘Email to verify’ field. A replacement email is format-validated, receives a short-lived OTP, and becomes active only after successful OTP verification. If verification fails or expires, the existing verified Store Email remains unchanged.
 
 **Store Phone Number** is the primary store contact. **Same as Vendor Owner phone number** pre-fills the Owner's registered number. It remains a contact field and is not treated as SMS-verified because the capstone does not use an SMS provider.
 
-### Business communication
+**Store Email verification safety.** Bind the OTP to the organization, requesting actor, proposed normalized email and change purpose. Limit sends and attempts, enforce expiration and single use, and invalidate an older challenge when a new address is submitted. A successful challenge atomically replaces the effective store address and records the verification source/time. Failed, expired or abandoned challenges leave the current verified email active. Changing Store Email does not silently change the user's login email, Google identity or Xendit account email. Those records have separate authorized change processes. Show: “This email will be used for store-related communication. A different email address must be verified before it can replace the existing Store Email.”
 
-Store Contact Information (verified Store Email and Store Phone) is the single source for business communication. The separate Primary Business Contact collection, API, database table and submission requirement were removed by the approved 23 September 2026 change. Owner identity, Authorized Representative / Authority to Act and Vendor Team permissions remain independent. Existing audit and compliance history is retained.
+**Public name synchronization.** Account creation supplies the initial Public Store Name. Business Information and Public Store Profile subsequently edit one canonical public name through the same validated save operation, so a saved change appears in both forms and their preview. Never maintain competing copies. Legal names remain independent; historic quotations, orders and invoices retain their accepted identity snapshots. If two editors save concurrently, return a version conflict with reload/reapply choices rather than losing an edit.
+
+### Primary Business Contact
+
+The Vendor Owner is displayed as the initial Primary Business Contact. The Owner may add multiple contacts. Each contact records full name, position or title, professional or personal email, and mobile or telephone number, together with applicable authorization flags such as:
+
+- Authorized for business-verification communication.
+- Authorized for account-administration communication.
+- Authorized for general administrative communication.
+- Authorized-representative designation, where applicable.
+
+Exactly one contact is designated **Primary Business Contact** at a time. Changing that designation creates an audit event. An authorized-representative designation does not create a Vendor Portal account or staff permission; a separate Vendor Team Account invitation is required for system access.
 
 ### Registered Business Address
 
 The Vendor provides the registered or principal operating address through either **Manual Address Entry** or **Interactive Map Selection**. Structured fields include street, building, unit, or establishment; barangay; city or municipality; province or applicable independent-city classification; and postal code.
 
-The approved Google Maps integration may resolve a map pin into structured address information. The interface displays, where available, street/building, barangay, city or municipality, province or administrative area, postal code, latitude, and longitude. Latitude and longitude are displayed in their designated location fields after map selection. The Vendor reviews the resolved address before saving and must complete missing fields when geocoding cannot confidently provide them.
+The approved Google Maps integration may resolve a map pin into structured address information. The interface displays, where available, street/building, barangay, city or municipality, province or administrative area, and postal code. Latitude and longitude are hidden from the Vendor onboarding form, but are validated and stored separately by the backend. The Vendor confirms the map pin and resolved structured address rather than editing raw coordinate fields. The Vendor reviews the resolved address before saving and must complete missing fields when geocoding cannot confidently provide them.
 
 Location validation occurs before the location is used for discovery, location-based search, distance calculations, delivery coverage, delivery-fee calculation, supplier recommendation, Vendor Materials Analytics scope, or geographic reporting. Coordinates are stored separately from the human-readable address. A critical change to an approved address creates a new version or review event rather than silently overwriting the verified value. Google API keys and provider credentials remain protected and are not committed or unnecessarily exposed to the client.
 
@@ -251,7 +276,7 @@ The Vendor selects one applicable Supplier Type:
 
 The Vendor selects one or more Supplier Niches. Canonical niches may include Construction Materials; Electrical Supplies; Plumbing and Sanitary; Tools and Equipment; Finishing Materials; Fasteners and Hardware; Cement and Concrete; Roofing Materials; Formworks and Scaffolding; Wood and Lumber; Landscaping and Exterior; Steel and Reinforcement; Tools and Accessories; Masonry; Insulation and Waterproofing; Aggregates; Drainage and Septic Materials; Construction Chemicals; Flooring Materials; Wall and Ceiling Materials; HVAC Materials; Sanitary Fixtures; Fire Protection Materials; Paints and Finishes; Adhesives and Sealants; and Doors, Windows, and Glass. Substantially equivalent labels are consolidated into one canonical taxonomy.
 
-The Vendor may select **Others — Specify Category**. The supplied text is stored as a Vendor-provided custom classification label and does not automatically create a new canonical MateryalPH category. A valid Other label does not require separate Admin approval solely because it is custom, provided it does not violate a prohibited-category rule. Canonical taxonomy mapping may be reviewed later.
+The Vendor may select **Others — Specify Category**. Allow multiple Other labels through repeatable Add/Remove controls without an arbitrary one-label limit; validate each value, normalized duplicates and prohibited rental-service wording. The supplied text is stored as a Vendor-provided custom classification label and does not automatically create a new canonical MateryalPH category. A valid Other label does not require separate Admin approval solely because it is custom, provided it does not violate a prohibited-category rule. Canonical taxonomy mapping may be reviewed later.
 
 MateryalPH does not support construction-vehicle or equipment-rental services as marketplace inventory. Category validation rejects entries such as Construction Vehicle Rental, Vehicle Rental, Construction Equipment Rental, Equipment Rental, or Rental, case-insensitively and after reasonable normalization. Selecting Tools and Equipment does not make construction-vehicle rental a supported service.
 
@@ -287,6 +312,8 @@ The Vendor Tax Profile maintains taxpayer identity, legal-entity classification,
 
 The Vendor may view **Submit declaration**, **View withholding status**, **Explain missing evidence**, and **Report threshold exceeded** actions. All withholding, remittance, commission, provider, and tax responsibilities remain governed by FIN-01 through FIN-12. TEST/DEMO evidence is visibly sample evidence and never becomes production approval. A Sworn Declaration is not automatic tax treatment, and Xendit connection is not proof of withholding responsibility.
 
+**Declaration input and effective treatment.** A Yes choice reveals the PDF upload for the applicable BIR-received/BIR-stamped Sworn Declaration and its taxable/effective period. A No choice records the period without relief evidence. Neither an unchecked box nor an uploaded PDF is a verified exemption. Keep the established FIN-01/FIN-04 rule: `withholding = qualifying gross remittance × 0.005` when applicable; the earlier expression “1% of one-half” is its historical equivalent, not an additional halving. The threshold is assessed under FIN-04 across the relevant remittance scope; the whole qualifying remittance crossing ₱500,000 is assessed, not only its excess. A missing optional declaration applies standard treatment and does not alone block activation. Missing mandatory BIR registration does block it. Do not invent an annual expiry for a COR; document expiration applicability and declaration-period eligibility are independent.
+
 ### Document Metadata and Verification
 
 For every business or compliance document, the Vendor supplies the file and any entered metadata. Metadata includes, where applicable, document type, document number, upload timestamp, uploading user, organization, file reference, submission status, verification status, reviewer, remarks, verified issue date, verified expiration date, replacement/superseded-document reference, and audit reference.
@@ -297,7 +324,7 @@ Each Admin-reviewed requirement uses `APPROVED`, `CHANGES_REQUIRED`, or `REJECTE
 
 ### Submission Validation
 
-Before Store Verification can be submitted, the system validates the applicable Business Type, legal-name and identity fields, business/store name, establishment date, verified Store Email, Store Phone Number, registered address and coordinates where required, Supplier Type and niches, registration evidence, LGU and BIR information, TIN, VAT/Non-VAT declaration, Vendor Tax Profile fields, applicable declarations, document numbers, supported file type and size, malware/file-safety state, acknowledgments, and other conditional requirements.
+Before Store Verification can be submitted, the system validates the applicable Business Type, legal-name and identity fields, business/store name, establishment date, verified Store Email, Store Phone Number, contacts, registered address and coordinates where required, Supplier Type and niches, registration evidence, LGU and BIR information, TIN, VAT/Non-VAT declaration, Vendor Tax Profile fields, applicable declarations, document numbers, supported file type and size, malware/file-safety state, acknowledgments, and other conditional requirements.
 
 If a required item is missing or invalid, submission is blocked and the exact requirement is identified. A conditionally required item that does not apply is recorded at level `CONDITIONALLY_REQUIRED` and status `NOT_APPLICABLE` with its applicability reason. Submission does not mean verification.
 
@@ -331,20 +358,37 @@ Changing ordinary public marketing text or a public profile image does not by it
 
 ## 2. Store Setup
 
-Store Setup is the second primary section of Vendor Onboarding. It may begin after Store Verification is submitted, even while review is pending. Its operational checklist and completion state are independent from Store Verification. It includes Business Store Profile, Fulfillment Configuration, conditional Delivery Configuration, Payment Configuration, optional Vendor Team Account Management, Finish Later and limited-dashboard behavior, and Store Activation readiness.
+Store Setup is the second primary section of Vendor Onboarding. It may begin from **Proceed to Store Setup** after Verification submission or from **Continue later** while Verification is still a draft. Its completion state is independent from Admin review. The screen sequence is **S1 Public Store Profile → S2 Fulfillment Configuration (with conditional Delivery Configuration) → S3 Payment Configuration → S4 Optional Team guidance → S5 Store Operation → S6 Review and Complete**. S4 is skippable guidance, not a required checklist item. These screen identifiers do not renumber this document's existing sections.
+
+The Store Setup Checklist contains **Public Store Profile**, **Fulfillment Configuration**, **Delivery Configuration** (conditionally applicable), **Payment Configuration**, and **Store Operation**. S6 reviews the saved results and completes the workstream; it is not a duplicate data-entry requirement. There is no separate **Store Media** item and no **Team Accounts** checklist item. Team invitations do not affect progress percentages, missing-requirement counts, completion, or activation.
 
 **Business Store Profile Setup**
 
 The Business Store Profile is a draft marketplace profile until Store Activation. It contains:
 
-- Logo or profile image.
-- Store Name pre-populated from Business Information.
-- Store Banner.
+- Required Store Logo (a valid saved public image).
+- Public Store Name synchronized with Business Information through one canonical field.
+- Required Store Banner (a valid saved public image).
 - Store Description.
 - Promotional images and optional promotional video.
 - Approved public business contact information.
+- Public operating information.
 
 Legal-business fields remain separate and cannot be changed through the public Store Profile editor. Media is validated for supported type, maximum size, safety, appropriate content, intellectual-property requirements, accessibility metadata, and other configured rules. Government ID, TIN, business-verification documents, private tax records, payout credentials, authentication information, and private employee information never appear publicly.
+
+**Public Store Profile completion and live preview.** Required profile fields, a saved valid Store Logo and a saved valid Store Banner must all exist before the checklist returns `COMPLETED`. Both uploads alone cannot complete a profile with other required information missing. Successful upload/removal returns the recalculated checklist from the backend and refreshes the marketplace-style preview immediately without discarding unsaved text. An upload still in progress, failed, rejected or awaiting its required safety check does not satisfy media completion. Replacement is committed only when the new file is valid; a failed replacement preserves the old valid image.
+
+Removing either required image from a previously completed profile returns that item to `IN_PROGRESS` and invalidates Store Setup completion until corrected. Unsaved removals do not change the authoritative checklist. Optional promotional media do not affect completion. Preserve the independent legal-verification decisions: editing a logo/banner does not approve or reopen unrelated legal evidence. Use public-media derivatives only; verification files must never become profile media through a copied private file identifier.
+
+**Store Operation — S5.** Store Operation is required. Save a structured weekly schedule in **Asia/Manila**, explicitly selecting Open or Closed for each of Monday, Tuesday, Wednesday, Thursday, Friday, Saturday and Sunday. An Open day requires both opening and closing times. A Closed day disables those inputs and stores no active time range. Opening must precede closing within the same day. The current simple schedule does not infer overnight operation or 24-hour opening from equal times; reject those ranges with a clear message. A Vendor may mark any or all days Closed; do not invent an unapproved minimum-open-days rule.
+
+Provide per-day editing and **Apply to Selected Days / Copy Hours**, which copies only to selected days and leaves them editable. Use accessible day labels, time inputs and inline errors. Save a complete weekly revision atomically; an incomplete draft remains `IN_PROGRESS`. Optional date-specific overrides contain a unique date, Open/Closed and required valid times if Open. A valid override replaces the weekly schedule for that local date. Do not generate holiday closures automatically. An omitted override uses the weekly schedule; a blank override is not a closure.
+
+After public eligibility, display the saved days/hours and Closed days on the Buyer Store Profile. Merge consecutive days only when their effective schedules match. A derived **Open Now**, **Closed Today** or next-opening indication is informational and uses the same schedule service; it is not proof of staff presence, stock or immediate response. Hours do not automatically cancel orders, pause deadlines or override existing acceptance rules.
+
+The Owner may edit the schedule later; the Store Manager may edit this specific operational setting within their store-operations scope without receiving access to legal identity, other protected profile fields or financial settings. Other staff may see only the operating information needed for their work. Record actor, old/new schedule, version and timestamp. S5 completion means only a valid saved schedule: it does not activate the store, approve Verification, connect Xendit or change fulfillment settings.
+
+**S6 Review and Complete.** Show the current profile and media, procurement/fulfillment capability, applicable vehicles and rates, payment readiness and effective tax-summary links, agreement status and full operating schedule. Re-evaluate all mandatory saved requirements server-side on confirmation. Return field-linked blockers for missing or stale data. Complete Store Setup only when all mandatory requirements pass and Delivery is complete or legitimately `NOT_APPLICABLE`. Keep the store limited while required verification is unresolved. Reopen the checklist after any later saved change that invalidates a required item; activation and discovery restrictions are evaluated separately.
 
 ## 3. Fulfillment Configuration
 
@@ -367,22 +411,38 @@ If **Self-Pickup only** is selected, Delivery Configuration has requirement leve
 
 ## 4. Delivery Configuration
 
-Delivery Configuration applies only when Vendor Delivery is selected. The Vendor records vehicles it actually operates or legitimately controls for Vendor Delivery. Categories include Motorcycle, Pickup, Van, Truck, and Custom Vehicle Type. Truck subtypes may include Open Truck, Flatbed Truck, and Wing Van. Unconfigured vehicles must not appear as available fulfillment options.
+Delivery Configuration is hidden and `NOT_APPLICABLE` for Self-Pickup only. For Vendor Delivery or Both it is conditionally required and must contain at least one complete, enabled, available configuration suitable for the offered delivery service. The Vendor may add as many vehicle configurations as needed; incomplete draft configurations remain ineligible. Save a new enabled configuration only after all applicable fields pass validation. Previously saved vehicles may be retained but excluded when delivery is disabled.
 
 | **Field** | **Description** |
 | --- | --- |
-| Vehicle image | Operational image shown where relevant |
-| Number of Vehicles | Positive integer representing usable vehicles |
-| Capacity per Vehicle (kg) | Maximum cargo payload |
-| Cargo Length, Width, and Height (m) | Usable cargo-space dimensions |
-| Heavy Vehicle Classification | Used for site-accessibility rules |
-| Base Fee (₱) | Fixed amount applied per applicable trip |
-| Per-Kilometer Rate (₱/km) | Distance-based delivery amount |
-| Maximum Delivery Distance (km) | Maximum supported service distance |
+| Vehicle Category | Motorcycle, Pickup, Van or Truck; category and type are distinct fields |
+| Vehicle Type, where applicable | Predefined type under its category or a named Custom Vehicle Type |
+| Vehicle Name | Vendor-defined operational name |
+| Vehicle Brand | Manufacturer/brand where applicable; record genuine non-applicability, not an invented brand |
+| Vehicle Image | Required valid saved image with upload preview and replacement control |
+| Number of Vehicles | Positive integer of usable vehicles represented by this configuration |
+| Maximum Weight Capacity (kg) | Positive payload capacity, not gross vehicle weight |
+| Mixer Capacity (m³), where applicable | Positive concrete volume capacity for a Concrete Mixer Truck / Transit Mixer |
+| Cargo Length, Width, Height (m) | Positive usable cargo dimensions for normal cargo; hidden and `NOT_APPLICABLE` for a mixer |
+| Heavy Vehicle Classification | Explicit operational classification for road/site restrictions |
+| Base Fee (₱) | Non-negative base amount per applicable trip |
+| Per-Kilometer Rate (₱/km) | Non-negative distance component |
+| Maximum Delivery Distance (km) | Required positive service limit retained from the existing fulfillment model |
+| Enabled / availability state | Determines whether this saved configuration can enter recommendations |
 
-The system validates positive quantities, valid numeric ranges, non-negative rates, required dimensions where applicable, and a required distance limit. It may provide an initial heavy-vehicle classification based on vehicle type while allowing an authorized correction when the actual vehicle differs.
+Truck types include **Box Truck**, **Wing Truck**, **Flatbed Truck**, **Concrete Mixer Truck / Transit Mixer** and **Custom Vehicle Type**. Van types include **Compact / Mini Panel Van**, **Mid-Size Cargo Van**, **Full-Size Cargo Van** and Custom. Pickup types include **Compact Pickup**, **Mid-Size Pickup**, **Heavy-Duty Pickup** and Custom. Provide a short practical description for each predefined category and type. A custom type remains linked to its category and must declare the applicable cargo/capacity model. It does not create rental inventory or bypass validation.
 
-The system recommends a suitable vehicle; it does not dispatch automatically. The Vendor confirms or changes the recommendation and confirms any multiple vehicles or trips before the Buyer pays the final delivery fee. Existing accepted-order delivery snapshots are not changed when a vehicle configuration is later edited, deactivated, or removed.
+Group each vehicle in its own panel. Keep Remove at the upper right, Vehicle Category/Type/Name/Brand stacked on the left, and Vehicle Image with upload/replacement control and preview on the right at desktop widths; stack sensibly on small screens. Group delivery-rate fields together. Removing a configuration asks for confirmation where it affects future service, never deletes historical snapshots, and recalculates the conditional checklist. Fields use explicit kg, m, m³, km and PHP units.
+
+**Backend recommendation.** Evaluate only complete, enabled, available configurations belonging to the fulfilling Vendor. Consider actual weight, cargo dimensions, applicable dimensional/volumetric weight, material volume, capacity, route distance, maximum distance, usable vehicle count, trips, heavy-vehicle classification and site access. Do not treat one summed length/width/height or a volume total as proof that a mixed load fits. Missing product dimensions, weight or conversion factors produce a visible manual-review reason, not zero values or a guaranteed recommendation. A configured dimensional-weight formula is only advisory, carries its unit/divisor version, and never replaces actual payload and fit checks.
+
+**Ready-mixed concrete.** A mixer is evaluated from required ready-mixed volume in m³ against Mixer Capacity, plus payload and access/service constraints. Hide normal cargo dimensions for this type. Use multiple trucks/trips where necessary and available; record quantities and capacity per trip. Bagged cement is ordinary cargo and must not enter the mixer rule. Mixed ready-mixed/conventional loads require separate compatible delivery groups. The recommendation is not automatic dispatch or a guarantee about concrete delivery timing/quality.
+
+**Heavy-vehicle restriction.** For Site Delivery the Buyer answers Yes/No to a known restriction. Yes requires an alternative drop-off address and map location; preserve both the intended delivery/project location and the alternative. Use the alternative as the vehicle delivery endpoint and distance basis when applicable. No uses the intended location, still subject to Vendor confirmation. A coverage radius and Buyer declaration never guarantee legal road access or practical unloading.
+
+**Vendor confirmation and accepted snapshot.** The Owner or Store Manager reviews the advisory result, confirms one or multiple eligible configured vehicles, usable counts, trips, endpoint, route distance, fulfillment date and final fee before the Buyer accepts/pays. Fulfillment Staff may view their assigned vehicle and report a problem but may not independently change the commercial vehicle arrangement. Preserve the existing approved fee formula and disclose every trip component; recommendation must not silently add a charge.
+
+On acceptance, store an immutable snapshot of configuration/version IDs, category/type/name/brand, image reference where shown, capacities and relevant dimensions, vehicle counts, trips, heavy classification, both destination references, selected endpoint, distance, base/per-km rates, fee computation version, final fee, confirming actor and time. Editing, disabling or removing a vehicle later affects future recommendations only. A later material change to an accepted arrangement requires the existing audited revision and Buyer approval rules, not rewriting the snapshot.
 
 ## 5. Payment Configuration (Using Xendit Activation)
 
@@ -400,13 +460,45 @@ COD and In-Store amounts are collected directly by the Vendor. Authorized Store 
 
 Payment Configuration reaches `COMPLETED` only when the required Xendit connection and onboarding state are confirmed, required payment capabilities and settings are complete, the effective Vendor Tax Profile is compatible with activation, Commission Terms are accepted by the Vendor Owner, and no applicable payment or provider requirement remains unresolved. A provider outage, unavailable capability, unconfirmed outcome, or unsupported refund route keeps the applicable requirement pending or blocked.
 
+**Connect Xendit — Vendor-operated, backend-owned TEST provisioning.** The Owner selects **Connect Xendit** and confirms the operation. Do not request a pasted provider URL, arbitrary sub-account ID or secret key. The backend supplies the verified Store Email, or the authenticated Owner's verified email when Store Email is unavailable, and records which source was used. Use server-side TEST credentials, a scoped connection attempt and organization-bound account association. Store the provider-issued ID; reconcile through the configured provider contract before displaying **Connected — TEST**. A saved ID, redirect, button click or Admin checkbox is never sufficient evidence.
+
+The uploaded specification uses `POST /v2/accounts`. Retain it only for the existing verified legacy integration: Xendit's current documentation marks v2 legacy and directs new integrations to v3. Record the chosen adapter/API version and readiness criteria; do not mix request shapes or silently create a second account during migration. New v3 integration follows its documented TEST restrictions, including its technical entity placeholder; retain the actual Sole Proprietorship/Partnership/Corporation/OPC/Cooperative classification separately in MateryalPH. Technical provider status such as `LIVE` returned under TEST credentials never becomes a live-money label in MateryalPH. See [Xendit v2](https://docs.xendit.co/apidocs/create-account) and [v3](https://docs.xendit.co/apidocs/create-account-v3).
+
+Keep a safe Pending/Checking state during provisioning/reconciliation. On timeout, reconcile the existing attempt before permitting another create; repeated clicks reuse the outstanding operation. Errors display a safe cause, retry/check-status action and correlation reference without secrets. Unsupported TEST invitations or onboarding links are not mandatory steps in this technical TEST connection. An API contract that requires an unavailable callback/capability remains blocked until a documented supported readiness path is established. No local success fixture may be labeled Connected — TEST.
+
+Required payment/refund capabilities remain a separate gate after account association succeeds. Preserve distinct account, KYC, payment-capability and reconciliation fields; TEST connection does not verify legal identity, tax registration or live withholding. An authenticated technical-status page may show the TEST label; the public Vendor landing page does not expose sandbox implementation details.
+
 ## 6. Vendor Team Account Management
 
-Team Accounts are optional and never block Store Activation. After the Vendor Owner has completed and submitted the required Store Setup configuration, the Owner may invite staff even when Store Verification is still pending. The Owner may also create Team Accounts after Store Activation. Every invitation identifies the employee, email, contact number where required, exactly one fixed role, organization, expiry, and inviting actor. The employee accepts through an individual account and never receives or uses the Owner's credentials.
+Team Accounts are optional and never block Store Activation. The Owner may invite staff before or after Store Activation through optional Team guidance or Team Accounts. Store Setup submission is not a prerequisite for the optional invitation. Staff access remains limited by the organization state, so an invitation never unlocks marketplace operations. Every invitation identifies employee full name, email, contact number where required, exactly one fixed role, organization, expiry, inviting actor, status, creation timestamp and acceptance timestamp when accepted. Invitations are single-use and bound to the invited identity; expired, revoked or already accepted links cannot establish a new membership. The employee accepts through an individual account and never receives or uses the Owner's credentials.
 
 The fixed Vendor Team roles are **Store Manager**, **Store Staff**, **Customer Service Staff**, **Inventory Staff**, and **Fulfillment Staff**. Each employee has one fixed role and individual audit history. A Team Account belongs to the Vendor organization and does not repeat Vendor Onboarding, create another store, or bypass Store Activation. A staff member may sign in before activation only in the limited-access state permitted by the organization's state and the staff member's role.
 
 When the Owner creates or edits a Store Manager, the system presents an off-by-default toggle: **Allow this Store Manager to manage staff accounts**. A delegated Store Manager may manage only Store Staff, Customer Service Staff, Inventory Staff, and Fulfillment Staff. The Manager cannot manage another Store Manager, create or deactivate another Store Manager, change the Owner, transfer ownership, grant delegation to self or another person, change their own role or access, edit payout credentials, or delete or alter audit records. The Owner is notified of every delegated staff-management action. Access is revoked when the staff account, Vendor account, or delegation is deactivated; active sessions are revoked and historical attribution is retained.
+
+**Dispute setting.** **Allow staff to handle disputes and appeals** defaults to enabled for Store Staff and Customer Service Staff. Only the Owner may change it. Disabling it removes their dispute navigation, case access, actions, exports and real-time subscriptions; open work routes to the Owner/Store Manager. Preserve every former action and handler history. The setting does not grant Inventory or Fulfillment Staff dispute powers and cannot authorize an employee to approve protected financial changes.
+
+**Sidebar and module access.** Apply the following matrix to existing navigation without redesigning its layout. “Limited” means explicitly scoped DTOs and resource checks, not a full response with hidden fields. The attachment's Wallet label maps to the existing Transaction History; no internal wallet, withdrawal balance or escrow is introduced.
+
+| **Section** | **Owner** | **Store Manager** | **Store Staff** | **Customer Service Staff** | **Inventory Staff** | **Fulfillment Staff** |
+| --- | --- | --- | --- | --- | --- | --- |
+| Dashboard | Full | Operational | Operational | Role-specific | Role-specific | Assigned work |
+| Orders | Full | Operational | Permitted sales | Permitted sales | Stock-allocation view | Assigned only |
+| Fulfillment | Full | Manage | Relevant status | Relevant status | No control | Assigned management |
+| Messages | All authorized store threads | Operational | Sales | Sales | No normal chat | Assigned fulfillment thread only |
+| E-Invoices | Full | Operational | Permitted sales | Assigned sales | No | Only necessary assigned-delivery view |
+| Notifications | All | Relevant operations | Relevant | Relevant | Inventory/compliance | Fulfillment |
+| Disputes & Appeals | Full | Operational | Owner-toggle controlled | Owner-toggle controlled | No | No management |
+| My Products | Full | Manage | Manage | Sales stock view | Manage | Assigned product view |
+| Vehicles | Full | Manage | No configuration | No | No | Assigned vehicle view |
+| Transaction History / former Wallet label | Owner financial view | No protected financial view | No | No | No | No |
+| Store Performance / Materials Analytics | Full | Operational / authorized aggregates | No section access | No | No | No |
+| Earnings | Full | No | No | No | No | No |
+| Team Accounts | Full | Delegated non-manager staff only | No | No | No | No |
+| Team Tracking | Full | Delegated staff scope only | No | No | No | No |
+| Store Profile | Full | Operational view; schedule edit only | Limited view | Limited view | Limited view | Limited view |
+
+Order-specific totals/payment statuses needed to perform assigned work do not grant financial-module access. Protected payout/bank/settlement details remain Owner-only and backend/provider-controlled. Dashboard summaries, exports, notifications and realtime payloads obey the same limits. A staff member retains their separate personal Account Profile and security controls.
 
 ### Finish Later and Limited Dashboard
 
@@ -432,16 +524,18 @@ A Vendor is eligible for **Store Activation** only when every applicable mandato
 
 1. The Vendor Owner account is active, the Owner email is verified, and the required Vendor Terms of Service and Vendor Code of Conduct are accepted.
 2. Store Verification has been submitted.
-3. All applicable mandatory Store Verification requirements are `APPROVED`, including required legal identity, Business Information, Store Contact Information, registered business address, Supplier Type/niches, Business Type-specific DTI/SEC/CDA evidence, LGU permit, BIR/TIN and applicable regulatory evidence.
+3. All applicable mandatory Store Verification requirements are `APPROVED`, including required legal identity, Business Information, contacts, registered business address, Supplier Type/niches, Business Type-specific DTI/SEC/CDA evidence, LGU permit, BIR/TIN and applicable regulatory evidence.
 4. No blocking Store Verification requirement remains `PENDING_VERIFICATION` or `CHANGES_REQUIRED`, and no mandatory item is `REJECTED` or `EXPIRED`.
 5. The Vendor Tax Profile is in the applicable successful state under FIN-01 through FIN-12. TEST/DEMO evidence is never live registration or production approval.
-6. All mandatory Store Setup requirements are `COMPLETED`, including Business Store Profile, Supplier and Bulk Order capability, fulfillment method, and other required operational configuration.
+6. All mandatory Store Setup requirements are `COMPLETED`, including required Public Store Profile fields, valid Logo and Banner, Bulk Order capability, fulfillment method, a valid seven-day Store Operation schedule, and S6 review of the saved setup revision.
 7. Delivery Configuration is `COMPLETED` when Vendor Delivery or Both is selected, and is `NOT_APPLICABLE` only when the condition does not apply because the Vendor selected Self-Pickup only.
 8. Required Xendit xenPlatform sub-account onboarding is complete for this Vendor, with the required TEST/DEMO connection and capabilities confirmed. Xendit onboarding is mandatory for every Vendor seeking Store Activation and marketplace participation, regardless of Business Type. It does not prove live payment processing or production withholding responsibility.
 9. Commission Terms have been accepted by the Vendor Owner as a versioned agreement, including the approved 2% Vendor-paid commission under FIN-03.
 10. No blocking payment, refund, compliance, or administrative restriction remains; the Vendor is not suspended and is not under an administrative hold.
 
 Team Accounts are optional and do not block activation. Product listing, product inventory, and product-level compliance submission are not prerequisites for Store Activation. Activation eligibility is evaluated by the backend and every activation, restriction, rejection, expiration, and restoration is recorded with the actor or system process, checklist result, rule version, timestamp, previous and new marketplace state, and reason.
+
+**Activation re-evaluation.** Required representative authority and current agreement acceptance are part of the legal gate where applicable. Evaluate the latest saved version after a review, evidence expiry, profile-media removal, capability switch, schedule edit, payment-status change, restriction or correction. Do not show Completed from stale cached data. A failed initial evaluation leaves the store inactive. A later loss of a mandatory activation condition restricts new affected marketplace activity through the existing restriction policy and audit record; preserve access needed to fulfill existing orders, resolve disputes and process refunds. A routine change that remains valid does not cause blanket reverification.
 
 ### Store Activation and Marketplace Discoverability
 
@@ -592,7 +686,7 @@ The Vendor may create a formal quotation from an eligible message thread. Item-B
 
 The quotation builder requires product or material lines, specifications, quantity, unit, unit price, fulfillment method, payment method, expected fulfillment date, and response deadline. Site Delivery also requires the system-suggested vehicle type and trip count to be confirmed or replaced with a valid configured alternative. The system calculates line subtotals, delivery fee, NRPC designation within the order value, Payment Processing Fee where applicable, Amount Due Now, later physical-payment balance, and total.
 
-Each published line also records the tax category, inclusive price, discount allocation and included VAT under FIN-02. The Vendor sees a separate estimated completion commission and withholding preview with an **Estimate — finalized at remittance** label. The preview never promises threshold relief or current net cash. Editing price, discount, tax category, fulfillment fee or NRPC creates a new quotation version with a readable Buyer change summary and renewed acceptance. Item-Based and Project-Based quotations call the same financial service.
+Each published line also records the tax category, inclusive price, discount allocation and included VAT under FIN-02. The Owner sees a separate estimated completion commission and withholding preview with an **Estimate — finalized at remittance** label. Staff quotation DTOs retain authorized commercial order totals but exclude protected financial previews. The preview never promises threshold relief or current net cash. Editing price, discount, tax category, fulfillment fee or NRPC creates a new quotation version with a readable Buyer change summary and renewed acceptance. Item-Based and Project-Based quotations call the same financial service.
 
 NRPC is disabled by default. Only Vendor Owner, Store Manager, or Store Staff may enter and publish its amount, affected lines, and required reason. Customer Service Staff may prepare a quotation draft but cannot publish a monetary change. The Vendor determines the order-specific NRPC amount; there is no platform-wide numeric cap, but the amount cannot exceed the eligible prepared-material subtotal, must reflect actual irreversible preparation, and remains subject to Buyer acceptance, evidence, flagging, and Admin review. Any NRPC quotation requires manual handling and cannot use auto-accept.
 
@@ -616,7 +710,7 @@ Notifications include order requests, response deadlines, Buyer revisions, verif
 
 Users may configure optional categories per channel, but mandatory security, legal, suspension, payment, and dispute notices cannot be disabled. A notification deep-links only to a resource the recipient is authorized to access.
 
-Finance notices add declaration review/due date, threshold crossing, tax adjustment, certificate availability, reconciliation exception, monthly statement issue/due/overdue and fee-credit status. Notify the Owner and permitted Manager; general staff do not receive attached private tax evidence.
+Finance notices add declaration review/due date, threshold crossing, tax adjustment, certificate availability, reconciliation exception, monthly statement issue/due/overdue and fee-credit status. Send protected finance notices to the Owner only. A Manager may receive a separate minimal operational task notice when action within their order scope is needed; it contains no protected statement, earnings, tax evidence or payout detail.
 
 - **Disputes**
 
@@ -664,17 +758,17 @@ Manufacturer, certification, or required marking changes return an active regula
 
 - **Vehicles**
 
-The Owner or Store Manager may add, update, deactivate, or remove future-use vehicle configurations. Fulfillment Staff may view and assign an eligible vehicle to an order but cannot change fees, capacity, or service coverage. Existing order snapshots remain intact after configuration changes.
+The Owner or Store Manager may add, update, deactivate, or remove future-use vehicle configurations. Fulfillment Staff may view the vehicle confirmed for their assigned order and report an issue, but cannot select a replacement commercial arrangement or change fees, capacity or service coverage. Existing order snapshots remain intact after configuration changes.
 
 - **Transaction History**
 
 Transaction History replaces the former Wallet module. It is a read-only MateryalPH record of full-order payments, NRPC assurance payments, verified payment events, Buyer processing fees, Cancellation Refunds, Dispute-Conclusion Refunds, compensating refunds after reconciled technical failure, COD records, and In-Store Payment records. It does not display or control a MateryalPH balance. A link may direct the Owner to the authorized Xendit dashboard for balance and withdrawal management.
 
-The Owner and Store Manager may view store-wide records. Other staff see only payment status required for their assigned order and never payout credentials or full financial reports.
+Only the Owner may open store-wide protected Transaction History and its financial tabs. Staff, including Store Manager, see only order-specific payment/invoice information required for their authorized operational work; they cannot obtain full financial reports or payout data through another endpoint.
 
 Within Transaction History, tabs are **Payments**, **Physical receipts**, **Remittances and CWT**, **Commission statements**, **Refunds and adjustments**, and **Tax documents**. These extend the existing sidebar item and do not create a wallet. Each row exposes environment, order/statement reference, gross amount, applicable deductions, net amount, evidence origin, status and drill-through audit trail.
 
-The commission tab shows estimated versus earned fees, unbilled items, disputed items, approved statements, due dates, payments and credits under FIN-03. The Owner may accept Terms, question a line with evidence and pay a positive issued statement. The Manager can inspect and prepare a dispute but cannot authorize the fee payment. A successful payment requires a verified Xendit TEST event or a distinctly labeled simulation. One statement cannot be paid twice; duplicate or late captures enter reconciliation and compensation review.
+The commission tab shows estimated versus earned fees, unbilled items, disputed items, approved statements, due dates, payments and credits under FIN-03. The Owner may accept Terms, question a line with evidence and pay a positive issued statement. The Manager may provide operational order evidence when requested but cannot inspect protected fee statements or authorize a fee payment. A successful payment requires a verified Xendit TEST event or a distinctly labeled simulation. One statement cannot be paid twice; duplicate or late captures enter reconciliation and compensation review.
 
 The CWT tab shows the effective profile, tax year, documented local/outside-platform threshold position, computation and responsible entity/scenario. It distinguishes assessed, simulated withheld, provider-reported, reconciled, adjustment required and certificate availability. A tax export is not proof that tax was remitted. Tax documents retain the actual/sample issuer; the platform does not replace a provider's name with MateryalPH. Declarations, certificates and export downloads require organization authorization and create audit events.
 
@@ -696,7 +790,7 @@ Invitation, acceptance, role, delegation, suspension, reactivation, and deactiva
 
   - **Team Tracking**
 
-The Owner and Store Manager may view authorized organization activity. Other employees see only their own relevant activity. Records include actor, role at the time, action, affected resource, previous and new value where appropriate, timestamp, result, and correlation reference. No Vendor user may edit or delete an audit entry.
+The Owner may view organization-wide Team Tracking. A Store Manager may use Team Tracking only when staff-management delegation is enabled, and only for permitted non-manager staff. Other employees have no Team Tracking section; necessary attribution remains visible within their authorized work records. Records include actor, role at the time, action, affected resource, previous and new value where appropriate, timestamp, result, and correlation reference. No Vendor user may edit or delete an audit entry.
 
 - **Analytics**
 
@@ -720,13 +814,13 @@ The Owner/Manager can encounter loading, empty, not-yet-comparable, insufficient
 
 Earnings follows FIN-11 and displays commercial sales, included transaction VAT, returns, online collections, recorded physical collections, processor charges, CWT credit records, earned commission, unpaid fee statements and estimated cash receipts separately. Withholding is not recorded as a reduction of sales or a platform commission. Cash receipts do not equal taxable income. These operational computations and exports support reconciliation but do not replace the Vendor's accounting books, official tax returns or registered invoicing process. Demo aggregates are visibly TEST-only.
 
-The Owner and Store Manager may view store-wide earnings. Other staff do not receive store-wide revenue access. Reports may be exported as CSV or spreadsheet with an **Internal Operational Report — Not a Tax Invoice** notice.
+Only the Owner may view or export store-wide Earnings. Store Manager and all other Team Accounts are denied this module and its revenue summaries. Reports may be exported as CSV or spreadsheet with an **Internal Operational Report — Not a Tax Invoice** notice.
 
 - **Store Profile (Vendor Owner) / Staff Profile (Vendor Team Accounts)**
 
 **Vendor Owner**
 
-The Owner sees Public Store Profile, Business Information, Business Documents, Fulfillment Configuration, Payment Connection, Security, and Staff. Public-profile changes save after validation. Legal-business, address, compliance, or payment changes may require recent authentication and reverification. A field with an active review cannot be overwritten without closing or replacing the prior submission through a documented action.
+The Owner sees Public Store Profile, Business Information, Business Documents, Fulfillment Configuration, Payment Connection, Store Operation, Security, and Staff. Public-profile changes save after validation. Legal-business, address, compliance, or payment changes may require recent authentication and reverification. A field with an active review cannot be overwritten without closing or replacing the prior submission through a documented action.
 
 **Vendor Team Account**
 
@@ -751,7 +845,7 @@ The Owner has full organization control and access to PS/ICC submissions. The Ow
 
 ## Store Manager (Delegate Role)
 
-The Store Manager has broad operational visibility and may manage conversations, order confirmation, quotation publication, order-specific NRPC, auto-accept configuration, listings, inventory, compliance, fulfillment, disputes, and reports. The Manager cannot transfer ownership, edit payout credentials, delete logs, delete the organization, change legal ownership, or grant delegation. Staff management is available only when the Owner enables the dedicated flag.
+The Store Manager has broad operational visibility and may manage conversations, order confirmation, quotation publication, order-specific NRPC, auto-accept configuration, listings, inventory, compliance, fulfillment, disputes, operating schedules and operational reports. Protected Earnings and financial statements are excluded. The Manager cannot transfer ownership, edit payout credentials, delete logs, delete the organization, change legal ownership, or grant delegation. Staff management is available only when the Owner enables the dedicated flag.
 
 ## Employee Roles
 
@@ -761,7 +855,7 @@ Store Staff combines Customer Service Staff and Inventory Staff functions, inclu
 
 ### Customer Service Staff
 
-Customer Service Staff monitors and confirms unchanged order requests, views stock necessary for confirmation, handles inquiries and assigned sales, prepares quotation drafts, and manages disputes when enabled. It cannot publish a quotation or commercial revision, set NRPC, change listings, prices, inventory, auto-accept configuration, compliance, fulfillment proof, or financial configuration.
+Customer Service Staff monitors and confirms unchanged order requests, views stock necessary for confirmation, handles inquiries and assigned sales, prepares quotation drafts, and manages disputes when the Owner-enabled setting permits. Managing quotations includes preparing and revising drafts for an authorized publisher; it does not expand existing commercial publication or NRPC authority. It cannot publish a quotation or commercial revision, set NRPC, change listings, prices, inventory, auto-accept configuration, compliance, fulfillment proof, or financial configuration.
 
 ### Inventory Staff
 
@@ -769,11 +863,11 @@ Inventory Staff manages listings, internal stock, variants, permitted prices, SK
 
 ### Fulfillment Staff
 
-Fulfillment Staff prepares assigned confirmed orders, records fulfillment milestones and proof, assigns an approved vehicle, and communicates through the linked delivery thread or an approved telephone call. It cannot alter prices, inventory definitions, compliance, payment settings, or commercial refunds.
+Fulfillment Staff prepares assigned confirmed orders, records fulfillment milestones and proof, views the confirmed assigned vehicle, and communicates through the linked delivery thread or an approved telephone call. It cannot alter prices, inventory definitions, compliance, payment settings, or commercial refunds.
 
 ## Restricted Actions
 
-No employee, including Store Manager, may transfer ownership, access another Vendor, delete audit history, create another Vendor organization under the membership, edit payout credentials, change their own role, or grant access beyond the fixed delegation rule. Only the Store Manager may view store-wide operations and earnings; specialized staff remain restricted to their scope.
+No employee, including Store Manager, may transfer ownership, access another Vendor, delete audit history, create another Vendor organization under the membership, edit payout credentials, change their own role, or grant access beyond the fixed delegation rule. The Store Manager may view store-wide operational information but has no Earnings or protected financial access; specialized staff remain restricted to their scope.
 
 ## Attribution Rules
 
@@ -794,6 +888,8 @@ Each listing, quantity, reservation, stock movement, variant, price, and complia
 ### Fulfillment Attribution
 
 Each preparation state, vehicle assignment, dispatch, handover, delivery proof, receiver, and timestamp identifies the employee who recorded it.
+
+**Dedicated fulfillment communication.** Enable one order-specific fulfillment thread when an order reaches `READY_FOR_PICKUP` or `OUT_FOR_DELIVERY`. Buyer, Owner, Store Manager and currently assigned authorized Fulfillment Staff may use it for arrival, pickup, alternative drop-off, unloading, access, delay and proof coordination. Fulfillment Staff do not receive the normal sales conversation, unrelated orders, quotation history or private financial attachments. Thread creation is idempotent. Reassignment/deactivation immediately removes staff access and records the transfer without deleting earlier messages. Display store identity with the actual handler's public name, role and avatar; never show private employee email, phone, government ID or authority evidence. Existing order/case retention governs closed-thread history.
 
 ## Off-Platform Communication Logging
 

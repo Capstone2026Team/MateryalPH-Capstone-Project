@@ -115,15 +115,23 @@ final class GoogleOidcService
 
         $portal = (string) $flow['portal'];
         $user = DB::transaction(function () use ($claims, $portal, $flow): User {
+            $email = mb_strtolower(trim((string) $claims['email']));
             $identity = ExternalIdentity::query()
                 ->where('provider', 'GOOGLE')
                 ->where('provider_subject', $claims['sub'])
                 ->first();
             if ($identity !== null) {
-                return User::query()->findOrFail($identity->user_id);
+                $user = User::query()->findOrFail($identity->user_id);
+                if ($user->account_type !== $portal || $user->account_status !== 'ACTIVE') {
+                    throw new AuthenticationException('PORTAL_ACCESS_DENIED', 'This account cannot sign in to the selected portal.', 403);
+                }
+                if (mb_strtolower($user->email) === $email && $user->email_verified_at === null) {
+                    $user->forceFill(['email_verified_at' => now()])->save();
+                }
+
+                return $user;
             }
 
-            $email = mb_strtolower(trim((string) $claims['email']));
             $user = User::query()->whereRaw('LOWER(email) = ?', [$email])->first();
             if ($user === null) {
                 if ($flow['mode'] !== 'SIGN_UP') {
@@ -160,6 +168,9 @@ final class GoogleOidcService
             }
             if ($user->account_type !== $portal || $user->account_status !== 'ACTIVE') {
                 throw new AuthenticationException('PORTAL_ACCESS_DENIED', 'This account cannot sign in to the selected portal.', 403);
+            }
+            if ($user->email_verified_at === null) {
+                $user->forceFill(['email_verified_at' => now()])->save();
             }
             ExternalIdentity::query()->create([
                 'user_id' => $user->getKey(),

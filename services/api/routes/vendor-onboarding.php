@@ -16,17 +16,18 @@ Route::prefix('vendors/onboarding')->middleware([
     Route::post('/setup/complete', [VendorOnboardingController::class, 'completeSetup'])->middleware('throttle:account-security');
     Route::post('/welcome/dismiss', [VendorOnboardingController::class, 'dismissWelcome']);
     Route::get('/address/areas', [VendorOnboardingController::class, 'addressAreas']);
-    Route::post('/address/pin', [VendorOnboardingController::class, 'resolvePin'])->middleware('throttle:auth-public');
-    Route::post('/address/resolve', [VendorOnboardingController::class, 'resolveAddress'])->middleware('throttle:auth-public');
-    Route::post('/address/geocode', [VendorOnboardingController::class, 'geocode'])->middleware('throttle:auth-public');
+    Route::post('/address/pin', [VendorOnboardingController::class, 'resolvePin'])->middleware('throttle:vendor-address');
+    Route::post('/address/resolve', [VendorOnboardingController::class, 'resolveAddress'])->middleware('throttle:vendor-address');
+    Route::post('/address/geocode', [VendorOnboardingController::class, 'geocode'])->middleware('throttle:vendor-address');
     Route::post('/store-email', [VendorOnboardingController::class, 'requestStoreEmailVerification'])->middleware('throttle:account-security');
     Route::post('/store-email/confirm', [VendorOnboardingController::class, 'confirmStoreEmailVerification'])->middleware('throttle:account-security');
     Route::delete('/documents/pending/{requirementKey}', [VendorOnboardingController::class, 'removePendingDocument']);
     Route::post('/documents', [VendorOnboardingController::class, 'uploadDocument'])->middleware('throttle:account-upload');
     Route::post('/media', [VendorOnboardingController::class, 'uploadMedia'])->middleware('throttle:account-upload');
+    Route::delete('/media/{mediaId}', [VendorOnboardingController::class, 'removeMedia'])->whereUuid('mediaId');
     Route::get('/files/{fileId}', [VendorOnboardingController::class, 'signedFile'])->whereUuid('fileId');
-    Route::post('/payment-connection', [VendorOnboardingController::class, 'capturePaymentConnection'])->middleware('throttle:account-security');
-    Route::post('/payment-connection/reconcile', [VendorOnboardingController::class, 'reconcilePaymentConnection'])->middleware('throttle:account-security');
+    Route::post('/payment-connection', [VendorOnboardingController::class, 'connectPayment'])->middleware('throttle:account-security');
+    Route::post('/payment-connection/reconcile', [VendorOnboardingController::class, 'reconcilePaymentConnection'])->middleware('throttle:vendor-payment-status');
     Route::post('/activation', [VendorOnboardingController::class, 'activate'])->middleware('throttle:account-security');
 });
 

@@ -13,6 +13,7 @@ tags:
   - name: Agreements
   - name: Authentication
   - name: Vendor Onboarding
+  - name: Stores
   - name: Admin Vendor Verification
 paths:
   /{webAccountPortal}/account/photo:
@@ -128,6 +129,7 @@ paths:
   /auth/verify-email/resend:
     post:
       operationId: resendEmailVerification
+      description: Issues a new code for a pending Vendor account or an active Vendor account whose Owner email is still unverified. The response does not reveal whether an eligible account exists.
       tags: [ Authentication ]
       security: [ { webCsrf: [] } ]
       requestBody:
@@ -2406,10 +2408,29 @@ paths:
         "409": { $ref: "#/components/responses/ErrorResponse" }
         "422": { $ref: "#/components/responses/ErrorResponse" }
         "503": { $ref: "#/components/responses/ErrorResponse" }
+  /stores:
+    get:
+      operationId: listPublicStores
+      description: Paginated publicly discoverable active stores. Does not expose inventory or private Vendor data.
+      tags: [ Stores ]
+      parameters:
+        - { name: page, in: query, schema: { type: integer, minimum: 1, maximum: 2000 } }
+      responses:
+        "200": { description: Discoverable stores., content: { application/json: { schema: { $ref: '#/components/schemas/PublicStoreListEnvelope' } } } }
+  /stores/{storeId}/profile:
+    get:
+      operationId: getPublicStoreProfile
+      description: Public Store Profile for an active, completed store. Weekly Store Operation is canonical; an explicit date override takes precedence for effective_today in Asia/Manila. The schedule is informational and does not prove live availability.
+      tags: [ Stores ]
+      parameters:
+        - { name: storeId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: Public Store Profile., content: { application/json: { schema: { $ref: '#/components/schemas/PublicStoreProfileEnvelope' } } } }
+        "404": { $ref: '#/components/responses/ErrorResponse' }
   /vendors/onboarding/setup:
     patch:
       operationId: saveVendorSetupDraft
-      description: Saves version-checked setup progress. Public-name, description and public-contact-only edits preserve completed setup and activation; operational changes reopen setup requirements. Every successful save advances the organization lock version.
+      description: Saves version-checked setup progress. Public profile and weekly operating schedule edits preserve completed setup and activation; fulfillment changes reopen setup requirements. Every successful save advances the organization lock version.
       tags: [ Vendor Onboarding ]
       security: [ { accessCookie: [], webCsrf: [] } ]
       requestBody:
@@ -2424,6 +2445,7 @@ paths:
   /vendors/onboarding/setup/complete:
     post:
       operationId: completeVendorSetup
+      description: Requires a valid seven-day Store Operation schedule, applicable setup configuration and confirmed TEST payment connection. Missing or invalid hours return STORE_OPERATION_REQUIRED. Completion does not activate the store or approve verification.
       tags: [ Vendor Onboarding ]
       security: [ { accessCookie: [], webCsrf: [] } ]
       parameters:
@@ -2563,6 +2585,20 @@ paths:
         "401": { $ref: "#/components/responses/ErrorResponse" }
         "403": { $ref: "#/components/responses/ErrorResponse" }
         "422": { $ref: "#/components/responses/ErrorResponse" }
+  /vendors/onboarding/media/{mediaId}:
+    delete:
+      operationId: removeVendorStoreMedia
+      description: Removes the current Store Logo or Banner record. A stale media ID cannot remove its replacement; the returned onboarding snapshot recalculates the profile checklist.
+      tags: [ Vendor Onboarding ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      parameters:
+        - { name: mediaId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: Current Store Logo or Banner removed., content: { application/json: { schema: { $ref: "#/components/schemas/VendorOnboardingEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
   /vendors/onboarding/files/{fileId}:
     get:
       operationId: getVendorPrivateFileUrl
@@ -2578,19 +2614,19 @@ paths:
         "404": { $ref: "#/components/responses/ErrorResponse" }
   /vendors/onboarding/payment-connection:
     post:
-      operationId: captureVendorPaymentConnection
+      operationId: connectVendorPayment
+      description: Owner and current PAYMENT_CONFIGURATION authority only. Creates a platform-controlled TEST OWNED sub-account through backend POST /v2/accounts for simulated payments, without a Vendor invitation or separate Xendit login. A validated create response is PENDING until backend GET /v2/accounts/{id} confirms LIVE, which yields CONNECTED_TEST. Reuses existing associations and rejects uncertain duplicate attempts. No client-supplied account ID or URL is accepted. Responses are private and no-store.
       tags: [ Vendor Onboarding ]
       security: [ { accessCookie: [], webCsrf: [] } ]
       parameters:
         - { name: Idempotency-Key, in: header, required: true, schema: { type: string, format: uuid } }
-      requestBody:
-        required: true
-        content: { application/json: { schema: { $ref: "#/components/schemas/VendorPaymentConnection" } } }
       responses:
-        "200": { description: Xendit TEST connection captured as unverified/pending., content: { application/json: { schema: { $ref: "#/components/schemas/VendorOnboardingEnvelope" } } } }
+        "200": { description: Existing or newly created TEST OWNED account saved by the backend; PENDING until Xendit confirms LIVE., content: { application/json: { schema: { $ref: "#/components/schemas/VendorPaymentOnboardingEnvelope" } } } }
         "401": { $ref: "#/components/responses/ErrorResponse" }
         "403": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
         "422": { $ref: "#/components/responses/ErrorResponse" }
+        "503": { description: "Provider failure, including PROVIDER_ACCOUNT_ACCESS_REQUIRED for an access denial and PROVIDER_ONBOARDING_UNCERTAIN when creation cannot be confirmed. An explicit Xendit 409 rejection returns PROVIDER_ACCOUNT_CONFLICT as HTTP 409.", content: { application/json: { schema: { $ref: "#/components/schemas/ErrorEnvelope" } } } }
   /vendors/onboarding/payment-connection/reconcile:
     post:
       operationId: reconcileVendorPaymentConnection
@@ -2615,6 +2651,16 @@ paths:
         "403": { $ref: "#/components/responses/ErrorResponse" }
         "409": { $ref: "#/components/responses/ErrorResponse" }
   /vendors/account/invitations:
+    get:
+      operationId: listVendorTeamInvitations
+      tags: [ Vendor Onboarding ]
+      description: Paginated organization-scoped invitation history. Delegated Managers cannot view Manager invitations. Invitation status is derived from acceptance, revocation and expiry.
+      security: [ { accessCookie: [] } ]
+      parameters:
+        - { name: page, in: query, schema: { type: integer, minimum: 1 } }
+      responses:
+        "200": { description: Invitation history without invitation secrets., content: { application/json: { schema: { $ref: "#/components/schemas/VendorTeamInvitationListEnvelope" } } } }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
     post:
       operationId: inviteVendorTeamMember
       tags: [ Vendor Onboarding ]
@@ -2630,6 +2676,44 @@ paths:
         "403": { $ref: "#/components/responses/ErrorResponse" }
         "409": { $ref: "#/components/responses/ErrorResponse" }
         "422": { $ref: "#/components/responses/ErrorResponse" }
+  /vendors/account/activity:
+    get:
+      operationId: listVendorTeamActivity
+      tags: [ Vendor Onboarding ]
+      security: [ { accessCookie: [] } ]
+      parameters:
+        - { name: page, in: query, schema: { type: integer, minimum: 1 } }
+      responses:
+        "200": { description: Organization-scoped immutable audit history. Delegated Managers see only non-manager employee activity. Before and after values are restricted to safe role and status fields., content: { application/json: { schema: { $ref: "#/components/schemas/VendorTeamActivityEnvelope" } } } }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+  /vendors/account/memberships/{membershipId}:
+    patch:
+      operationId: updateVendorStaff
+      tags: [ Accounts ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      parameters:
+        - { name: membershipId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/VendorStaffUpdate" } } }
+      responses:
+        "200": { description: Staff information and role updated; sessions revoked; audit history preserved., content: { application/json: { schema: { $ref: "#/components/schemas/AccountMutationResultEnvelope" } } } }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /vendors/account/staff-disputes:
+    patch:
+      operationId: changeVendorStaffDisputes
+      tags: [ Vendor Onboarding ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/VendorStaffDisputeSetting" } } }
+      responses:
+        "200": { description: Owner-only setting saved after recent authentication., content: { application/json: { schema: { $ref: "#/components/schemas/AccountMutationResultEnvelope" } } } }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
   /admin/dashboard:
     get:
       operationId: getAdminDashboard
@@ -2683,6 +2767,7 @@ paths:
   /admin/vendor-verification/{organizationId}/requirements/{requirementKey}/decision:
     post:
       operationId: decideVendorVerificationRequirement
+      description: Business information and each Government ID can be decided as a grouped review item. Grouped requests supply requirement_versions for every applicable underlying step; BIR COR, business registration, LGU permit, and other documents retain separate decisions.
       tags: [ Admin Vendor Verification ]
       security: [ { accessCookie: [], webCsrf: [] } ]
       parameters:
@@ -2887,6 +2972,7 @@ components:
     "AccountReauthentication":
       {
         "type": "object",
+        "description": "An enrolled Vendor or Admin web account may reauthenticate with a fresh authenticator code alone. Buyer accounts continue to use password or current-email OTP. Privileged password and email OTP reauthentication also require TOTP.",
         "additionalProperties": false,
         "required": [],
         "properties":
@@ -3002,7 +3088,8 @@ components:
             "name": { "type": "string" },
             "role": { "type": "string" },
             "status": { "type": "string" },
-            "can_manage_staff": { "type": "boolean" }
+            "can_manage_staff": { "type": "boolean" },
+            "lock_version": { "type": "integer", "minimum": 1 }
           }
       }
     "AccountDelegation":
@@ -3071,8 +3158,8 @@ components:
             "token": { "type": "string" },
             "email": { "type": "string", "format": "email" },
             "full_name": { "type": "string" },
-            "password": { "type": "string", "minLength": 14 },
-            "password_confirmation": { "type": "string" }
+            "password": { "type": "string", "minLength": 1, "maxLength": 1024, "description": "New Vendor identities require at least 14 characters, mixed case, and a number. Existing eligible Vendor identities use their current password." },
+            "password_confirmation": { "type": "string", "maxLength": 1024 }
           }
       }
     "AccountProfileEnvelope":
@@ -3655,11 +3742,67 @@ components:
         drafts: { type: array, items: { $ref: "#/components/schemas/OnboardingDraftVersion" } }
         organization: { type: object, additionalProperties: true }
         sections: { type: object, additionalProperties: { $ref: "#/components/schemas/VendorOnboardingSection" } }
-        verification: { type: object, additionalProperties: true }
-        setup: { type: object, additionalProperties: true }
+        verification: { type: object, additionalProperties: true, description: 'Private verification snapshot. Each documents entry includes its latest Admin review (decision, reason, verified_document_number, verified_issue_date, expiration_kind, verified_expiration_date, evidence_source, remarks, reviewed_at), or null when not reviewed.' }
+        setup:
+          type: object
+          additionalProperties: true
+          description: 'Private Store Setup snapshot, including the canonical weekly Store Operation schedule and vacation_mode boolean.'
+          properties:
+            operating_schedule: { type: array, items: { $ref: '#/components/schemas/StoreOperatingDay' } }
         activation: { $ref: "#/components/schemas/VendorActivationSnapshot" }
         welcome_required: { type: boolean }
         permissions: { type: array, items: { type: string } }
+    StoreOperatingDay:
+      type: object
+      required: [ day_of_week, status ]
+      properties:
+        day_of_week: { type: integer, minimum: 1, maximum: 7, description: 'ISO weekday; Monday is 1 and Sunday is 7.' }
+        status: { type: string, enum: [ OPEN, CLOSED ] }
+        opens_at: { type: [ string, 'null' ], pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$', description: 'Philippine local time; null when Closed.' }
+        closes_at: { type: [ string, 'null' ], pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$', description: 'Later than opens_at on the same day; overnight periods are unsupported.' }
+    PublicStoreProfile:
+      type: object
+      required: [ id, vacation_mode, public_store_name, description, public_email, public_phone, operating_schedule, effective_today, effective_date, effective_source, time_zone ]
+      properties:
+        id: { type: string, format: uuid }
+        vacation_mode: { type: boolean, description: 'True when all new procurement is paused; existing work remains available.' }
+        public_store_name: { type: string }
+        description: { type: [ string, 'null' ] }
+        public_email: { type: [ string, 'null' ], format: email }
+        public_phone: { type: [ string, 'null' ] }
+        operating_schedule: { type: array, items: { $ref: '#/components/schemas/StoreOperatingDay' } }
+        effective_today: { oneOf: [ { $ref: '#/components/schemas/StoreOperatingDay' }, { type: 'null' } ] }
+        effective_date: { type: string, format: date }
+        effective_source: { type: string, enum: [ WEEKLY, DATE_OVERRIDE ] }
+        time_zone: { type: string, const: Asia/Manila }
+    PublicStoreProfileEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { $ref: '#/components/schemas/PublicStoreProfile' }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    PublicStoreSummary:
+      type: object
+      required: [ id, vacation_mode, public_store_name, description ]
+      properties:
+        id: { type: string, format: uuid }
+        vacation_mode: { type: boolean, description: 'True when all new procurement is paused; existing work remains available.' }
+        public_store_name: { type: string }
+        description: { type: [ string, 'null' ] }
+    PublicStoreListEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/PublicStoreSummary' } }
+        meta:
+          type: object
+          required: [ current_page, last_page, total ]
+          properties:
+            current_page: { type: integer }
+            last_page: { type: integer }
+            total: { type: integer }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
     GenericDataEnvelope:
       type: object
       required: [ data, meta, errors ]
@@ -3766,27 +3909,40 @@ components:
       properties:
         draft_lock_version: { type: integer, minimum: 0, description: 'Workstream draft version; zero on first save. Send together with the required organization guard. Omission retains legacy behavior without draft-level comparison. A stale draft returns 409 STALE_VERSION; a stale organization returns 409 RESOURCE_VERSION_CONFLICT.' }
         organization_lock_version: { type: integer, minimum: 1 }
+        form_state: { type: string, maxLength: 65536, description: Encrypted JSON setup form progress. Unfinished vehicle entries are not operational configurations. Returned privately as setup.form_state. }
+        vacation_mode: { type: boolean, description: 'Owner-only immediate pause of all new procurement. Existing work and messaging remain available. Does not alter weekly hours or activation.' }
         public_store_name: { type: string, maxLength: 180 }
         description: { type: [ string, 'null' ], maxLength: 3000 }
         bulk_capability: { type: boolean }
         fulfillment_method: { type: string, enum: [ SELF_PICKUP, VENDOR_DELIVERY, BOTH ] }
         public_email: { type: [ string, 'null' ], format: email }
         public_phone: { type: [ string, 'null' ], maxLength: 24 }
+        operating_schedule:
+          type: array
+          minItems: 7
+          maxItems: 7
+          description: 'Complete replacement of the normal weekly schedule. All seven distinct weekdays are required. Closed days have null times; Open days need a same-day opening and later closing time.'
+          items: { $ref: '#/components/schemas/StoreOperatingDay' }
         delivery:
           type: object
           additionalProperties: true
           properties:
-            maximum_distance_km: { type: integer, minimum: 1, maximum: 1000 }
+            maximum_distance_km: { type: integer, minimum: 1, maximum: 1000, description: 'Omission retains the saved limit; new coverage defaults to the approved 50 km procurement limit. New vehicle rates inherit coverage.' }
             coverage_notes: { type: [ string, 'null' ], maxLength: 2000 }
         vehicles:
           type: array
-          maxItems: 20
           items:
             type: object
             additionalProperties: true
             properties:
               id: { type: [ string, 'null' ], format: uuid }
-              vehicle_type: { type: string, maxLength: 64 }
+              vehicle_category: { type: string, enum: [ MOTORCYCLE, PICKUP, VAN, TRUCK ], description: 'Separate category and type. Categorized configurations require applicable cargo dimensions or mixer capacity and heavy classification.' }
+              vehicle_type: { type: string, maxLength: 32 }
+              custom_type_name: { type: [ string, 'null' ], maxLength: 120 }
+              brand: { type: [ string, 'null' ], maxLength: 120 }
+              mixer_capacity_m3: { type: [ number, 'null' ], exclusiveMinimum: 0, maximum: 1000000 }
+              image_file_id: { type: [ string, 'null' ], format: uuid, description: 'Clean VEHICLE_IMAGE file owned by this Vendor.' }
+              active: { type: boolean, description: 'Disabled configurations are retained for history and excluded from recommendations.' }
               name: { type: string, maxLength: 120 }
               capacity_kg: { type: number, exclusiveMinimum: 0 }
               number_available: { type: integer, minimum: 1 }
@@ -3796,7 +3952,7 @@ components:
               heavy_classification: { type: [ string, 'null' ], maxLength: 96 }
               base_fee_centavos: { type: integer, minimum: 0 }
               per_km_centavos: { type: integer, minimum: 0 }
-              maximum_distance_km: { type: integer, minimum: 1, maximum: 1000 }
+              maximum_distance_km: { type: integer, minimum: 1, maximum: 1000, description: 'Omission retains the saved limit; new coverage defaults to the approved 50 km procurement limit. New vehicle rates inherit coverage.' }
     VendorCommissionAcceptance:
       type: object
       required: [ organization_lock_version, agreement_version_id, accepted ]
@@ -3894,7 +4050,7 @@ components:
       type: object
       required: [ kind, file ]
       properties:
-        kind: { type: string, enum: [ LOGO, BANNER, PROMOTIONAL_IMAGE, PROMOTIONAL_VIDEO ] }
+        kind: { type: string, enum: [ LOGO, BANNER, PROMOTIONAL_IMAGE, PROMOTIONAL_VIDEO, VEHICLE_IMAGE ] }
         file: { type: string, format: binary }
         alt_text: { type: [ string, 'null' ], maxLength: 160 }
     VendorMediaEnvelope:
@@ -3917,12 +4073,19 @@ components:
         data: { $ref: "#/components/schemas/VendorFile" }
         meta: { type: object, additionalProperties: true }
         errors: { type: array, items: { type: object, additionalProperties: true } }
-    VendorPaymentConnection:
+    VendorPaymentOnboardingEnvelope:
       type: object
-      required: [ invitation_url, provider_account_id ]
+      required: [ data, meta, errors ]
       properties:
-        invitation_url: { type: string, format: uri, pattern: '^https://' }
-        provider_account_id: { type: string, pattern: '^[A-Za-z0-9_-]{3,128}$' }
+        data: { $ref: "#/components/schemas/VendorPaymentOnboarding" }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    VendorPaymentOnboarding:
+      type: object
+      required: [ status, environment ]
+      properties:
+        status: { type: string, enum: [ NOT_CONNECTED, CONNECTING, PENDING, CONNECTED_TEST, CONNECTION_FAILED ] }
+        environment: { type: string, enum: [ TEST ] }
     VendorPaymentReconciliationEnvelope:
       type: object
       required: [ data, meta, errors ]
@@ -3938,9 +4101,80 @@ components:
         invitee_name: { type: string, maxLength: 160 }
         invitee_mobile: { type: [ string, 'null' ], maxLength: 24 }
         role: { type: string, enum: [ STORE_MANAGER, STORE_STAFF, CUSTOMER_SERVICE, INVENTORY, FULFILLMENT ] }
+        can_manage_staff: { type: boolean, default: false, description: Owner-only setting for Store Manager invitations. Enabling requires recent authentication. Invitations are permitted during Store Setup and never grant marketplace activation. }
+    VendorStaffUpdate:
+      type: object
+      additionalProperties: false
+      required: [ full_name, role, lock_version ]
+      properties:
+        full_name: { type: string, maxLength: 160 }
+        role: { type: string, enum: [ STORE_MANAGER, STORE_STAFF, CUSTOMER_SERVICE, INVENTORY, FULFILLMENT ] }
+        lock_version: { type: integer, minimum: 1 }
+    VendorTeamActivity:
+      type: object
+      required: [ id, actor_role, action, resource_type, created_at, succeeded, before, after ]
+      properties:
+        id: { type: string, format: uuid }
+        actor_name: { type: [ string, 'null' ] }
+        actor_role: { type: string }
+        action: { type: string }
+        resource_type: { type: string }
+        resource_id: { type: [ string, 'null' ] }
+        created_at: { type: string, format: date-time }
+        succeeded: { type: boolean }
+        before: { type: object, additionalProperties: true }
+        after: { type: object, additionalProperties: true }
+    VendorTeamActivityEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/VendorTeamActivity" } }
+        meta:
+          type: object
+          required: [ current_page, last_page ]
+          properties:
+            current_page: { type: integer }
+            last_page: { type: integer }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    VendorStaffDisputeSetting:
+      type: object
+      additionalProperties: false
+      required: [ enabled, lock_version ]
+      properties:
+        enabled: { type: boolean }
+        lock_version: { type: integer, minimum: 1 }
+    VendorTeamInvitationRecord:
+      type: object
+      required: [ id, email, role, status, vendor_organization_id, invited_by_id, invited_by_name, created_at, expires_at, can_manage_staff ]
+      properties:
+        id: { type: string, format: uuid }
+        invitee_name: { type: [ string, 'null' ] }
+        email: { type: string, format: email }
+        invitee_mobile: { type: [ string, 'null' ] }
+        vendor_organization_id: { type: string, format: uuid }
+        role: { type: string }
+        can_manage_staff: { type: boolean }
+        status: { type: string, enum: [ PENDING, ACCEPTED, REVOKED, EXPIRED ] }
+        invited_by_id: { type: string, format: uuid }
+        invited_by_name: { type: string }
+        created_at: { type: string, format: date-time }
+        expires_at: { type: string, format: date-time }
+        accepted_at: { type: [ string, 'null' ], format: date-time }
+    VendorTeamInvitationListEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/VendorTeamInvitationRecord" } }
+        meta:
+          type: object
+          required: [ current_page, last_page ]
+          properties:
+            current_page: { type: integer }
+            last_page: { type: integer }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
     VendorInvitation:
       type: object
-      required: [ queued, role ]
+      required: [ queued ]
       properties:
         queued: { type: boolean }
         invitation_id: { type: string, format: uuid }
@@ -4020,6 +4254,10 @@ components:
           items: { type: string, enum: [ TAX_DECLARATIONS, COMMISSION_AGREEMENT, PAYMENT_CONFIGURATION ] }
         decision: { type: string, enum: [ APPROVED, CHANGES_REQUIRED, REJECTED ] }
         lock_version: { type: integer, minimum: 1 }
+        requirement_versions:
+          type: object
+          description: Current lock version of every applicable underlying requirement when deciding a grouped review item.
+          additionalProperties: { type: integer, minimum: 1 }
         reason: { type: [ string, 'null' ], minLength: 3, maxLength: 2000 }
         verified_document_number: { type: [ string, 'null' ], maxLength: 180 }
         verified_issue_date: { type: [ string, 'null' ], format: date }
@@ -4042,15 +4280,20 @@ components:
         errors: { type: array, items: { type: object, additionalProperties: true } }
     XenditAccountVerificationWebhook:
       type: object
-      required: [ id ]
+      required: [ event, created, data ]
       additionalProperties: true
       properties:
-        id: { type: string, maxLength: 191 }
-        for_user_id: { type: string, maxLength: 128 }
-        account_id: { type: string, maxLength: 128 }
-        subaccount_id: { type: string, maxLength: 128 }
-        status: { type: string, maxLength: 48 }
-        verification_status: { type: string, maxLength: 48 }
+        event: { type: string, enum: [ account.registered, account.activated ] }
+        created: { type: string, format: date-time }
+        data:
+          type: object
+          required: [ user_id ]
+          properties:
+            user_id: { type: string, pattern: '^[A-Za-z0-9_-]{3,128}$' }
+            account_info:
+              type: object
+              properties:
+                payments_enabled: { type: boolean, description: Never used as proof of TEST registration or live payment permission. }
     VendorWebhookEnvelope:
       type: object
       required: [ data, meta, errors ]

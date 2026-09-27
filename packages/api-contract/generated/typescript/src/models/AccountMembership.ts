@@ -39,6 +39,10 @@ export interface AccountMembership {
      *
      */
     canManageStaff: boolean;
+    /**
+     *
+     */
+    lockVersion?: number;
 }
 
 /**
@@ -68,6 +72,7 @@ export function AccountMembershipFromJSONTyped(json: any, ignoreDiscriminator: b
         'role': json['role'],
         'status': json['status'],
         'canManageStaff': json['can_manage_staff'],
+        'lockVersion': json['lock_version'] == null ? undefined : json['lock_version'],
     };
 }
 
@@ -87,6 +92,7 @@ export function AccountMembershipToJSONTyped(value?: AccountMembership | null, i
         'role': value['role'],
         'status': value['status'],
         'can_manage_staff': value['canManageStaff'],
+        'lock_version': value['lockVersion'],
     };
 }
 

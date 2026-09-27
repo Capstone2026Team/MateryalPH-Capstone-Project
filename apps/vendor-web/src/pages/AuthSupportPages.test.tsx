@@ -1,12 +1,12 @@
 import { ResponseError } from '@materyalph/api-client-ts'
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { StrictMode } from 'react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 
 import * as authApi from '../lib/auth-api'
 import { recoveryCodesDocument } from '../lib/recovery-codes'
-import { VendorDashboardFoundation, VendorMfaPage } from './AuthSupportPages'
+import { VendorDashboardFoundation, VendorMfaPage, VendorVerifyEmailPage } from './AuthSupportPages'
 
 vi.mock('../lib/auth-api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../lib/auth-api')>()
@@ -17,9 +17,21 @@ vi.mock('../lib/auth-api', async (importOriginal) => {
     getMfaStatus: vi.fn(),
     getSession: vi.fn(),
     recoverMfaChallenge: vi.fn(),
+    resendVendorVerification: vi.fn(),
     signOut: vi.fn(),
     startMfaEnrollment: vi.fn(),
   }
+})
+
+test('an Owner opening email verification from the dashboard can request a code', async () => {
+  vi.mocked(authApi.resendVendorVerification).mockResolvedValue({} as never)
+  render(<MemoryRouter initialEntries={['/verify-email']}><VendorVerifyEmailPage /></MemoryRouter>)
+  const resend = screen.getByRole('button', { name: 'Request another code' })
+  expect(resend).toBeDisabled()
+  fireEvent.change(screen.getByRole('textbox', { name: 'Email address' }), { target: { value: 'owner@example.test' } })
+  expect(resend).toBeEnabled()
+  fireEvent.click(resend)
+  await waitFor(() => expect(authApi.resendVendorVerification).toHaveBeenCalledWith('owner@example.test'))
 })
 
 describe('Vendor MFA flow', () => {

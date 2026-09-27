@@ -27,5 +27,11 @@ void main() {
       // TODO
     });
 
+    // Owner-only setting for Store Manager invitations. Enabling requires recent authentication. Invitations are permitted during Store Setup and never grant marketplace activation.
+    // bool canManageStaff (default value: false)
+    test('to test the property `canManageStaff`', () async {
+      // TODO
+    });
+
   });
 }

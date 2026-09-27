@@ -16,10 +16,13 @@ use App\Http\Controllers\Api\Auth\ResendVerificationController;
 use App\Http\Controllers\Api\Auth\SessionController;
 use App\Http\Controllers\Api\Auth\VerifyEmailController;
 use App\Http\Controllers\Api\HealthController;
+use App\Http\Controllers\Api\PublicStoreProfileController;
 use App\Http\Controllers\Api\XenditAccountVerificationWebhookController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', HealthController::class);
+Route::get('/stores', [PublicStoreProfileController::class, 'index'])->middleware('throttle:public-store');
+Route::get('/stores/{storeId}/profile', PublicStoreProfileController::class)->whereUuid('storeId')->middleware('throttle:public-store');
 Route::get('/agreements/current', AgreementController::class);
 
 require __DIR__.'/account.php';
@@ -27,10 +30,10 @@ require __DIR__.'/vendor-onboarding.php';
 require __DIR__.'/admin-vendor-verification.php';
 require __DIR__.'/vendor-private-files.php';
 
-Route::post('/webhooks/xendit/account-verification', XenditAccountVerificationWebhookController::class)->middleware('throttle:auth-public');
+Route::post('/webhooks/xendit/account-verification', XenditAccountVerificationWebhookController::class)->middleware('throttle:provider-webhook');
 
 Route::prefix('auth')->middleware('auth.transport:WEB')->group(function (): void {
-    Route::get('/csrf', CsrfController::class)->middleware('throttle:auth-public');
+    Route::get('/csrf', CsrfController::class)->middleware('throttle:auth-csrf');
     Route::get('/google/callback', [GoogleOidcController::class, 'callback'])->middleware('throttle:auth-public');
     Route::post('/login', LoginController::class)->middleware('web.csrf');
     Route::middleware(['web.csrf', 'throttle:auth-public'])->group(function (): void {

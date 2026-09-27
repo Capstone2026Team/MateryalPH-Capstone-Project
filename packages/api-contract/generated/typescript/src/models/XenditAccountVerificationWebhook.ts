@@ -12,7 +12,15 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
+import { mapValues, parseDate, parseDateTime, serializeDate, serializeDateTime } from '../runtime';
+import type { XenditAccountVerificationWebhookData } from './XenditAccountVerificationWebhookData';
+import {
+    XenditAccountVerificationWebhookDataFromJSON,
+    XenditAccountVerificationWebhookDataFromJSONTyped,
+    XenditAccountVerificationWebhookDataToJSON,
+    XenditAccountVerificationWebhookDataToJSONTyped,
+} from './XenditAccountVerificationWebhookData';
+
 /**
  *
  * @export
@@ -23,34 +31,35 @@ export interface XenditAccountVerificationWebhook {
     /**
      *
      */
-    id: string;
+    event: XenditAccountVerificationWebhookEventEnum;
     /**
      *
      */
-    forUserId?: string;
+    created: Date;
     /**
      *
      */
-    accountId?: string;
-    /**
-     *
-     */
-    subaccountId?: string;
-    /**
-     *
-     */
-    status?: string;
-    /**
-     *
-     */
-    verificationStatus?: string;
+    data: XenditAccountVerificationWebhookData;
 }
+
+
+/**
+ * @export
+ */
+export const XenditAccountVerificationWebhookEventEnum = {
+    AccountRegistered: 'account.registered',
+    AccountActivated: 'account.activated',
+} as const;
+export type XenditAccountVerificationWebhookEventEnum = typeof XenditAccountVerificationWebhookEventEnum[keyof typeof XenditAccountVerificationWebhookEventEnum];
+
 
 /**
  * Check if a given object implements the XenditAccountVerificationWebhook interface.
  */
 export function instanceOfXenditAccountVerificationWebhook(value: object): value is XenditAccountVerificationWebhook {
-    if (!('id' in value) || value['id'] === undefined) return false;
+    if (!('event' in value) || value['event'] === undefined) return false;
+    if (!('created' in value) || value['created'] === undefined) return false;
+    if (!('data' in value) || value['data'] === undefined) return false;
     return true;
 }
 
@@ -65,12 +74,9 @@ export function XenditAccountVerificationWebhookFromJSONTyped(json: any, ignoreD
     return {
 
             ...json,
-        'id': json['id'],
-        'forUserId': json['for_user_id'] == null ? undefined : json['for_user_id'],
-        'accountId': json['account_id'] == null ? undefined : json['account_id'],
-        'subaccountId': json['subaccount_id'] == null ? undefined : json['subaccount_id'],
-        'status': json['status'] == null ? undefined : json['status'],
-        'verificationStatus': json['verification_status'] == null ? undefined : json['verification_status'],
+        'event': json['event'],
+        'created': (json['created'] == null ? json['created'] : parseDateTime(json['created'])),
+        'data': XenditAccountVerificationWebhookDataFromJSON(json['data']),
     };
 }
 
@@ -86,12 +92,9 @@ export function XenditAccountVerificationWebhookToJSONTyped(value?: XenditAccoun
     return {
 
             ...value,
-        'id': value['id'],
-        'for_user_id': value['forUserId'],
-        'account_id': value['accountId'],
-        'subaccount_id': value['subaccountId'],
-        'status': value['status'],
-        'verification_status': value['verificationStatus'],
+        'event': value['event'],
+        'created': value['created'] == null ? value['created'] : serializeDateTime(value['created']),
+        'data': XenditAccountVerificationWebhookDataToJSON(value['data']),
     };
 }
 

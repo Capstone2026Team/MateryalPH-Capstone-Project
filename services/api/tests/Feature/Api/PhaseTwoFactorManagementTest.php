@@ -12,6 +12,7 @@ use App\Models\VendorMembership;
 use App\Models\VendorOrganization;
 use Database\Seeders\SystemFoundationSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Laravel\Passport\AccessToken;
 use Tests\TestCase;
@@ -19,6 +20,20 @@ use Tests\TestCase;
 final class PhaseTwoFactorManagementTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_enrolled_web_account_can_step_up_with_fresh_authenticator_code_only(): void
+    {
+        [$user, $session] = $this->owner(true);
+        $secret = Crypt::decryptString((string) DB::table('totp_factors')->where('user_id', $user->getKey())->value('encrypted_secret'));
+        $code = $this->totpCode($secret, intdiv(time(), 30));
+
+        $this->postJson('/api/v1/vendors/account/factor')->assertForbidden();
+        $this->postJson('/api/v1/vendors/account/reauthentication', ['code' => 'not-a-code'])->assertUnprocessable();
+        $this->postJson('/api/v1/vendors/account/reauthentication', ['code' => $code])->assertOk();
+        self::assertSame('TOTP', $session->refresh()->reauthentication_method);
+        $this->postJson('/api/v1/vendors/account/factor')->assertOk();
+        $this->postJson('/api/v1/vendors/account/reauthentication', ['code' => $code])->assertUnprocessable();
+    }
 
     public function test_factor_replacement_preserves_old_factor_until_confirmation_and_revokes_all_sessions(): void
     {
@@ -65,7 +80,7 @@ final class PhaseTwoFactorManagementTest extends TestCase
     }
 
     /** @return array{User, AuthSession, list<string>} */
-    private function owner(): array
+    private function owner(bool $enrollPreviousWindow = false): array
     {
         $this->seed(SystemFoundationSeeder::class);
         $org = VendorOrganization::query()->create(['legal_name' => 'Factor test organization', 'store_name' => 'Factor test store']);
@@ -73,7 +88,7 @@ final class PhaseTwoFactorManagementTest extends TestCase
         VendorMembership::query()->create(['user_id' => $user->getKey(), 'vendor_organization_id' => $org->getKey(), 'role' => 'OWNER', 'status' => 'ACTIVE']);
         $totp = app(TotpService::class);
         $enrollment = $totp->startEnrollment($user);
-        $codes = $totp->confirm($user, $this->totpCode($enrollment['secret'], intdiv(time(), 30)));
+        $codes = $totp->confirm($user, $this->totpCode($enrollment['secret'], intdiv(time(), 30) - ($enrollPreviousWindow ? 1 : 0)));
 
         return [$user, $this->signIn($user), $codes];
     }
