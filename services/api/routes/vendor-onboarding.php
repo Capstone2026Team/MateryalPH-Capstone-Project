@@ -16,9 +16,9 @@ Route::prefix('vendors/onboarding')->middleware([
     Route::post('/setup/complete', [VendorOnboardingController::class, 'completeSetup'])->middleware('throttle:account-security');
     Route::post('/welcome/dismiss', [VendorOnboardingController::class, 'dismissWelcome']);
     Route::get('/address/areas', [VendorOnboardingController::class, 'addressAreas']);
-    Route::post('/address/pin', [VendorOnboardingController::class, 'resolvePin'])->middleware('throttle:auth-public');
-    Route::post('/address/resolve', [VendorOnboardingController::class, 'resolveAddress'])->middleware('throttle:auth-public');
-    Route::post('/address/geocode', [VendorOnboardingController::class, 'geocode'])->middleware('throttle:auth-public');
+    Route::post('/address/pin', [VendorOnboardingController::class, 'resolvePin'])->middleware('throttle:vendor-address');
+    Route::post('/address/resolve', [VendorOnboardingController::class, 'resolveAddress'])->middleware('throttle:vendor-address');
+    Route::post('/address/geocode', [VendorOnboardingController::class, 'geocode'])->middleware('throttle:vendor-address');
     Route::post('/store-email', [VendorOnboardingController::class, 'requestStoreEmailVerification'])->middleware('throttle:account-security');
     Route::post('/store-email/confirm', [VendorOnboardingController::class, 'confirmStoreEmailVerification'])->middleware('throttle:account-security');
     Route::delete('/documents/pending/{requirementKey}', [VendorOnboardingController::class, 'removePendingDocument']);

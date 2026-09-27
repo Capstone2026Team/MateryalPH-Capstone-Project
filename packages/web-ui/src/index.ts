@@ -8,8 +8,10 @@ export { Field, FormErrors, type FieldProps } from './field'
 export { StatusMessage } from './status-message'
 export { PhoneField, type PhoneFieldProps } from './phone-field'
 export { PortalBrand } from './portal-brand'
+export { LoginLayout } from './login-layout'
 export { AccountWorkspace } from './account-workspace'
 export { PortalAccountMenu } from './portal-account-menu'
+export { PortalIdentityProvider } from './portal-identity'
 export { PortalShell, ProgressBar, StatusBadge, type PortalNavItem, type PortalNavSection } from './portal-shell'
 export { rateLimitMessage, clearWebSessionTransport, createWebApiConfiguration, getWebCsrfToken } from './web-api-session'
 export { OnboardingFlow, OnboardingStepContent } from './onboarding-flow'
@@ -29,6 +31,7 @@ export { PrivateEvidenceGallery, type PrivateEvidenceItem } from './private-evid
 export { readWebPrivateFile } from './web-api-session'
 
 export { VersionedAgreementPanel } from './versioned-agreement-panel'
+export { PublishedAgreementReader } from './published-agreement-reader'
 export { ChoiceField } from './choice-field'
 
 export { DeliveryVehicles, emptyDeliveryVehicle, type DeliveryVehicleDraft } from './delivery-vehicles'

@@ -495,8 +495,9 @@ function VerificationForm({ snapshot, onSaved, onRefresh, editing = false, regis
     publish(await getVendorOnboarding())
     return true
   }
-  async function saveProgress(): Promise<boolean> {
+  async function saveProgress(force = false): Promise<boolean> {
     if ((verification.status === 'PENDING_VERIFICATION' || (!editing && verification.status === 'APPROVED'))) return true
+    if (!force && !dirty && !Object.entries(files).some(([key, file]) => staged.current[key] !== file)) return true
     if (working.current || !formRef.current) return false
     working.current = true; setBusy(true); setMessage(null)
     try {
@@ -537,7 +538,7 @@ function VerificationForm({ snapshot, onSaved, onRefresh, editing = false, regis
   }, [dirty, files])
   async function save() {
     if (!formRef.current || working.current) return
-    if (!await saveProgress()) return
+    if (!await saveProgress(true)) return
     if (previewPending || previewError) { setMessage({ tone: 'error', text: 'Wait for the applicable requirements to refresh, or retry.' }); return }
     working.current = true; setBusy(true); setMessage(null); setFieldErrors({})
     const data = new FormData(formRef.current)

@@ -73,6 +73,11 @@ class AppServiceProvider extends ServiceProvider
         Passport::refreshTokensExpireIn(now()->addDays((int) config('materyalph.auth.refresh_token_days', 14)));
 
         RateLimiter::for('auth-public', fn (Request $request): Limit => Limit::perMinute(10)->by($request->ip()));
+        // Browsing, bootstrap and provider traffic must not exhaust authentication attempts.
+        RateLimiter::for('public-store', fn (Request $request): Limit => Limit::perMinute(10)->by($request->ip()));
+        RateLimiter::for('auth-csrf', fn (Request $request): Limit => Limit::perMinute(10)->by($request->ip()));
+        RateLimiter::for('provider-webhook', fn (Request $request): Limit => Limit::perMinute(10)->by($request->ip()));
+        RateLimiter::for('vendor-address', fn (Request $request): Limit => Limit::perMinute(10)->by((string) $request->user()?->getAuthIdentifier()));
         RateLimiter::for('auth-registration', fn (Request $request): Limit => Limit::perHour(5)->by($request->ip()));
         RateLimiter::for('auth-refresh', fn (Request $request): Limit => Limit::perMinute(30)->by($request->ip()));
     }

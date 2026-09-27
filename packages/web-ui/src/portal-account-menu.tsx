@@ -1,10 +1,16 @@
 import { useEffect, useRef, useState, type MouseEvent } from 'react'
-import { AccountsApi, AuthenticationApi, type AccountProfile } from '@materyalph/api-client-ts'
+import { AccountsApi, AuthenticationApi } from '@materyalph/api-client-ts'
+import { usePortalIdentity, type PortalIdentity } from './portal-identity'
 import { clearWebSessionTransport, createWebApiConfiguration } from './web-api-session'
 import { ChevronDown, FileCheck2, LogOut, MonitorSmartphone, Settings, ShieldCheck, UserRound } from 'lucide-react'
 
-export function PortalAccountMenu({ portal, basePath, onNavigate, onSignOut, avatarUrl, onProfileChange }: { portal: 'admin' | 'vendors'; basePath: string; onNavigate?: ((href: string) => void) | undefined; onSignOut?: (() => Promise<void>) | undefined; avatarUrl?: string; onProfileChange?: (profile: AccountProfile | null) => void }) {
-  const [profile, setProfile] = useState<AccountProfile | null>(null)
+export function PortalAccountMenu({ portal, basePath, onNavigate, onSignOut, avatarUrl, onProfileChange }: { portal: 'admin' | 'vendors'; basePath: string; onNavigate?: ((href: string) => void) | undefined; onSignOut?: (() => Promise<void>) | undefined; avatarUrl?: string; onProfileChange?: (profile: PortalIdentity | null) => void }) {
+  const identity = usePortalIdentity()
+  const shared = identity !== null
+  const ensureFresh = identity?.ensureFresh
+  useEffect(() => { ensureFresh?.() }, [ensureFresh])
+  const [localProfile, setProfile] = useState<PortalIdentity | null>(null)
+  const profile = identity ? identity.profile : localProfile
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -13,13 +19,14 @@ export function PortalAccountMenu({ portal, basePath, onNavigate, onSignOut, ava
   const trigger = useRef<HTMLButtonElement>(null)
   const href = portal === 'admin' ? '/workspace' : '/settings'
   useEffect(() => {
+    if (shared) return
     let active = true
-    onProfileChange?.(null)
-    const refresh = () => { void new AccountsApi(createWebApiConfiguration(basePath, { refreshSession: true })).getAccountProfile({ accountPortal: portal }).then(result => { if (active) { setProfile(result.data); onProfileChange?.(result.data) } }).catch(() => {}) }
+    const refresh = () => { void new AccountsApi(createWebApiConfiguration(basePath, { refreshSession: true })).getAccountProfile({ accountPortal: portal }).then(result => { if (active) setProfile(result.data) }).catch(() => {}) }
     refresh()
     window.addEventListener('materyalph:profile-updated', refresh)
     return () => { active = false; window.removeEventListener('materyalph:profile-updated', refresh) }
-  }, [basePath, portal, onProfileChange])
+  }, [basePath, portal, shared])
+  useEffect(() => { onProfileChange?.(profile) }, [onProfileChange, profile])
   useEffect(() => {
     function outside(event: PointerEvent) { if (!root.current?.contains(event.target as Node)) setOpen(false) }
     document.addEventListener('pointerdown', outside)

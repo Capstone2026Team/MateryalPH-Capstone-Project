@@ -12,10 +12,15 @@ $testEnvironment = Join-Path $repoRoot 'services/api/.env.testing'
 $projectName = 'materyalph_phase1_test'
 $dockerCommand = (Get-Command docker -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty Source)
 if (-not $dockerCommand) {
-    $dockerCommand = Get-ChildItem "$env:LOCALAPPDATA\Programs\DockerDesktop" -Filter docker.exe -Recurse -ErrorAction SilentlyContinue |
-        Select-Object -First 1 -ExpandProperty FullName
+    $dockerCandidates = @(
+        (Join-Path $env:LOCALAPPDATA 'Programs/DockerDesktop/resources/bin/docker.exe'),
+        (Join-Path $env:ProgramFiles 'Docker/Docker/resources/bin/docker.exe')
+    )
+    $dockerCommand = $dockerCandidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
 }
-if (-not $dockerCommand) { throw 'Docker Desktop CLI was not found.' }
+if (-not $dockerCommand) { throw 'Docker Desktop CLI was not found on PATH or in its user/system installation folders. Check that this session can access Docker Desktop.' }
+& $dockerCommand info --format '{{.ServerVersion}}' *> $null
+if ($LASTEXITCODE -ne 0) { throw 'Docker Desktop CLI was found, but its engine is unreachable. Start Docker Desktop and check this session has access to its engine.' }
 
 function Invoke-TestCompose {
     param([Parameter(ValueFromRemainingArguments = $true)][string[]] $Arguments)
@@ -69,22 +74,13 @@ if (-not $testPasswordLine -or ($testPasswordLine.Substring('TEST_DB_PASSWORD='.
 Push-Location $repoRoot
 try {
     Invoke-TestCompose config --quiet
-    Invoke-TestCompose up -d --build postgres-test redis-test api-test
+    Invoke-TestCompose up -d --build --wait --wait-timeout 120 postgres-test redis-test api-test
 
-    # Simple wait: check containers exist and are running, then sleep for healthchecks to pass
-    Write-Host 'Waiting for containers to start...' -ForegroundColor Cyan
-    $maxAttempts = 30
-    for ($i = 0; $i -lt $maxAttempts; $i++) {
-        $postgresContainer = (Invoke-TestCompose ps -q postgres-test 2>$null).Trim()
-        $apiContainer = (Invoke-TestCompose ps -q api-test 2>$null).Trim()
-        if ($postgresContainer -and $apiContainer) { break }
-        Write-Host "  Waiting... ($($i+1)/$maxAttempts)" -ForegroundColor Gray
-        Start-Sleep -Seconds 1
-    }
+    $postgresContainer = [string](Invoke-TestCompose ps -q postgres-test)
+    $apiContainer = [string](Invoke-TestCompose ps -q api-test)
+    $postgresContainer = $postgresContainer.Trim()
+    $apiContainer = $apiContainer.Trim()
     if (-not $postgresContainer -or -not $apiContainer) { throw 'The isolated test containers are not running.' }
-
-    # Wait a bit more for healthchecks to pass
-    Start-Sleep -Seconds 5
 
     $postgresInspect = @(& $dockerCommand inspect $postgresContainer | ConvertFrom-Json)
     $apiInspect = @(& $dockerCommand inspect $apiContainer | ConvertFrom-Json)
@@ -137,13 +133,13 @@ try {
 
     Write-Host 'Running full schema verification...' -ForegroundColor Cyan
     Invoke-TestCompose exec -T api-test php /workspace/scripts/verify-test-schema.php
-    
+
     Write-Host 'Running Pint (code style)...' -ForegroundColor Cyan
     Invoke-TestCompose exec -T api-test vendor/bin/pint --test
-    
+
     Write-Host 'Running PHPStan (static analysis)...' -ForegroundColor Cyan
     Invoke-TestCompose exec -T api-test vendor/bin/phpstan analyse --memory-limit=1G
-    
+
     Write-Host 'Running PHPUnit tests...' -ForegroundColor Cyan
     Invoke-TestCompose exec -T api-test php artisan test
 }

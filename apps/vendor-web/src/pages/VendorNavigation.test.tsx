@@ -131,6 +131,7 @@ test('first login persists Continue then permits later login to resume onboardin
 })
 test('Finish Later saves each standalone onboarding form before returning to limited dashboard', async () => {
   open('/onboarding/verification')
+  fireEvent.change(await screen.findByRole('textbox', { name: 'Public Store Name' }), { target: { value: 'Edited Supply' } })
   fireEvent.click(await screen.findByRole('button', { name: 'Finish Later' }))
   expect(await screen.findByText('Limited-Access Vendor Dashboard')).toBeVisible()
   fireEvent.click(screen.getByRole('link', { name: 'Continue Store Setup' }))
@@ -148,6 +149,23 @@ test('Store Profile is separate and logo returns to the authenticated dashboard'
   fireEvent.click(screen.getByRole('link', { name: /MateryalPH VENDOR PORTAL/ }))
   expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeVisible()
   expect(screen.queryByText('Personal account settings')).not.toBeInTheDocument()
+})
+
+test('leaving unchanged verification sends no draft mutation or redundant snapshot read', async () => {
+  open('/onboarding/verification')
+  await screen.findByRole('heading', { name: 'Store Verification', level: 1 })
+  fireEvent.click(screen.getByRole('link', { name: 'Back to dashboard' }))
+  await screen.findByText('Limited-Access Vendor Dashboard')
+  expect(api.saveVendorVerificationDraft).not.toHaveBeenCalled()
+  expect(api.getVendorOnboarding).toHaveBeenCalledTimes(2)
+  for (let visit = 0; visit < 8; visit++) {
+    fireEvent.click(screen.getByRole('link', { name: 'Continue Store Verification / Review requirements' }))
+    await screen.findByRole('heading', { name: 'Store Verification', level: 1 })
+    fireEvent.click(screen.getByRole('link', { name: 'Back to dashboard' }))
+    await screen.findByText('Limited-Access Vendor Dashboard')
+  }
+  expect(api.saveVendorVerificationDraft).not.toHaveBeenCalled()
+  expect(api.getVendorOnboarding).toHaveBeenCalledTimes(18)
 })
 
 test('Vendor sidebar uses the uploaded store logo and falls back to initials if it fails', async () => {
@@ -193,6 +211,7 @@ test('an unavailable API keeps entry recoverable instead of routing to login', a
 test('Finish Later does not leave the form when saving fails', async () => {
   vi.mocked(api.saveVendorVerificationDraft).mockRejectedValueOnce(new TypeError('Network unavailable'))
   open('/onboarding/verification')
+  fireEvent.change(await screen.findByRole('textbox', { name: 'Public Store Name' }), { target: { value: 'Edited Supply' } })
   fireEvent.click(await screen.findByRole('button', { name: 'Finish Later' }))
   await waitFor(() => expect(api.saveVendorVerificationDraft).toHaveBeenCalledOnce())
   expect(await screen.findByRole('alert')).toBeVisible()
@@ -526,6 +545,10 @@ test.each(['123', '1234', '12345'])('autosave retains combined TIN and separate 
   expect(saved).toMatchObject({ lockVersion: 7, draftLockVersion: 4 })
   expect(JSON.parse(saved.formState!)).toMatchObject({ store_name: ['Public Supply'], legal_business_name: ['Legal Trading Name'], tin: [`123-456-789-${code}`] })
   fireEvent.click(screen.getByRole('button', { name: 'Back' }))
+  await screen.findByRole('textbox', { name: 'Registered Business Name' })
+  expect(api.saveVendorVerificationDraft).toHaveBeenCalledOnce()
+  fireEvent.change(screen.getByRole('textbox', { name: 'Registered Business Name' }), { target: { value: 'Updated Trading Name' } })
+  fireEvent.click(screen.getByRole('button', { name: '2 Registered Business Address' }))
   await waitFor(() => expect(api.saveVendorVerificationDraft).toHaveBeenLastCalledWith(expect.objectContaining({ lockVersion: 8, draftLockVersion: 5 })))
 })
 

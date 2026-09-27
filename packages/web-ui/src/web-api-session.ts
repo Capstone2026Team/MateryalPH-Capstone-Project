@@ -8,6 +8,7 @@ type WebApiOptions = {
 const csrfTokens = new Map<string, string>()
 const csrfRequests = new Map<string, Promise<string>>()
 const refreshRequests = new Map<string, Promise<RefreshResult>>()
+const refreshVersions = new Map<string, number>()
 const reads = new Map<string, Promise<Response>>()
 const mutations = new Set<string>()
 const cooldowns = new Map<string, { until: number; response: Response }>()
@@ -34,7 +35,7 @@ function normalizedBasePath(basePath: string): string {
 }
 
 async function issueCsrfToken(basePath: string): Promise<string> {
-  const response = await fetch(`${basePath}/auth/csrf`, {
+  const response = await coordinatedFetch(basePath, false, `${basePath}/auth/csrf`, {
     method: 'GET',
     credentials: 'include',
     headers: { Accept: 'application/json' },
@@ -70,11 +71,13 @@ export function clearWebSessionTransport(basePath?: string): void {
     csrfTokens.delete(key)
     csrfRequests.delete(key)
     refreshRequests.delete(key)
+    refreshVersions.delete(key)
     return
   }
   csrfTokens.clear()
   csrfRequests.clear()
   refreshRequests.clear()
+  refreshVersions.clear()
 }
 
 export function createWebApiConfiguration(basePath: string, options: WebApiOptions = {}): Configuration {
@@ -122,16 +125,22 @@ async function coordinatedFetch(basePath: string, refreshSession: boolean, input
 }
 
 async function webFetch(basePath: string, refreshSession: boolean, input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const version = refreshVersions.get(basePath) ?? 0
   let response = await fetch(input, init)
 
   if (response.status === 419 && !isSafeMethod(init?.method)) {
     const token = await getWebCsrfToken(basePath, true)
-    response = await fetch(input, withCsrf(init, token))
+    init = withCsrf(init, token)
+    response = await fetch(input, init)
   }
 
   if (response.status !== 401 || !refreshSession || isAuthenticationLifecycleRequest(input, basePath)) {
     return response
   }
+
+  // A slower request may return its old-token 401 after another request has
+  // already refreshed. Replay once with the new cookie without rotating again.
+  if ((refreshVersions.get(basePath) ?? 0) !== version) return fetch(input, init)
 
   const refreshed = await refreshWebSession(basePath)
   if (refreshed.kind === 'invalid') return response
@@ -149,23 +158,17 @@ async function refreshWebSession(basePath: string): Promise<RefreshResult> {
 }
 
 async function performRefresh(basePath: string): Promise<RefreshResult> {
-  let token = await getWebCsrfToken(basePath)
-  let response = await fetch(`${basePath}/auth/refresh`, withCsrf({
+  const token = await getWebCsrfToken(basePath)
+  const response = await coordinatedFetch(basePath, false, `${basePath}/auth/refresh`, withCsrf({
     method: 'POST',
     credentials: 'include',
     headers: { Accept: 'application/json' },
   }, token))
 
-  if (response.status === 419) {
-    token = await getWebCsrfToken(basePath, true)
-    response = await fetch(`${basePath}/auth/refresh`, withCsrf({
-      method: 'POST',
-      credentials: 'include',
-      headers: { Accept: 'application/json' },
-    }, token))
+  if (response.ok) {
+    refreshVersions.set(basePath, (refreshVersions.get(basePath) ?? 0) + 1)
+    return { kind: 'refreshed' }
   }
-
-  if (response.ok) return { kind: 'refreshed' }
   if (response.status === 401) return { kind: 'invalid' }
   return { kind: 'response', response }
 }

@@ -83,6 +83,20 @@ describe('Vendor public portal', () => {
     expect(screen.getByRole('link', { name: 'Register with Google' })).toHaveAttribute('href', '/register/google')
   })
 
+  test.each(['/register', '/register/google'])('opens sign-up documents in a separate tab on %s', (path) => {
+    window.history.replaceState({}, '', path)
+    render(<App />)
+    for (const [name, href] of [
+      ['Terms of Service', '/legal/terms-of-service'],
+      ['Privacy Notice', '/legal/privacy-notice'],
+    ]) {
+      const link = screen.getByRole('link', { name: `${name} (opens in a new tab)` })
+      expect(link).toHaveAttribute('href', href)
+      expect(link).toHaveAttribute('target', '_blank')
+      expect(link).toHaveAttribute('rel', 'noopener noreferrer')
+    }
+  })
+
   test('shows a friendly portal-isolation error after a denied Google callback', () => {
     window.history.replaceState({}, '', '/auth/callback?status=error&code=PORTAL_ACCESS_DENIED')
     render(<App />)

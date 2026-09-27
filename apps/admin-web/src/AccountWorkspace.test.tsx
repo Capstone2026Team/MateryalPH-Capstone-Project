@@ -46,6 +46,24 @@ describe('Account workspace access and security', () => {
     expect(screen.queryByRole('button', { name: 'Staff access' })).not.toBeInTheDocument()
   })
 
+  test('section navigation reuses mounted profile and fetches only section data', async () => {
+    open()
+    await screen.findByRole('heading', { name: 'Settings' })
+    for (let visit = 0; visit < 10; visit++) {
+      fireEvent.click(screen.getByRole('button', { name: 'Account' }))
+      await screen.findByRole('heading', { name: 'Account' })
+      fireEvent.click(screen.getByRole('button', { name: 'Profile' }))
+      await screen.findByRole('textbox', { name: 'Full name' })
+    }
+    expect(requests.filter(request => request.path.endsWith('/profile'))).toHaveLength(1)
+    fireEvent.click(screen.getByRole('button', { name: 'Sessions / Devices' }))
+    await waitFor(() => expect(requests.filter(request => request.path.includes('/sessions'))).toHaveLength(1))
+    expect(requests.filter(request => request.path.endsWith('/profile'))).toHaveLength(1)
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Refresh' })).toBeEnabled())
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }))
+    await waitFor(() => expect(requests.filter(request => request.path.endsWith('/profile'))).toHaveLength(2))
+  })
+
   test('expired sessions remove account controls and offer sign-in', async () => {
     status = 401
     open()

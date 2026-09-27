@@ -1,8 +1,8 @@
 import { RateLimitNotice } from './rate-limit-notice'
 import { PortalAccountMenu } from './portal-account-menu'
-import { useEffect, useState, type FocusEvent, type MouseEvent, type ReactNode } from 'react'
+import { useEffect, useState, type MouseEvent, type ReactNode } from 'react'
 import { Circle, Menu, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react'
-import type { AccountProfile } from '@materyalph/api-client-ts'
+import type { PortalIdentity } from './portal-identity'
 import './portal-shell.css'
 
 export type PortalNavItem = { label: string; href: string; icon?: ReactNode; disabled?: boolean }
@@ -44,7 +44,7 @@ export function PortalShell({
   const [collapsed, setCollapsed] = useState(() => {
     try { return window.sessionStorage.getItem(sidebarPreferenceKey) === 'true' } catch { return false }
   })
-  const [profile, setProfile] = useState<AccountProfile | null>(null)
+  const [profile, setProfile] = useState<PortalIdentity | null>(null)
   const [avatarFailed, setAvatarFailed] = useState(false)
   const [tooltip, setTooltip] = useState<{ label: string; top: number; left: number } | null>(null)
   const storeIdentity = !isAdmin && profile?.role === 'OWNER'
@@ -53,6 +53,7 @@ export function PortalShell({
   const initials = footerName.trim().split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase()
   useEffect(() => { setAvatarFailed(false) }, [accountAvatarUrl])
   function showTooltip(element: HTMLElement, label: string) {
+    if (!collapsed || !window.matchMedia('(min-width: 1024px)').matches) return
     const box = element.getBoundingClientRect()
     setTooltip({ label, top: Math.min(box.top + box.height / 2, window.innerHeight - 24), left: box.right + 12 })
   }
@@ -97,7 +98,7 @@ export function PortalShell({
               <span className="portal-brand-full"><span className="portal-brand-name">Materyal<span className="text-action-primary">PH</span></span><span className="portal-brand-label">{portalLabel}</span></span>
               <span className="portal-brand-short" aria-hidden="true">M<span className="text-action-primary">PH</span></span>
             </a>
-            <button className="portal-collapse-toggle portal-icon-control" type="button" aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} aria-expanded={!collapsed} aria-controls="portal-navigation" title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} onClick={toggleSidebar}>{collapsed ? <PanelLeftOpen size={18} aria-hidden="true" /> : <PanelLeftClose size={18} aria-hidden="true" />}</button>
+            <button className="portal-collapse-toggle portal-icon-control" type="button" aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} aria-expanded={!collapsed} aria-controls="portal-navigation" title={collapsed ? 'Expand sidebar' : undefined} onClick={toggleSidebar}>{collapsed ? <PanelLeftOpen size={18} aria-hidden="true" /> : <PanelLeftClose size={18} aria-hidden="true" />}</button>
             <button className="portal-drawer-toggle portal-icon-control" type="button" aria-label="Close navigation" onClick={() => { setNavigationOpen(false); requestAnimationFrame(() => document.getElementById('portal-navigation-toggle')?.focus()) }}><X size={20} aria-hidden="true" /></button>
           </div>
           <nav id="portal-navigation" className="portal-nav" aria-label={`${portalLabel} menu`} onScroll={() => setTooltip(null)}>
@@ -106,7 +107,7 @@ export function PortalShell({
               <div>
                 {section.items.map(item => {
                   const content = <><span className="portal-nav-icon" aria-hidden="true">{item.icon ?? <Circle />}</span><span className="portal-nav-text">{item.label}</span></>
-                  const hints = { onMouseEnter: (event: MouseEvent<HTMLElement>) => showTooltip(event.currentTarget, item.label), onMouseLeave: () => setTooltip(null), onFocus: (event: FocusEvent<HTMLElement>) => showTooltip(event.currentTarget, item.label), onBlur: () => setTooltip(null) }
+                  const hints = { onMouseEnter: (event: MouseEvent<HTMLElement>) => showTooltip(event.currentTarget, item.label), onMouseLeave: () => setTooltip(null), onBlur: () => setTooltip(null) }
                   return item.disabled
                     ? <span key={item.href} role="link" tabIndex={0} aria-label={`${item.label}, unavailable`} aria-disabled="true" className="portal-nav-row" {...hints}>{content}</span>
                     : <a key={item.href} className="portal-nav-row" href={item.href} aria-label={item.label} aria-current={item.href === activeHref ? 'page' : undefined} onClick={event => follow(event, item.href)} {...hints}>{content}</a>
@@ -115,14 +116,14 @@ export function PortalShell({
             </section>)}
           </nav>
           <div className="portal-sidebar-footer">
-            <a className="portal-footer-account" href={isAdmin ? '/workspace#Profile' : '/settings#Profile'} aria-label={`Account profile: ${footerName}${footerStatus ? `, ${footerStatus}` : ''}`} onClick={event => follow(event, isAdmin ? '/workspace#Profile' : '/settings#Profile')} onMouseEnter={event => showTooltip(event.currentTarget, footerName)} onMouseLeave={() => setTooltip(null)} onFocus={event => showTooltip(event.currentTarget, footerName)} onBlur={() => setTooltip(null)}>
+            <a className="portal-footer-account" href={isAdmin ? '/workspace#Profile' : '/settings#Profile'} aria-label={`Account profile: ${footerName}${footerStatus ? `, ${footerStatus}` : ''}`} onClick={event => follow(event, isAdmin ? '/workspace#Profile' : '/settings#Profile')} onMouseEnter={event => showTooltip(event.currentTarget, footerName)} onMouseLeave={() => setTooltip(null)} onBlur={() => setTooltip(null)}>
               <span className="portal-footer-avatar" aria-hidden="true">{accountAvatarUrl && !avatarFailed ? <img src={accountAvatarUrl} alt="" onError={() => setAvatarFailed(true)} /> : initials || '…'}</span>
-              <span className="portal-footer-details"><span className="portal-footer-name" title={footerName}>{footerName}</span>{footerStatus && <span className="portal-footer-status" title={footerStatus}>{footerStatus}</span>}</span>
+              <span className="portal-footer-details"><span className="portal-footer-name">{footerName}</span>{footerStatus && <span className="portal-footer-status">{footerStatus}</span>}</span>
             </a>
           </div>
         </div>
       </aside>
-      {tooltip && <span className="portal-nav-tooltip" role="tooltip" style={{ top: tooltip.top, left: tooltip.left }}>{tooltip.label}</span>}
+      {collapsed && tooltip && <span className="portal-nav-tooltip" role="tooltip" style={{ top: tooltip.top, left: tooltip.left }}>{tooltip.label}</span>}
       <div className="portal-workspace min-w-0" inert={navigationOpen}>
         <header className="sticky top-0 z-30 flex min-h-16 items-center justify-between gap-4 border-b border-border-default bg-surface-primary px-4 sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center gap-3">
