@@ -1,4 +1,5 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
+import { ConfirmDialog } from './confirm-dialog'
 import { Button } from './button'
 import { Field } from './field'
 import { ImagePlus, Upload, Trash2 } from 'lucide-react'
@@ -7,6 +8,8 @@ export type DeliveryVehicleDraft = {
   key: string; id?: string; category: string; type: string; customType: string; name: string; brand: string;
   count: string; weight: string; mixer: string; length: string; width: string; height: string; heavy: string;
   baseFee: string; perKm: string; imageId: string; active: boolean
+  /** Operational fleet fields: per-vehicle service limit, temporary availability, removal and optimistic version. */
+  maxDistance: string; available: boolean; removed: boolean; lockVersion?: number
 }
 type Option = { value: string; label: string; description: string }
 export const vehicleCategories: Option[] = [
@@ -76,26 +79,42 @@ function VehicleImage({ vehicle, upload, resolve, onChange, onPending }: { onPen
   </div>
 }
 
-export function DeliveryVehicles({ vehicles, onChange, uploadImage, resolveImage, onImagePending, errors = {} }: {
+export function DeliveryVehicles({ vehicles, onChange, uploadImage, resolveImage, onImagePending, errors = {}, operational = false, notices = {}, disabled = false }: {
   onImagePending?: (key: string, pending: boolean) => void;
   errors?: Record<string, Record<string, string>>;
   vehicles: DeliveryVehicleDraft[]; onChange: (vehicles: DeliveryVehicleDraft[]) => void;
   uploadImage: (file: File) => Promise<string>; resolveImage: (id: string) => Promise<string>; coverageKm: number
+  /** Operational fleet mode adds the per-vehicle distance limit, enabled/availability state and confirmed removal. */
+  operational?: boolean; notices?: Record<string, ReactNode>; disabled?: boolean
 }) {
   const currentVehicles = useRef(vehicles)
   currentVehicles.current = vehicles
+  const [pendingRemoval, setPendingRemoval] = useState<DeliveryVehicleDraft | null>(null)
   function update(key: string, change: Partial<DeliveryVehicleDraft>) { onChange(currentVehicles.current.map(vehicle => vehicle.key === key ? { ...vehicle, ...change } : vehicle)) }
+  function remove(vehicle: DeliveryVehicleDraft) {
+    if (operational && vehicle.id) { setPendingRemoval(vehicle); return }
+    onChange(vehicle.id ? currentVehicles.current.map(row => row.key === vehicle.key ? { ...row, active: false } : row) : currentVehicles.current.filter(row => row.key !== vehicle.key))
+  }
+  const visible = vehicles.filter(vehicle => operational ? !vehicle.removed : vehicle.active)
   return <section aria-label="Delivery Configuration" className="rounded-surface border border-border-default bg-surface-primary p-5 sm:p-7">
     <h3 className="text-xl font-semibold">Delivery Configuration</h3>
-    <p className="mt-2 max-w-3xl text-sm leading-6 text-text-secondary">Configure the vehicles your store operates or legitimately controls. At least one eligible vehicle is required for Vendor Delivery before Store Activation.</p>
-    <div className="mt-6 grid min-w-0 grid-cols-1 gap-8">{vehicles.filter(vehicle => vehicle.active).map((vehicle, index) => {
+    <p className="mt-2 max-w-3xl text-sm leading-6 text-text-secondary">{operational ? 'Vehicles your store operates or legitimately controls. Changes apply to future delivery proposals only; accepted orders keep the vehicle, rate and address they were confirmed with.' : 'Configure the vehicles your store operates or legitimately controls. At least one eligible vehicle is required for Vendor Delivery before Store Activation.'}</p>
+    <ConfirmDialog open={pendingRemoval !== null} title="Remove this vehicle?" confirmLabel="Remove vehicle" onCancel={() => setPendingRemoval(null)} onConfirm={() => { if (pendingRemoval) update(pendingRemoval.key, { removed: true }); setPendingRemoval(null) }}>
+      <p>“{pendingRemoval?.name || 'This vehicle'}” will no longer be offered for future deliveries after you save. Accepted orders keep their confirmed vehicle. To stop using it for a while instead, turn off “Available now”.</p>
+    </ConfirmDialog>
+    <div className="mt-6 grid min-w-0 grid-cols-1 gap-8">{visible.map((vehicle, index) => {
       const issues = errors[vehicle.key] ?? {}
       const prefix = `vehicle-${vehicle.key}`
       const mixer = vehicle.type === 'CONCRETE_MIXER'
       const detail = vehicle.category && vehicle.type
-      const input = (label: string, field: keyof DeliveryVehicleDraft, type = 'text', hint?: string) => <Field label={label} error={issues[field] ?? ''} name={`${prefix}-${field}`} value={String(vehicle[field] ?? '')} onChange={event => update(vehicle.key, { [field]: event.target.value })} type={type} {...(type === 'number' ? { min: field === 'count' ? '1' : '0.0001', step: field === 'count' ? '1' : '0.0001' } : {})} hint={hint} />
+      const input = (label: string, field: keyof DeliveryVehicleDraft, type = 'text', hint?: string) => <Field label={label} error={issues[field] ?? ''} name={`${prefix}-${field}`} value={String(vehicle[field] ?? '')} onChange={event => update(vehicle.key, { [field]: event.target.value })} type={type} {...(type === 'number' ? { min: field === 'count' || field === 'maxDistance' ? '1' : '0.0001', step: field === 'count' || field === 'maxDistance' ? '1' : '0.0001' } : {})} hint={hint} />
       return <fieldset key={vehicle.key} className="min-w-0 border-t border-border-default pt-6"><legend className="sr-only">Vehicle {index + 1}{vehicle.name ? ` — ${vehicle.name}` : ''}</legend>
-        <div className="mb-6 flex items-start justify-between gap-3"><h3 className="min-w-0 break-words pt-2 text-lg font-semibold">Vehicle {index + 1}{vehicle.name ? ` — ${vehicle.name}` : ''}</h3><Button className="shrink-0 text-sm" type="button" variant="quiet" aria-label={`Remove vehicle ${index + 1}`} onClick={() => onChange(vehicle.id ? currentVehicles.current.map(row => row.key === vehicle.key ? { ...row, active: false } : row) : currentVehicles.current.filter(row => row.key !== vehicle.key))}><Trash2 size={16} aria-hidden="true" />Remove</Button></div>
+        <div className="mb-6 flex items-start justify-between gap-3"><h3 className="min-w-0 break-words pt-2 text-lg font-semibold">Vehicle {index + 1}{vehicle.name ? ` — ${vehicle.name}` : ''}</h3><Button className="shrink-0 text-sm" type="button" variant="quiet" disabled={disabled} aria-label={`Remove vehicle ${index + 1}`} onClick={() => remove(vehicle)}><Trash2 size={16} aria-hidden="true" />Remove</Button></div>
+        {notices[vehicle.key] && <div className="mb-6">{notices[vehicle.key]}</div>}
+        {operational && <fieldset className="mb-6 grid min-w-0 gap-2 sm:grid-cols-2"><legend className="mb-2 text-sm font-semibold">Service status</legend>
+          <label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" className="h-5 w-5 accent-action-primary" checked={vehicle.active} disabled={disabled} onChange={event => update(vehicle.key, { active: event.target.checked })} />Enabled for future deliveries</label>
+          <label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" className="h-5 w-5 accent-action-primary" checked={vehicle.available} disabled={disabled} onChange={event => update(vehicle.key, { available: event.target.checked })} />Available now</label>
+        </fieldset>}
         <div className="grid min-w-0 grid-cols-1 items-start gap-6 md:grid-cols-2 md:gap-8">
           <div className="grid min-w-0 grid-cols-1 gap-5">
             <Select id={`${prefix}-category`} label="Vehicle Category" error={issues.category} value={vehicle.category} options={vehicleCategories} onChange={category => update(vehicle.key, { category, type: category === 'MOTORCYCLE' ? 'MOTORCYCLE' : '', customType: '', mixer: '' })} />
@@ -107,16 +126,16 @@ export function DeliveryVehicles({ vehicles, onChange, uploadImage, resolveImage
         {detail && <div className="mt-8 grid min-w-0 grid-cols-1 gap-6">
           <div className="border-t border-border-default pt-5"><h4 className="font-semibold">Capacity and access</h4><div className="mt-4 grid min-w-0 grid-cols-1 gap-5 md:grid-cols-2">{input('Number of Vehicles', 'count', 'number')}{input('Maximum Weight Capacity (kg)', 'weight', 'number')}{mixer ? input('Mixer Capacity (m³)', 'mixer', 'number', 'Ready-mixed concrete volume per vehicle per trip.') : <>{input('Cargo Length (m)', 'length', 'number')}{input('Cargo Width (m)', 'width', 'number')}{input('Cargo Height (m)', 'height', 'number')}</>}
           <Select id={`${prefix}-heavy`} label="Heavy Vehicle Classification" error={issues.heavy} value={vehicle.heavy} options={[{ value: 'HEAVY', label: 'Heavy vehicle', description: 'Subject to applicable heavy-vehicle or site-access restrictions.' }, { value: 'NOT_HEAVY', label: 'Not a heavy vehicle', description: 'Normal road and site-access checks still apply.' }]} onChange={heavy => update(vehicle.key, { heavy })} /></div>{mixer && <p className="mt-3 text-sm text-text-secondary">Cargo dimensions: Not applicable. Mixer capacity is used for ready-mixed concrete delivery.</p>}</div>
-          <section aria-label={`Vehicle ${index + 1} delivery rates`} className="min-w-0 rounded-surface border border-border-default bg-surface-canvas p-4 sm:p-6"><h4 className="text-lg font-semibold">Delivery rates</h4><p className="mt-2 text-sm leading-6 text-text-secondary">Enter amounts in Philippine pesos. The final delivery charge requires Vendor confirmation of vehicles, trips and the delivery arrangement.</p><div className="mt-4 grid min-w-0 grid-cols-1 gap-5 md:grid-cols-2">{input('Base Fee (₱)', 'baseFee', 'text', 'Fixed delivery amount per applicable trip, e.g. 500.00.')}{input('Per-Kilometer Rate (₱/km)', 'perKm', 'text', 'Distance-based amount, e.g. 25.50.')}</div><DeliveryRateCalculator baseFee={vehicle.baseFee} perKm={vehicle.perKm} /></section>
+          <section aria-label={`Vehicle ${index + 1} delivery rates`} className="min-w-0 rounded-surface border border-border-default bg-surface-canvas p-4 sm:p-6"><h4 className="text-lg font-semibold">Delivery rates</h4><p className="mt-2 text-sm leading-6 text-text-secondary">Enter amounts in Philippine pesos. The final delivery charge requires Vendor confirmation of vehicles, trips and the delivery arrangement.</p><div className="mt-4 grid min-w-0 grid-cols-1 gap-5 md:grid-cols-2">{input('Base Fee (₱)', 'baseFee', 'text', 'Fixed delivery amount per applicable trip, e.g. 500.00.')}{input('Per-Kilometer Rate (₱/km)', 'perKm', 'text', 'Distance-based amount, e.g. 25.50.')}{operational && input('Maximum Delivery Distance (km)', 'maxDistance', 'number', 'Farthest drop-off this vehicle serves, 1 to 1,000 km, within your delivery area.')}</div><DeliveryRateCalculator baseFee={vehicle.baseFee} perKm={vehicle.perKm} /></section>
         </div>}
       </fieldset>
     })}</div>
-    <Button className="mt-6" type="button" variant="secondary" onClick={() => onChange([...vehicles, emptyDeliveryVehicle()])}>Add delivery vehicle</Button>
+    <Button className="mt-6" type="button" variant="secondary" disabled={disabled} onClick={() => onChange([...vehicles, emptyDeliveryVehicle()])}>Add delivery vehicle</Button>
   </section>
 }
 
 export function emptyDeliveryVehicle(): DeliveryVehicleDraft {
-  return { key: crypto.randomUUID(), category: '', type: '', customType: '', name: '', brand: '', count: '', weight: '', mixer: '', length: '', width: '', height: '', heavy: '', baseFee: '', perKm: '', imageId: '', active: true }
+  return { key: crypto.randomUUID(), category: '', type: '', customType: '', name: '', brand: '', count: '', weight: '', mixer: '', length: '', width: '', height: '', heavy: '', baseFee: '', perKm: '', imageId: '', active: true, maxDistance: '', available: true, removed: false }
 }
 
 function DeliveryRateCalculator({ baseFee, perKm }: { baseFee: string; perKm: string }) {

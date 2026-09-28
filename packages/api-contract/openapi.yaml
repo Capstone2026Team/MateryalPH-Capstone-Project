@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: MateryalPH API
-  version: 1.0.0-phase.4
+  version: 1.0.0-phase.5
   description: >-
     Versioned Phase 1–4 contract. Vendor onboarding, verification, activation readiness, private evidence, team invitations, the Vendor catalog and product PS/ICC compliance are server-authorized.
     Browser credentials are isolated by configured frontend origin using _vendor and _admin suffixes on access, refresh, CSRF, MFA and bot-proof cookies.
@@ -17,6 +17,9 @@ tags:
   - name: Admin Vendor Verification
   - name: Vendor Catalog
   - name: Admin Product Compliance
+  - name: Vendor Inventory
+  - name: Vendor Auto-Accept
+  - name: Vendor Fleet
 paths:
   /{webAccountPortal}/account/photo:
     parameters:
@@ -3288,6 +3291,256 @@ paths:
         "403": { $ref: "#/components/responses/ErrorResponse" }
         "404": { $ref: "#/components/responses/ErrorResponse" }
 
+  /vendor/inventory/items:
+    get:
+      operationId: listVendorInventoryItems
+      description: 'Vendor-only inventory ledger, one row per active variant. Exact quantities are private to authorized Vendor users (Owner, Store Manager, Store Staff, Inventory Staff; Customer Service Staff read-only). Fulfillment Staff are denied. Buyers only ever receive public_label.'
+      tags: [ Vendor Inventory ]
+      security: [ { accessCookie: [] } ]
+      parameters:
+        - { name: q, in: query, required: false, schema: { type: string, maxLength: 120 } }
+        - { name: listing_id, in: query, required: false, schema: { type: string, format: uuid } }
+        - { name: stock, in: query, required: false, schema: { $ref: "#/components/schemas/StockLabel" } }
+        - { name: confirmation, in: query, required: false, schema: { type: string, enum: [ DUE, STALE ] } }
+        - { name: page, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 1000 } }
+      responses:
+        "200": { description: "Ledger rows with summary counts and the stale-stock band.", content: { application/json: { schema: { $ref: "#/components/schemas/InventoryLedgerEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+  /vendor/inventory/items/{variantId}:
+    patch:
+      operationId: updateVendorInventoryItem
+      description: 'Inline row edit. A count or adjustment (with reason) and reorder level need inventory.manage; a quick ordinary-price change needs catalog.manage and the current price version id. One transaction appends an immutable movement and, for a price change, a new immutable price version. A stale lock_version returns 409 STALE_VERSION and a stale price version 409 PRICE_VERSION_CONFLICT, each with the current row in details.current. Physical stock never falls below hard reservations (422 STOCK_BELOW_RESERVED).'
+      tags: [ Vendor Inventory ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      parameters:
+        - { name: variantId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/InventoryRowUpdate" } } }
+      responses:
+        "200": { description: "Updated ledger row.", content: { application/json: { schema: { $ref: "#/components/schemas/InventoryRowEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /vendor/inventory/items/{variantId}/movements:
+    get:
+      operationId: listVendorInventoryMovements
+      description: Append-only movement history with actor, reason and before/after quantities, newest first.
+      tags: [ Vendor Inventory ]
+      security: [ { accessCookie: [] } ]
+      parameters:
+        - { name: variantId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: page, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 1000 } }
+      responses:
+        "200": { description: "Movement page.", content: { application/json: { schema: { $ref: "#/components/schemas/InventoryMovementListEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+  /vendor/inventory/items/{variantId}/prices:
+    get:
+      operationId: listVendorPriceHistory
+      description: 'Every immutable price version of the variant, newest first, including retired ordinary and volume-tier versions. Earlier versions are never edited in place (MAT-03).'
+      tags: [ Vendor Inventory ]
+      security: [ { accessCookie: [] } ]
+      parameters:
+        - { name: variantId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: "Price version history.", content: { application/json: { schema: { $ref: "#/components/schemas/PriceHistoryEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+  /vendor/inventory/confirmations:
+    post:
+      operationId: confirmVendorStock
+      description: 'Confirms unchanged stock counts. All rows succeed or none do; any stale lock_version returns 409 with every conflict. A listing hidden as TEMPORARILY_HIDDEN_STOCK_NOT_CONFIRMED is restored immediately when all its active variants are confirmed and no other restriction applies.'
+      tags: [ Vendor Inventory ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/StockConfirmationRequest" } } }
+      responses:
+        "200": { description: "Confirmed rows.", content: { application/json: { schema: { $ref: "#/components/schemas/InventoryRowListEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /vendor/inventory/settings:
+    get:
+      operationId: getVendorInventorySettings
+      tags: [ Vendor Inventory ]
+      security: [ { accessCookie: [] } ]
+      responses:
+        "200": { description: "Stale-stock reminder settings.", content: { application/json: { schema: { $ref: "#/components/schemas/InventorySettingsEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+    put:
+      operationId: saveVendorInventorySettings
+      description: 'Owner or Store Manager sets the Asia/Manila time for Day 7 and Day 12 reminders and whether email accompanies the in-app notice. SMS is never sent.'
+      tags: [ Vendor Inventory ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/InventorySettingsUpdate" } } }
+      responses:
+        "200": { description: "Settings saved.", content: { application/json: { schema: { $ref: "#/components/schemas/InventorySettingsEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /vendor/auto-accept/policies/{variantId}:
+    get:
+      operationId: getAutoAcceptPolicy
+      description: 'Vendor-only Item-Based auto-accept configuration with the private stock context and immutable version history. Store Staff and Customer Service Staff view outcomes only; Fulfillment Staff are denied.'
+      tags: [ Vendor Auto-Accept ]
+      security: [ { accessCookie: [] } ]
+      parameters:
+        - { name: variantId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: "Policy detail.", content: { application/json: { schema: { $ref: "#/components/schemas/AutoAcceptPolicyDetailEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+    put:
+      operationId: configureAutoAcceptPolicy
+      description: 'Owner or Store Manager enables or disables Item-Based auto-accept and sets the independent allotment, unit and amount safeguards. Disabled by default; enabling needs an ACTIVE listing, a validated price-tax classification and a whole-number allotment above zero. Reconfiguring a paused policy never resumes it. Project-Based procurement and NRPC orders are never auto-accepted.'
+      tags: [ Vendor Auto-Accept ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      parameters:
+        - { name: variantId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/AutoAcceptPolicyConfigure" } } }
+      responses:
+        "200": { description: "New immutable policy version recorded.", content: { application/json: { schema: { $ref: "#/components/schemas/AutoAcceptPolicyDetailEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /vendor/auto-accept/policies/{variantId}/allotment:
+    patch:
+      operationId: updateAutoAcceptAllotment
+      description: 'Sets the remaining allotment only (Inventory Staff grant; Owner and Store Manager also). Zero pauses an active policy and notifies permitted users. A higher allotment never resumes a paused policy.'
+      tags: [ Vendor Auto-Accept ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      parameters:
+        - { name: variantId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/AutoAcceptAllotmentUpdate" } } }
+      responses:
+        "200": { description: "Allotment saved.", content: { application/json: { schema: { $ref: "#/components/schemas/AutoAcceptPolicyDetailEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /vendor/auto-accept/policies/{variantId}/pause:
+    post:
+      operationId: pauseAutoAcceptPolicy
+      tags: [ Vendor Auto-Accept ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      parameters:
+        - { name: variantId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/AutoAcceptPause" } } }
+      responses:
+        "200": { description: "Policy paused.", content: { application/json: { schema: { $ref: "#/components/schemas/AutoAcceptPolicyDetailEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+  /vendor/auto-accept/policies/{variantId}/resume:
+    post:
+      operationId: resumeAutoAcceptPolicy
+      description: 'Deliberate Owner or Store Manager resume. confirmed_allotment_quantity must equal the remaining allotment being restored (409 AUTO_ACCEPT_ALLOTMENT_CHANGED otherwise); a zero allotment returns 422 AUTO_ACCEPT_ALLOTMENT_REQUIRED.'
+      tags: [ Vendor Auto-Accept ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      parameters:
+        - { name: variantId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/AutoAcceptResume" } } }
+      responses:
+        "200": { description: "Policy resumed.", content: { application/json: { schema: { $ref: "#/components/schemas/AutoAcceptPolicyDetailEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /vendor/fleet/vehicles:
+    get:
+      operationId: listVendorFleetVehicles
+      description: 'Owner and Store Manager receive every saved vehicle configuration with its eligibility reasons. Fulfillment Staff receive only confirmed vehicles on assigned orders (meta.scope ASSIGNED_ONLY). Other roles are denied.'
+      tags: [ Vendor Fleet ]
+      security: [ { accessCookie: [] } ]
+      responses:
+        "200": { description: "Vehicle configurations.", content: { application/json: { schema: { $ref: "#/components/schemas/FleetVehicleListEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+    put:
+      operationId: saveVendorFleetVehicles
+      description: 'Owner or Store Manager saves a repeatable vehicle row set on the same records Store Setup uses. Every per-vehicle field error returns together keyed vehicles.{index}.{field}; a saved vehicle needs its lock_version (409 STALE_VERSION when stale). Changes append immutable configuration and rate versions and affect future proposals only; accepted delivery snapshots never change.'
+      tags: [ Vendor Fleet ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/FleetVehiclesSave" } } }
+      responses:
+        "200": { description: "Saved configurations.", content: { application/json: { schema: { $ref: "#/components/schemas/FleetVehicleListEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /vendor/fleet/vehicle-images:
+    post:
+      operationId: uploadFleetVehicleImage
+      description: Stores a private, scanned and content-validated vehicle image for Owner or Store Manager.
+      tags: [ Vendor Fleet ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema: { $ref: "#/components/schemas/FleetVehicleImageUpload" }
+      responses:
+        "201": { description: "Image stored.", content: { application/json: { schema: { $ref: "#/components/schemas/FleetVehicleImageEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+        "503": { $ref: "#/components/responses/ErrorResponse" }
+  /vendor/fleet/vehicle-images/{fileId}:
+    get:
+      operationId: getFleetVehicleImageUrl
+      tags: [ Vendor Fleet ]
+      security: [ { accessCookie: [] } ]
+      parameters:
+        - { name: fileId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: "Five-minute authorized URL for a vehicle image of the caller's store.", content: { application/json: { schema: { $ref: "#/components/schemas/VendorFileEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+  /fleet-files/{fileId}/content:
+    get:
+      operationId: downloadFleetVehicleImage
+      tags: [ Vendor Fleet ]
+      security: [ { accessCookie: [] } ]
+      parameters:
+        - { name: fileId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: "Authorized signed vehicle image stream.", content: { application/octet-stream: { schema: { type: string, format: binary } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+
 components:
   securitySchemes:
     passportBearer: { type: http, scheme: bearer, bearerFormat: JWT }
@@ -4954,7 +5207,7 @@ components:
         variant_count: { type: integer }
         min_price_centavos: { type: [ integer, 'null' ], format: int64 }
         max_price_centavos: { type: [ integer, 'null' ], format: int64 }
-        public_availability: { type: string, enum: [ IN_STOCK, OUT_OF_STOCK ], description: The only availability a Buyer would see. }
+        public_availability: { type: string, enum: [ IN_STOCK, LIMITED_STOCK, OUT_OF_STOCK ], description: The only availability a Buyer would see. }
         primary_image_file_id: { type: [ string, 'null' ], format: uuid }
         deletable: { type: boolean, description: 'True when the caller may delete this never-published listing.' }
         primary_image_url: { type: [ string, 'null' ], description: 'Short-lived signed URL of the first ready product photo; expires within minutes.' }
@@ -5025,6 +5278,8 @@ components:
         quantity_on_hand: { type: string }
         hard_reserved_quantity: { type: string }
         available_to_sell: { type: string }
+        soft_held_quantity: { type: string }
+        reorder_level: { type: [ string, 'null' ] }
         confirmed_at: { type: [ string, 'null' ] }
     CatalogVariant:
       type: object
@@ -5046,7 +5301,7 @@ components:
         price: { oneOf: [ { $ref: "#/components/schemas/CatalogPrice" }, { type: 'null' } ] }
         volume_tiers: { type: array, maxItems: 5, items: { $ref: "#/components/schemas/CatalogVolumeTier" } }
         inventory: { oneOf: [ { $ref: "#/components/schemas/CatalogInventory" }, { type: 'null' } ] }
-        public_availability: { type: string, enum: [ IN_STOCK, OUT_OF_STOCK ] }
+        public_availability: { type: string, enum: [ IN_STOCK, LIMITED_STOCK, OUT_OF_STOCK ] }
         comparability: { type: string, enum: [ COMPARABLE, NOT_YET_COMPARABLE ] }
     CatalogMedia:
       type: object
@@ -5460,5 +5715,469 @@ components:
             group_id: { type: string, format: uuid }
             group_version_id: { type: string, format: uuid }
             mapped_variants: { type: integer }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    StockLabel:
+      type: string
+      description: 'The only stock vocabulary a Buyer receives. OUT_OF_STOCK when available_to_sell is zero or less; LIMITED_STOCK when available_to_sell is at or below the Vendor reorder level; IN_STOCK otherwise.'
+      enum: [ IN_STOCK, LIMITED_STOCK, OUT_OF_STOCK ]
+    StockConfirmationSchedule:
+      type: object
+      description: 'Stale-stock schedule. Exact UTC instants; clients render them in Asia/Manila beside the countdown.'
+      required: [ state, confirmed_at, first_reminder_at, final_reminder_at, hide_at, days_since_confirmation ]
+      properties:
+        state: { type: string, enum: [ CONFIRMED, REMINDER, FINAL_REMINDER, OVERDUE, NOT_CONFIRMED ] }
+        confirmed_at: { type: [ string, 'null' ], format: date-time }
+        first_reminder_at: { type: [ string, 'null' ], format: date-time, description: Day 7. }
+        final_reminder_at: { type: [ string, 'null' ], format: date-time, description: Day 12. }
+        hide_at: { type: [ string, 'null' ], format: date-time, description: Day 15. }
+        days_since_confirmation: { type: [ integer, 'null' ] }
+    InventoryBalance:
+      type: object
+      description: Vendor-only exact quantities. Never returned to Buyers or analytics.
+      required: [ quantity_on_hand, hard_reserved_quantity, soft_held_quantity, available_to_sell, reorder_level, confirmed_at ]
+      properties:
+        quantity_on_hand: { type: string, description: Physical stock (four decimals). Reduced only by fulfillment or a recorded adjustment. }
+        hard_reserved_quantity: { type: string }
+        soft_held_quantity: { type: string, description: Planning-only quotation holds; never reduce available_to_sell. }
+        available_to_sell: { type: string, description: quantity_on_hand minus hard_reserved_quantity. }
+        reorder_level: { type: [ string, 'null' ] }
+        confirmed_at: { type: [ string, 'null' ], format: date-time }
+        updated_at: { type: [ string, 'null' ] }
+    InventoryPrice:
+      type: object
+      required: [ price_version_id, version, amount_centavos, tax_category, effective_at ]
+      properties:
+        price_version_id: { type: string, format: uuid }
+        version: { type: integer }
+        amount_centavos: { type: integer, format: int64 }
+        tax_category: { $ref: "#/components/schemas/TaxCategory" }
+        effective_at: { type: [ string, 'null' ] }
+    InventoryComparability:
+      type: object
+      description: MAT-03 source version of the current comparable-group mapping.
+      required: [ status, group_version_id, rule_version ]
+      properties:
+        status: { type: string, enum: [ COMPARABLE, NOT_YET_COMPARABLE ] }
+        group_version_id: { type: [ string, 'null' ], format: uuid }
+        rule_version: { type: string }
+    AutoAcceptStatus:
+      type: string
+      enum: [ DISABLED, ACTIVE, PAUSED ]
+    AutoAcceptPolicy:
+      type: object
+      required: [ status, enabled, paused, pause_reason, paused_at, allotment_quantity, remaining_allotment_quantity, max_unit_count, max_order_amount_centavos, current_version, lock_version, updated_at ]
+      properties:
+        status: { $ref: "#/components/schemas/AutoAcceptStatus" }
+        enabled: { type: boolean }
+        paused: { type: boolean }
+        pause_reason: { type: [ string, 'null' ], enum: [ ALLOTMENT_EXHAUSTED, MANUAL, null ] }
+        paused_at: { type: [ string, 'null' ] }
+        allotment_quantity: { type: string, description: Whole-number allotment last set. }
+        remaining_allotment_quantity: { type: string, description: Whole units still available to auto-accept. }
+        max_unit_count: { type: [ string, 'null' ], description: 'Independent per-order unit safeguard; null means no unit cap.' }
+        max_order_amount_centavos: { type: [ integer, 'null' ], format: int64, description: 'Independent Buyer commercial total safeguard; null means no amount cap.' }
+        current_version: { type: integer }
+        lock_version: { type: integer }
+        updated_at: { type: [ string, 'null' ] }
+        last_editor: { type: [ string, 'null' ] }
+    InventoryRow:
+      type: object
+      required: [ listing_variant_id, listing_id, listing_name, listing_status, sku, unit_code, lock_version, inventory, public_label, stock_confirmation, listing_confirmation, price, comparability, auto_accept ]
+      properties:
+        listing_variant_id: { type: string, format: uuid }
+        listing_id: { type: string, format: uuid }
+        listing_name: { type: string }
+        listing_status: { $ref: "#/components/schemas/ListingStatus" }
+        variant_label: { type: [ string, 'null' ] }
+        sku: { type: string }
+        unit_code: { type: string }
+        lock_version: { type: integer, description: Inventory row version; 0 before the first count. }
+        inventory: { oneOf: [ { $ref: "#/components/schemas/InventoryBalance" }, { type: 'null' } ] }
+        public_label: { $ref: "#/components/schemas/StockLabel" }
+        stock_confirmation: { $ref: "#/components/schemas/StockConfirmationSchedule" }
+        listing_confirmation: { $ref: "#/components/schemas/StockConfirmationSchedule" }
+        price: { oneOf: [ { $ref: "#/components/schemas/InventoryPrice" }, { type: 'null' } ] }
+        comparability: { $ref: "#/components/schemas/InventoryComparability" }
+        auto_accept: { $ref: "#/components/schemas/AutoAcceptPolicy" }
+    StaleListing:
+      type: object
+      required: [ listing_id, listing_name, listing_status, confirmation ]
+      properties:
+        listing_id: { type: string, format: uuid }
+        listing_name: { type: string }
+        listing_status: { $ref: "#/components/schemas/ListingStatus" }
+        confirmation: { $ref: "#/components/schemas/StockConfirmationSchedule" }
+    InventoryLedgerMeta:
+      type: object
+      additionalProperties: true
+      required: [ current_page, last_page, total, page_size, summary, stale_listings, label_rule_version, timezone, permissions ]
+      properties:
+        current_page: { type: integer }
+        last_page: { type: integer }
+        total: { type: integer }
+        page_size: { type: integer }
+        summary:
+          type: object
+          required: [ variants, out_of_stock, limited_stock, confirmation_due, stale ]
+          properties:
+            variants: { type: integer }
+            out_of_stock: { type: integer }
+            limited_stock: { type: integer }
+            confirmation_due: { type: integer }
+            stale: { type: integer }
+        stale_listings:
+          type: object
+          required: [ count, items ]
+          properties:
+            count: { type: integer }
+            items: { type: array, maxItems: 5, items: { $ref: "#/components/schemas/StaleListing" } }
+        label_rule_version: { type: string }
+        timezone: { type: string, const: Asia/Manila }
+        permissions:
+          type: object
+          required: [ can_adjust, can_change_price, can_configure_auto_accept, can_update_allotment, can_view_auto_accept, can_edit_settings ]
+          properties:
+            can_adjust: { type: boolean }
+            can_change_price: { type: boolean }
+            can_configure_auto_accept: { type: boolean }
+            can_update_allotment: { type: boolean }
+            can_view_auto_accept: { type: boolean }
+            can_edit_settings: { type: boolean }
+    InventoryLedgerEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/InventoryRow" } }
+        meta: { $ref: "#/components/schemas/InventoryLedgerMeta" }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    InventoryRowEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { $ref: "#/components/schemas/InventoryRow" }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    InventoryRowListEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/InventoryRow" } }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    InventoryPriceChange:
+      type: object
+      additionalProperties: false
+      required: [ expected_price_version_id, amount_centavos ]
+      properties:
+        expected_price_version_id: { type: string, format: uuid, description: The current ordinary price version the editor started from. }
+        amount_centavos: { type: integer, format: int64, minimum: 1, maximum: 100000000000, description: 'VAT-inclusive payable amount; keeps the current tax classification and must stay above every volume tier.' }
+    InventoryRowUpdate:
+      type: object
+      additionalProperties: false
+      required: [ lock_version ]
+      properties:
+        lock_version: { type: integer, minimum: 0 }
+        quantity_on_hand: { type: [ string, 'null' ], pattern: '^\d{1,14}(\.\d{1,4})?$' }
+        reorder_level: { type: [ string, 'null' ], pattern: '^\d{1,14}(\.\d{1,4})?$', description: Null clears the reorder level. }
+        reason_code: { type: string, enum: [ COUNT, RECEIVED, RETURNED, DAMAGED, LOST, CORRECTION ], default: COUNT }
+        note: { type: [ string, 'null' ], maxLength: 500 }
+        price: { $ref: "#/components/schemas/InventoryPriceChange" }
+    InventoryMovement:
+      type: object
+      required: [ id, movement_type, quantity_delta, quantity_on_hand_before, quantity_on_hand_after, hard_reserved_after, reason_code, note, source_type, actor, recorded_at ]
+      properties:
+        id: { type: string, format: uuid }
+        movement_type: { type: string, enum: [ INITIAL_COUNT, COUNT_ADJUSTMENT, RECEIVED, DAMAGED, LOST, RETURNED, CORRECTION, HARD_RESERVE, HARD_RELEASE, SOFT_HOLD, SOFT_RELEASE, FULFILLED ] }
+        quantity_delta: { type: string }
+        quantity_on_hand_before: { type: [ string, 'null' ] }
+        quantity_on_hand_after: { type: string }
+        hard_reserved_after: { type: [ string, 'null' ] }
+        reason_code: { type: [ string, 'null' ] }
+        note: { type: [ string, 'null' ] }
+        source_type: { type: string }
+        actor: { type: string, description: 'Public display name of the Vendor user, System or Auto-accept policy.' }
+        recorded_at: { type: string }
+    InventoryMovementListEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/InventoryMovement" } }
+        meta: { $ref: "#/components/schemas/PageMeta" }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    PageMeta:
+      type: object
+      additionalProperties: true
+      required: [ current_page, last_page, total ]
+      properties:
+        current_page: { type: integer }
+        last_page: { type: integer }
+        total: { type: integer }
+    PriceHistoryEntry:
+      type: object
+      required: [ price_version_id, version, price_kind, amount_centavos, tax_category, minimum_quantity, included_vat_centavos, effective_at, retired_at, supersedes_price_version_id, current ]
+      properties:
+        price_version_id: { type: string, format: uuid }
+        version: { type: integer }
+        price_kind: { type: string, enum: [ ORDINARY, PROMOTIONAL, VOLUME_TIER, NEGOTIATED ] }
+        amount_centavos: { type: integer, format: int64 }
+        tax_category: { $ref: "#/components/schemas/TaxCategory" }
+        minimum_quantity: { type: [ string, 'null' ] }
+        included_vat_centavos: { type: integer, format: int64 }
+        effective_at: { type: [ string, 'null' ] }
+        retired_at: { type: [ string, 'null' ] }
+        supersedes_price_version_id: { type: [ string, 'null' ], format: uuid }
+        current: { type: boolean }
+        created_by: { type: [ string, 'null' ] }
+    PriceHistoryEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { type: array, maxItems: 50, items: { $ref: "#/components/schemas/PriceHistoryEntry" } }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    StockConfirmationItem:
+      type: object
+      additionalProperties: false
+      required: [ listing_variant_id, lock_version ]
+      properties:
+        listing_variant_id: { type: string, format: uuid }
+        lock_version: { type: integer, minimum: 1 }
+    StockConfirmationRequest:
+      type: object
+      additionalProperties: false
+      required: [ items ]
+      properties:
+        items: { type: array, minItems: 1, maxItems: 100, items: { $ref: "#/components/schemas/StockConfirmationItem" } }
+    InventorySettings:
+      type: object
+      required: [ reminder_local_time, email_reminders, in_app_reminders, timezone, reminder_days, hide_after_days, lock_version, can_edit ]
+      properties:
+        reminder_local_time: { type: string, pattern: '^\d{2}:\d{2}$' }
+        email_reminders: { type: boolean }
+        in_app_reminders: { type: boolean, const: true }
+        timezone: { type: string, const: Asia/Manila }
+        reminder_days: { type: array, items: { type: integer } }
+        hide_after_days: { type: integer }
+        lock_version: { type: integer }
+        can_edit: { type: boolean }
+    InventorySettingsEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { $ref: "#/components/schemas/InventorySettings" }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    InventorySettingsUpdate:
+      type: object
+      additionalProperties: false
+      required: [ lock_version, reminder_local_time, email_reminders ]
+      properties:
+        lock_version: { type: integer, minimum: 0 }
+        reminder_local_time: { type: string, pattern: '^\d{2}:\d{2}$' }
+        email_reminders: { type: boolean }
+    AutoAcceptPolicyVersion:
+      type: object
+      required: [ version, change_kind, enabled, paused, pause_reason, allotment_quantity, remaining_allotment_quantity, max_unit_count, max_order_amount_centavos, created_at, automated, actor ]
+      properties:
+        version: { type: integer }
+        change_kind: { type: string, enum: [ CONFIGURED, ALLOTMENT_UPDATED, PAUSED, RESUMED, EXHAUSTED, DISABLED ] }
+        enabled: { type: boolean }
+        paused: { type: boolean }
+        pause_reason: { type: [ string, 'null' ] }
+        allotment_quantity: { type: string }
+        remaining_allotment_quantity: { type: string }
+        max_unit_count: { type: [ string, 'null' ] }
+        max_order_amount_centavos: { type: [ integer, 'null' ], format: int64 }
+        created_at: { type: [ string, 'null' ] }
+        automated: { type: boolean }
+        actor: { type: string }
+    AutoAcceptPolicyDetail:
+      type: object
+      required: [ listing_variant_id, listing_id, listing_name, listing_status, sku, unit_code, stock, policy, versions, scope, permissions ]
+      properties:
+        listing_variant_id: { type: string, format: uuid }
+        listing_id: { type: string, format: uuid }
+        listing_name: { type: string }
+        listing_status: { $ref: "#/components/schemas/ListingStatus" }
+        variant_label: { type: [ string, 'null' ] }
+        sku: { type: string }
+        unit_code: { type: string }
+        stock:
+          oneOf:
+            - type: 'null'
+            - type: object
+              required: [ quantity_on_hand, hard_reserved_quantity, soft_held_quantity, available_to_sell ]
+              properties:
+                quantity_on_hand: { type: string }
+                hard_reserved_quantity: { type: string }
+                soft_held_quantity: { type: string }
+                available_to_sell: { type: string }
+        policy: { $ref: "#/components/schemas/AutoAcceptPolicy" }
+        versions: { type: array, maxItems: 20, items: { $ref: "#/components/schemas/AutoAcceptPolicyVersion" } }
+        scope:
+          type: object
+          required: [ item_based_only, nrpc_excluded, project_based_excluded, rule_version ]
+          properties:
+            item_based_only: { type: boolean, const: true }
+            nrpc_excluded: { type: boolean, const: true }
+            project_based_excluded: { type: boolean, const: true }
+            rule_version: { type: string }
+        permissions:
+          type: object
+          required: [ can_configure, can_update_allotment ]
+          properties:
+            can_configure: { type: boolean }
+            can_update_allotment: { type: boolean }
+    AutoAcceptPolicyDetailEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { $ref: "#/components/schemas/AutoAcceptPolicyDetail" }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    AutoAcceptPolicyConfigure:
+      type: object
+      additionalProperties: false
+      required: [ lock_version, enabled, allotment_quantity ]
+      properties:
+        lock_version: { type: integer, minimum: 0, description: 0 when no policy exists yet. }
+        enabled: { type: boolean }
+        allotment_quantity: { type: string, pattern: '^\d{1,14}$', description: 'Whole-number remaining allotment; above zero to enable.' }
+        max_unit_count: { type: [ string, 'null' ], pattern: '^\d{1,14}(\.\d{1,4})?$' }
+        max_order_amount_centavos: { type: [ integer, 'null' ], format: int64, minimum: 1, maximum: 100000000000 }
+    AutoAcceptAllotmentUpdate:
+      type: object
+      additionalProperties: false
+      required: [ lock_version, allotment_quantity ]
+      properties:
+        lock_version: { type: integer, minimum: 0 }
+        allotment_quantity: { type: string, pattern: '^\d{1,14}$' }
+    AutoAcceptPause:
+      type: object
+      additionalProperties: false
+      required: [ lock_version ]
+      properties:
+        lock_version: { type: integer, minimum: 1 }
+    AutoAcceptResume:
+      type: object
+      additionalProperties: false
+      required: [ lock_version, confirmed_allotment_quantity ]
+      properties:
+        lock_version: { type: integer, minimum: 1 }
+        confirmed_allotment_quantity: { type: string, pattern: '^\d{1,14}$', description: The remaining allotment named in the resume confirmation. }
+    FleetVehicleEligibility:
+      type: object
+      required: [ eligible, reasons ]
+      properties:
+        eligible: { type: boolean }
+        reasons: { type: array, items: { type: string, enum: [ DELIVERY_NOT_ENABLED, VEHICLE_DISABLED, VEHICLE_UNAVAILABLE, VEHICLE_INCOMPLETE, IMAGE_MISSING, RATE_MISSING ] } }
+    FleetVehicle:
+      type: object
+      required: [ id, lock_version, configuration_version, vehicle_category, vehicle_type, name, number_available, capacity_kg, heavy_classification, active, available, eligibility ]
+      properties:
+        id: { type: string, format: uuid }
+        lock_version: { type: integer }
+        configuration_version: { type: integer }
+        vehicle_category: { type: [ string, 'null' ], enum: [ MOTORCYCLE, PICKUP, VAN, TRUCK, null ] }
+        vehicle_type: { type: string }
+        custom_type_name: { type: [ string, 'null' ] }
+        name: { type: string }
+        brand: { type: [ string, 'null' ] }
+        image_file_id: { type: [ string, 'null' ], format: uuid }
+        number_available: { type: integer }
+        capacity_kg: { type: number }
+        cargo_length_m: { type: [ number, 'null' ] }
+        cargo_width_m: { type: [ number, 'null' ] }
+        cargo_height_m: { type: [ number, 'null' ] }
+        mixer_capacity_m3: { type: [ number, 'null' ] }
+        heavy_classification: { type: [ string, 'null' ], enum: [ HEAVY, NOT_HEAVY, null ] }
+        active: { type: boolean, description: Enabled for future proposals. }
+        available: { type: boolean, description: Temporarily available or unavailable. }
+        rate_version: { type: [ integer, 'null' ] }
+        base_fee_centavos: { type: [ integer, 'null' ], format: int64 }
+        per_km_centavos: { type: [ integer, 'null' ], format: int64 }
+        maximum_distance_km: { type: [ integer, 'null' ] }
+        eligibility: { $ref: "#/components/schemas/FleetVehicleEligibility" }
+        updated_at: { type: [ string, 'null' ] }
+    FleetVehicleListMeta:
+      type: object
+      additionalProperties: true
+      required: [ scope, permissions ]
+      properties:
+        scope: { type: string, enum: [ ORGANIZATION, ASSIGNED_ONLY ] }
+        delivery:
+          oneOf:
+            - type: 'null'
+            - type: object
+              required: [ fulfillment_method, delivery_enabled, service_radius_km ]
+              properties:
+                fulfillment_method: { type: [ string, 'null' ] }
+                delivery_enabled: { type: boolean }
+                service_radius_km: { type: [ integer, 'null' ] }
+        permissions:
+          type: object
+          required: [ can_manage ]
+          properties:
+            can_manage: { type: boolean }
+        limits:
+          type: object
+          properties:
+            max_vehicles: { type: integer }
+    FleetVehicleListEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { type: array, maxItems: 50, items: { $ref: "#/components/schemas/FleetVehicle" } }
+        meta: { $ref: "#/components/schemas/FleetVehicleListMeta" }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    FleetVehicleInput:
+      type: object
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid, description: Omit for a new configuration. }
+        lock_version: { type: integer, minimum: 0, description: Required with id. }
+        removed: { type: boolean, description: 'True removes a saved configuration from future use; its versions and accepted snapshots are kept.' }
+        vehicle_category: { type: [ string, 'null' ], enum: [ MOTORCYCLE, PICKUP, VAN, TRUCK, null ] }
+        vehicle_type: { type: [ string, 'null' ], maxLength: 32 }
+        custom_type_name: { type: [ string, 'null' ], maxLength: 120 }
+        name: { type: [ string, 'null' ], maxLength: 120 }
+        brand: { type: [ string, 'null' ], maxLength: 120 }
+        image_file_id: { type: [ string, 'null' ], format: uuid }
+        number_available: { type: integer, minimum: 1, maximum: 1000 }
+        capacity_kg: { type: number, exclusiveMinimum: 0, description: Payload in kilograms, not gross vehicle weight. }
+        cargo_length_m: { type: [ number, 'null' ], exclusiveMinimum: 0 }
+        cargo_width_m: { type: [ number, 'null' ], exclusiveMinimum: 0 }
+        cargo_height_m: { type: [ number, 'null' ], exclusiveMinimum: 0 }
+        mixer_capacity_m3: { type: [ number, 'null' ], exclusiveMinimum: 0, description: Required for a Concrete Mixer Truck / Transit Mixer; cargo dimensions are then not applicable. }
+        heavy_classification: { type: [ string, 'null' ], enum: [ HEAVY, NOT_HEAVY, null ] }
+        active: { type: boolean }
+        available: { type: boolean }
+        base_fee_centavos: { type: integer, format: int64, minimum: 0 }
+        per_km_centavos: { type: integer, format: int64, minimum: 0 }
+        maximum_distance_km: { type: integer, minimum: 1, maximum: 1000 }
+    FleetVehiclesSave:
+      type: object
+      additionalProperties: false
+      required: [ vehicles ]
+      properties:
+        vehicles: { type: array, minItems: 1, maxItems: 50, items: { $ref: "#/components/schemas/FleetVehicleInput" } }
+    FleetVehicleImageUpload:
+      type: object
+      required: [ file ]
+      properties:
+        file: { type: string, format: binary, description: JPG, PNG or WebP. }
+    FleetVehicleImageEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data:
+          type: object
+          required: [ file_id, status, url, expires_at ]
+          properties:
+            file_id: { type: string, format: uuid }
+            status: { type: string, const: READY }
+            url: { type: string, format: uri }
+            expires_at: { type: string, format: date-time }
         meta: { type: object, additionalProperties: true }
         errors: { type: array, items: { type: object, additionalProperties: true } }

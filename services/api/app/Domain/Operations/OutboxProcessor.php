@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Domain\Operations;
 
+use App\Domain\Catalog\EligibilityInvalidation;
+use App\Domain\Catalog\EligibleOfferQuery;
 use App\Mail\AccountSecurityMail;
 use App\Mail\AdminInvitationMail;
 use App\Mail\EmailOtpMail;
 use App\Mail\ProductComplianceNoticeMail;
+use App\Mail\VendorInventoryNoticeMail;
 use App\Mail\VendorInvitationMail;
 use App\Mail\VendorOnboardingNoticeMail;
 use Illuminate\Support\Facades\Cache;
@@ -57,6 +60,11 @@ final class OutboxProcessor
     /** @param array<string, mixed> $payload */
     private function deliver(string $eventType, array $payload): void
     {
+        if ($eventType === EligibilityInvalidation::EVENT) {
+            EligibleOfferQuery::invalidate();
+
+            return;
+        }
         $recipient = $payload['recipient'] ?? null;
         if (! is_string($recipient)) {
             throw new RuntimeException('The outbox email recipient is invalid.');
@@ -81,6 +89,10 @@ final class OutboxProcessor
                 $this->requiredString($payload, 'message'),
             )),
             'PRODUCT_COMPLIANCE_NOTICE' => Mail::to($recipient)->send(new ProductComplianceNoticeMail(
+                $this->requiredString($payload, 'message'),
+            )),
+            'VENDOR_INVENTORY_NOTICE' => Mail::to($recipient)->send(new VendorInventoryNoticeMail(
+                $this->requiredString($payload, 'subject'),
                 $this->requiredString($payload, 'message'),
             )),
             default => throw new RuntimeException('Unsupported outbox event type.'),

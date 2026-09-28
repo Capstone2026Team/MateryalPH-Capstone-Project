@@ -22,6 +22,16 @@ void main() {
       // TODO
     });
 
+    // String softHeldQuantity
+    test('to test the property `softHeldQuantity`', () async {
+      // TODO
+    });
+
+    // String reorderLevel
+    test('to test the property `reorderLevel`', () async {
+      // TODO
+    });
+
     // String confirmedAt
     test('to test the property `confirmedAt`', () async {
       // TODO

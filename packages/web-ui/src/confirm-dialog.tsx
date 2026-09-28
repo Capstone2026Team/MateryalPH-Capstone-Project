@@ -5,8 +5,8 @@ import { Button } from './button'
  * Modal confirmation for an irreversible action. Focus starts on Cancel, Escape cancels,
  * and the confirm button names the exact action.
  */
-export function ConfirmDialog({ open, title, children, confirmLabel, busy = false, onConfirm, onCancel }: {
-  open: boolean; title: string; children: ReactNode; confirmLabel: string; busy?: boolean; onConfirm: () => void; onCancel: () => void
+export function ConfirmDialog({ open, title, children, confirmLabel, busy = false, onConfirm, onCancel, tone = 'danger' }: {
+  open: boolean; title: string; children: ReactNode; confirmLabel: string; busy?: boolean; onConfirm: () => void; onCancel: () => void; tone?: 'danger' | 'primary'
 }) {
   const dialog = useRef<HTMLDialogElement>(null)
   const titleId = useId()
@@ -22,7 +22,7 @@ export function ConfirmDialog({ open, title, children, confirmLabel, busy = fals
       <div className="mt-2 text-sm text-text-secondary">{children}</div>
       <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
         <Button variant="secondary" autoFocus disabled={busy} onClick={onCancel}>Cancel</Button>
-        <Button variant="danger" disabled={busy} onClick={onConfirm}>{busy ? 'Working…' : confirmLabel}</Button>
+        <Button variant={tone} disabled={busy} onClick={onConfirm}>{busy ? 'Working…' : confirmLabel}</Button>
       </div>
     </>}
   </dialog>

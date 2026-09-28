@@ -10,7 +10,8 @@
     "generate": "node scripts/generate-clients.mjs",
     "test:account-contract": "node scripts/check-account-contract.mjs",
     "test:vendor-contract": "node scripts/check-vendor-onboarding-contract.mjs",
-    "test:catalog-contract": "node scripts/check-catalog-contract.mjs"
+    "test:catalog-contract": "node scripts/check-catalog-contract.mjs",
+    "test:inventory-contract": "node scripts/check-inventory-contract.mjs"
   },
   "devDependencies": {
     "@openapitools/openapi-generator-cli": "^2.41.0",

@@ -1,4 +1,4 @@
-# @materyalph/api-client-ts@1.0.0-phase.4
+# @materyalph/api-client-ts@1.0.0-phase.5
 
 A TypeScript SDK client for the localhost API.
 
@@ -140,6 +140,11 @@ All URIs are relative to */api/v1*
 *StoresApi* | [**getPublicStoreProfile**](docs/StoresApi.md#getpublicstoreprofile) | **GET** /stores/{storeId}/profile |
 *StoresApi* | [**listPublicStores**](docs/StoresApi.md#listpublicstores) | **GET** /stores |
 *SystemApi* | [**getApiHealth**](docs/SystemApi.md#getapihealth) | **GET** /health |
+*VendorAutoAcceptApi* | [**configureAutoAcceptPolicy**](docs/VendorAutoAcceptApi.md#configureautoacceptpolicy) | **PUT** /vendor/auto-accept/policies/{variantId} |
+*VendorAutoAcceptApi* | [**getAutoAcceptPolicy**](docs/VendorAutoAcceptApi.md#getautoacceptpolicy) | **GET** /vendor/auto-accept/policies/{variantId} |
+*VendorAutoAcceptApi* | [**pauseAutoAcceptPolicy**](docs/VendorAutoAcceptApi.md#pauseautoacceptpolicy) | **POST** /vendor/auto-accept/policies/{variantId}/pause |
+*VendorAutoAcceptApi* | [**resumeAutoAcceptPolicy**](docs/VendorAutoAcceptApi.md#resumeautoacceptpolicy) | **POST** /vendor/auto-accept/policies/{variantId}/resume |
+*VendorAutoAcceptApi* | [**updateAutoAcceptAllotment**](docs/VendorAutoAcceptApi.md#updateautoacceptallotment) | **PATCH** /vendor/auto-accept/policies/{variantId}/allotment |
 *VendorCatalogApi* | [**applyCatalogImport**](docs/VendorCatalogApi.md#applycatalogimport) | **POST** /vendor/catalog/imports/{jobId}/apply |
 *VendorCatalogApi* | [**createVendorCatalogListing**](docs/VendorCatalogApi.md#createvendorcataloglisting) | **POST** /vendor/catalog/listings |
 *VendorCatalogApi* | [**deactivateVendorCatalogListing**](docs/VendorCatalogApi.md#deactivatevendorcataloglisting) | **POST** /vendor/catalog/listings/{listingId}/deactivate |
@@ -161,6 +166,18 @@ All URIs are relative to */api/v1*
 *VendorCatalogApi* | [**uploadCatalogImport**](docs/VendorCatalogApi.md#uploadcatalogimport) | **POST** /vendor/catalog/imports |
 *VendorCatalogApi* | [**uploadListingComplianceEvidence**](docs/VendorCatalogApi.md#uploadlistingcomplianceevidence) | **POST** /vendor/catalog/listings/{listingId}/compliance/evidence |
 *VendorCatalogApi* | [**uploadVendorListingMedia**](docs/VendorCatalogApi.md#uploadvendorlistingmedia) | **POST** /vendor/catalog/listings/{listingId}/media |
+*VendorFleetApi* | [**downloadFleetVehicleImage**](docs/VendorFleetApi.md#downloadfleetvehicleimage) | **GET** /fleet-files/{fileId}/content |
+*VendorFleetApi* | [**getFleetVehicleImageUrl**](docs/VendorFleetApi.md#getfleetvehicleimageurl) | **GET** /vendor/fleet/vehicle-images/{fileId} |
+*VendorFleetApi* | [**listVendorFleetVehicles**](docs/VendorFleetApi.md#listvendorfleetvehicles) | **GET** /vendor/fleet/vehicles |
+*VendorFleetApi* | [**saveVendorFleetVehicles**](docs/VendorFleetApi.md#savevendorfleetvehicles) | **PUT** /vendor/fleet/vehicles |
+*VendorFleetApi* | [**uploadFleetVehicleImage**](docs/VendorFleetApi.md#uploadfleetvehicleimage) | **POST** /vendor/fleet/vehicle-images |
+*VendorInventoryApi* | [**confirmVendorStock**](docs/VendorInventoryApi.md#confirmvendorstock) | **POST** /vendor/inventory/confirmations |
+*VendorInventoryApi* | [**getVendorInventorySettings**](docs/VendorInventoryApi.md#getvendorinventorysettings) | **GET** /vendor/inventory/settings |
+*VendorInventoryApi* | [**listVendorInventoryItems**](docs/VendorInventoryApi.md#listvendorinventoryitems) | **GET** /vendor/inventory/items |
+*VendorInventoryApi* | [**listVendorInventoryMovements**](docs/VendorInventoryApi.md#listvendorinventorymovements) | **GET** /vendor/inventory/items/{variantId}/movements |
+*VendorInventoryApi* | [**listVendorPriceHistory**](docs/VendorInventoryApi.md#listvendorpricehistory) | **GET** /vendor/inventory/items/{variantId}/prices |
+*VendorInventoryApi* | [**saveVendorInventorySettings**](docs/VendorInventoryApi.md#savevendorinventorysettings) | **PUT** /vendor/inventory/settings |
+*VendorInventoryApi* | [**updateVendorInventoryItem**](docs/VendorInventoryApi.md#updatevendorinventoryitem) | **PATCH** /vendor/inventory/items/{variantId} |
 *VendorOnboardingApi* | [**acceptVendorCommission**](docs/VendorOnboardingApi.md#acceptvendorcommission) | **POST** /vendors/onboarding/verification/commission |
 *VendorOnboardingApi* | [**activateVendorStore**](docs/VendorOnboardingApi.md#activatevendorstore) | **POST** /vendors/onboarding/activation |
 *VendorOnboardingApi* | [**changeVendorStaffDisputes**](docs/VendorOnboardingApi.md#changevendorstaffdisputes) | **PATCH** /vendors/account/staff-disputes |
@@ -241,6 +258,18 @@ All URIs are relative to */api/v1*
 - [ApiError](docs/ApiError.md)
 - [AuthEnvelope](docs/AuthEnvelope.md)
 - [AuthEnvelopeAllOfData](docs/AuthEnvelopeAllOfData.md)
+- [AutoAcceptAllotmentUpdate](docs/AutoAcceptAllotmentUpdate.md)
+- [AutoAcceptPause](docs/AutoAcceptPause.md)
+- [AutoAcceptPolicy](docs/AutoAcceptPolicy.md)
+- [AutoAcceptPolicyConfigure](docs/AutoAcceptPolicyConfigure.md)
+- [AutoAcceptPolicyDetail](docs/AutoAcceptPolicyDetail.md)
+- [AutoAcceptPolicyDetailEnvelope](docs/AutoAcceptPolicyDetailEnvelope.md)
+- [AutoAcceptPolicyDetailPermissions](docs/AutoAcceptPolicyDetailPermissions.md)
+- [AutoAcceptPolicyDetailScope](docs/AutoAcceptPolicyDetailScope.md)
+- [AutoAcceptPolicyDetailStock](docs/AutoAcceptPolicyDetailStock.md)
+- [AutoAcceptPolicyVersion](docs/AutoAcceptPolicyVersion.md)
+- [AutoAcceptResume](docs/AutoAcceptResume.md)
+- [AutoAcceptStatus](docs/AutoAcceptStatus.md)
 - [BotProofEnvelope](docs/BotProofEnvelope.md)
 - [BotProofEnvelopeAllOfData](docs/BotProofEnvelopeAllOfData.md)
 - [BotStepUpErrorEnvelope](docs/BotStepUpErrorEnvelope.md)
@@ -310,11 +339,40 @@ All URIs are relative to */api/v1*
 - [ErrorEnvelope](docs/ErrorEnvelope.md)
 - [FeeAssessment](docs/FeeAssessment.md)
 - [FinancialSnapshot](docs/FinancialSnapshot.md)
+- [FleetVehicle](docs/FleetVehicle.md)
+- [FleetVehicleEligibility](docs/FleetVehicleEligibility.md)
+- [FleetVehicleImageEnvelope](docs/FleetVehicleImageEnvelope.md)
+- [FleetVehicleImageEnvelopeData](docs/FleetVehicleImageEnvelopeData.md)
+- [FleetVehicleInput](docs/FleetVehicleInput.md)
+- [FleetVehicleListEnvelope](docs/FleetVehicleListEnvelope.md)
+- [FleetVehicleListMeta](docs/FleetVehicleListMeta.md)
+- [FleetVehicleListMetaDelivery](docs/FleetVehicleListMetaDelivery.md)
+- [FleetVehicleListMetaLimits](docs/FleetVehicleListMetaLimits.md)
+- [FleetVehicleListMetaPermissions](docs/FleetVehicleListMetaPermissions.md)
+- [FleetVehiclesSave](docs/FleetVehiclesSave.md)
 - [GenericDataEnvelope](docs/GenericDataEnvelope.md)
 - [GoogleMobileExchangeRequest](docs/GoogleMobileExchangeRequest.md)
 - [GoogleOidcStartRequest](docs/GoogleOidcStartRequest.md)
 - [HealthEnvelope](docs/HealthEnvelope.md)
 - [HealthEnvelopeAllOfData](docs/HealthEnvelopeAllOfData.md)
+- [InventoryBalance](docs/InventoryBalance.md)
+- [InventoryComparability](docs/InventoryComparability.md)
+- [InventoryLedgerEnvelope](docs/InventoryLedgerEnvelope.md)
+- [InventoryLedgerMeta](docs/InventoryLedgerMeta.md)
+- [InventoryLedgerMetaPermissions](docs/InventoryLedgerMetaPermissions.md)
+- [InventoryLedgerMetaStaleListings](docs/InventoryLedgerMetaStaleListings.md)
+- [InventoryLedgerMetaSummary](docs/InventoryLedgerMetaSummary.md)
+- [InventoryMovement](docs/InventoryMovement.md)
+- [InventoryMovementListEnvelope](docs/InventoryMovementListEnvelope.md)
+- [InventoryPrice](docs/InventoryPrice.md)
+- [InventoryPriceChange](docs/InventoryPriceChange.md)
+- [InventoryRow](docs/InventoryRow.md)
+- [InventoryRowEnvelope](docs/InventoryRowEnvelope.md)
+- [InventoryRowListEnvelope](docs/InventoryRowListEnvelope.md)
+- [InventoryRowUpdate](docs/InventoryRowUpdate.md)
+- [InventorySettings](docs/InventorySettings.md)
+- [InventorySettingsEnvelope](docs/InventorySettingsEnvelope.md)
+- [InventorySettingsUpdate](docs/InventorySettingsUpdate.md)
 - [ListingComplianceStatus](docs/ListingComplianceStatus.md)
 - [ListingStatus](docs/ListingStatus.md)
 - [ListingStatusChange](docs/ListingStatusChange.md)
@@ -330,8 +388,11 @@ All URIs are relative to */api/v1*
 - [OnboardingDraftVersion](docs/OnboardingDraftVersion.md)
 - [OnboardingRequirement](docs/OnboardingRequirement.md)
 - [OnboardingStepCompletion](docs/OnboardingStepCompletion.md)
+- [PageMeta](docs/PageMeta.md)
 - [PasswordRecoveryRequest](docs/PasswordRecoveryRequest.md)
 - [PasswordResetRequest](docs/PasswordResetRequest.md)
+- [PriceHistoryEntry](docs/PriceHistoryEntry.md)
+- [PriceHistoryEnvelope](docs/PriceHistoryEnvelope.md)
 - [ProductComplianceCaseEnvelope](docs/ProductComplianceCaseEnvelope.md)
 - [ProductComplianceCaseEnvelopeData](docs/ProductComplianceCaseEnvelopeData.md)
 - [ProductComplianceDecision](docs/ProductComplianceDecision.md)
@@ -350,6 +411,11 @@ All URIs are relative to */api/v1*
 - [RegistrationEnvelopeAllOfData](docs/RegistrationEnvelopeAllOfData.md)
 - [RegulatedMaterialRule](docs/RegulatedMaterialRule.md)
 - [ResendBotChallengeRequest](docs/ResendBotChallengeRequest.md)
+- [StaleListing](docs/StaleListing.md)
+- [StockConfirmationItem](docs/StockConfirmationItem.md)
+- [StockConfirmationRequest](docs/StockConfirmationRequest.md)
+- [StockConfirmationSchedule](docs/StockConfirmationSchedule.md)
+- [StockLabel](docs/StockLabel.md)
 - [StoreActivationBlocker](docs/StoreActivationBlocker.md)
 - [StoreActivationReadiness](docs/StoreActivationReadiness.md)
 - [StoreOperatingDay](docs/StoreOperatingDay.md)
@@ -451,8 +517,8 @@ This TypeScript SDK client supports the [Fetch API](https://fetch.spec.whatwg.or
 and is automatically generated by the
 [OpenAPI Generator](https://openapi-generator.tech) project:
 
-- API version: `1.0.0-phase.4`
-- Package version: `1.0.0-phase.4`
+- API version: `1.0.0-phase.5`
+- Package version: `1.0.0-phase.5`
 - Generator version: `7.25.0`
 - Build package: `org.openapitools.codegen.languages.TypeScriptFetchClientCodegen`
 

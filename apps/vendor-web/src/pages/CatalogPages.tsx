@@ -2,35 +2,24 @@ import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { AlertCircle, FileSpreadsheet, LayoutGrid, Layers, Package, Plus, Rows3, Trash2 } from 'lucide-react'
 import { ResponseError, type CatalogListingUpdate, type ListingStatus } from '@materyalph/api-client-ts'
-import { Button, ConfirmDialog, Field, FilterChips, OnboardingFlow, ResponsiveRecordList, RowErrorTable, StatusMessage, SummaryTiles, type FilterChip, type RecordColumn, type SummaryTile } from '@materyalph/web-ui'
+import { Button, ConfirmDialog, Field, FilterChips, OnboardingFlow, ResponsiveRecordList, RowErrorTable, StatusMessage, StockLabelBadge, stockLabelText, SummaryTiles, type FilterChip, type RecordColumn, type SummaryTile } from '@materyalph/web-ui'
 import {
   applyImport, catalogFieldErrors, createListing, deactivateListing, deleteListing, formatCentavos, getCatalogTaxonomy, getImport,
   getImportTemplate, getListing, getMaterial, listListings, publishListing, readableCatalogError, removeListingMedia, saveVariants,
   updateListing, uploadImport, uploadListingMedia,
   type CatalogImportJob, type CatalogListing, type CatalogListingListMeta, type CatalogListingSummary, type CatalogMaterial, type CatalogMaterialMatch, type CatalogTaxonomy,
 } from '../lib/catalog-api'
-import { statusLabel, useOnboardingSnapshot } from '../lib/vendor-status'
+import { statusLabel } from '../lib/vendor-status'
+import { storeName, useCatalogAccess } from '../lib/catalog-access'
 import { formFromListing, listingSteps, quantityText, rowsFromListing, unitName, useMaterialSearch, usePhotoPreviews, variantClientErrors, variantInputs, type DetailsForm, type VariantRow } from '../lib/catalog-form'
-import { ListingBadge, ListingState } from './CatalogShared'
+import { ListingBadge, ListingState, ProductsTabs } from './CatalogShared'
 import { MaterialMatchOption, MaterialStep, PhotosComplianceStep, ProductInformationStep, PublicationGate, ReviewStep } from './CatalogListingSteps'
 import { ErrorState, LoadingState, PageHeader, VendorShell } from './PhaseThreeVendorPages'
 
 const LISTING_STATUSES: ListingStatus[] = ['DRAFT', 'PENDING_COMPLIANCE', 'PENDING_ADMIN_REVIEW', 'ACTIVE', 'INACTIVE', 'TEMPORARILY_HIDDEN_STOCK_NOT_CONFIRMED', 'REJECTED']
 const ATTENTION: ListingStatus[] = ['PENDING_COMPLIANCE', 'PENDING_ADMIN_REVIEW', 'TEMPORARILY_HIDDEN_STOCK_NOT_CONFIRMED', 'REJECTED']
 
-function useCatalogAccess() {
-  const { snapshot, loading, error, refresh } = useOnboardingSnapshot()
-  const permissions = snapshot?.permissions ?? []
-  const activation = String((snapshot?.activation as { status?: unknown } | undefined)?.status ?? 'NOT_READY')
-  return { snapshot, loading, error, refresh, canView: permissions.includes('portal.products'), canManage: permissions.includes('catalog.manage'), canSubmitCompliance: permissions.includes('compliance.submit'), active: activation === 'ACTIVE', activation }
-}
-
-function storeName(snapshot: ReturnType<typeof useOnboardingSnapshot>['snapshot']): string {
-  const organization = snapshot?.organization as { store_name?: string; storeName?: string } | undefined
-  return organization?.storeName ?? organization?.store_name ?? 'Vendor'
-}
-
-function CatalogGate({ access, activeHref, children }: { access: ReturnType<typeof useCatalogAccess>; activeHref: string; children: ReactNode }) {
+export function CatalogGate({ access, activeHref, children }: { access: ReturnType<typeof useCatalogAccess>; activeHref: string; children: ReactNode }) {
   if (access.loading) return <VendorShell activeHref={activeHref} accountLabel="Vendor" navigationData={null}><LoadingState label="Loading My Products…" /></VendorShell>
   if (access.error) return <VendorShell activeHref={activeHref} accountLabel="Vendor" navigationData={null}><ErrorState message={access.error} onRetry={() => void access.refresh()} /></VendorShell>
   if (!access.canView) return <VendorShell activeHref={activeHref} accountLabel={storeName(access.snapshot)} navigationData={access.snapshot}><StatusMessage tone="error">Your role does not include My Products. Ask the store Owner if you need product access.</StatusMessage></VendorShell>
@@ -50,7 +39,7 @@ function classification(row: CatalogListingSummary): string {
 /** Vendor-only stock line. Buyers never see these quantities. */
 function StockLine({ row, unit }: { row: CatalogListingSummary; unit: string }) {
   if (row.availableQuantity === null || row.availableQuantity === undefined) {
-    return <span className="text-text-secondary">{row.publicAvailability === 'IN_STOCK' ? 'In stock' : 'No stock count'}</span>
+    return <span className="text-text-secondary">{row.publicAvailability === 'OUT_OF_STOCK' ? 'No stock count' : stockLabelText(row.publicAvailability)}</span>
   }
   const amount = quantityText(row.availableQuantity)
   return Number(row.availableQuantity) > 0
@@ -150,7 +139,7 @@ export function VendorCatalogPage() {
     { key: 'variants', header: 'Variants', cell: row => row.variantCount },
     { key: 'price', header: 'Price', cell: row => `${priceText(row)}${row.unitCode && row.minPriceCentavos != null ? ` / ${unitName(taxonomy, row.unitCode)}` : ''}` },
     { key: 'stock', header: 'Stock (private)', cell: row => <StockLine row={row} unit={unitName(taxonomy, row.unitCode)} /> },
-    { key: 'availability', header: 'Buyers see', cell: row => row.publicAvailability === 'IN_STOCK' ? 'In Stock' : 'Out of Stock' },
+    { key: 'availability', header: 'Buyers see', cell: row => <StockLabelBadge label={row.publicAvailability} prefix="" /> },
     { key: 'actions', header: 'Actions', cell: row => row.deletable ? <Button variant="quiet" aria-label={`Delete ${row.displayName}`} onClick={() => setPendingDelete(row)}><Trash2 size={16} aria-hidden="true" /> Delete</Button> : <span className="text-text-secondary">—</span> },
   ]
   const control = 'min-h-12 w-full min-w-0 rounded-control border border-border-default bg-surface-primary px-3 text-base font-normal'
@@ -159,6 +148,7 @@ export function VendorCatalogPage() {
   return <CatalogGate access={access} activeHref="/products">
     <div className="space-y-6">
       <PageHeader eyebrow="Store Management" title="My Products" description="Listings, variants, photos and PS/ICC evidence. Regulated materials publish only after their compliance evidence is verified." actions={access.canManage ? <><Link className="inline-flex min-h-11 items-center gap-2 rounded-control border border-border-default bg-surface-primary px-4 font-semibold" to="/products/import"><FileSpreadsheet size={16} aria-hidden="true" /> Bulk import</Link><Link className="inline-flex min-h-11 items-center gap-2 rounded-control bg-action-primary px-4 font-semibold text-white" to="/products/new"><Plus size={16} aria-hidden="true" /> Add product</Link></> : undefined} />
+      <ProductsTabs active="listings" showInventory={access.canViewInventory} />
       {notice && <StatusMessage tone={notice.tone}>{notice.text}</StatusMessage>}
       {!error && <SummaryTiles label="Listing summary" tiles={tiles} />}
       <div className="grid gap-3 rounded-surface border border-border-default bg-surface-primary p-4">

@@ -491,7 +491,7 @@ final class VendorOnboardingService
                 $this->saveDelivery($organizationId, $delivery);
             }
             if (is_array($input['vehicles'] ?? null)) {
-                $this->saveVehicles($organizationId, $input['vehicles']);
+                $this->saveVehicles($request, $organizationId, $input['vehicles']);
             }
             DB::table('vendor_organizations')->where('id', $organizationId)->update(['store_setup_status' => $organization->store_setup_status === 'COMPLETED' ? 'COMPLETED' : 'IN_PROGRESS', 'lock_version' => (int) $organization->lock_version + 1, 'updated_at' => now()]);
             $this->audit->account($request, 'VENDOR_STORE_SETUP_DRAFT_SAVED', 'STORE_PROFILE', (string) ($existing->id ?? $profile['id']), after: ['fields' => array_keys($input)]);
@@ -1348,7 +1348,7 @@ final class VendorOnboardingService
     /** @return list<array<string, mixed>> */
     private function vehicles(string $organizationId): array
     {
-        $rows = DB::table('vendor_vehicles')->where('vendor_organization_id', $organizationId)->orderBy('id')->get();
+        $rows = DB::table('vendor_vehicles')->where('vendor_organization_id', $organizationId)->whereNull('removed_at')->orderBy('id')->get();
         if ($rows->isEmpty()) {
             return [];
         }
@@ -1918,89 +1918,9 @@ final class VendorOnboardingService
     }
 
     /** @param array<int, mixed> $vehicles */
-    private function saveVehicles(string $organizationId, array $vehicles): void
+    private function saveVehicles(Request $request, string $organizationId, array $vehicles): void
     {
-        $deliveryDistance = DB::table('delivery_service_areas')
-            ->where('vendor_organization_id', $organizationId)
-            ->where('active', true)
-            ->value('maximum_distance_km');
-        $centavos = static function (mixed $value): ?int {
-            if (is_int($value)) {
-                return $value >= 0 ? $value : null;
-            }
-            if ((! is_string($value) && ! is_float($value)) || ! is_numeric($value) || ! is_finite((float) $value) || floor((float) $value) !== (float) $value || (float) $value < 0) {
-                return null;
-            }
-
-            return (int) $value;
-        };
-        foreach ($vehicles as $index => $vehicle) {
-            if (! is_array($vehicle)) {
-                throw new AuthenticationException('VEHICLE_CONFIGURATION_INVALID', 'Each vehicle must be a structured configuration.', 422);
-            }
-            $hasId = isset($vehicle['id']) && trim((string) $vehicle['id']) !== '';
-            $id = $hasId ? (string) $vehicle['id'] : (string) Str::uuid7();
-            $existing = $hasId ? DB::table('vendor_vehicles')->where('id', $id)->lockForUpdate()->first() : null;
-            if ($hasId && ($existing === null || (string) $existing->vendor_organization_id !== $organizationId)) {
-                throw new AuthenticationException('RESOURCE_NOT_FOUND', 'The requested vehicle configuration is unavailable.', 404);
-            }
-            if ($existing !== null && ($vehicle['active'] ?? true) === false) {
-                DB::table('vendor_vehicles')->where('id', $id)->update(['active' => false, 'lock_version' => (int) $existing->lock_version + 1, 'updated_at' => now()]);
-
-                continue;
-            }
-            $configuration = VehicleConfiguration::normalize($vehicle, $index);
-            $vehicleType = trim((string) ($vehicle['vehicle_type'] ?? ''));
-            $name = trim((string) ($vehicle['name'] ?? ''));
-            $capacity = $vehicle['capacity_kg'] ?? null;
-            $numberAvailable = $vehicle['number_available'] ?? null;
-            if ($vehicleType === '' || $name === '' || ! is_numeric($capacity) || ! is_finite((float) $capacity) || (float) $capacity <= 0 || ! is_numeric($numberAvailable) || ! is_finite((float) $numberAvailable) || floor((float) $numberAvailable) !== (float) $numberAvailable || (int) $numberAvailable < 1) {
-                throw new AuthenticationException('VEHICLE_CONFIGURATION_INVALID', 'Provide a vehicle type, name, positive capacity, and at least one available vehicle.', 422);
-            }
-            $dimensions = [];
-            foreach (['cargo_length_m', 'cargo_width_m', 'cargo_height_m'] as $dimension) {
-                $value = $vehicleType === 'CONCRETE_MIXER' ? null : ($vehicle[$dimension] ?? null);
-                if ($value === null || $value === '') {
-                    $dimensions[$dimension] = null;
-
-                    continue;
-                }
-                if (! is_numeric($value) || ! is_finite((float) $value) || (float) $value <= 0 || (float) $value > 1000) {
-                    throw new AuthenticationException('VEHICLE_CONFIGURATION_INVALID', 'Vehicle dimensions must be positive values within the supported range.', 422);
-                }
-                $dimensions[$dimension] = (float) $value;
-            }
-            $values = ['vehicle_type' => $vehicleType, 'name' => $name, 'capacity_kg' => (float) $capacity, 'number_available' => (int) $numberAvailable, 'cargo_length_m' => $dimensions['cargo_length_m'], 'cargo_width_m' => $dimensions['cargo_width_m'], 'cargo_height_m' => $dimensions['cargo_height_m'], 'heavy_classification' => isset($vehicle['heavy_classification']) ? trim((string) $vehicle['heavy_classification']) : null, 'active' => true, 'lock_version' => ($existing === null ? 0 : (int) $existing->lock_version) + 1, 'updated_at' => now()];
-            $values = array_merge($values, $configuration);
-            $values['active'] = $vehicle['active'] ?? ($existing->active ?? true);
-            if (array_key_exists('image_file_id', $vehicle)) {
-                $imageId = $vehicle['image_file_id'];
-                if ($imageId !== null && ! DB::table('files')->where('id', $imageId)->where('owner_type', 'VENDOR_ORGANIZATION')->where('owner_id', $organizationId)->where('purpose', 'VEHICLE_IMAGE')->where('scan_state', 'CLEAN')->exists()) {
-                    throw new AuthenticationException('RESOURCE_NOT_FOUND', 'The vehicle image is unavailable.', 404);
-                }
-                $values['image_file_id'] = $imageId;
-            }
-            if ($existing === null) {
-                DB::table('vendor_vehicles')->insert($values + ['id' => $id, 'vendor_organization_id' => $organizationId, 'created_at' => now()]);
-            } else {
-                DB::table('vendor_vehicles')->where('id', $id)->update($values);
-            }
-
-            $rateKeys = ['base_fee_centavos', 'per_km_centavos', 'maximum_distance_km'];
-            $rateProvided = count(array_intersect($rateKeys, array_keys($vehicle))) > 0;
-            if ($rateProvided) {
-                $currentRate = DB::table('vehicle_rate_versions')->where('vendor_vehicle_id', $id)->orderByDesc('version')->lockForUpdate()->first();
-                $baseFee = $centavos(array_key_exists('base_fee_centavos', $vehicle) ? $vehicle['base_fee_centavos'] : ($currentRate === null ? null : $currentRate->base_fee_centavos));
-                $perKm = $centavos(array_key_exists('per_km_centavos', $vehicle) ? $vehicle['per_km_centavos'] : ($currentRate === null ? null : $currentRate->per_km_centavos));
-                $maximumDistance = array_key_exists('maximum_distance_km', $vehicle) ? $vehicle['maximum_distance_km'] : ($currentRate === null ? $deliveryDistance : ($currentRate->maximum_distance_km ?? $deliveryDistance));
-                if ($baseFee === null || $perKm === null || ! is_numeric($maximumDistance) || ! is_finite((float) $maximumDistance) || floor((float) $maximumDistance) !== (float) $maximumDistance || (int) $maximumDistance < 1 || (int) $maximumDistance > 1000) {
-                    throw new AuthenticationException('VEHICLE_RATE_INCOMPLETE', 'Provide non-negative base and per-kilometer fees and a delivery distance between 1 and 1000 km.', 422);
-                }
-                if ($currentRate === null || (int) $currentRate->base_fee_centavos !== $baseFee || (int) $currentRate->per_km_centavos !== $perKm || (int) $currentRate->maximum_distance_km !== (int) $maximumDistance) {
-                    DB::table('vehicle_rate_versions')->insert(['id' => (string) Str::uuid7(), 'vendor_vehicle_id' => $id, 'version' => ($currentRate === null ? 0 : (int) $currentRate->version) + 1, 'base_fee_centavos' => $baseFee, 'per_km_centavos' => $perKm, 'maximum_distance_km' => (int) $maximumDistance, 'effective_at' => now()]);
-                }
-            }
-        }
+        app(VehicleConfigurationWriter::class)->save($organizationId, $vehicles, (int) $request->user()->getKey());
     }
 
     private function vehicleConfigurationReady(string $organizationId): bool

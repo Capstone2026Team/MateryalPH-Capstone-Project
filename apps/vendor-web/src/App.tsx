@@ -26,6 +26,8 @@ import {
 import { VendorLandingPage } from './pages/VendorLandingPage'
 import { VendorLegalPage } from './pages/VendorLegalPage'
 import { VendorCatalogImportPage, VendorCatalogPage, VendorListingEditorPage } from './pages/CatalogPages'
+import { VendorInventoryPage } from './pages/InventoryPages'
+import { VendorFleetPage } from './pages/FleetPages'
 import { VendorAccountPage, VendorStoreProfilePage, VendorDashboardPage, VendorSetupPage, VendorTeamPage, VendorVerificationPage, VendorWelcomePage } from './pages/PhaseThreeVendorPages'
 
 function App() {
@@ -54,6 +56,8 @@ function App() {
           <Route path="/store-profile" element={<VendorStoreProfilePage />} />
           <Route path="/products" element={<VendorCatalogPage />} />
           <Route path="/products/new" element={<VendorListingEditorPage />} />
+          <Route path="/products/inventory" element={<VendorInventoryPage />} />
+          <Route path="/vehicles" element={<VendorFleetPage />} />
           <Route path="/products/import" element={<VendorCatalogImportPage />} />
           <Route path="/products/:listingId" element={<VendorListingEditorPage />} />
         </Route>

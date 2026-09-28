@@ -1,0 +1,6 @@
+<!doctype html>
+<html lang="en"><body>
+<h1>{{ $noticeSubject }}</h1>
+<p>{{ $notice }}</p>
+<p>Sign in to the Vendor Portal and open My Products → Inventory to review your stock. MateryalPH will never ask you to send a password, one-time code or private document by email.</p>
+</body></html>

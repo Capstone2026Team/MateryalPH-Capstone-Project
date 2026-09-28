@@ -83,7 +83,7 @@ abstract class CatalogListingSummary implements Built<CatalogListingSummary, Cat
   /// The only availability a Buyer would see.
   @BuiltValueField(wireName: r'public_availability')
   CatalogListingSummaryPublicAvailabilityEnum get publicAvailability;
-  // enum publicAvailabilityEnum {  IN_STOCK,  OUT_OF_STOCK,  };
+  // enum publicAvailabilityEnum {  IN_STOCK,  LIMITED_STOCK,  OUT_OF_STOCK,  };
 
   @BuiltValueField(wireName: r'primary_image_file_id')
   String? get primaryImageFileId;
@@ -458,6 +458,8 @@ class CatalogListingSummaryPublicAvailabilityEnum extends EnumClass {
 
   @BuiltValueEnumConst(wireName: r'IN_STOCK')
   static const CatalogListingSummaryPublicAvailabilityEnum IN_STOCK = _$catalogListingSummaryPublicAvailabilityEnum_IN_STOCK;
+  @BuiltValueEnumConst(wireName: r'LIMITED_STOCK')
+  static const CatalogListingSummaryPublicAvailabilityEnum LIMITED_STOCK = _$catalogListingSummaryPublicAvailabilityEnum_LIMITED_STOCK;
   @BuiltValueEnumConst(wireName: r'OUT_OF_STOCK')
   static const CatalogListingSummaryPublicAvailabilityEnum OUT_OF_STOCK = _$catalogListingSummaryPublicAvailabilityEnum_OUT_OF_STOCK;
 

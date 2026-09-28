@@ -10,6 +10,9 @@ const CatalogVariantPublicAvailabilityEnum
     _$catalogVariantPublicAvailabilityEnum_IN_STOCK =
     const CatalogVariantPublicAvailabilityEnum._('IN_STOCK');
 const CatalogVariantPublicAvailabilityEnum
+    _$catalogVariantPublicAvailabilityEnum_LIMITED_STOCK =
+    const CatalogVariantPublicAvailabilityEnum._('LIMITED_STOCK');
+const CatalogVariantPublicAvailabilityEnum
     _$catalogVariantPublicAvailabilityEnum_OUT_OF_STOCK =
     const CatalogVariantPublicAvailabilityEnum._('OUT_OF_STOCK');
 
@@ -18,6 +21,8 @@ CatalogVariantPublicAvailabilityEnum
   switch (name) {
     case 'IN_STOCK':
       return _$catalogVariantPublicAvailabilityEnum_IN_STOCK;
+    case 'LIMITED_STOCK':
+      return _$catalogVariantPublicAvailabilityEnum_LIMITED_STOCK;
     case 'OUT_OF_STOCK':
       return _$catalogVariantPublicAvailabilityEnum_OUT_OF_STOCK;
     default:
@@ -29,6 +34,7 @@ final BuiltSet<CatalogVariantPublicAvailabilityEnum>
     _$catalogVariantPublicAvailabilityEnumValues = BuiltSet<
         CatalogVariantPublicAvailabilityEnum>(const <CatalogVariantPublicAvailabilityEnum>[
   _$catalogVariantPublicAvailabilityEnum_IN_STOCK,
+  _$catalogVariantPublicAvailabilityEnum_LIMITED_STOCK,
   _$catalogVariantPublicAvailabilityEnum_OUT_OF_STOCK,
 ]);
 
@@ -69,10 +75,12 @@ class _$CatalogVariantPublicAvailabilityEnumSerializer
     implements PrimitiveSerializer<CatalogVariantPublicAvailabilityEnum> {
   static const Map<String, Object> _toWire = const <String, Object>{
     'IN_STOCK': 'IN_STOCK',
+    'LIMITED_STOCK': 'LIMITED_STOCK',
     'OUT_OF_STOCK': 'OUT_OF_STOCK',
   };
   static const Map<Object, String> _fromWire = const <Object, String>{
     'IN_STOCK': 'IN_STOCK',
+    'LIMITED_STOCK': 'LIMITED_STOCK',
     'OUT_OF_STOCK': 'OUT_OF_STOCK',
   };
 

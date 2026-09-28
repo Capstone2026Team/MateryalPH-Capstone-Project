@@ -7,6 +7,8 @@ namespace App\Domain\Catalog;
 use App\Domain\Authorization\AccountAccess;
 use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
+use App\Domain\Inventory\InventoryLedgerWriter;
+use App\Domain\Inventory\StockAvailability;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -37,6 +39,8 @@ final class VendorCatalogService
         private readonly CatalogFileStore $files,
         private readonly ImageContentValidator $images,
         private readonly AuditRecorder $audit,
+        private readonly PriceVersionService $prices,
+        private readonly InventoryLedgerWriter $ledger,
     ) {}
 
     /** @return array<string, mixed> */
@@ -117,8 +121,11 @@ final class VendorCatalogService
         $prices = DB::table('listing_variants as v')->join('listing_price_versions as pv', fn ($join) => $join->on('pv.listing_variant_id', '=', 'v.id')->where('pv.price_kind', 'ORDINARY')->whereNull('pv.retired_at'))
             ->whereIn('v.vendor_listing_id', $ids)->where('v.active', true)->groupBy('v.vendor_listing_id')
             ->selectRaw('v.vendor_listing_id, MIN(pv.amount_centavos) AS min_price, MAX(pv.amount_centavos) AS max_price, COUNT(DISTINCT v.id) AS variant_count')->get()->keyBy('vendor_listing_id');
+        // The listing shows its best variant label: In Stock beats Limited Stock beats Out of Stock.
         $available = DB::table('listing_variants as v')->join('inventory_items as i', 'i.listing_variant_id', '=', 'v.id')->whereIn('v.vendor_listing_id', $ids)->where('v.active', true)
-            ->whereRaw('i.quantity_on_hand - i.hard_reserved_quantity > 0')->distinct()->pluck('v.vendor_listing_id')->flip();
+            ->whereRaw('i.quantity_on_hand - i.hard_reserved_quantity > 0')->groupBy('v.vendor_listing_id')
+            ->selectRaw('v.vendor_listing_id, bool_or(i.reorder_level IS NULL OR i.quantity_on_hand - i.hard_reserved_quantity > i.reorder_level) AS in_stock')
+            ->get()->mapWithKeys(static fn (object $row): array => [$row->vendor_listing_id => $row->in_stock ? StockAvailability::IN_STOCK : StockAvailability::LIMITED_STOCK]);
         $images = DB::table('listing_media')->whereIn('vendor_listing_id', $ids)->where('status', 'READY')->orderBy('sort_order')->orderBy('id')->get(['vendor_listing_id', 'file_id'])->groupBy('vendor_listing_id');
         $imageFiles = DB::table('files')->whereIn('id', $images->map(fn ($media) => $media[0]->file_id)->values()->all())->where('scan_state', 'CLEAN')->get()->keyBy('id');
         // One sale unit per listing lets the card show "₱275 / bag" and a summed Vendor-only stock figure.
@@ -134,7 +141,7 @@ final class VendorCatalogService
             'variant_count' => (int) ($prices[$row->id]->variant_count ?? 0),
             'min_price_centavos' => isset($prices[$row->id]) ? (int) $prices[$row->id]->min_price : null,
             'max_price_centavos' => isset($prices[$row->id]) ? (int) $prices[$row->id]->max_price : null,
-            'public_availability' => isset($available[$row->id]) ? 'IN_STOCK' : 'OUT_OF_STOCK',
+            'public_availability' => $available[$row->id] ?? StockAvailability::OUT_OF_STOCK,
             'primary_image_file_id' => $images[$row->id][0]->file_id ?? null,
             'deletable' => $canManage && self::deletable($row),
             'primary_image_url' => isset($images[$row->id], $imageFiles[$images[$row->id][0]->file_id]) ? $this->files->temporaryUrl($imageFiles[$images[$row->id][0]->file_id])['url'] : null,
@@ -534,7 +541,7 @@ final class VendorCatalogService
         $permissions = $this->accounts->resolve($request->user())['permissions'];
         $variants = DB::table('listing_variants as v')->join('units as u', 'u.id', '=', 'v.unit_id')->leftJoin('inventory_items as i', 'i.listing_variant_id', '=', 'v.id')
             ->where('v.vendor_listing_id', $listing->id)->orderByDesc('v.active')->orderBy('v.sort_order')->orderBy('v.id')
-            ->get(['v.*', 'u.code as unit_code', 'i.quantity_on_hand', 'i.hard_reserved_quantity', 'i.confirmed_at']);
+            ->get(['v.*', 'u.code as unit_code', 'i.quantity_on_hand', 'i.hard_reserved_quantity', 'i.soft_held_quantity', 'i.reorder_level', 'i.confirmed_at']);
         $submissions = DB::table('compliance_submissions')->where('vendor_listing_id', $listing->id)->orderByDesc('version')->limit(20)->get();
         $readiness = $this->readiness->evaluate((string) $listing->id);
 
@@ -574,7 +581,8 @@ final class VendorCatalogService
     {
         $price = $this->comparability->ordinaryPublicPrice((string) $variant->id);
         $assignment = DB::table('listing_comparable_assignments')->where('listing_variant_id', $variant->id)->whereNull('effective_until')->where('mapping_state', 'APPROVED')->value('material_comparable_group_version_id');
-        $available = $variant->quantity_on_hand === null ? null : bcsub((string) $variant->quantity_on_hand, (string) $variant->hard_reserved_quantity, 4);
+        $available = $variant->quantity_on_hand === null ? null : StockAvailability::availableToSell((string) $variant->quantity_on_hand, (string) $variant->hard_reserved_quantity);
+        $reorder = $variant->reorder_level === null ? null : StockAvailability::quantity($variant->reorder_level);
 
         return [
             'id' => $variant->id, 'sku' => $variant->sku, 'label' => $variant->label, 'unit_id' => $variant->unit_id, 'unit_code' => $variant->unit_code,
@@ -584,8 +592,8 @@ final class VendorCatalogService
             'lock_version' => (int) $variant->lock_version,
             'price' => $price === null ? null : ['price_version_id' => $price->id, 'version' => (int) $price->version, 'amount_centavos' => (int) $price->amount_centavos, 'tax_category' => $price->tax_category, 'tax_basis' => $price->tax_basis, 'included_vat_centavos' => ListingTaxPolicy::includedVatCentavos((int) $price->amount_centavos, (string) $price->tax_category), 'effective_at' => $price->effective_at],
             'volume_tiers' => array_map(static fn (array $tier): array => ['price_version_id' => $tier['price_version_id'], 'version' => $tier['version'], 'minimum_quantity' => $tier['minimum_quantity'], 'amount_centavos' => $tier['amount_centavos'], 'included_vat_centavos' => ListingTaxPolicy::includedVatCentavos($tier['amount_centavos'], $tier['tax_category'])], $this->currentTiers((string) $variant->id)),
-            'inventory' => $available === null ? null : ['quantity_on_hand' => (string) $variant->quantity_on_hand, 'hard_reserved_quantity' => (string) $variant->hard_reserved_quantity, 'available_to_sell' => $available, 'confirmed_at' => $variant->confirmed_at],
-            'public_availability' => $available !== null && bccomp($available, '0', 4) > 0 ? 'IN_STOCK' : 'OUT_OF_STOCK',
+            'inventory' => $available === null ? null : ['quantity_on_hand' => (string) $variant->quantity_on_hand, 'hard_reserved_quantity' => (string) $variant->hard_reserved_quantity, 'soft_held_quantity' => (string) $variant->soft_held_quantity, 'available_to_sell' => $available, 'reorder_level' => $reorder, 'confirmed_at' => $variant->confirmed_at],
+            'public_availability' => StockAvailability::label($available, $reorder),
             'comparability' => $assignment === null ? 'NOT_YET_COMPARABLE' : 'COMPARABLE',
         ];
     }
@@ -813,42 +821,13 @@ final class VendorCatalogService
     /** Creates a new immutable ordinary price version only when the price terms change. */
     private function savePrice(Request $request, string $variantId, int $amount, string $category, mixed $basis): bool
     {
-        $basis = in_array($category, ListingTaxPolicy::BASIS_REQUIRED, true) ? trim((string) $basis) : null;
-        $current = DB::table('listing_price_versions')->where('listing_variant_id', $variantId)->where('price_kind', 'ORDINARY')->whereNull('retired_at')->lockForUpdate()->first();
-        if ($current !== null && (int) $current->amount_centavos === $amount && $current->tax_category === $category && $current->tax_basis === $basis) {
-            return false;
-        }
-        if ($current !== null) {
-            DB::table('listing_price_versions')->where('id', $current->id)->update(['retired_at' => now(), 'updated_at' => now()]);
-        }
-        $version = (int) DB::table('listing_price_versions')->where('listing_variant_id', $variantId)->max('version') + 1;
-        DB::table('listing_price_versions')->insert(['id' => (string) Str::uuid7(), 'listing_variant_id' => $variantId, 'version' => $version, 'amount_centavos' => $amount, 'currency' => 'PHP', 'tax_category' => $category, 'tax_basis' => $basis, 'price_kind' => 'ORDINARY', 'effective_at' => now(), 'created_by_user_id' => $request->user()->getKey(), 'supersedes_price_version_id' => $current?->id, 'created_at' => now(), 'updated_at' => now()]);
-
-        return true;
+        return $this->prices->saveOrdinary((int) $request->user()->getKey(), $variantId, $amount, $category, $basis);
     }
 
-    /** Records a counted stock quantity. Physical quantity never falls below hard reservations. */
+    /** Records a counted stock quantity through the shared append-only ledger writer. */
     private function recordStockCount(Request $request, string $variantId, string $quantity): void
     {
-        $item = DB::table('inventory_items')->where('listing_variant_id', $variantId)->lockForUpdate()->first();
-        if ($item === null) {
-            $itemId = (string) Str::uuid7();
-            DB::table('inventory_items')->insert(['id' => $itemId, 'listing_variant_id' => $variantId, 'quantity_on_hand' => $quantity, 'confirmed_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
-            $delta = $quantity;
-            $type = 'INITIAL_COUNT';
-        } else {
-            $itemId = (string) $item->id;
-            if (bccomp($quantity, (string) $item->hard_reserved_quantity, 4) < 0) {
-                throw new AuthenticationException('STOCK_BELOW_RESERVED', 'The counted quantity cannot be lower than stock already reserved for confirmed orders.', 422);
-            }
-            $delta = bcsub($quantity, (string) $item->quantity_on_hand, 4);
-            $type = 'COUNT_ADJUSTMENT';
-            DB::table('inventory_items')->where('id', $itemId)->update(['quantity_on_hand' => $quantity, 'confirmed_at' => now(), 'lock_version' => DB::raw('lock_version + 1'), 'updated_at' => now()]);
-        }
-        if (bccomp($delta, '0', 4) !== 0) {
-            DB::table('inventory_movements')->insert(['id' => (string) Str::uuid7(), 'inventory_item_id' => $itemId, 'movement_type' => $type, 'quantity' => $delta, 'quantity_on_hand_after' => $quantity, 'actor_user_id' => $request->user()->getKey(), 'source_type' => 'CATALOG_LISTING', 'source_id' => $variantId, 'created_at' => now(), 'updated_at' => now()]);
-        }
-        DB::table('stock_confirmation_events')->insert(['id' => (string) Str::uuid7(), 'inventory_item_id' => $itemId, 'actor_user_id' => $request->user()->getKey(), 'confirmed_quantity' => $quantity, 'confirmed_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
+        $this->ledger->recordCount((int) $request->user()->getKey(), $variantId, $quantity, 'COUNT', null, 'CATALOG_LISTING');
     }
 
     /**

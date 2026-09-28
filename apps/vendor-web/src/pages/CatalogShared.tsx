@@ -1,4 +1,5 @@
 import { AlertCircle, CheckCircle2, Clock, EyeOff, FileText, PauseCircle, ShieldCheck, XCircle } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { StatusBadge } from '@materyalph/web-ui'
 import { statusLabel } from '../lib/vendor-status'
 
@@ -10,6 +11,13 @@ const badgeTones: Record<string, 'success' | 'warning' | 'error' | 'neutral' | '
 export function ListingState({ status, prefix }: { status: string; prefix?: string }) {
   const Icon = statusIcons[status] ?? FileText
   return <span className={`inline-flex items-center gap-1.5 font-semibold ${statusTones[status] ?? 'text-text-strong'}`}><Icon size={16} aria-hidden="true" />{prefix ? `${prefix}: ` : ''}{statusLabel(status)}</span>
+}
+
+/** Sections inside My Products. The sidebar keeps its single My Products entry. */
+export function ProductsTabs({ active, showInventory }: { active: 'listings' | 'inventory'; showInventory: boolean }) {
+  if (!showInventory) return null
+  const tab = (key: 'listings' | 'inventory', to: string, label: string) => <li><Link to={to} aria-current={active === key ? 'page' : undefined} className={`inline-flex min-h-11 items-center border-b-2 px-4 text-sm font-semibold ${active === key ? 'border-action-primary text-action-primary' : 'border-transparent text-text-secondary hover:text-text-strong'}`}>{label}</Link></li>
+  return <nav aria-label="My Products sections" className="border-b border-border-default"><ul className="-mb-px flex flex-wrap gap-1">{tab('listings', '/products', 'Listings')}{tab('inventory', '/products/inventory', 'Inventory')}</ul></nav>
 }
 
 /** Compact status pill for cards and summaries. */

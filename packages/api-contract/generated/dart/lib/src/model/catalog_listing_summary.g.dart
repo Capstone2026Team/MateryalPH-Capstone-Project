@@ -10,6 +10,9 @@ const CatalogListingSummaryPublicAvailabilityEnum
     _$catalogListingSummaryPublicAvailabilityEnum_IN_STOCK =
     const CatalogListingSummaryPublicAvailabilityEnum._('IN_STOCK');
 const CatalogListingSummaryPublicAvailabilityEnum
+    _$catalogListingSummaryPublicAvailabilityEnum_LIMITED_STOCK =
+    const CatalogListingSummaryPublicAvailabilityEnum._('LIMITED_STOCK');
+const CatalogListingSummaryPublicAvailabilityEnum
     _$catalogListingSummaryPublicAvailabilityEnum_OUT_OF_STOCK =
     const CatalogListingSummaryPublicAvailabilityEnum._('OUT_OF_STOCK');
 
@@ -18,6 +21,8 @@ CatalogListingSummaryPublicAvailabilityEnum
   switch (name) {
     case 'IN_STOCK':
       return _$catalogListingSummaryPublicAvailabilityEnum_IN_STOCK;
+    case 'LIMITED_STOCK':
+      return _$catalogListingSummaryPublicAvailabilityEnum_LIMITED_STOCK;
     case 'OUT_OF_STOCK':
       return _$catalogListingSummaryPublicAvailabilityEnum_OUT_OF_STOCK;
     default:
@@ -29,6 +34,7 @@ final BuiltSet<CatalogListingSummaryPublicAvailabilityEnum>
     _$catalogListingSummaryPublicAvailabilityEnumValues = BuiltSet<
         CatalogListingSummaryPublicAvailabilityEnum>(const <CatalogListingSummaryPublicAvailabilityEnum>[
   _$catalogListingSummaryPublicAvailabilityEnum_IN_STOCK,
+  _$catalogListingSummaryPublicAvailabilityEnum_LIMITED_STOCK,
   _$catalogListingSummaryPublicAvailabilityEnum_OUT_OF_STOCK,
 ]);
 
@@ -41,10 +47,12 @@ class _$CatalogListingSummaryPublicAvailabilityEnumSerializer
         PrimitiveSerializer<CatalogListingSummaryPublicAvailabilityEnum> {
   static const Map<String, Object> _toWire = const <String, Object>{
     'IN_STOCK': 'IN_STOCK',
+    'LIMITED_STOCK': 'LIMITED_STOCK',
     'OUT_OF_STOCK': 'OUT_OF_STOCK',
   };
   static const Map<Object, String> _fromWire = const <Object, String>{
     'IN_STOCK': 'IN_STOCK',
+    'LIMITED_STOCK': 'LIMITED_STOCK',
     'OUT_OF_STOCK': 'OUT_OF_STOCK',
   };
 
