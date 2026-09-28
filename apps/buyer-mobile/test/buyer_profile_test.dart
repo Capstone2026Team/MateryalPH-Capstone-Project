@@ -51,12 +51,12 @@ void main() {
               'Map',
               'Explore',
               'Projects',
-              'Message',
+              'Messages',
               'Profile',
             ])
               tester.getCenter(find.bySemanticsLabel(label)),
           ];
-          for (final label in ['Explore', 'Projects', 'Message', 'Profile']) {
+          for (final label in ['Explore', 'Projects', 'Messages', 'Profile']) {
             await tester.tap(find.bySemanticsLabel(label));
             await tester.pumpAndSettle();
             expect(tester.takeException(), isNull);
@@ -68,7 +68,7 @@ void main() {
             expect(
               tester.getCenter(
                 find.bySemanticsLabel(
-                  ['Map', 'Explore', 'Projects', 'Message', 'Profile'][i],
+                  ['Map', 'Explore', 'Projects', 'Messages', 'Profile'][i],
                 ),
               ),
               positions[i],

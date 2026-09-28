@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:materyalph_api_client/materyalph_api_client.dart';
 import '../auth/auth_repository.dart';
+import '../features/map_discovery/buyer_onboarding_screen.dart';
+import '../features/map_discovery/buyer_places_screens.dart';
+import '../features/map_discovery/device_location.dart';
+import '../features/map_discovery/discovery_models.dart';
+import '../features/map_discovery/discovery_repository.dart';
 import '../widgets/auth_content.dart';
 import '../widgets/buyer_account_widgets.dart';
 import 'buyer_account_screen.dart';
@@ -12,8 +17,12 @@ class BuyerProfileScreen extends StatefulWidget {
     required this.repository,
     required this.onSignedOut,
     required this.onSignOut,
+    this.discoveryRepository,
+    this.deviceLocation = const GeolocatorDeviceLocationService(),
   });
   final AuthRepository repository;
+  final DiscoveryRepository? discoveryRepository;
+  final DeviceLocationService deviceLocation;
   final VoidCallback onSignedOut;
   final Future<void> Function() onSignOut;
   @override
@@ -86,6 +95,35 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
               BuyerUnavailableScreen(title: title, artwork: artwork),
         ),
       );
+  void _open(
+    Widget Function(DiscoveryRepository repository) builder,
+    String title, [
+    String artwork = 'not-implemented',
+  ]) {
+    final discovery = widget.discoveryRepository;
+    if (discovery == null) return _unavailable(title, artwork);
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => builder(discovery)));
+  }
+
+  Future<void> _aboutWork() async {
+    final discovery = widget.discoveryRepository;
+    if (discovery == null) return _unavailable('About your work');
+    try {
+      final onboarding = await discovery.onboarding();
+      if (!mounted) return;
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) =>
+              BuyerOnboardingScreen(repository: discovery, initial: onboarding),
+        ),
+      );
+    } on DiscoveryFailure catch (error) {
+      if (mounted) setState(() => _error = error.message);
+    }
+  }
+
   Future<void> _account(String section) async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -173,12 +211,28 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
               BuyerMenuRow(
                 label: 'Favorite Suppliers',
                 icon: LucideIcons.heart,
-                onTap: () => _unavailable('Favorite Suppliers'),
+                onTap: () => _open(
+                  (repository) =>
+                      FavoriteSuppliersScreen(repository: repository),
+                  'Favorite Suppliers',
+                ),
               ),
               BuyerMenuRow(
                 label: 'Saved Locations',
                 icon: LucideIcons.mapPin,
-                onTap: () => _unavailable('Saved Locations', 'location'),
+                onTap: () => _open(
+                  (repository) => SavedLocationsScreen(
+                    repository: repository,
+                    deviceLocation: widget.deviceLocation,
+                  ),
+                  'Saved Locations',
+                  'location',
+                ),
+              ),
+              BuyerMenuRow(
+                label: 'About your work',
+                icon: LucideIcons.hardHat,
+                onTap: _aboutWork,
               ),
               BuyerMenuRow(
                 label: 'Ranking Preferences',

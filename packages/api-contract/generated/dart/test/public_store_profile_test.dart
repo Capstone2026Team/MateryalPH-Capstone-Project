@@ -63,5 +63,47 @@ void main() {
       // TODO
     });
 
+    // Validated public media only.
+    // String logoUrl
+    test('to test the property `logoUrl`', () async {
+      // TODO
+    });
+
+    // String bannerUrl
+    test('to test the property `bannerUrl`', () async {
+      // TODO
+    });
+
+    // PublicAddressSummary address
+    test('to test the property `address`', () async {
+      // TODO
+    });
+
+    // String supplierType
+    test('to test the property `supplierType`', () async {
+      // TODO
+    });
+
+    // BuiltList<String> niches
+    test('to test the property `niches`', () async {
+      // TODO
+    });
+
+    // String fulfillmentMethod
+    test('to test the property `fulfillmentMethod`', () async {
+      // TODO
+    });
+
+    // ScoreLabel scoreLabel
+    test('to test the property `scoreLabel`', () async {
+      // TODO
+    });
+
+    // UNAVAILABLE shows Hours Unavailable; the store stays visible and hours are never fabricated.
+    // String hoursStatus
+    test('to test the property `hoursStatus`', () async {
+      // TODO
+    });
+
   });
 }

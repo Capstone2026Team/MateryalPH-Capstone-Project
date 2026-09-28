@@ -39,10 +39,15 @@ const dartColors = Object.entries(tokens.color)
   .map(([name, value]) => `  static const int ${toDartName(name)} = 0xFF${value.slice(1).toUpperCase()};`)
 const dart = `// @generated from tokens.json — do not edit directly.\nabstract final class MateryalColorTokens {\n${dartColors.join('\n')}\n}\n`
 
+const dartMotion = Object.entries(tokens.motion ?? {})
+  .map(([name, value]) => `  /// ${value.use}\n  static const Duration ${toDartName(name)} = Duration(milliseconds: ${value.durationMs});`)
+const motionDart = `// @generated from tokens.json — do not edit directly.\nabstract final class MateryalMotionTokens {\n${dartMotion.join('\n')}\n}\n`
+
 const outputs = [
   [resolve(packageRoot, 'web.css'), webCss],
   [resolve(repositoryRoot, 'services/api/public/auth/tokens.css'), `${generatedHeader}\n:root {\n${rootVariables.join('\n')}\n}\n`],
   [resolve(repositoryRoot, 'apps/buyer-mobile/lib/design_system/generated/color_tokens.dart'), dart],
+  [resolve(repositoryRoot, 'apps/buyer-mobile/lib/design_system/generated/motion_tokens.dart'), motionDart],
 ]
 
 if (process.argv.includes('--check')) {

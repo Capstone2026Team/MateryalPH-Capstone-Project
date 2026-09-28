@@ -1,6 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Foreground, optional location only. Denial never blocks manual address or pin selection. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
     <application
         android:label="MateryalPH"
@@ -46,6 +49,11 @@
             </intent-filter>
 
         </activity>
+
+        <!-- Restricted Android Maps SDK client key injected from untracked local.properties or CI. -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="${mapsAndroidApiKey}" />
 
         <!-- Used by Flutter to generate GeneratedPluginRegistrant.java -->
         <meta-data

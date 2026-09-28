@@ -4,6 +4,10 @@ import 'package:materyalph/screens/buyer_store_browse_screen.dart';
 import 'package:materyalph_api_client/materyalph_api_client.dart';
 
 class _StoreRepository extends BuyerStoreRepository {
+  _StoreRepository({this.hoursAvailable = true});
+
+  final bool hoursAvailable;
+
   @override
   Future<PublicStoreProfile> profile(String id) async => PublicStoreProfile(
     (b) => b
@@ -31,7 +35,25 @@ class _StoreRepository extends BuyerStoreRepository {
       )
       ..effectiveDate = Date(2026, 9, 28)
       ..effectiveSource = PublicStoreProfileEffectiveSourceEnum.DATE_OVERRIDE
-      ..timeZone = PublicStoreProfileTimeZoneEnum.asiaSlashManila,
+      ..timeZone = PublicStoreProfileTimeZoneEnum.asiaSlashManila
+      ..hoursStatus = hoursAvailable
+          ? PublicStoreProfileHoursStatusEnum.AVAILABLE
+          : PublicStoreProfileHoursStatusEnum.UNAVAILABLE
+      ..address.replace(
+        PublicAddressSummary(
+          (b) => b
+            ..formattedAddress = '123 Aurora Boulevard, Quezon City'
+            ..cityMunicipality = 'Quezon City'
+            ..province = 'Metro Manila',
+        ),
+      )
+      ..scoreLabel.replace(
+        ScoreLabel(
+          (b) => b
+            ..kind = ScoreLabelKindEnum.NEW_VENDOR
+            ..text = 'New Vendor',
+        ),
+      ),
   );
 }
 
@@ -64,5 +86,20 @@ void main() {
     expect(find.text('Today’s hours: Closed'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('Date-specific schedule'), 100, scrollable: find.byType(Scrollable));
     expect(find.text('Date-specific schedule'), findsOneWidget);
+  });
+
+  testWidgets('unusable saved hours show Hours unavailable, never invented hours', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BuyerPublicStoreProfileScreen(
+          storeId: 'store-1',
+          repository: _StoreRepository(hoursAvailable: false),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Hours unavailable'), findsOneWidget);
   });
 }

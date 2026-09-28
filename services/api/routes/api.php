@@ -31,6 +31,7 @@ require __DIR__.'/admin-vendor-verification.php';
 require __DIR__.'/vendor-private-files.php';
 require __DIR__.'/catalog.php';
 require __DIR__.'/inventory.php';
+require __DIR__.'/buyer.php';
 
 Route::post('/webhooks/xendit/account-verification', XenditAccountVerificationWebhookController::class)->middleware('throttle:provider-webhook');
 

@@ -57,7 +57,7 @@ Optional onboarding may collect:
 - Saved delivery addresses or project sites.
 - First Procurement Project.
 
-Company fields are optional for independent and DIY builders. A Buyer may save multiple addresses and project sites. Every order must identify the location used for discovery, pickup reference, or delivery. GPS permission is optional; denial never blocks address entry, map-pin placement, catalog browsing, or procurement.
+The contractor or industry classification uses a controlled list: General Contractor, Subcontractor or Trade, Independent Builder, DIY or Homeowner, or Other with a short required description (approved by the project owner on 2026-09-28). Company fields are optional for independent and DIY builders. A Buyer may save multiple addresses and project sites. Every order must identify the location used for discovery, pickup reference, or delivery. GPS permission is optional; denial never blocks address entry, map-pin placement, catalog browsing, or procurement.
 
 Buyer organization team accounts are outside the current capstone scope. Every action is attributed to the individual Buyer account that performed it.
 
@@ -71,8 +71,8 @@ Every page implements `loading`, `content`, `empty`, `recoverable error`, `offli
 
 **Map Home**
 
-- **Design.** The top app bar contains the active Location Selector and labeled Search, Notifications, and Cart actions. Radius chips show `5`, `10`, `20`, `30`, `40`, and `50 km`; five kilometers is the default. A tune icon opens filters. The map shows the selected boundary, Buyer or project pin, clustered Vendor markers, map-layer control, recenter control, and a legend for Verified Vendors, Directory Suppliers, and Favorite Suppliers. The weather widget is removed. A draggable **Vendors Near You** sheet and equivalent full list expose the same results.
-- **Flow.** Opening the page loads the last permitted location and radius, then requests eligible Tier 1 and Tier 2 results. Selecting a marker focuses its summary card; selecting the card opens the Vendor Store Profile or the limited Tier 1 details. Radius expansion occurs only after Buyer confirmation. Pull-to-refresh reruns the search without changing saved preferences.
+- **Design.** The top app bar contains the active Location Selector and labeled Search, Notifications, and Cart actions. Radius chips show `5`, `10`, `20`, `30`, `40`, and `50 km`; five kilometers is the default. A tune icon opens filters. The map filter set is Verified Vendors and Directory Suppliers toggles, Favorite Suppliers only, Supplier Type and Material Category; Favorite, Supplier Type and Material Category apply to Verified Vendors only and therefore hide Directory Suppliers while active. There is no Open Now, rating or review-count map filter, so saved hours never remove a supplier and Google ratings are never mixed with VPS (approved by the project owner on 2026-09-28). The map shows the selected boundary, Buyer or project pin, clustered Vendor markers, map-layer control, recenter control, and a legend for Verified Vendors, Directory Suppliers, and Favorite Suppliers. The weather widget is removed. The map-layer control chooses the basemap (Map or Satellite) and opens the legend. A draggable **Vendors Near You** sheet and equivalent full list expose the same results.
+- **Flow.** Without a location, a separate full-screen location page (outside Map Home and its navigation) offers Use Current Location or Select It Manually; a current location shows its street address in the Location Selector. Opening the page loads the last permitted location and radius, then requests eligible Tier 1 and Tier 2 results. Selecting a marker isolates it: every other marker is hidden until the selection is closed, while the list keeps all results. The selected supplier's summary sheet opens the Vendor Store Profile or the limited Tier 1 details. Radius expansion occurs only after Buyer confirmation. Pull-to-refresh reruns the search without changing saved preferences.
 - **Logic.** GPS is optional. If unavailable, the page uses a manually selected location. Ranking and exact-radius filtering occur on the backend. Map and list results share one result identifier so selection remains synchronized. Failed map tiles do not block the list, search, or procurement functions.
 
 **Explore Materials Catalog**
@@ -109,7 +109,7 @@ Both new page flows inherit the existing loading/error/offline/permission, focus
 
 **Select Location**
 
-- **Design.** Tabs provide Saved Locations, Search Address, and Drop Pin. The confirmation panel shows the formatted address, map preview, coordinates at appropriate precision, PSGC region/province/city-or-municipality where resolved, label, contact, and optional site instructions.
+- **Design.** Tabs provide Saved Locations, Search Address, and Drop Pin. Drop Pin is a full-height map under a fixed centre pin; the map owns drag gestures and tabs change by tapping only. Latitude and longitude are never displayed or typed (approved by the project owner on 2026-09-28). The confirmation panel shows the formatted address, PSGC region/province/city-or-municipality where resolved, label, contact, and optional site instructions.
 - **Flow.** The Buyer may grant current-location permission, search an address, move the pin, or select a saved location. The page validates serviceability and asks whether the choice applies to browsing only, a project, or an order. Save requires a descriptive label when retained for future use.
 - **Logic.** Location permission denial never blocks manual entry. Coordinates are validated against Philippine bounds and geocoded server-side. Sensitive site instructions are shown only to the relevant Vendor after an order or authorized inquiry requires them.
 

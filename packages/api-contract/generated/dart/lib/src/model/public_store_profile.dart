@@ -3,9 +3,11 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:materyalph_api_client/src/model/score_label.dart';
 import 'package:materyalph_api_client/src/model/date.dart';
 import 'package:built_collection/built_collection.dart';
 import 'package:materyalph_api_client/src/model/store_operating_day.dart';
+import 'package:materyalph_api_client/src/model/public_address_summary.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -25,6 +27,14 @@ part 'public_store_profile.g.dart';
 /// * [effectiveDate]
 /// * [effectiveSource]
 /// * [timeZone]
+/// * [logoUrl] - Validated public media only.
+/// * [bannerUrl]
+/// * [address]
+/// * [supplierType]
+/// * [niches]
+/// * [fulfillmentMethod]
+/// * [scoreLabel]
+/// * [hoursStatus] - UNAVAILABLE shows Hours Unavailable; the store stays visible and hours are never fabricated.
 @BuiltValue()
 abstract class PublicStoreProfile implements Built<PublicStoreProfile, PublicStoreProfileBuilder> {
   @BuiltValueField(wireName: r'id')
@@ -62,6 +72,33 @@ abstract class PublicStoreProfile implements Built<PublicStoreProfile, PublicSto
   @BuiltValueField(wireName: r'time_zone')
   PublicStoreProfileTimeZoneEnum get timeZone;
   // enum timeZoneEnum {  Asia/Manila,  };
+
+  /// Validated public media only.
+  @BuiltValueField(wireName: r'logo_url')
+  String? get logoUrl;
+
+  @BuiltValueField(wireName: r'banner_url')
+  String? get bannerUrl;
+
+  @BuiltValueField(wireName: r'address')
+  PublicAddressSummary get address;
+
+  @BuiltValueField(wireName: r'supplier_type')
+  String? get supplierType;
+
+  @BuiltValueField(wireName: r'niches')
+  BuiltList<String> get niches;
+
+  @BuiltValueField(wireName: r'fulfillment_method')
+  String? get fulfillmentMethod;
+
+  @BuiltValueField(wireName: r'score_label')
+  ScoreLabel get scoreLabel;
+
+  /// UNAVAILABLE shows Hours Unavailable; the store stays visible and hours are never fabricated.
+  @BuiltValueField(wireName: r'hours_status')
+  PublicStoreProfileHoursStatusEnum get hoursStatus;
+  // enum hoursStatusEnum {  AVAILABLE,  UNAVAILABLE,  };
 
   PublicStoreProfile._();
 
@@ -140,6 +177,46 @@ class _$PublicStoreProfileSerializer implements PrimitiveSerializer<PublicStoreP
     yield serializers.serialize(
       object.timeZone,
       specifiedType: const FullType(PublicStoreProfileTimeZoneEnum),
+    );
+    yield r'logo_url';
+    yield object.logoUrl == null ? null : serializers.serialize(
+      object.logoUrl,
+      specifiedType: const FullType.nullable(String),
+    );
+    yield r'banner_url';
+    yield object.bannerUrl == null ? null : serializers.serialize(
+      object.bannerUrl,
+      specifiedType: const FullType.nullable(String),
+    );
+    yield r'address';
+    yield serializers.serialize(
+      object.address,
+      specifiedType: const FullType(PublicAddressSummary),
+    );
+    yield r'supplier_type';
+    yield object.supplierType == null ? null : serializers.serialize(
+      object.supplierType,
+      specifiedType: const FullType.nullable(String),
+    );
+    yield r'niches';
+    yield serializers.serialize(
+      object.niches,
+      specifiedType: const FullType(BuiltList, [FullType(String)]),
+    );
+    yield r'fulfillment_method';
+    yield object.fulfillmentMethod == null ? null : serializers.serialize(
+      object.fulfillmentMethod,
+      specifiedType: const FullType.nullable(String),
+    );
+    yield r'score_label';
+    yield serializers.serialize(
+      object.scoreLabel,
+      specifiedType: const FullType(ScoreLabel),
+    );
+    yield r'hours_status';
+    yield serializers.serialize(
+      object.hoursStatus,
+      specifiedType: const FullType(PublicStoreProfileHoursStatusEnum),
     );
   }
 
@@ -245,6 +322,66 @@ class _$PublicStoreProfileSerializer implements PrimitiveSerializer<PublicStoreP
           ) as PublicStoreProfileTimeZoneEnum;
           result.timeZone = valueDes;
           break;
+        case r'logo_url':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.logoUrl = valueDes;
+          break;
+        case r'banner_url':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.bannerUrl = valueDes;
+          break;
+        case r'address':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(PublicAddressSummary),
+          ) as PublicAddressSummary;
+          result.address.replace(valueDes);
+          break;
+        case r'supplier_type':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.supplierType = valueDes;
+          break;
+        case r'niches':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(BuiltList, [FullType(String)]),
+          ) as BuiltList<String>;
+          result.niches.replace(valueDes);
+          break;
+        case r'fulfillment_method':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.fulfillmentMethod = valueDes;
+          break;
+        case r'score_label':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(ScoreLabel),
+          ) as ScoreLabel;
+          result.scoreLabel.replace(valueDes);
+          break;
+        case r'hours_status':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(PublicStoreProfileHoursStatusEnum),
+          ) as PublicStoreProfileHoursStatusEnum;
+          result.hoursStatus = valueDes;
+          break;
         default:
           unhandled.add(key);
           unhandled.add(value);
@@ -301,5 +438,21 @@ class PublicStoreProfileTimeZoneEnum extends EnumClass {
 
   static BuiltSet<PublicStoreProfileTimeZoneEnum> get values => _$publicStoreProfileTimeZoneEnumValues;
   static PublicStoreProfileTimeZoneEnum valueOf(String name) => _$publicStoreProfileTimeZoneEnumValueOf(name);
+}
+
+/// UNAVAILABLE shows Hours Unavailable; the store stays visible and hours are never fabricated.
+class PublicStoreProfileHoursStatusEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'AVAILABLE')
+  static const PublicStoreProfileHoursStatusEnum AVAILABLE = _$publicStoreProfileHoursStatusEnum_AVAILABLE;
+  @BuiltValueEnumConst(wireName: r'UNAVAILABLE')
+  static const PublicStoreProfileHoursStatusEnum UNAVAILABLE = _$publicStoreProfileHoursStatusEnum_UNAVAILABLE;
+
+  static Serializer<PublicStoreProfileHoursStatusEnum> get serializer => _$publicStoreProfileHoursStatusEnumSerializer;
+
+  const PublicStoreProfileHoursStatusEnum._(String name): super(name);
+
+  static BuiltSet<PublicStoreProfileHoursStatusEnum> get values => _$publicStoreProfileHoursStatusEnumValues;
+  static PublicStoreProfileHoursStatusEnum valueOf(String name) => _$publicStoreProfileHoursStatusEnumValueOf(name);
 }
 

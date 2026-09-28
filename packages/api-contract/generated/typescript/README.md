@@ -1,4 +1,4 @@
-# @materyalph/api-client-ts@1.0.0-phase.5
+# @materyalph/api-client-ts@1.0.0-phase.6
 
 A TypeScript SDK client for the localhost API.
 
@@ -137,6 +137,22 @@ All URIs are relative to */api/v1*
 *AuthenticationApi* | [**verifyBuyerMobileBotChallenge**](docs/AuthenticationApi.md#verifybuyermobilebotchallenge) | **POST** /mobile/auth/bot-challenges/{challenge_id}/verify |
 *AuthenticationApi* | [**verifyBuyerMobileEmail**](docs/AuthenticationApi.md#verifybuyermobileemail) | **POST** /mobile/auth/verify-email |
 *AuthenticationApi* | [**verifyEmail**](docs/AuthenticationApi.md#verifyemailoperation) | **POST** /auth/verify-email |
+*BuyerDiscoveryApi* | [**addFavoriteSupplier**](docs/BuyerDiscoveryApi.md#addfavoritesupplier) | **PUT** /buyers/favorite-suppliers/{vendorId} |
+*BuyerDiscoveryApi* | [**estimateBuyerRoute**](docs/BuyerDiscoveryApi.md#estimatebuyerroute) | **POST** /buyers/discovery/routes |
+*BuyerDiscoveryApi* | [**getDirectorySupplierDetails**](docs/BuyerDiscoveryApi.md#getdirectorysupplierdetails) | **GET** /buyers/discovery/directory-suppliers/{supplierId} |
+*BuyerDiscoveryApi* | [**listFavoriteSuppliers**](docs/BuyerDiscoveryApi.md#listfavoritesuppliers) | **GET** /buyers/favorite-suppliers |
+*BuyerDiscoveryApi* | [**removeFavoriteSupplier**](docs/BuyerDiscoveryApi.md#removefavoritesupplier) | **DELETE** /buyers/favorite-suppliers/{vendorId} |
+*BuyerDiscoveryApi* | [**saveBuyerDiscoveryRadius**](docs/BuyerDiscoveryApi.md#savebuyerdiscoveryradius) | **PUT** /buyers/discovery/preferences |
+*BuyerDiscoveryApi* | [**searchBuyerSuppliers**](docs/BuyerDiscoveryApi.md#searchbuyersuppliers) | **POST** /buyers/discovery/search |
+*BuyerLocationsApi* | [**createBuyerLocation**](docs/BuyerLocationsApi.md#createbuyerlocation) | **POST** /buyers/locations |
+*BuyerLocationsApi* | [**getBuyerOnboarding**](docs/BuyerLocationsApi.md#getbuyeronboarding) | **GET** /buyers/onboarding |
+*BuyerLocationsApi* | [**listBuyerLocations**](docs/BuyerLocationsApi.md#listbuyerlocations) | **GET** /buyers/locations |
+*BuyerLocationsApi* | [**listBuyerPsgcAreas**](docs/BuyerLocationsApi.md#listbuyerpsgcareas) | **GET** /buyers/geography/areas |
+*BuyerLocationsApi* | [**makeBuyerLocationPrimary**](docs/BuyerLocationsApi.md#makebuyerlocationprimary) | **POST** /buyers/locations/{locationId}/primary |
+*BuyerLocationsApi* | [**removeBuyerLocation**](docs/BuyerLocationsApi.md#removebuyerlocation) | **DELETE** /buyers/locations/{locationId} |
+*BuyerLocationsApi* | [**resolveBuyerLocation**](docs/BuyerLocationsApi.md#resolvebuyerlocation) | **POST** /buyers/locations/resolve |
+*BuyerLocationsApi* | [**saveBuyerOnboarding**](docs/BuyerLocationsApi.md#savebuyeronboarding) | **PUT** /buyers/onboarding |
+*BuyerLocationsApi* | [**updateBuyerLocation**](docs/BuyerLocationsApi.md#updatebuyerlocation) | **PATCH** /buyers/locations/{locationId} |
 *StoresApi* | [**getPublicStoreProfile**](docs/StoresApi.md#getpublicstoreprofile) | **GET** /stores/{storeId}/profile |
 *StoresApi* | [**listPublicStores**](docs/StoresApi.md#listpublicstores) | **GET** /stores |
 *SystemApi* | [**getApiHealth**](docs/SystemApi.md#getapihealth) | **GET** /health |
@@ -245,6 +261,7 @@ All URIs are relative to */api/v1*
 - [AccountSessionListEnvelope](docs/AccountSessionListEnvelope.md)
 - [AccountSessionRevocation](docs/AccountSessionRevocation.md)
 - [AccountType](docs/AccountType.md)
+- [AddressComponents](docs/AddressComponents.md)
 - [AdminDashboardAuditEnvelope](docs/AdminDashboardAuditEnvelope.md)
 - [AdminDashboardEnvelope](docs/AdminDashboardEnvelope.md)
 - [AdminDashboardSummary](docs/AdminDashboardSummary.md)
@@ -275,11 +292,26 @@ All URIs are relative to */api/v1*
 - [BotStepUpErrorEnvelope](docs/BotStepUpErrorEnvelope.md)
 - [BotStepUpErrorEnvelopeAllOfErrors](docs/BotStepUpErrorEnvelopeAllOfErrors.md)
 - [BotStepUpErrorEnvelopeAllOfErrorsAllOfDetails](docs/BotStepUpErrorEnvelopeAllOfErrorsAllOfDetails.md)
+- [BuyerIndustryClassification](docs/BuyerIndustryClassification.md)
+- [BuyerLocation](docs/BuyerLocation.md)
+- [BuyerLocationCreate](docs/BuyerLocationCreate.md)
+- [BuyerLocationEnvelope](docs/BuyerLocationEnvelope.md)
+- [BuyerLocationKind](docs/BuyerLocationKind.md)
+- [BuyerLocationListEnvelope](docs/BuyerLocationListEnvelope.md)
+- [BuyerLocationPreview](docs/BuyerLocationPreview.md)
+- [BuyerLocationPreviewEnvelope](docs/BuyerLocationPreviewEnvelope.md)
+- [BuyerLocationRemoved](docs/BuyerLocationRemoved.md)
+- [BuyerLocationRemovedEnvelope](docs/BuyerLocationRemovedEnvelope.md)
+- [BuyerLocationResolveRequest](docs/BuyerLocationResolveRequest.md)
+- [BuyerLocationUpdate](docs/BuyerLocationUpdate.md)
 - [BuyerMobileGoogleOidcStartRequest](docs/BuyerMobileGoogleOidcStartRequest.md)
 - [BuyerMobileLoginRequest](docs/BuyerMobileLoginRequest.md)
 - [BuyerMobilePasswordRecoveryRequest](docs/BuyerMobilePasswordRecoveryRequest.md)
 - [BuyerMobileRefreshRequest](docs/BuyerMobileRefreshRequest.md)
 - [BuyerMobileRegisterRequest](docs/BuyerMobileRegisterRequest.md)
+- [BuyerOnboarding](docs/BuyerOnboarding.md)
+- [BuyerOnboardingEnvelope](docs/BuyerOnboardingEnvelope.md)
+- [BuyerOnboardingUpdate](docs/BuyerOnboardingUpdate.md)
 - [CatalogAttributeDefinition](docs/CatalogAttributeDefinition.md)
 - [CatalogBlocker](docs/CatalogBlocker.md)
 - [CatalogCompletion](docs/CatalogCompletion.md)
@@ -335,8 +367,23 @@ All URIs are relative to */api/v1*
 - [ComplianceSubmissionSummary](docs/ComplianceSubmissionSummary.md)
 - [CsrfEnvelope](docs/CsrfEnvelope.md)
 - [CsrfEnvelopeAllOfData](docs/CsrfEnvelopeAllOfData.md)
+- [DirectoryAvailability](docs/DirectoryAvailability.md)
+- [DirectorySupplierDetail](docs/DirectorySupplierDetail.md)
+- [DirectorySupplierDetailEnvelope](docs/DirectorySupplierDetailEnvelope.md)
+- [DirectorySupplierSummary](docs/DirectorySupplierSummary.md)
+- [DiscoveryCounts](docs/DiscoveryCounts.md)
+- [DiscoveryPreferences](docs/DiscoveryPreferences.md)
+- [DiscoveryPreferencesEnvelope](docs/DiscoveryPreferencesEnvelope.md)
+- [DiscoveryScope](docs/DiscoveryScope.md)
+- [DiscoverySearchEnvelope](docs/DiscoverySearchEnvelope.md)
+- [DiscoverySearchMeta](docs/DiscoverySearchMeta.md)
+- [DiscoverySearchRequest](docs/DiscoverySearchRequest.md)
 - [EmailRequest](docs/EmailRequest.md)
 - [ErrorEnvelope](docs/ErrorEnvelope.md)
+- [FavoriteSupplier](docs/FavoriteSupplier.md)
+- [FavoriteSupplierListEnvelope](docs/FavoriteSupplierListEnvelope.md)
+- [FavoriteSupplierState](docs/FavoriteSupplierState.md)
+- [FavoriteSupplierStateEnvelope](docs/FavoriteSupplierStateEnvelope.md)
 - [FeeAssessment](docs/FeeAssessment.md)
 - [FinancialSnapshot](docs/FinancialSnapshot.md)
 - [FleetVehicle](docs/FleetVehicle.md)
@@ -353,6 +400,7 @@ All URIs are relative to */api/v1*
 - [GenericDataEnvelope](docs/GenericDataEnvelope.md)
 - [GoogleMobileExchangeRequest](docs/GoogleMobileExchangeRequest.md)
 - [GoogleOidcStartRequest](docs/GoogleOidcStartRequest.md)
+- [GoogleRating](docs/GoogleRating.md)
 - [HealthEnvelope](docs/HealthEnvelope.md)
 - [HealthEnvelopeAllOfData](docs/HealthEnvelopeAllOfData.md)
 - [InventoryBalance](docs/InventoryBalance.md)
@@ -376,8 +424,11 @@ All URIs are relative to */api/v1*
 - [ListingComplianceStatus](docs/ListingComplianceStatus.md)
 - [ListingStatus](docs/ListingStatus.md)
 - [ListingStatusChange](docs/ListingStatusChange.md)
+- [LockVersionRequest](docs/LockVersionRequest.md)
 - [LoginRequest](docs/LoginRequest.md)
+- [MapPoint](docs/MapPoint.md)
 - [MarkingType](docs/MarkingType.md)
+- [MaterialCategoryOption](docs/MaterialCategoryOption.md)
 - [MaterialPriceObservation](docs/MaterialPriceObservation.md)
 - [MfaCodeRequest](docs/MfaCodeRequest.md)
 - [MfaEnrollmentEnvelope](docs/MfaEnrollmentEnvelope.md)
@@ -398,19 +449,32 @@ All URIs are relative to */api/v1*
 - [ProductComplianceDecision](docs/ProductComplianceDecision.md)
 - [ProductComplianceQueueEnvelope](docs/ProductComplianceQueueEnvelope.md)
 - [ProductComplianceQueueItem](docs/ProductComplianceQueueItem.md)
+- [ProviderAttribution](docs/ProviderAttribution.md)
 - [PsgcArea](docs/PsgcArea.md)
+- [PsgcAreaListEnvelope](docs/PsgcAreaListEnvelope.md)
+- [PsgcAreaListMeta](docs/PsgcAreaListMeta.md)
+- [PsgcAreaOption](docs/PsgcAreaOption.md)
+- [PsgcAreaRef](docs/PsgcAreaRef.md)
+- [PsgcResolution](docs/PsgcResolution.md)
 - [PsgcSearchEnvelope](docs/PsgcSearchEnvelope.md)
 - [PsgcSearchEnvelopeData](docs/PsgcSearchEnvelopeData.md)
+- [PublicAddressSummary](docs/PublicAddressSummary.md)
 - [PublicStoreListEnvelope](docs/PublicStoreListEnvelope.md)
 - [PublicStoreListEnvelopeMeta](docs/PublicStoreListEnvelopeMeta.md)
 - [PublicStoreProfile](docs/PublicStoreProfile.md)
 - [PublicStoreProfileEnvelope](docs/PublicStoreProfileEnvelope.md)
 - [PublicStoreSummary](docs/PublicStoreSummary.md)
+- [RadiusExpansion](docs/RadiusExpansion.md)
+- [RadiusKm](docs/RadiusKm.md)
 - [RegisterRequest](docs/RegisterRequest.md)
 - [RegistrationEnvelope](docs/RegistrationEnvelope.md)
 - [RegistrationEnvelopeAllOfData](docs/RegistrationEnvelopeAllOfData.md)
 - [RegulatedMaterialRule](docs/RegulatedMaterialRule.md)
 - [ResendBotChallengeRequest](docs/ResendBotChallengeRequest.md)
+- [RouteEstimate](docs/RouteEstimate.md)
+- [RouteEstimateEnvelope](docs/RouteEstimateEnvelope.md)
+- [RouteEstimateRequest](docs/RouteEstimateRequest.md)
+- [ScoreLabel](docs/ScoreLabel.md)
 - [StaleListing](docs/StaleListing.md)
 - [StockConfirmationItem](docs/StockConfirmationItem.md)
 - [StockConfirmationRequest](docs/StockConfirmationRequest.md)
@@ -420,6 +484,10 @@ All URIs are relative to */api/v1*
 - [StoreActivationReadiness](docs/StoreActivationReadiness.md)
 - [StoreOperatingDay](docs/StoreOperatingDay.md)
 - [SuccessEnvelope](docs/SuccessEnvelope.md)
+- [SupplierOpenStatus](docs/SupplierOpenStatus.md)
+- [SupplierResult](docs/SupplierResult.md)
+- [SupplierServiceability](docs/SupplierServiceability.md)
+- [SupplierTier](docs/SupplierTier.md)
 - [TaxCategory](docs/TaxCategory.md)
 - [UserIdentity](docs/UserIdentity.md)
 - [VendorActivationSnapshot](docs/VendorActivationSnapshot.md)
@@ -467,6 +535,7 @@ All URIs are relative to */api/v1*
 - [VendorVerificationDraftTaxProfile](docs/VendorVerificationDraftTaxProfile.md)
 - [VendorVerificationSubmit](docs/VendorVerificationSubmit.md)
 - [VendorWebhookEnvelope](docs/VendorWebhookEnvelope.md)
+- [VerifiedVendorSummary](docs/VerifiedVendorSummary.md)
 - [VerifyBotChallengeRequest](docs/VerifyBotChallengeRequest.md)
 - [VerifyEmailRequest](docs/VerifyEmailRequest.md)
 - [XenditAccountVerificationWebhook](docs/XenditAccountVerificationWebhook.md)
@@ -517,8 +586,8 @@ This TypeScript SDK client supports the [Fetch API](https://fetch.spec.whatwg.or
 and is automatically generated by the
 [OpenAPI Generator](https://openapi-generator.tech) project:
 
-- API version: `1.0.0-phase.5`
-- Package version: `1.0.0-phase.5`
+- API version: `1.0.0-phase.6`
+- Package version: `1.0.0-phase.6`
 - Generator version: `7.25.0`
 - Build package: `org.openapitools.codegen.languages.TypeScriptFetchClientCodegen`
 

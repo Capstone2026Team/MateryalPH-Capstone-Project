@@ -53,9 +53,27 @@ return [
         'asset_folder' => env('CLOUDINARY_ASSET_FOLDER', 'marketplace'),
     ],
 
+    // Backend-only restricted key (Geocoding, Places API (New), Routes API). Android, iOS and browser keys are
+    // separate client-restricted keys configured in each client's untracked native/build configuration.
     'google_maps' => [
         'server_api_key' => env('GOOGLE_MAPS_SERVER_API_KEY'),
         'timeout_seconds' => (int) env('GOOGLE_MAPS_TIMEOUT_SECONDS', 5),
+        'places' => [
+            'enabled' => (bool) env('GOOGLE_PLACES_ENABLED', true),
+            'included_types' => array_values(array_filter(array_map('trim', explode(',', (string) env('GOOGLE_PLACES_INCLUDED_TYPES', 'hardware_store,home_improvement_store'))))),
+            // Operational refresh target for permitted cached content; the database caps it at 30 days and a
+            // shorter contractual limit in the current Google Maps Platform terms always prevails.
+            'cache_ttl_hours' => (int) env('GOOGLE_PLACES_CACHE_TTL_HOURS', 168),
+            'max_search_cells' => (int) env('GOOGLE_PLACES_MAX_SEARCH_CELLS', 7),
+            'max_calls_per_day' => (int) env('GOOGLE_PLACES_MAX_CALLS_PER_DAY', 2000),
+            'max_cache_records' => (int) env('GOOGLE_PLACES_MAX_CACHE_RECORDS', 20000),
+        ],
+        'routes' => [
+            'routing_preference' => env('GOOGLE_ROUTES_ROUTING_PREFERENCE', 'TRAFFIC_AWARE'),
+            'cache_ttl_minutes' => (int) env('GOOGLE_ROUTES_CACHE_TTL_MINUTES', 10),
+            'max_calls_per_day' => (int) env('GOOGLE_ROUTES_MAX_CALLS_PER_DAY', 2000),
+            'max_cache_records' => (int) env('GOOGLE_ROUTES_MAX_CACHE_RECORDS', 20000),
+        ],
     ],
 
     'xendit' => [
