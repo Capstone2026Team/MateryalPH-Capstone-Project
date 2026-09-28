@@ -241,6 +241,11 @@ class _BuyerPublicStoreProfileScreenState
               'Normal weekly schedule · Philippine local time. Hours are informational and do not guarantee staff availability.',
             ),
             const SizedBox(height: 12),
+            if (profile.hoursStatus ==
+                PublicStoreProfileHoursStatusEnum.UNAVAILABLE)
+              const Text(
+                'Hours unavailable. This store is still listed; check with the store before visiting.',
+              ),
             for (final day in schedule)
               ListTile(
                 contentPadding: EdgeInsets.zero,

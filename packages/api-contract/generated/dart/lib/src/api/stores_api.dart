@@ -20,7 +20,7 @@ class StoresApi {
   const StoresApi(this._dio, this._serializers);
 
   /// getPublicStoreProfile
-  /// Public Store Profile for an active, completed store. Weekly Store Operation is canonical; an explicit date override takes precedence for effective_today in Asia/Manila. The schedule is informational and does not prove live availability.
+  /// Public Store Profile for an active, completed store, built from the same public projection as Buyer map, list and preview results. Weekly Store Operation is canonical; an explicit date override takes precedence for effective_today in Asia/Manila. The schedule is informational and does not prove live availability.
   ///
   /// Parameters:
   /// * [storeId]

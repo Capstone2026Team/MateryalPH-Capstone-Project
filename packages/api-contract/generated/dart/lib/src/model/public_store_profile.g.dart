@@ -52,12 +52,41 @@ final BuiltSet<PublicStoreProfileTimeZoneEnum>
   _$publicStoreProfileTimeZoneEnum_asiaSlashManila,
 ]);
 
+const PublicStoreProfileHoursStatusEnum
+    _$publicStoreProfileHoursStatusEnum_AVAILABLE =
+    const PublicStoreProfileHoursStatusEnum._('AVAILABLE');
+const PublicStoreProfileHoursStatusEnum
+    _$publicStoreProfileHoursStatusEnum_UNAVAILABLE =
+    const PublicStoreProfileHoursStatusEnum._('UNAVAILABLE');
+
+PublicStoreProfileHoursStatusEnum _$publicStoreProfileHoursStatusEnumValueOf(
+    String name) {
+  switch (name) {
+    case 'AVAILABLE':
+      return _$publicStoreProfileHoursStatusEnum_AVAILABLE;
+    case 'UNAVAILABLE':
+      return _$publicStoreProfileHoursStatusEnum_UNAVAILABLE;
+    default:
+      throw ArgumentError(name);
+  }
+}
+
+final BuiltSet<PublicStoreProfileHoursStatusEnum>
+    _$publicStoreProfileHoursStatusEnumValues = BuiltSet<
+        PublicStoreProfileHoursStatusEnum>(const <PublicStoreProfileHoursStatusEnum>[
+  _$publicStoreProfileHoursStatusEnum_AVAILABLE,
+  _$publicStoreProfileHoursStatusEnum_UNAVAILABLE,
+]);
+
 Serializer<PublicStoreProfileEffectiveSourceEnum>
     _$publicStoreProfileEffectiveSourceEnumSerializer =
     _$PublicStoreProfileEffectiveSourceEnumSerializer();
 Serializer<PublicStoreProfileTimeZoneEnum>
     _$publicStoreProfileTimeZoneEnumSerializer =
     _$PublicStoreProfileTimeZoneEnumSerializer();
+Serializer<PublicStoreProfileHoursStatusEnum>
+    _$publicStoreProfileHoursStatusEnumSerializer =
+    _$PublicStoreProfileHoursStatusEnumSerializer();
 
 class _$PublicStoreProfileEffectiveSourceEnumSerializer
     implements PrimitiveSerializer<PublicStoreProfileEffectiveSourceEnum> {
@@ -119,6 +148,36 @@ class _$PublicStoreProfileTimeZoneEnumSerializer
           _fromWire[serialized] ?? (serialized is String ? serialized : ''));
 }
 
+class _$PublicStoreProfileHoursStatusEnumSerializer
+    implements PrimitiveSerializer<PublicStoreProfileHoursStatusEnum> {
+  static const Map<String, Object> _toWire = const <String, Object>{
+    'AVAILABLE': 'AVAILABLE',
+    'UNAVAILABLE': 'UNAVAILABLE',
+  };
+  static const Map<Object, String> _fromWire = const <Object, String>{
+    'AVAILABLE': 'AVAILABLE',
+    'UNAVAILABLE': 'UNAVAILABLE',
+  };
+
+  @override
+  final Iterable<Type> types = const <Type>[PublicStoreProfileHoursStatusEnum];
+  @override
+  final String wireName = 'PublicStoreProfileHoursStatusEnum';
+
+  @override
+  Object serialize(
+          Serializers serializers, PublicStoreProfileHoursStatusEnum object,
+          {FullType specifiedType = FullType.unspecified}) =>
+      _toWire[object.name] ?? object.name;
+
+  @override
+  PublicStoreProfileHoursStatusEnum deserialize(
+          Serializers serializers, Object serialized,
+          {FullType specifiedType = FullType.unspecified}) =>
+      PublicStoreProfileHoursStatusEnum.valueOf(
+          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+}
+
 class _$PublicStoreProfile extends PublicStoreProfile {
   @override
   final String id;
@@ -142,6 +201,22 @@ class _$PublicStoreProfile extends PublicStoreProfile {
   final PublicStoreProfileEffectiveSourceEnum effectiveSource;
   @override
   final PublicStoreProfileTimeZoneEnum timeZone;
+  @override
+  final String? logoUrl;
+  @override
+  final String? bannerUrl;
+  @override
+  final PublicAddressSummary address;
+  @override
+  final String? supplierType;
+  @override
+  final BuiltList<String> niches;
+  @override
+  final String? fulfillmentMethod;
+  @override
+  final ScoreLabel scoreLabel;
+  @override
+  final PublicStoreProfileHoursStatusEnum hoursStatus;
 
   factory _$PublicStoreProfile(
           [void Function(PublicStoreProfileBuilder)? updates]) =>
@@ -158,7 +233,15 @@ class _$PublicStoreProfile extends PublicStoreProfile {
       this.effectiveToday,
       required this.effectiveDate,
       required this.effectiveSource,
-      required this.timeZone})
+      required this.timeZone,
+      this.logoUrl,
+      this.bannerUrl,
+      required this.address,
+      this.supplierType,
+      required this.niches,
+      this.fulfillmentMethod,
+      required this.scoreLabel,
+      required this.hoursStatus})
       : super._();
   @override
   PublicStoreProfile rebuild(
@@ -183,7 +266,15 @@ class _$PublicStoreProfile extends PublicStoreProfile {
         effectiveToday == other.effectiveToday &&
         effectiveDate == other.effectiveDate &&
         effectiveSource == other.effectiveSource &&
-        timeZone == other.timeZone;
+        timeZone == other.timeZone &&
+        logoUrl == other.logoUrl &&
+        bannerUrl == other.bannerUrl &&
+        address == other.address &&
+        supplierType == other.supplierType &&
+        niches == other.niches &&
+        fulfillmentMethod == other.fulfillmentMethod &&
+        scoreLabel == other.scoreLabel &&
+        hoursStatus == other.hoursStatus;
   }
 
   @override
@@ -200,6 +291,14 @@ class _$PublicStoreProfile extends PublicStoreProfile {
     _$hash = $jc(_$hash, effectiveDate.hashCode);
     _$hash = $jc(_$hash, effectiveSource.hashCode);
     _$hash = $jc(_$hash, timeZone.hashCode);
+    _$hash = $jc(_$hash, logoUrl.hashCode);
+    _$hash = $jc(_$hash, bannerUrl.hashCode);
+    _$hash = $jc(_$hash, address.hashCode);
+    _$hash = $jc(_$hash, supplierType.hashCode);
+    _$hash = $jc(_$hash, niches.hashCode);
+    _$hash = $jc(_$hash, fulfillmentMethod.hashCode);
+    _$hash = $jc(_$hash, scoreLabel.hashCode);
+    _$hash = $jc(_$hash, hoursStatus.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -217,7 +316,15 @@ class _$PublicStoreProfile extends PublicStoreProfile {
           ..add('effectiveToday', effectiveToday)
           ..add('effectiveDate', effectiveDate)
           ..add('effectiveSource', effectiveSource)
-          ..add('timeZone', timeZone))
+          ..add('timeZone', timeZone)
+          ..add('logoUrl', logoUrl)
+          ..add('bannerUrl', bannerUrl)
+          ..add('address', address)
+          ..add('supplierType', supplierType)
+          ..add('niches', niches)
+          ..add('fulfillmentMethod', fulfillmentMethod)
+          ..add('scoreLabel', scoreLabel)
+          ..add('hoursStatus', hoursStatus))
         .toString();
   }
 }
@@ -279,6 +386,44 @@ class PublicStoreProfileBuilder
   set timeZone(PublicStoreProfileTimeZoneEnum? timeZone) =>
       _$this._timeZone = timeZone;
 
+  String? _logoUrl;
+  String? get logoUrl => _$this._logoUrl;
+  set logoUrl(String? logoUrl) => _$this._logoUrl = logoUrl;
+
+  String? _bannerUrl;
+  String? get bannerUrl => _$this._bannerUrl;
+  set bannerUrl(String? bannerUrl) => _$this._bannerUrl = bannerUrl;
+
+  PublicAddressSummaryBuilder? _address;
+  PublicAddressSummaryBuilder get address =>
+      _$this._address ??= PublicAddressSummaryBuilder();
+  set address(PublicAddressSummaryBuilder? address) =>
+      _$this._address = address;
+
+  String? _supplierType;
+  String? get supplierType => _$this._supplierType;
+  set supplierType(String? supplierType) => _$this._supplierType = supplierType;
+
+  ListBuilder<String>? _niches;
+  ListBuilder<String> get niches => _$this._niches ??= ListBuilder<String>();
+  set niches(ListBuilder<String>? niches) => _$this._niches = niches;
+
+  String? _fulfillmentMethod;
+  String? get fulfillmentMethod => _$this._fulfillmentMethod;
+  set fulfillmentMethod(String? fulfillmentMethod) =>
+      _$this._fulfillmentMethod = fulfillmentMethod;
+
+  ScoreLabelBuilder? _scoreLabel;
+  ScoreLabelBuilder get scoreLabel =>
+      _$this._scoreLabel ??= ScoreLabelBuilder();
+  set scoreLabel(ScoreLabelBuilder? scoreLabel) =>
+      _$this._scoreLabel = scoreLabel;
+
+  PublicStoreProfileHoursStatusEnum? _hoursStatus;
+  PublicStoreProfileHoursStatusEnum? get hoursStatus => _$this._hoursStatus;
+  set hoursStatus(PublicStoreProfileHoursStatusEnum? hoursStatus) =>
+      _$this._hoursStatus = hoursStatus;
+
   PublicStoreProfileBuilder() {
     PublicStoreProfile._defaults(this);
   }
@@ -297,6 +442,14 @@ class PublicStoreProfileBuilder
       _effectiveDate = $v.effectiveDate;
       _effectiveSource = $v.effectiveSource;
       _timeZone = $v.timeZone;
+      _logoUrl = $v.logoUrl;
+      _bannerUrl = $v.bannerUrl;
+      _address = $v.address.toBuilder();
+      _supplierType = $v.supplierType;
+      _niches = $v.niches.toBuilder();
+      _fulfillmentMethod = $v.fulfillmentMethod;
+      _scoreLabel = $v.scoreLabel.toBuilder();
+      _hoursStatus = $v.hoursStatus;
       _$v = null;
     }
     return this;
@@ -337,6 +490,15 @@ class PublicStoreProfileBuilder
                 effectiveSource, r'PublicStoreProfile', 'effectiveSource'),
             timeZone: BuiltValueNullFieldError.checkNotNull(
                 timeZone, r'PublicStoreProfile', 'timeZone'),
+            logoUrl: logoUrl,
+            bannerUrl: bannerUrl,
+            address: address.build(),
+            supplierType: supplierType,
+            niches: niches.build(),
+            fulfillmentMethod: fulfillmentMethod,
+            scoreLabel: scoreLabel.build(),
+            hoursStatus: BuiltValueNullFieldError.checkNotNull(
+                hoursStatus, r'PublicStoreProfile', 'hoursStatus'),
           );
     } catch (_) {
       late String _$failedField;
@@ -345,6 +507,15 @@ class PublicStoreProfileBuilder
         operatingSchedule.build();
         _$failedField = 'effectiveToday';
         _effectiveToday?.build();
+
+        _$failedField = 'address';
+        address.build();
+
+        _$failedField = 'niches';
+        niches.build();
+
+        _$failedField = 'scoreLabel';
+        scoreLabel.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
             r'PublicStoreProfile', _$failedField, e.toString());

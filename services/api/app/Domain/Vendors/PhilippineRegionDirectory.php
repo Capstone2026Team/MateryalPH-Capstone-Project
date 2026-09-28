@@ -16,7 +16,8 @@ final class PhilippineRegionDirectory
     SELECT id, code, code AS region_code, name AS region_name
     FROM psgc_areas
     WHERE level = 'REGION' AND psgc_version_id = (
-        SELECT id FROM psgc_versions WHERE effective_on <= CURRENT_DATE ORDER BY effective_on DESC, id DESC LIMIT 1
+        SELECT id FROM psgc_versions WHERE effective_on <= CURRENT_DATE AND status <> 'RETIRED'
+        ORDER BY (status = 'ACTIVE') DESC, effective_on DESC, id DESC LIMIT 1
     )
     UNION ALL
     SELECT a.id, a.code, r.region_code, r.region_name

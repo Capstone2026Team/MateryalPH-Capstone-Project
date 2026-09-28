@@ -5,6 +5,8 @@ export * from './AdminProductComplianceApi';
 export * from './AdminVendorVerificationApi';
 export * from './AgreementsApi';
 export * from './AuthenticationApi';
+export * from './BuyerDiscoveryApi';
+export * from './BuyerLocationsApi';
 export * from './StoresApi';
 export * from './SystemApi';
 export * from './VendorAutoAcceptApi';

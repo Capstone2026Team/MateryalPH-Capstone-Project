@@ -7,7 +7,7 @@ void main() {
   final instance = MateryalphApiClient().getStoresApi();
 
   group(StoresApi, () {
-    // Public Store Profile for an active, completed store. Weekly Store Operation is canonical; an explicit date override takes precedence for effective_today in Asia/Manila. The schedule is informational and does not prove live availability.
+    // Public Store Profile for an active, completed store, built from the same public projection as Buyer map, list and preview results. Weekly Store Operation is canonical; an explicit date override takes precedence for effective_today in Asia/Manila. The schedule is informational and does not prove live availability.
     //
     //Future<PublicStoreProfileEnvelope> getPublicStoreProfile(String storeId) async
     test('test getPublicStoreProfile', () async {

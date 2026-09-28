@@ -90,6 +90,9 @@ final class AuthRepository {
 
   AuthenticationApi get _authentication => _client.getAuthenticationApi();
 
+  /// The bearer-authenticated generated client shared by Buyer feature repositories.
+  MateryalphApiClient get apiClient => _client;
+
   Future<T> accountOperation<T>(
     Future<T> Function(AccountsApi api) operation,
   ) async {

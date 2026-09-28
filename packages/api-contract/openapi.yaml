@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: MateryalPH API
-  version: 1.0.0-phase.5
+  version: 1.0.0-phase.6
   description: >-
     Versioned Phase 1–4 contract. Vendor onboarding, verification, activation readiness, private evidence, team invitations, the Vendor catalog and product PS/ICC compliance are server-authorized.
     Browser credentials are isolated by configured frontend origin using _vendor and _admin suffixes on access, refresh, CSRF, MFA and bot-proof cookies.
@@ -20,6 +20,8 @@ tags:
   - name: Vendor Inventory
   - name: Vendor Auto-Accept
   - name: Vendor Fleet
+  - name: Buyer Locations
+  - name: Buyer Discovery
 paths:
   /{webAccountPortal}/account/photo:
     parameters:
@@ -2425,7 +2427,7 @@ paths:
   /stores/{storeId}/profile:
     get:
       operationId: getPublicStoreProfile
-      description: Public Store Profile for an active, completed store. Weekly Store Operation is canonical; an explicit date override takes precedence for effective_today in Asia/Manila. The schedule is informational and does not prove live availability.
+      description: Public Store Profile for an active, completed store, built from the same public projection as Buyer map, list and preview results. Weekly Store Operation is canonical; an explicit date override takes precedence for effective_today in Asia/Manila. The schedule is informational and does not prove live availability.
       tags: [ Stores ]
       parameters:
         - { name: storeId, in: path, required: true, schema: { type: string, format: uuid } }
@@ -3541,6 +3543,241 @@ paths:
         "403": { $ref: "#/components/responses/ErrorResponse" }
         "404": { $ref: "#/components/responses/ErrorResponse" }
 
+  /buyers/onboarding:
+    get:
+      operationId: getBuyerOnboarding
+      description: Optional Buyer profile onboarding snapshot with the approved industry list, active material categories and the saved discovery radius. Skipping never blocks the account.
+      tags: [ Buyer Locations ]
+      security: [ { passportBearer: [] } ]
+      responses:
+        "200": { description: Onboarding snapshot., content: { application/json: { schema: { $ref: "#/components/schemas/BuyerOnboardingEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+    put:
+      operationId: saveBuyerOnboarding
+      description: Saves, completes or skips optional onboarding with optimistic concurrency. OTHER requires industry_other_label. A stale lock_version returns 409 ONBOARDING_VERSION_CONFLICT.
+      tags: [ Buyer Locations ]
+      security: [ { passportBearer: [] } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/BuyerOnboardingUpdate" } } }
+      responses:
+        "200": { description: Updated onboarding snapshot., content: { application/json: { schema: { $ref: "#/components/schemas/BuyerOnboardingEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /buyers/discovery/preferences:
+    put:
+      operationId: saveBuyerDiscoveryRadius
+      description: Saves the Buyer's confirmed radius. Clients call this only after an explicit selection or a confirmed expansion; values outside 5, 10, 20, 30, 40 or 50 km return 422 RADIUS_UNSUPPORTED.
+      tags: [ Buyer Discovery ]
+      security: [ { passportBearer: [] } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/DiscoveryPreferences" } } }
+      responses:
+        "200": { description: Saved radius., content: { application/json: { schema: { $ref: "#/components/schemas/DiscoveryPreferencesEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /buyers/geography/areas:
+    get:
+      operationId: listBuyerPsgcAreas
+      description: Paginated PSGC area picker from the ACTIVE imported version. PROVINCE returns provinces plus independent cities directly under a region. Returns an empty list with status NO_ACTIVE_PSGC_VERSION when nothing is imported.
+      tags: [ Buyer Locations ]
+      security: [ { passportBearer: [] } ]
+      parameters:
+        - { name: level, in: query, required: true, schema: { type: string, enum: [ REGION, PROVINCE, CITY, BARANGAY ] } }
+        - { name: parent_code, in: query, schema: { type: string, pattern: '^[0-9]{10}$' } }
+        - { name: q, in: query, schema: { type: string, maxLength: 80 } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, maximum: 200 } }
+      responses:
+        "200": { description: PSGC areas., content: { application/json: { schema: { $ref: "#/components/schemas/PsgcAreaListEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /buyers/locations:
+    get:
+      operationId: listBuyerLocations
+      description: The Buyer's own active saved locations, primary first. Coordinates, contacts and site instructions are returned only to their owner.
+      tags: [ Buyer Locations ]
+      security: [ { passportBearer: [] } ]
+      responses:
+        "200": { description: Saved locations (bounded to 20)., content: { application/json: { schema: { $ref: "#/components/schemas/BuyerLocationListEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+    post:
+      operationId: createBuyerLocation
+      description: Saves a location from a resolution_token issued to this Buyer within 30 minutes. The first location becomes primary. When the address provider was unavailable, address_line is required (ADDRESS_DESCRIPTION_REQUIRED). Retrying with the same Idempotency-Key returns the same location.
+      tags: [ Buyer Locations ]
+      security: [ { passportBearer: [] } ]
+      parameters:
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/BuyerLocationCreate" } } }
+      responses:
+        "201": { description: Saved location., content: { application/json: { schema: { $ref: "#/components/schemas/BuyerLocationEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /buyers/locations/resolve:
+    post:
+      operationId: resolveBuyerLocation
+      description: Resolves a dropped pin, an explicitly granted device point or a typed Philippine address into a reviewable preview with the best resolved versioned PSGC codes. Nothing is stored. GPS is optional; PIN and ADDRESS are complete alternatives. Pin resolution degrades to coordinates only when the address provider is unavailable; ADDRESS returns 503 ADDRESS_PROVIDER_UNAVAILABLE so the Buyer can drop a pin instead.
+      tags: [ Buyer Locations ]
+      security: [ { passportBearer: [] } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/BuyerLocationResolveRequest" } } }
+      responses:
+        "200": { description: Location preview., content: { application/json: { schema: { $ref: "#/components/schemas/BuyerLocationPreviewEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+        "429": { $ref: "#/components/responses/ErrorResponse" }
+        "503": { $ref: "#/components/responses/ErrorResponse" }
+  /buyers/locations/{locationId}:
+    parameters:
+      - { name: locationId, in: path, required: true, schema: { type: string, format: uuid } }
+    patch:
+      operationId: updateBuyerLocation
+      description: Updates details with optimistic concurrency. A new resolution_token appends a new address version; earlier versions stay intact for snapshots. Another Buyer's location returns 404.
+      tags: [ Buyer Locations ]
+      security: [ { passportBearer: [] } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/BuyerLocationUpdate" } } }
+      responses:
+        "200": { description: Updated location., content: { application/json: { schema: { $ref: "#/components/schemas/BuyerLocationEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+    delete:
+      operationId: removeBuyerLocation
+      description: Archives a saved location. The primary location cannot be removed while other locations exist (409 PRIMARY_LOCATION_REQUIRED).
+      tags: [ Buyer Locations ]
+      security: [ { passportBearer: [] } ]
+      parameters:
+        - { name: lock_version, in: query, required: true, schema: { type: integer, minimum: 1 } }
+      responses:
+        "200": { description: Location removed., content: { application/json: { schema: { $ref: "#/components/schemas/BuyerLocationRemovedEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+  /buyers/locations/{locationId}/primary:
+    parameters:
+      - { name: locationId, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      operationId: makeBuyerLocationPrimary
+      description: Makes this location the single primary location.
+      tags: [ Buyer Locations ]
+      security: [ { passportBearer: [] } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/LockVersionRequest" } } }
+      responses:
+        "200": { description: Primary location., content: { application/json: { schema: { $ref: "#/components/schemas/BuyerLocationEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+  /buyers/discovery/search:
+    post:
+      operationId: searchBuyerSuppliers
+      description: >-
+        Map and list results from one server response with one result identifier and one order (straight-line distance,
+        then Verified Vendors before Directory Suppliers, then result id). Membership is PostGIS ST_DWithin on geography
+        in metres with an inclusive boundary; route distance and saved hours never affect membership or order. The
+        origin travels in the body, is never echoed, and is either an owned saved location, finite Philippine
+        coordinates or the primary saved location. Radius expansion is only suggested in meta.expansion and requires
+        Buyer confirmation. Directory Suppliers come from Google Places with attribution and are informational only.
+      tags: [ Buyer Discovery ]
+      security: [ { passportBearer: [] } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/DiscoverySearchRequest" } } }
+      responses:
+        "200": { description: Ordered suppliers., content: { application/json: { schema: { $ref: "#/components/schemas/DiscoverySearchEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+        "429": { $ref: "#/components/responses/ErrorResponse" }
+  /buyers/discovery/directory-suppliers/{supplierId}:
+    get:
+      operationId: getDirectorySupplierDetails
+      description: Lazy-loaded, attributed Google Place Details for one unexpired Directory Supplier. Informational only; never exposes VPS, verification, messaging, ordering, reviews, payments or a storefront. A Google rating is labeled Google rating.
+      tags: [ Buyer Discovery ]
+      security: [ { passportBearer: [] } ]
+      parameters:
+        - { name: supplierId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: Directory Supplier details., content: { application/json: { schema: { $ref: "#/components/schemas/DirectorySupplierDetailEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "429": { $ref: "#/components/responses/ErrorResponse" }
+        "503": { $ref: "#/components/responses/ErrorResponse" }
+  /buyers/discovery/routes:
+    post:
+      operationId: estimateBuyerRoute
+      description: One driving route from the active origin to the selected supplier inside the radius. Echoes request_version and the opaque origin_version so clients discard stale responses. Failures keep straight_line_meters in error details (503 ROUTE_UNAVAILABLE, 422 ROUTE_NOT_FOUND).
+      tags: [ Buyer Discovery ]
+      security: [ { passportBearer: [] } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/RouteEstimateRequest" } } }
+      responses:
+        "200": { description: Driving estimate., content: { application/json: { schema: { $ref: "#/components/schemas/RouteEstimateEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+        "429": { $ref: "#/components/responses/ErrorResponse" }
+        "503": { $ref: "#/components/responses/ErrorResponse" }
+  /buyers/favorite-suppliers:
+    get:
+      operationId: listFavoriteSuppliers
+      description: The Buyer's Favorite Suppliers (Verified Vendors only). A Favorite without eligible offerings stays listed with currently_discoverable false.
+      tags: [ Buyer Discovery ]
+      security: [ { passportBearer: [] } ]
+      parameters:
+        - { name: page, in: query, schema: { type: integer, minimum: 1, maximum: 500 } }
+      responses:
+        "200": { description: Favorite Suppliers., content: { application/json: { schema: { $ref: "#/components/schemas/FavoriteSupplierListEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+  /buyers/favorite-suppliers/{vendorId}:
+    parameters:
+      - { name: vendorId, in: path, required: true, schema: { type: string, format: uuid } }
+    put:
+      operationId: addFavoriteSupplier
+      description: Idempotently saves an active Verified Vendor as a Favorite Supplier. A Directory Supplier returns 422 FAVORITE_REQUIRES_VERIFIED_VENDOR.
+      tags: [ Buyer Discovery ]
+      security: [ { passportBearer: [] } ]
+      responses:
+        "200": { description: Favorite saved., content: { application/json: { schema: { $ref: "#/components/schemas/FavoriteSupplierStateEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+    delete:
+      operationId: removeFavoriteSupplier
+      description: Idempotently removes a Favorite Supplier. Transaction and audit history are unaffected.
+      tags: [ Buyer Discovery ]
+      security: [ { passportBearer: [] } ]
+      responses:
+        "200": { description: Favorite removed., content: { application/json: { schema: { $ref: "#/components/schemas/FavoriteSupplierStateEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
 components:
   securitySchemes:
     passportBearer: { type: http, scheme: bearer, bearerFormat: JWT }
@@ -3578,6 +3815,500 @@ components:
         application/json:
           schema: { $ref: "#/components/schemas/BotStepUpErrorEnvelope" }
   schemas:
+    RadiusKm:
+      description: Approved Buyer/Vendor radius allowlist; 5 km is the Buyer default and 50 km the platform maximum.
+      type: integer
+      enum: [ 5, 10, 20, 30, 40, 50 ]
+    SupplierTier:
+      type: string
+      enum: [ VERIFIED_VENDOR, DIRECTORY_SUPPLIER ]
+    ScoreLabel:
+      description: Tier 2 shows VPS or New Vendor; Tier 1 shows Directory. A Google rating is never a ScoreLabel.
+      type: object
+      required: [ kind, value, text ]
+      properties:
+        kind: { type: string, enum: [ VPS, NEW_VENDOR, DIRECTORY ] }
+        value: { type: [ string, 'null' ], description: One-decimal VPS for kind VPS; null otherwise. }
+        text: { type: string }
+    MapPoint:
+      type: object
+      required: [ latitude, longitude ]
+      properties:
+        latitude: { type: number, format: double }
+        longitude: { type: number, format: double }
+    PublicAddressSummary:
+      type: object
+      required: [ formatted_address, city_municipality, province ]
+      properties:
+        formatted_address: { type: [ string, 'null' ] }
+        city_municipality: { type: [ string, 'null' ] }
+        province: { type: [ string, 'null' ] }
+    SupplierOpenStatus:
+      description: Descriptive only. Derived from saved public hours in Asia/Manila; never filters, ranks or implies stock or staff presence.
+      type: object
+      required: [ status, opens_at, closes_at, basis ]
+      properties:
+        status: { type: string, enum: [ OPEN, CLOSED, UNAVAILABLE ] }
+        opens_at: { type: [ string, 'null' ] }
+        closes_at: { type: [ string, 'null' ] }
+        basis: { type: string, enum: [ SAVED_SCHEDULE, DATE_OVERRIDE ] }
+    SupplierServiceability:
+      description: Advisory straight-line comparison with the Vendor's stated delivery distance; actual serviceability is revalidated at checkout.
+      type: object
+      required: [ pickup_available, delivery, delivery_maximum_km, basis ]
+      properties:
+        pickup_available: { type: boolean }
+        delivery: { type: string, enum: [ WITHIN_STATED_AREA, OUTSIDE_STATED_AREA, NOT_OFFERED ] }
+        delivery_maximum_km: { type: [ integer, 'null' ] }
+        basis: { type: string, enum: [ STRAIGHT_LINE_ADVISORY ] }
+    VerifiedVendorSummary:
+      type: object
+      required: [ logo_url, supplier_type, niches, fulfillment_method, vacation_mode, public_phone, address, open_status, serviceability ]
+      properties:
+        logo_url: { type: [ string, 'null' ], format: uri }
+        supplier_type: { type: [ string, 'null' ] }
+        niches: { type: array, items: { type: string } }
+        fulfillment_method: { type: [ string, 'null' ] }
+        vacation_mode: { type: boolean }
+        public_phone: { type: [ string, 'null' ] }
+        address: { $ref: "#/components/schemas/PublicAddressSummary" }
+        open_status: { $ref: "#/components/schemas/SupplierOpenStatus" }
+        serviceability: { $ref: "#/components/schemas/SupplierServiceability" }
+    DirectorySupplierSummary:
+      type: object
+      required: [ formatted_address, primary_type, source, refreshed_at ]
+      properties:
+        formatted_address: { type: [ string, 'null' ] }
+        primary_type: { type: [ string, 'null' ] }
+        source: { type: string, enum: [ GOOGLE ] }
+        refreshed_at: { type: string, format: date-time }
+    SupplierResult:
+      type: object
+      required: [ result_id, tier, tier_label, rank, name, marker, distance_meters, score_label, is_favorite, vendor, directory ]
+      properties:
+        result_id: { type: string, format: uuid }
+        tier: { $ref: "#/components/schemas/SupplierTier" }
+        tier_label: { type: string }
+        rank: { type: integer, minimum: 1 }
+        name: { type: string, description: Canonical Public Store Name for Tier 2; Google display name for Tier 1. }
+        marker: { $ref: "#/components/schemas/MapPoint" }
+        distance_meters: { type: integer, minimum: 0, description: Geodesic straight-line distance; never a route distance. }
+        score_label: { $ref: "#/components/schemas/ScoreLabel" }
+        is_favorite: { type: boolean }
+        vendor: { oneOf: [ { $ref: "#/components/schemas/VerifiedVendorSummary" }, { type: 'null' } ] }
+        directory: { oneOf: [ { $ref: "#/components/schemas/DirectorySupplierSummary" }, { type: 'null' } ] }
+    DiscoveryScope:
+      description: Resolved MAT-01 scope. Never includes the exact origin coordinates; origin_version is an opaque identity for stale-response checks.
+      type: object
+      required: [ audience, kind, origin_kind, origin_version, radius_km, radius_meters, distance_basis ]
+      properties:
+        audience: { type: string, enum: [ BUYER ] }
+        kind: { type: string, enum: [ RADIUS ] }
+        origin_kind: { type: string, enum: [ SAVED_LOCATION, DEVICE, MAP_PIN, SEARCH ] }
+        location_id: { type: string, format: uuid }
+        origin_label: { type: string }
+        origin_version: { type: string, pattern: '^[a-f0-9]{32}$' }
+        radius_km: { $ref: "#/components/schemas/RadiusKm" }
+        radius_meters: { type: integer }
+        distance_basis: { type: string, enum: [ GEODESIC_STRAIGHT_LINE ] }
+    DiscoveryCounts:
+      type: object
+      required: [ verified_vendors, directory_suppliers, favorite_suppliers ]
+      properties:
+        verified_vendors: { type: integer, minimum: 0 }
+        directory_suppliers: { type: integer, minimum: 0 }
+        favorite_suppliers: { type: integer, minimum: 0 }
+    ProviderAttribution:
+      type: object
+      required: [ provider, text ]
+      properties:
+        provider: { type: string, enum: [ GOOGLE ] }
+        text: { type: string }
+    DirectoryAvailability:
+      type: object
+      required: [ status, as_of, attribution, coverage_note ]
+      properties:
+        status: { type: string, enum: [ AVAILABLE, CACHED, UNAVAILABLE, NOT_CONFIGURED, FILTERED_OUT, HIDDEN ] }
+        as_of: { type: [ string, 'null' ], format: date-time }
+        attribution: { $ref: "#/components/schemas/ProviderAttribution" }
+        coverage_note: { type: string }
+    RadiusExpansion:
+      description: A suggestion only. The next radius is never applied without Buyer confirmation; 50 km has no further expansion.
+      type: object
+      required: [ eligible_verified_count, suggested_radius_km, at_maximum, reason, requires_confirmation ]
+      properties:
+        eligible_verified_count: { type: integer, minimum: 0 }
+        suggested_radius_km: { type: [ integer, 'null' ], description: 'The next allowed radius (10, 20, 30, 40 or 50), or null at 50 km or with three or more Verified Vendors.' }
+        at_maximum: { type: boolean }
+        reason: { type: [ string, 'null' ], description: 'FEWER_THAN_THREE_VERIFIED_VENDORS or null.' }
+        requires_confirmation: { type: boolean, description: Always true; clients ask before changing the radius. }
+    DiscoverySearchMeta:
+      type: object
+      required: [ scope, current_as_of, eligibility_version, projection_version, counts, directory, expansion, page, per_page, total, has_more ]
+      properties:
+        correlation_id: { type: string }
+        scope: { $ref: "#/components/schemas/DiscoveryScope" }
+        current_as_of: { type: string, format: date-time }
+        eligibility_version: { type: string }
+        projection_version: { type: string }
+        counts: { $ref: "#/components/schemas/DiscoveryCounts" }
+        directory: { $ref: "#/components/schemas/DirectoryAvailability" }
+        expansion: { $ref: "#/components/schemas/RadiusExpansion" }
+        page: { type: integer, minimum: 1 }
+        per_page: { type: integer, minimum: 1, maximum: 100 }
+        total: { type: integer, minimum: 0 }
+        has_more: { type: boolean }
+    DiscoverySearchRequest:
+      description: Send location_id or latitude/longitude (never both). Omit both to use the primary saved location. radius_km defaults to the saved preference.
+      type: object
+      additionalProperties: false
+      properties:
+        location_id: { type: [ string, 'null' ], format: uuid }
+        latitude: { type: number, format: double, minimum: -90, maximum: 90 }
+        longitude: { type: number, format: double, minimum: -180, maximum: 180 }
+        origin_source: { type: string, enum: [ DEVICE, MAP_PIN, SEARCH ] }
+        radius_km: { type: integer, description: 'Must be one of 5, 10, 20, 30, 40 or 50; otherwise 422 RADIUS_UNSUPPORTED.' }
+        include_verified: { type: boolean }
+        include_directory: { type: boolean }
+        favorites_only: { type: boolean }
+        supplier_type: { type: [ string, 'null' ], description: 'WHOLESALER_DISTRIBUTOR, RETAIL_HARDWARE_STORE, SPECIALIZED_SUPPLIER or OTHER. Tier-specific filters hide Directory Suppliers.' }
+        category_id: { type: [ string, 'null' ], format: uuid }
+        page: { type: integer, minimum: 1, maximum: 50 }
+        per_page: { type: integer, minimum: 1, maximum: 100 }
+    DiscoverySearchEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/SupplierResult" } }
+        meta: { $ref: "#/components/schemas/DiscoverySearchMeta" }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    GoogleRating:
+      type: object
+      required: [ source, label, value, count ]
+      properties:
+        source: { type: string, enum: [ GOOGLE ] }
+        label: { type: string, description: Always Google rating. }
+        value: { type: string }
+        count: { type: [ integer, 'null' ] }
+    DirectorySupplierDetail:
+      description: Informational Tier 1 details. There is intentionally no VPS, verification, listing, message, order, review, payment or storefront field.
+      type: object
+      additionalProperties: false
+      required: [ result_id, tier, tier_label, name, formatted_address, marker, public_phone, website_uri, google_maps_uri, opening_hours, google_rating, attribution, fetched_at, actions ]
+      properties:
+        result_id: { type: string, format: uuid }
+        tier: { type: string, enum: [ DIRECTORY_SUPPLIER ] }
+        tier_label: { type: string, enum: [ Directory Supplier ] }
+        name: { type: string }
+        formatted_address: { type: [ string, 'null' ] }
+        marker: { $ref: "#/components/schemas/MapPoint" }
+        public_phone: { type: [ string, 'null' ] }
+        website_uri: { type: [ string, 'null' ], format: uri }
+        google_maps_uri: { type: [ string, 'null' ], format: uri }
+        opening_hours: { type: array, items: { type: string } }
+        google_rating: { oneOf: [ { $ref: "#/components/schemas/GoogleRating" }, { type: 'null' } ] }
+        attribution: { $ref: "#/components/schemas/ProviderAttribution" }
+        fetched_at: { type: string, format: date-time }
+        actions: { type: array, items: { type: string, enum: [ CALL, OPEN_IN_MAPS, WEBSITE, SHARE ] } }
+    DirectorySupplierDetailEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { $ref: "#/components/schemas/DirectorySupplierDetail" }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    RouteEstimateRequest:
+      type: object
+      additionalProperties: false
+      required: [ tier, supplier_id, request_version ]
+      properties:
+        location_id: { type: [ string, 'null' ], format: uuid }
+        latitude: { type: number, format: double, minimum: -90, maximum: 90 }
+        longitude: { type: number, format: double, minimum: -180, maximum: 180 }
+        origin_source: { type: string, enum: [ DEVICE, MAP_PIN, SEARCH ] }
+        radius_km: { type: integer }
+        tier: { $ref: "#/components/schemas/SupplierTier" }
+        supplier_id: { type: string, format: uuid }
+        request_version: { type: string, pattern: '^[A-Za-z0-9_.:-]{1,64}$' }
+    RouteEstimate:
+      type: object
+      required: [ request_version, origin_version, tier, supplier_id, straight_line_meters, distance_meters, duration_seconds, duration_basis, encoded_polyline, computed_at, cached ]
+      properties:
+        request_version: { type: string }
+        origin_version: { type: string }
+        tier: { $ref: "#/components/schemas/SupplierTier" }
+        supplier_id: { type: string, format: uuid }
+        straight_line_meters: { type: integer, minimum: 0 }
+        distance_meters: { type: integer, minimum: 0 }
+        duration_seconds: { type: integer, minimum: 0 }
+        duration_basis: { type: string, enum: [ TRAFFIC_AWARE, TRAFFIC_UNAWARE ] }
+        encoded_polyline: { type: string }
+        computed_at: { type: string, format: date-time }
+        cached: { type: boolean }
+    RouteEstimateEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { $ref: "#/components/schemas/RouteEstimate" }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    PsgcAreaRef:
+      type: object
+      required: [ code, name ]
+      properties:
+        code: { type: string }
+        name: { type: [ string, 'null' ] }
+    PsgcResolution:
+      description: Best resolved versioned PSGC codes. Coordinates stay authoritative; UNRESOLVED is a valid saved state.
+      type: object
+      required: [ resolution, version, reason, region, province, city_municipality, barangay ]
+      properties:
+        resolution: { type: string, enum: [ RESOLVED, PARTIAL, UNRESOLVED ] }
+        version: { type: [ string, 'null' ] }
+        reason: { type: [ string, 'null' ] }
+        region: { oneOf: [ { $ref: "#/components/schemas/PsgcAreaRef" }, { type: 'null' } ] }
+        province: { oneOf: [ { $ref: "#/components/schemas/PsgcAreaRef" }, { type: 'null' } ] }
+        city_municipality: { oneOf: [ { $ref: "#/components/schemas/PsgcAreaRef" }, { type: 'null' } ] }
+        barangay: { oneOf: [ { $ref: "#/components/schemas/PsgcAreaRef" }, { type: 'null' } ] }
+    AddressComponents:
+      type: object
+      required: [ street, barangay, city_municipality, province, postal_code ]
+      properties:
+        street: { type: [ string, 'null' ] }
+        barangay: { type: [ string, 'null' ] }
+        city_municipality: { type: [ string, 'null' ] }
+        province: { type: [ string, 'null' ] }
+        postal_code: { type: [ string, 'null' ] }
+    BuyerLocationResolveRequest:
+      type: object
+      additionalProperties: false
+      required: [ mode ]
+      properties:
+        mode: { type: string, enum: [ PIN, DEVICE, ADDRESS ] }
+        latitude: { type: number, format: double, minimum: -90, maximum: 90 }
+        longitude: { type: number, format: double, minimum: -180, maximum: 180 }
+        address_line: { type: [ string, 'null' ], maxLength: 200 }
+        barangay: { type: [ string, 'null' ], maxLength: 120 }
+        city_municipality: { type: [ string, 'null' ], maxLength: 120 }
+        province: { type: [ string, 'null' ], maxLength: 120 }
+        postal_code: { type: [ string, 'null' ], pattern: '^[0-9]{4}$' }
+        city_code: { type: [ string, 'null' ], pattern: '^[0-9]{10}$' }
+        barangay_code: { type: [ string, 'null' ], pattern: '^[0-9]{10}$' }
+    BuyerLocationPreview:
+      type: object
+      required: [ formatted_address, latitude, longitude, source, provider_status, components, psgc, resolution_token, expires_at ]
+      properties:
+        formatted_address: { type: [ string, 'null' ] }
+        latitude: { type: number, format: double }
+        longitude: { type: number, format: double }
+        source: { type: string, enum: [ DEVICE, MAP_PIN, ADDRESS_SEARCH ] }
+        provider_status: { type: string, enum: [ AVAILABLE, UNAVAILABLE, NOT_FOUND ] }
+        components: { $ref: "#/components/schemas/AddressComponents" }
+        psgc: { $ref: "#/components/schemas/PsgcResolution" }
+        resolution_token: { type: string, description: 'Opaque, Buyer-bound and valid for 30 minutes.' }
+        expires_at: { type: string, format: date-time }
+    BuyerLocationPreviewEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { $ref: "#/components/schemas/BuyerLocationPreview" }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    BuyerLocationKind:
+      type: string
+      enum: [ DELIVERY, BUSINESS, PROJECT_SITE, PICKUP_REFERENCE, OTHER ]
+    BuyerLocationCreate:
+      type: object
+      additionalProperties: false
+      required: [ resolution_token, label ]
+      properties:
+        resolution_token: { type: string, maxLength: 8192 }
+        label: { type: string, minLength: 1, maxLength: 60 }
+        location_kind: { $ref: "#/components/schemas/BuyerLocationKind" }
+        make_primary: { type: boolean }
+        contact_name: { type: [ string, 'null' ], maxLength: 120 }
+        contact_phone_e164: { type: [ string, 'null' ], pattern: '^\+[1-9][0-9]{7,14}$' }
+        site_instructions: { type: [ string, 'null' ], maxLength: 500 }
+        address_line: { type: [ string, 'null' ], maxLength: 300 }
+    BuyerLocationUpdate:
+      type: object
+      additionalProperties: false
+      required: [ lock_version ]
+      properties:
+        lock_version: { type: integer, minimum: 1 }
+        resolution_token: { type: string, maxLength: 8192 }
+        label: { type: string, minLength: 1, maxLength: 60 }
+        location_kind: { $ref: "#/components/schemas/BuyerLocationKind" }
+        contact_name: { type: [ string, 'null' ], maxLength: 120 }
+        contact_phone_e164: { type: [ string, 'null' ], pattern: '^\+[1-9][0-9]{7,14}$' }
+        site_instructions: { type: [ string, 'null' ], maxLength: 500 }
+        address_line: { type: [ string, 'null' ], maxLength: 300 }
+    LockVersionRequest:
+      type: object
+      additionalProperties: false
+      required: [ lock_version ]
+      properties:
+        lock_version: { type: integer, minimum: 1 }
+    BuyerLocation:
+      type: object
+      required: [ id, label, location_kind, is_primary, formatted_address, latitude, longitude, source, address_version, components, psgc, contact_name, contact_phone_e164, site_instructions, lock_version, updated_at ]
+      properties:
+        id: { type: string, format: uuid }
+        label: { type: [ string, 'null' ] }
+        location_kind: { $ref: "#/components/schemas/BuyerLocationKind" }
+        is_primary: { type: boolean }
+        formatted_address: { type: string }
+        latitude: { type: number, format: double }
+        longitude: { type: number, format: double }
+        source: { type: string }
+        address_version: { type: integer, minimum: 1 }
+        components: { $ref: "#/components/schemas/AddressComponents" }
+        psgc: { $ref: "#/components/schemas/PsgcResolution" }
+        contact_name: { type: [ string, 'null' ] }
+        contact_phone_e164: { type: [ string, 'null' ] }
+        site_instructions: { type: [ string, 'null' ], description: Owner-only; shown to a Vendor only when a later order or authorized inquiry needs it. }
+        lock_version: { type: integer, minimum: 1 }
+        updated_at: { type: string, format: date-time }
+    BuyerLocationEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { $ref: "#/components/schemas/BuyerLocation" }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    BuyerLocationListEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { type: array, maxItems: 20, items: { $ref: "#/components/schemas/BuyerLocation" } }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    BuyerLocationRemoved:
+      type: object
+      required: [ id, removed ]
+      properties:
+        id: { type: string, format: uuid }
+        removed: { type: boolean }
+    BuyerLocationRemovedEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { $ref: "#/components/schemas/BuyerLocationRemoved" }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    MaterialCategoryOption:
+      type: object
+      required: [ id, code, name ]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
+    BuyerIndustryClassification:
+      description: Approved by the project owner on 2026-09-28.
+      type: string
+      enum: [ GENERAL_CONTRACTOR, SUBCONTRACTOR_TRADE, INDEPENDENT_BUILDER, DIY_HOMEOWNER, OTHER ]
+    BuyerOnboarding:
+      type: object
+      required: [ status, completed_at, buyer_type, company_name, position_title, industry_classification, industry_other_label, preferred_category_ids, discovery_radius_km, has_primary_location, lock_version, categories, industries ]
+      properties:
+        status: { type: string, enum: [ NOT_STARTED, SKIPPED, COMPLETED ] }
+        completed_at: { type: [ string, 'null' ], format: date-time }
+        buyer_type: { type: string }
+        company_name: { type: [ string, 'null' ] }
+        position_title: { type: [ string, 'null' ] }
+        industry_classification: { oneOf: [ { $ref: "#/components/schemas/BuyerIndustryClassification" }, { type: 'null' } ] }
+        industry_other_label: { type: [ string, 'null' ] }
+        preferred_category_ids: { type: array, items: { type: string, format: uuid } }
+        discovery_radius_km: { $ref: "#/components/schemas/RadiusKm" }
+        has_primary_location: { type: boolean }
+        lock_version: { type: integer, minimum: 1 }
+        categories: { type: array, items: { $ref: "#/components/schemas/MaterialCategoryOption" } }
+        industries: { type: array, items: { $ref: "#/components/schemas/BuyerIndustryClassification" } }
+    BuyerOnboardingUpdate:
+      type: object
+      additionalProperties: false
+      required: [ lock_version, action ]
+      properties:
+        lock_version: { type: integer, minimum: 1 }
+        action: { type: string, enum: [ SAVE, COMPLETE, SKIP ] }
+        company_name: { type: [ string, 'null' ], maxLength: 180 }
+        position_title: { type: [ string, 'null' ], maxLength: 80 }
+        industry_classification: { oneOf: [ { $ref: "#/components/schemas/BuyerIndustryClassification" }, { type: 'null' } ] }
+        industry_other_label: { type: [ string, 'null' ], maxLength: 80 }
+        preferred_category_ids: { type: array, maxItems: 24, items: { type: string, format: uuid } }
+    BuyerOnboardingEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { $ref: "#/components/schemas/BuyerOnboarding" }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    DiscoveryPreferences:
+      type: object
+      additionalProperties: false
+      required: [ radius_km ]
+      properties:
+        radius_km: { type: integer, description: 'One of 5, 10, 20, 30, 40 or 50.' }
+    DiscoveryPreferencesEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { $ref: "#/components/schemas/DiscoveryPreferences" }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    PsgcAreaOption:
+      type: object
+      required: [ code, name, level ]
+      properties:
+        code: { type: string }
+        name: { type: string }
+        level: { type: string }
+    PsgcAreaListMeta:
+      type: object
+      required: [ psgc_version, page, has_more, status ]
+      properties:
+        correlation_id: { type: string }
+        psgc_version: { type: [ string, 'null' ] }
+        page: { type: integer }
+        has_more: { type: boolean }
+        status: { type: string, enum: [ AVAILABLE, NO_ACTIVE_PSGC_VERSION, PARENT_UNKNOWN ] }
+    PsgcAreaListEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/PsgcAreaOption" } }
+        meta: { $ref: "#/components/schemas/PsgcAreaListMeta" }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    FavoriteSupplier:
+      type: object
+      required: [ vendor_id, name, logo_url, score_label, currently_discoverable, saved_at ]
+      properties:
+        vendor_id: { type: string, format: uuid }
+        name: { type: string }
+        logo_url: { type: [ string, 'null' ], format: uri }
+        score_label: { $ref: "#/components/schemas/ScoreLabel" }
+        currently_discoverable: { type: boolean }
+        saved_at: { type: string, format: date-time }
+    FavoriteSupplierListEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/FavoriteSupplier" } }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    FavoriteSupplierState:
+      type: object
+      required: [ vendor_id, is_favorite ]
+      properties:
+        vendor_id: { type: string, format: uuid }
+        is_favorite: { type: boolean }
+    FavoriteSupplierStateEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { $ref: "#/components/schemas/FavoriteSupplierState" }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
     "AccountProfile":
       {
         "type": "object",
@@ -4449,7 +5180,7 @@ components:
         closes_at: { type: [ string, 'null' ], pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$', description: 'Later than opens_at on the same day; overnight periods are unsupported.' }
     PublicStoreProfile:
       type: object
-      required: [ id, vacation_mode, public_store_name, description, public_email, public_phone, operating_schedule, effective_today, effective_date, effective_source, time_zone ]
+      required: [ id, vacation_mode, public_store_name, description, public_email, public_phone, logo_url, banner_url, address, supplier_type, niches, fulfillment_method, score_label, hours_status, operating_schedule, effective_today, effective_date, effective_source, time_zone ]
       properties:
         id: { type: string, format: uuid }
         vacation_mode: { type: boolean, description: 'True when all new procurement is paused; existing work remains available.' }
@@ -4462,6 +5193,14 @@ components:
         effective_date: { type: string, format: date }
         effective_source: { type: string, enum: [ WEEKLY, DATE_OVERRIDE ] }
         time_zone: { type: string, const: Asia/Manila }
+        logo_url: { type: [ string, 'null' ], format: uri, description: Validated public media only. }
+        banner_url: { type: [ string, 'null' ], format: uri }
+        address: { $ref: '#/components/schemas/PublicAddressSummary' }
+        supplier_type: { type: [ string, 'null' ] }
+        niches: { type: array, items: { type: string } }
+        fulfillment_method: { type: [ string, 'null' ] }
+        score_label: { $ref: '#/components/schemas/ScoreLabel' }
+        hours_status: { type: string, enum: [ AVAILABLE, UNAVAILABLE ], description: 'UNAVAILABLE shows Hours Unavailable; the store stays visible and hours are never fabricated.' }
     PublicStoreProfileEnvelope:
       type: object
       required: [ data, meta, errors ]

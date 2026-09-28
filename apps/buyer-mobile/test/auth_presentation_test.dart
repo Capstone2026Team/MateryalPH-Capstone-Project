@@ -1,3 +1,5 @@
+import 'buyer_account_test.dart' as account_fixtures;
+import 'map_discovery_fakes.dart';
 import 'terms_fixtures.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -124,19 +126,30 @@ void main() {
       MaterialApp(
         theme: BuyerTheme.light,
         home: BuyerHomeScreen(
+          repository: account_fixtures.repository(),
+          discoveryRepository: FakeDiscoveryRepository(),
           onSignOut: () async => throw Exception('private server detail'),
         ),
       ),
     );
-    await tester.tap(find.byTooltip('Sign out'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('Sign-out could not finish'), findsOneWidget);
-    expect(find.text('Buyer account connected'), findsOneWidget);
-    expect(find.textContaining('private server detail'), findsNothing);
-    expect(
-      tester.widget<IconButton>(find.byType(IconButton).first).onPressed,
-      isNotNull,
+    await tester.tap(find.bySemanticsLabel('Profile'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Sign Out'),
+      200,
+      scrollable: find.byType(Scrollable).last,
     );
+    await tester.tap(find.text('Sign Out'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.textContaining('Could not sign out'),
+      -200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    expect(find.textContaining('Could not sign out'), findsOneWidget);
+    expect(find.text('Buyer fixture'), findsOneWidget);
+    expect(find.textContaining('private server detail'), findsNothing);
   });
 
   test(

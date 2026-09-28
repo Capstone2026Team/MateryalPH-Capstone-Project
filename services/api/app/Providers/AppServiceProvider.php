@@ -5,6 +5,8 @@ namespace App\Providers;
 use App\Domain\Authorization\AccountAccess;
 use App\Domain\Compliance\ComplianceReferenceProvider;
 use App\Domain\Compliance\ComplianceTextExtractor;
+use App\Domain\Geography\PlacesProvider;
+use App\Domain\Geography\RouteProvider;
 use App\Domain\Identity\AccessTokenIssuer;
 use App\Domain\Identity\OtpCodeGenerator;
 use App\Domain\Identity\PassportAccessTokenIssuer;
@@ -17,6 +19,8 @@ use App\Domain\Vendors\XenditAccountVerificationGateway;
 use App\Infrastructure\Compliance\RegisterComplianceReferenceProvider;
 use App\Infrastructure\Compliance\UnavailableComplianceTextExtractor;
 use App\Infrastructure\Geography\ConfiguredGoogleMapsGeocoder;
+use App\Infrastructure\Geography\GooglePlacesProvider;
+use App\Infrastructure\Geography\GoogleRoutesProvider;
 use App\Infrastructure\Geography\PsgcCloudProvider;
 use App\Infrastructure\Identity\GoogleRecaptchaEnterpriseGateway;
 use App\Infrastructure\Payments\ConfiguredXenditAccountVerificationGateway;
@@ -43,6 +47,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(XenditAccountVerificationGateway::class, ConfiguredXenditAccountVerificationGateway::class);
         $this->app->bind(ComplianceReferenceProvider::class, RegisterComplianceReferenceProvider::class);
         $this->app->bind(ComplianceTextExtractor::class, UnavailableComplianceTextExtractor::class);
+        $this->app->bind(PlacesProvider::class, GooglePlacesProvider::class);
+        $this->app->bind(RouteProvider::class, GoogleRoutesProvider::class);
     }
 
     /**
@@ -86,5 +92,11 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('vendor-address', fn (Request $request): Limit => Limit::perMinute(10)->by((string) $request->user()?->getAuthIdentifier()));
         RateLimiter::for('auth-registration', fn (Request $request): Limit => Limit::perHour(5)->by($request->ip()));
         RateLimiter::for('auth-refresh', fn (Request $request): Limit => Limit::perMinute(30)->by($request->ip()));
+        // Buyer maps traffic: per-user budgets inside the overall account budget. Platform-wide daily provider
+        // budgets are enforced separately by ProviderBudget.
+        RateLimiter::for('buyer-discovery', fn (Request $request): Limit => Limit::perMinute(30)->by((string) $request->user()?->getAuthIdentifier()));
+        RateLimiter::for('buyer-geocode', fn (Request $request): Limit => Limit::perMinute(12)->by((string) $request->user()?->getAuthIdentifier()));
+        RateLimiter::for('buyer-places', fn (Request $request): Limit => Limit::perMinute(20)->by((string) $request->user()?->getAuthIdentifier()));
+        RateLimiter::for('buyer-route', fn (Request $request): Limit => Limit::perMinute(20)->by((string) $request->user()?->getAuthIdentifier()));
     }
 }

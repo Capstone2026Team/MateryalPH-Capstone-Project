@@ -17,6 +17,14 @@ Name | Type
 `effectiveDate` | Date
 `effectiveSource` | string
 `timeZone` | string
+`logoUrl` | string
+`bannerUrl` | string
+`address` | [PublicAddressSummary](PublicAddressSummary.md)
+`supplierType` | string
+`niches` | Array&lt;string&gt;
+`fulfillmentMethod` | string
+`scoreLabel` | [ScoreLabel](ScoreLabel.md)
+`hoursStatus` | string
 
 ## Example
 
@@ -36,6 +44,14 @@ const example = {
   "effectiveDate": null,
   "effectiveSource": null,
   "timeZone": null,
+  "logoUrl": null,
+  "bannerUrl": null,
+  "address": null,
+  "supplierType": null,
+  "niches": null,
+  "fulfillmentMethod": null,
+  "scoreLabel": null,
+  "hoursStatus": null,
 } satisfies PublicStoreProfile
 
 console.log(example)

@@ -194,6 +194,17 @@ GOOGLE_OIDC_REDIRECT_URI=http://localhost:8080/api/v1/auth/google/callback
 GOOGLE_OIDC_ANDROID_CLIENT_ID=
 GOOGLE_OIDC_IOS_CLIENT_ID=
 GOOGLE_MAPS_SERVER_API_KEY=
+GOOGLE_MAPS_TIMEOUT_SECONDS=5
+GOOGLE_PLACES_ENABLED=true
+GOOGLE_PLACES_INCLUDED_TYPES=hardware_store,home_improvement_store
+GOOGLE_PLACES_CACHE_TTL_HOURS=168
+GOOGLE_PLACES_MAX_SEARCH_CELLS=7
+GOOGLE_PLACES_MAX_CALLS_PER_DAY=2000
+GOOGLE_PLACES_MAX_CACHE_RECORDS=20000
+GOOGLE_ROUTES_ROUTING_PREFERENCE=TRAFFIC_AWARE
+GOOGLE_ROUTES_CACHE_TTL_MINUTES=10
+GOOGLE_ROUTES_MAX_CALLS_PER_DAY=2000
+GOOGLE_ROUTES_MAX_CACHE_RECORDS=20000
 
 RECAPTCHA_ENABLED=false
 RECAPTCHA_GOOGLE_CLOUD_PROJECT_ID=
@@ -261,11 +272,12 @@ The committed `config/environment.example.json` contains empty/public build-time
   "API_BASE_URL": "http://10.0.2.2:8080/api/v1",
   "GOOGLE_OIDC_CLIENT_ID": "",
   "GOOGLE_OIDC_SERVER_CLIENT_ID": "",
+  "MAPS_CLIENT_CONFIGURED": false,
   "SENTRY_DSN": ""
 }
 ```
 
-Native Google Maps keys belong in ignored flavor-specific properties/configuration consumed through manifest placeholders. Firebase client configuration files are environment-specific and ignored under the user's security policy. They are not server secrets, but they must not be reused across environments.
+Native Google Maps keys belong in ignored files consumed at build time: Android reads `MAPS_ANDROID_API_KEY` from `apps/buyer-mobile/android/secrets.properties` (or the build environment) into the manifest placeholder; iOS reads `MAPS_IOS_API_KEY` from the ignored `apps/buyer-mobile/ios/Flutter/MapsKeys.xcconfig` (copy `MapsKeys.xcconfig.example`). Set `MAPS_CLIENT_CONFIGURED` to `true` only when both native keys are installed; otherwise the Buyer app shows the synchronized supplier list with a map-unavailable notice. The Flutter app never receives the server key: Places, Routes and geocoding go through `/api/v1`. Firebase client configuration files are environment-specific and ignored under the user's security policy. They are not server secrets, but they must not be reused across environments.
 
 Run a Development build with an ignored configuration file:
 
@@ -354,16 +366,18 @@ Create four keys rather than one shared key:
 1. **Android key:** restrict by Android application, package name, and signing-certificate SHA fingerprint; restrict APIs to Maps SDK for Android.
 2. **iOS key:** restrict by iOS bundle identifier; restrict APIs to Maps SDK for iOS.
 3. **Browser key:** restrict by exact local/Staging/Production HTTP referrers; restrict APIs to Maps JavaScript API.
-4. **Server key:** restrict APIs to Places API (New), Routes, and selected geocoding API. Apply server IP restrictions when stable outbound addresses are available; otherwise use the strongest supported platform control, quotas, and monitoring.
+4. **Server key:** restrict APIs to Places API (New), Routes API and Geocoding API. Apply server IP restrictions when stable outbound addresses are available; otherwise use the strongest supported platform control, quotas, and monitoring.
 
 Paste locations:
 
 | Key | Development destination |
 | --- | --- |
-| Android | ignored `apps/buyer-mobile/android/secrets.properties` |
-| iOS | ignored environment `.xcconfig` |
+| Android | ignored `apps/buyer-mobile/android/secrets.properties` as `MAPS_ANDROID_API_KEY` |
+| iOS | ignored `apps/buyer-mobile/ios/Flutter/MapsKeys.xcconfig` as `MAPS_IOS_API_KEY` |
 | Browser | Vendor/Admin `.env.development.local` only if that portal uses Maps |
 | Server | `services/api/.env` as `GOOGLE_MAPS_SERVER_API_KEY` |
+
+Phase 6 cost and policy controls: the backend requests minimum field masks (Places search: id, display name, location, formatted address, primary type, business status; Place Details adds phone, website, Google Maps link, weekday hours, rating and rating count; Routes: distance, duration, encoded polyline). It enforces the `*_MAX_CALLS_PER_DAY` budgets, caches permitted Places content for at most `GOOGLE_PLACES_CACHE_TTL_HOURS` (the database caps it at 30 days, and a shorter limit in the current Google Maps Platform terms always prevails), and caches routes for `GOOGLE_ROUTES_CACHE_TTL_MINUTES`. The hourly `materyalph:geography-cache-prune` job deletes expired and excess cache records. Set a Google Cloud budget alert that matches these daily budgets.
 
 ### 8.3 Configure Google OpenID Connect
 

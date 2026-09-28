@@ -1,51 +1,55 @@
 import 'package:flutter/material.dart';
-
-import '../design_system/theme.dart';
-import '../widgets/brand_lockup.dart';
-import '../widgets/auth_content.dart';
-import '../auth/auth_repository.dart';
-import 'buyer_profile_screen.dart';
-import 'buyer_store_browse_screen.dart';
-import '../widgets/buyer_account_widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../auth/auth_repository.dart';
+import '../design_system/theme.dart';
+import '../features/map_discovery/device_location.dart';
+import '../features/map_discovery/discovery_repository.dart';
+import '../features/map_discovery/map_home_screen.dart';
+import '../features/map_discovery/supplier_map.dart';
+import '../widgets/buyer_account_widgets.dart';
+import 'buyer_profile_screen.dart';
+import 'buyer_store_browse_screen.dart';
+
+/// The five-destination Buyer shell. Map is the default authenticated destination and stays
+/// mounted while another tab is open, so the selected location, radius and selection survive.
 class BuyerHomeScreen extends StatefulWidget {
   const BuyerHomeScreen({
     super.key,
     required this.onSignOut,
     this.repository,
     this.onSessionEnded,
+    this.discoveryRepository,
+    this.deviceLocation = const GeolocatorDeviceLocationService(),
+    this.mapBuilder = defaultSupplierMapBuilder,
   });
 
   final Future<void> Function() onSignOut;
   final AuthRepository? repository;
   final VoidCallback? onSessionEnded;
+  final DiscoveryRepository? discoveryRepository;
+  final DeviceLocationService deviceLocation;
+  final SupplierMapBuilder mapBuilder;
 
   @override
   State<BuyerHomeScreen> createState() => _BuyerHomeScreenState();
 }
 
 class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
-  bool _signingOut = false;
-  String? _error;
+  static const _labels = ['Map', 'Explore', 'Projects', 'Messages', 'Profile'];
   int _destination = 0;
-  Future<void> _signOut() async {
-    setState(() {
-      _signingOut = true;
-      _error = null;
-    });
-    try {
-      await widget.onSignOut();
-    } catch (_) {
-      if (mounted) {
-        setState(
-          () => _error =
-              'Sign-out could not finish. Check your connection and try again.',
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _signingOut = false);
-    }
+  late final DiscoveryRepository? _discovery =
+      widget.discoveryRepository ??
+      (widget.repository == null
+          ? null
+          : ApiDiscoveryRepository(
+              client: widget.repository!.apiClient,
+              onSessionExpired: _expireSession,
+            ));
+
+  Future<void> _expireSession() async {
+    await widget.repository?.clearAccountSession();
+    if (mounted) _sessionEnded();
   }
 
   void _sessionEnded() {
@@ -53,107 +57,85 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
     widget.onSessionEnded?.call();
   }
 
+  void _unavailable(String title) => Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (_) => BuyerUnavailableScreen(title: title),
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
+    final discovery = _discovery;
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: Stack(
+        // Expand so a destination still fills the body while the Map stays mounted offstage.
+        fit: StackFit.expand,
+        children: [
+          Offstage(
+            offstage: _destination != 0,
+            child: TickerMode(
+              enabled: _destination == 0,
+              child: discovery == null
+                  ? const SafeArea(child: BuyerUnavailableContent())
+                  : MapHomeScreen(
+                      repository: discovery,
+                      deviceLocation: widget.deviceLocation,
+                      mapBuilder: widget.mapBuilder,
+                      onUnavailable: _unavailable,
+                      onOpenStore: (context, supplier) =>
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => BuyerPublicStoreProfileScreen(
+                                storeId: supplier.resultId,
+                                repository: BuyerStoreRepository(),
+                              ),
+                            ),
+                          ),
+                    ),
+            ),
+          ),
+          if (_destination != 0) Positioned.fill(child: _destinationPage()),
+        ],
+      ),
+      bottomNavigationBar: _navigation(),
+    );
+  }
+
+  Widget _destinationPage() {
     if (_destination == 4 && widget.repository != null) {
-      return Scaffold(
-        body: BuyerProfileScreen(
-          repository: widget.repository!,
-          onSignedOut: _sessionEnded,
-          onSignOut: widget.onSignOut,
-        ),
-        bottomNavigationBar: _navigation(),
+      return BuyerProfileScreen(
+        repository: widget.repository!,
+        discoveryRepository: _discovery,
+        deviceLocation: widget.deviceLocation,
+        onSignedOut: _sessionEnded,
+        onSignOut: widget.onSignOut,
       );
     }
     if (_destination == 1) {
-      return Scaffold(appBar: AppBar(title: const Text('Explore stores')), body: const BuyerStoreBrowseScreen(), bottomNavigationBar: _navigation());
-    }
-    if (_destination > 0) {
-      const titles = ['Map', 'Explore', 'Projects', 'Message', 'Profile'];
       return Scaffold(
-        backgroundColor: Colors.white,
-        appBar: AppBar(title: Text(titles[_destination]), centerTitle: true),
-        body: SafeArea(
-          child: BuyerUnavailableContent(
-            artwork: _destination == 3 ? 'inbox' : 'not-implemented',
-          ),
-        ),
-        bottomNavigationBar: _navigation(),
+        appBar: AppBar(title: const Text('Explore stores')),
+        body: const BuyerStoreBrowseScreen(),
       );
     }
     return Scaffold(
-      bottomNavigationBar: _navigation(),
-      appBar: AppBar(
-        title: const BrandLockup(compact: true),
-        actions: [
-          IconButton(
-            onPressed: _signingOut ? null : _signOut,
-            tooltip: 'Sign out',
-            icon: const Icon(LucideIcons.logOut),
-          ),
-        ],
-      ),
+      backgroundColor: Colors.white,
+      appBar: AppBar(title: Text(_labels[_destination]), centerTitle: true),
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
-          children: [
-            Text(
-              'Your Buyer workspace',
-              style: Theme.of(
-                context,
-              ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 24),
-            if (_error != null) ...[
-              AuthNotice(message: _error!, isError: true),
-              const SizedBox(height: 16),
-            ],
-            if (_signingOut) const AuthNotice(message: 'Signing out securely…'),
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: Theme.of(context).colorScheme.outline,
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(
-                    LucideIcons.shieldCheck,
-                    color: BuyerTheme.action,
-                    size: 36,
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    'Buyer account connected',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'You are securely signed in. Supplier discovery and project tools are not available in this workspace yet.',
-                    style: TextStyle(color: BuyerTheme.muted, height: 1.5),
-                  ),
-                ],
-              ),
-            ),
-          ],
+        child: BuyerUnavailableContent(
+          artwork: _destination == 3 ? 'inbox' : 'not-implemented',
         ),
       ),
     );
   }
 
   Widget _navigation() {
-    const items = [
-      (LucideIcons.compass, 'Map'),
-      (LucideIcons.layoutGrid, 'Explore'),
-      (LucideIcons.clipboardList, 'Projects'),
-      (LucideIcons.messageCircle, 'Message'),
-      (LucideIcons.user, 'Profile'),
+    const icons = [
+      LucideIcons.compass,
+      LucideIcons.layoutGrid,
+      LucideIcons.clipboardList,
+      LucideIcons.messageCircle,
+      LucideIcons.user,
     ];
     return DecoratedBox(
       decoration: const BoxDecoration(
@@ -165,13 +147,13 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            for (var index = 0; index < items.length; index++)
+            for (var index = 0; index < _labels.length; index++)
               Expanded(
                 child: Semantics(
                   selected: index == _destination,
                   onTap: () => setState(() => _destination = index),
                   button: true,
-                  label: items[index].$2,
+                  label: _labels[index],
                   child: ExcludeSemantics(
                     child: InkWell(
                       onTap: () => setState(() => _destination = index),
@@ -189,7 +171,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                             ),
                             const SizedBox(height: 12),
                             Icon(
-                              items[index].$1,
+                              icons[index],
                               size: 24,
                               color: index == _destination
                                   ? BuyerTheme.action
@@ -199,7 +181,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                             Padding(
                               padding: const EdgeInsets.fromLTRB(2, 0, 2, 10),
                               child: Text(
-                                items[index].$2,
+                                _labels[index],
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontSize: 11,
