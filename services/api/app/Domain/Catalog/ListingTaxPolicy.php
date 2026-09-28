@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Catalog;
 
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -32,6 +33,20 @@ final class ListingTaxPolicy
             'VAT', 'VAT_ZERO', 'VAT_EXEMPT' => ['VAT_12', 'VAT_ZERO', 'VAT_EXEMPT'],
             default => [],
         };
+    }
+
+    /**
+     * The same mapping as allowedCategories() as a correlated SQL predicate, for queries that span
+     * several Vendors. Price alias columns are qualified by the caller.
+     */
+    public static function constrainAllowed(Builder $query, string $priceCategoryColumn, string $organizationColumn): Builder
+    {
+        return $query->whereExists(fn (Builder $profile) => $profile->selectRaw('1')->from('vendor_tax_profiles as tp')
+            ->join('vendor_tax_profile_versions as tv', 'tv.id', '=', 'tp.current_version_id')
+            ->whereColumn('tp.vendor_organization_id', $organizationColumn)->where('tp.status', 'APPROVED')
+            ->where(fn (Builder $match) => $match
+                ->where(fn (Builder $nonVat) => $nonVat->where('tv.vat_verified_category', 'NON_VAT')->where($priceCategoryColumn, 'NON_VAT'))
+                ->orWhere(fn (Builder $vat) => $vat->whereIn('tv.vat_verified_category', ['VAT', 'VAT_ZERO', 'VAT_EXEMPT'])->whereIn($priceCategoryColumn, ['VAT_12', 'VAT_ZERO', 'VAT_EXEMPT']))));
     }
 
     /** FIN-02 included VAT for a discounted payable VAT_12 amount: money(L × 12 / 112), half-up. */

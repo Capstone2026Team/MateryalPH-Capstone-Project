@@ -14,6 +14,8 @@ part 'catalog_inventory.g.dart';
 /// * [quantityOnHand]
 /// * [hardReservedQuantity]
 /// * [availableToSell]
+/// * [softHeldQuantity]
+/// * [reorderLevel]
 /// * [confirmedAt]
 @BuiltValue()
 abstract class CatalogInventory implements Built<CatalogInventory, CatalogInventoryBuilder> {
@@ -25,6 +27,12 @@ abstract class CatalogInventory implements Built<CatalogInventory, CatalogInvent
 
   @BuiltValueField(wireName: r'available_to_sell')
   String get availableToSell;
+
+  @BuiltValueField(wireName: r'soft_held_quantity')
+  String? get softHeldQuantity;
+
+  @BuiltValueField(wireName: r'reorder_level')
+  String? get reorderLevel;
 
   @BuiltValueField(wireName: r'confirmed_at')
   String? get confirmedAt;
@@ -67,6 +75,20 @@ class _$CatalogInventorySerializer implements PrimitiveSerializer<CatalogInvento
       object.availableToSell,
       specifiedType: const FullType(String),
     );
+    if (object.softHeldQuantity != null) {
+      yield r'soft_held_quantity';
+      yield serializers.serialize(
+        object.softHeldQuantity,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.reorderLevel != null) {
+      yield r'reorder_level';
+      yield serializers.serialize(
+        object.reorderLevel,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
     if (object.confirmedAt != null) {
       yield r'confirmed_at';
       yield serializers.serialize(
@@ -117,6 +139,22 @@ class _$CatalogInventorySerializer implements PrimitiveSerializer<CatalogInvento
             specifiedType: const FullType(String),
           ) as String;
           result.availableToSell = valueDes;
+          break;
+        case r'soft_held_quantity':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.softHeldQuantity = valueDes;
+          break;
+        case r'reorder_level':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.reorderLevel = valueDes;
           break;
         case r'confirmed_at':
           final valueDes = serializers.deserialize(

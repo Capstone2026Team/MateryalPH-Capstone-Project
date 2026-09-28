@@ -80,7 +80,7 @@ const vendorModules: Record<string, string> = { orders: 'Orders', fulfillment: '
 const vendorModuleIcons = { orders: FileText, fulfillment: Truck, messages: MessageSquare, invoices: ReceiptText, notifications: Bell, disputes: Scale, products: Package, vehicles: Truck, wallet: Wallet, performance: ChartNoAxesCombined, earnings: CreditCard }
 const vendorNavigation: PortalNavSection[] = [
   { label: 'Overview', items: [{ label: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard size={16} aria-hidden="true" /> }] },
-  ...[['Store Operations', ['orders', 'fulfillment', 'messages', 'invoices', 'notifications', 'disputes']], ['Store Management', ['products', 'vehicles', 'wallet']], ['Analytics', ['performance', 'earnings']]].map(([label, keys]) => ({ label: label as string, items: (keys as string[]).map(key => ({ label: vendorModules[key] ?? key, href: key === 'products' ? '/products' : `/preview/${key}`, icon: (() => { const Icon = vendorModuleIcons[key as keyof typeof vendorModuleIcons]; return <Icon size={18} aria-hidden="true" /> })() })) })),
+  ...[['Store Operations', ['orders', 'fulfillment', 'messages', 'invoices', 'notifications', 'disputes']], ['Store Management', ['products', 'vehicles', 'wallet']], ['Analytics', ['performance', 'earnings']]].map(([label, keys]) => ({ label: label as string, items: (keys as string[]).map(key => ({ label: vendorModules[key] ?? key, href: key === 'products' ? '/products' : key === 'vehicles' ? '/vehicles' : `/preview/${key}`, icon: (() => { const Icon = vendorModuleIcons[key as keyof typeof vendorModuleIcons]; return <Icon size={18} aria-hidden="true" /> })() })) })),
   { label: 'Vendor Team Accounts', items: [{ label: 'Team Accounts', href: '/team', icon: <Users size={16} aria-hidden="true" /> }, { label: 'Team Tracking', href: '/preview/tracking', icon: <Activity size={16} aria-hidden="true" /> }] },
   { label: 'Store Profile', items: [{ label: 'Store Profile', href: '/store-profile', icon: <Store size={16} aria-hidden="true" /> }] },
 ]
@@ -183,10 +183,11 @@ export function VendorShell({ activeHref, accountLabel, accountStatus, children,
       if (!navigationSnapshot) return item.href === '/dashboard'
       if (item.href === '/team') return navigationSnapshot.permissions.includes('staff.manage')
       if (item.href === '/products') return navigationSnapshot.permissions.includes('portal.products')
+      if (item.href === '/vehicles') return navigationSnapshot.permissions.includes('portal.vehicles')
       if (item.href.startsWith('/preview/')) return navigationSnapshot.permissions.includes(`portal.${item.href.split('/').at(-1)}`)
       return true
     }).map(item => ({
-      ...item, disabled: item.disabled || ((item.href.startsWith('/preview/') || item.href === '/products') && item.href !== '/preview/tracking' && record(navigationSnapshot?.activation).status !== 'ACTIVE'),
+      ...item, disabled: item.disabled || ((item.href.startsWith('/preview/') || item.href === '/products' || item.href === '/vehicles') && item.href !== '/preview/tracking' && record(navigationSnapshot?.activation).status !== 'ACTIVE'),
     })),
   })).filter(section => section.items.length > 0)
   const [logoutError, setLogoutError] = useState<string | null>(null)

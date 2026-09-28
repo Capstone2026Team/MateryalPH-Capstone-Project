@@ -123,3 +123,25 @@ The server still tracks the same six completion requirements. The project owner 
 **Generator note.** dart-dio assigns the new list meta object directly to a builder field. `scripts/generate-clients.mjs` now converts it with `toBuilder()`, as it already did for four onboarding models. Run `dart run build_runner build --delete-conflicting-outputs` in `generated/dart` after every regeneration.
 
 **Not yet built.** Checkout, quotations and order snapshots don't exist yet. When they are built, they must call `VolumePricing::unitPriceCentavos` and record the applied tier's price version. Buyer-facing tier display belongs to the Buyer product details work. Bulk CSV import doesn't carry tiers.
+
+## Update: draft deletion, display-name suggestion, compliance photo check (2026-09-28)
+
+- **Delete.** Only listings that were never published can be deleted. That means publication version 0, never published, and not Active; the server and a DB check constraint both enforce it. The row, versions and audit log are kept (`removed_at`, `removed_by_user_id`), and the listing is hidden from every catalog query. Its Vendor SKU is reusable through a partial unique index. A pending PS/ICC submission is superseded. A listing that was ever published returns 409 `LISTING_HAS_PUBLICATION_HISTORY`. The endpoint is `DELETE /vendor/catalog/listings/{id}?lock_version=`, and the migration is `2026_09_28_000003_add_draft_listing_removal`. The Vendor workflow records the rule.
+- **Display name suggestion.** Add product asks for the material name first. The chosen match (or the typed text) becomes the display-name placeholder: Tab or "Use suggestion" fills it, and an empty field uses it. A chosen material is saved with the new draft. Step 2 offers the same suggestion when the display name is cleared.
+- **Compliance photo check.** A chosen marking photo is previewed locally and uploaded only after "Upload this photo". Uploaded photos show as thumbnails in Review and confirm and can be removed from the submission.
+
+**Tests.**
+- API: `test_only_never_published_listings_can_be_deleted_and_their_history_is_kept` covers stale lock, SKU reuse, superseded submission, published and deactivated refusal, the DB constraint, and the read-only role.
+- Vendor components: card delete with confirm and cancel, editor delete, material-to-display-name suggestion, and upload only after confirmation.
+- Playwright: delete dialog focus, create-form suggestion, and photo preview before upload, at all 8 widths.
+
+**Results.**
+
+| Gate | Result |
+| --- | --- |
+| Vendor tests | **189 passed** |
+| Admin tests | **29 passed, 1 failed**. `PortalShell` also fails at `HEAD`. |
+| Phase 4 Playwright | **32 passed** |
+| Contract checks | 61, 35 and 29 operations passed |
+| `flutter test` | 44 passed, 12 failed, the same as `HEAD` |
+| Gitleaks | No leaks |

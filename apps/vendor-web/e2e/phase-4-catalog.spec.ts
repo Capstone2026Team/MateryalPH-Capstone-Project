@@ -88,11 +88,12 @@ async function vendorFixture(page: Page, options: { empty?: boolean } = {}) {
       if (options.empty) return fulfil(route, [], { total: 0, last_page: 1, current_page: 1, scope: 'ORGANIZATION', status_counts: {}, active_out_of_stock: 0 })
       const current = listing.body()
       return fulfil(route, [
-        { id: 'listing-1', display_name: current.display_name, vendor_sku: 'CEM-40', status: current.status, compliance_status: current.compliance_status, regulated: true, category_name: 'Cement and Concrete', material_name: 'Portland cement', other_label: null, lock_version: current.lock_version, updated_at: '2026-09-28T01:00:00Z', variant_count: 1, min_price_centavos: 28550, max_price_centavos: 28550, public_availability: 'IN_STOCK', primary_image_file_id: 'photo-file-1', primary_image_url: 'https://files.example.test/photo.png', unit_code: 'BAG', available_quantity: '50.0000' },
+        { id: 'listing-1', display_name: current.display_name, vendor_sku: 'CEM-40', status: current.status, compliance_status: current.compliance_status, regulated: true, category_name: 'Cement and Concrete', material_name: 'Portland cement', other_label: null, lock_version: current.lock_version, updated_at: '2026-09-28T01:00:00Z', variant_count: 1, min_price_centavos: 28550, max_price_centavos: 28550, public_availability: 'IN_STOCK', primary_image_file_id: 'photo-file-1', primary_image_url: 'https://files.example.test/photo.png', unit_code: 'BAG', available_quantity: '50.0000', deletable: current.status === 'DRAFT' },
         { id: 'listing-2', display_name: 'Hollow block 4 in', vendor_sku: 'CHB-4', status: 'ACTIVE', compliance_status: 'NOT_REQUIRED', regulated: false, category_name: 'Cement and Concrete', material_name: null, other_label: 'Hollow block', lock_version: 1, updated_at: '2026-09-27T01:00:00Z', variant_count: 2, min_price_centavos: 1450, max_price_centavos: 1875, public_availability: 'OUT_OF_STOCK', primary_image_file_id: null, primary_image_url: null, unit_code: 'PC', available_quantity: '0.0000' },
       ], { total: 2, last_page: 1, current_page: 1, scope: 'ORGANIZATION', status_counts: { [current.status]: 1, ACTIVE: 1 }, active_out_of_stock: 1 })
     }
     if (path === '/vendor/catalog/listings' && method === 'POST') return fulfil(route, listing.body(), {}, 201)
+    if (path === '/vendor/catalog/listings/listing-1' && method === 'DELETE') return fulfil(route, { id: 'listing-1', removed_at: '2026-09-28T03:00:00Z' })
     if (path === '/vendor/catalog/listings/listing-1/media' && method === 'POST') { listing.addPhoto(); return fulfil(route, listing.body(), {}, 201) }
     if (path === '/vendor/catalog/listings/listing-1/compliance/evidence') return fulfil(route, { evidence_id: 'evidence-1', file_id: 'evidence-file-1', path: 'MANUAL', evidence_kind: 'MARKING_PHOTO', content_type: 'image/png', byte_size: PIXEL.length, scan_state: 'CLEAN', extraction: { source: 'MANUAL', status: 'NOT_REQUESTED', confidence: null, suggestions: {}, assistance_only: true } }, {}, 201)
     if (path === '/vendor/catalog/listings/listing-1/compliance') { listing.submit(); return fulfil(route, listing.body()) }
@@ -146,8 +147,16 @@ test('My Products shows summary tiles, status chips and product cards, and the s
   await expect(page.getByText('Needs attention')).toBeVisible()
   await expect(page.getByRole('group', { name: 'Filter by listing status' }).getByRole('button', { name: /All\s*2/ })).toHaveAttribute('aria-pressed', 'true')
   await expect(page.getByRole('link', { name: 'Add new product' })).toBeVisible()
+  await expect(cards.getByRole('button', { name: /^Delete / })).toHaveCount(1)
   await fits(page)
   await capture(page, 'products-list')
+  await cards.getByRole('button', { name: 'Delete Portland cement 40 kg' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Delete this draft?' })
+  await expect(dialog).toBeVisible()
+  await expect(dialog.getByRole('button', { name: 'Cancel' })).toBeFocused()
+  await capture(page, 'products-delete-dialog')
+  await dialog.getByRole('button', { name: 'Cancel' }).click()
+  await expect(dialog).toBeHidden()
   await page.getByRole('button', { name: 'Table' }).click()
   await expect(page).toHaveURL(/view=table/)
   const records = page.viewportSize()!.width >= 1024 ? page.getByRole('table', { name: 'Store products' }) : page.getByRole('list', { name: 'Store products' })
@@ -169,6 +178,10 @@ test('listing wizard creates a draft, validates variants and tiers, uploads a ph
   const mutations = await vendorFixture(page)
   await page.goto('/products/new')
   await expect(page.getByRole('heading', { name: 'Add product', exact: true })).toBeVisible()
+  await page.getByRole('textbox', { name: /Material name/ }).fill('portland')
+  await page.getByRole('radio', { name: /Portland cement/ }).check()
+  await expect(page.getByRole('textbox', { name: /Display name/ })).toHaveAttribute('placeholder', 'Portland cement')
+  await expect(page.getByRole('button', { name: 'Use suggestion: Portland cement' })).toBeVisible()
   await page.getByRole('textbox', { name: /Display name/ }).fill('Portland cement 40 kg')
   await page.getByRole('textbox', { name: /Vendor SKU/ }).fill('CEM-40')
   await fits(page)
@@ -181,6 +194,7 @@ test('listing wizard creates a draft, validates variants and tiers, uploads a ph
   await fits(page)
   await capture(page, 'wizard-material')
 
+  const afterCreate = mutations.length
   await page.getByRole('button', { name: 'Continue: Product information' }).click()
   await expect(page.getByRole('group', { name: 'Variants' })).toBeVisible()
   const first = page.getByRole('region', { name: 'Variant 1 — 40 kg' })
@@ -191,7 +205,7 @@ test('listing wizard creates a draft, validates variants and tiers, uploads a ph
   const second = page.getByRole('region', { name: 'Variant 2' })
   await expect(second.getByText('Choose a sale unit.').first()).toBeVisible()
   await expect(second.getByRole('textbox', { name: 'Price (PHP)' })).toHaveAttribute('aria-invalid', 'true')
-  expect(mutations.filter(item => item.path.endsWith('/variants') || item.method === 'PATCH')).toHaveLength(0)
+  expect(mutations.slice(afterCreate).filter(item => item.path.endsWith('/variants') || item.method === 'PATCH')).toHaveLength(0)
   await fits(page)
   await capture(page, 'wizard-product-information')
 
@@ -205,6 +219,12 @@ test('listing wizard creates a draft, validates variants and tiers, uploads a ph
   await expect(page.getByText('PNS 07:2018', { exact: true })).toBeVisible()
   await paths.getByRole('radio', { name: /Manual entry/ }).check()
   await page.getByLabel(/Upload PS Mark marking photo/).setInputFiles({ name: 'marking.png', mimeType: 'image/png', buffer: PIXEL })
+  await expect(page.getByRole('heading', { name: 'Check the photo before uploading' })).toBeVisible()
+  await expect(page.getByRole('img', { name: 'Preview of marking.png' })).toBeVisible()
+  expect(mutations.filter(item => item.path.endsWith('/compliance/evidence'))).toHaveLength(0)
+  await fits(page)
+  await capture(page, 'wizard-compliance-preview')
+  await page.getByRole('button', { name: 'Upload this photo' }).click()
   await expect(page.getByRole('heading', { name: 'Review and confirm' })).toBeVisible()
   await page.getByRole('textbox', { name: /PS License No/ }).fill('Q-1234')
   await page.getByRole('button', { name: 'Submit PS/ICC evidence' }).click()

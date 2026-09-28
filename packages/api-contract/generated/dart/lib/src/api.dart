@@ -16,7 +16,10 @@ import 'package:materyalph_api_client/src/api/agreements_api.dart';
 import 'package:materyalph_api_client/src/api/authentication_api.dart';
 import 'package:materyalph_api_client/src/api/stores_api.dart';
 import 'package:materyalph_api_client/src/api/system_api.dart';
+import 'package:materyalph_api_client/src/api/vendor_auto_accept_api.dart';
 import 'package:materyalph_api_client/src/api/vendor_catalog_api.dart';
+import 'package:materyalph_api_client/src/api/vendor_fleet_api.dart';
+import 'package:materyalph_api_client/src/api/vendor_inventory_api.dart';
 import 'package:materyalph_api_client/src/api/vendor_onboarding_api.dart';
 
 class MateryalphApiClient {
@@ -155,10 +158,28 @@ class MateryalphApiClient {
     return SystemApi(dio, serializers);
   }
 
+  /// Get VendorAutoAcceptApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  VendorAutoAcceptApi getVendorAutoAcceptApi() {
+    return VendorAutoAcceptApi(dio, serializers);
+  }
+
   /// Get VendorCatalogApi instance, base route and serializer can be overridden by a given but be careful,
   /// by doing that all interceptors will not be executed
   VendorCatalogApi getVendorCatalogApi() {
     return VendorCatalogApi(dio, serializers);
+  }
+
+  /// Get VendorFleetApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  VendorFleetApi getVendorFleetApi() {
+    return VendorFleetApi(dio, serializers);
+  }
+
+  /// Get VendorInventoryApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  VendorInventoryApi getVendorInventoryApi() {
+    return VendorInventoryApi(dio, serializers);
   }
 
   /// Get VendorOnboardingApi instance, base route and serializer can be overridden by a given but be careful,

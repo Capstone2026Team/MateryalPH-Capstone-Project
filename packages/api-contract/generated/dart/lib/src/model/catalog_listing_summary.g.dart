@@ -10,6 +10,9 @@ const CatalogListingSummaryPublicAvailabilityEnum
     _$catalogListingSummaryPublicAvailabilityEnum_IN_STOCK =
     const CatalogListingSummaryPublicAvailabilityEnum._('IN_STOCK');
 const CatalogListingSummaryPublicAvailabilityEnum
+    _$catalogListingSummaryPublicAvailabilityEnum_LIMITED_STOCK =
+    const CatalogListingSummaryPublicAvailabilityEnum._('LIMITED_STOCK');
+const CatalogListingSummaryPublicAvailabilityEnum
     _$catalogListingSummaryPublicAvailabilityEnum_OUT_OF_STOCK =
     const CatalogListingSummaryPublicAvailabilityEnum._('OUT_OF_STOCK');
 
@@ -18,6 +21,8 @@ CatalogListingSummaryPublicAvailabilityEnum
   switch (name) {
     case 'IN_STOCK':
       return _$catalogListingSummaryPublicAvailabilityEnum_IN_STOCK;
+    case 'LIMITED_STOCK':
+      return _$catalogListingSummaryPublicAvailabilityEnum_LIMITED_STOCK;
     case 'OUT_OF_STOCK':
       return _$catalogListingSummaryPublicAvailabilityEnum_OUT_OF_STOCK;
     default:
@@ -29,6 +34,7 @@ final BuiltSet<CatalogListingSummaryPublicAvailabilityEnum>
     _$catalogListingSummaryPublicAvailabilityEnumValues = BuiltSet<
         CatalogListingSummaryPublicAvailabilityEnum>(const <CatalogListingSummaryPublicAvailabilityEnum>[
   _$catalogListingSummaryPublicAvailabilityEnum_IN_STOCK,
+  _$catalogListingSummaryPublicAvailabilityEnum_LIMITED_STOCK,
   _$catalogListingSummaryPublicAvailabilityEnum_OUT_OF_STOCK,
 ]);
 
@@ -41,10 +47,12 @@ class _$CatalogListingSummaryPublicAvailabilityEnumSerializer
         PrimitiveSerializer<CatalogListingSummaryPublicAvailabilityEnum> {
   static const Map<String, Object> _toWire = const <String, Object>{
     'IN_STOCK': 'IN_STOCK',
+    'LIMITED_STOCK': 'LIMITED_STOCK',
     'OUT_OF_STOCK': 'OUT_OF_STOCK',
   };
   static const Map<Object, String> _fromWire = const <Object, String>{
     'IN_STOCK': 'IN_STOCK',
+    'LIMITED_STOCK': 'LIMITED_STOCK',
     'OUT_OF_STOCK': 'OUT_OF_STOCK',
   };
 
@@ -103,6 +111,8 @@ class _$CatalogListingSummary extends CatalogListingSummary {
   @override
   final String? primaryImageFileId;
   @override
+  final bool? deletable;
+  @override
   final String? primaryImageUrl;
   @override
   final String? unitCode;
@@ -130,6 +140,7 @@ class _$CatalogListingSummary extends CatalogListingSummary {
       this.maxPriceCentavos,
       required this.publicAvailability,
       this.primaryImageFileId,
+      this.deletable,
       this.primaryImageUrl,
       this.unitCode,
       this.availableQuantity})
@@ -163,6 +174,7 @@ class _$CatalogListingSummary extends CatalogListingSummary {
         maxPriceCentavos == other.maxPriceCentavos &&
         publicAvailability == other.publicAvailability &&
         primaryImageFileId == other.primaryImageFileId &&
+        deletable == other.deletable &&
         primaryImageUrl == other.primaryImageUrl &&
         unitCode == other.unitCode &&
         availableQuantity == other.availableQuantity;
@@ -187,6 +199,7 @@ class _$CatalogListingSummary extends CatalogListingSummary {
     _$hash = $jc(_$hash, maxPriceCentavos.hashCode);
     _$hash = $jc(_$hash, publicAvailability.hashCode);
     _$hash = $jc(_$hash, primaryImageFileId.hashCode);
+    _$hash = $jc(_$hash, deletable.hashCode);
     _$hash = $jc(_$hash, primaryImageUrl.hashCode);
     _$hash = $jc(_$hash, unitCode.hashCode);
     _$hash = $jc(_$hash, availableQuantity.hashCode);
@@ -213,6 +226,7 @@ class _$CatalogListingSummary extends CatalogListingSummary {
           ..add('maxPriceCentavos', maxPriceCentavos)
           ..add('publicAvailability', publicAvailability)
           ..add('primaryImageFileId', primaryImageFileId)
+          ..add('deletable', deletable)
           ..add('primaryImageUrl', primaryImageUrl)
           ..add('unitCode', unitCode)
           ..add('availableQuantity', availableQuantity))
@@ -295,6 +309,10 @@ class CatalogListingSummaryBuilder
   set primaryImageFileId(String? primaryImageFileId) =>
       _$this._primaryImageFileId = primaryImageFileId;
 
+  bool? _deletable;
+  bool? get deletable => _$this._deletable;
+  set deletable(bool? deletable) => _$this._deletable = deletable;
+
   String? _primaryImageUrl;
   String? get primaryImageUrl => _$this._primaryImageUrl;
   set primaryImageUrl(String? primaryImageUrl) =>
@@ -332,6 +350,7 @@ class CatalogListingSummaryBuilder
       _maxPriceCentavos = $v.maxPriceCentavos;
       _publicAvailability = $v.publicAvailability;
       _primaryImageFileId = $v.primaryImageFileId;
+      _deletable = $v.deletable;
       _primaryImageUrl = $v.primaryImageUrl;
       _unitCode = $v.unitCode;
       _availableQuantity = $v.availableQuantity;
@@ -383,6 +402,7 @@ class CatalogListingSummaryBuilder
               r'CatalogListingSummary',
               'publicAvailability'),
           primaryImageFileId: primaryImageFileId,
+          deletable: deletable,
           primaryImageUrl: primaryImageUrl,
           unitCode: unitCode,
           availableQuantity: availableQuantity,

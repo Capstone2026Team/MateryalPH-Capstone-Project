@@ -97,7 +97,7 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
         $orderId = (string) Str::uuid7();
         DB::table('orders')->insert(['id' => $orderId, 'reference' => 'DELIVERY-TEST', 'buyer_profile_id' => $buyerId, 'vendor_organization_id' => $organization->id, 'procurement_type' => 'ITEM_BASED', 'order_state' => 'CONFIRMED', 'fulfillment_method' => 'VENDOR_DELIVERY', 'payment_method' => 'COD', 'commercial_total_centavos' => 100000, 'created_at' => now(), 'updated_at' => now()]);
         $load = ['material_kind' => 'READY_MIXED_CONCRETE', 'weight_kg' => 24000, 'volume_m3' => 10, 'distance_meters' => 10000, 'heavy_vehicle_restriction' => false, 'intended_location' => ['latitude' => 14, 'longitude' => 121], 'route_destination' => ['latitude' => 14, 'longitude' => 121], 'site_access_confirmed' => true, 'heavy_vehicle_access_confirmed' => true];
-        $snapshotId = app(ConfirmedDeliverySnapshot::class)->record($owner, $orderId, $load, [['vehicle_id' => $id, 'number_of_vehicles' => 2, 'total_vehicle_trips' => 2]], 150000, 'Two mixer trips, confirmed drop-off.');
+        $snapshotId = app(ConfirmedDeliverySnapshot::class)->record($owner, $orderId, $load, [['vehicle_id' => $id, 'number_of_vehicles' => 2, 'total_vehicle_trips' => 2]], 150000, 'Two mixer trips, confirmed drop-off.', now('Asia/Manila')->toDateString());
         $frozen = DB::table('order_delivery_snapshots')->where('id', $snapshotId)->first();
         $version = $saved->json('data.organization.lock_version');
         $this->patchJson('/api/v1/vendors/onboarding/setup', ['organization_lock_version' => $version, 'vehicles' => [['id' => $id, 'active' => false]]])->assertOk();

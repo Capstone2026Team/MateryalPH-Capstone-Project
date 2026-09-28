@@ -1,6 +1,6 @@
 import { forwardRef, type ButtonHTMLAttributes } from 'react'
 
-export type ButtonVariant = 'primary' | 'secondary' | 'quiet'
+export type ButtonVariant = 'primary' | 'secondary' | 'quiet' | 'danger'
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant
@@ -10,6 +10,7 @@ const variantClasses: Record<ButtonVariant, string> = {
   primary: 'bg-action-primary text-white hover:bg-action-primary-pressed',
   secondary: 'border border-border-default bg-surface-primary text-text-strong',
   quiet: 'bg-transparent text-text-strong hover:bg-brand-orange-50',
+  danger: 'bg-status-error text-white hover:brightness-90',
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(

@@ -10,6 +10,8 @@ Name | Type
 `quantityOnHand` | string
 `hardReservedQuantity` | string
 `availableToSell` | string
+`softHeldQuantity` | string
+`reorderLevel` | string
 `confirmedAt` | string
 
 ## Example
@@ -22,6 +24,8 @@ const example = {
   "quantityOnHand": null,
   "hardReservedQuantity": null,
   "availableToSell": null,
+  "softHeldQuantity": null,
+  "reorderLevel": null,
   "confirmedAt": null,
 } satisfies CatalogInventory
 

@@ -214,7 +214,7 @@ For a multi-vendor cart, the system creates one parent checkout and one child or
 - Manual Vendor confirmation, quotation acceptance, or eligible Item-Based auto-accept reserves the approved quantity using one database transaction and row-level concurrency control. The transaction validates every line before changing any line; multi-line acceptance is all-or-nothing.
 - Rejection, payment expiration, cancellation, or an approved quantity reduction releases the affected reservation.
 - Delivery or pickup atomically reduces `quantity_on_hand` and `hard_reserved_quantity` and creates the fulfilled/sold movement. Reservation is not incorrectly recorded as physical consumption.
-- Buyers see only `In Stock`, `Limited Stock`, or `Out of Stock`; authorized Vendor users may see quantity on hand, reserved quantity, and available quantity.
+- Buyers see only `In Stock`, `Limited Stock`, or `Out of Stock`; authorized Vendor users may see quantity on hand, reserved quantity, and available quantity. `Limited Stock` means available-to-sell is above zero and at or below the Vendor's reorder level; with no reorder level set, positive stock is `In Stock` (approved by the project owner on 2026-09-28).
 
 **Item-Based Auto-Accept**
 

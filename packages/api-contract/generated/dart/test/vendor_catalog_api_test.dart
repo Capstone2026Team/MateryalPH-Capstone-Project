@@ -26,6 +26,13 @@ void main() {
       // TODO
     });
 
+    // Deletes a listing that was never published (publication_version 0). It disappears from the catalog and its Vendor SKU can be reused; the record and audit trail are kept, and a pending PS/ICC submission is superseded. A listing that was ever published returns 409 LISTING_HAS_PUBLICATION_HISTORY and must be deactivated instead.
+    //
+    //Future<CatalogListingDeletedEnvelope> deleteVendorCatalogListing(String listingId, int lockVersion) async
+    test('test deleteVendorCatalogListing', () async {
+      // TODO
+    });
+
     //Future<Uint8List> downloadCatalogFile(String fileId) async
     test('test downloadCatalogFile', () async {
       // TODO

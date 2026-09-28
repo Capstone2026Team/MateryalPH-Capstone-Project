@@ -8,6 +8,7 @@ Name | Type
 ------------ | -------------
 `canManage` | boolean
 `canSubmitCompliance` | boolean
+`canDelete` | boolean
 
 ## Example
 
@@ -18,6 +19,7 @@ import type { CatalogListingPermissions } from '@materyalph/api-client-ts'
 const example = {
   "canManage": null,
   "canSubmitCompliance": null,
+  "canDelete": null,
 } satisfies CatalogListingPermissions
 
 console.log(example)

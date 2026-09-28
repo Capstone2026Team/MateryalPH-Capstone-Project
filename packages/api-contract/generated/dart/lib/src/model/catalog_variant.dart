@@ -85,7 +85,7 @@ abstract class CatalogVariant implements Built<CatalogVariant, CatalogVariantBui
 
   @BuiltValueField(wireName: r'public_availability')
   CatalogVariantPublicAvailabilityEnum get publicAvailability;
-  // enum publicAvailabilityEnum {  IN_STOCK,  OUT_OF_STOCK,  };
+  // enum publicAvailabilityEnum {  IN_STOCK,  LIMITED_STOCK,  OUT_OF_STOCK,  };
 
   @BuiltValueField(wireName: r'comparability')
   CatalogVariantComparabilityEnum get comparability;
@@ -408,6 +408,8 @@ class CatalogVariantPublicAvailabilityEnum extends EnumClass {
 
   @BuiltValueEnumConst(wireName: r'IN_STOCK')
   static const CatalogVariantPublicAvailabilityEnum IN_STOCK = _$catalogVariantPublicAvailabilityEnum_IN_STOCK;
+  @BuiltValueEnumConst(wireName: r'LIMITED_STOCK')
+  static const CatalogVariantPublicAvailabilityEnum LIMITED_STOCK = _$catalogVariantPublicAvailabilityEnum_LIMITED_STOCK;
   @BuiltValueEnumConst(wireName: r'OUT_OF_STOCK')
   static const CatalogVariantPublicAvailabilityEnum OUT_OF_STOCK = _$catalogVariantPublicAvailabilityEnum_OUT_OF_STOCK;
 

@@ -12,6 +12,7 @@ Method | HTTP request | Description
 [**applyCatalogImport**](VendorCatalogApi.md#applycatalogimport) | **POST** /vendor/catalog/imports/{jobId}/apply |
 [**createVendorCatalogListing**](VendorCatalogApi.md#createvendorcataloglisting) | **POST** /vendor/catalog/listings |
 [**deactivateVendorCatalogListing**](VendorCatalogApi.md#deactivatevendorcataloglisting) | **POST** /vendor/catalog/listings/{listingId}/deactivate |
+[**deleteVendorCatalogListing**](VendorCatalogApi.md#deletevendorcataloglisting) | **DELETE** /vendor/catalog/listings/{listingId} |
 [**downloadCatalogFile**](VendorCatalogApi.md#downloadcatalogfile) | **GET** /catalog-files/{fileId}/content |
 [**getCatalogImport**](VendorCatalogApi.md#getcatalogimport) | **GET** /vendor/catalog/imports/{jobId} |
 [**getCatalogImportTemplate**](VendorCatalogApi.md#getcatalogimporttemplate) | **GET** /vendor/catalog/imports/template |
@@ -184,6 +185,59 @@ Name | Type | Description  | Notes
 ### HTTP request headers
 
  - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **deleteVendorCatalogListing**
+> CatalogListingDeletedEnvelope deleteVendorCatalogListing(listingId, lockVersion)
+
+
+
+Deletes a listing that was never published (publication_version 0). It disappears from the catalog and its Vendor SKU can be reused; the record and audit trail are kept, and a pending PS/ICC submission is superseded. A listing that was ever published returns 409 LISTING_HAS_PUBLICATION_HISTORY and must be deactivated instead.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getVendorCatalogApi();
+final String listingId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final int lockVersion = 56; // int |
+
+try {
+    final response = api.deleteVendorCatalogListing(listingId, lockVersion);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling VendorCatalogApi->deleteVendorCatalogListing: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **listingId** | **String**|  |
+ **lockVersion** | **int**|  |
+
+### Return type
+
+[**CatalogListingDeletedEnvelope**](CatalogListingDeletedEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)

@@ -14,6 +14,10 @@ class _$CatalogInventory extends CatalogInventory {
   @override
   final String availableToSell;
   @override
+  final String? softHeldQuantity;
+  @override
+  final String? reorderLevel;
+  @override
   final String? confirmedAt;
 
   factory _$CatalogInventory(
@@ -24,6 +28,8 @@ class _$CatalogInventory extends CatalogInventory {
       {required this.quantityOnHand,
       required this.hardReservedQuantity,
       required this.availableToSell,
+      this.softHeldQuantity,
+      this.reorderLevel,
       this.confirmedAt})
       : super._();
   @override
@@ -41,6 +47,8 @@ class _$CatalogInventory extends CatalogInventory {
         quantityOnHand == other.quantityOnHand &&
         hardReservedQuantity == other.hardReservedQuantity &&
         availableToSell == other.availableToSell &&
+        softHeldQuantity == other.softHeldQuantity &&
+        reorderLevel == other.reorderLevel &&
         confirmedAt == other.confirmedAt;
   }
 
@@ -50,6 +58,8 @@ class _$CatalogInventory extends CatalogInventory {
     _$hash = $jc(_$hash, quantityOnHand.hashCode);
     _$hash = $jc(_$hash, hardReservedQuantity.hashCode);
     _$hash = $jc(_$hash, availableToSell.hashCode);
+    _$hash = $jc(_$hash, softHeldQuantity.hashCode);
+    _$hash = $jc(_$hash, reorderLevel.hashCode);
     _$hash = $jc(_$hash, confirmedAt.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
@@ -61,6 +71,8 @@ class _$CatalogInventory extends CatalogInventory {
           ..add('quantityOnHand', quantityOnHand)
           ..add('hardReservedQuantity', hardReservedQuantity)
           ..add('availableToSell', availableToSell)
+          ..add('softHeldQuantity', softHeldQuantity)
+          ..add('reorderLevel', reorderLevel)
           ..add('confirmedAt', confirmedAt))
         .toString();
   }
@@ -85,6 +97,15 @@ class CatalogInventoryBuilder
   set availableToSell(String? availableToSell) =>
       _$this._availableToSell = availableToSell;
 
+  String? _softHeldQuantity;
+  String? get softHeldQuantity => _$this._softHeldQuantity;
+  set softHeldQuantity(String? softHeldQuantity) =>
+      _$this._softHeldQuantity = softHeldQuantity;
+
+  String? _reorderLevel;
+  String? get reorderLevel => _$this._reorderLevel;
+  set reorderLevel(String? reorderLevel) => _$this._reorderLevel = reorderLevel;
+
   String? _confirmedAt;
   String? get confirmedAt => _$this._confirmedAt;
   set confirmedAt(String? confirmedAt) => _$this._confirmedAt = confirmedAt;
@@ -99,6 +120,8 @@ class CatalogInventoryBuilder
       _quantityOnHand = $v.quantityOnHand;
       _hardReservedQuantity = $v.hardReservedQuantity;
       _availableToSell = $v.availableToSell;
+      _softHeldQuantity = $v.softHeldQuantity;
+      _reorderLevel = $v.reorderLevel;
       _confirmedAt = $v.confirmedAt;
       _$v = null;
     }
@@ -129,6 +152,8 @@ class CatalogInventoryBuilder
               'hardReservedQuantity'),
           availableToSell: BuiltValueNullFieldError.checkNotNull(
               availableToSell, r'CatalogInventory', 'availableToSell'),
+          softHeldQuantity: softHeldQuantity,
+          reorderLevel: reorderLevel,
           confirmedAt: confirmedAt,
         );
     replace(_$result);

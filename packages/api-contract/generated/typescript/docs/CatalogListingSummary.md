@@ -22,6 +22,7 @@ Name | Type
 `maxPriceCentavos` | number
 `publicAvailability` | string
 `primaryImageFileId` | string
+`deletable` | boolean
 `primaryImageUrl` | string
 `unitCode` | string
 `availableQuantity` | string
@@ -49,6 +50,7 @@ const example = {
   "maxPriceCentavos": null,
   "publicAvailability": null,
   "primaryImageFileId": null,
+  "deletable": null,
   "primaryImageUrl": null,
   "unitCode": null,
   "availableQuantity": null,

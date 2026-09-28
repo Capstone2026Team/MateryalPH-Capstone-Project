@@ -21,6 +21,7 @@ Route::prefix('vendor/catalog')->middleware([
     Route::delete('/listings/{listingId}/media/{mediaId}', [VendorCatalogController::class, 'removeMedia'])->whereUuid(['listingId', 'mediaId']);
     Route::post('/listings/{listingId}/publish', [VendorCatalogController::class, 'publish'])->whereUuid('listingId');
     Route::post('/listings/{listingId}/deactivate', [VendorCatalogController::class, 'deactivate'])->whereUuid('listingId');
+    Route::delete('/listings/{listingId}', [VendorCatalogController::class, 'destroy'])->whereUuid('listingId');
     Route::post('/listings/{listingId}/compliance/evidence', [VendorCatalogController::class, 'uploadComplianceEvidence'])->whereUuid('listingId')->middleware('throttle:account-upload');
     Route::post('/listings/{listingId}/compliance', [VendorCatalogController::class, 'submitCompliance'])->whereUuid('listingId');
     Route::get('/files/{fileId}', [VendorCatalogController::class, 'fileUrl'])->whereUuid('fileId');

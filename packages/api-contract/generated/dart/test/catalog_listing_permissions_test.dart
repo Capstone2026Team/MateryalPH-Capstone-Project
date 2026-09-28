@@ -17,5 +17,11 @@ void main() {
       // TODO
     });
 
+    // True when the caller may delete this never-published listing.
+    // bool canDelete
+    test('to test the property `canDelete`', () async {
+      // TODO
+    });
+
   });
 }

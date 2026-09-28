@@ -30,6 +30,7 @@ part 'catalog_listing_summary.g.dart';
 /// * [maxPriceCentavos]
 /// * [publicAvailability] - The only availability a Buyer would see.
 /// * [primaryImageFileId]
+/// * [deletable] - True when the caller may delete this never-published listing.
 /// * [primaryImageUrl] - Short-lived signed URL of the first ready product photo; expires within minutes.
 /// * [unitCode] - Sale unit code when every active variant uses the same unit.
 /// * [availableQuantity] - Vendor-only summed available-to-sell quantity when every active variant shares one unit and has a stock count. Never returned to Buyers.
@@ -82,10 +83,14 @@ abstract class CatalogListingSummary implements Built<CatalogListingSummary, Cat
   /// The only availability a Buyer would see.
   @BuiltValueField(wireName: r'public_availability')
   CatalogListingSummaryPublicAvailabilityEnum get publicAvailability;
-  // enum publicAvailabilityEnum {  IN_STOCK,  OUT_OF_STOCK,  };
+  // enum publicAvailabilityEnum {  IN_STOCK,  LIMITED_STOCK,  OUT_OF_STOCK,  };
 
   @BuiltValueField(wireName: r'primary_image_file_id')
   String? get primaryImageFileId;
+
+  /// True when the caller may delete this never-published listing.
+  @BuiltValueField(wireName: r'deletable')
+  bool? get deletable;
 
   /// Short-lived signed URL of the first ready product photo; expires within minutes.
   @BuiltValueField(wireName: r'primary_image_url')
@@ -214,6 +219,13 @@ class _$CatalogListingSummarySerializer implements PrimitiveSerializer<CatalogLi
       yield serializers.serialize(
         object.primaryImageFileId,
         specifiedType: const FullType.nullable(String),
+      );
+    }
+    if (object.deletable != null) {
+      yield r'deletable';
+      yield serializers.serialize(
+        object.deletable,
+        specifiedType: const FullType(bool),
       );
     }
     if (object.primaryImageUrl != null) {
@@ -379,6 +391,14 @@ class _$CatalogListingSummarySerializer implements PrimitiveSerializer<CatalogLi
           if (valueDes == null) continue;
           result.primaryImageFileId = valueDes;
           break;
+        case r'deletable':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.deletable = valueDes;
+          break;
         case r'primary_image_url':
           final valueDes = serializers.deserialize(
             value,
@@ -438,6 +458,8 @@ class CatalogListingSummaryPublicAvailabilityEnum extends EnumClass {
 
   @BuiltValueEnumConst(wireName: r'IN_STOCK')
   static const CatalogListingSummaryPublicAvailabilityEnum IN_STOCK = _$catalogListingSummaryPublicAvailabilityEnum_IN_STOCK;
+  @BuiltValueEnumConst(wireName: r'LIMITED_STOCK')
+  static const CatalogListingSummaryPublicAvailabilityEnum LIMITED_STOCK = _$catalogListingSummaryPublicAvailabilityEnum_LIMITED_STOCK;
   @BuiltValueEnumConst(wireName: r'OUT_OF_STOCK')
   static const CatalogListingSummaryPublicAvailabilityEnum OUT_OF_STOCK = _$catalogListingSummaryPublicAvailabilityEnum_OUT_OF_STOCK;
 

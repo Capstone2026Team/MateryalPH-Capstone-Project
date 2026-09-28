@@ -11,13 +11,17 @@ class _$CatalogListingPermissions extends CatalogListingPermissions {
   final bool canManage;
   @override
   final bool canSubmitCompliance;
+  @override
+  final bool? canDelete;
 
   factory _$CatalogListingPermissions(
           [void Function(CatalogListingPermissionsBuilder)? updates]) =>
       (CatalogListingPermissionsBuilder()..update(updates))._build();
 
   _$CatalogListingPermissions._(
-      {required this.canManage, required this.canSubmitCompliance})
+      {required this.canManage,
+      required this.canSubmitCompliance,
+      this.canDelete})
       : super._();
   @override
   CatalogListingPermissions rebuild(
@@ -33,7 +37,8 @@ class _$CatalogListingPermissions extends CatalogListingPermissions {
     if (identical(other, this)) return true;
     return other is CatalogListingPermissions &&
         canManage == other.canManage &&
-        canSubmitCompliance == other.canSubmitCompliance;
+        canSubmitCompliance == other.canSubmitCompliance &&
+        canDelete == other.canDelete;
   }
 
   @override
@@ -41,6 +46,7 @@ class _$CatalogListingPermissions extends CatalogListingPermissions {
     var _$hash = 0;
     _$hash = $jc(_$hash, canManage.hashCode);
     _$hash = $jc(_$hash, canSubmitCompliance.hashCode);
+    _$hash = $jc(_$hash, canDelete.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -49,7 +55,8 @@ class _$CatalogListingPermissions extends CatalogListingPermissions {
   String toString() {
     return (newBuiltValueToStringHelper(r'CatalogListingPermissions')
           ..add('canManage', canManage)
-          ..add('canSubmitCompliance', canSubmitCompliance))
+          ..add('canSubmitCompliance', canSubmitCompliance)
+          ..add('canDelete', canDelete))
         .toString();
   }
 }
@@ -68,6 +75,10 @@ class CatalogListingPermissionsBuilder
   set canSubmitCompliance(bool? canSubmitCompliance) =>
       _$this._canSubmitCompliance = canSubmitCompliance;
 
+  bool? _canDelete;
+  bool? get canDelete => _$this._canDelete;
+  set canDelete(bool? canDelete) => _$this._canDelete = canDelete;
+
   CatalogListingPermissionsBuilder() {
     CatalogListingPermissions._defaults(this);
   }
@@ -77,6 +88,7 @@ class CatalogListingPermissionsBuilder
     if ($v != null) {
       _canManage = $v.canManage;
       _canSubmitCompliance = $v.canSubmitCompliance;
+      _canDelete = $v.canDelete;
       _$v = null;
     }
     return this;
@@ -104,6 +116,7 @@ class CatalogListingPermissionsBuilder
               canSubmitCompliance,
               r'CatalogListingPermissions',
               'canSubmitCompliance'),
+          canDelete: canDelete,
         );
     replace(_$result);
     return _$result;

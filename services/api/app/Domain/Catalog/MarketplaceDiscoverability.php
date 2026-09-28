@@ -11,32 +11,20 @@ use Illuminate\Support\Str;
 /**
  * Marketplace Discoverability is evaluated separately from Store Activation.
  * An active store with no eligible listing stays NOT_DISCOVERABLE. Eligibility
- * requires the current organization gate plus at least one ACTIVE, compliant
+ * is the shared MAT-02 predicate (EligibleOfferQuery): an ACTIVE, compliant
  * listing with an available variant carrying a current ordinary public price,
  * a permitted tax classification and a non-stale stock confirmation.
  */
 final class MarketplaceDiscoverability
 {
-    public const RULE_VERSION = 'phase4.discoverability.v1';
+    public const RULE_VERSION = 'phase5.discoverability.v2';
 
-    public const STOCK_CONFIRMATION_DAYS = 15;
-
-    public function __construct(private readonly ListingTaxPolicy $tax) {}
+    public function __construct(private readonly EligibleOfferQuery $offers, private readonly EligibilityInvalidation $invalidation) {}
 
     /** Constrains a vendor_listings query (alias l) to currently eligible offers. */
     public function eligibleListings(Builder $query, string $organizationId): Builder
     {
-        $allowed = $this->tax->allowedCategories($organizationId);
-
-        return $query->where('l.vendor_organization_id', $organizationId)->where('l.status', 'ACTIVE')
-            ->where(fn (Builder $compliance) => $compliance->where('l.regulated', false)->orWhere('l.compliance_status', 'VERIFIED'))
-            ->whereExists(fn (Builder $variant) => $variant->selectRaw('1')->from('listing_variants as v')
-                ->join('inventory_items as i', 'i.listing_variant_id', '=', 'v.id')
-                ->join('listing_price_versions as pv', fn ($join) => $join->on('pv.listing_variant_id', '=', 'v.id')->where('pv.price_kind', 'ORDINARY')->whereNull('pv.retired_at'))
-                ->whereColumn('v.vendor_listing_id', 'l.id')->where('v.active', true)->where('pv.effective_at', '<=', now())
-                ->whereIn('pv.tax_category', $allowed === [] ? ['__NONE__'] : $allowed)
-                ->whereRaw('i.quantity_on_hand - i.hard_reserved_quantity > 0')
-                ->where('i.confirmed_at', '>=', now()->subDays(self::STOCK_CONFIRMATION_DAYS)));
+        return $this->offers->constrainListings($query->where('l.vendor_organization_id', $organizationId));
     }
 
     /** @return array{status: string, reason: ?string, eligible_listings: int} */
@@ -73,6 +61,10 @@ final class MarketplaceDiscoverability
                 }
             } else {
                 DB::table('vendor_organizations')->where('id', $organizationId)->update(['discoverability_evaluated_at' => now()]);
+            }
+            // Scheduled re-evaluation only ages confirmations, which the short count TTL already covers.
+            if ($source !== 'SYSTEM' || $organization->marketplace_discoverability_status !== $state['status']) {
+                $this->invalidation->changed($organizationId, $source);
             }
 
             return $state;

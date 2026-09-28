@@ -13,6 +13,7 @@ import 'package:materyalph_api_client/src/model/catalog_deactivation.dart';
 import 'package:materyalph_api_client/src/model/catalog_import_job_envelope.dart';
 import 'package:materyalph_api_client/src/model/catalog_import_template_envelope.dart';
 import 'package:materyalph_api_client/src/model/catalog_listing_create.dart';
+import 'package:materyalph_api_client/src/model/catalog_listing_deleted_envelope.dart';
 import 'package:materyalph_api_client/src/model/catalog_listing_envelope.dart';
 import 'package:materyalph_api_client/src/model/catalog_listing_summary_list_envelope.dart';
 import 'package:materyalph_api_client/src/model/catalog_listing_update.dart';
@@ -334,6 +335,100 @@ class VendorCatalogApi {
     }
 
     return Response<CatalogListingEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// deleteVendorCatalogListing
+  /// Deletes a listing that was never published (publication_version 0). It disappears from the catalog and its Vendor SKU can be reused; the record and audit trail are kept, and a pending PS/ICC submission is superseded. A listing that was ever published returns 409 LISTING_HAS_PUBLICATION_HISTORY and must be deactivated instead.
+  ///
+  /// Parameters:
+  /// * [listingId]
+  /// * [lockVersion]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [CatalogListingDeletedEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<CatalogListingDeletedEnvelope>> deleteVendorCatalogListing({
+    required String listingId,
+    required int lockVersion,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/vendor/catalog/listings/{listingId}'.replaceAll('{' r'listingId' '}', encodeQueryParameter(_serializers, listingId, const FullType(String)).toString());
+    final _options = Options(
+      method: r'DELETE',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'accessCookie',
+            'keyName': 'mp_access',
+            'where': '',
+          },{
+            'type': 'apiKey',
+            'name': 'webCsrf',
+            'keyName': 'X-CSRF-Token',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _queryParameters = <String, dynamic>{
+      r'lock_version': encodeQueryParameter(_serializers, lockVersion, const FullType(int)),
+    };
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      queryParameters: _queryParameters,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    CatalogListingDeletedEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(CatalogListingDeletedEnvelope),
+      ) as CatalogListingDeletedEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<CatalogListingDeletedEnvelope>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

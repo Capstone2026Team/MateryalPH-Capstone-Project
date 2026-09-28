@@ -144,7 +144,7 @@ final class CatalogImportService
         $categories = DB::table('material_categories')->where('active', true)->pluck('id', 'code')->all();
         $tags = DB::table('material_tags')->pluck('id', 'code')->all();
         $compatible = DB::table('material_compatible_units')->get(['material_id', 'unit_id'])->groupBy('material_id')->map(fn ($items) => $items->pluck('unit_id')->all());
-        $existingSkus = DB::table('vendor_listings')->where('vendor_organization_id', $organizationId)->pluck('vendor_sku')->flip();
+        $existingSkus = DB::table('vendor_listings')->where('vendor_organization_id', $organizationId)->whereNull('removed_at')->pluck('vendor_sku')->flip();
         $allowedTax = $this->tax->allowedCategories($organizationId);
         $variantSkus = [];
         $listingNames = [];

@@ -1,36 +1,25 @@
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { AlertCircle, FileSpreadsheet, LayoutGrid, Layers, Package, Plus, Rows3 } from 'lucide-react'
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { AlertCircle, FileSpreadsheet, LayoutGrid, Layers, Package, Plus, Rows3, Trash2 } from 'lucide-react'
 import { ResponseError, type CatalogListingUpdate, type ListingStatus } from '@materyalph/api-client-ts'
-import { Button, Field, FilterChips, OnboardingFlow, ResponsiveRecordList, RowErrorTable, StatusMessage, SummaryTiles, type FilterChip, type RecordColumn, type SummaryTile } from '@materyalph/web-ui'
+import { Button, ConfirmDialog, Field, FilterChips, OnboardingFlow, ResponsiveRecordList, RowErrorTable, StatusMessage, StockLabelBadge, stockLabelText, SummaryTiles, type FilterChip, type RecordColumn, type SummaryTile } from '@materyalph/web-ui'
 import {
-  applyImport, catalogFieldErrors, createListing, deactivateListing, formatCentavos, getCatalogTaxonomy, getImport,
+  applyImport, catalogFieldErrors, createListing, deactivateListing, deleteListing, formatCentavos, getCatalogTaxonomy, getImport,
   getImportTemplate, getListing, getMaterial, listListings, publishListing, readableCatalogError, removeListingMedia, saveVariants,
   updateListing, uploadImport, uploadListingMedia,
-  type CatalogImportJob, type CatalogListing, type CatalogListingListMeta, type CatalogListingSummary, type CatalogMaterial, type CatalogTaxonomy,
+  type CatalogImportJob, type CatalogListing, type CatalogListingListMeta, type CatalogListingSummary, type CatalogMaterial, type CatalogMaterialMatch, type CatalogTaxonomy,
 } from '../lib/catalog-api'
-import { statusLabel, useOnboardingSnapshot } from '../lib/vendor-status'
-import { formFromListing, listingSteps, quantityText, rowsFromListing, unitName, usePhotoPreviews, variantClientErrors, variantInputs, type DetailsForm, type VariantRow } from '../lib/catalog-form'
-import { ListingBadge, ListingState } from './CatalogShared'
-import { MaterialStep, PhotosComplianceStep, ProductInformationStep, PublicationGate, ReviewStep } from './CatalogListingSteps'
+import { statusLabel } from '../lib/vendor-status'
+import { storeName, useCatalogAccess } from '../lib/catalog-access'
+import { formFromListing, listingSteps, quantityText, rowsFromListing, unitName, useMaterialSearch, usePhotoPreviews, variantClientErrors, variantInputs, type DetailsForm, type VariantRow } from '../lib/catalog-form'
+import { ListingBadge, ListingState, ProductsTabs } from './CatalogShared'
+import { MaterialMatchOption, MaterialStep, PhotosComplianceStep, ProductInformationStep, PublicationGate, ReviewStep } from './CatalogListingSteps'
 import { ErrorState, LoadingState, PageHeader, VendorShell } from './PhaseThreeVendorPages'
 
 const LISTING_STATUSES: ListingStatus[] = ['DRAFT', 'PENDING_COMPLIANCE', 'PENDING_ADMIN_REVIEW', 'ACTIVE', 'INACTIVE', 'TEMPORARILY_HIDDEN_STOCK_NOT_CONFIRMED', 'REJECTED']
 const ATTENTION: ListingStatus[] = ['PENDING_COMPLIANCE', 'PENDING_ADMIN_REVIEW', 'TEMPORARILY_HIDDEN_STOCK_NOT_CONFIRMED', 'REJECTED']
 
-function useCatalogAccess() {
-  const { snapshot, loading, error, refresh } = useOnboardingSnapshot()
-  const permissions = snapshot?.permissions ?? []
-  const activation = String((snapshot?.activation as { status?: unknown } | undefined)?.status ?? 'NOT_READY')
-  return { snapshot, loading, error, refresh, canView: permissions.includes('portal.products'), canManage: permissions.includes('catalog.manage'), canSubmitCompliance: permissions.includes('compliance.submit'), active: activation === 'ACTIVE', activation }
-}
-
-function storeName(snapshot: ReturnType<typeof useOnboardingSnapshot>['snapshot']): string {
-  const organization = snapshot?.organization as { store_name?: string; storeName?: string } | undefined
-  return organization?.storeName ?? organization?.store_name ?? 'Vendor'
-}
-
-function CatalogGate({ access, activeHref, children }: { access: ReturnType<typeof useCatalogAccess>; activeHref: string; children: ReactNode }) {
+export function CatalogGate({ access, activeHref, children }: { access: ReturnType<typeof useCatalogAccess>; activeHref: string; children: ReactNode }) {
   if (access.loading) return <VendorShell activeHref={activeHref} accountLabel="Vendor" navigationData={null}><LoadingState label="Loading My Products…" /></VendorShell>
   if (access.error) return <VendorShell activeHref={activeHref} accountLabel="Vendor" navigationData={null}><ErrorState message={access.error} onRetry={() => void access.refresh()} /></VendorShell>
   if (!access.canView) return <VendorShell activeHref={activeHref} accountLabel={storeName(access.snapshot)} navigationData={access.snapshot}><StatusMessage tone="error">Your role does not include My Products. Ask the store Owner if you need product access.</StatusMessage></VendorShell>
@@ -50,7 +39,7 @@ function classification(row: CatalogListingSummary): string {
 /** Vendor-only stock line. Buyers never see these quantities. */
 function StockLine({ row, unit }: { row: CatalogListingSummary; unit: string }) {
   if (row.availableQuantity === null || row.availableQuantity === undefined) {
-    return <span className="text-text-secondary">{row.publicAvailability === 'IN_STOCK' ? 'In stock' : 'No stock count'}</span>
+    return <span className="text-text-secondary">{row.publicAvailability === 'OUT_OF_STOCK' ? 'No stock count' : stockLabelText(row.publicAvailability)}</span>
   }
   const amount = quantityText(row.availableQuantity)
   return Number(row.availableQuantity) > 0
@@ -58,7 +47,7 @@ function StockLine({ row, unit }: { row: CatalogListingSummary; unit: string }) 
     : <span className="font-semibold text-status-error">Out of stock</span>
 }
 
-function ProductCard({ row, taxonomy }: { row: CatalogListingSummary; taxonomy: CatalogTaxonomy | null }) {
+function ProductCard({ row, taxonomy, onDelete }: { row: CatalogListingSummary; taxonomy: CatalogTaxonomy | null; onDelete: (row: CatalogListingSummary) => void }) {
   const unit = unitName(taxonomy, row.unitCode)
   return <li className="flex min-w-0 flex-col overflow-hidden rounded-surface border border-border-default bg-surface-primary transition-shadow hover:shadow-md motion-reduce:transition-none">
     <div className="grid aspect-[16/10] place-items-center overflow-hidden bg-surface-canvas">
@@ -72,7 +61,7 @@ function ProductCard({ row, taxonomy }: { row: CatalogListingSummary; taxonomy: 
     </div>
     <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border-default px-4 py-2 text-sm">
       <StockLine row={row} unit={unit} />
-      <Link className="inline-flex min-h-11 items-center rounded-control border border-border-default px-3 font-semibold hover:bg-surface-canvas" to={`/products/${row.id}`}>Edit<span className="sr-only"> {row.displayName}</span></Link>
+      <span className="flex gap-2">{row.deletable && <Button variant="quiet" aria-label={`Delete ${row.displayName}`} onClick={() => onDelete(row)}><Trash2 size={16} aria-hidden="true" /> Delete</Button>}<Link className="inline-flex min-h-11 items-center rounded-control border border-border-default px-3 font-semibold hover:bg-surface-canvas" to={`/products/${row.id}`}>Edit<span className="sr-only"> {row.displayName}</span></Link></span>
     </div>
   </li>
 }
@@ -92,7 +81,19 @@ export function VendorCatalogPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [attempt, setAttempt] = useState(0)
+  const location = useLocation()
+  const [notice, setNotice] = useState<{ tone: 'success' | 'error'; text: string } | null>(() => { const state = location.state as { notice?: string } | null; return state?.notice ? { tone: 'success', text: state.notice } : null })
+  const [pendingDelete, setPendingDelete] = useState<CatalogListingSummary | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const ready = access.canView && access.active
+
+  async function confirmDelete() {
+    if (!pendingDelete) return
+    setDeleting(true)
+    try { await deleteListing(pendingDelete.id, pendingDelete.lockVersion); setNotice({ tone: 'success', text: `“${pendingDelete.displayName}” was deleted.` }); setAttempt(value => value + 1) }
+    catch (cause) { setNotice({ tone: 'error', text: await readableCatalogError(cause) }) }
+    finally { setDeleting(false); setPendingDelete(null) }
+  }
 
   const setParams = (patch: Record<string, string>) => setSearchParams(current => {
     const next = new URLSearchParams(current)
@@ -138,7 +139,8 @@ export function VendorCatalogPage() {
     { key: 'variants', header: 'Variants', cell: row => row.variantCount },
     { key: 'price', header: 'Price', cell: row => `${priceText(row)}${row.unitCode && row.minPriceCentavos != null ? ` / ${unitName(taxonomy, row.unitCode)}` : ''}` },
     { key: 'stock', header: 'Stock (private)', cell: row => <StockLine row={row} unit={unitName(taxonomy, row.unitCode)} /> },
-    { key: 'availability', header: 'Buyers see', cell: row => row.publicAvailability === 'IN_STOCK' ? 'In Stock' : 'Out of Stock' },
+    { key: 'availability', header: 'Buyers see', cell: row => <StockLabelBadge label={row.publicAvailability} prefix="" /> },
+    { key: 'actions', header: 'Actions', cell: row => row.deletable ? <Button variant="quiet" aria-label={`Delete ${row.displayName}`} onClick={() => setPendingDelete(row)}><Trash2 size={16} aria-hidden="true" /> Delete</Button> : <span className="text-text-secondary">—</span> },
   ]
   const control = 'min-h-12 w-full min-w-0 rounded-control border border-border-default bg-surface-primary px-3 text-base font-normal'
   const lastPage = meta.lastPage ?? 1
@@ -146,6 +148,8 @@ export function VendorCatalogPage() {
   return <CatalogGate access={access} activeHref="/products">
     <div className="space-y-6">
       <PageHeader eyebrow="Store Management" title="My Products" description="Listings, variants, photos and PS/ICC evidence. Regulated materials publish only after their compliance evidence is verified." actions={access.canManage ? <><Link className="inline-flex min-h-11 items-center gap-2 rounded-control border border-border-default bg-surface-primary px-4 font-semibold" to="/products/import"><FileSpreadsheet size={16} aria-hidden="true" /> Bulk import</Link><Link className="inline-flex min-h-11 items-center gap-2 rounded-control bg-action-primary px-4 font-semibold text-white" to="/products/new"><Plus size={16} aria-hidden="true" /> Add product</Link></> : undefined} />
+      <ProductsTabs active="listings" showInventory={access.canViewInventory} />
+      {notice && <StatusMessage tone={notice.tone}>{notice.text}</StatusMessage>}
       {!error && <SummaryTiles label="Listing summary" tiles={tiles} />}
       <div className="grid gap-3 rounded-surface border border-border-default bg-surface-primary p-4">
         <FilterChips label="Filter by listing status" chips={chips} value={status} disabled={loading} onChange={value => setParams({ status: value })} />
@@ -164,11 +168,14 @@ export function VendorCatalogPage() {
               {view === 'table'
                 ? <ResponsiveRecordList caption="Store products" rows={rows} columns={columns} rowKey={row => row.id} cardTitle={row => <Link className="text-action-primary underline" to={`/products/${row.id}`}>{row.displayName}</Link>} />
                 : <ul className="grid grid-cols-1 gap-4 min-[480px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5" aria-label="Store products">
-                  {rows.map(row => <ProductCard key={row.id} row={row} taxonomy={taxonomy} />)}
+                  {rows.map(row => <ProductCard key={row.id} row={row} taxonomy={taxonomy} onDelete={setPendingDelete} />)}
                   {access.canManage && page >= lastPage && <li className="min-w-0"><Link to="/products/new" className="grid h-full min-h-56 place-items-center rounded-surface border-2 border-dashed border-border-default bg-brand-orange-50 p-6 text-center transition-colors hover:border-action-primary motion-reduce:transition-none"><span className="grid justify-items-center gap-2"><Plus size={28} className="text-action-primary" aria-hidden="true" /><span className="font-semibold">Add new product</span><span className="text-sm text-text-secondary">List another material for Buyers</span></span></Link></li>}
                 </ul>}
               {lastPage > 1 && <nav aria-label="Product pages" className="flex flex-wrap items-center gap-3"><Button variant="secondary" disabled={page <= 1} onClick={() => setParams({ page: String(page - 1) })}>Previous</Button><span>Page {page} of {lastPage}</span><Button variant="secondary" disabled={page >= lastPage} onClick={() => setParams({ page: String(page + 1) })}>Next</Button></nav>}
             </>}
+      <ConfirmDialog open={pendingDelete !== null} title="Delete this draft?" confirmLabel="Delete draft" busy={deleting} onConfirm={() => void confirmDelete()} onCancel={() => setPendingDelete(null)}>
+        <p>“{pendingDelete?.displayName}” will be removed from My Products and its SKU can be used again. This can't be undone. Only drafts that were never published can be deleted.</p>
+      </ConfirmDialog>
     </div>
   </CatalogGate>
 }
@@ -189,6 +196,7 @@ export function VendorListingEditorPage() {
   const [message, setMessage] = useState<{ tone: 'success' | 'error' | 'info'; text: string } | null>(null)
   const [conflict, setConflict] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
   const step = Math.min(Math.max(Number(searchParams.get('step') ?? '0') || 0, 0), listingSteps.length - 1)
   const ready = access.canView && access.active
 
@@ -251,8 +259,19 @@ export function VendorListingEditorPage() {
     } catch (cause) { await fail(cause) } finally { setBusy(false) }
   }
 
+  async function removeListing() {
+    if (!listing) return
+    setBusy(true)
+    try { await deleteListing(listing.id, listing.lockVersion); navigate('/products', { replace: true, state: { notice: `“${listing.displayName}” was deleted.` } }) }
+    catch (cause) { setConfirmingDelete(false); await fail(cause) }
+    finally { setBusy(false) }
+  }
+
   return <CatalogGate access={access} activeHref="/products">
-    <EditorContent listing={listing} taxonomy={taxonomy} form={form} setForm={setForm} rows={rows} setRows={setRows} material={material} setMaterial={setMaterial}
+    <ConfirmDialog open={confirmingDelete} title="Delete this draft?" confirmLabel="Delete draft" busy={busy} onConfirm={() => void removeListing()} onCancel={() => setConfirmingDelete(false)}>
+      <p>“{listing.displayName}” will be removed from My Products and its SKU can be used again. This can't be undone.</p>
+    </ConfirmDialog>
+    <EditorContent onDelete={() => setConfirmingDelete(true)} listing={listing} taxonomy={taxonomy} form={form} setForm={setForm} rows={rows} setRows={setRows} material={material} setMaterial={setMaterial}
       step={step} goToStep={goToStep} busy={busy} setBusy={setBusy} readOnly={readOnly} conflict={conflict} message={message} fieldErrors={fieldErrors}
       onReload={() => void load()} onSaveDraft={() => void saveDraft()} onSaveProductInformation={() => void saveProductInformation()}
       onUpload={(file, replaces) => void run(() => uploadListingMedia(listing.id, file, listing.displayName, replaces), replaces ? 'Photo replaced. The previous version is retained in history.' : 'Photo uploaded.')}
@@ -268,7 +287,7 @@ function EditorContent(props: {
   material: CatalogMaterial | null; setMaterial: (material: CatalogMaterial | null) => void; step: number; goToStep: (step: number) => void; busy: boolean; setBusy: (busy: boolean) => void
   readOnly: boolean; conflict: boolean; message: { tone: 'success' | 'error' | 'info'; text: string } | null; fieldErrors: Record<string, string>
   onReload: () => void; onSaveDraft: () => void; onSaveProductInformation: () => void; onUpload: (file: File, replaces: string | null) => void; onRemove: (mediaId: string) => void
-  onComplianceSubmitted: (listing: CatalogListing) => void; onPublish: () => void; onDeactivate: (reason: string | null) => void
+  onComplianceSubmitted: (listing: CatalogListing) => void; onPublish: () => void; onDeactivate: (reason: string | null) => void; onDelete: () => void
 }) {
   const { listing, taxonomy, form, step, busy, readOnly, fieldErrors } = props
   const previews = usePhotoPreviews(listing)
@@ -276,7 +295,7 @@ function EditorContent(props: {
     : step === 1 ? <Button variant="secondary" disabled={busy} onClick={props.onSaveProductInformation}>{busy ? 'Saving…' : 'Save product information'}</Button> : null
   return <div className="space-y-5">
     <Link className="inline-flex min-h-11 items-center text-sm font-semibold text-action-primary" to="/products">← My Products</Link>
-    <PageHeader eyebrow={`Listing · ${listing.vendorSku}`} title={listing.displayName} description={listing.regulated ? `Regulated material: ${listing.regulatedRule?.productName ?? 'DTI-BPS mandatory certification'}. It publishes only after its PS/ICC evidence is verified.` : 'Complete each step. The server decides completion and publication readiness.'} actions={<ListingBadge status={listing.status} />} />
+    <PageHeader eyebrow={`Listing · ${listing.vendorSku}`} title={listing.displayName} description={listing.regulated ? `Regulated material: ${listing.regulatedRule?.productName ?? 'DTI-BPS mandatory certification'}. It publishes only after its PS/ICC evidence is verified.` : 'Complete each step. The server decides completion and publication readiness.'} actions={<><ListingBadge status={listing.status} />{listing.permissions.canDelete && <Button variant="quiet" disabled={busy} onClick={props.onDelete}><Trash2 size={16} aria-hidden="true" /> Delete draft</Button>}</>} />
     {props.conflict && <div className="flex flex-wrap items-center gap-3 rounded-surface border border-status-warning/40 bg-amber-50 p-4 text-sm" role="alert"><AlertCircle size={18} aria-hidden="true" /><span className="flex-1">This listing changed in another session. Reload to continue; unsaved edits on this page would be replaced.</span><Button variant="secondary" onClick={props.onReload}>Reload latest version</Button></div>}
     {props.message && <StatusMessage tone={props.message.tone}>{props.message.text}</StatusMessage>}
     {readOnly && <StatusMessage>Your role can view this listing but not change product, price, inventory or compliance data.</StatusMessage>}
@@ -296,17 +315,31 @@ function CreateListingForm({ canManage, onCreated }: { canManage: boolean; onCre
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [materialQuery, setMaterialQuery] = useState('')
+  const [chosen, setChosen] = useState<CatalogMaterialMatch | null>(null)
+  const [displayName, setDisplayName] = useState('')
+  const [vendorSku, setVendorSku] = useState('')
+  const { results, searching, error: lookupError } = useMaterialSearch(materialQuery, canManage)
   if (!canManage) return <StatusMessage tone="error">Your role cannot create listings.</StatusMessage>
+  // The display name suggestion follows the chosen canonical material, or what the Vendor typed.
+  const suggestion = (chosen?.name ?? materialQuery).trim().slice(0, 180)
+  const acceptSuggestion = () => { if (suggestion) setDisplayName(suggestion) }
   async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); setBusy(true); setError(null); setErrors({})
-    const data = new FormData(event.currentTarget)
-    try { onCreated(await createListing(String(data.get('display_name')), String(data.get('vendor_sku')))) }
+    event.preventDefault()
+    const name = displayName.trim() || suggestion
+    if (name.length < 2) { setErrors({ display_name: 'Enter the display name, or type a material name to use as a suggestion.' }); return }
+    setBusy(true); setError(null); setErrors({})
+    try {
+      const created = await createListing(name, vendorSku)
+      // A chosen canonical material is saved right away so step 1 opens with it selected.
+      onCreated(chosen ? await updateListing(created.id, { lockVersion: created.lockVersion, materialId: chosen.id, materialMatch: chosen.matchType === 'FUZZY' ? 'FUZZY_CONFIRMED' : chosen.matchType }) : created)
+    }
     catch (cause) { setErrors(await catalogFieldErrors(cause)); setError(await readableCatalogError(cause)) }
     finally { setBusy(false) }
   }
   return <div className="space-y-6">
     <Link className="inline-flex min-h-11 items-center text-sm font-semibold text-action-primary" to="/products">← My Products</Link>
-    <PageHeader eyebrow="Store Management" title="Add product" description="Start with the name Buyers will see and your SKU. Next you choose the material, add details, prices, photos and any PS/ICC evidence. You can save the draft at any step." />
+    <PageHeader eyebrow="Store Management" title="Add product" description="Start with the material, the name Buyers will see and your SKU. Next you add details, prices, photos and any PS/ICC evidence. You can save the draft at any step." />
     <div className="grid gap-5 lg:grid-cols-[17rem_minmax(0,1fr)] lg:items-start">
       <ol className="grid gap-1 rounded-surface border border-border-default bg-surface-primary p-2 text-sm" aria-label="Listing steps after you create the draft">
         {listingSteps.map((item, index) => <li key={item.label} className="flex items-start gap-3 px-3 py-2"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border-default text-xs font-semibold">{index + 1}</span><span><span className="block font-semibold">{item.label}</span><span className="text-xs text-text-secondary">{item.description}</span></span></li>)}
@@ -314,8 +347,22 @@ function CreateListingForm({ canManage, onCreated }: { canManage: boolean; onCre
       <form className="grid min-w-0 gap-4 rounded-surface border border-border-default bg-surface-primary p-5 sm:p-7" onSubmit={submit} aria-busy={busy} aria-labelledby="create-listing-heading">
         <h2 id="create-listing-heading" className="text-2xl font-semibold tracking-tight">New product listing</h2>
         {error && <StatusMessage tone="error">{error}</StatusMessage>}
-        <Field label="Display name" name="display_name" required minLength={2} maxLength={180} error={errors.display_name} hint="The name Buyers see. Vehicle or equipment rental services are not supported." />
-        <Field label="Vendor SKU" name="vendor_sku" required maxLength={96} error={errors.vendor_sku} />
+        <Field label="Material name" name="material_query" value={materialQuery} autoComplete="off" hint="Type the material, for example Portland cement. Matches appear as you type; choosing one fills in the category and PS/ICC rules." onChange={event => { setMaterialQuery(event.target.value); if (chosen && event.target.value !== chosen.name) setChosen(null) }} />
+        <p className="sr-only" role="status">{searching ? 'Searching materials…' : results ? `${results.length} matching materials` : ''}</p>
+        {lookupError && <p className="text-sm text-status-error" role="alert">{lookupError}</p>}
+        {results && results.length > 0 && <fieldset className="min-w-0 overflow-hidden rounded-surface border border-border-default">
+          <legend className="sr-only">Matching materials</legend>
+          <ul className="divide-y divide-border-default">{results.slice(0, 6).map(match => <MaterialMatchOption key={match.id} match={match} name="create_material_choice" selected={chosen?.id === match.id} onChoose={() => { setChosen(match); setMaterialQuery(match.name) }} />)}</ul>
+        </fieldset>}
+        {chosen && <p className="text-sm text-text-secondary">Material: <strong className="text-text-strong">{chosen.name}</strong> · {chosen.categoryName}</p>}
+        <div className="grid gap-2">
+          <Field label="Display name" name="display_name" value={displayName} placeholder={suggestion || 'For example Portland Cement Type I, 40 kg bag'} maxLength={180} error={errors.display_name}
+            hint={suggestion && !displayName ? 'Leave it empty to use the suggestion, or press Tab to fill it in. Vehicle or equipment rental services are not supported.' : 'The name Buyers see. Vehicle or equipment rental services are not supported.'}
+            onChange={event => setDisplayName(event.target.value)}
+            onKeyDown={event => { if (event.key === 'Tab' && !event.shiftKey && !displayName && suggestion) { event.preventDefault(); acceptSuggestion() } }} />
+          {suggestion && displayName.trim() !== suggestion && <Button variant="quiet" className="w-fit" onClick={acceptSuggestion}>Use suggestion: {suggestion}</Button>}
+        </div>
+        <Field label="Vendor SKU" name="vendor_sku" value={vendorSku} required maxLength={96} error={errors.vendor_sku} onChange={event => setVendorSku(event.target.value)} />
         <Button type="submit" className="w-fit" disabled={busy}>{busy ? 'Creating…' : 'Create draft'}</Button>
       </form>
     </div>
