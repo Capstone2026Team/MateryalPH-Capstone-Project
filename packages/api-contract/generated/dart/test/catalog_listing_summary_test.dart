@@ -88,6 +88,12 @@ void main() {
       // TODO
     });
 
+    // True when the caller may delete this never-published listing.
+    // bool deletable
+    test('to test the property `deletable`', () async {
+      // TODO
+    });
+
     // Short-lived signed URL of the first ready product photo; expires within minutes.
     // String primaryImageUrl
     test('to test the property `primaryImageUrl`', () async {

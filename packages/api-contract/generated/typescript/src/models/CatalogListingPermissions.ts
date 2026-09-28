@@ -27,6 +27,10 @@ export interface CatalogListingPermissions {
      *
      */
     canSubmitCompliance: boolean;
+    /**
+     * True when the caller may delete this never-published listing.
+     */
+    canDelete?: boolean;
 }
 
 /**
@@ -50,6 +54,7 @@ export function CatalogListingPermissionsFromJSONTyped(json: any, ignoreDiscrimi
 
         'canManage': json['can_manage'],
         'canSubmitCompliance': json['can_submit_compliance'],
+        'canDelete': json['can_delete'] == null ? undefined : json['can_delete'],
     };
 }
 
@@ -66,6 +71,7 @@ export function CatalogListingPermissionsToJSONTyped(value?: CatalogListingPermi
 
         'can_manage': value['canManage'],
         'can_submit_compliance': value['canSubmitCompliance'],
+        'can_delete': value['canDelete'],
     };
 }
 

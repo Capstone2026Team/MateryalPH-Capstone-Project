@@ -77,6 +77,10 @@ export async function deactivateListing(listingId: string, lockVersion: number, 
   return (await catalogApi().deactivateVendorCatalogListing({ listingId, catalogDeactivation: { lockVersion, reason } })).data
 }
 
+export async function deleteListing(listingId: string, lockVersion: number): Promise<void> {
+  await catalogApi().deleteVendorCatalogListing({ listingId, lockVersion })
+}
+
 export async function uploadComplianceEvidence(listingId: string, path: CompliancePath, file: Blob, qrPayload: string | null): Promise<ComplianceEvidence> {
   return (await catalogApi().uploadListingComplianceEvidence({ listingId, path, file, qrPayload })).data
 }

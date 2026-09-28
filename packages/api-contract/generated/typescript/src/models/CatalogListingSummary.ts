@@ -99,6 +99,10 @@ export interface CatalogListingSummary {
      */
     primaryImageFileId?: string | null;
     /**
+     * True when the caller may delete this never-published listing.
+     */
+    deletable?: boolean;
+    /**
      * Short-lived signed URL of the first ready product photo; expires within minutes.
      */
     primaryImageUrl?: string | null;
@@ -165,6 +169,7 @@ export function CatalogListingSummaryFromJSONTyped(json: any, ignoreDiscriminato
         'maxPriceCentavos': json['max_price_centavos'] === undefined ? undefined : json['max_price_centavos'] === null ? null : json['max_price_centavos'],
         'publicAvailability': json['public_availability'],
         'primaryImageFileId': json['primary_image_file_id'] === undefined ? undefined : json['primary_image_file_id'] === null ? null : json['primary_image_file_id'],
+        'deletable': json['deletable'] == null ? undefined : json['deletable'],
         'primaryImageUrl': json['primary_image_url'] === undefined ? undefined : json['primary_image_url'] === null ? null : json['primary_image_url'],
         'unitCode': json['unit_code'] === undefined ? undefined : json['unit_code'] === null ? null : json['unit_code'],
         'availableQuantity': json['available_quantity'] === undefined ? undefined : json['available_quantity'] === null ? null : json['available_quantity'],
@@ -198,6 +203,7 @@ export function CatalogListingSummaryToJSONTyped(value?: CatalogListingSummary |
         'max_price_centavos': value['maxPriceCentavos'],
         'public_availability': value['publicAvailability'],
         'primary_image_file_id': value['primaryImageFileId'],
+        'deletable': value['deletable'],
         'primary_image_url': value['primaryImageUrl'],
         'unit_code': value['unitCode'],
         'available_quantity': value['availableQuantity'],

@@ -24,6 +24,7 @@ Name | Type | Description | Notes
 **maxPriceCentavos** | **int** |  | [optional]
 **publicAvailability** | **String** | The only availability a Buyer would see. |
 **primaryImageFileId** | **String** |  | [optional]
+**deletable** | **bool** | True when the caller may delete this never-published listing. | [optional]
 **primaryImageUrl** | **String** | Short-lived signed URL of the first ready product photo; expires within minutes. | [optional]
 **unitCode** | **String** | Sale unit code when every active variant uses the same unit. | [optional]
 **availableQuantity** | **String** | Vendor-only summed available-to-sell quantity when every active variant shares one unit and has a stock count. Never returned to Buyers. | [optional]

@@ -754,6 +754,8 @@ FIN-07 governs the financial consequences. No commission is earned on cancellati
 
 Vendor Owner, Store Manager, Store Staff, and Inventory Staff may create and edit listings. Vendor Owner, Store Manager, Store Staff, and Inventory Staff may submit PS/ICC evidence. Customer Service Staff and Fulfillment Staff cannot change product, price, inventory, or compliance data.
 
+A listing that was never published (no publication version) may be deleted by a user who may manage listings. It disappears from My Products and its Vendor SKU becomes reusable; the record and audit trail are kept, and a pending PS/ICC submission for it is superseded. A listing that was ever published cannot be deleted and is deactivated instead, so its publication, price and order history stays intact. Approved by the project owner on 2026-09-28.
+
 Manufacturer, certification, or required marking changes return an active regulated listing to compliance review. The last approved information remains in history and the public verified indicator is withheld until review succeeds.
 
 - **Vehicles**

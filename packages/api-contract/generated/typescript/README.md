@@ -143,6 +143,7 @@ All URIs are relative to */api/v1*
 *VendorCatalogApi* | [**applyCatalogImport**](docs/VendorCatalogApi.md#applycatalogimport) | **POST** /vendor/catalog/imports/{jobId}/apply |
 *VendorCatalogApi* | [**createVendorCatalogListing**](docs/VendorCatalogApi.md#createvendorcataloglisting) | **POST** /vendor/catalog/listings |
 *VendorCatalogApi* | [**deactivateVendorCatalogListing**](docs/VendorCatalogApi.md#deactivatevendorcataloglisting) | **POST** /vendor/catalog/listings/{listingId}/deactivate |
+*VendorCatalogApi* | [**deleteVendorCatalogListing**](docs/VendorCatalogApi.md#deletevendorcataloglisting) | **DELETE** /vendor/catalog/listings/{listingId} |
 *VendorCatalogApi* | [**downloadCatalogFile**](docs/VendorCatalogApi.md#downloadcatalogfile) | **GET** /catalog-files/{fileId}/content |
 *VendorCatalogApi* | [**getCatalogImport**](docs/VendorCatalogApi.md#getcatalogimport) | **GET** /vendor/catalog/imports/{jobId} |
 *VendorCatalogApi* | [**getCatalogImportTemplate**](docs/VendorCatalogApi.md#getcatalogimporttemplate) | **GET** /vendor/catalog/imports/template |
@@ -264,6 +265,8 @@ All URIs are relative to */api/v1*
 - [CatalogLimits](docs/CatalogLimits.md)
 - [CatalogListing](docs/CatalogListing.md)
 - [CatalogListingCreate](docs/CatalogListingCreate.md)
+- [CatalogListingDeletedEnvelope](docs/CatalogListingDeletedEnvelope.md)
+- [CatalogListingDeletedEnvelopeData](docs/CatalogListingDeletedEnvelopeData.md)
 - [CatalogListingEnvelope](docs/CatalogListingEnvelope.md)
 - [CatalogListingListMeta](docs/CatalogListingListMeta.md)
 - [CatalogListingMaterial](docs/CatalogListingMaterial.md)

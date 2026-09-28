@@ -1,4 +1,5 @@
 export { Button, type ButtonProps, type ButtonVariant } from './button'
+export { ConfirmDialog } from './confirm-dialog'
 export { VendorTeamInvitations } from './vendor-team-invitations'
 export { VendorTeamActivity } from './vendor-team-activity'
 export { DateFilter, ALL_DATES, type DateFilterRange } from './date-filter'

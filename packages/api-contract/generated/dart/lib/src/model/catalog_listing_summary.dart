@@ -30,6 +30,7 @@ part 'catalog_listing_summary.g.dart';
 /// * [maxPriceCentavos]
 /// * [publicAvailability] - The only availability a Buyer would see.
 /// * [primaryImageFileId]
+/// * [deletable] - True when the caller may delete this never-published listing.
 /// * [primaryImageUrl] - Short-lived signed URL of the first ready product photo; expires within minutes.
 /// * [unitCode] - Sale unit code when every active variant uses the same unit.
 /// * [availableQuantity] - Vendor-only summed available-to-sell quantity when every active variant shares one unit and has a stock count. Never returned to Buyers.
@@ -86,6 +87,10 @@ abstract class CatalogListingSummary implements Built<CatalogListingSummary, Cat
 
   @BuiltValueField(wireName: r'primary_image_file_id')
   String? get primaryImageFileId;
+
+  /// True when the caller may delete this never-published listing.
+  @BuiltValueField(wireName: r'deletable')
+  bool? get deletable;
 
   /// Short-lived signed URL of the first ready product photo; expires within minutes.
   @BuiltValueField(wireName: r'primary_image_url')
@@ -214,6 +219,13 @@ class _$CatalogListingSummarySerializer implements PrimitiveSerializer<CatalogLi
       yield serializers.serialize(
         object.primaryImageFileId,
         specifiedType: const FullType.nullable(String),
+      );
+    }
+    if (object.deletable != null) {
+      yield r'deletable';
+      yield serializers.serialize(
+        object.deletable,
+        specifiedType: const FullType(bool),
       );
     }
     if (object.primaryImageUrl != null) {
@@ -378,6 +390,14 @@ class _$CatalogListingSummarySerializer implements PrimitiveSerializer<CatalogLi
           ) as String?;
           if (valueDes == null) continue;
           result.primaryImageFileId = valueDes;
+          break;
+        case r'deletable':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.deletable = valueDes;
           break;
         case r'primary_image_url':
           final valueDes = serializers.deserialize(

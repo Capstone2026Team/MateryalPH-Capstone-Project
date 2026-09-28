@@ -91,6 +91,8 @@ export 'package:materyalph_api_client/src/model/catalog_inventory.dart';
 export 'package:materyalph_api_client/src/model/catalog_limits.dart';
 export 'package:materyalph_api_client/src/model/catalog_listing.dart';
 export 'package:materyalph_api_client/src/model/catalog_listing_create.dart';
+export 'package:materyalph_api_client/src/model/catalog_listing_deleted_envelope.dart';
+export 'package:materyalph_api_client/src/model/catalog_listing_deleted_envelope_data.dart';
 export 'package:materyalph_api_client/src/model/catalog_listing_envelope.dart';
 export 'package:materyalph_api_client/src/model/catalog_listing_list_meta.dart';
 export 'package:materyalph_api_client/src/model/catalog_listing_material.dart';

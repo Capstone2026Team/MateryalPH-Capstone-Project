@@ -108,6 +108,13 @@ final class VendorCatalogController extends Controller
         return ApiResponse::success($this->catalog->deactivate($request, $listingId, (int) $input['lock_version'], $input['reason'] ?? null));
     }
 
+    public function destroy(Request $request, string $listingId): JsonResponse
+    {
+        $input = $request->validate(['lock_version' => ['required', 'integer', 'min:1']]);
+
+        return ApiResponse::success($this->catalog->delete($request, $listingId, (int) $input['lock_version']));
+    }
+
     public function fileUrl(Request $request, string $fileId): JsonResponse
     {
         return ApiResponse::success($this->catalog->fileUrl($request, $fileId));

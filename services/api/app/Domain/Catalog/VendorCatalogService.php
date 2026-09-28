@@ -88,7 +88,7 @@ final class VendorCatalogService
             return ['items' => [], 'meta' => ['current_page' => 1, 'last_page' => 1, 'total' => 0, 'scope' => 'ASSIGNED_ONLY', 'status_counts' => new \stdClass, 'active_out_of_stock' => 0]];
         }
         $scoped = function () use ($organizationId, $filters) {
-            $query = DB::table('vendor_listings as l')->where('l.vendor_organization_id', $organizationId);
+            $query = DB::table('vendor_listings as l')->where('l.vendor_organization_id', $organizationId)->whereNull('l.removed_at');
             if (! empty($filters['compliance_status'])) {
                 $query->where('l.compliance_status', $filters['compliance_status']);
             }
@@ -106,12 +106,13 @@ final class VendorCatalogService
         $statusCounts = $scoped()->groupBy('l.status')->selectRaw('l.status, COUNT(*) AS total')->pluck('total', 'status')->map(static fn (mixed $total): int => (int) $total)->all();
         $activeOutOfStock = $scoped()->where('l.status', 'ACTIVE')->whereNotExists(fn ($stock) => $stock->selectRaw('1')->from('listing_variants as v')->join('inventory_items as i', 'i.listing_variant_id', '=', 'v.id')
             ->whereColumn('v.vendor_listing_id', 'l.id')->where('v.active', true)->whereRaw('i.quantity_on_hand - i.hard_reserved_quantity > 0'))->count();
+        $canManage = in_array(CatalogAccess::MANAGE, $this->accounts->resolve($request->user())['permissions'], true);
         $query = $scoped()->join('products as p', 'p.id', '=', 'l.product_id')
             ->leftJoin('materials as m', 'm.id', '=', 'p.material_id')->leftJoin('material_categories as c', 'c.id', '=', 'l.material_category_id');
         if (! empty($filters['status'])) {
             $query->where('l.status', $filters['status']);
         }
-        $page = $query->orderByDesc('l.updated_at')->orderBy('l.id')->paginate(20, ['l.id', 'l.display_name', 'l.vendor_sku', 'l.status', 'l.compliance_status', 'l.regulated', 'l.other_label', 'l.lock_version', 'l.updated_at', 'c.name as category_name', 'm.name as material_name'], 'page', (int) ($filters['page'] ?? 1));
+        $page = $query->orderByDesc('l.updated_at')->orderBy('l.id')->paginate(20, ['l.id', 'l.display_name', 'l.vendor_sku', 'l.status', 'l.compliance_status', 'l.regulated', 'l.other_label', 'l.lock_version', 'l.updated_at', 'l.publication_version', 'l.published_at', 'c.name as category_name', 'm.name as material_name'], 'page', (int) ($filters['page'] ?? 1));
         $ids = collect($page->items())->pluck('id')->all();
         $prices = DB::table('listing_variants as v')->join('listing_price_versions as pv', fn ($join) => $join->on('pv.listing_variant_id', '=', 'v.id')->where('pv.price_kind', 'ORDINARY')->whereNull('pv.retired_at'))
             ->whereIn('v.vendor_listing_id', $ids)->where('v.active', true)->groupBy('v.vendor_listing_id')
@@ -135,6 +136,7 @@ final class VendorCatalogService
             'max_price_centavos' => isset($prices[$row->id]) ? (int) $prices[$row->id]->max_price : null,
             'public_availability' => isset($available[$row->id]) ? 'IN_STOCK' : 'OUT_OF_STOCK',
             'primary_image_file_id' => $images[$row->id][0]->file_id ?? null,
+            'deletable' => $canManage && self::deletable($row),
             'primary_image_url' => isset($images[$row->id], $imageFiles[$images[$row->id][0]->file_id]) ? $this->files->temporaryUrl($imageFiles[$images[$row->id][0]->file_id])['url'] : null,
             'unit_code' => isset($units[$row->id]) && (int) $units[$row->id]->unit_count === 1 ? (string) $units[$row->id]->unit_code : null,
             'available_quantity' => isset($units[$row->id]) && (int) $units[$row->id]->unit_count === 1 && (int) $units[$row->id]->counted === (int) $units[$row->id]->variants ? bcadd((string) $units[$row->id]->available, '0', 4) : null,
@@ -166,14 +168,14 @@ final class VendorCatalogService
         $listingId = DB::transaction(function () use ($request, $input, $organizationId, $key): string {
             $this->access->lockActiveStore($organizationId);
             if ($this->access->replayed($request, 'catalog.listings.create', $key, $organizationId)) {
-                $existing = DB::table('vendor_listings')->where('vendor_organization_id', $organizationId)->where('vendor_sku', $this->sku((string) $input['vendor_sku']))->value('id');
+                $existing = DB::table('vendor_listings')->where('vendor_organization_id', $organizationId)->whereNull('removed_at')->where('vendor_sku', $this->sku((string) $input['vendor_sku']))->value('id');
                 if (is_string($existing)) {
                     return $existing;
                 }
             }
             $this->assertNotRental((string) $input['display_name'], 'display_name');
             $sku = $this->sku((string) $input['vendor_sku']);
-            if (DB::table('vendor_listings')->where('vendor_organization_id', $organizationId)->where('vendor_sku', $sku)->exists()) {
+            if (DB::table('vendor_listings')->where('vendor_organization_id', $organizationId)->whereNull('removed_at')->where('vendor_sku', $sku)->exists()) {
                 throw new AuthenticationException('VALIDATION_FAILED', 'Review the highlighted fields and try again.', 422, ['vendor_sku' => ['This Vendor SKU is already used by another listing.']]);
             }
             $productId = DB::table('products')->insertGetId(['name' => trim((string) $input['display_name']), 'public_id' => (string) Str::uuid7(), 'vendor_organization_id' => $organizationId, 'created_at' => now(), 'updated_at' => now()]);
@@ -215,7 +217,7 @@ final class VendorCatalogService
             }
             if (isset($input['vendor_sku'])) {
                 $sku = $this->sku((string) $input['vendor_sku']);
-                if (DB::table('vendor_listings')->where('vendor_organization_id', $organizationId)->where('vendor_sku', $sku)->where('id', '!=', $listingId)->exists()) {
+                if (DB::table('vendor_listings')->where('vendor_organization_id', $organizationId)->whereNull('removed_at')->where('vendor_sku', $sku)->where('id', '!=', $listingId)->exists()) {
                     throw new AuthenticationException('VALIDATION_FAILED', 'Review the highlighted fields and try again.', 422, ['vendor_sku' => ['This Vendor SKU is already used by another listing.']]);
                 }
                 $listingValues['vendor_sku'] = $sku;
@@ -441,6 +443,41 @@ final class VendorCatalogService
         return $this->present($request, $this->ownedListing($listingId, $organizationId, false));
     }
 
+    /** Only a listing that Buyers never saw may be deleted; everything else is deactivated so its history stays attached. */
+    public static function deletable(object $listing): bool
+    {
+        return (int) $listing->publication_version === 0 && $listing->published_at === null && $listing->status !== 'ACTIVE';
+    }
+
+    /**
+     * Deletes a never-published listing from the Vendor's catalog. The row, its versions and its audit
+     * trail are kept; it is hidden everywhere and its Vendor SKU can be reused. A pending PS/ICC
+     * submission for it is superseded so no reviewer decides on a deleted product.
+     *
+     * @return array{id: string, removed_at: string}
+     */
+    public function delete(Request $request, string $listingId, int $lockVersion): array
+    {
+        $organizationId = $this->access->organizationFor($request, CatalogAccess::MANAGE);
+        $removedAt = now();
+        DB::transaction(function () use ($request, $organizationId, $listingId, $lockVersion, $removedAt): void {
+            DB::table('vendor_organizations')->where('id', $organizationId)->lockForUpdate()->first();
+            $listing = $this->ownedListing($listingId, $organizationId, true);
+            $this->assertVersion($listing, $lockVersion);
+            if (! self::deletable($listing)) {
+                throw new AuthenticationException('LISTING_HAS_PUBLICATION_HISTORY', 'This listing has been published before, so its history must stay. Deactivate it instead.', 409);
+            }
+            $superseded = DB::table('compliance_submissions')->where('vendor_listing_id', $listingId)->where('status', 'PENDING_ADMIN_REVIEW')->orderBy('id')->lockForUpdate()->pluck('id');
+            if ($superseded->isNotEmpty()) {
+                DB::table('compliance_submissions')->whereIn('id', $superseded->all())->update(['status' => 'SUPERSEDED', 'lock_version' => DB::raw('lock_version + 1'), 'updated_at' => $removedAt]);
+            }
+            DB::table('vendor_listings')->where('id', $listingId)->update(['removed_at' => $removedAt, 'removed_by_user_id' => $request->user()->getKey(), 'publication_requested_at' => null, 'lock_version' => DB::raw('lock_version + 1'), 'updated_at' => $removedAt]);
+            $this->audit->account($request, 'CATALOG_LISTING_DELETED', 'VENDOR_LISTING', $listingId, before: ['status' => $listing->status, 'vendor_sku' => $listing->vendor_sku], after: ['superseded_submissions' => $superseded->count()]);
+        });
+
+        return ['id' => $listingId, 'removed_at' => $removedAt->toIso8601String()];
+    }
+
     /** @return array{url: string, expires_at: string} */
     public function fileUrl(Request $request, string $fileId): array
     {
@@ -467,7 +504,7 @@ final class VendorCatalogService
 
     public function ownedListing(string $listingId, string $organizationId, bool $lock): object
     {
-        $query = DB::table('vendor_listings')->where('id', $listingId)->where('vendor_organization_id', $organizationId);
+        $query = DB::table('vendor_listings')->where('id', $listingId)->where('vendor_organization_id', $organizationId)->whereNull('removed_at');
         $listing = ($lock ? $query->lockForUpdate() : $query)->first();
         if ($listing === null) {
             throw new AuthenticationException('RESOURCE_NOT_FOUND', 'The listing is unavailable.', 404);
@@ -524,7 +561,7 @@ final class VendorCatalogService
             'status_history' => DB::table('listing_status_history')->where('vendor_listing_id', $listing->id)->orderByDesc('created_at')->orderByDesc('id')->limit(20)->get(['from_status', 'to_status', 'source', 'reason_code', 'reason', 'publication_version', 'created_at'])->all(),
             'completion' => ['key' => 'LISTING', 'label' => 'Listing', 'steps' => $readiness['steps']],
             'blockers' => $readiness['blockers'],
-            'permissions' => ['can_manage' => in_array(CatalogAccess::MANAGE, $permissions, true), 'can_submit_compliance' => in_array(CatalogAccess::SUBMIT_COMPLIANCE, $permissions, true)],
+            'permissions' => ['can_manage' => in_array(CatalogAccess::MANAGE, $permissions, true), 'can_submit_compliance' => in_array(CatalogAccess::SUBMIT_COMPLIANCE, $permissions, true), 'can_delete' => in_array(CatalogAccess::MANAGE, $permissions, true) && self::deletable($listing)],
         ];
     }
 

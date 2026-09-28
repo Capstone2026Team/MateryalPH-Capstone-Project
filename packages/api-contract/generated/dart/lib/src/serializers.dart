@@ -84,6 +84,8 @@ import 'package:materyalph_api_client/src/model/catalog_inventory.dart';
 import 'package:materyalph_api_client/src/model/catalog_limits.dart';
 import 'package:materyalph_api_client/src/model/catalog_listing.dart';
 import 'package:materyalph_api_client/src/model/catalog_listing_create.dart';
+import 'package:materyalph_api_client/src/model/catalog_listing_deleted_envelope.dart';
+import 'package:materyalph_api_client/src/model/catalog_listing_deleted_envelope_data.dart';
 import 'package:materyalph_api_client/src/model/catalog_listing_envelope.dart';
 import 'package:materyalph_api_client/src/model/catalog_listing_list_meta.dart';
 import 'package:materyalph_api_client/src/model/catalog_listing_material.dart';
@@ -298,6 +300,8 @@ part 'serializers.g.dart';
   CatalogLimits,
   CatalogListing,
   CatalogListingCreate,
+  CatalogListingDeletedEnvelope,
+  CatalogListingDeletedEnvelopeData,
   CatalogListingEnvelope,
   CatalogListingListMeta,
   CatalogListingMaterial,

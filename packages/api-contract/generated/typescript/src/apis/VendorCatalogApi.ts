@@ -34,6 +34,11 @@ import {
     CatalogListingCreateToJSON,
 } from '../models/CatalogListingCreate';
 import {
+    type CatalogListingDeletedEnvelope,
+    CatalogListingDeletedEnvelopeFromJSON,
+    CatalogListingDeletedEnvelopeToJSON,
+} from '../models/CatalogListingDeletedEnvelope';
+import {
     type CatalogListingEnvelope,
     CatalogListingEnvelopeFromJSON,
     CatalogListingEnvelopeToJSON,
@@ -140,6 +145,17 @@ export interface DeactivateVendorCatalogListingRequest {
      *
      */
     catalogDeactivation: CatalogDeactivation;
+}
+
+export interface DeleteVendorCatalogListingRequest {
+    /**
+     *
+     */
+    listingId: string;
+    /**
+     *
+     */
+    lockVersion: number;
 }
 
 export interface DownloadCatalogFileRequest {
@@ -500,6 +516,66 @@ export class VendorCatalogApi extends runtime.BaseAPI {
      */
     async deactivateVendorCatalogListing(requestParameters: DeactivateVendorCatalogListingRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CatalogListingEnvelope> {
         const response = await this.deactivateVendorCatalogListingRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for deleteVendorCatalogListing without sending the request
+     */
+    async deleteVendorCatalogListingRequestOpts(requestParameters: DeleteVendorCatalogListingRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['listingId'] == null) {
+            throw new runtime.RequiredError(
+                'listingId',
+                'Required parameter "listingId" was null or undefined when calling deleteVendorCatalogListing().'
+            );
+        }
+
+        if (requestParameters['lockVersion'] == null) {
+            throw new runtime.RequiredError(
+                'lockVersion',
+                'Required parameter "lockVersion" was null or undefined when calling deleteVendorCatalogListing().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['lockVersion'] != null) {
+            queryParameters['lock_version'] = requestParameters['lockVersion'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/vendor/catalog/listings/{listingId}`;
+        urlPath = urlPath.replace('{listingId}', encodeURIComponent(String(requestParameters['listingId'])));
+
+        return {
+            path: urlPath,
+            method: 'DELETE',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Deletes a listing that was never published (publication_version 0). It disappears from the catalog and its Vendor SKU can be reused; the record and audit trail are kept, and a pending PS/ICC submission is superseded. A listing that was ever published returns 409 LISTING_HAS_PUBLICATION_HISTORY and must be deactivated instead.
+     */
+    async deleteVendorCatalogListingRaw(requestParameters: DeleteVendorCatalogListingRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CatalogListingDeletedEnvelope>> {
+        const requestOptions = await this.deleteVendorCatalogListingRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => CatalogListingDeletedEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * Deletes a listing that was never published (publication_version 0). It disappears from the catalog and its Vendor SKU can be reused; the record and audit trail are kept, and a pending PS/ICC submission is superseded. A listing that was ever published returns 409 LISTING_HAS_PUBLICATION_HISTORY and must be deactivated instead.
+     */
+    async deleteVendorCatalogListing(requestParameters: DeleteVendorCatalogListingRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CatalogListingDeletedEnvelope> {
+        const response = await this.deleteVendorCatalogListingRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

@@ -563,6 +563,51 @@ final class PhaseFourCatalogComplianceTest extends TestCase
             ->assertJsonMissingPath('meta.status_counts.DRAFT')->assertJsonPath('data.0.public_availability', 'OUT_OF_STOCK');
     }
 
+    public function test_only_never_published_listings_can_be_deleted_and_their_history_is_kept(): void
+    {
+        [$organization, $owner] = $this->activeStore();
+        $this->signInVendor($owner);
+        $draft = $this->createListing('Draft gravel', 'GRAVEL-1');
+        $this->getJson('/api/v1/vendor/catalog/listings?status=DRAFT')->assertOk()->assertJsonPath('data.0.deletable', true);
+        $this->getJson('/api/v1/vendor/catalog/listings/'.$draft)->assertOk()->assertJsonPath('data.permissions.can_delete', true);
+        $this->deleteJson('/api/v1/vendor/catalog/listings/'.$draft.'?lock_version=99')->assertConflict();
+        $this->deleteJson('/api/v1/vendor/catalog/listings/'.$draft.'?lock_version=1')->assertOk()->assertJsonPath('data.id', $draft);
+        $this->getJson('/api/v1/vendor/catalog/listings/'.$draft)->assertNotFound();
+        $this->getJson('/api/v1/vendor/catalog/listings')->assertOk()->assertJsonCount(0, 'data');
+        self::assertNotNull(DB::table('vendor_listings')->where('id', $draft)->value('removed_at'));
+        self::assertSame(1, DB::table('listing_status_history')->where('vendor_listing_id', $draft)->count());
+        $this->assertDatabaseHas('audit_logs', ['action' => 'CATALOG_LISTING_DELETED', 'resource_id' => $draft]);
+        // The deleted draft's SKU is free again.
+        $this->createListing('Draft gravel again', 'GRAVEL-1');
+
+        // A pending PS/ICC submission on a never-published regulated draft is superseded, not left for a reviewer.
+        $regulated = $this->publishableListing('PORTLAND_CEMENT', 'CEM-DEL', ['cement_type' => 'Type I', 'bag_weight_kg' => '40'], regulated: true);
+        $this->submitCompliance($regulated, 'MANUAL', ['certificate_number' => 'Q-9999', 'manufacturer_name' => 'Unlisted Maker'])->assertCreated()->assertJsonPath('data.compliance_status', 'PENDING_ADMIN_REVIEW');
+        $this->deleteJson('/api/v1/vendor/catalog/listings/'.$regulated.'?lock_version='.DB::table('vendor_listings')->where('id', $regulated)->value('lock_version'))->assertOk();
+        self::assertSame(['SUPERSEDED'], DB::table('compliance_submissions')->where('vendor_listing_id', $regulated)->pluck('status')->unique()->values()->all());
+
+        // Anything Buyers have seen keeps its history: published, and later deactivated, listings cannot be deleted.
+        $published = $this->publishableListing('CONCRETE_HOLLOW_BLOCK', 'CHB-DEL', ['thickness_mm' => '100']);
+        $this->publish($published)->assertOk()->assertJsonPath('data.status', 'ACTIVE');
+        $this->getJson('/api/v1/vendor/catalog/listings/'.$published)->assertJsonPath('data.permissions.can_delete', false);
+        $version = fn (): int => (int) DB::table('vendor_listings')->where('id', $published)->value('lock_version');
+        $this->deleteJson('/api/v1/vendor/catalog/listings/'.$published.'?lock_version='.$version())->assertConflict()->assertJsonPath('errors.0.code', 'LISTING_HAS_PUBLICATION_HISTORY');
+        $this->postJson('/api/v1/vendor/catalog/listings/'.$published.'/deactivate', ['lock_version' => $version()])->assertOk()->assertJsonPath('data.status', 'INACTIVE');
+        $this->deleteJson('/api/v1/vendor/catalog/listings/'.$published.'?lock_version='.$version())->assertConflict();
+        try {
+            DB::transaction(fn () => DB::table('vendor_listings')->where('id', $published)->update(['removed_at' => now(), 'removed_by_user_id' => $owner->id]));
+            self::fail('A published listing was removed directly.');
+        } catch (QueryException $exception) {
+            self::assertStringContainsString('vendor_listing_removal_check', $exception->getMessage());
+        }
+
+        // Read-only roles cannot delete.
+        $other = $this->createListing('Draft sand', 'SAND-DEL');
+        $this->signInVendor($this->member($organization, 'CUSTOMER_SERVICE'));
+        $this->getJson('/api/v1/vendor/catalog/listings/'.$other)->assertOk()->assertJsonPath('data.permissions.can_delete', false);
+        $this->deleteJson('/api/v1/vendor/catalog/listings/'.$other.'?lock_version=1')->assertForbidden();
+    }
+
     private function publishableListing(string $materialCode, string $sku, array $attributes, bool $regulated = false, string $brand = 'BrandCo', string $packQuantity = '1', int $price = 1800): string
     {
         $material = DB::table('materials')->where('code', $materialCode)->first();

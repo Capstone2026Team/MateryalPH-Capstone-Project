@@ -3,10 +3,10 @@ import { AlertCircle, Camera, Check, CheckCircle2, ClipboardList, Package, QrCod
 import type { CatalogAttributeDefinition, CompliancePath, MarkingType } from '@materyalph/api-client-ts'
 import { Button, Field, MediaUploadField, RowGroup, StatusMessage, type MediaItem } from '@materyalph/web-ui'
 import {
-  formatCentavos, getMaterial, readableCatalogError, catalogFieldErrors, searchMaterials, submitCompliance, uploadComplianceEvidence,
+  formatCentavos, getMaterial, readableCatalogError, catalogFieldErrors, submitCompliance, uploadComplianceEvidence,
   type CatalogListing, type CatalogMaterial, type CatalogMaterialMatch, type CatalogTaxonomy, type ComplianceEvidence,
 } from '../lib/catalog-api'
-import { IMAGE_TYPES, MAX_TIERS, emptyVariant, groupedBlockers, quantityText, tierRange, unitName, type DetailsForm, type TierRow, type VariantRow } from '../lib/catalog-form'
+import { IMAGE_TYPES, MAX_TIERS, emptyVariant, groupedBlockers, quantityText, tierRange, unitName, useMaterialSearch, type DetailsForm, type TierRow, type VariantRow } from '../lib/catalog-form'
 import { statusLabel } from '../lib/vendor-status'
 import { ListingBadge, ListingState } from './CatalogShared'
 
@@ -17,27 +17,23 @@ function SectionHeading({ id, title, children }: { id: string; title: string; ch
   return <div className="border-b border-border-default pb-2"><h3 id={id} className="text-xs font-semibold uppercase tracking-wide text-text-secondary">{title}</h3>{children && <p className="mt-1 text-sm text-text-secondary">{children}</p>}</div>
 }
 
+/** One canonical-material match: name, regulated badge, category and how it matched. */
+export function MaterialMatchOption({ match, name, selected, onChoose }: { match: CatalogMaterialMatch; name: string; selected: boolean; onChoose: () => void }) {
+  const matchLabel = match.matchType === 'FUZZY' ? `Close match ${Math.round(match.similarity * 100)}%` : match.matchType === 'ALIAS' ? 'Alias match' : 'Exact name'
+  return <li><label className={`flex min-h-14 cursor-pointer flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 ${selected ? 'bg-green-50' : 'hover:bg-surface-canvas'}`}>
+    <input type="radio" name={name} className="h-5 w-5 shrink-0 accent-action-primary" checked={selected} onChange={onChoose} />
+    <span className="min-w-0 flex-1"><span className="flex flex-wrap items-center gap-2"><span className="font-semibold">{match.name}</span>{match.regulated && <span className="inline-flex items-center gap-1 rounded-pill border border-amber-300 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-900"><ShieldAlert size={13} aria-hidden="true" />DTI-BPS regulated</span>}</span>
+      <span className="block text-sm text-text-secondary">{match.categoryName}{match.regulated ? ' · PS Mark or ICC sticker required' : ' · Not regulated'}{match.matchType === 'ALIAS' ? ` · alias “${match.matchedText}”` : ''}</span></span>
+    <span className={`shrink-0 rounded-pill px-2 py-0.5 text-xs font-semibold ${match.matchType === 'FUZZY' ? 'bg-amber-50 text-amber-900' : 'bg-green-100 text-green-900'}`}>{matchLabel}</span>
+    {match.matchType === 'FUZZY' && <span className="basis-full pl-8 text-xs text-text-secondary">Close match to “{match.matchedText}” — confirm it is the same product before choosing it.</span>}
+  </label></li>
+}
+
 export function MaterialStep({ form, setForm, taxonomy, material, setMaterial, errors, readOnly }: { form: DetailsForm; setForm: (form: DetailsForm) => void; taxonomy: CatalogTaxonomy; material: CatalogMaterial | null; setMaterial: (material: CatalogMaterial | null) => void; errors: Record<string, string>; readOnly: boolean }) {
   const [query, setQuery] = useState(material?.name ?? form.displayName)
-  const [results, setResults] = useState<CatalogMaterialMatch[] | null>(null)
-  const [searching, setSearching] = useState(false)
+  const { results, searching, error: lookupError, searchNow } = useMaterialSearch(query, !readOnly)
   const [searchError, setSearchError] = useState<string | null>(null)
-  const request = useRef(0)
   const other = form.materialId === null
-  async function search(term: string) {
-    const id = ++request.current
-    setSearching(true); setSearchError(null)
-    try { const found = await searchMaterials(term); if (id === request.current) setResults(found) }
-    catch (cause) { if (id === request.current) setSearchError(await readableCatalogError(cause)) }
-    finally { if (id === request.current) setSearching(false) }
-  }
-  // Matching runs as the Vendor types, after a pause, so fast typing sends one request.
-  useEffect(() => {
-    const term = query.trim()
-    if (readOnly || term.length < 2) { request.current += 1; setResults(null); setSearching(false); return undefined }
-    const timer = window.setTimeout(() => void search(term), 400)
-    return () => window.clearTimeout(timer)
-  }, [query, readOnly])
   async function choose(match: CatalogMaterialMatch) {
     const chosen: DetailsForm = { ...form, materialId: match.id, materialMatch: match.matchType === 'FUZZY' ? 'FUZZY_CONFIRMED' : match.matchType, categoryId: match.categoryId, otherLabel: '' }
     setForm(chosen)
@@ -45,30 +41,20 @@ export function MaterialStep({ form, setForm, taxonomy, material, setMaterial, e
     catch (cause) { setSearchError(await readableCatalogError(cause)) }
   }
   const shown = results ?? (material ? [{ id: material.id, code: material.code, name: material.name, categoryId: material.categoryId, categoryName: material.categoryName, regulated: material.regulated, matchType: 'EXACT' as const, matchedText: material.name, similarity: 1 }] : [])
-  const matchLabel = (match: CatalogMaterialMatch) => match.matchType === 'FUZZY' ? `Close match ${Math.round(match.similarity * 100)}%` : match.matchType === 'ALIAS' ? 'Alias match' : 'Exact name'
   return <div className="grid gap-6">
     <section aria-labelledby="material-search-heading" className="grid gap-3">
       <SectionHeading id="material-search-heading" title="What material are you listing?">Type the name you use. MateryalPH matches it to a canonical material and flags DTI-BPS regulated products that need a PS Mark or ICC sticker.</SectionHeading>
       <div className="relative">
-        <Field label="Material name" name="material_query" value={query} disabled={readOnly} autoComplete="off" onChange={event => setQuery(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); if (query.trim().length >= 2) void search(query.trim()) } }} hint="At least two characters. Matches update as you type." />
+        <Field label="Material name" name="material_query" value={query} disabled={readOnly} autoComplete="off" onChange={event => setQuery(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); searchNow() } }} hint="At least two characters. Matches update as you type." />
         <Search size={18} className="pointer-events-none absolute right-3 top-[2.6rem] text-text-secondary" aria-hidden="true" />
       </div>
       <p className="sr-only" role="status">{searching ? 'Searching materials…' : results ? `${results.length} matching materials` : ''}</p>
-      {searchError && <p className="text-sm text-status-error" role="alert">{searchError}</p>}
+      {(searchError ?? lookupError) && <p className="text-sm text-status-error" role="alert">{searchError ?? lookupError}</p>}
       {errors.material && <p className="text-sm text-status-error" role="alert">{errors.material}</p>}
       <fieldset className="min-w-0 overflow-hidden rounded-surface border border-border-default" disabled={readOnly} aria-busy={searching}>
         <legend className="sr-only">Choose a material</legend>
         <ul className="divide-y divide-border-default">
-          {shown.map(match => {
-            const selected = form.materialId === match.id
-            return <li key={match.id}><label className={`flex min-h-14 cursor-pointer flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 ${selected ? 'bg-green-50' : 'hover:bg-surface-canvas'}`}>
-              <input type="radio" name="material_choice" className="h-5 w-5 shrink-0 accent-action-primary" checked={selected} onChange={() => void choose(match)} />
-              <span className="min-w-0 flex-1"><span className="flex flex-wrap items-center gap-2"><span className="font-semibold">{match.name}</span>{match.regulated && <span className="inline-flex items-center gap-1 rounded-pill border border-amber-300 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-900"><ShieldAlert size={13} aria-hidden="true" />DTI-BPS regulated</span>}</span>
-                <span className="block text-sm text-text-secondary">{match.categoryName}{match.regulated ? ' · PS Mark or ICC sticker required' : ' · Not regulated'}{match.matchType === 'ALIAS' ? ` · alias “${match.matchedText}”` : ''}</span></span>
-              <span className={`shrink-0 rounded-pill px-2 py-0.5 text-xs font-semibold ${match.matchType === 'FUZZY' ? 'bg-amber-50 text-amber-900' : 'bg-green-100 text-green-900'}`}>{matchLabel(match)}</span>
-              {match.matchType === 'FUZZY' && <span className="basis-full pl-8 text-xs text-text-secondary">Close match to “{match.matchedText}” — confirm it is the same product before choosing it.</span>}
-            </label></li>
-          })}
+          {shown.map(match => <MaterialMatchOption key={match.id} match={match} name="material_choice" selected={form.materialId === match.id} onChoose={() => void choose(match)} />)}
           {results !== null && results.length === 0 && <li className="px-4 py-3 text-sm text-text-secondary">No canonical material matches “{query.trim()}”. Describe the product with an Other label below.</li>}
           <li><label className={`flex min-h-14 cursor-pointer items-start gap-3 px-4 py-3 ${other ? 'bg-brand-orange-50' : 'hover:bg-surface-canvas'}`}>
             <input type="radio" name="material_choice" className="mt-0.5 h-5 w-5 shrink-0 accent-action-primary" checked={other} onChange={() => { setForm({ ...form, materialId: null, otherLabel: form.otherLabel || query.trim().slice(0, 60) }); setMaterial(null) }} />
@@ -99,10 +85,15 @@ export function ProductInformationStep({ listing, form, setForm, rows, setRows, 
   const definitions = taxonomy.attributeDefinitions.filter(definition => definition.materialCategoryId === form.categoryId)
   const set = (key: keyof DetailsForm) => (event: { target: { value: string } }) => setForm({ ...form, [key]: event.target.value })
   const regulated = listing.regulated
+  const nameSuggestion = (material?.name ?? form.otherLabel).trim()
   return <div className="grid gap-8">
     <section aria-labelledby="core-details-heading" className="grid gap-4">
       <SectionHeading id="core-details-heading" title="Core details" />
-      <Field label="Display name" name="display_name" value={form.displayName} required disabled={readOnly} error={errors.display_name} hint="The name Buyers see in search results." onChange={set('displayName')} />
+      <div className="grid gap-2">
+        <Field label="Display name" name="display_name" value={form.displayName} required disabled={readOnly} error={errors.display_name} placeholder={nameSuggestion || undefined} hint={nameSuggestion && !form.displayName ? 'Empty — press Tab to use the suggestion from the material name.' : 'The name Buyers see in search results.'} onChange={set('displayName')}
+          onKeyDown={event => { if (event.key === 'Tab' && !event.shiftKey && !form.displayName && nameSuggestion) { event.preventDefault(); setForm({ ...form, displayName: nameSuggestion }) } }} />
+        {!readOnly && nameSuggestion && !form.displayName && <Button variant="quiet" className="w-fit" onClick={() => setForm({ ...form, displayName: nameSuggestion })}>Use suggestion: {nameSuggestion}</Button>}
+      </div>
       <div className="grid items-start gap-4 sm:grid-cols-2">
         <Field label="Brand" name="brand" value={form.brand} required={regulated} disabled={readOnly} error={errors.brand} onChange={set('brand')} />
         <Field label="Manufacturer" name="manufacturer" value={form.manufacturer} required={regulated} disabled={readOnly} error={errors.manufacturer} onChange={set('manufacturer')} />
@@ -219,16 +210,34 @@ function ComplianceSection({ listing, canSubmit, busy, setBusy, onSubmitted }: {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [values, setValues] = useState<ReviewValues>({ markingType: 'PS_MARK', certificateNumber: '', manufacturerName: listing.manufacturer ?? '', manufacturerAddress: listing.manufacturerAddress ?? '', importerName: '', importerAddress: '', countryOfManufacture: listing.countryOfManufacture ?? '', brand: listing.brand ?? '', batchNumber: '', confirmed: false })
   const reviewHeading = useRef<HTMLHeadingElement>(null)
+  const picker = useRef<HTMLInputElement>(null)
+  // A chosen photo is previewed locally and uploaded only after the Vendor confirms it.
+  const [pending, setPending] = useState<{ file: File; url: string | null } | null>(null)
+  const [thumbnails, setThumbnails] = useState<Record<string, string>>({})
+  const objectUrls = useRef<string[]>([])
+  useEffect(() => () => { objectUrls.current.forEach(url => URL.revokeObjectURL(url)) }, [])
   const rule = listing.regulatedRule
   if (!listing.regulated) return <section aria-labelledby="compliance-heading" className="grid gap-3"><SectionHeading id="compliance-heading" title="DTI-BPS compliance marking" /><StatusMessage>This material is not on the DTI-BPS list of regulated building and construction products, so no PS Mark or ICC sticker is requested.</StatusMessage></section>
   const latest = listing.complianceSubmissions[0]
-  async function upload(file: File | undefined) {
+  function choose(file: File | undefined) {
     if (!file) return
+    setError(null)
+    if (!IMAGE_TYPES.includes(file.type)) { setError(`${file.name} is not an accepted type. Use JPG, PNG or WebP.`); return }
+    if (file.size > 10 * 1024 * 1024) { setError(`${file.name} is larger than 10 MB.`); return }
+    const url = typeof URL.createObjectURL === 'function' ? URL.createObjectURL(file) : null
+    if (url) objectUrls.current.push(url)
+    setPending({ file, url })
+  }
+  async function upload() {
+    if (!pending) return
+    const { file, url } = pending
     setBusy(true); setError(null)
     try {
       const qrPayload = path === 'QR' ? await decodeQr(file) : null
       const stored = await uploadComplianceEvidence(listing.id, path, file, qrPayload)
       setEvidence(current => [...current, stored])
+      if (url) setThumbnails(current => ({ ...current, [stored.evidenceId]: url }))
+      setPending(null)
       const suggestions = stored.extraction.suggestions
       setValues(current => ({ ...current, ...(suggestions.marking_type === 'PS_MARK' || suggestions.marking_type === 'ICC_STICKER' ? { markingType: suggestions.marking_type } : {}), ...(suggestions.certificate_number ? { certificateNumber: suggestions.certificate_number } : {}), ...(suggestions.manufacturer_name ? { manufacturerName: suggestions.manufacturer_name } : {}), ...(suggestions.importer_name ? { importerName: suggestions.importer_name } : {}), confirmed: false }))
       window.requestAnimationFrame(() => reviewHeading.current?.focus())
@@ -268,16 +277,30 @@ function ComplianceSection({ listing, canSubmit, busy, setBusy, onSubmitted }: {
         <legend className="text-sm font-semibold">How will you provide the marking?</legend>
         <div className="grid gap-3 md:grid-cols-3">{pathOptions.map(option => { const Icon = option.icon; const checked = path === option.value; return <label key={option.value} className={`flex min-h-11 cursor-pointer items-start gap-3 rounded-control border p-3 ${checked ? 'border-action-primary bg-brand-orange-50' : 'border-border-default'}`}><input type="radio" name="compliance_path" className="mt-1 h-5 w-5 shrink-0 accent-action-primary" checked={checked} onChange={() => { setPath(option.value); setEvidence([]) }} /><span className="min-w-0"><span className="flex items-center gap-1.5 font-semibold"><Icon size={16} aria-hidden="true" />{option.label}</span><span className="block text-sm text-text-secondary">{option.description}</span></span></label> })}</div>
       </fieldset>
-      <label className={`grid cursor-pointer justify-items-center gap-2 rounded-surface border-2 border-dashed p-6 text-center transition-colors motion-reduce:transition-none ${busy ? 'opacity-60' : 'border-brand-orange-300 bg-brand-orange-50 hover:border-action-primary'}`}>
+      <label hidden={Boolean(pending)} className={`grid cursor-pointer justify-items-center gap-2 rounded-surface border-2 border-dashed p-6 text-center transition-colors motion-reduce:transition-none ${busy ? 'opacity-60' : 'border-brand-orange-300 bg-brand-orange-50 hover:border-action-primary'}`}>
         <UploadCloud size={28} className="text-action-primary" aria-hidden="true" />
         <span className="font-semibold">{path === 'QR' ? 'Upload QR code image' : `Upload ${markingName} marking photo`}</span>
-        <span className="text-sm text-text-secondary">Take a clear, well-lit photo of the marking on the product or packaging. JPG, PNG or WebP up to 10 MB. Stored privately; never shown to Buyers.</span>
-        <input type="file" accept={IMAGE_TYPES.join(',')} capture={path === 'PHOTO_OCR' ? 'environment' : undefined} disabled={busy} className="min-h-11 w-full min-w-0 max-w-xs text-sm" onChange={event => { void upload(event.target.files?.[0]); event.target.value = '' }} />
+        <span className="text-sm text-text-secondary">Take a clear, well-lit photo of the marking on the product or packaging. JPG, PNG or WebP up to 10 MB. You can check the photo before it is uploaded. Stored privately; never shown to Buyers.</span>
+        <input ref={picker} type="file" accept={IMAGE_TYPES.join(',')} capture={path === 'PHOTO_OCR' ? 'environment' : undefined} disabled={busy} className="min-h-11 w-full min-w-0 max-w-xs text-sm" onChange={event => { choose(event.target.files?.[0]); event.target.value = '' }} />
       </label>
+      {pending && <section aria-labelledby="pending-photo-heading" className="grid gap-4 rounded-surface border border-border-default p-4 sm:grid-cols-[minmax(0,18rem)_minmax(0,1fr)] sm:items-start">
+        <div className="grid min-h-48 place-items-center overflow-hidden rounded-control border border-border-default bg-surface-canvas">{pending.url ? <img src={pending.url} alt={`Preview of ${pending.file.name}`} className="max-h-72 w-full object-contain" /> : <UploadCloud size={32} className="text-text-secondary" aria-hidden="true" />}</div>
+        <div className="grid content-start gap-3">
+          <h4 id="pending-photo-heading" className="text-lg font-semibold">Check the photo before uploading</h4>
+          <p className="break-words text-sm text-text-secondary">{pending.file.name} · {Math.max(1, Math.round(pending.file.size / 1024))} KB</p>
+          <p className="text-sm">Make sure the {path === 'QR' ? 'QR code' : `${markingName} and its licence or certificate number`} is sharp, fully in frame and readable. A blurry or cropped photo is returned for correction.</p>
+          <div className="flex flex-wrap gap-2"><Button disabled={busy} onClick={() => void upload()}>{busy ? 'Uploading…' : 'Upload this photo'}</Button><Button variant="secondary" disabled={busy} onClick={() => picker.current?.click()}>Choose a different photo</Button><Button variant="quiet" disabled={busy} onClick={() => setPending(null)}>Cancel</Button></div>
+        </div>
+      </section>}
       {error && <StatusMessage tone="error">{error}</StatusMessage>}
       {evidence.length > 0 && <form className="grid gap-4 border-t border-border-default pt-5" onSubmit={submit} noValidate>
         <h4 ref={reviewHeading} tabIndex={-1} className="text-lg font-semibold">Review and confirm</h4>
-        <ul className="grid gap-1 text-sm">{evidence.map(item => <li key={item.evidenceId} className="flex items-center gap-2"><CheckCircle2 size={16} className="text-status-success" aria-hidden="true" />{item.evidenceKind === 'QR_IMAGE' ? 'QR image' : 'Marking photo'} · safety check {item.scanState === 'CLEAN' ? 'passed' : item.scanState.toLowerCase()} · {Math.max(1, Math.round(item.byteSize / 1024))} KB</li>)}</ul>
+        <ul className="grid gap-3 text-sm sm:grid-cols-2" aria-label="Uploaded marking photos">{evidence.map((item, index) => <li key={item.evidenceId} className="flex min-w-0 items-center gap-3 rounded-control border border-border-default p-2">
+          <span className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-control bg-surface-canvas">{thumbnails[item.evidenceId] ? <img src={thumbnails[item.evidenceId]} alt={`Uploaded ${item.evidenceKind === 'QR_IMAGE' ? 'QR image' : 'marking photo'} ${index + 1}`} className="h-full w-full object-cover" /> : <CheckCircle2 size={20} className="text-status-success" aria-hidden="true" />}</span>
+          <span className="min-w-0 flex-1"><span className="block font-semibold">{item.evidenceKind === 'QR_IMAGE' ? 'QR image' : 'Marking photo'} {index + 1}</span><span className="flex items-center gap-1 text-text-secondary"><CheckCircle2 size={14} className="text-status-success" aria-hidden="true" />Safety check {item.scanState === 'CLEAN' ? 'passed' : item.scanState.toLowerCase()} · {Math.max(1, Math.round(item.byteSize / 1024))} KB</span></span>
+          <Button variant="quiet" disabled={busy} aria-label={`Remove ${item.evidenceKind === 'QR_IMAGE' ? 'QR image' : 'marking photo'} ${index + 1}`} onClick={() => setEvidence(current => current.filter(entry => entry.evidenceId !== item.evidenceId))}><Trash2 size={16} aria-hidden="true" /></Button>
+        </li>)}</ul>
+        {!pending && <Button variant="secondary" className="w-fit" disabled={busy} onClick={() => picker.current?.click()}>Add another photo</Button>}
         <StatusMessage>{extraction?.status === 'EXTRACTED' ? `Suggested from the ${extraction.source === 'QR' ? 'QR code' : 'photo'}. Check every value against the physical marking and correct anything that differs.` : extraction?.status === 'NOT_REQUESTED' ? 'Enter the values exactly as printed on the marking.' : 'Automatic reading is not available for this image. Enter the values exactly as printed on the marking.'}</StatusMessage>
         <fieldset className="grid gap-2"><legend className="text-sm font-semibold">Marking type</legend><div className="flex flex-wrap gap-3">{(['PS_MARK', 'ICC_STICKER'] as const).map(type => <label key={type} className="flex min-h-11 items-center gap-2 rounded-control border border-border-default px-3"><input type="radio" name="marking_type" className="h-5 w-5 accent-action-primary" checked={values.markingType === type} onChange={() => setValues({ ...values, markingType: type })} />{type === 'PS_MARK' ? 'PS Mark (locally manufactured)' : 'ICC sticker (imported)'}</label>)}</div></fieldset>
         <div className="grid items-start gap-4 sm:grid-cols-2">

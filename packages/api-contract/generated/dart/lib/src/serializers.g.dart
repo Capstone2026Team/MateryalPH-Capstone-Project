@@ -97,6 +97,8 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(CatalogLimits.serializer)
       ..add(CatalogListing.serializer)
       ..add(CatalogListingCreate.serializer)
+      ..add(CatalogListingDeletedEnvelope.serializer)
+      ..add(CatalogListingDeletedEnvelopeData.serializer)
       ..add(CatalogListingEnvelope.serializer)
       ..add(CatalogListingListMeta.serializer)
       ..add(CatalogListingListMetaScopeEnum.serializer)
@@ -785,6 +787,20 @@ Serializers _$serializers = (Serializers().toBuilder()
           const FullType(BuiltList,
               const [const FullType(BotStepUpErrorEnvelopeAllOfErrors)]),
           () => ListBuilder<BotStepUpErrorEnvelopeAllOfErrors>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [
+            const FullType(BuiltMap, const [
+              const FullType(String),
+              const FullType.nullable(JsonObject)
+            ])
+          ]),
+          () => ListBuilder<BuiltMap<String, JsonObject?>>())
       ..addBuilderFactory(
           const FullType(BuiltMap, const [
             const FullType(String),

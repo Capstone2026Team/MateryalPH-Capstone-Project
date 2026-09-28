@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { TaxCategory } from '@materyalph/api-client-ts'
-import { centavosToPeso, getCatalogFileUrl, pesoToCentavos, type CatalogListing, type CatalogTaxonomy, type CatalogVariantInput } from './catalog-api'
+import { centavosToPeso, getCatalogFileUrl, pesoToCentavos, readableCatalogError, searchMaterials, type CatalogListing, type CatalogMaterialMatch, type CatalogTaxonomy, type CatalogVariantInput } from './catalog-api'
 
 /** Listing wizard form state, client pre-validation and presentation helpers shared by the catalog pages. */
 
@@ -107,4 +107,29 @@ export function unitName(taxonomy: CatalogTaxonomy | null, code: string | null |
 export function quantityText(value: string | null | undefined): string {
   if (value === null || value === undefined) return ''
   return value.includes('.') ? value.replace(/\.?0+$/, '') : value
+}
+
+/**
+ * Canonical-material matching as the Vendor types: waits for a pause so fast typing sends one
+ * request, ignores stale responses, and needs at least two characters.
+ */
+export function useMaterialSearch(query: string, enabled = true) {
+  const [results, setResults] = useState<CatalogMaterialMatch[] | null>(null)
+  const [searching, setSearching] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const request = useRef(0)
+  const search = useCallback(async (term: string) => {
+    const id = ++request.current
+    setSearching(true); setError(null)
+    try { const found = await searchMaterials(term); if (id === request.current) setResults(found) }
+    catch (cause) { if (id === request.current) setError(await readableCatalogError(cause)) }
+    finally { if (id === request.current) setSearching(false) }
+  }, [])
+  useEffect(() => {
+    const term = query.trim()
+    if (!enabled || term.length < 2) { request.current += 1; setResults(null); setSearching(false); return undefined }
+    const timer = window.setTimeout(() => void search(term), 400)
+    return () => window.clearTimeout(timer)
+  }, [query, enabled, search])
+  return { results, searching, error, searchNow: () => { if (query.trim().length >= 2) void search(query.trim()) } }
 }

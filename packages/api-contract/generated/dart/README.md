@@ -149,6 +149,7 @@ Class | Method | HTTP request | Description
 [*VendorCatalogApi*](doc/VendorCatalogApi.md) | [**applyCatalogImport**](doc/VendorCatalogApi.md#applycatalogimport) | **POST** /vendor/catalog/imports/{jobId}/apply |
 [*VendorCatalogApi*](doc/VendorCatalogApi.md) | [**createVendorCatalogListing**](doc/VendorCatalogApi.md#createvendorcataloglisting) | **POST** /vendor/catalog/listings |
 [*VendorCatalogApi*](doc/VendorCatalogApi.md) | [**deactivateVendorCatalogListing**](doc/VendorCatalogApi.md#deactivatevendorcataloglisting) | **POST** /vendor/catalog/listings/{listingId}/deactivate |
+[*VendorCatalogApi*](doc/VendorCatalogApi.md) | [**deleteVendorCatalogListing**](doc/VendorCatalogApi.md#deletevendorcataloglisting) | **DELETE** /vendor/catalog/listings/{listingId} |
 [*VendorCatalogApi*](doc/VendorCatalogApi.md) | [**downloadCatalogFile**](doc/VendorCatalogApi.md#downloadcatalogfile) | **GET** /catalog-files/{fileId}/content |
 [*VendorCatalogApi*](doc/VendorCatalogApi.md) | [**getCatalogImport**](doc/VendorCatalogApi.md#getcatalogimport) | **GET** /vendor/catalog/imports/{jobId} |
 [*VendorCatalogApi*](doc/VendorCatalogApi.md) | [**getCatalogImportTemplate**](doc/VendorCatalogApi.md#getcatalogimporttemplate) | **GET** /vendor/catalog/imports/template |
@@ -270,6 +271,8 @@ Class | Method | HTTP request | Description
  - [CatalogLimits](doc/CatalogLimits.md)
  - [CatalogListing](doc/CatalogListing.md)
  - [CatalogListingCreate](doc/CatalogListingCreate.md)
+ - [CatalogListingDeletedEnvelope](doc/CatalogListingDeletedEnvelope.md)
+ - [CatalogListingDeletedEnvelopeData](doc/CatalogListingDeletedEnvelopeData.md)
  - [CatalogListingEnvelope](doc/CatalogListingEnvelope.md)
  - [CatalogListingListMeta](doc/CatalogListingListMeta.md)
  - [CatalogListingMaterial](doc/CatalogListingMaterial.md)

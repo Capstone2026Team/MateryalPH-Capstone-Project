@@ -2951,6 +2951,21 @@ paths:
         "404": { $ref: "#/components/responses/ErrorResponse" }
         "409": { $ref: "#/components/responses/ErrorResponse" }
         "422": { $ref: "#/components/responses/ErrorResponse" }
+    delete:
+      operationId: deleteVendorCatalogListing
+      description: 'Deletes a listing that was never published (publication_version 0). It disappears from the catalog and its Vendor SKU can be reused; the record and audit trail are kept, and a pending PS/ICC submission is superseded. A listing that was ever published returns 409 LISTING_HAS_PUBLICATION_HISTORY and must be deactivated instead.'
+      tags: [ Vendor Catalog ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      parameters:
+        - { name: listingId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: lock_version, in: query, required: true, schema: { type: integer, minimum: 1 } }
+      responses:
+        "200": { description: "Listing deleted.", content: { application/json: { schema: { $ref: "#/components/schemas/CatalogListingDeletedEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
   /vendor/catalog/listings/{listingId}/variants:
     put:
       operationId: saveVendorCatalogVariants
@@ -4941,9 +4956,22 @@ components:
         max_price_centavos: { type: [ integer, 'null' ], format: int64 }
         public_availability: { type: string, enum: [ IN_STOCK, OUT_OF_STOCK ], description: The only availability a Buyer would see. }
         primary_image_file_id: { type: [ string, 'null' ], format: uuid }
+        deletable: { type: boolean, description: 'True when the caller may delete this never-published listing.' }
         primary_image_url: { type: [ string, 'null' ], description: 'Short-lived signed URL of the first ready product photo; expires within minutes.' }
         unit_code: { type: [ string, 'null' ], description: Sale unit code when every active variant uses the same unit. }
         available_quantity: { type: [ string, 'null' ], description: 'Vendor-only summed available-to-sell quantity when every active variant shares one unit and has a stock count. Never returned to Buyers.' }
+    CatalogListingDeletedEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data:
+          type: object
+          required: [ id, removed_at ]
+          properties:
+            id: { type: string, format: uuid }
+            removed_at: { type: string, format: date-time }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
     CatalogListingListMeta:
       type: object
       additionalProperties: true
@@ -5095,6 +5123,7 @@ components:
       properties:
         can_manage: { type: boolean }
         can_submit_compliance: { type: boolean }
+        can_delete: { type: boolean, description: 'True when the caller may delete this never-published listing.' }
     CatalogListingMaterial:
       type: object
       required: [ id, code, name, regulated ]

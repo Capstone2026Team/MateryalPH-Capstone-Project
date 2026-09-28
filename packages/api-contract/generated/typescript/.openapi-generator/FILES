@@ -78,6 +78,8 @@ docs/CatalogInventory.md
 docs/CatalogLimits.md
 docs/CatalogListing.md
 docs/CatalogListingCreate.md
+docs/CatalogListingDeletedEnvelope.md
+docs/CatalogListingDeletedEnvelopeData.md
 docs/CatalogListingEnvelope.md
 docs/CatalogListingListMeta.md
 docs/CatalogListingMaterial.md
@@ -304,6 +306,8 @@ src/models/CatalogInventory.ts
 src/models/CatalogLimits.ts
 src/models/CatalogListing.ts
 src/models/CatalogListingCreate.ts
+src/models/CatalogListingDeletedEnvelope.ts
+src/models/CatalogListingDeletedEnvelopeData.ts
 src/models/CatalogListingEnvelope.ts
 src/models/CatalogListingListMeta.ts
 src/models/CatalogListingMaterial.ts

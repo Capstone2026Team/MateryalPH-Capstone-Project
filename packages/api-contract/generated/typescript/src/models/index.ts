@@ -71,6 +71,8 @@ export * from './CatalogInventory';
 export * from './CatalogLimits';
 export * from './CatalogListing';
 export * from './CatalogListingCreate';
+export * from './CatalogListingDeletedEnvelope';
+export * from './CatalogListingDeletedEnvelopeData';
 export * from './CatalogListingEnvelope';
 export * from './CatalogListingListMeta';
 export * from './CatalogListingMaterial';

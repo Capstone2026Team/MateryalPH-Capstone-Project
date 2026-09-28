@@ -6,9 +6,9 @@ These show **layout only**. Every `/api/v1` response is a synthetic fixture, so 
 
 | Screen | Vendor / Admin route |
 | --- | --- |
-| `products-list`, `products-table`, `products-empty` | `/products` (grid, table view, empty state) |
+| `products-list`, `products-delete-dialog`, `products-table`, `products-empty` | `/products` (grid, table view, empty state) |
 | `wizard-create` | `/products/new` |
-| `wizard-material`, `wizard-product-information`, `wizard-photos-compliance`, `wizard-compliance-submitted`, `wizard-review` | `/products/:listingId?step=0…3` |
+| `wizard-material`, `wizard-product-information`, `wizard-compliance-preview`, `wizard-photos-compliance`, `wizard-compliance-submitted`, `wizard-review` | `/products/:listingId?step=0…3` |
 | `import-validation`, `import-applied` | `/products/import` |
 | `admin-compliance-queue`, `admin-compliance-case`, `admin-compliance-decided` | Admin `/product-compliance`, `/product-compliance/:submissionId` |
 

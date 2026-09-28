@@ -13,6 +13,7 @@ part 'catalog_listing_permissions.g.dart';
 /// Properties:
 /// * [canManage]
 /// * [canSubmitCompliance]
+/// * [canDelete] - True when the caller may delete this never-published listing.
 @BuiltValue()
 abstract class CatalogListingPermissions implements Built<CatalogListingPermissions, CatalogListingPermissionsBuilder> {
   @BuiltValueField(wireName: r'can_manage')
@@ -20,6 +21,10 @@ abstract class CatalogListingPermissions implements Built<CatalogListingPermissi
 
   @BuiltValueField(wireName: r'can_submit_compliance')
   bool get canSubmitCompliance;
+
+  /// True when the caller may delete this never-published listing.
+  @BuiltValueField(wireName: r'can_delete')
+  bool? get canDelete;
 
   CatalogListingPermissions._();
 
@@ -54,6 +59,13 @@ class _$CatalogListingPermissionsSerializer implements PrimitiveSerializer<Catal
       object.canSubmitCompliance,
       specifiedType: const FullType(bool),
     );
+    if (object.canDelete != null) {
+      yield r'can_delete';
+      yield serializers.serialize(
+        object.canDelete,
+        specifiedType: const FullType(bool),
+      );
+    }
   }
 
   @override
@@ -90,6 +102,14 @@ class _$CatalogListingPermissionsSerializer implements PrimitiveSerializer<Catal
             specifiedType: const FullType(bool),
           ) as bool;
           result.canSubmitCompliance = valueDes;
+          break;
+        case r'can_delete':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.canDelete = valueDes;
           break;
         default:
           unhandled.add(key);

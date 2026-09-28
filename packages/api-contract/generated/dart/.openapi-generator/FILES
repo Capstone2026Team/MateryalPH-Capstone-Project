@@ -78,6 +78,8 @@ doc/CatalogInventory.md
 doc/CatalogLimits.md
 doc/CatalogListing.md
 doc/CatalogListingCreate.md
+doc/CatalogListingDeletedEnvelope.md
+doc/CatalogListingDeletedEnvelopeData.md
 doc/CatalogListingEnvelope.md
 doc/CatalogListingListMeta.md
 doc/CatalogListingMaterial.md
@@ -310,6 +312,8 @@ lib/src/model/catalog_inventory.dart
 lib/src/model/catalog_limits.dart
 lib/src/model/catalog_listing.dart
 lib/src/model/catalog_listing_create.dart
+lib/src/model/catalog_listing_deleted_envelope.dart
+lib/src/model/catalog_listing_deleted_envelope_data.dart
 lib/src/model/catalog_listing_envelope.dart
 lib/src/model/catalog_listing_list_meta.dart
 lib/src/model/catalog_listing_material.dart
@@ -527,6 +531,8 @@ test/catalog_import_template_test.dart
 test/catalog_inventory_test.dart
 test/catalog_limits_test.dart
 test/catalog_listing_create_test.dart
+test/catalog_listing_deleted_envelope_data_test.dart
+test/catalog_listing_deleted_envelope_test.dart
 test/catalog_listing_envelope_test.dart
 test/catalog_listing_list_meta_test.dart
 test/catalog_listing_material_test.dart

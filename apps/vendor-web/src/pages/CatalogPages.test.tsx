@@ -10,7 +10,7 @@ vi.mock('../lib/onboarding-api', async original => ({ ...await original<typeof i
 vi.mock('../lib/catalog-api', async original => ({
   ...await original<typeof import('../lib/catalog-api')>(),
   getCatalogTaxonomy: vi.fn(), listListings: vi.fn(), getListing: vi.fn(), getMaterial: vi.fn(), saveVariants: vi.fn(), uploadComplianceEvidence: vi.fn(),
-  submitCompliance: vi.fn(), getImportTemplate: vi.fn(), uploadImport: vi.fn(), applyImport: vi.fn(), getCatalogFileUrl: vi.fn(), searchMaterials: vi.fn(), updateListing: vi.fn(),
+  submitCompliance: vi.fn(), getImportTemplate: vi.fn(), uploadImport: vi.fn(), applyImport: vi.fn(), getCatalogFileUrl: vi.fn(), searchMaterials: vi.fn(), updateListing: vi.fn(), deleteListing: vi.fn(), createListing: vi.fn(),
 }))
 
 const unit = { id: 'unit-bag', code: 'BAG', name: 'Bag', dimension: 'PACK', precision: 0 }
@@ -46,7 +46,7 @@ beforeEach(() => {
 })
 
 function open(path: string) {
-  return render(<MemoryRouter initialEntries={[path]}><Routes><Route path="/products" element={<VendorCatalogPage />} /><Route path="/products/import" element={<VendorCatalogImportPage />} /><Route path="/products/:listingId" element={<VendorListingEditorPage />} /><Route path="/dashboard" element={<h1>Dashboard</h1>} /></Routes></MemoryRouter>)
+  return render(<MemoryRouter initialEntries={[path]}><Routes><Route path="/products" element={<VendorCatalogPage />} /><Route path="/products/import" element={<VendorCatalogImportPage />} /><Route path="/products/new" element={<VendorListingEditorPage />} /><Route path="/products/:listingId" element={<VendorListingEditorPage />} /><Route path="/dashboard" element={<h1>Dashboard</h1>} /></Routes></MemoryRouter>)
 }
 
 test('catalog shows summary tiles, status chips and product cards, with a table view from the same data', async () => {
@@ -113,7 +113,13 @@ test('all three compliance paths converge on one editable Review and Confirm ste
   expect(screen.getByText('PNS 07:2018')).toBeVisible()
   fireEvent.click(within(paths).getByRole('radio', { name: /QR code scan or upload/ }))
   fireEvent.change(screen.getByLabelText(/QR code image/), { target: { files: [new File(['qr'], 'qr.png', { type: 'image/png' })] } })
+  // The chosen image is checked first; nothing is uploaded until the Vendor confirms it.
+  expect(await screen.findByRole('heading', { name: 'Check the photo before uploading' })).toBeVisible()
+  expect(screen.getByText(/qr\.png/)).toBeVisible()
+  expect(catalog.uploadComplianceEvidence).not.toHaveBeenCalled()
+  fireEvent.click(screen.getByRole('button', { name: 'Upload this photo' }))
   expect(await screen.findByRole('heading', { name: 'Review and confirm' })).toBeVisible()
+  expect(within(screen.getByRole('list', { name: 'Uploaded marking photos' })).getByText('QR image 1')).toBeVisible()
   const number = screen.getByRole('textbox', { name: /PS License No/ })
   expect(number).toHaveValue('Q-1234')
   fireEvent.change(number, { target: { value: 'Q-1235' } })
@@ -168,4 +174,54 @@ test('volume tiers are checked against the ordinary price and saved with the det
   await waitFor(() => expect(catalog.saveVariants).toHaveBeenCalledWith('listing-1', 4, [expect.objectContaining({ id: 'variant-1', priceCentavos: 28550, volumeTiers: [{ minimumQuantity: '50', priceCentavos: 26000 }] })]))
   expect(vi.mocked(catalog.updateListing).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(catalog.saveVariants).mock.invocationCallOrder[0]!)
   expect(await screen.findByText('Product information, prices and stock counts saved.')).toBeVisible()
+})
+
+test('a never-published draft can be deleted from its card after confirmation', async () => {
+  const draft: CatalogListingSummary = { id: 'listing-9', displayName: 'Gravel draft', vendorSku: 'GRAVEL-1', status: 'DRAFT', complianceStatus: 'NOT_REQUIRED', regulated: false, lockVersion: 2, variantCount: 0, publicAvailability: 'OUT_OF_STOCK', deletable: true }
+  const published: CatalogListingSummary = { ...draft, id: 'listing-8', displayName: 'Sand active', vendorSku: 'SAND-1', status: 'ACTIVE', deletable: false }
+  vi.mocked(catalog.listListings).mockResolvedValue({ items: [draft, published], meta: { total: 2, lastPage: 1, statusCounts: { DRAFT: 1, ACTIVE: 1 }, activeOutOfStock: 1 } })
+  vi.mocked(catalog.deleteListing).mockResolvedValue()
+  open('/products')
+  const cards = await screen.findByRole('list', { name: 'Store products' })
+  expect(within(cards).queryByRole('button', { name: 'Delete Sand active' })).not.toBeInTheDocument()
+  fireEvent.click(within(cards).getByRole('button', { name: 'Delete Gravel draft' }))
+  const dialog = await screen.findByRole('dialog', { name: 'Delete this draft?' })
+  expect(within(dialog).getByText(/Gravel draft/)).toBeVisible()
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }))
+  expect(catalog.deleteListing).not.toHaveBeenCalled()
+  fireEvent.click(within(cards).getByRole('button', { name: 'Delete Gravel draft' }))
+  fireEvent.click(within(await screen.findByRole('dialog', { name: 'Delete this draft?' })).getByRole('button', { name: 'Delete draft' }))
+  await waitFor(() => expect(catalog.deleteListing).toHaveBeenCalledWith('listing-9', 2))
+  expect(await screen.findByText('“Gravel draft” was deleted.')).toBeVisible()
+  await waitFor(() => expect(catalog.listListings).toHaveBeenCalledTimes(2))
+})
+
+test('the listing editor offers Delete draft only when the server allows it and returns to My Products', async () => {
+  vi.mocked(catalog.getListing).mockResolvedValue(listing({ permissions: { canManage: true, canSubmitCompliance: true, canDelete: true } }))
+  vi.mocked(catalog.deleteListing).mockResolvedValue()
+  vi.mocked(catalog.listListings).mockResolvedValue({ items: [], meta: { total: 0, lastPage: 1, statusCounts: {}, activeOutOfStock: 0 } })
+  open('/products/listing-1')
+  fireEvent.click(await screen.findByRole('button', { name: 'Delete draft' }))
+  fireEvent.click(within(await screen.findByRole('dialog', { name: 'Delete this draft?' })).getByRole('button', { name: 'Delete draft' }))
+  await waitFor(() => expect(catalog.deleteListing).toHaveBeenCalledWith('listing-1', 3))
+  expect(await screen.findByText('“Portland cement 40 kg” was deleted.')).toBeVisible()
+})
+
+test('the material name becomes the suggested display name and the chosen material is saved with the draft', async () => {
+  vi.mocked(catalog.searchMaterials).mockResolvedValue([{ id: 'mat-cement', code: 'PORTLAND_CEMENT', name: 'Portland cement', categoryId: 'cat-cement', categoryName: 'Cement and Concrete', regulated: true, matchType: 'EXACT', matchedText: 'Portland cement', similarity: 1 }])
+  vi.mocked(catalog.createListing).mockResolvedValue(listing({ lockVersion: 1, material: null, displayName: 'Portland cement' }))
+  vi.mocked(catalog.updateListing).mockResolvedValue(listing({ lockVersion: 2, displayName: 'Portland cement' }))
+  open('/products/new')
+  fireEvent.change(await screen.findByRole('textbox', { name: /Material name/ }), { target: { value: 'portland' } })
+  const displayName = screen.getByRole('textbox', { name: /Display name/ })
+  expect(displayName).toHaveAttribute('placeholder', 'portland')
+  fireEvent.click(await screen.findByRole('radio', { name: /Portland cement/ }, { timeout: 2000 }))
+  expect(displayName).toHaveAttribute('placeholder', 'Portland cement')
+  fireEvent.keyDown(displayName, { key: 'Tab' })
+  expect(displayName).toHaveValue('Portland cement')
+  fireEvent.change(displayName, { target: { value: '' } })
+  fireEvent.change(screen.getByRole('textbox', { name: /Vendor SKU/ }), { target: { value: 'CEM-40' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Create draft' }))
+  await waitFor(() => expect(catalog.createListing).toHaveBeenCalledWith('Portland cement', 'CEM-40'))
+  await waitFor(() => expect(catalog.updateListing).toHaveBeenCalledWith('listing-1', { lockVersion: 1, materialId: 'mat-cement', materialMatch: 'EXACT' }))
 })
