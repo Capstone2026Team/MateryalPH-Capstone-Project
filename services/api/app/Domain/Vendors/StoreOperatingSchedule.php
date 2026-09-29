@@ -13,13 +13,31 @@ final class StoreOperatingSchedule
     /** @return list<array{day_of_week: int, status: string, opens_at: ?string, closes_at: ?string}> */
     public function weekly(string $profileId): array
     {
-        return DB::table('operating_hours')->where('store_profile_id', $profileId)->orderBy('day_of_week')->get()
-            ->map(fn (object $row): array => [
+        return $this->weeklyMany([$profileId])[$profileId] ?? [];
+    }
+
+    /**
+     * The saved (never draft) weekly schedules of several profiles in one query.
+     *
+     * @param  list<string>  $profileIds
+     * @return array<string, list<array{day_of_week: int, status: string, opens_at: ?string, closes_at: ?string}>>
+     */
+    public function weeklyMany(array $profileIds): array
+    {
+        if ($profileIds === []) {
+            return [];
+        }
+        $schedules = [];
+        foreach (DB::table('operating_hours')->whereIn('store_profile_id', $profileIds)->orderBy('store_profile_id')->orderBy('day_of_week')->get() as $row) {
+            $schedules[(string) $row->store_profile_id][] = [
                 'day_of_week' => (int) $row->day_of_week,
                 'status' => $row->is_closed ? 'CLOSED' : 'OPEN',
                 'opens_at' => $row->is_closed ? null : substr((string) $row->opens_at, 0, 5),
                 'closes_at' => $row->is_closed ? null : substr((string) $row->closes_at, 0, 5),
-            ])->all();
+            ];
+        }
+
+        return $schedules;
     }
 
     /** @param list<array<string, mixed>> $days */

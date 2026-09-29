@@ -15,6 +15,9 @@ final class FakeRouteProvider implements RouteProvider
 
     public int $calls = 0;
 
+    /** @var list<array{origin: array{float, float}, destination: array{float, float}}> */
+    public array $requests = [];
+
     public function configured(): bool
     {
         return $this->failure !== 'NOT_CONFIGURED';
@@ -23,6 +26,7 @@ final class FakeRouteProvider implements RouteProvider
     public function drive(float $originLatitude, float $originLongitude, float $destinationLatitude, float $destinationLongitude): ?array
     {
         $this->calls++;
+        $this->requests[] = ['origin' => [$originLatitude, $originLongitude], 'destination' => [$destinationLatitude, $destinationLongitude]];
         if ($this->failure !== null) {
             throw new GeographyProviderUnavailable($this->failure);
         }

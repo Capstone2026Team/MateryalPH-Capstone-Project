@@ -1,7 +1,9 @@
 <?php
 
+use App\Http\Controllers\Api\BuyerCartController;
 use App\Http\Controllers\Api\BuyerDiscoveryController;
 use App\Http\Controllers\Api\BuyerLocationController;
+use App\Http\Controllers\Api\BuyerProcurementController;
 use Illuminate\Support\Facades\Route;
 
 // Buyer mobile only: native bearer transport, Buyer account access, per-user throttles. Every resource is
@@ -22,6 +24,21 @@ Route::prefix('buyers')->middleware(['auth.transport:MOBILE', 'auth:api', 'accou
     Route::post('/discovery/search', [BuyerDiscoveryController::class, 'search'])->middleware('throttle:buyer-discovery');
     Route::get('/discovery/directory-suppliers/{supplierId}', [BuyerDiscoveryController::class, 'directorySupplier'])->whereUuid('supplierId')->middleware('throttle:buyer-places');
     Route::post('/discovery/routes', [BuyerDiscoveryController::class, 'route'])->middleware('throttle:buyer-route');
+
+    // Phase 7 Item-Based procurement. Origins stay in bodies; cart and preview never reserve stock.
+    Route::post('/explore/summary', [BuyerProcurementController::class, 'explore'])->middleware('throttle:buyer-discovery');
+    Route::post('/listings/search', [BuyerProcurementController::class, 'search'])->middleware('throttle:buyer-discovery');
+    Route::post('/listings/{listingId}/details', [BuyerProcurementController::class, 'listing'])->whereUuid('listingId');
+    Route::get('/ranking-preferences/item-based', [BuyerProcurementController::class, 'preferences']);
+    Route::put('/ranking-preferences/item-based', [BuyerProcurementController::class, 'savePreferences']);
+    Route::delete('/ranking-preferences/item-based', [BuyerProcurementController::class, 'resetPreferences']);
+    Route::get('/cart', [BuyerCartController::class, 'show']);
+    Route::post('/cart/items', [BuyerCartController::class, 'add']);
+    Route::patch('/cart/items/{itemId}', [BuyerCartController::class, 'update'])->whereUuid('itemId');
+    Route::delete('/cart/items/{itemId}', [BuyerCartController::class, 'remove'])->whereUuid('itemId');
+    Route::put('/cart/vendor-groups/{vendorId}/fulfillment', [BuyerCartController::class, 'fulfillment'])->whereUuid('vendorId');
+    Route::put('/cart/destination', [BuyerCartController::class, 'destination']);
+    Route::post('/cart/checkout-preview', [BuyerCartController::class, 'preview'])->middleware('throttle:buyer-route');
 
     Route::get('/favorite-suppliers', [BuyerDiscoveryController::class, 'favorites']);
     Route::put('/favorite-suppliers/{vendorId}', [BuyerDiscoveryController::class, 'addFavorite'])->whereUuid('vendorId');

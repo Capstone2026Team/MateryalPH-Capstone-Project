@@ -27,6 +27,12 @@ Name | Type | Description | Notes
 **fulfillmentMethod** | **String** |  |
 **scoreLabel** | [**ScoreLabel**](ScoreLabel.md) |  |
 **hoursStatus** | **String** | UNAVAILABLE shows Hours Unavailable; the store stays visible and hours are never fabricated. |
+**week** | [**BuiltList&lt;StoreHoursDay&gt;**](StoreHoursDay.md) | Today and the next six Asia/Manila dates, a unique dated override applied before the weekly rule; explicit Closed days kept. Empty when hours are unavailable. |
+**openNow** | [**StoreOpenNow**](StoreOpenNow.md) |  |
+**allClosed** | **bool** | True when every weekly day is explicitly Closed, which is a valid saved schedule. |
+**hoursAsOf** | [**DateTime**](DateTime.md) |  |
+**hoursNotice** | **String** |  |
+**hoursUnavailableReason** | **String** |  | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

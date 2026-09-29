@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: MateryalPH API
-  version: 1.0.0-phase.6
+  version: 1.0.0-phase.7
   description: >-
     Versioned Phase 1–4 contract. Vendor onboarding, verification, activation readiness, private evidence, team invitations, the Vendor catalog and product PS/ICC compliance are server-authorized.
     Browser credentials are isolated by configured frontend origin using _vendor and _admin suffixes on access, refresh, CSRF, MFA and bot-proof cookies.
@@ -22,6 +22,8 @@ tags:
   - name: Vendor Fleet
   - name: Buyer Locations
   - name: Buyer Discovery
+  - name: Buyer Explore
+  - name: Buyer Cart
 paths:
   /{webAccountPortal}/account/photo:
     parameters:
@@ -3778,6 +3780,227 @@ paths:
         "200": { description: Favorite removed., content: { application/json: { schema: { $ref: "#/components/schemas/FavoriteSupplierStateEnvelope" } } } }
         "401": { $ref: "#/components/responses/ErrorResponse" }
         "403": { $ref: "#/components/responses/ErrorResponse" }
+  /buyers/explore/summary:
+    post:
+      operationId: getBuyerExploreSummary
+      description: >-
+        MAT-01/MAT-02 Explore dashboard. Nearby Verified Vendors and Available Products (counted as distinct Vendor listings,
+        never variants or canonical materials) and every category count come from one server snapshot with one current_as_of,
+        scoped to all categories at the selected location and radius before any category or search filter. Materials Analytics
+        stays explicitly unavailable until its end-to-end feature is installed. The origin travels in the body and is never echoed.
+      tags: [ Buyer Explore ]
+      security: [ { passportBearer: [] } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/BuyerOriginRequest" } } }
+      responses:
+        "200": { description: Explore dashboard snapshot., content: { application/json: { schema: { $ref: "#/components/schemas/ExploreSummaryEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+        "429": { $ref: "#/components/responses/ErrorResponse" }
+  /buyers/listings/search:
+    post:
+      operationId: searchBuyerListings
+      description: >-
+        Item-Based search over MAT-02 eligible Tier 2 listings inside the radius; Directory Suppliers are never inventory.
+        Browsing defaults to DISTANCE and a text query defaults to BEST_DEAL (SRS, a normalized weighted sum with the Buyer's
+        Item-Based weights). FAVORITES_FIRST is a separate explicit sort that never changes Best Deal. Best Price compares the
+        MAT-03 normalized price of the same comparable group and canonical unit across in-stock offers in the radius and needs
+        two Vendors. One card per listing, deterministic tie-breaking and a signed keyset cursor that rejects changed filters.
+      tags: [ Buyer Explore ]
+      security: [ { passportBearer: [] } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/ListingSearchRequest" } } }
+      responses:
+        "200": { description: Ranked listing cards., content: { application/json: { schema: { $ref: "#/components/schemas/ListingSearchEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+        "429": { $ref: "#/components/responses/ErrorResponse" }
+  /buyers/listings/{listingId}/details:
+    post:
+      operationId: getBuyerListingDetails
+      description: >-
+        Product Details for one Tier 2 listing while it has at least one eligible variant; a stale card returns 404
+        LISTING_UNAVAILABLE. Outside the radius it is described with purchasable false. Unoffered variants carry no price or
+        stock label; exact quantities are never returned. A PS/ICC badge is MateryalPH evidence review, not a certification.
+      tags: [ Buyer Explore ]
+      security: [ { passportBearer: [] } ]
+      parameters:
+        - { name: listingId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/BuyerOriginRequest" } } }
+      responses:
+        "200": { description: Listing details., content: { application/json: { schema: { $ref: "#/components/schemas/ListingDetailsEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /buyers/ranking-preferences/item-based:
+    get:
+      operationId: getBuyerItemRankingPreferences
+      description: The Buyer's own Item-Based SRS weights, the current platform defaults and whether personalization is active. Never accepts a Buyer id.
+      tags: [ Buyer Explore ]
+      security: [ { passportBearer: [] } ]
+      responses:
+        "200": { description: Ranking preferences., content: { application/json: { schema: { $ref: "#/components/schemas/RankingPreferencesEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+    put:
+      operationId: saveBuyerItemRankingPreferences
+      description: Saves a separate Item-Based override. Whole percentages 0–100 for exactly the five components, totalling 100 (422 WEIGHTS_TOTAL_INVALID); all-zero is 422 WEIGHTS_ALL_ZERO. version 0 creates; a stale version is 409 PREFERENCE_VERSION_CONFLICT. Audited.
+      tags: [ Buyer Explore ]
+      security: [ { passportBearer: [] } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/RankingPreferencesUpdate" } } }
+      responses:
+        "200": { description: Saved preferences., content: { application/json: { schema: { $ref: "#/components/schemas/RankingPreferencesEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+    delete:
+      operationId: resetBuyerItemRankingPreferences
+      description: Reset to Default. Removes the Item-Based override so the current platform defaults apply. Audited.
+      tags: [ Buyer Explore ]
+      security: [ { passportBearer: [] } ]
+      parameters:
+        - { name: version, in: query, required: true, schema: { type: integer, minimum: 0 } }
+      responses:
+        "200": { description: Default preferences., content: { application/json: { schema: { $ref: "#/components/schemas/RankingPreferencesEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /buyers/cart:
+    get:
+      operationId: getBuyerCart
+      description: The Buyer's active cart grouped by Vendor with each line's snapshot, current public state and inline issues. Viewing never reserves stock.
+      tags: [ Buyer Cart ]
+      security: [ { passportBearer: [] } ]
+      responses:
+        "200": { description: Cart., content: { application/json: { schema: { $ref: "#/components/schemas/CartEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+  /buyers/cart/items:
+    post:
+      operationId: addBuyerCartItem
+      description: >-
+        Adds a variant (or increases an existing line) after revalidating eligibility, radius, the expected price version
+        (409 PRICE_CHANGED) and quantity (422 QUANTITY_INVALID or QUANTITY_UNAVAILABLE without revealing stock). Creates no
+        inventory hold or reservation. Idempotency-Key makes retries safe; a changed body under the same key is 409.
+      tags: [ Buyer Cart ]
+      security: [ { passportBearer: [] } ]
+      parameters:
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CartItemCreate" } } }
+      responses:
+        "200": { description: Updated cart., content: { application/json: { schema: { $ref: "#/components/schemas/CartEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /buyers/cart/items/{itemId}:
+    parameters:
+      - { name: itemId, in: path, required: true, schema: { type: string, format: uuid } }
+    patch:
+      operationId: updateBuyerCartItem
+      description: Changes quantity (revalidated), saves for later, or explicitly accepts the current price version. Requires the cart lock_version (409 CART_VERSION_CONFLICT).
+      tags: [ Buyer Cart ]
+      security: [ { passportBearer: [] } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CartItemUpdate" } } }
+      responses:
+        "200": { description: Updated cart., content: { application/json: { schema: { $ref: "#/components/schemas/CartEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+    delete:
+      operationId: removeBuyerCartItem
+      description: Removes one cart line. Requires the cart lock_version.
+      tags: [ Buyer Cart ]
+      security: [ { passportBearer: [] } ]
+      parameters:
+        - { name: lock_version, in: query, required: true, schema: { type: integer, minimum: 1 } }
+      responses:
+        "200": { description: Updated cart., content: { application/json: { schema: { $ref: "#/components/schemas/CartEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /buyers/cart/vendor-groups/{vendorId}/fulfillment:
+    put:
+      operationId: setBuyerCartFulfillment
+      description: Chooses Site Delivery or Self-Pickup for one Vendor group; 422 FULFILLMENT_NOT_OFFERED when the store does not offer it.
+      tags: [ Buyer Cart ]
+      security: [ { passportBearer: [] } ]
+      parameters:
+        - { name: vendorId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CartFulfillmentUpdate" } } }
+      responses:
+        "200": { description: Updated cart., content: { application/json: { schema: { $ref: "#/components/schemas/CartEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /buyers/cart/destination:
+    put:
+      operationId: setBuyerCartDestination
+      description: >-
+        Sets the intended destination or Project site and the known heavy-vehicle restriction answer. YES requires a distinct
+        saved alternate drop-off and access instructions (422 ALTERNATE_DROP_OFF_REQUIRED); both locations stay stored and
+        labelled and the intended site is never replaced. Only the Buyer's own active saved locations are accepted.
+      tags: [ Buyer Cart ]
+      security: [ { passportBearer: [] } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CartDestinationUpdate" } } }
+      responses:
+        "200": { description: Updated cart., content: { application/json: { schema: { $ref: "#/components/schemas/CartEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /buyers/cart/checkout-preview:
+    post:
+      operationId: previewBuyerCheckout
+      description: >-
+        One child group per Vendor, each revalidated for listing state, price version, availability label, destination and
+        serviceability, delivery/pickup capability and payment-method eligibility, with stale or blocked results inline on the
+        affected group. Delivery shows the Phase 5 advisory estimate (road route from store to the vehicle drop-off) and never
+        a confirmed offer; unknown measurements stay manual review. Amounts follow FIN-02 included VAT and exclude Vendor
+        commission and withholding. Creates no order, hold or reservation and never discards cart lines.
+      tags: [ Buyer Cart ]
+      security: [ { passportBearer: [] } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CheckoutPreviewRequest" } } }
+      responses:
+        "200": { description: Checkout preview., content: { application/json: { schema: { $ref: "#/components/schemas/CheckoutPreviewEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+        "429": { $ref: "#/components/responses/ErrorResponse" }
 components:
   securitySchemes:
     passportBearer: { type: http, scheme: bearer, bearerFormat: JWT }
@@ -3815,6 +4038,728 @@ components:
         application/json:
           schema: { $ref: "#/components/schemas/BotStepUpErrorEnvelope" }
   schemas:
+    BuyerOriginRequest:
+      description: Send location_id or latitude/longitude (never both). Omit both to use the primary saved location. radius_km defaults to the saved preference.
+      type: object
+      additionalProperties: false
+      properties:
+        location_id: { type: [ string, 'null' ], format: uuid }
+        latitude: { type: number, format: double, minimum: -90, maximum: 90 }
+        longitude: { type: number, format: double, minimum: -180, maximum: 180 }
+        origin_source: { type: string, enum: [ DEVICE, MAP_PIN, SEARCH ] }
+        radius_km: { type: integer, description: 'Must be one of 5, 10, 20, 30, 40 or 50; otherwise 422 RADIUS_UNSUPPORTED.' }
+    ExploreCounts:
+      type: object
+      required: [ verified_vendors, vendor_listings ]
+      properties:
+        verified_vendors: { type: integer, minimum: 0, description: Distinct active Tier 2 organizations with at least one eligible listing in scope. }
+        vendor_listings: { type: integer, minimum: 0, description: Distinct Vendor listings with at least one eligible variant; variants never inflate it. }
+    ExploreLabels:
+      type: object
+      required: [ verified_vendors, vendor_listings, vendor_listings_unit ]
+      properties:
+        verified_vendors: { type: string }
+        vendor_listings: { type: string }
+        vendor_listings_unit: { type: string, description: Always Vendor listings. }
+    ExploreCategoryCount:
+      type: object
+      required: [ id, code, name, vendor_listings ]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
+        vendor_listings: { type: integer, minimum: 0 }
+    FeatureAvailability:
+      type: object
+      required: [ enabled, status, message ]
+      properties:
+        enabled: { type: boolean }
+        status: { type: string, enum: [ NOT_YET_AVAILABLE, AVAILABLE ] }
+        message: { type: string }
+    DatasetLabel:
+      type: object
+      required: [ kind, label ]
+      properties:
+        kind: { type: string, enum: [ TEST, LIVE ] }
+        label: { type: [ string, 'null' ], description: DEMO — Simulated Marketplace Data for TEST datasets. }
+    ExploreSummary:
+      type: object
+      required: [ scope, count_scope, scope_label, current_as_of, eligibility_version, counts, labels, categories, materials_analytics, dataset ]
+      properties:
+        scope: { $ref: "#/components/schemas/DiscoveryScope" }
+        count_scope: { type: string, enum: [ ALL_CATEGORIES_AT_LOCATION_RADIUS ] }
+        scope_label: { type: string }
+        current_as_of: { type: string, format: date-time, description: Capture time of the shared snapshot; a cached value keeps its original time. }
+        eligibility_version: { type: string }
+        counts: { $ref: "#/components/schemas/ExploreCounts" }
+        labels: { $ref: "#/components/schemas/ExploreLabels" }
+        categories: { type: array, items: { $ref: "#/components/schemas/ExploreCategoryCount" } }
+        materials_analytics: { $ref: "#/components/schemas/FeatureAvailability" }
+        dataset: { $ref: "#/components/schemas/DatasetLabel" }
+    ExploreSummaryEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { $ref: "#/components/schemas/ExploreSummary" }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    ListingSearchSort:
+      type: string
+      enum: [ BEST_DEAL, DISTANCE, PRICE, RATING, FAVORITES_FIRST ]
+    ListingSearchRequest:
+      description: Origin fields as BuyerOriginRequest plus optional filters. ANY means no filter. A cursor is valid only for the same scope, query, sort, weights and filters.
+      type: object
+      additionalProperties: false
+      properties:
+        location_id: { type: [ string, 'null' ], format: uuid }
+        latitude: { type: number, format: double, minimum: -90, maximum: 90 }
+        longitude: { type: number, format: double, minimum: -180, maximum: 180 }
+        origin_source: { type: string, enum: [ DEVICE, MAP_PIN, SEARCH ] }
+        radius_km: { type: integer }
+        query: { type: [ string, 'null' ], maxLength: 100 }
+        sort: { oneOf: [ { $ref: "#/components/schemas/ListingSearchSort" }, { type: 'null' } ] }
+        category_id: { type: [ string, 'null' ], format: uuid }
+        brand: { type: [ string, 'null' ], maxLength: 80 }
+        variant: { type: [ string, 'null' ], maxLength: 80 }
+        availability: { type: [ string, 'null' ], enum: [ ANY, IN_STOCK, null ] }
+        fulfillment: { type: [ string, 'null' ], enum: [ ANY, DELIVERY, PICKUP, null ] }
+        favorites_only: { type: boolean }
+        compliance: { type: [ string, 'null' ], enum: [ ANY, PS_ICC_VERIFIED, null ] }
+        min_price_centavos: { type: [ integer, 'null' ], minimum: 0 }
+        max_price_centavos: { type: [ integer, 'null' ], minimum: 0 }
+        vendor_id: { type: [ string, 'null' ], format: uuid, description: Browse one Verified Vendor's eligible listings from its Store Profile. }
+        cursor: { type: [ string, 'null' ], maxLength: 1024 }
+        per_page: { type: integer, minimum: 1, maximum: 50 }
+    ListingImage:
+      type: object
+      required: [ url, alt_text ]
+      properties:
+        url: { type: string, format: uri, description: Validated public media only. }
+        alt_text: { type: [ string, 'null' ] }
+    ListingCategoryRef:
+      type: object
+      required: [ id, name ]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: [ string, 'null' ] }
+    ListingPrice:
+      description: The ordinary public price per sale unit, a VAT-inclusive payable amount in centavos.
+      type: object
+      required: [ unit_price_centavos, currency, unit_code, unit_name, pack_quantity, tax_category, vat_label, price_version_id, effective_at ]
+      properties:
+        unit_price_centavos: { type: integer, minimum: 1 }
+        currency: { type: string, const: PHP }
+        unit_code: { type: string }
+        unit_name: { type: string }
+        pack_quantity: { type: string, pattern: '^\d+\.\d{4}$' }
+        tax_category: { type: string, enum: [ VAT_12, VAT_ZERO, VAT_EXEMPT, NON_VAT ] }
+        vat_label: { type: string }
+        price_version_id: { type: string, format: uuid }
+        effective_at: { type: string, format: date-time }
+    ComparableStatus:
+      type: object
+      required: [ status, normalized_unit_price, canonical_unit_code ]
+      properties:
+        status: { type: string, enum: [ COMPARABLE, NOT_YET_COMPARABLE ] }
+        normalized_unit_price: { type: [ string, 'null' ], description: MAT-03 PHP per canonical unit as a decimal string. }
+        canonical_unit_code: { type: [ string, 'null' ] }
+    ProductRatingSummary:
+      type: object
+      required: [ average, count, label ]
+      properties:
+        average: { type: [ string, 'null' ], description: Revealed Product Review average; null means New. }
+        count: { type: integer, minimum: 0 }
+        label: { type: string }
+    ListingVendorCard:
+      type: object
+      required: [ id, name, logo_url, score_label, vacation_mode ]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        logo_url: { type: [ string, 'null' ], format: uri }
+        score_label: { $ref: "#/components/schemas/ScoreLabel" }
+        vacation_mode: { type: boolean }
+    ListingFulfillmentSummary:
+      type: object
+      required: [ pickup_available, delivery, basis ]
+      properties:
+        pickup_available: { type: boolean }
+        delivery: { type: string, enum: [ WITHIN_STATED_AREA, OUTSIDE_STATED_AREA, NOT_OFFERED ] }
+        basis: { type: string, enum: [ STRAIGHT_LINE_ADVISORY ] }
+    RankingComponent:
+      type: object
+      required: [ key, label, weight_percent, score, weighted, basis ]
+      properties:
+        key: { type: string, enum: [ distance, price, vps, stock, product_rating ] }
+        label: { type: string }
+        weight_percent: { type: integer, minimum: 0, maximum: 100 }
+        score: { type: string, description: Normalized 0–100 component score, two decimals. }
+        weighted: { type: string, description: score × weight / 100, two decimals. }
+        basis: { type: string, description: Plain-language source of the score, including internal neutral defaults. }
+    RankingExplanation:
+      type: object
+      required: [ srs, components ]
+      properties:
+        srs: { type: string, description: Search Relevance Score 0–100, two decimals. }
+        components: { type: array, items: { $ref: "#/components/schemas/RankingComponent" } }
+    ListingSearchResult:
+      type: object
+      required: [ listing_id, variant_id, rank, display_name, brand, category, variant_label, options_count, image, price, comparable, stock_label, stock_confirmed_at, product_rating, units_sold, distance_meters, badges, is_favorite, vendor, fulfillment, ranking ]
+      properties:
+        listing_id: { type: string, format: uuid }
+        variant_id: { type: string, format: uuid, description: The listing's best variant under the active sort. }
+        rank: { type: integer, minimum: 1 }
+        display_name: { type: string }
+        brand: { type: [ string, 'null' ] }
+        category: { oneOf: [ { $ref: "#/components/schemas/ListingCategoryRef" }, { type: 'null' } ] }
+        variant_label: { type: [ string, 'null' ] }
+        options_count: { type: integer, minimum: 1 }
+        image: { oneOf: [ { $ref: "#/components/schemas/ListingImage" }, { type: 'null' } ] }
+        price: { $ref: "#/components/schemas/ListingPrice" }
+        comparable: { $ref: "#/components/schemas/ComparableStatus" }
+        stock_label: { type: string, enum: [ IN_STOCK, LIMITED_STOCK ] }
+        stock_confirmed_at: { type: string, format: date-time }
+        product_rating: { $ref: "#/components/schemas/ProductRatingSummary" }
+        units_sold: { type: string, description: Quantity on completed orders. }
+        distance_meters: { type: integer, minimum: 0, description: Geodesic straight-line distance to the store. }
+        badges: { type: array, items: { type: string, enum: [ BEST_PRICE, PS_ICC_VERIFIED ] } }
+        is_favorite: { type: boolean }
+        vendor: { $ref: "#/components/schemas/ListingVendorCard" }
+        fulfillment: { $ref: "#/components/schemas/ListingFulfillmentSummary" }
+        ranking: { $ref: "#/components/schemas/RankingExplanation" }
+    RankingWeightSet:
+      description: Whole percentages for the five Item-Based SRS components; they total exactly 100.
+      type: object
+      additionalProperties: false
+      required: [ distance, price, vps, stock, product_rating ]
+      properties:
+        distance: { type: integer, minimum: 0, maximum: 100 }
+        price: { type: integer, minimum: 0, maximum: 100 }
+        vps: { type: integer, minimum: 0, maximum: 100 }
+        stock: { type: integer, minimum: 0, maximum: 100 }
+        product_rating: { type: integer, minimum: 0, maximum: 100 }
+    ListingSearchRanking:
+      type: object
+      required: [ weights, personalized, default_weights, tie_breakers ]
+      properties:
+        weights: { $ref: "#/components/schemas/RankingWeightSet" }
+        personalized: { type: boolean }
+        default_weights: { $ref: "#/components/schemas/RankingWeightSet" }
+        tie_breakers: { type: array, items: { type: string } }
+    ListingSearchQuery:
+      type: object
+      required: [ text, normalized ]
+      properties:
+        text: { type: [ string, 'null' ] }
+        normalized: { type: [ string, 'null' ] }
+    ListingSearchExpansion:
+      type: object
+      required: [ suggested_radius_km, requires_confirmation ]
+      properties:
+        suggested_radius_km: { type: [ integer, 'null' ] }
+        requires_confirmation: { type: boolean }
+    ListingSearchMeta:
+      type: object
+      required: [ scope, current_as_of, eligibility_version, algorithm_version, sort, default_sort, query, ranking, total, per_page, has_more, next_cursor, candidate_limit_reached, expansion, tier_note ]
+      properties:
+        correlation_id: { type: string }
+        scope: { $ref: "#/components/schemas/DiscoveryScope" }
+        current_as_of: { type: string, format: date-time }
+        eligibility_version: { type: string }
+        algorithm_version: { type: string }
+        sort: { $ref: "#/components/schemas/ListingSearchSort" }
+        default_sort: { $ref: "#/components/schemas/ListingSearchSort" }
+        query: { $ref: "#/components/schemas/ListingSearchQuery" }
+        ranking: { $ref: "#/components/schemas/ListingSearchRanking" }
+        total: { type: integer, minimum: 0 }
+        per_page: { type: integer, minimum: 1, maximum: 50 }
+        has_more: { type: boolean }
+        next_cursor: { type: [ string, 'null' ] }
+        candidate_limit_reached: { type: boolean }
+        expansion: { oneOf: [ { $ref: "#/components/schemas/ListingSearchExpansion" }, { type: 'null' } ] }
+        tier_note: { type: string }
+    ListingSearchEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/ListingSearchResult" } }
+        meta: { $ref: "#/components/schemas/ListingSearchMeta" }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    VolumeTier:
+      type: object
+      required: [ price_version_id, minimum_quantity, amount_centavos ]
+      properties:
+        price_version_id: { type: string, format: uuid }
+        minimum_quantity: { type: string }
+        amount_centavos: { type: integer, minimum: 1 }
+    ListingVariantPrice:
+      type: object
+      required: [ price_version_id, unit_price_centavos, currency, tax_category, vat_label, included_vat_centavos, effective_at ]
+      properties:
+        price_version_id: { type: string, format: uuid }
+        unit_price_centavos: { type: integer, minimum: 1 }
+        currency: { type: string, const: PHP }
+        tax_category: { type: string, enum: [ VAT_12, VAT_ZERO, VAT_EXEMPT, NON_VAT ] }
+        vat_label: { type: string }
+        included_vat_centavos: { type: integer, minimum: 0, description: FIN-02 money(L × 12 / 112) for VAT_12; included, never added. }
+        effective_at: { type: string, format: date-time }
+    ListingVariantOffer:
+      type: object
+      required: [ variant_id, sku, label, attributes, unit_code, unit_name, pack_quantity, quantity_step, available, availability_note, stock_label, stock_confirmed_at, price, volume_tiers, best_price, comparable ]
+      properties:
+        variant_id: { type: string, format: uuid }
+        sku: { type: string }
+        label: { type: [ string, 'null' ] }
+        attributes: { type: object, additionalProperties: true }
+        unit_code: { type: string }
+        unit_name: { type: string }
+        pack_quantity: { type: string }
+        quantity_step: { type: string, description: Smallest quantity increment for this sale unit. }
+        available: { type: boolean }
+        availability_note: { type: [ string, 'null' ] }
+        stock_label: { type: [ string, 'null' ], enum: [ IN_STOCK, LIMITED_STOCK, null ] }
+        stock_confirmed_at: { type: [ string, 'null' ], format: date-time }
+        price: { oneOf: [ { $ref: "#/components/schemas/ListingVariantPrice" }, { type: 'null' } ] }
+        volume_tiers: { type: array, items: { $ref: "#/components/schemas/VolumeTier" } }
+        best_price: { type: boolean }
+        comparable: { oneOf: [ { $ref: "#/components/schemas/ComparableStatus" }, { type: 'null' } ] }
+    ListingCompliance:
+      type: object
+      required: [ regulated, status, badge, required_marking, notice ]
+      properties:
+        regulated: { type: boolean }
+        status: { type: string }
+        badge: { type: [ string, 'null' ], enum: [ PS_ICC_VERIFIED, null ] }
+        required_marking: { type: [ string, 'null' ] }
+        notice: { type: string }
+    ListingDetailVendor:
+      type: object
+      required: [ id, name, logo_url, score_label, address, open_status, vacation_mode, supplier_type ]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        logo_url: { type: [ string, 'null' ], format: uri }
+        score_label: { $ref: "#/components/schemas/ScoreLabel" }
+        address: { $ref: "#/components/schemas/PublicAddressSummary" }
+        open_status: { $ref: "#/components/schemas/SupplierOpenStatus" }
+        vacation_mode: { type: boolean }
+        supplier_type: { type: [ string, 'null' ] }
+    ListingDetailFulfillment:
+      type: object
+      required: [ pickup_available, delivery, delivery_maximum_km, basis, notice ]
+      properties:
+        pickup_available: { type: boolean }
+        delivery: { type: string, enum: [ WITHIN_STATED_AREA, OUTSIDE_STATED_AREA, NOT_OFFERED ] }
+        delivery_maximum_km: { type: [ integer, 'null' ] }
+        basis: { type: string, enum: [ STRAIGHT_LINE_ADVISORY ] }
+        notice: { type: string }
+    ListingDetails:
+      type: object
+      required: [ listing_id, publication_version, display_name, description, brand, model, manufacturer, country_of_manufacture, category, technical_attributes, images, compliance, product_rating, units_sold, is_favorite, purchasable, not_purchasable_reason, distance_meters, vendor, fulfillment, variants, scope, current_as_of, eligibility_version ]
+      properties:
+        listing_id: { type: string, format: uuid }
+        publication_version: { type: integer }
+        display_name: { type: string }
+        description: { type: [ string, 'null' ] }
+        brand: { type: [ string, 'null' ] }
+        model: { type: [ string, 'null' ] }
+        manufacturer: { type: [ string, 'null' ] }
+        country_of_manufacture: { type: [ string, 'null' ] }
+        category: { oneOf: [ { $ref: "#/components/schemas/ListingCategoryRef" }, { type: 'null' } ] }
+        technical_attributes: { type: object, additionalProperties: true }
+        images: { type: array, items: { $ref: "#/components/schemas/ListingImage" } }
+        compliance: { $ref: "#/components/schemas/ListingCompliance" }
+        product_rating: { $ref: "#/components/schemas/ProductRatingSummary" }
+        units_sold: { type: string }
+        is_favorite: { type: boolean }
+        purchasable: { type: boolean }
+        not_purchasable_reason: { type: [ string, 'null' ], enum: [ OUTSIDE_SELECTED_RADIUS, STORE_PAUSED, null ] }
+        distance_meters: { type: integer, minimum: 0 }
+        vendor: { $ref: "#/components/schemas/ListingDetailVendor" }
+        fulfillment: { $ref: "#/components/schemas/ListingDetailFulfillment" }
+        variants: { type: array, items: { $ref: "#/components/schemas/ListingVariantOffer" } }
+        scope: { $ref: "#/components/schemas/DiscoveryScope" }
+        current_as_of: { type: string, format: date-time }
+        eligibility_version: { type: string }
+    ListingDetailsEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { $ref: "#/components/schemas/ListingDetails" }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    RankingPreferences:
+      type: object
+      required: [ procurement_type, weights, default_weights, defaults_version, personalized, version, total_percent, algorithm_version ]
+      properties:
+        procurement_type: { type: string, enum: [ ITEM_BASED ] }
+        weights: { $ref: "#/components/schemas/RankingWeightSet" }
+        default_weights: { $ref: "#/components/schemas/RankingWeightSet" }
+        defaults_version: { type: integer, minimum: 0 }
+        personalized: { type: boolean, description: True while a Buyer override is stored. }
+        version: { type: integer, minimum: 0, description: 0 when following the platform defaults. }
+        total_percent: { type: integer, const: 100 }
+        algorithm_version: { type: string }
+    RankingPreferencesUpdate:
+      type: object
+      additionalProperties: false
+      required: [ weights, version ]
+      properties:
+        weights: { $ref: "#/components/schemas/RankingWeightSet" }
+        version: { type: integer, minimum: 0 }
+    RankingPreferencesEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { $ref: "#/components/schemas/RankingPreferences" }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    CartIssue:
+      type: object
+      required: [ code, severity, message ]
+      properties:
+        code: { type: string }
+        severity: { type: string, enum: [ BLOCKING, ACTION_REQUIRED, INFO ] }
+        message: { type: string }
+    CartLineSnapshot:
+      description: What the Buyer saw when the line was added or last accepted.
+      type: object
+      required: [ price_version_id, unit_price_centavos, stock_label, publication_version, added_at ]
+      properties:
+        price_version_id: { type: [ string, 'null' ], format: uuid }
+        unit_price_centavos: { type: [ integer, 'null' ] }
+        stock_label: { type: [ string, 'null' ] }
+        publication_version: { type: [ integer, 'null' ] }
+        added_at: { type: string, format: date-time }
+    CartLineCurrent:
+      type: object
+      required: [ price_version_id, unit_price_centavos, tax_category, applied_unit_price_centavos, applied_price_version_id, volume_tier_applied, stock_label, vacation_mode ]
+      properties:
+        price_version_id: { type: string, format: uuid }
+        unit_price_centavos: { type: integer }
+        tax_category: { type: string, enum: [ VAT_12, VAT_ZERO, VAT_EXEMPT, NON_VAT ] }
+        applied_unit_price_centavos: { type: integer, description: CAT-PRICE-01 highest reached volume tier, else the ordinary price. }
+        applied_price_version_id: { type: string, format: uuid }
+        volume_tier_applied: { type: boolean }
+        stock_label: { type: string, enum: [ IN_STOCK, LIMITED_STOCK, OUT_OF_STOCK ] }
+        vacation_mode: { type: boolean }
+    CartLine:
+      type: object
+      required: [ id, lock_version, listing_id, variant_id, vendor_id, display_name, variant_label, image, unit_code, unit_name, quantity, quantity_step, saved_for_later, snapshot, current, line_total_centavos, issues, status ]
+      properties:
+        id: { type: string, format: uuid }
+        lock_version: { type: integer }
+        listing_id: { type: string, format: uuid }
+        variant_id: { type: string, format: uuid }
+        vendor_id: { type: string, format: uuid }
+        display_name: { type: string }
+        variant_label: { type: [ string, 'null' ] }
+        image: { oneOf: [ { $ref: "#/components/schemas/ListingImage" }, { type: 'null' } ] }
+        unit_code: { type: string }
+        unit_name: { type: string }
+        quantity: { type: string, pattern: '^\d+\.\d{4}$' }
+        quantity_step: { type: string }
+        saved_for_later: { type: boolean }
+        snapshot: { $ref: "#/components/schemas/CartLineSnapshot" }
+        current: { oneOf: [ { $ref: "#/components/schemas/CartLineCurrent" }, { type: 'null' } ], description: Null when the offer is no longer eligible. }
+        line_total_centavos: { type: [ integer, 'null' ] }
+        issues: { type: array, items: { $ref: "#/components/schemas/CartIssue" } }
+        status: { type: string, enum: [ READY, ACTION_REQUIRED, BLOCKED ] }
+    CartLocationRef:
+      type: object
+      required: [ location_id, label, kind, formatted_address, status ]
+      properties:
+        location_id: { type: string, format: uuid }
+        label: { type: [ string, 'null' ] }
+        kind: { type: string }
+        formatted_address: { type: [ string, 'null' ] }
+        status: { type: string, enum: [ ACTIVE, UNAVAILABLE ], description: UNAVAILABLE when removed; it is never replaced automatically. }
+    CartDestinationLabels:
+      type: object
+      required: [ intended, vehicle_endpoint ]
+      properties:
+        intended: { type: string }
+        vehicle_endpoint: { type: string }
+    CartDestination:
+      type: object
+      required: [ intended, heavy_vehicle_restriction, alternate_drop_off, vehicle_endpoint, access_instructions, labels ]
+      properties:
+        intended: { oneOf: [ { $ref: "#/components/schemas/CartLocationRef" }, { type: 'null' } ] }
+        heavy_vehicle_restriction: { type: string, enum: [ UNANSWERED, 'NO', 'YES' ] }
+        alternate_drop_off: { oneOf: [ { $ref: "#/components/schemas/CartLocationRef" }, { type: 'null' } ] }
+        vehicle_endpoint: { type: [ string, 'null' ], enum: [ INTENDED_LOCATION, ALTERNATE_DROP_OFF, null ] }
+        access_instructions: { type: [ string, 'null' ], description: The Buyer's own site instructions; shared with a Vendor only once an order requires them. }
+        labels: { $ref: "#/components/schemas/CartDestinationLabels" }
+    CartVendorRef:
+      type: object
+      required: [ id, name, vacation_mode ]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        vacation_mode: { type: boolean }
+    CartVendorGroup:
+      type: object
+      required: [ vendor, fulfillment_method, fulfillment_options, lines, materials_subtotal_centavos, status ]
+      properties:
+        vendor: { $ref: "#/components/schemas/CartVendorRef" }
+        fulfillment_method: { type: [ string, 'null' ], enum: [ DELIVERY, PICKUP, null ] }
+        fulfillment_options: { type: array, items: { type: string, enum: [ DELIVERY, PICKUP ] } }
+        lines: { type: array, items: { $ref: "#/components/schemas/CartLine" } }
+        materials_subtotal_centavos: { type: integer, minimum: 0 }
+        status: { type: string, enum: [ READY, ACTION_REQUIRED, BLOCKED ] }
+    CartSummary:
+      type: object
+      required: [ line_count, vendor_count, materials_subtotal_centavos, notice, reserves_stock ]
+      properties:
+        line_count: { type: integer, minimum: 0 }
+        vendor_count: { type: integer, minimum: 0 }
+        materials_subtotal_centavos: { type: integer, minimum: 0 }
+        notice: { type: string }
+        reserves_stock: { type: boolean, const: false }
+    Cart:
+      type: object
+      required: [ id, lock_version, current_as_of, destination, groups, saved_for_later, summary ]
+      properties:
+        id: { type: string, format: uuid }
+        lock_version: { type: integer, minimum: 1 }
+        current_as_of: { type: string, format: date-time }
+        destination: { $ref: "#/components/schemas/CartDestination" }
+        groups: { type: array, items: { $ref: "#/components/schemas/CartVendorGroup" } }
+        saved_for_later: { type: array, items: { $ref: "#/components/schemas/CartLine" } }
+        summary: { $ref: "#/components/schemas/CartSummary" }
+    CartEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { $ref: "#/components/schemas/Cart" }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    CartItemCreate:
+      type: object
+      additionalProperties: false
+      required: [ listing_variant_id, expected_price_version_id, quantity ]
+      properties:
+        listing_variant_id: { type: string, format: uuid }
+        expected_price_version_id: { type: string, format: uuid, description: The price version shown to the Buyer; a newer one returns 409 PRICE_CHANGED. }
+        quantity: { type: string, pattern: '^\d{1,7}(\.\d{1,4})?$' }
+        fulfillment_method: { type: [ string, 'null' ], enum: [ DELIVERY, PICKUP, null ] }
+        location_id: { type: [ string, 'null' ], format: uuid }
+        latitude: { type: number, format: double, minimum: -90, maximum: 90 }
+        longitude: { type: number, format: double, minimum: -180, maximum: 180 }
+        origin_source: { type: string, enum: [ DEVICE, MAP_PIN, SEARCH ] }
+        radius_km: { type: integer }
+    CartItemUpdate:
+      type: object
+      additionalProperties: false
+      required: [ lock_version ]
+      properties:
+        lock_version: { type: integer, minimum: 1 }
+        quantity: { type: string, pattern: '^\d{1,7}(\.\d{1,4})?$' }
+        saved_for_later: { type: boolean }
+        accept_current_price: { type: boolean }
+    CartFulfillmentUpdate:
+      type: object
+      additionalProperties: false
+      required: [ lock_version, fulfillment_method ]
+      properties:
+        lock_version: { type: integer, minimum: 1 }
+        fulfillment_method: { type: string, enum: [ DELIVERY, PICKUP ] }
+    CartDestinationUpdate:
+      type: object
+      additionalProperties: false
+      required: [ lock_version, intended_location_id, heavy_vehicle_restriction ]
+      properties:
+        lock_version: { type: integer, minimum: 1 }
+        intended_location_id: { type: [ string, 'null' ], format: uuid }
+        heavy_vehicle_restriction: { type: string, enum: [ UNANSWERED, 'NO', 'YES' ] }
+        alternate_drop_off_location_id: { type: [ string, 'null' ], format: uuid }
+        access_instructions: { type: [ string, 'null' ], maxLength: 500 }
+    CheckoutPreviewRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        request_version: { type: [ string, 'null' ], pattern: '^[A-Za-z0-9_.:-]{1,64}$', description: Echoed so the client discards stale previews. }
+    DeliveryRoute:
+      type: object
+      required: [ distance_meters, duration_seconds, basis, source, computed_at, cached ]
+      properties:
+        distance_meters: { type: integer, minimum: 0 }
+        duration_seconds: { type: integer, minimum: 0 }
+        basis: { type: string, enum: [ ROAD_ROUTE_STORE_TO_VEHICLE_DROP_OFF ] }
+        source: { type: string, enum: [ GOOGLE_ROUTES ] }
+        computed_at: { type: string, format: date-time }
+        cached: { type: boolean }
+    DeliveryEstimateOption:
+      type: object
+      required: [ load_key, vehicle_name, vehicle_type, vehicles, trips, fee_centavos, fee_per_trip_centavos ]
+      properties:
+        load_key: { type: string }
+        vehicle_name: { type: string }
+        vehicle_type: { type: string }
+        vehicles: { type: integer, minimum: 1 }
+        trips: { type: integer, minimum: 1 }
+        fee_centavos: { type: integer, minimum: 0 }
+        fee_per_trip_centavos: { type: integer, minimum: 0 }
+    DeliveryEstimate:
+      description: Advisory range across the Vendor's eligible vehicles. Not an offer; the Vendor confirms vehicles, trips and the final fee.
+      type: object
+      required: [ fee_min_centavos, fee_max_centavos, trips_min, trips_max, vehicles_min, vehicles_max, options ]
+      properties:
+        fee_min_centavos: { type: integer, minimum: 0 }
+        fee_max_centavos: { type: integer, minimum: 0 }
+        trips_min: { type: integer, minimum: 0 }
+        trips_max: { type: integer, minimum: 0 }
+        vehicles_min: { type: integer, minimum: 0 }
+        vehicles_max: { type: integer, minimum: 0 }
+        options: { type: array, items: { $ref: "#/components/schemas/DeliveryEstimateOption" } }
+    DeliveryPreview:
+      type: object
+      required: [ status, issues, endpoint, route, straight_line_meters, coverage_km, estimate, manual_review_reasons, confirmed_offer, calculation_version, notice ]
+      properties:
+        status: { type: string, enum: [ NOT_APPLICABLE, ACTION_REQUIRED, BLOCKED, MANUAL_REVIEW, ADVISORY_ESTIMATE ] }
+        issues: { type: array, items: { $ref: "#/components/schemas/CartIssue" } }
+        endpoint: { type: [ string, 'null' ], enum: [ INTENDED_LOCATION, ALTERNATE_DROP_OFF, null ] }
+        route: { oneOf: [ { $ref: "#/components/schemas/DeliveryRoute" }, { type: 'null' } ] }
+        straight_line_meters: { type: [ integer, 'null' ] }
+        coverage_km: { type: [ integer, 'null' ] }
+        estimate: { oneOf: [ { $ref: "#/components/schemas/DeliveryEstimate" }, { type: 'null' } ] }
+        manual_review_reasons: { type: array, items: { type: string } }
+        confirmed_offer: { type: [ object, 'null' ], additionalProperties: true, description: Always null in a preview; an authorized confirmed offer exists only after Vendor confirmation. }
+        calculation_version: { type: string }
+        notice: { type: [ string, 'null' ] }
+    PickupPreview:
+      type: object
+      required: [ address, open_status, notice ]
+      properties:
+        address: { oneOf: [ { $ref: "#/components/schemas/PublicAddressSummary" }, { type: 'null' } ] }
+        open_status: { oneOf: [ { $ref: "#/components/schemas/SupplierOpenStatus" }, { type: 'null' } ] }
+        notice: { type: string }
+    PaymentMethodEligibility:
+      type: object
+      required: [ method, available, reason ]
+      properties:
+        method: { type: string, enum: [ ONLINE, CASH_ON_DELIVERY, IN_STORE ] }
+        available: { type: boolean }
+        reason: { type: [ string, 'null' ] }
+    DeliveryAmount:
+      type: object
+      required: [ status, min_centavos, max_centavos ]
+      properties:
+        status: { type: string, enum: [ ESTIMATE, NOT_APPLICABLE, PENDING_VENDOR_REVIEW ] }
+        min_centavos: { type: [ integer, 'null' ] }
+        max_centavos: { type: [ integer, 'null' ] }
+    ProcessingFeeAmount:
+      type: object
+      required: [ status, amount_centavos ]
+      properties:
+        status: { type: string, enum: [ PENDING_PAYMENT_CHANNEL ] }
+        amount_centavos: { type: [ integer, 'null' ] }
+    FinancialPreviewLine:
+      type: object
+      required: [ line_id, payable_centavos, included_vat_centavos, tax_category ]
+      properties:
+        line_id: { type: string, format: uuid }
+        payable_centavos: { type: integer, minimum: 0 }
+        included_vat_centavos: { type: integer, minimum: 0 }
+        tax_category: { type: string, enum: [ VAT_12, VAT_ZERO, VAT_EXEMPT, NON_VAT ] }
+    FinancialPreview:
+      description: FIN-02 preview. M = Σ line payable amounts, V = included VAT, E = M − V; D estimate or pending; F pending until a payment channel. Never includes Vendor commission or merchant withholding.
+      type: object
+      required: [ currency, calculation_version, lines, materials_subtotal_centavos, included_vat_centavos, vat_exclusive_materials_centavos, vat_treatment, delivery, processing_fee, total_before_processing_min_centavos, total_before_processing_max_centavos, excludes, status ]
+      properties:
+        currency: { type: string, const: PHP }
+        calculation_version: { type: string }
+        lines: { type: array, items: { $ref: "#/components/schemas/FinancialPreviewLine" } }
+        materials_subtotal_centavos: { type: integer, minimum: 0 }
+        included_vat_centavos: { type: integer, minimum: 0 }
+        vat_exclusive_materials_centavos: { type: integer, minimum: 0 }
+        vat_treatment: { type: string, enum: [ PRICES_INCLUDE_VAT, NO_INCLUDED_VAT ] }
+        delivery: { $ref: "#/components/schemas/DeliveryAmount" }
+        processing_fee: { $ref: "#/components/schemas/ProcessingFeeAmount" }
+        total_before_processing_min_centavos: { type: [ integer, 'null' ] }
+        total_before_processing_max_centavos: { type: [ integer, 'null' ] }
+        excludes: { type: array, items: { type: string, enum: [ VENDOR_COMMISSION, MERCHANT_WITHHOLDING ] } }
+        status: { type: string, enum: [ ADVISORY_UNTIL_VENDOR_CONFIRMATION ] }
+    CheckoutVendorRef:
+      type: object
+      required: [ id, name, logo_url, address, open_status ]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        logo_url: { type: [ string, 'null' ], format: uri }
+        address: { oneOf: [ { $ref: "#/components/schemas/PublicAddressSummary" }, { type: 'null' } ] }
+        open_status: { oneOf: [ { $ref: "#/components/schemas/SupplierOpenStatus" }, { type: 'null' } ] }
+    CheckoutGroupPreview:
+      type: object
+      required: [ vendor, fulfillment_method, fulfillment_options, status, issues, lines, delivery, pickup, payment_methods, amounts ]
+      properties:
+        vendor: { $ref: "#/components/schemas/CheckoutVendorRef" }
+        fulfillment_method: { type: [ string, 'null' ], enum: [ DELIVERY, PICKUP, null ] }
+        fulfillment_options: { type: array, items: { type: string, enum: [ DELIVERY, PICKUP ] } }
+        status: { type: string, enum: [ READY, ACTION_REQUIRED, BLOCKED ] }
+        issues: { type: array, items: { $ref: "#/components/schemas/CartIssue" } }
+        lines: { type: array, items: { $ref: "#/components/schemas/CartLine" } }
+        delivery: { $ref: "#/components/schemas/DeliveryPreview" }
+        pickup: { oneOf: [ { $ref: "#/components/schemas/PickupPreview" }, { type: 'null' } ] }
+        payment_methods: { type: array, items: { $ref: "#/components/schemas/PaymentMethodEligibility" } }
+        amounts: { $ref: "#/components/schemas/FinancialPreview" }
+    CheckoutPreviewSummary:
+      type: object
+      required: [ group_count, ready_groups, action_required_groups, blocked_groups, requires_split_confirmation, creates_orders, reserves_stock, notice ]
+      properties:
+        group_count: { type: integer, minimum: 0 }
+        ready_groups: { type: integer, minimum: 0 }
+        action_required_groups: { type: integer, minimum: 0 }
+        blocked_groups: { type: integer, minimum: 0 }
+        requires_split_confirmation: { type: boolean }
+        creates_orders: { type: boolean, const: false }
+        reserves_stock: { type: boolean, const: false }
+        notice: { type: string }
+    CheckoutPreview:
+      type: object
+      required: [ request_version, cart_lock_version, current_as_of, calculation_version, destination, groups, summary ]
+      properties:
+        request_version: { type: [ string, 'null' ] }
+        cart_lock_version: { type: integer, minimum: 1 }
+        current_as_of: { type: string, format: date-time }
+        calculation_version: { type: string }
+        destination: { $ref: "#/components/schemas/CartDestination" }
+        groups: { type: array, items: { $ref: "#/components/schemas/CheckoutGroupPreview" } }
+        summary: { $ref: "#/components/schemas/CheckoutPreviewSummary" }
+    CheckoutPreviewEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { $ref: "#/components/schemas/CheckoutPreview" }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    StoreHoursDay:
+      type: object
+      required: [ date, day_of_week, weekday, status, opens_at, closes_at, source ]
+      properties:
+        date: { type: string, format: date, description: Asia/Manila calendar date. }
+        day_of_week: { type: integer, minimum: 1, maximum: 7 }
+        weekday: { type: string }
+        status: { type: string, enum: [ OPEN, CLOSED ] }
+        opens_at: { type: [ string, 'null' ], pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$' }
+        closes_at: { type: [ string, 'null' ], pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$', description: The closing minute itself is closed. }
+        source: { type: string, enum: [ WEEKLY, DATE_OVERRIDE ] }
+    StoreNextOpening:
+      type: object
+      required: [ date, weekday, opens_at ]
+      properties:
+        date: { type: string, format: date }
+        weekday: { type: string }
+        opens_at: { type: string }
+    StoreOpenNow:
+      description: Informational label from the saved schedule and server time in Asia/Manila; not staff presence, stock or a response promise.
+      type: object
+      required: [ status, closes_at, next_opening, basis ]
+      properties:
+        status: { type: string, enum: [ OPEN, CLOSED, UNAVAILABLE ] }
+        closes_at: { type: [ string, 'null' ] }
+        next_opening: { oneOf: [ { $ref: "#/components/schemas/StoreNextOpening" }, { type: 'null' } ] }
+        basis: { type: string, enum: [ SAVED_SCHEDULE, DATE_OVERRIDE ] }
     RadiusKm:
       description: Approved Buyer/Vendor radius allowlist; 5 km is the Buyer default and 50 km the platform maximum.
       type: integer
@@ -5180,7 +6125,7 @@ components:
         closes_at: { type: [ string, 'null' ], pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$', description: 'Later than opens_at on the same day; overnight periods are unsupported.' }
     PublicStoreProfile:
       type: object
-      required: [ id, vacation_mode, public_store_name, description, public_email, public_phone, logo_url, banner_url, address, supplier_type, niches, fulfillment_method, score_label, hours_status, operating_schedule, effective_today, effective_date, effective_source, time_zone ]
+      required: [ id, vacation_mode, public_store_name, description, public_email, public_phone, logo_url, banner_url, address, supplier_type, niches, fulfillment_method, score_label, hours_status, operating_schedule, effective_today, effective_date, effective_source, time_zone, week, open_now, all_closed, hours_as_of, hours_notice ]
       properties:
         id: { type: string, format: uuid }
         vacation_mode: { type: boolean, description: 'True when all new procurement is paused; existing work remains available.' }
@@ -5201,6 +6146,12 @@ components:
         fulfillment_method: { type: [ string, 'null' ] }
         score_label: { $ref: '#/components/schemas/ScoreLabel' }
         hours_status: { type: string, enum: [ AVAILABLE, UNAVAILABLE ], description: 'UNAVAILABLE shows Hours Unavailable; the store stays visible and hours are never fabricated.' }
+        week: { type: array, maxItems: 7, items: { $ref: '#/components/schemas/StoreHoursDay' }, description: 'Today and the next six Asia/Manila dates, a unique dated override applied before the weekly rule; explicit Closed days kept. Empty when hours are unavailable.' }
+        open_now: { $ref: '#/components/schemas/StoreOpenNow' }
+        all_closed: { type: boolean, description: 'True when every weekly day is explicitly Closed, which is a valid saved schedule.' }
+        hours_as_of: { type: string, format: date-time }
+        hours_notice: { type: string }
+        hours_unavailable_reason: { type: string, enum: [ SCHEDULE_NOT_AVAILABLE ] }
     PublicStoreProfileEnvelope:
       type: object
       required: [ data, meta, errors ]

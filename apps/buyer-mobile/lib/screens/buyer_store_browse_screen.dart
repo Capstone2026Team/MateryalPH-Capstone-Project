@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:materyalph_api_client/materyalph_api_client.dart';
 
+import '../design_system/components/procurement_components.dart';
+import '../features/item_procurement/procurement_models.dart';
+import '../features/item_procurement/procurement_repository.dart';
+
 class BuyerStoreRepository {
   BuyerStoreRepository({MateryalphApiClient? client})
     : _client =
@@ -155,10 +159,15 @@ class BuyerPublicStoreProfileScreen extends StatefulWidget {
     super.key,
     required this.storeId,
     required this.repository,
+    this.onBrowseProducts,
   });
 
   final String storeId;
   final BuyerStoreRepository repository;
+
+  /// Opens this store's eligible listings in Search Results; null where browsing is unavailable.
+  final void Function(BuildContext context, String storeId, String storeName)?
+  onBrowseProducts;
 
   @override
   State<BuyerPublicStoreProfileScreen> createState() =>
@@ -166,30 +175,32 @@ class BuyerPublicStoreProfileScreen extends StatefulWidget {
 }
 
 class _BuyerPublicStoreProfileScreenState
-    extends State<BuyerPublicStoreProfileScreen> {
+    extends State<BuyerPublicStoreProfileScreen>
+    with WidgetsBindingObserver {
   late Future<PublicStoreProfile> _profile = widget.repository.profile(
     widget.storeId,
   );
-  static const _days = [
-    'Monday',
-    'Tuesday',
-    'Wednesday',
-    'Thursday',
-    'Friday',
-    'Saturday',
-    'Sunday',
-  ];
 
-  String _time(String value) {
-    final parts = value.split(':');
-    final hour = int.parse(parts[0]);
-    return '${hour % 12 == 0 ? 12 : hour % 12}:${parts[1]} ${hour < 12 ? 'AM' : 'PM'}';
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
   }
 
-  String _hours(StoreOperatingDay day) =>
-      day.status == StoreOperatingDayStatusEnum.CLOSED
-      ? 'Closed'
-      : '${_time(day.opensAt!)} – ${_time(day.closesAt!)}';
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  // A cached view shows its freshness and refreshes on resume.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _reload();
+  }
+
+  void _reload() =>
+      setState(() => _profile = widget.repository.profile(widget.storeId));
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -201,70 +212,173 @@ class _BuyerPublicStoreProfileScreenState
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
-          return Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('Store Profile could not be loaded.'),
-                TextButton(
-                  onPressed: () => setState(
-                    () => _profile = widget.repository.profile(widget.storeId),
-                  ),
-                  child: const Text('Retry'),
-                ),
-              ],
-            ),
+          return StateMessage(
+            kind: StateKind.error,
+            title: 'Store Profile could not be loaded.',
+            message: 'Check your connection and retry.',
+            actionLabel: 'Retry',
+            onAction: _reload,
           );
         }
         final profile = snapshot.data!;
-        final schedule = profile.operatingSchedule.toList()
-          ..sort((a, b) => a.dayOfWeek.compareTo(b.dayOfWeek));
-        return ListView(
-          padding: const EdgeInsets.all(24),
-          children: [
-            Text(
-              profile.publicStoreName,
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-            if (profile.vacationMode == true) ...[
-              const SizedBox(height: 12),
-              const Text('Vacation Mode · This store has paused new procurement. Existing orders and messaging remain available.'),
-            ],
-            if (profile.description != null) ...[
-              const SizedBox(height: 12),
-              Text(profile.description!),
-            ],
-            const SizedBox(height: 28),
-            Text('Store Hours', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 8),
-            const Text(
-              'Normal weekly schedule · Philippine local time. Hours are informational and do not guarantee staff availability.',
-            ),
-            const SizedBox(height: 12),
-            if (profile.hoursStatus ==
-                PublicStoreProfileHoursStatusEnum.UNAVAILABLE)
-              const Text(
-                'Hours unavailable. This store is still listed; check with the store before visiting.',
-              ),
-            for (final day in schedule)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(_days[day.dayOfWeek - 1]),
-                trailing: Text(_hours(day)),
-              ),
-            if (profile.effectiveToday != null &&
-                profile.effectiveSource ==
-                    PublicStoreProfileEffectiveSourceEnum.DATE_OVERRIDE) ...[
-              const Divider(),
+        final hours = storeHoursFromProfile(profile);
+        return RefreshIndicator(
+          onRefresh: () async => _reload(),
+          child: ListView(
+            padding: const EdgeInsets.all(24),
+            children: [
               Text(
-                'Today’s hours: ${_hours(profile.effectiveToday!)}',
-                style: Theme.of(context).textTheme.titleMedium,
+                profile.publicStoreName,
+                style: Theme.of(context).textTheme.headlineMedium,
               ),
-              const Text('Date-specific schedule'),
+              if (profile.vacationMode == true) ...[
+                const SizedBox(height: 12),
+                const Text(
+                  'Vacation Mode · This store has paused new procurement. Existing orders and messaging remain available.',
+                ),
+              ],
+              if (profile.description != null) ...[
+                const SizedBox(height: 12),
+                Text(profile.description!),
+              ],
+              if (widget.onBrowseProducts != null) ...[
+                const SizedBox(height: 16),
+                FilledButton.icon(
+                  onPressed: () => widget.onBrowseProducts!(
+                    context,
+                    profile.id,
+                    profile.publicStoreName,
+                  ),
+                  icon: const Icon(Icons.inventory_2_outlined),
+                  label: const Text('Browse this store’s products'),
+                ),
+              ],
+              const SizedBox(height: 28),
+              StoreHoursSection(hours: hours, onRetry: _reload),
             ],
-          ],
+          ),
         );
       },
     ),
+  );
+}
+
+/// Saved Store Operation schedule in Asia/Manila: today and the next six dates with explicit Closed
+/// days and date-specific hours marked. Dates and times are displayed exactly as the server sent
+/// them, so a phone set to another time zone still shows the Philippine schedule.
+class StoreHoursSection extends StatelessWidget {
+  const StoreHoursSection({
+    super.key,
+    required this.hours,
+    required this.onRetry,
+  });
+
+  final StoreHoursView hours;
+  final VoidCallback onRetry;
+
+  static const _months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+
+  static String _date(String iso) {
+    final parts = iso.split('-');
+    return '${_months[int.parse(parts[1]) - 1]} ${int.parse(parts[2])}';
+  }
+
+  String get _openNow {
+    if (hours.allClosed) return 'Closed on all days of the saved schedule';
+    return switch (hours.openNowStatus) {
+      'OPEN' => 'Open now · closes ${formatClock(hours.closesAt!)}',
+      _ =>
+        hours.nextOpeningDate == null
+            ? 'Closed now · no opening in the next 7 days'
+            : 'Closed now · opens ${hours.nextOpeningWeekday} ${_date(hours.nextOpeningDate!)}, ${formatClock(hours.nextOpeningTime!)}',
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Semantics(
+        header: true,
+        child: Text(
+          'Store Hours',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+      ),
+      const SizedBox(height: 8),
+      if (!hours.available)
+        StatusBand(
+          tone: BandTone.warning,
+          title: 'Hours unavailable',
+          message:
+              'This store is still listed; check with the store before visiting.',
+          action: TextButton(onPressed: onRetry, child: const Text('Retry')),
+        )
+      else ...[
+        Row(
+          children: [
+            Icon(
+              hours.openNowStatus == 'OPEN'
+                  ? Icons.check_circle_outline
+                  : Icons.schedule,
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                _openNow,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        for (final (index, day) in hours.week.indexed)
+          Semantics(
+            container: true,
+            label:
+                '${index == 0 ? 'Today, ' : ''}${day.weekday} ${_date(day.date)}: ${day.open ? '${formatClock(day.opensAt!)} to ${formatClock(day.closesAt!)}' : 'Closed'}${day.fromOverride ? ', date-specific hours' : ''}',
+            excludeSemantics: true,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                spacing: 12,
+                children: [
+                  Text(
+                    '${index == 0 ? 'Today · ' : ''}${day.weekday}, ${_date(day.date)}',
+                    style: TextStyle(
+                      fontWeight: index == 0
+                          ? FontWeight.w700
+                          : FontWeight.w500,
+                    ),
+                  ),
+                  Text(
+                    '${day.open ? '${formatClock(day.opensAt!)} – ${formatClock(day.closesAt!)}' : 'Closed'}${day.fromOverride ? ' · date-specific' : ''}',
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
+      const SizedBox(height: 8),
+      Text(
+        '${hours.notice} Philippine time (Asia/Manila) · as of ${formatManilaTimestamp(hours.asOf)}.',
+        style: const TextStyle(fontSize: 12),
+      ),
+    ],
   );
 }

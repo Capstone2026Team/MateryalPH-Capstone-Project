@@ -686,7 +686,7 @@ Catalog browsing defaults to distance within the selected category. When a Buyer
 | Stock | In Stock = 100; Limited Stock = 50; Out of Stock = 0 and excluded |
 | Product Rating | `(Product average / 5) × 100`; unrated listing internal default is 60 and is labeled New |
 
-Comparable prices must use the same product, variant, unit, and quantity basis. Sponsored placement, if introduced later, must never be mixed invisibly into SRS.
+Comparable prices must use the same product, variant, unit, and quantity basis. Sponsored placement, if introduced later, must never be mixed invisibly into SRS. A listing without an approved MAT-03 comparable group (Not Yet Comparable) receives the internal neutral Price score of 50, labelled in the ranking explanation; a mapped listing that is the only offer in its group is the lowest comparable price and scores 100 (approved by the project owner on 2026-09-29).
 
 ### Project-Based Procurement
 

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Geography;
 
 use App\Domain\Catalog\EligibleOfferQuery;
-use App\Domain\Vendors\StoreOperatingSchedule;
+use App\Domain\Vendors\PublicStoreHours;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -24,7 +24,7 @@ final class PublicVendorProjection
 {
     public const VERSION = 'phase6.public-vendor.v1';
 
-    public function __construct(private readonly EligibleOfferQuery $offers, private readonly StoreOperatingSchedule $schedule) {}
+    public function __construct(private readonly EligibleOfferQuery $offers, private readonly PublicStoreHours $hours) {}
 
     /** Organizations (alias o) with profile p and current store address version av. */
     public function members(): Builder
@@ -137,24 +137,12 @@ final class PublicVendorProjection
      */
     public function openStatuses(array $profileIds, ?Carbon $at = null): array
     {
-        $now = ($at ?? Carbon::now())->copy()->setTimezone('Asia/Manila');
-        $overrides = DB::table('store_operation_date_overrides')->whereIn('store_profile_id', $profileIds)->where('specific_date', $now->toDateString())->get()->keyBy('store_profile_id');
         $result = [];
-        foreach ($profileIds as $profileId) {
-            $weekly = $this->schedule->weekly($profileId);
-            if (! $this->schedule->valid($weekly)) {
-                $result[$profileId] = ['status' => 'UNAVAILABLE', 'opens_at' => null, 'closes_at' => null, 'basis' => 'SAVED_SCHEDULE'];
-
-                continue;
-            }
-            $override = $overrides[$profileId] ?? null;
-            $today = $override === null
-                ? collect($weekly)->firstWhere('day_of_week', $now->isoWeekday())
-                : ['status' => $override->is_closed ? 'CLOSED' : 'OPEN', 'opens_at' => $override->is_closed ? null : substr((string) $override->opens_at, 0, 5), 'closes_at' => $override->is_closed ? null : substr((string) $override->closes_at, 0, 5)];
-            $clock = $now->format('H:i');
-            $open = ($today['status'] ?? 'CLOSED') === 'OPEN' && $clock >= $today['opens_at'] && $clock < $today['closes_at'];
-            $result[$profileId] = ['status' => $open ? 'OPEN' : 'CLOSED', 'opens_at' => $today['opens_at'] ?? null, 'closes_at' => $today['closes_at'] ?? null,
-                'basis' => $override === null ? 'SAVED_SCHEDULE' : 'DATE_OVERRIDE'];
+        foreach ($this->hours->describeMany($profileIds, $at) as $profileId => $hours) {
+            $today = $hours['today'];
+            $result[$profileId] = $today === null
+                ? ['status' => 'UNAVAILABLE', 'opens_at' => null, 'closes_at' => null, 'basis' => 'SAVED_SCHEDULE']
+                : ['status' => $hours['open_now']['status'], 'opens_at' => $today['opens_at'], 'closes_at' => $today['closes_at'], 'basis' => $hours['open_now']['basis']];
         }
 
         return $result;

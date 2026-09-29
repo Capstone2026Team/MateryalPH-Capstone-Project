@@ -14,7 +14,9 @@ import 'package:materyalph_api_client/src/api/admin_product_compliance_api.dart'
 import 'package:materyalph_api_client/src/api/admin_vendor_verification_api.dart';
 import 'package:materyalph_api_client/src/api/agreements_api.dart';
 import 'package:materyalph_api_client/src/api/authentication_api.dart';
+import 'package:materyalph_api_client/src/api/buyer_cart_api.dart';
 import 'package:materyalph_api_client/src/api/buyer_discovery_api.dart';
+import 'package:materyalph_api_client/src/api/buyer_explore_api.dart';
 import 'package:materyalph_api_client/src/api/buyer_locations_api.dart';
 import 'package:materyalph_api_client/src/api/stores_api.dart';
 import 'package:materyalph_api_client/src/api/system_api.dart';
@@ -148,10 +150,22 @@ class MateryalphApiClient {
     return AuthenticationApi(dio, serializers);
   }
 
+  /// Get BuyerCartApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  BuyerCartApi getBuyerCartApi() {
+    return BuyerCartApi(dio, serializers);
+  }
+
   /// Get BuyerDiscoveryApi instance, base route and serializer can be overridden by a given but be careful,
   /// by doing that all interceptors will not be executed
   BuyerDiscoveryApi getBuyerDiscoveryApi() {
     return BuyerDiscoveryApi(dio, serializers);
+  }
+
+  /// Get BuyerExploreApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  BuyerExploreApi getBuyerExploreApi() {
+    return BuyerExploreApi(dio, serializers);
   }
 
   /// Get BuyerLocationsApi instance, base route and serializer can be overridden by a given but be careful,

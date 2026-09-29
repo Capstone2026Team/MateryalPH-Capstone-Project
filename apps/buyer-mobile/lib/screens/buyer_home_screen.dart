@@ -3,7 +3,13 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../auth/auth_repository.dart';
 import '../design_system/theme.dart';
+import '../features/item_procurement/cart_controller.dart';
+import '../features/item_procurement/explore_controller.dart';
+import '../features/item_procurement/explore_screen.dart';
+import '../features/item_procurement/procurement_navigation.dart';
+import '../features/item_procurement/procurement_repository.dart';
 import '../features/map_discovery/device_location.dart';
+import '../features/map_discovery/discovery_controller.dart';
 import '../features/map_discovery/discovery_repository.dart';
 import '../features/map_discovery/map_home_screen.dart';
 import '../features/map_discovery/supplier_map.dart';
@@ -13,6 +19,7 @@ import 'buyer_store_browse_screen.dart';
 
 /// The five-destination Buyer shell. Map is the default authenticated destination and stays
 /// mounted while another tab is open, so the selected location, radius and selection survive.
+/// Map and Explore share one DiscoveryController: Explore always uses the Map's origin and radius.
 class BuyerHomeScreen extends StatefulWidget {
   const BuyerHomeScreen({
     super.key,
@@ -20,6 +27,7 @@ class BuyerHomeScreen extends StatefulWidget {
     this.repository,
     this.onSessionEnded,
     this.discoveryRepository,
+    this.procurementRepository,
     this.deviceLocation = const GeolocatorDeviceLocationService(),
     this.mapBuilder = defaultSupplierMapBuilder,
   });
@@ -28,6 +36,7 @@ class BuyerHomeScreen extends StatefulWidget {
   final AuthRepository? repository;
   final VoidCallback? onSessionEnded;
   final DiscoveryRepository? discoveryRepository;
+  final ProcurementRepository? procurementRepository;
   final DeviceLocationService deviceLocation;
   final SupplierMapBuilder mapBuilder;
 
@@ -46,6 +55,45 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
               client: widget.repository!.apiClient,
               onSessionExpired: _expireSession,
             ));
+  late final ProcurementRepository? _procurement =
+      widget.procurementRepository ??
+      (widget.repository == null
+          ? null
+          : ApiProcurementRepository(
+              client: widget.repository!.apiClient,
+              onSessionExpired: _expireSession,
+            ));
+  late final DiscoveryController? _discoveryController = _discovery == null
+      ? null
+      : DiscoveryController(repository: _discovery);
+  late final ExploreController? _explore =
+      _procurement == null || _discoveryController == null
+      ? null
+      : ExploreController(
+          repository: _procurement,
+          discovery: _discoveryController,
+        );
+  late final CartController? _cart = _procurement == null
+      ? null
+      : CartController(repository: _procurement);
+  late final ProcurementNavigation? _navigation =
+      _explore == null || _cart == null
+      ? null
+      : ProcurementNavigation(
+          explore: _explore,
+          cart: _cart,
+          repository: _procurement!,
+          openStoreProfile: _openStore,
+        );
+  bool _cartLoaded = false;
+
+  @override
+  void dispose() {
+    _explore?.dispose();
+    _cart?.dispose();
+    _discoveryController?.dispose();
+    super.dispose();
+  }
 
   Future<void> _expireSession() async {
     await widget.repository?.clearAccountSession();
@@ -63,9 +111,35 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
     ),
   );
 
+  void _openStore(BuildContext context, String storeId) =>
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => BuyerPublicStoreProfileScreen(
+            storeId: storeId,
+            repository: BuyerStoreRepository(),
+            onBrowseProducts: _navigation == null
+                ? null
+                : (context, id, name) => _navigation.browseStore(
+                    context,
+                    vendorId: id,
+                    vendorName: name,
+                  ),
+          ),
+        ),
+      );
+
+  void _select(int index) {
+    if (index == 1 && !_cartLoaded) {
+      _cartLoaded = true;
+      _cart?.load();
+    }
+    setState(() => _destination = index);
+  }
+
   @override
   Widget build(BuildContext context) {
     final discovery = _discovery;
+    final navigation = _navigation;
     return Scaffold(
       backgroundColor: Colors.white,
       body: Stack(
@@ -80,25 +154,25 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                   ? const SafeArea(child: BuyerUnavailableContent())
                   : MapHomeScreen(
                       repository: discovery,
+                      controller: _discoveryController,
                       deviceLocation: widget.deviceLocation,
                       mapBuilder: widget.mapBuilder,
                       onUnavailable: _unavailable,
+                      onOpenSearch: navigation == null
+                          ? null
+                          : () => _select(1),
+                      onOpenCart: navigation == null
+                          ? null
+                          : () => navigation.openCart(context),
                       onOpenStore: (context, supplier) =>
-                          Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (_) => BuyerPublicStoreProfileScreen(
-                                storeId: supplier.resultId,
-                                repository: BuyerStoreRepository(),
-                              ),
-                            ),
-                          ),
+                          _openStore(context, supplier.resultId),
                     ),
             ),
           ),
           if (_destination != 0) Positioned.fill(child: _destinationPage()),
         ],
       ),
-      bottomNavigationBar: _navigation(),
+      bottomNavigationBar: _navigationBar(),
     );
   }
 
@@ -113,6 +187,17 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
       );
     }
     if (_destination == 1) {
+      final explore = _explore;
+      final cart = _cart;
+      final navigation = _navigation;
+      if (explore != null && cart != null && navigation != null) {
+        return ExploreScreen(
+          controller: explore,
+          cart: cart,
+          navigation: navigation,
+          onOpenMap: () => _select(0),
+        );
+      }
       return Scaffold(
         appBar: AppBar(title: const Text('Explore stores')),
         body: const BuyerStoreBrowseScreen(),
@@ -129,7 +214,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
     );
   }
 
-  Widget _navigation() {
+  Widget _navigationBar() {
     const icons = [
       LucideIcons.compass,
       LucideIcons.layoutGrid,
@@ -151,12 +236,12 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
               Expanded(
                 child: Semantics(
                   selected: index == _destination,
-                  onTap: () => setState(() => _destination = index),
+                  onTap: () => _select(index),
                   button: true,
                   label: _labels[index],
                   child: ExcludeSemantics(
                     child: InkWell(
-                      onTap: () => setState(() => _destination = index),
+                      onTap: () => _select(index),
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(minHeight: 76),
                         child: Column(

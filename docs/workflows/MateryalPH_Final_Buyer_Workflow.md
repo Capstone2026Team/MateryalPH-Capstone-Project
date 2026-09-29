@@ -99,7 +99,7 @@ Both new page flows inherit the existing loading/error/offline/permission, focus
 
 - **Design.** The page provides editable query text, result count, selected location and radius, sort control, filter chips, active-filter summary, list/grid selection, and accessible result cards. Each card shows product, normalized unit price, public stock status, Vendor, distance, rating eligibility, fulfillment methods, badges, and data-freshness time.
 - **Flow.** A query is normalized for aliases and typographical similarity. Filters may include category, brand, variant, compliance status, availability, fulfillment method, Favorite Supplier, price range, and radius. Changing radius or weights requests a new ranked result set; Back restores the prior query and scroll position.
-- **Logic.** Cursor pagination prevents duplicate cards. Results are deduplicated by listing and variant. Empty results offer filter removal or confirmed radius expansion. The page never represents Tier 1 directory records as purchasable inventory.
+- **Logic.** Cursor pagination prevents duplicate cards. Results are deduplicated by listing and variant: each listing appears as one card showing its best eligible variant under the active sort, with the count of other options; SRS and Best Price come from that variant (approved by the project owner on 2026-09-29). Empty results offer filter removal or confirmed radius expansion. The page never represents Tier 1 directory records as purchasable inventory.
 
 **Product Details**
 

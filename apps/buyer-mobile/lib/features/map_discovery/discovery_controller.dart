@@ -253,6 +253,17 @@ class DiscoveryController extends ChangeNotifier {
     }
   }
 
+  /// Favorite from another page (Product Details, Store Profile). Keeps map rows in sync and lets
+  /// the caller show a failure instead of swallowing it.
+  Future<void> setFavorite(String vendorId, {required bool favorite}) async {
+    await _repository.setFavorite(vendorId, favorite: favorite);
+    items = [
+      for (final item in items)
+        item.resultId == vendorId ? item.withFavorite(favorite) : item,
+    ];
+    _notify();
+  }
+
   Future<void> _requestRoute(SupplierResultView supplier) async {
     final currentOrigin = origin;
     final currentPage = page;

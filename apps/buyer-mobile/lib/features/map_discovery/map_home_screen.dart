@@ -33,6 +33,9 @@ class MapHomeScreen extends StatefulWidget {
     this.onUnavailable,
     this.openLink,
     this.share,
+    this.controller,
+    this.onOpenSearch,
+    this.onOpenCart,
   });
 
   final DiscoveryRepository repository;
@@ -43,14 +46,18 @@ class MapHomeScreen extends StatefulWidget {
   final Future<void> Function(Uri uri)? openLink;
   final void Function(String text)? share;
 
+  /// Shared with Explore so both use the same origin and radius; owned by the caller when given.
+  final DiscoveryController? controller;
+  final VoidCallback? onOpenSearch;
+  final VoidCallback? onOpenCart;
+
   @override
   State<MapHomeScreen> createState() => _MapHomeScreenState();
 }
 
 class _MapHomeScreenState extends State<MapHomeScreen> {
-  late final DiscoveryController _controller = DiscoveryController(
-    repository: widget.repository,
-  );
+  late final DiscoveryController _controller =
+      widget.controller ?? DiscoveryController(repository: widget.repository);
   final DraggableScrollableController _sheet = DraggableScrollableController();
   SupplierListView _view = SupplierListView.all;
   bool? _listMode;
@@ -76,7 +83,7 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
   @override
   void dispose() {
     _controller.removeListener(_onChanged);
-    _controller.dispose();
+    if (widget.controller == null) _controller.dispose();
     _sheet.dispose();
     super.dispose();
   }
@@ -279,7 +286,9 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
               ),
               IconButton(
                 tooltip: 'Search',
-                onPressed: () => widget.onUnavailable?.call('Search'),
+                onPressed:
+                    widget.onOpenSearch ??
+                    () => widget.onUnavailable?.call('Search'),
                 icon: const Icon(LucideIcons.search),
               ),
               IconButton(
@@ -289,7 +298,9 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
               ),
               IconButton(
                 tooltip: 'Cart',
-                onPressed: () => widget.onUnavailable?.call('Cart'),
+                onPressed:
+                    widget.onOpenCart ??
+                    () => widget.onUnavailable?.call('Cart'),
                 icon: const Icon(LucideIcons.shoppingCart),
               ),
             ],

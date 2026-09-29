@@ -1,4 +1,4 @@
-# @materyalph/api-client-ts@1.0.0-phase.6
+# @materyalph/api-client-ts@1.0.0-phase.7
 
 A TypeScript SDK client for the localhost API.
 
@@ -137,6 +137,13 @@ All URIs are relative to */api/v1*
 *AuthenticationApi* | [**verifyBuyerMobileBotChallenge**](docs/AuthenticationApi.md#verifybuyermobilebotchallenge) | **POST** /mobile/auth/bot-challenges/{challenge_id}/verify |
 *AuthenticationApi* | [**verifyBuyerMobileEmail**](docs/AuthenticationApi.md#verifybuyermobileemail) | **POST** /mobile/auth/verify-email |
 *AuthenticationApi* | [**verifyEmail**](docs/AuthenticationApi.md#verifyemailoperation) | **POST** /auth/verify-email |
+*BuyerCartApi* | [**addBuyerCartItem**](docs/BuyerCartApi.md#addbuyercartitem) | **POST** /buyers/cart/items |
+*BuyerCartApi* | [**getBuyerCart**](docs/BuyerCartApi.md#getbuyercart) | **GET** /buyers/cart |
+*BuyerCartApi* | [**previewBuyerCheckout**](docs/BuyerCartApi.md#previewbuyercheckout) | **POST** /buyers/cart/checkout-preview |
+*BuyerCartApi* | [**removeBuyerCartItem**](docs/BuyerCartApi.md#removebuyercartitem) | **DELETE** /buyers/cart/items/{itemId} |
+*BuyerCartApi* | [**setBuyerCartDestination**](docs/BuyerCartApi.md#setbuyercartdestination) | **PUT** /buyers/cart/destination |
+*BuyerCartApi* | [**setBuyerCartFulfillment**](docs/BuyerCartApi.md#setbuyercartfulfillment) | **PUT** /buyers/cart/vendor-groups/{vendorId}/fulfillment |
+*BuyerCartApi* | [**updateBuyerCartItem**](docs/BuyerCartApi.md#updatebuyercartitem) | **PATCH** /buyers/cart/items/{itemId} |
 *BuyerDiscoveryApi* | [**addFavoriteSupplier**](docs/BuyerDiscoveryApi.md#addfavoritesupplier) | **PUT** /buyers/favorite-suppliers/{vendorId} |
 *BuyerDiscoveryApi* | [**estimateBuyerRoute**](docs/BuyerDiscoveryApi.md#estimatebuyerroute) | **POST** /buyers/discovery/routes |
 *BuyerDiscoveryApi* | [**getDirectorySupplierDetails**](docs/BuyerDiscoveryApi.md#getdirectorysupplierdetails) | **GET** /buyers/discovery/directory-suppliers/{supplierId} |
@@ -144,6 +151,12 @@ All URIs are relative to */api/v1*
 *BuyerDiscoveryApi* | [**removeFavoriteSupplier**](docs/BuyerDiscoveryApi.md#removefavoritesupplier) | **DELETE** /buyers/favorite-suppliers/{vendorId} |
 *BuyerDiscoveryApi* | [**saveBuyerDiscoveryRadius**](docs/BuyerDiscoveryApi.md#savebuyerdiscoveryradius) | **PUT** /buyers/discovery/preferences |
 *BuyerDiscoveryApi* | [**searchBuyerSuppliers**](docs/BuyerDiscoveryApi.md#searchbuyersuppliers) | **POST** /buyers/discovery/search |
+*BuyerExploreApi* | [**getBuyerExploreSummary**](docs/BuyerExploreApi.md#getbuyerexploresummary) | **POST** /buyers/explore/summary |
+*BuyerExploreApi* | [**getBuyerItemRankingPreferences**](docs/BuyerExploreApi.md#getbuyeritemrankingpreferences) | **GET** /buyers/ranking-preferences/item-based |
+*BuyerExploreApi* | [**getBuyerListingDetails**](docs/BuyerExploreApi.md#getbuyerlistingdetails) | **POST** /buyers/listings/{listingId}/details |
+*BuyerExploreApi* | [**resetBuyerItemRankingPreferences**](docs/BuyerExploreApi.md#resetbuyeritemrankingpreferences) | **DELETE** /buyers/ranking-preferences/item-based |
+*BuyerExploreApi* | [**saveBuyerItemRankingPreferences**](docs/BuyerExploreApi.md#savebuyeritemrankingpreferences) | **PUT** /buyers/ranking-preferences/item-based |
+*BuyerExploreApi* | [**searchBuyerListings**](docs/BuyerExploreApi.md#searchbuyerlistings) | **POST** /buyers/listings/search |
 *BuyerLocationsApi* | [**createBuyerLocation**](docs/BuyerLocationsApi.md#createbuyerlocation) | **POST** /buyers/locations |
 *BuyerLocationsApi* | [**getBuyerOnboarding**](docs/BuyerLocationsApi.md#getbuyeronboarding) | **GET** /buyers/onboarding |
 *BuyerLocationsApi* | [**listBuyerLocations**](docs/BuyerLocationsApi.md#listbuyerlocations) | **GET** /buyers/locations |
@@ -312,6 +325,23 @@ All URIs are relative to */api/v1*
 - [BuyerOnboarding](docs/BuyerOnboarding.md)
 - [BuyerOnboardingEnvelope](docs/BuyerOnboardingEnvelope.md)
 - [BuyerOnboardingUpdate](docs/BuyerOnboardingUpdate.md)
+- [BuyerOriginRequest](docs/BuyerOriginRequest.md)
+- [Cart](docs/Cart.md)
+- [CartDestination](docs/CartDestination.md)
+- [CartDestinationLabels](docs/CartDestinationLabels.md)
+- [CartDestinationUpdate](docs/CartDestinationUpdate.md)
+- [CartEnvelope](docs/CartEnvelope.md)
+- [CartFulfillmentUpdate](docs/CartFulfillmentUpdate.md)
+- [CartIssue](docs/CartIssue.md)
+- [CartItemCreate](docs/CartItemCreate.md)
+- [CartItemUpdate](docs/CartItemUpdate.md)
+- [CartLine](docs/CartLine.md)
+- [CartLineCurrent](docs/CartLineCurrent.md)
+- [CartLineSnapshot](docs/CartLineSnapshot.md)
+- [CartLocationRef](docs/CartLocationRef.md)
+- [CartSummary](docs/CartSummary.md)
+- [CartVendorGroup](docs/CartVendorGroup.md)
+- [CartVendorRef](docs/CartVendorRef.md)
 - [CatalogAttributeDefinition](docs/CatalogAttributeDefinition.md)
 - [CatalogBlocker](docs/CatalogBlocker.md)
 - [CatalogCompletion](docs/CatalogCompletion.md)
@@ -351,9 +381,16 @@ All URIs are relative to */api/v1*
 - [CatalogVariantsSave](docs/CatalogVariantsSave.md)
 - [CatalogVolumeTier](docs/CatalogVolumeTier.md)
 - [CatalogVolumeTierInput](docs/CatalogVolumeTierInput.md)
+- [CheckoutGroupPreview](docs/CheckoutGroupPreview.md)
+- [CheckoutPreview](docs/CheckoutPreview.md)
+- [CheckoutPreviewEnvelope](docs/CheckoutPreviewEnvelope.md)
+- [CheckoutPreviewRequest](docs/CheckoutPreviewRequest.md)
+- [CheckoutPreviewSummary](docs/CheckoutPreviewSummary.md)
+- [CheckoutVendorRef](docs/CheckoutVendorRef.md)
 - [ComparableGroupCreate](docs/ComparableGroupCreate.md)
 - [ComparableGroupEnvelope](docs/ComparableGroupEnvelope.md)
 - [ComparableGroupEnvelopeData](docs/ComparableGroupEnvelopeData.md)
+- [ComparableStatus](docs/ComparableStatus.md)
 - [ComplianceEvidence](docs/ComplianceEvidence.md)
 - [ComplianceEvidenceEnvelope](docs/ComplianceEvidenceEnvelope.md)
 - [ComplianceExtraction](docs/ComplianceExtraction.md)
@@ -367,6 +404,12 @@ All URIs are relative to */api/v1*
 - [ComplianceSubmissionSummary](docs/ComplianceSubmissionSummary.md)
 - [CsrfEnvelope](docs/CsrfEnvelope.md)
 - [CsrfEnvelopeAllOfData](docs/CsrfEnvelopeAllOfData.md)
+- [DatasetLabel](docs/DatasetLabel.md)
+- [DeliveryAmount](docs/DeliveryAmount.md)
+- [DeliveryEstimate](docs/DeliveryEstimate.md)
+- [DeliveryEstimateOption](docs/DeliveryEstimateOption.md)
+- [DeliveryPreview](docs/DeliveryPreview.md)
+- [DeliveryRoute](docs/DeliveryRoute.md)
 - [DirectoryAvailability](docs/DirectoryAvailability.md)
 - [DirectorySupplierDetail](docs/DirectorySupplierDetail.md)
 - [DirectorySupplierDetailEnvelope](docs/DirectorySupplierDetailEnvelope.md)
@@ -380,11 +423,19 @@ All URIs are relative to */api/v1*
 - [DiscoverySearchRequest](docs/DiscoverySearchRequest.md)
 - [EmailRequest](docs/EmailRequest.md)
 - [ErrorEnvelope](docs/ErrorEnvelope.md)
+- [ExploreCategoryCount](docs/ExploreCategoryCount.md)
+- [ExploreCounts](docs/ExploreCounts.md)
+- [ExploreLabels](docs/ExploreLabels.md)
+- [ExploreSummary](docs/ExploreSummary.md)
+- [ExploreSummaryEnvelope](docs/ExploreSummaryEnvelope.md)
 - [FavoriteSupplier](docs/FavoriteSupplier.md)
 - [FavoriteSupplierListEnvelope](docs/FavoriteSupplierListEnvelope.md)
 - [FavoriteSupplierState](docs/FavoriteSupplierState.md)
 - [FavoriteSupplierStateEnvelope](docs/FavoriteSupplierStateEnvelope.md)
+- [FeatureAvailability](docs/FeatureAvailability.md)
 - [FeeAssessment](docs/FeeAssessment.md)
+- [FinancialPreview](docs/FinancialPreview.md)
+- [FinancialPreviewLine](docs/FinancialPreviewLine.md)
 - [FinancialSnapshot](docs/FinancialSnapshot.md)
 - [FleetVehicle](docs/FleetVehicle.md)
 - [FleetVehicleEligibility](docs/FleetVehicleEligibility.md)
@@ -421,9 +472,29 @@ All URIs are relative to */api/v1*
 - [InventorySettings](docs/InventorySettings.md)
 - [InventorySettingsEnvelope](docs/InventorySettingsEnvelope.md)
 - [InventorySettingsUpdate](docs/InventorySettingsUpdate.md)
+- [ListingCategoryRef](docs/ListingCategoryRef.md)
+- [ListingCompliance](docs/ListingCompliance.md)
 - [ListingComplianceStatus](docs/ListingComplianceStatus.md)
+- [ListingDetailFulfillment](docs/ListingDetailFulfillment.md)
+- [ListingDetailVendor](docs/ListingDetailVendor.md)
+- [ListingDetails](docs/ListingDetails.md)
+- [ListingDetailsEnvelope](docs/ListingDetailsEnvelope.md)
+- [ListingFulfillmentSummary](docs/ListingFulfillmentSummary.md)
+- [ListingImage](docs/ListingImage.md)
+- [ListingPrice](docs/ListingPrice.md)
+- [ListingSearchEnvelope](docs/ListingSearchEnvelope.md)
+- [ListingSearchExpansion](docs/ListingSearchExpansion.md)
+- [ListingSearchMeta](docs/ListingSearchMeta.md)
+- [ListingSearchQuery](docs/ListingSearchQuery.md)
+- [ListingSearchRanking](docs/ListingSearchRanking.md)
+- [ListingSearchRequest](docs/ListingSearchRequest.md)
+- [ListingSearchResult](docs/ListingSearchResult.md)
+- [ListingSearchSort](docs/ListingSearchSort.md)
 - [ListingStatus](docs/ListingStatus.md)
 - [ListingStatusChange](docs/ListingStatusChange.md)
+- [ListingVariantOffer](docs/ListingVariantOffer.md)
+- [ListingVariantPrice](docs/ListingVariantPrice.md)
+- [ListingVendorCard](docs/ListingVendorCard.md)
 - [LockVersionRequest](docs/LockVersionRequest.md)
 - [LoginRequest](docs/LoginRequest.md)
 - [MapPoint](docs/MapPoint.md)
@@ -442,13 +513,17 @@ All URIs are relative to */api/v1*
 - [PageMeta](docs/PageMeta.md)
 - [PasswordRecoveryRequest](docs/PasswordRecoveryRequest.md)
 - [PasswordResetRequest](docs/PasswordResetRequest.md)
+- [PaymentMethodEligibility](docs/PaymentMethodEligibility.md)
+- [PickupPreview](docs/PickupPreview.md)
 - [PriceHistoryEntry](docs/PriceHistoryEntry.md)
 - [PriceHistoryEnvelope](docs/PriceHistoryEnvelope.md)
+- [ProcessingFeeAmount](docs/ProcessingFeeAmount.md)
 - [ProductComplianceCaseEnvelope](docs/ProductComplianceCaseEnvelope.md)
 - [ProductComplianceCaseEnvelopeData](docs/ProductComplianceCaseEnvelopeData.md)
 - [ProductComplianceDecision](docs/ProductComplianceDecision.md)
 - [ProductComplianceQueueEnvelope](docs/ProductComplianceQueueEnvelope.md)
 - [ProductComplianceQueueItem](docs/ProductComplianceQueueItem.md)
+- [ProductRatingSummary](docs/ProductRatingSummary.md)
 - [ProviderAttribution](docs/ProviderAttribution.md)
 - [PsgcArea](docs/PsgcArea.md)
 - [PsgcAreaListEnvelope](docs/PsgcAreaListEnvelope.md)
@@ -466,6 +541,12 @@ All URIs are relative to */api/v1*
 - [PublicStoreSummary](docs/PublicStoreSummary.md)
 - [RadiusExpansion](docs/RadiusExpansion.md)
 - [RadiusKm](docs/RadiusKm.md)
+- [RankingComponent](docs/RankingComponent.md)
+- [RankingExplanation](docs/RankingExplanation.md)
+- [RankingPreferences](docs/RankingPreferences.md)
+- [RankingPreferencesEnvelope](docs/RankingPreferencesEnvelope.md)
+- [RankingPreferencesUpdate](docs/RankingPreferencesUpdate.md)
+- [RankingWeightSet](docs/RankingWeightSet.md)
 - [RegisterRequest](docs/RegisterRequest.md)
 - [RegistrationEnvelope](docs/RegistrationEnvelope.md)
 - [RegistrationEnvelopeAllOfData](docs/RegistrationEnvelopeAllOfData.md)
@@ -482,6 +563,9 @@ All URIs are relative to */api/v1*
 - [StockLabel](docs/StockLabel.md)
 - [StoreActivationBlocker](docs/StoreActivationBlocker.md)
 - [StoreActivationReadiness](docs/StoreActivationReadiness.md)
+- [StoreHoursDay](docs/StoreHoursDay.md)
+- [StoreNextOpening](docs/StoreNextOpening.md)
+- [StoreOpenNow](docs/StoreOpenNow.md)
 - [StoreOperatingDay](docs/StoreOperatingDay.md)
 - [SuccessEnvelope](docs/SuccessEnvelope.md)
 - [SupplierOpenStatus](docs/SupplierOpenStatus.md)
@@ -538,6 +622,7 @@ All URIs are relative to */api/v1*
 - [VerifiedVendorSummary](docs/VerifiedVendorSummary.md)
 - [VerifyBotChallengeRequest](docs/VerifyBotChallengeRequest.md)
 - [VerifyEmailRequest](docs/VerifyEmailRequest.md)
+- [VolumeTier](docs/VolumeTier.md)
 - [XenditAccountVerificationWebhook](docs/XenditAccountVerificationWebhook.md)
 - [XenditAccountVerificationWebhookData](docs/XenditAccountVerificationWebhookData.md)
 - [XenditAccountVerificationWebhookDataAccountInfo](docs/XenditAccountVerificationWebhookDataAccountInfo.md)
@@ -586,8 +671,8 @@ This TypeScript SDK client supports the [Fetch API](https://fetch.spec.whatwg.or
 and is automatically generated by the
 [OpenAPI Generator](https://openapi-generator.tech) project:
 
-- API version: `1.0.0-phase.6`
-- Package version: `1.0.0-phase.6`
+- API version: `1.0.0-phase.7`
+- Package version: `1.0.0-phase.7`
 - Generator version: `7.25.0`
 - Build package: `org.openapitools.codegen.languages.TypeScriptFetchClientCodegen`
 

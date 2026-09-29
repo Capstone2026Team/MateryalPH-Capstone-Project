@@ -7,7 +7,9 @@ import 'package:materyalph_api_client/src/model/score_label.dart';
 import 'package:materyalph_api_client/src/model/date.dart';
 import 'package:built_collection/built_collection.dart';
 import 'package:materyalph_api_client/src/model/store_operating_day.dart';
+import 'package:materyalph_api_client/src/model/store_open_now.dart';
 import 'package:materyalph_api_client/src/model/public_address_summary.dart';
+import 'package:materyalph_api_client/src/model/store_hours_day.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -35,6 +37,12 @@ part 'public_store_profile.g.dart';
 /// * [fulfillmentMethod]
 /// * [scoreLabel]
 /// * [hoursStatus] - UNAVAILABLE shows Hours Unavailable; the store stays visible and hours are never fabricated.
+/// * [week] - Today and the next six Asia/Manila dates, a unique dated override applied before the weekly rule; explicit Closed days kept. Empty when hours are unavailable.
+/// * [openNow]
+/// * [allClosed] - True when every weekly day is explicitly Closed, which is a valid saved schedule.
+/// * [hoursAsOf]
+/// * [hoursNotice]
+/// * [hoursUnavailableReason]
 @BuiltValue()
 abstract class PublicStoreProfile implements Built<PublicStoreProfile, PublicStoreProfileBuilder> {
   @BuiltValueField(wireName: r'id')
@@ -99,6 +107,27 @@ abstract class PublicStoreProfile implements Built<PublicStoreProfile, PublicSto
   @BuiltValueField(wireName: r'hours_status')
   PublicStoreProfileHoursStatusEnum get hoursStatus;
   // enum hoursStatusEnum {  AVAILABLE,  UNAVAILABLE,  };
+
+  /// Today and the next six Asia/Manila dates, a unique dated override applied before the weekly rule; explicit Closed days kept. Empty when hours are unavailable.
+  @BuiltValueField(wireName: r'week')
+  BuiltList<StoreHoursDay> get week;
+
+  @BuiltValueField(wireName: r'open_now')
+  StoreOpenNow get openNow;
+
+  /// True when every weekly day is explicitly Closed, which is a valid saved schedule.
+  @BuiltValueField(wireName: r'all_closed')
+  bool get allClosed;
+
+  @BuiltValueField(wireName: r'hours_as_of')
+  DateTime get hoursAsOf;
+
+  @BuiltValueField(wireName: r'hours_notice')
+  String get hoursNotice;
+
+  @BuiltValueField(wireName: r'hours_unavailable_reason')
+  PublicStoreProfileHoursUnavailableReasonEnum? get hoursUnavailableReason;
+  // enum hoursUnavailableReasonEnum {  SCHEDULE_NOT_AVAILABLE,  };
 
   PublicStoreProfile._();
 
@@ -218,6 +247,38 @@ class _$PublicStoreProfileSerializer implements PrimitiveSerializer<PublicStoreP
       object.hoursStatus,
       specifiedType: const FullType(PublicStoreProfileHoursStatusEnum),
     );
+    yield r'week';
+    yield serializers.serialize(
+      object.week,
+      specifiedType: const FullType(BuiltList, [FullType(StoreHoursDay)]),
+    );
+    yield r'open_now';
+    yield serializers.serialize(
+      object.openNow,
+      specifiedType: const FullType(StoreOpenNow),
+    );
+    yield r'all_closed';
+    yield serializers.serialize(
+      object.allClosed,
+      specifiedType: const FullType(bool),
+    );
+    yield r'hours_as_of';
+    yield serializers.serialize(
+      object.hoursAsOf,
+      specifiedType: const FullType(DateTime),
+    );
+    yield r'hours_notice';
+    yield serializers.serialize(
+      object.hoursNotice,
+      specifiedType: const FullType(String),
+    );
+    if (object.hoursUnavailableReason != null) {
+      yield r'hours_unavailable_reason';
+      yield serializers.serialize(
+        object.hoursUnavailableReason,
+        specifiedType: const FullType(PublicStoreProfileHoursUnavailableReasonEnum),
+      );
+    }
   }
 
   @override
@@ -382,6 +443,49 @@ class _$PublicStoreProfileSerializer implements PrimitiveSerializer<PublicStoreP
           ) as PublicStoreProfileHoursStatusEnum;
           result.hoursStatus = valueDes;
           break;
+        case r'week':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(BuiltList, [FullType(StoreHoursDay)]),
+          ) as BuiltList<StoreHoursDay>;
+          result.week.replace(valueDes);
+          break;
+        case r'open_now':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(StoreOpenNow),
+          ) as StoreOpenNow;
+          result.openNow.replace(valueDes);
+          break;
+        case r'all_closed':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(bool),
+          ) as bool;
+          result.allClosed = valueDes;
+          break;
+        case r'hours_as_of':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(DateTime),
+          ) as DateTime;
+          result.hoursAsOf = valueDes;
+          break;
+        case r'hours_notice':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.hoursNotice = valueDes;
+          break;
+        case r'hours_unavailable_reason':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(PublicStoreProfileHoursUnavailableReasonEnum),
+          ) as PublicStoreProfileHoursUnavailableReasonEnum?;
+          if (valueDes == null) continue;
+          result.hoursUnavailableReason = valueDes;
+          break;
         default:
           unhandled.add(key);
           unhandled.add(value);
@@ -454,5 +558,18 @@ class PublicStoreProfileHoursStatusEnum extends EnumClass {
 
   static BuiltSet<PublicStoreProfileHoursStatusEnum> get values => _$publicStoreProfileHoursStatusEnumValues;
   static PublicStoreProfileHoursStatusEnum valueOf(String name) => _$publicStoreProfileHoursStatusEnumValueOf(name);
+}
+
+class PublicStoreProfileHoursUnavailableReasonEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'SCHEDULE_NOT_AVAILABLE')
+  static const PublicStoreProfileHoursUnavailableReasonEnum SCHEDULE_NOT_AVAILABLE = _$publicStoreProfileHoursUnavailableReasonEnum_SCHEDULE_NOT_AVAILABLE;
+
+  static Serializer<PublicStoreProfileHoursUnavailableReasonEnum> get serializer => _$publicStoreProfileHoursUnavailableReasonEnumSerializer;
+
+  const PublicStoreProfileHoursUnavailableReasonEnum._(String name): super(name);
+
+  static BuiltSet<PublicStoreProfileHoursUnavailableReasonEnum> get values => _$publicStoreProfileHoursUnavailableReasonEnumValues;
+  static PublicStoreProfileHoursUnavailableReasonEnum valueOf(String name) => _$publicStoreProfileHoursUnavailableReasonEnumValueOf(name);
 }
 

@@ -78,6 +78,27 @@ final BuiltSet<PublicStoreProfileHoursStatusEnum>
   _$publicStoreProfileHoursStatusEnum_UNAVAILABLE,
 ]);
 
+const PublicStoreProfileHoursUnavailableReasonEnum
+    _$publicStoreProfileHoursUnavailableReasonEnum_SCHEDULE_NOT_AVAILABLE =
+    const PublicStoreProfileHoursUnavailableReasonEnum._(
+        'SCHEDULE_NOT_AVAILABLE');
+
+PublicStoreProfileHoursUnavailableReasonEnum
+    _$publicStoreProfileHoursUnavailableReasonEnumValueOf(String name) {
+  switch (name) {
+    case 'SCHEDULE_NOT_AVAILABLE':
+      return _$publicStoreProfileHoursUnavailableReasonEnum_SCHEDULE_NOT_AVAILABLE;
+    default:
+      throw ArgumentError(name);
+  }
+}
+
+final BuiltSet<PublicStoreProfileHoursUnavailableReasonEnum>
+    _$publicStoreProfileHoursUnavailableReasonEnumValues = BuiltSet<
+        PublicStoreProfileHoursUnavailableReasonEnum>(const <PublicStoreProfileHoursUnavailableReasonEnum>[
+  _$publicStoreProfileHoursUnavailableReasonEnum_SCHEDULE_NOT_AVAILABLE,
+]);
+
 Serializer<PublicStoreProfileEffectiveSourceEnum>
     _$publicStoreProfileEffectiveSourceEnumSerializer =
     _$PublicStoreProfileEffectiveSourceEnumSerializer();
@@ -87,6 +108,9 @@ Serializer<PublicStoreProfileTimeZoneEnum>
 Serializer<PublicStoreProfileHoursStatusEnum>
     _$publicStoreProfileHoursStatusEnumSerializer =
     _$PublicStoreProfileHoursStatusEnumSerializer();
+Serializer<PublicStoreProfileHoursUnavailableReasonEnum>
+    _$publicStoreProfileHoursUnavailableReasonEnumSerializer =
+    _$PublicStoreProfileHoursUnavailableReasonEnumSerializer();
 
 class _$PublicStoreProfileEffectiveSourceEnumSerializer
     implements PrimitiveSerializer<PublicStoreProfileEffectiveSourceEnum> {
@@ -178,6 +202,37 @@ class _$PublicStoreProfileHoursStatusEnumSerializer
           _fromWire[serialized] ?? (serialized is String ? serialized : ''));
 }
 
+class _$PublicStoreProfileHoursUnavailableReasonEnumSerializer
+    implements
+        PrimitiveSerializer<PublicStoreProfileHoursUnavailableReasonEnum> {
+  static const Map<String, Object> _toWire = const <String, Object>{
+    'SCHEDULE_NOT_AVAILABLE': 'SCHEDULE_NOT_AVAILABLE',
+  };
+  static const Map<Object, String> _fromWire = const <Object, String>{
+    'SCHEDULE_NOT_AVAILABLE': 'SCHEDULE_NOT_AVAILABLE',
+  };
+
+  @override
+  final Iterable<Type> types = const <Type>[
+    PublicStoreProfileHoursUnavailableReasonEnum
+  ];
+  @override
+  final String wireName = 'PublicStoreProfileHoursUnavailableReasonEnum';
+
+  @override
+  Object serialize(Serializers serializers,
+          PublicStoreProfileHoursUnavailableReasonEnum object,
+          {FullType specifiedType = FullType.unspecified}) =>
+      _toWire[object.name] ?? object.name;
+
+  @override
+  PublicStoreProfileHoursUnavailableReasonEnum deserialize(
+          Serializers serializers, Object serialized,
+          {FullType specifiedType = FullType.unspecified}) =>
+      PublicStoreProfileHoursUnavailableReasonEnum.valueOf(
+          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+}
+
 class _$PublicStoreProfile extends PublicStoreProfile {
   @override
   final String id;
@@ -217,6 +272,18 @@ class _$PublicStoreProfile extends PublicStoreProfile {
   final ScoreLabel scoreLabel;
   @override
   final PublicStoreProfileHoursStatusEnum hoursStatus;
+  @override
+  final BuiltList<StoreHoursDay> week;
+  @override
+  final StoreOpenNow openNow;
+  @override
+  final bool allClosed;
+  @override
+  final DateTime hoursAsOf;
+  @override
+  final String hoursNotice;
+  @override
+  final PublicStoreProfileHoursUnavailableReasonEnum? hoursUnavailableReason;
 
   factory _$PublicStoreProfile(
           [void Function(PublicStoreProfileBuilder)? updates]) =>
@@ -241,7 +308,13 @@ class _$PublicStoreProfile extends PublicStoreProfile {
       required this.niches,
       this.fulfillmentMethod,
       required this.scoreLabel,
-      required this.hoursStatus})
+      required this.hoursStatus,
+      required this.week,
+      required this.openNow,
+      required this.allClosed,
+      required this.hoursAsOf,
+      required this.hoursNotice,
+      this.hoursUnavailableReason})
       : super._();
   @override
   PublicStoreProfile rebuild(
@@ -274,7 +347,13 @@ class _$PublicStoreProfile extends PublicStoreProfile {
         niches == other.niches &&
         fulfillmentMethod == other.fulfillmentMethod &&
         scoreLabel == other.scoreLabel &&
-        hoursStatus == other.hoursStatus;
+        hoursStatus == other.hoursStatus &&
+        week == other.week &&
+        openNow == other.openNow &&
+        allClosed == other.allClosed &&
+        hoursAsOf == other.hoursAsOf &&
+        hoursNotice == other.hoursNotice &&
+        hoursUnavailableReason == other.hoursUnavailableReason;
   }
 
   @override
@@ -299,6 +378,12 @@ class _$PublicStoreProfile extends PublicStoreProfile {
     _$hash = $jc(_$hash, fulfillmentMethod.hashCode);
     _$hash = $jc(_$hash, scoreLabel.hashCode);
     _$hash = $jc(_$hash, hoursStatus.hashCode);
+    _$hash = $jc(_$hash, week.hashCode);
+    _$hash = $jc(_$hash, openNow.hashCode);
+    _$hash = $jc(_$hash, allClosed.hashCode);
+    _$hash = $jc(_$hash, hoursAsOf.hashCode);
+    _$hash = $jc(_$hash, hoursNotice.hashCode);
+    _$hash = $jc(_$hash, hoursUnavailableReason.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -324,7 +409,13 @@ class _$PublicStoreProfile extends PublicStoreProfile {
           ..add('niches', niches)
           ..add('fulfillmentMethod', fulfillmentMethod)
           ..add('scoreLabel', scoreLabel)
-          ..add('hoursStatus', hoursStatus))
+          ..add('hoursStatus', hoursStatus)
+          ..add('week', week)
+          ..add('openNow', openNow)
+          ..add('allClosed', allClosed)
+          ..add('hoursAsOf', hoursAsOf)
+          ..add('hoursNotice', hoursNotice)
+          ..add('hoursUnavailableReason', hoursUnavailableReason))
         .toString();
   }
 }
@@ -424,6 +515,35 @@ class PublicStoreProfileBuilder
   set hoursStatus(PublicStoreProfileHoursStatusEnum? hoursStatus) =>
       _$this._hoursStatus = hoursStatus;
 
+  ListBuilder<StoreHoursDay>? _week;
+  ListBuilder<StoreHoursDay> get week =>
+      _$this._week ??= ListBuilder<StoreHoursDay>();
+  set week(ListBuilder<StoreHoursDay>? week) => _$this._week = week;
+
+  StoreOpenNowBuilder? _openNow;
+  StoreOpenNowBuilder get openNow => _$this._openNow ??= StoreOpenNowBuilder();
+  set openNow(StoreOpenNowBuilder? openNow) => _$this._openNow = openNow;
+
+  bool? _allClosed;
+  bool? get allClosed => _$this._allClosed;
+  set allClosed(bool? allClosed) => _$this._allClosed = allClosed;
+
+  DateTime? _hoursAsOf;
+  DateTime? get hoursAsOf => _$this._hoursAsOf;
+  set hoursAsOf(DateTime? hoursAsOf) => _$this._hoursAsOf = hoursAsOf;
+
+  String? _hoursNotice;
+  String? get hoursNotice => _$this._hoursNotice;
+  set hoursNotice(String? hoursNotice) => _$this._hoursNotice = hoursNotice;
+
+  PublicStoreProfileHoursUnavailableReasonEnum? _hoursUnavailableReason;
+  PublicStoreProfileHoursUnavailableReasonEnum? get hoursUnavailableReason =>
+      _$this._hoursUnavailableReason;
+  set hoursUnavailableReason(
+          PublicStoreProfileHoursUnavailableReasonEnum?
+              hoursUnavailableReason) =>
+      _$this._hoursUnavailableReason = hoursUnavailableReason;
+
   PublicStoreProfileBuilder() {
     PublicStoreProfile._defaults(this);
   }
@@ -450,6 +570,12 @@ class PublicStoreProfileBuilder
       _fulfillmentMethod = $v.fulfillmentMethod;
       _scoreLabel = $v.scoreLabel.toBuilder();
       _hoursStatus = $v.hoursStatus;
+      _week = $v.week.toBuilder();
+      _openNow = $v.openNow.toBuilder();
+      _allClosed = $v.allClosed;
+      _hoursAsOf = $v.hoursAsOf;
+      _hoursNotice = $v.hoursNotice;
+      _hoursUnavailableReason = $v.hoursUnavailableReason;
       _$v = null;
     }
     return this;
@@ -499,6 +625,15 @@ class PublicStoreProfileBuilder
             scoreLabel: scoreLabel.build(),
             hoursStatus: BuiltValueNullFieldError.checkNotNull(
                 hoursStatus, r'PublicStoreProfile', 'hoursStatus'),
+            week: week.build(),
+            openNow: openNow.build(),
+            allClosed: BuiltValueNullFieldError.checkNotNull(
+                allClosed, r'PublicStoreProfile', 'allClosed'),
+            hoursAsOf: BuiltValueNullFieldError.checkNotNull(
+                hoursAsOf, r'PublicStoreProfile', 'hoursAsOf'),
+            hoursNotice: BuiltValueNullFieldError.checkNotNull(
+                hoursNotice, r'PublicStoreProfile', 'hoursNotice'),
+            hoursUnavailableReason: hoursUnavailableReason,
           );
     } catch (_) {
       late String _$failedField;
@@ -516,6 +651,11 @@ class PublicStoreProfileBuilder
 
         _$failedField = 'scoreLabel';
         scoreLabel.build();
+
+        _$failedField = 'week';
+        week.build();
+        _$failedField = 'openNow';
+        openNow.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
             r'PublicStoreProfile', _$failedField, e.toString());

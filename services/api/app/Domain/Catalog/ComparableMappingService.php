@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Catalog;
 
 use App\Domain\Identity\AuthenticationException;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -20,6 +21,28 @@ final class ComparableMappingService
     public const MAPPING_RULE = 'mat03.exact-key.v1';
 
     public const IDENTITY_CONVERSION = 'IDENTITY';
+
+    /**
+     * SQL form of normalizedPrice() over the aliases added by joinComparable() and a price alias pv: PHP per
+     * canonical unit, rounded half-up to eight decimals (round() on positive NUMERIC), NULL when the variant is
+     * unmapped or has neither an identity unit nor an approved conversion for the stated version.
+     */
+    public const NORMALIZED_PRICE_SQL = "CASE WHEN ca.id IS NULL OR v.pack_quantity <= 0 THEN NULL WHEN v.unit_id = gv.canonical_unit_id THEN round((pv.amount_centavos::numeric / 100) / v.pack_quantity, 8) WHEN uc.multiplier IS NOT NULL AND gv.conversion_version <> 'IDENTITY' THEN round((pv.amount_centavos::numeric / 100) / (v.pack_quantity * uc.multiplier), 8) ELSE NULL END";
+
+    /**
+     * Left-joins a variant query (alias v) to its current approved MAT-03 assignment (ca), group version (gv),
+     * group (cg), canonical unit (cu) and approved conversion (uc) for NORMALIZED_PRICE_SQL.
+     */
+    public static function joinComparable(Builder $query): Builder
+    {
+        return $query
+            ->leftJoin('listing_comparable_assignments as ca', fn ($join) => $join->on('ca.listing_variant_id', '=', 'v.id')->whereNull('ca.effective_until')->where('ca.mapping_state', 'APPROVED'))
+            ->leftJoin('material_comparable_group_versions as gv', 'gv.id', '=', 'ca.material_comparable_group_version_id')
+            ->leftJoin('material_comparable_groups as cg', 'cg.id', '=', 'gv.material_comparable_group_id')
+            ->leftJoin('units as cu', 'cu.id', '=', 'gv.canonical_unit_id')
+            ->leftJoin('unit_conversions as uc', fn ($join) => $join->on('uc.material_id', '=', 'cg.material_id')->on('uc.from_unit_id', '=', 'v.unit_id')
+                ->on('uc.to_unit_id', '=', 'gv.canonical_unit_id')->whereRaw('uc.version::text = gv.conversion_version')->whereNotNull('uc.approved_by_user_id'));
+    }
 
     /**
      * @param  array<string, mixed>  $specification

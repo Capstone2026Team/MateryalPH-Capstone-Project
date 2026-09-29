@@ -25,6 +25,12 @@ Name | Type
 `fulfillmentMethod` | string
 `scoreLabel` | [ScoreLabel](ScoreLabel.md)
 `hoursStatus` | string
+`week` | [Array&lt;StoreHoursDay&gt;](StoreHoursDay.md)
+`openNow` | [StoreOpenNow](StoreOpenNow.md)
+`allClosed` | boolean
+`hoursAsOf` | Date
+`hoursNotice` | string
+`hoursUnavailableReason` | string
 
 ## Example
 
@@ -52,6 +58,12 @@ const example = {
   "fulfillmentMethod": null,
   "scoreLabel": null,
   "hoursStatus": null,
+  "week": null,
+  "openNow": null,
+  "allClosed": null,
+  "hoursAsOf": null,
+  "hoursNotice": null,
+  "hoursUnavailableReason": null,
 } satisfies PublicStoreProfile
 
 console.log(example)
