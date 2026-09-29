@@ -301,11 +301,10 @@ void main() {
       await tester.ensureVisible(find.text('Select it manually'));
       await tester.tap(find.text('Select it manually'));
       await tester.pumpAndSettle();
-      expect(find.text('Search address'), findsOneWidget);
-      expect(find.text('Drop pin'), findsOneWidget);
-      expect(find.text('City or municipality'), findsOneWidget);
-      await tester.tap(find.text('Drop pin'));
-      await tester.pumpAndSettle();
+      expect(find.text('Search location'), findsOneWidget);
+      expect(find.text('Location Details'), findsOneWidget);
+      expect(find.text('Enter address'), findsNothing);
+      expect(find.text('City or municipality'), findsNothing);
       for (final removed in ['Latitude', 'Longitude', 'Enter coordinates']) {
         expect(find.text(removed), findsNothing);
       }
@@ -332,12 +331,13 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('Hi, nice to meet you!'), findsNothing);
         expect(repository.resolvedPoints.single.$2, isTrue);
-        expect(
-          find.text('123 Rizal Avenue, Santa Cruz, Manila, 1003 Metro Manila'),
-          findsOneWidget,
-        );
+        expect(find.text(repository.pointAddress!), findsOneWidget);
+        await tester.tap(find.text('Choose Location'));
+        await tester.pumpAndSettle();
+        expect(repository.saveCalls, 1);
         expect(find.text('Current location'), findsNothing);
-        expect(map.last.origin, const GeoPoint(14.6177, 120.9836));
+        expect(map.last.origin, primaryLocation.point);
+        expect(repository.searches.last.origin.locationId, primaryLocation.id);
       },
     );
 
@@ -433,7 +433,7 @@ void main() {
         expect(map.last.selectedId, 'v-1');
         expect(map.last.routePath, isNotNull);
         expect(repository.routes, hasLength(1));
-        expect(find.text('View Store'), findsOneWidget);
+        expect(find.text('View Storefront'), findsOneWidget);
         expect(find.byTooltip('Message this store'), findsOneWidget);
         expect(find.byTooltip('Save as Favorite Supplier'), findsOneWidget);
         expect(find.textContaining('4.2 km · 18 min drive'), findsOneWidget);
@@ -463,18 +463,24 @@ void main() {
         }
         expect(find.text('Google rating 4.8 (120)'), findsOneWidget);
         expect(find.textContaining('Source: Google Maps'), findsWidgets);
-        // Overview and About only: no review tab and no photos for Directory Suppliers.
+        // Google review excerpts are distinct from MateryalPH review submission.
         expect(find.text('Overview'), findsOneWidget);
+        await tester.ensureVisible(find.text('About'));
         await tester.tap(find.text('About'));
         await tester.pumpAndSettle();
-        expect(find.text('Opening hours'), findsOneWidget);
+        expect(
+          find.textContaining('additional business attributes'),
+          findsOneWidget,
+        );
+        await tester.tap(find.text('Reviews'));
+        await tester.pumpAndSettle();
+        expect(find.text('Google reviews'), findsOneWidget);
         for (final forbidden in [
-          'View Store',
+          'View Storefront',
           'Message',
           'Add to Cart',
           'Order',
           'Review',
-          'Reviews',
           'Save as Favorite Supplier',
         ]) {
           expect(find.text(forbidden), findsNothing);
@@ -503,7 +509,7 @@ void main() {
           ),
           findsOneWidget,
         );
-        expect(find.text('View Store'), findsOneWidget);
+        expect(find.text('View Storefront'), findsOneWidget);
         repository.routeFailure = null;
         await tester.tap(find.text('Retry'));
         await tester.pumpAndSettle();
@@ -545,7 +551,7 @@ void main() {
       await tester.pump();
       await tester.pump();
       expect(tester.hasRunningAnimations, isFalse);
-      expect(find.text('View Store'), findsOneWidget);
+      expect(find.text('View Storefront'), findsOneWidget);
     });
 
     for (final (size, scale) in [
@@ -589,7 +595,10 @@ void main() {
         await tester.tap(find.text('Sampaloc Lumber Hardware'));
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
-        expect(find.text('View Store', skipOffstage: false), findsOneWidget);
+        expect(
+          find.text('View Storefront', skipOffstage: false),
+          findsOneWidget,
+        );
       });
     }
   });

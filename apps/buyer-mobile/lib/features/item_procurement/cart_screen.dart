@@ -25,15 +25,30 @@ class CartScreen extends StatelessWidget {
     listenable: controller,
     builder: (context, _) {
       final cart = controller.cart;
+      final canPop = ModalRoute.of(context)?.canPop ?? false;
       return Scaffold(
         appBar: AppBar(
+          automaticallyImplyLeading: false,
+          leadingWidth: 60,
+          leading: canPop
+              ? Center(
+                  child: RoundIconButton(
+                    icon: LucideIcons.arrowLeft,
+                    tooltip: 'Back',
+                    filled: true,
+                    onPressed: () => Navigator.of(context).maybePop(),
+                  ),
+                )
+              : null,
+          centerTitle: true,
           title: Text(
             cart == null || cart.lineCount == 0
                 ? 'Cart'
                 : 'Cart (${cart.lineCount})',
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
           ),
         ),
-        bottomNavigationBar: cart == null || cart.groups.isEmpty
+        bottomNavigationBar: cart == null || cart.empty
             ? null
             : _summary(context, cart),
         body: SafeArea(child: _body(context)),
@@ -68,22 +83,51 @@ class CartScreen extends StatelessWidget {
       );
     }
     if (cart.empty) {
-      return StateMessage(
-        kind: StateKind.empty,
-        title: 'Your cart is empty',
-        message:
-            'Add materials from Explore. Adding to the cart never reserves stock.',
-        actionLabel: 'Browse materials',
-        onAction: () => Navigator.of(context).maybePop(),
+      return Center(
+        child: SingleChildScrollView(
+          child: StateMessage(
+            kind: StateKind.empty,
+            artwork: 'assets/states/cart.png',
+            title: 'Your cart is empty',
+            message:
+                'Add materials from Explore. Adding to the cart never reserves stock.',
+            actionLabel: 'Browse materials',
+            onAction: () => Navigator.of(context).maybePop(),
+          ),
+        ),
       );
     }
     return RefreshIndicator(
       onRefresh: controller.load,
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
         children: [
-          StatusBand(tone: BandTone.info, title: cart.notice),
-          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(4, 0, 4, 10),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.only(top: 2),
+                  child: Icon(
+                    LucideIcons.info,
+                    size: 16,
+                    color: BuyerTheme.muted,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    cart.notice,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: BuyerTheme.muted,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
           if (controller.notice != null) ...[
             StatusBand(tone: BandTone.warning, title: controller.notice!),
             const SizedBox(height: 8),
@@ -102,63 +146,200 @@ class CartScreen extends StatelessWidget {
           ],
           for (final group in cart.groups)
             _GroupSection(controller: controller, group: group),
-          if (cart.savedForLater.isNotEmpty) ...[
-            SectionHeading('Saved for later'),
-            for (final line in cart.savedForLater)
-              _LineTile(
-                controller: controller,
-                line: line,
-                savedForLater: true,
-              ),
-          ],
+          if (cart.savedForLater.isNotEmpty)
+            _Panel(
+              children: [
+                Semantics(
+                  header: true,
+                  child: const Text(
+                    'Saved for later',
+                    style: TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                ),
+                const Text(
+                  'Tick an item to include it in checkout.',
+                  style: TextStyle(fontSize: 12, color: BuyerTheme.muted),
+                ),
+                const Divider(height: 16),
+                for (final line in cart.savedForLater)
+                  _LineTile(
+                    controller: controller,
+                    line: line,
+                    savedForLater: true,
+                  ),
+              ],
+            ),
         ],
       ),
     );
   }
 
-  Widget _summary(BuildContext context, CartView cart) => SafeArea(
-    top: false,
-    child: Container(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: BuyerTheme.border)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Wrap(
-            alignment: WrapAlignment.spaceBetween,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: 12,
-            children: [
-              const Text(
-                'Materials subtotal (advisory)',
-                style: TextStyle(color: BuyerTheme.muted),
-              ),
-              Text(
-                formatPeso(cart.materialsSubtotalCentavos),
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ],
+  Future<void> _deleteSelected(BuildContext context, CartView cart) async {
+    final count = cart.groups.fold<int>(
+      0,
+      (sum, group) => sum + group.lines.length,
+    );
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Remove $count selected item${count == 1 ? '' : 's'}?'),
+        content: const Text(
+          'They are removed from your cart. Items saved for later stay.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
           ),
-          const SizedBox(height: 8),
-          FilledButton(
-            onPressed: controller.busy
-                ? null
-                : () => navigation.openCheckout(context),
-            child: Text(
-              cart.groups.length > 1
-                  ? 'Review ${cart.groups.length} Vendor orders'
-                  : 'Review checkout',
-            ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Remove'),
           ),
         ],
       ),
+    );
+    if (confirmed == true) await controller.removeSelected();
+  }
+
+  Widget _summary(BuildContext context, CartView cart) {
+    final busy = controller.busy;
+    final allSelected = cart.groups.isNotEmpty && cart.savedForLater.isEmpty;
+    final selectAll = MergeSemantics(
+      child: InkWell(
+        onTap: busy ? null : () => controller.selectAll(!allSelected),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Checkbox(
+                value: allSelected,
+                activeColor: BuyerTheme.action,
+                onChanged: busy
+                    ? null
+                    : (value) => controller.selectAll(value ?? false),
+              ),
+              const Flexible(
+                child: Text('Select all', style: TextStyle(fontSize: 13)),
+              ),
+              const SizedBox(width: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+    final delete = TextButton.icon(
+      onPressed: busy || cart.groups.isEmpty
+          ? null
+          : () => _deleteSelected(context, cart),
+      style: TextButton.styleFrom(
+        foregroundColor: BuyerTheme.action,
+        minimumSize: const Size(0, 44),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        textStyle: const TextStyle(
+          fontFamily: 'Inter',
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      icon: const Icon(LucideIcons.trash2, size: 18),
+      label: const Text('Delete'),
+    );
+    final total = Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          cart.groups.length > 1
+              ? 'Total · ${cart.groups.length} stores (advisory)'
+              : 'Total (advisory)',
+          textAlign: TextAlign.right,
+          style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
+        ),
+        Text(
+          formatPeso(cart.materialsSubtotalCentavos),
+          textAlign: TextAlign.right,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+        ),
+      ],
+    );
+    final checkout = FilledButton(
+      style: FilledButton.styleFrom(
+        minimumSize: const Size(0, 48),
+        padding: const EdgeInsets.symmetric(horizontal: 22),
+      ),
+      onPressed: busy || cart.groups.isEmpty
+          ? null
+          : () => navigation.openCheckout(context),
+      child: const Text('Checkout'),
+    );
+    final stacked =
+        MediaQuery.textScalerOf(context).scale(1) > 1.3 ||
+        MediaQuery.sizeOf(context).width < 340;
+    return SafeArea(
+      top: false,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(8, 6, 16, 8),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          border: Border(top: BorderSide(color: BuyerTheme.border)),
+        ),
+        child: stacked
+            ? Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Wrap(children: [selectAll, delete]),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8, bottom: 8),
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: total,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: checkout,
+                  ),
+                ],
+              )
+            : Row(
+                children: [
+                  Flexible(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [selectAll, delete],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(child: total),
+                  const SizedBox(width: 12),
+                  checkout,
+                ],
+              ),
+      ),
+    );
+  }
+}
+
+class _Panel extends StatelessWidget {
+  const _Panel({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    margin: const EdgeInsets.only(bottom: 12),
+    padding: const EdgeInsets.fromLTRB(12, 12, 8, 4),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: BuyerTheme.border),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: children,
     ),
   );
 }
@@ -170,89 +351,89 @@ class _GroupSection extends StatelessWidget {
   final CartGroupView group;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 16),
-    child: DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: BuyerTheme.border),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                const Icon(LucideIcons.store, color: BuyerTheme.action),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Semantics(
-                    header: true,
-                    child: Text(
-                      group.vendorName,
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            if (group.status != 'READY')
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: StatusBand(
-                  tone: group.status == 'BLOCKED'
-                      ? BandTone.danger
-                      : BandTone.warning,
-                  title: group.status == 'BLOCKED'
-                      ? 'This store group cannot be checked out yet'
-                      : 'This store group needs your review',
-                  message: 'Other Vendor groups in your cart are not affected.',
-                ),
-              ),
-            if (group.vacationMode)
-              const Padding(
-                padding: EdgeInsets.only(bottom: 8),
-                child: StatusBand(
-                  tone: BandTone.warning,
-                  title: 'This store has paused new procurement',
-                ),
-              ),
-            _fulfillment(context),
-            const Divider(height: 24),
-            for (final line in group.lines)
-              _LineTile(
-                controller: controller,
-                line: line,
-                savedForLater: false,
-              ),
-            Align(
-              alignment: Alignment.centerRight,
+  Widget build(BuildContext context) => _Panel(
+    children: [
+      Row(
+        children: [
+          const Icon(LucideIcons.store, size: 18, color: BuyerTheme.action),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Semantics(
+              header: true,
               child: Text(
-                'Group subtotal ${formatPeso(group.materialsSubtotalCentavos)}',
-                style: const TextStyle(fontWeight: FontWeight.w700),
+                group.vendorName,
+                style: const TextStyle(fontWeight: FontWeight.w800),
               ),
             ),
-          ],
+          ),
+        ],
+      ),
+      const SizedBox(height: 8),
+      if (group.status != 'READY')
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8, right: 4),
+          child: StatusBand(
+            tone: group.status == 'BLOCKED'
+                ? BandTone.danger
+                : BandTone.warning,
+            title: group.status == 'BLOCKED'
+                ? 'This store group cannot be checked out yet'
+                : 'This store group needs your review',
+            message: 'Other Vendor groups in your cart are not affected.',
+          ),
+        ),
+      if (group.vacationMode)
+        const Padding(
+          padding: EdgeInsets.only(bottom: 8, right: 4),
+          child: StatusBand(
+            tone: BandTone.warning,
+            title: 'This store has paused new procurement',
+          ),
+        ),
+      _fulfillment(context),
+      const Divider(height: 16),
+      for (final line in group.lines)
+        _LineTile(controller: controller, line: line, savedForLater: false),
+      Padding(
+        padding: const EdgeInsets.only(right: 4, bottom: 8),
+        child: Text(
+          'Store subtotal ${formatPeso(group.materialsSubtotalCentavos)}',
+          textAlign: TextAlign.right,
+          style: const TextStyle(fontWeight: FontWeight.w700),
         ),
       ),
-    ),
+    ],
   );
 
   Widget _fulfillment(BuildContext context) {
     final options = group.fulfillmentOptions;
     if (options.isEmpty) {
-      return const StatusBand(
-        tone: BandTone.danger,
-        title: 'This store has no fulfillment method available',
+      return const Padding(
+        padding: EdgeInsets.only(right: 4),
+        child: StatusBand(
+          tone: BandTone.danger,
+          title: 'This store has no fulfillment method available',
+        ),
       );
     }
     if (options.length == 1) {
-      return Text(
-        options.first == 'DELIVERY' ? 'Site Delivery only' : 'Self-Pickup only',
-        style: const TextStyle(fontWeight: FontWeight.w600),
+      return Row(
+        children: [
+          Icon(
+            options.first == 'DELIVERY' ? LucideIcons.truck : LucideIcons.store,
+            size: 16,
+            color: BuyerTheme.successStrong,
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              options.first == 'DELIVERY'
+                  ? 'Site Delivery only'
+                  : 'Self-Pickup only',
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
       );
     }
     return Column(
@@ -260,41 +441,31 @@ class _GroupSection extends StatelessWidget {
       children: [
         const Text(
           'Fulfillment for this store',
-          style: TextStyle(fontWeight: FontWeight.w600),
+          style: TextStyle(fontSize: 12, color: BuyerTheme.muted),
         ),
-        const SizedBox(height: 4),
         Wrap(
           spacing: 8,
-          runSpacing: 8,
           children: [
-            ChoiceChip(
+            FilterPill(
               selected: group.fulfillmentMethod == 'DELIVERY',
-              showCheckmark: true,
-              avatar: const Icon(LucideIcons.truck, size: 18),
-              label: const Text('Site Delivery'),
-              onSelected: controller.busy
+              label: 'Site Delivery',
+              onTap: controller.busy
                   ? null
-                  : (_) =>
-                        controller.setFulfillment(group.vendorId, 'DELIVERY'),
+                  : () => controller.setFulfillment(group.vendorId, 'DELIVERY'),
             ),
-            ChoiceChip(
+            FilterPill(
               selected: group.fulfillmentMethod == 'PICKUP',
-              showCheckmark: true,
-              avatar: const Icon(LucideIcons.store, size: 18),
-              label: const Text('Self-Pickup'),
-              onSelected: controller.busy
+              label: 'Self-Pickup',
+              onTap: controller.busy
                   ? null
-                  : (_) => controller.setFulfillment(group.vendorId, 'PICKUP'),
+                  : () => controller.setFulfillment(group.vendorId, 'PICKUP'),
             ),
           ],
         ),
         if (group.fulfillmentMethod == null)
-          const Padding(
-            padding: EdgeInsets.only(top: 4),
-            child: Text(
-              'Choose how you will receive this store’s items.',
-              style: TextStyle(fontSize: 12, color: BuyerTheme.muted),
-            ),
+          const Text(
+            'Choose how you will receive this store’s items.',
+            style: TextStyle(fontSize: 12, color: BuyerTheme.muted),
           ),
       ],
     );
@@ -317,19 +488,35 @@ class _LineTile extends StatelessWidget {
     final busy = controller.busy;
     final whole = line.quantityStep == '1';
     final quantity = double.tryParse(line.quantity) ?? 1;
+    final large = MediaQuery.textScalerOf(context).scale(1) > 1.3;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              SizedBox(
+                width: 36,
+                child: Checkbox(
+                  value: !savedForLater,
+                  activeColor: BuyerTheme.action,
+                  semanticLabel: 'Select ${line.displayName}',
+                  onChanged: busy || (savedForLater && !line.available)
+                      ? null
+                      : (selected) => controller.saveForLater(
+                          line,
+                          saved: selected != true,
+                        ),
+                ),
+              ),
+              const SizedBox(width: 4),
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
                 child: SizedBox(
-                  width: 56,
-                  height: 56,
+                  width: large ? 44 : 64,
+                  height: large ? 44 : 64,
                   child: line.imageUrl == null
                       ? const ColoredBox(
                           color: BuyerTheme.canvas,
@@ -341,6 +528,7 @@ class _LineTile extends StatelessWidget {
                       : Image.network(
                           line.imageUrl!,
                           fit: BoxFit.cover,
+                          cacheWidth: 192,
                           errorBuilder: (_, _, _) => const ColoredBox(
                             color: BuyerTheme.canvas,
                             child: Icon(LucideIcons.imageOff),
@@ -348,42 +536,54 @@ class _LineTile extends StatelessWidget {
                         ),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       line.displayName,
-                      style: const TextStyle(fontWeight: FontWeight.w700),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                     if (line.variantLabel != null)
                       Text(
                         line.variantLabel!,
                         style: const TextStyle(
-                          fontSize: 12,
+                          fontSize: 11,
                           color: BuyerTheme.muted,
                         ),
                       ),
                     if (line.appliedUnitPriceCentavos != null)
                       Text(
                         '${formatPeso(line.appliedUnitPriceCentavos!)} / ${line.unitName}${line.volumeTierApplied ? ' · volume price' : ''}',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: BuyerTheme.action,
+                        ),
                       ),
                     if (line.stockLabel != null)
-                      StockLabelText(label: line.stockLabel),
-                    if (line.lineTotalCentavos != null)
-                      Text(
-                        'Line total ${formatPeso(line.lineTotalCentavos!)}',
-                        style: const TextStyle(fontWeight: FontWeight.w700),
-                      ),
+                      StockLabelText(label: line.stockLabel, compact: true),
                   ],
+                ),
+              ),
+              IconButton(
+                tooltip: 'Remove ${line.displayName}',
+                onPressed: busy ? null : () => controller.remove(line),
+                icon: const Icon(
+                  LucideIcons.trash2,
+                  size: 18,
+                  color: BuyerTheme.muted,
                 ),
               ),
             ],
           ),
           for (final issue in line.issues)
             Padding(
-              padding: const EdgeInsets.only(top: 6),
+              padding: const EdgeInsets.only(top: 6, right: 4),
               child: StatusBand(
                 tone: issue.blocking
                     ? BandTone.danger
@@ -407,44 +607,39 @@ class _LineTile extends StatelessWidget {
                     : null,
               ),
             ),
-          const SizedBox(height: 4),
-          Wrap(
-            spacing: 8,
-            runSpacing: 4,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              if (!savedForLater && line.available && whole)
-                QuantityStepper(
-                  quantity: quantity.round(),
-                  unitName: line.unitName,
-                  enabled: !busy,
-                  onChanged: (value) =>
-                      controller.changeQuantity(line, '$value'),
-                )
-              else if (!savedForLater)
+          Padding(
+            padding: const EdgeInsets.only(left: 40),
+            child: Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              children: [
                 Text(
-                  'Quantity ${formatQuantity(line.quantity)} ${line.unitName}',
-                ),
-              TextButton.icon(
-                onPressed: busy
-                    ? null
-                    : () =>
-                          controller.saveForLater(line, saved: !savedForLater),
-                icon: Icon(
                   savedForLater
-                      ? LucideIcons.shoppingCart
-                      : LucideIcons.bookmark,
+                      ? 'Saved for later · ${formatQuantity(line.quantity)} ${line.unitName}'
+                      : line.lineTotalCentavos != null
+                      ? 'Line total ${formatPeso(line.lineTotalCentavos!)}'
+                      : '',
+                  style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
                 ),
-                label: Text(savedForLater ? 'Move to cart' : 'Save for later'),
-              ),
-              TextButton.icon(
-                onPressed: busy ? null : () => controller.remove(line),
-                icon: const Icon(LucideIcons.trash2),
-                label: const Text('Remove'),
-              ),
-            ],
+                if (!savedForLater && line.available && whole)
+                  QuantityStepper(
+                    compact: true,
+                    quantity: quantity.round(),
+                    unitName: line.unitName,
+                    enabled: !busy,
+                    onChanged: (value) =>
+                        controller.changeQuantity(line, '$value'),
+                  )
+                else if (!savedForLater)
+                  Text(
+                    'Quantity ${formatQuantity(line.quantity)} ${line.unitName}',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+              ],
+            ),
           ),
-          const Divider(height: 16),
+          const Divider(height: 12),
         ],
       ),
     );

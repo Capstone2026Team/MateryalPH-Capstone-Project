@@ -64,7 +64,7 @@ return [
             // Operational refresh target for permitted cached content; the database caps it at 30 days and a
             // shorter contractual limit in the current Google Maps Platform terms always prevails.
             'cache_ttl_hours' => (int) env('GOOGLE_PLACES_CACHE_TTL_HOURS', 168),
-            'max_search_cells' => (int) env('GOOGLE_PLACES_MAX_SEARCH_CELLS', 7),
+            'max_search_cells' => (int) env('GOOGLE_PLACES_MAX_SEARCH_CELLS', 121),
             'max_calls_per_day' => (int) env('GOOGLE_PLACES_MAX_CALLS_PER_DAY', 2000),
             'max_cache_records' => (int) env('GOOGLE_PLACES_MAX_CACHE_RECORDS', 20000),
         ],

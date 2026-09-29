@@ -27,24 +27,38 @@ class CartController extends ChangeNotifier {
   bool previewLoading = false;
   int _previewSequence = 0;
   bool _disposed = false;
+  bool _loadingCart = false;
+  int _cartSequence = 0;
 
   int get lineCount => cart?.lineCount ?? 0;
 
   Future<void> load() async {
+    if (_loadingCart || busy) return;
+    _loadingCart = true;
+    final sequence = ++_cartSequence;
     phase = cart == null ? LoadPhase.loading : phase;
     failure = null;
     _notify();
     try {
-      cart = await _repository.cart();
+      final loaded = await _repository.cart();
+      if (_disposed || sequence != _cartSequence) return;
+      cart = loaded;
       phase = LoadPhase.ready;
     } on DiscoveryFailure catch (error) {
+      if (_disposed || sequence != _cartSequence) return;
       failure = error;
       phase = cart == null ? LoadPhase.failed : LoadPhase.ready;
+    } finally {
+      _loadingCart = false;
     }
     _notify();
   }
 
   void replace(CartView next) {
+    _cartSequence++;
+    preview = null;
+    _previewSequence++;
+    previewLoading = false;
     cart = next;
     phase = LoadPhase.ready;
     _notify();
@@ -83,6 +97,77 @@ class CartController extends ChangeNotifier {
     (version) => _repository.removeLine(line, cartLockVersion: version),
   );
 
+  /// Removes every selected (active) line, one versioned request at a time. The first failure
+  /// stops the run and keeps the cart the server last returned; saved-for-later lines stay.
+  Future<void> removeSelected() async {
+    if (busy || cart == null) return;
+    busy = true;
+    _cartSequence++;
+    notice = null;
+    preview = null;
+    _previewSequence++;
+    previewLoading = false;
+    _notify();
+    try {
+      for (final line in [...cart!.groups.expand((group) => group.lines)]) {
+        cart = await _repository.removeLine(
+          line,
+          cartLockVersion: cart!.lockVersion,
+        );
+      }
+    } on DiscoveryFailure catch (error) {
+      await _handle(error);
+    } finally {
+      busy = false;
+      _notify();
+    }
+  }
+
+  /// Selection reuses the persisted active/saved-for-later partition consumed by
+  /// checkout preview. Unselected lines remain in the cart, with separate variants.
+  Future<bool> selectOnlyVariant(String variantId) =>
+      _selectLines((line) => line.variantId == variantId);
+
+  Future<bool> selectAll(bool selected) => _selectLines(
+    (line) =>
+        selected &&
+        line.available &&
+        !line.issues.any((issue) => issue.blocking),
+  );
+
+  Future<bool> _selectLines(bool Function(CartLineView) selected) async {
+    if (busy || cart == null) return false;
+    busy = true;
+    _cartSequence++;
+    notice = null;
+    preview = null;
+    _previewSequence++;
+    previewLoading = false;
+    _notify();
+    try {
+      final lines = [
+        ...cart!.groups.expand((group) => group.lines),
+        ...cart!.savedForLater,
+      ];
+      for (final line in lines) {
+        final saved = !selected(line);
+        if (line.savedForLater == saved) continue;
+        cart = await _repository.updateLine(
+          line,
+          cartLockVersion: cart!.lockVersion,
+          savedForLater: saved,
+        );
+      }
+      return true;
+    } on DiscoveryFailure catch (error) {
+      await _handle(error);
+      return false;
+    } finally {
+      busy = false;
+      _notify();
+    }
+  }
+
   Future<void> setFulfillment(String vendorId, String method) => _mutate(
     null,
     (version) =>
@@ -97,9 +182,14 @@ class CartController extends ChangeNotifier {
     String? accessInstructions,
   }) async {
     final current = cart;
-    if (current == null) return null;
+    if (current == null || busy) {
+      return {'form': 'Wait for the current cart update.'};
+    }
     busy = true;
     notice = null;
+    _cartSequence++;
+    _previewSequence++;
+    previewLoading = false;
     _notify();
     try {
       cart = await _repository.setDestination(
@@ -156,6 +246,10 @@ class CartController extends ChangeNotifier {
   ) async {
     final current = cart;
     if (current == null || busy) return;
+    _cartSequence++;
+    preview = null;
+    _previewSequence++;
+    previewLoading = false;
     busy = true;
     busyLineId = lineId;
     notice = null;

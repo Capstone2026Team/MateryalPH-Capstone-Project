@@ -3,8 +3,10 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../design_system/components/procurement_components.dart';
 import '../../design_system/theme.dart';
+import '../../widgets/buyer_account_widgets.dart' show BuyerUnavailableScreen;
 import '../map_discovery/discovery_models.dart';
 import 'cart_controller.dart';
+import 'checkout_previews.dart';
 import 'procurement_models.dart';
 
 /// Checkout preview: one group per Vendor, revalidated by the server. Delivery shows an advisory
@@ -30,23 +32,54 @@ class _CheckoutPreviewScreenState extends State<CheckoutPreviewScreen> {
   @override
   void initState() {
     super.initState();
-    _controller.loadPreview();
+    // After the first frame: loading notifies cart listeners (for example cart badges on the
+    // pages underneath), which must not happen while this route is still building.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _controller.loadPreview();
+    });
   }
 
+  void _push(Widget page) =>
+      Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
+
   @override
-  Widget build(BuildContext context) => ListenableBuilder(
-    listenable: _controller,
-    builder: (context, _) => Scaffold(
-      appBar: AppBar(title: const Text('Checkout preview')),
-      bottomNavigationBar: _controller.preview == null ? null : _submitBar(),
-      body: SafeArea(child: _body()),
-    ),
-  );
+  Widget build(BuildContext context) {
+    final canPop = ModalRoute.of(context)?.canPop ?? false;
+    return ListenableBuilder(
+      listenable: _controller,
+      builder: (context, _) => Scaffold(
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          leadingWidth: 60,
+          leading: canPop
+              ? Center(
+                  child: RoundIconButton(
+                    icon: LucideIcons.arrowLeft,
+                    tooltip: 'Back',
+                    filled: true,
+                    onPressed: () => Navigator.of(context).maybePop(),
+                  ),
+                )
+              : null,
+          centerTitle: true,
+          title: const Text(
+            'Checkout',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+          ),
+        ),
+        bottomNavigationBar: _controller.preview == null
+            ? null
+            : _submitBar(_controller.preview!),
+        body: SafeArea(child: _body()),
+      ),
+    );
+  }
 
   Widget _body() {
     final preview = _controller.preview;
     final failure = _controller.previewFailure;
-    if (preview == null && _controller.previewLoading) {
+    // No preview and no failure yet means the first request is about to start.
+    if (preview == null && (_controller.previewLoading || failure == null)) {
       return ListView(
         padding: const EdgeInsets.all(16),
         children: const [
@@ -73,7 +106,7 @@ class _CheckoutPreviewScreenState extends State<CheckoutPreviewScreen> {
     return RefreshIndicator(
       onRefresh: _controller.loadPreview,
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
         children: [
           if (failure != null)
             Padding(
@@ -88,31 +121,54 @@ class _CheckoutPreviewScreenState extends State<CheckoutPreviewScreen> {
                 ),
               ),
             ),
-          StatusBand(
-            tone: preview.blockedGroups + preview.actionRequiredGroups == 0
-                ? BandTone.success
-                : BandTone.warning,
-            title:
-                '${preview.groups.length} Vendor order${preview.groups.length == 1 ? '' : 's'} · ${preview.readyGroups} ready · ${preview.actionRequiredGroups} need action · ${preview.blockedGroups} blocked',
-            message: preview.requiresSplitConfirmation
-                ? '${preview.notice} Only ready groups can continue; the others stay in your cart.'
-                : preview.notice,
-          ),
-          Text(
-            'Checked ${formatManilaTimestamp(preview.currentAsOf)}',
-            style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
-          ),
+          if (preview.blockedGroups + preview.actionRequiredGroups > 0 ||
+              preview.requiresSplitConfirmation)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: StatusBand(
+                tone: preview.blockedGroups + preview.actionRequiredGroups == 0
+                    ? BandTone.info
+                    : BandTone.warning,
+                title:
+                    '${preview.groups.length} Vendor order${preview.groups.length == 1 ? '' : 's'} · ${preview.readyGroups} ready · ${preview.actionRequiredGroups} need action · ${preview.blockedGroups} blocked',
+                message: preview.requiresSplitConfirmation
+                    ? '${preview.notice} Only ready groups can continue; the others stay in your cart.'
+                    : preview.notice,
+              ),
+            ),
           if (needsDestination)
             _DestinationSection(
               controller: _controller,
               destination: preview.destination,
               savedLocations: widget.savedLocations(),
             ),
-          for (final group in preview.groups) _GroupPreview(group: group),
-          const Padding(
-            padding: EdgeInsets.only(top: 16),
+          for (final group in preview.groups)
+            _GroupPreview(group: group, controller: _controller),
+          _Card(
+            padding: EdgeInsets.zero,
+            children: [
+              _LinkRow(
+                icon: LucideIcons.clipboardList,
+                title: 'Project Procurement',
+                hint: 'Link this order to your Project',
+                onTap: () => _push(
+                  const BuyerUnavailableScreen(title: 'Project Procurement'),
+                ),
+              ),
+              const Divider(height: 1),
+              _LinkRow(
+                icon: LucideIcons.receiptText,
+                title: 'Request E-Invoice',
+                hint: 'Preview',
+                onTap: () => _push(const EInvoiceRequestPreviewScreen()),
+              ),
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(4, 4, 4, 0),
             child: Text(
-              'Submitting order requests opens in the next release. Nothing has been reserved or charged.',
+              'Checked ${formatManilaTimestamp(preview.currentAsOf)}',
+              style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
             ),
           ),
         ],
@@ -120,10 +176,10 @@ class _CheckoutPreviewScreenState extends State<CheckoutPreviewScreen> {
     );
   }
 
-  Widget _submitBar() => SafeArea(
+  Widget _submitBar(CheckoutPreviewView preview) => SafeArea(
     top: false,
     child: Container(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
       decoration: const BoxDecoration(
         color: Colors.white,
         border: Border(top: BorderSide(color: BuyerTheme.border)),
@@ -142,7 +198,100 @@ class _CheckoutPreviewScreenState extends State<CheckoutPreviewScreen> {
               child: Text('Submit order requests'),
             ),
           ),
+          Wrap(
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              const Text(
+                'Opens in the next release. Nothing is reserved or charged.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12, color: BuyerTheme.muted),
+              ),
+              TextButton(
+                onPressed: () =>
+                    _push(OrderPlacedPreviewScreen(preview: preview)),
+                child: const Text('Preview confirmation'),
+              ),
+            ],
+          ),
         ],
+      ),
+    ),
+  );
+}
+
+class _Card extends StatelessWidget {
+  const _Card({
+    required this.children,
+    this.padding = const EdgeInsets.all(12),
+  });
+
+  final List<Widget> children;
+  final EdgeInsets padding;
+
+  // A Material (not a coloured box) so list tiles and ink inside stay visible.
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: Material(
+      color: Colors.white,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: const BorderSide(color: BuyerTheme.border),
+      ),
+      child: Padding(
+        padding: padding,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: children,
+        ),
+      ),
+    ),
+  );
+}
+
+class _LinkRow extends StatelessWidget {
+  const _LinkRow({
+    required this.icon,
+    required this.title,
+    required this.hint,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String hint;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+    onTap: onTap,
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 52),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        child: Row(
+          children: [
+            Icon(icon, size: 18, color: BuyerTheme.action),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+            Flexible(
+              child: Text(
+                hint,
+                textAlign: TextAlign.right,
+                style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
+              ),
+            ),
+            const SizedBox(width: 4),
+            const Icon(LucideIcons.chevronRight, size: 18),
+          ],
+        ),
       ),
     ),
   );
@@ -171,6 +320,7 @@ class _DestinationSectionState extends State<_DestinationSection> {
     text: widget.destination.accessInstructions ?? '',
   );
   Map<String, Object?> _errors = const {};
+  bool _editing = false;
 
   @override
   void dispose() {
@@ -219,7 +369,10 @@ class _DestinationSectionState extends State<_DestinationSection> {
           : _instructions.text.trim(),
     );
     if (!mounted) return;
-    setState(() => _errors = errors ?? const {});
+    setState(() {
+      _errors = errors ?? const {};
+      if (errors == null) _editing = false;
+    });
     if (errors == null) await widget.controller.loadPreview();
   }
 
@@ -227,18 +380,28 @@ class _DestinationSectionState extends State<_DestinationSection> {
   Widget build(BuildContext context) {
     final locations = widget.savedLocations;
     final destination = widget.destination;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    final incomplete =
+        destination.intended == null ||
+        destination.heavyVehicleRestriction == 'UNANSWERED';
+    return _Card(
       children: [
-        SectionHeading('Delivery destination'),
+        _AddressSummary(
+          destination: destination,
+          expanded: _editing || incomplete,
+          onTap: incomplete ? null : () => setState(() => _editing = !_editing),
+        ),
         if (locations.isEmpty)
-          const StatusBand(
-            tone: BandTone.warning,
-            title: 'Save a location first',
-            message:
-                'Delivery needs a saved location. Add one from the Map’s location selector.',
+          const Padding(
+            padding: EdgeInsets.only(top: 10),
+            child: StatusBand(
+              tone: BandTone.warning,
+              title: 'Save a location first',
+              message:
+                  'Delivery needs a saved location. Add one from the Map’s location selector.',
+            ),
           )
-        else ...[
+        else if (_editing || incomplete) ...[
+          const Divider(height: 24),
           _LocationPicker(
             label: destination.intendedLabel,
             locations: locations,
@@ -269,6 +432,7 @@ class _DestinationSectionState extends State<_DestinationSection> {
               children: [
                 RadioListTile<String>(
                   value: 'NO',
+                  contentPadding: EdgeInsets.zero,
                   title: Text('No known restriction'),
                   subtitle: Text(
                     'Vehicles go to the intended destination. Access is still confirmed by the Vendor.',
@@ -276,6 +440,7 @@ class _DestinationSectionState extends State<_DestinationSection> {
                 ),
                 RadioListTile<String>(
                   value: 'YES',
+                  contentPadding: EdgeInsets.zero,
                   title: Text('Yes, trucks cannot reach it'),
                   subtitle: Text(
                     'Choose an alternative drop-off that delivery vehicles can reach.',
@@ -314,42 +479,138 @@ class _DestinationSectionState extends State<_DestinationSection> {
             onPressed: widget.controller.busy ? null : _save,
             child: const Text('Save destination'),
           ),
-          if (destination.intended != null) ...[
-            const SizedBox(height: 8),
-            _SavedDestination(destination: destination),
-          ],
         ],
       ],
     );
   }
 }
 
-class _SavedDestination extends StatelessWidget {
-  const _SavedDestination({required this.destination});
+/// The delivery address card: the intended destination / Project site and, when it differs, the
+/// actual vehicle drop-off used for the route and fee. Both stay labelled.
+class _AddressSummary extends StatelessWidget {
+  const _AddressSummary({
+    required this.destination,
+    required this.expanded,
+    this.onTap,
+  });
 
   final CartDestinationView destination;
+  final bool expanded;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final intended = destination.intended!;
+    final intended = destination.intended;
     final alternate = destination.alternateDropOff;
     final endpoint = destination.vehicleEndpoint == 'ALTERNATE_DROP_OFF'
         ? alternate
         : intended;
+    final kind = switch (intended?.kind) {
+      'PROJECT_SITE' => 'Project site',
+      'DELIVERY' => 'Delivery',
+      'HOME' => 'Home',
+      'OFFICE' => 'Office',
+      _ => null,
+    };
     return Semantics(
       container: true,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '${destination.intendedLabel}: ${intended.title}',
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
-          if (endpoint != null)
-            Text(
-              '${destination.endpointLabel}: ${endpoint.title}${destination.vehicleEndpoint == 'ALTERNATE_DROP_OFF' ? ' — used for route distance and the delivery fee' : ''}',
+      button: onTap != null,
+      label: onTap == null ? null : 'Change delivery address',
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.only(top: 2),
+              child: Icon(
+                LucideIcons.mapPin,
+                size: 20,
+                color: BuyerTheme.action,
+              ),
             ),
-        ],
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(
+                        destination.intendedLabel,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: BuyerTheme.muted,
+                        ),
+                      ),
+                      if (kind != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: BuyerTheme.action,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            kind,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  Text(
+                    intended?.title ?? 'Choose a delivery address',
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  if (intended?.formattedAddress != null &&
+                      intended!.formattedAddress != intended.title)
+                    Text(
+                      intended.formattedAddress!,
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                  if (intended != null && endpoint != null) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Padding(
+                          padding: EdgeInsets.only(top: 2),
+                          child: Icon(
+                            LucideIcons.truck,
+                            size: 16,
+                            color: BuyerTheme.muted,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            '${destination.endpointLabel}: ${endpoint.title}${destination.vehicleEndpoint == 'ALTERNATE_DROP_OFF' ? ' — used for route distance and the delivery fee' : ''}',
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            if (onTap != null)
+              Icon(
+                expanded ? LucideIcons.chevronUp : LucideIcons.chevronRight,
+                color: BuyerTheme.action,
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -392,119 +653,195 @@ class _LocationPicker extends StatelessWidget {
 }
 
 class _GroupPreview extends StatelessWidget {
-  const _GroupPreview({required this.group});
+  const _GroupPreview({required this.group, required this.controller});
 
   final CheckoutGroupView group;
+  final CartController controller;
+
+  Future<void> _choose(String method) async {
+    if (controller.busy || group.fulfillmentMethod == method) return;
+    await controller.setFulfillment(group.vendorId, method);
+    await controller.loadPreview();
+  }
 
   @override
   Widget build(BuildContext context) {
     final amounts = group.amounts;
-    return Padding(
-      padding: const EdgeInsets.only(top: 16),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: BuyerTheme.border),
+    final items = group.lines.length;
+    final (
+      IconData statusIcon,
+      String statusText,
+      Color statusColor,
+    ) = switch (group.status) {
+      'READY' => (LucideIcons.circleCheck, 'Ready', BuyerTheme.successStrong),
+      'BLOCKED' => (
+        LucideIcons.octagonAlert,
+        'Blocked',
+        Theme.of(context).colorScheme.error,
+      ),
+      _ => (
+        LucideIcons.triangleAlert,
+        'Needs action',
+        BuyerTheme.actionPressed,
+      ),
+    };
+    return _Card(
+      children: [
+        Row(
+          children: [
+            const CircleAvatar(
+              radius: 18,
+              backgroundColor: BuyerTheme.brandSoft,
+              child: Icon(
+                LucideIcons.store,
+                size: 18,
+                color: BuyerTheme.action,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Semantics(
+                    header: true,
+                    child: Text(
+                      group.vendorName,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      Icon(statusIcon, size: 14, color: statusColor),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          statusText,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: statusColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
-        child: Padding(
+        if (group.status != 'READY')
+          Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: StatusBand(
+              tone: group.status == 'BLOCKED'
+                  ? BandTone.danger
+                  : BandTone.warning,
+              title: group.status == 'BLOCKED'
+                  ? 'Blocked — stays in your cart'
+                  : 'Needs your action',
+              message: group.issues.isEmpty
+                  ? null
+                  : group.issues.map((issue) => issue.message).join('\n'),
+            ),
+          ),
+        const SizedBox(height: 10),
+        for (final line in group.lines) _LineCard(line: line),
+        const SizedBox(height: 6),
+        const Text(
+          'Delivery Mode',
+          style: TextStyle(fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 8),
+        _ModeSelector(
+          options: group.fulfillmentOptions,
+          selected: group.fulfillmentMethod,
+          enabled: !controller.busy,
+          onSelected: _choose,
+        ),
+        if (group.fulfillmentMethod == 'PICKUP' && group.pickupAddress != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              'Self-Pickup at ${group.pickupAddress}',
+              style: const TextStyle(fontSize: 13),
+            ),
+          ),
+        if (group.fulfillmentMethod == 'DELIVERY')
+          DeliveryPreviewPanel(delivery: group.delivery),
+        const SizedBox(height: 10),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: BuyerTheme.border),
+          ),
+          child: Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            spacing: 12,
+            children: [
+              Text(
+                'Total $items item${items == 1 ? '' : 's'}',
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+              Text(
+                formatPeso(amounts.materialsSubtotalCentavos),
+                style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        const Text(
+          'Payment methods',
+          style: TextStyle(fontWeight: FontWeight.w800),
+        ),
+        for (final method in group.paymentMethods)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Row(
+              children: [
+                Icon(
+                  method.available
+                      ? LucideIcons.circleCheck
+                      : LucideIcons.circleSlash,
+                  size: 16,
+                  color: method.available
+                      ? BuyerTheme.successStrong
+                      : BuyerTheme.muted,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    '${method.label} — ${method.available ? 'available' : _reason(method.reason)}',
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        const SizedBox(height: 12),
+        Container(
           padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: BuyerTheme.canvas,
+            borderRadius: BorderRadius.circular(10),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Semantics(
-                header: true,
-                child: Text(
-                  group.vendorName,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              StatusBand(
-                tone: switch (group.status) {
-                  'READY' => BandTone.success,
-                  'BLOCKED' => BandTone.danger,
-                  _ => BandTone.warning,
-                },
-                title: switch (group.status) {
-                  'READY' => 'Ready for an order request',
-                  'BLOCKED' => 'Blocked — stays in your cart',
-                  _ => 'Needs your action',
-                },
-                message: group.issues.isEmpty
-                    ? null
-                    : group.issues.map((issue) => issue.message).join('\n'),
-              ),
-              for (final line in group.lines)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${formatQuantity(line.quantity)} × ${line.displayName}${line.variantLabel == null ? '' : ' (${line.variantLabel})'}',
-                      ),
-                      if (line.lineTotalCentavos != null)
-                        Text(
-                          formatPeso(line.lineTotalCentavos!),
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                      for (final issue in line.issues)
-                        Text(
-                          '• ${issue.message}',
-                          style: TextStyle(
-                            color: issue.blocking
-                                ? Theme.of(context).colorScheme.error
-                                : BuyerTheme.ink,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              const Divider(height: 24),
-              Text(
-                group.fulfillmentMethod == 'DELIVERY'
-                    ? 'Site Delivery'
-                    : group.fulfillmentMethod == 'PICKUP'
-                    ? 'Self-Pickup${group.pickupAddress == null ? '' : ' at ${group.pickupAddress}'}'
-                    : 'Fulfillment not chosen',
-                style: const TextStyle(fontWeight: FontWeight.w600),
-              ),
-              if (group.fulfillmentMethod == 'DELIVERY')
-                DeliveryPreviewPanel(delivery: group.delivery),
-              const Divider(height: 24),
               const Text(
-                'Payment methods',
-                style: TextStyle(fontWeight: FontWeight.w600),
+                'Payment Details',
+                style: TextStyle(fontWeight: FontWeight.w800),
               ),
-              for (final method in group.paymentMethods)
-                Row(
-                  children: [
-                    Icon(
-                      method.available
-                          ? LucideIcons.circleCheck
-                          : LucideIcons.circleSlash,
-                      size: 16,
-                      color: method.available
-                          ? BuyerTheme.success
-                          : BuyerTheme.muted,
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        '${method.label} — ${method.available ? 'available' : _reason(method.reason)}',
-                      ),
-                    ),
-                  ],
-                ),
-              const Divider(height: 24),
+              const Divider(height: 16),
               _AmountRow(
-                'Materials subtotal',
+                'Merchandise subtotal',
                 formatPeso(amounts.materialsSubtotalCentavos),
-                strong: true,
               ),
               _AmountRow(
                 amounts.vatIncluded ? 'Includes VAT' : 'VAT',
@@ -524,6 +861,7 @@ class _GroupPreview extends StatelessWidget {
                 'Payment processing fee',
                 'Shown when you choose a payment channel',
               ),
+              const Divider(height: 16),
               _AmountRow(
                 'Total before processing fee',
                 amounts.totalMinCentavos == null
@@ -533,7 +871,7 @@ class _GroupPreview extends StatelessWidget {
                     : '${formatPeso(amounts.totalMinCentavos!)}–${formatPeso(amounts.totalMaxCentavos!)}',
                 strong: true,
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 6),
               const Text(
                 'Prices already include any applicable VAT. The Vendor’s 2% commission and withholding are not Buyer charges.',
                 style: TextStyle(fontSize: 12, color: BuyerTheme.muted),
@@ -541,7 +879,7 @@ class _GroupPreview extends StatelessWidget {
             ],
           ),
         ),
-      ),
+      ],
     );
   }
 
@@ -552,6 +890,170 @@ class _GroupPreview extends StatelessWidget {
     'VENDOR_ONLINE_PAYMENT_NOT_READY' => 'not ready for this store yet',
     _ => 'unavailable',
   };
+}
+
+class _LineCard extends StatelessWidget {
+  const _LineCard({required this.line});
+
+  final CartLineView line;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    margin: const EdgeInsets.only(bottom: 8),
+    padding: const EdgeInsets.all(10),
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(10),
+      border: Border.all(color: BuyerTheme.border),
+    ),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            width: 64,
+            height: 64,
+            color: BuyerTheme.canvas,
+            child: line.imageUrl == null
+                ? const Icon(LucideIcons.package, color: BuyerTheme.muted)
+                : Image.network(
+                    line.imageUrl!,
+                    fit: BoxFit.cover,
+                    cacheWidth: 192,
+                    errorBuilder: (_, _, _) => const Icon(LucideIcons.imageOff),
+                  ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                line.displayName,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+              if (line.variantLabel != null)
+                Text(
+                  line.variantLabel!,
+                  style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
+                ),
+              if (line.appliedUnitPriceCentavos != null)
+                Text(
+                  '${formatPeso(line.appliedUnitPriceCentavos!)} / ${line.unitName}',
+                  style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
+                ),
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                spacing: 8,
+                children: [
+                  Text(
+                    line.lineTotalCentavos == null
+                        ? 'Unavailable'
+                        : formatPeso(line.lineTotalCentavos!),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      color: BuyerTheme.action,
+                    ),
+                  ),
+                  Text(
+                    '${formatQuantity(line.quantity)} ${line.unitName}',
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                ],
+              ),
+              for (final issue in line.issues)
+                Text(
+                  '• ${issue.message}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: issue.blocking
+                        ? Theme.of(context).colorScheme.error
+                        : BuyerTheme.ink,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+/// Site Delivery / Self-Pickup for one store. A mode the store does not offer stays visible but
+/// disabled and says so.
+class _ModeSelector extends StatelessWidget {
+  const _ModeSelector({
+    required this.options,
+    required this.selected,
+    required this.enabled,
+    required this.onSelected,
+  });
+
+  final List<String> options;
+  final String? selected;
+  final bool enabled;
+  final ValueChanged<String> onSelected;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(3),
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(10),
+      border: Border.all(color: BuyerTheme.border),
+    ),
+    child: Row(
+      children: [
+        for (final (method, label) in const [
+          ('DELIVERY', 'Site Delivery'),
+          ('PICKUP', 'Self-Pickup'),
+        ])
+          Expanded(child: _segment(method, label)),
+      ],
+    ),
+  );
+
+  Widget _segment(String method, String label) {
+    final offered = options.contains(method);
+    final isSelected = selected == method;
+    final text = offered ? label : '$label (not offered)';
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      enabled: offered && enabled,
+      label: text,
+      excludeSemantics: true,
+      child: Material(
+        color: isSelected ? BuyerTheme.action : Colors.transparent,
+        borderRadius: BorderRadius.circular(8),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: offered && enabled ? () => onSelected(method) : null,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 44),
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                child: Text(
+                  text,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                    color: isSelected
+                        ? Colors.white
+                        : offered
+                        ? BuyerTheme.ink
+                        : BuyerTheme.muted,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// Advisory delivery estimate versus the Vendor's confirmed offer, always labelled apart.

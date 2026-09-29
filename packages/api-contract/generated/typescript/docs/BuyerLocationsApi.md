@@ -4,6 +4,7 @@ All URIs are relative to */api/v1*
 
 | Method | HTTP request | Description |
 |------------- | ------------- | -------------|
+| [**autocompleteBuyerLocation**](BuyerLocationsApi.md#autocompletebuyerlocation) | **POST** /buyers/locations/autocomplete |  |
 | [**createBuyerLocation**](BuyerLocationsApi.md#createbuyerlocation) | **POST** /buyers/locations |  |
 | [**getBuyerOnboarding**](BuyerLocationsApi.md#getbuyeronboarding) | **GET** /buyers/onboarding |  |
 | [**listBuyerLocations**](BuyerLocationsApi.md#listbuyerlocations) | **GET** /buyers/locations |  |
@@ -14,6 +15,82 @@ All URIs are relative to */api/v1*
 | [**saveBuyerOnboarding**](BuyerLocationsApi.md#savebuyeronboarding) | **PUT** /buyers/onboarding |  |
 | [**updateBuyerLocation**](BuyerLocationsApi.md#updatebuyerlocation) | **PATCH** /buyers/locations/{locationId} |  |
 
+
+
+## autocompleteBuyerLocation
+
+> LocationSuggestionEnvelope autocompleteBuyerLocation(locationAutocompleteRequest)
+
+
+
+Up to five Google Places suggestions restricted to the Philippines. Query travels in the body; no content is persisted. Reuse the session token when resolving the selected Place ID.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  BuyerLocationsApi,
+} from '@materyalph/api-client-ts';
+import type { AutocompleteBuyerLocationRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // Configure HTTP bearer authorization: passportBearer
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new BuyerLocationsApi(config);
+
+  const body = {
+    // LocationAutocompleteRequest
+    locationAutocompleteRequest: ...,
+  } satisfies AutocompleteBuyerLocationRequest;
+
+  try {
+    const data = await api.autocompleteBuyerLocation(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **locationAutocompleteRequest** | [LocationAutocompleteRequest](LocationAutocompleteRequest.md) |  | |
+
+### Return type
+
+[**LocationSuggestionEnvelope**](LocationSuggestionEnvelope.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Attributed Google Places suggestions. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **429** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **503** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
 ## createBuyerLocation

@@ -3,36 +3,30 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../design_system/components/discovery_controls.dart';
 import '../../design_system/components/procurement_components.dart';
+import '../../design_system/generated/color_tokens.dart';
 import '../../design_system/theme.dart';
 import '../map_discovery/discovery_models.dart';
 import 'explore_controller.dart';
 import 'procurement_models.dart';
 import 'procurement_navigation.dart';
 
-/// Search Results for Tier 2 listings only. Sort, filters and the scroll position live in the
-/// shared controller and survive navigation; each card explains its ranking in text.
+/// Search state and pagination remain in the shared controller across navigation.
 class SearchResultsScreen extends StatefulWidget {
   const SearchResultsScreen({
     super.key,
     required this.controller,
     required this.navigation,
   });
-
   final ExploreController controller;
   final ProcurementNavigation navigation;
-
   @override
   State<SearchResultsScreen> createState() => _SearchResultsScreenState();
 }
 
 class _SearchResultsScreenState extends State<SearchResultsScreen> {
-  late final ScrollController _scroll = ScrollController(
-    initialScrollOffset: widget.controller.resultsScrollOffset,
+  late final _scroll = ScrollController(
+    initialScrollOffset: _controller.resultsScrollOffset,
   );
-  late final TextEditingController _query = TextEditingController(
-    text: widget.controller.query,
-  );
-
   ExploreController get _controller => widget.controller;
 
   @override
@@ -47,7 +41,6 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
   @override
   void dispose() {
     _scroll.dispose();
-    _query.dispose();
     super.dispose();
   }
 
@@ -61,180 +54,368 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
     if (confirmed) await _controller.discovery.selectRadius(next);
   }
 
-  @override
-  Widget build(BuildContext context) => ListenableBuilder(
-    listenable: _controller,
-    builder: (context, _) {
-      final page = _controller.page;
-      final personalized = page?.personalized ?? false;
-      return Scaffold(
-        appBar: AppBar(
-          titleSpacing: 0,
-          title: TextField(
-            controller: _query,
-            textInputAction: TextInputAction.search,
-            onSubmitted: (value) =>
-                _controller.search(query: value, sort: () => null),
-            decoration: const InputDecoration(
-              hintText: 'Search materials',
-              isDense: true,
-              prefixIcon: Icon(LucideIcons.search),
+  Future<void> _favorite(ListingCardView card) async {
+    try {
+      await _controller.setFavorite(card.vendorId, favorite: !card.isFavorite);
+    } on DiscoveryFailure catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    }
+  }
+
+  void _sortBy(ListingSort option) {
+    final sort = _controller.effectiveSort;
+    _controller.search(
+      sort: () => sort.family == option ? sort.reversed : option,
+    );
+  }
+
+  Future<void> _chooseRelevance() async {
+    final current = _controller.effectiveSort;
+    final choice = await showModalBottomSheet<ListingSort>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      builder: (context) => SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(8, 8, 8, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const _SheetTitle('Sort by relevance'),
+            for (final (option, detail) in const [
+              (
+                ListingSort.bestDeal,
+                'Ranked by the Best Deal score: distance, price, VPS, stock and product rating.',
+              ),
+              (
+                ListingSort.favoritesFirst,
+                'Your Favorite Suppliers first, then Best Deal. Best Deal itself never changes.',
+              ),
+            ])
+              ListTile(
+                selected: current == option,
+                leading: Icon(
+                  current == option
+                      ? LucideIcons.circleCheck
+                      : LucideIcons.circle,
+                ),
+                title: Text(option.label),
+                subtitle: Text(detail),
+                onTap: () => Navigator.pop(context, option),
+              ),
+            const Divider(height: 16),
+            ListTile(
+              leading: const Icon(LucideIcons.slidersHorizontal),
+              title: const Text('Ranking preferences'),
+              subtitle: const Text('Adjust the Best Deal weights'),
+              trailing: const Icon(LucideIcons.chevronRight),
+              onTap: () {
+                Navigator.pop(context);
+                widget.navigation.openPreferences(this.context);
+              },
             ),
-          ),
-          actions: [
-            Badge(
-              isLabelVisible: personalized,
-              smallSize: 10,
-              child: IconButton(
-                tooltip: personalized
-                    ? 'Ranking preferences, personalization active'
-                    : 'Ranking preferences',
-                onPressed: () => widget.navigation.openPreferences(context),
-                icon: const Icon(LucideIcons.slidersHorizontal),
+          ],
+        ),
+      ),
+    );
+    if (choice != null && choice != current) {
+      _controller.search(sort: () => choice);
+    }
+  }
+
+  Future<void> _chooseRadius() async {
+    final selected = await showModalBottomSheet<int>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      builder: (context) => SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(8, 8, 8, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const _SheetTitle('Search radius'),
+            for (final km in kDiscoveryRadiiKm)
+              ListTile(
+                selected: km == _controller.radiusKm,
+                leading: Icon(
+                  km == _controller.radiusKm
+                      ? LucideIcons.circleCheck
+                      : LucideIcons.circle,
+                ),
+                title: Text('Within $km km'),
+                onTap: () => Navigator.pop(context, km),
+              ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Text(
+                'The same radius is used on the Map.',
+                style: TextStyle(fontSize: 12, color: BuyerTheme.muted),
               ),
             ),
           ],
         ),
-        body: SafeArea(
-          child: RefreshIndicator(
-            onRefresh: _controller.retrySearch,
-            child: CustomScrollView(
-              controller: _scroll,
-              slivers: [
-                SliverToBoxAdapter(child: _controls(personalized)),
-                ..._results(),
-              ],
-            ),
-          ),
-        ),
-      );
-    },
+      ),
+    );
+    if (selected != null && selected != _controller.radiusKm) {
+      await _controller.discovery.selectRadius(selected);
+    }
+  }
+
+  void _explain(ListingCardView card) => showModalBottomSheet<void>(
+    context: context,
+    useSafeArea: true,
+    isScrollControlled: true,
+    builder: (context) => SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      child: RankingExplanation(card: card),
+    ),
   );
 
-  Widget _controls(bool personalized) {
+  String? get _title {
+    final filters = _controller.filters;
+    if (filters.categoryName != null) return '${filters.categoryName} Catalog';
+    if (filters.vendorName != null) return '${filters.vendorName} Catalog';
+    return _controller.query.isEmpty ? 'Product Catalog' : null;
+  }
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: Listenable.merge([_controller, widget.navigation.cart]),
+    builder: (context, _) => Scaffold(
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: _controller.retrySearch,
+          child: CustomScrollView(
+            controller: _scroll,
+            slivers: [
+              SliverToBoxAdapter(child: _header()),
+              SliverToBoxAdapter(child: _status()),
+              ..._results(),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+
+  Widget _cartButton() => IconButton(
+    tooltip: 'Cart',
+    onPressed: () => widget.navigation.openCart(context),
+    icon: Badge(
+      isLabelVisible: widget.navigation.cart.lineCount > 0,
+      backgroundColor: BuyerTheme.ink,
+      label: Text('${widget.navigation.cart.lineCount}'),
+      child: const Icon(LucideIcons.shoppingCart, color: BuyerTheme.ink),
+    ),
+  );
+
+  Widget _header() {
     final filters = _controller.filters;
     final sort = _controller.effectiveSort;
-    final page = _controller.page;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+    final personalized = _controller.page?.personalized ?? false;
+    final title = _title;
+    final canPop = ModalRoute.of(context)?.canPop ?? false;
+    return ColoredBox(
+      color: Colors.white,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Semantics(
-            container: true,
-            label: 'Sort results',
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
+          if (title != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 4, 0),
               child: Row(
                 children: [
-                  for (final option in ListingSort.values)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
-                        selected: option == sort,
-                        showCheckmark: true,
-                        label: Text(option.label),
-                        onSelected: (_) =>
-                            _controller.search(sort: () => option),
+                  Expanded(
+                    child: Semantics(
+                      header: true,
+                      child: Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
+                  ),
+                  _cartButton(),
                 ],
               ),
             ),
+          Padding(
+            padding: EdgeInsets.fromLTRB(canPop ? 4 : 16, 8, 4, 8),
+            child: Row(
+              children: [
+                if (canPop)
+                  IconButton(
+                    tooltip: 'Back',
+                    onPressed: () => Navigator.of(context).maybePop(),
+                    icon: const Icon(
+                      LucideIcons.arrowLeft,
+                      color: BuyerTheme.action,
+                    ),
+                  ),
+                Expanded(
+                  child: PillSearchField(
+                    text: _controller.query,
+                    onTap: () => widget.navigation.openSearch(
+                      context,
+                      fromResults: true,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: personalized
+                      ? 'Ranking preferences, personalization active'
+                      : 'Ranking preferences',
+                  onPressed: () => widget.navigation.openPreferences(context),
+                  icon: Badge(
+                    isLabelVisible: personalized,
+                    smallSize: 8,
+                    backgroundColor: BuyerTheme.ink,
+                    child: const Icon(
+                      LucideIcons.slidersHorizontal,
+                      color: BuyerTheme.action,
+                    ),
+                  ),
+                ),
+                if (title == null) _cartButton(),
+              ],
+            ),
           ),
-          const SizedBox(height: 4),
-          Wrap(
-            spacing: 8,
-            runSpacing: 4,
-            children: [
-              FilterChip(
-                label: const Text('Favorite Suppliers'),
+          SortTabBar(
+            items: [
+              SortTabItem(
+                label: sort == ListingSort.favoritesFirst
+                    ? ListingSort.favoritesFirst.label
+                    : ListingSort.bestDeal.label,
+                selected:
+                    sort == ListingSort.bestDeal ||
+                    sort == ListingSort.favoritesFirst,
+                menu: true,
+                onTap: _chooseRelevance,
+              ),
+              for (final option in const [
+                ListingSort.distance,
+                ListingSort.rating,
+                ListingSort.price,
+              ])
+                SortTabItem(
+                  label: option.label,
+                  selected: sort.family == option,
+                  directional: true,
+                  descending: sort.descending,
+                  onTap: () => _sortBy(option),
+                ),
+            ],
+          ),
+          FilterPillRow(
+            pills: [
+              FilterPill(
+                label: 'Radius ${_controller.radiusKm} km',
+                selected: false,
+                trailingIcon: LucideIcons.chevronDown,
+                onTap: _chooseRadius,
+              ),
+              FilterPill(
+                label: 'Favorite Suppliers',
                 selected: filters.favoritesOnly,
-                onSelected: (value) => _controller.search(
-                  filters: filters.copyWith(favoritesOnly: value),
-                ),
-              ),
-              FilterChip(
-                label: const Text('Site Delivery'),
-                selected: filters.fulfillment == 'DELIVERY',
-                onSelected: (value) => _controller.search(
+                onTap: () => _controller.search(
                   filters: filters.copyWith(
-                    fulfillment: () => value ? 'DELIVERY' : null,
+                    favoritesOnly: !filters.favoritesOnly,
                   ),
                 ),
               ),
-              FilterChip(
-                label: const Text('Self-Pickup'),
-                selected: filters.fulfillment == 'PICKUP',
-                onSelected: (value) => _controller.search(
-                  filters: filters.copyWith(
-                    fulfillment: () => value ? 'PICKUP' : null,
+              for (final (method, label) in const [
+                ('DELIVERY', 'Site Delivery'),
+                ('PICKUP', 'Self-Pickup'),
+              ])
+                FilterPill(
+                  label: label,
+                  selected: filters.fulfillment == method,
+                  onTap: () => _controller.search(
+                    filters: filters.copyWith(
+                      fulfillment: () =>
+                          filters.fulfillment == method ? null : method,
+                    ),
                   ),
                 ),
-              ),
-              FilterChip(
-                label: const Text('In Stock only'),
+              FilterPill(
+                label: 'In Stock only',
                 selected: filters.inStockOnly,
-                onSelected: (value) => _controller.search(
-                  filters: filters.copyWith(inStockOnly: value),
+                onTap: () => _controller.search(
+                  filters: filters.copyWith(inStockOnly: !filters.inStockOnly),
                 ),
               ),
-              FilterChip(
-                label: const Text('PS/ICC verified'),
+              FilterPill(
+                label: 'PS/ICC verified',
                 selected: filters.verifiedComplianceOnly,
-                onSelected: (value) => _controller.search(
-                  filters: filters.copyWith(verifiedComplianceOnly: value),
+                onTap: () => _controller.search(
+                  filters: filters.copyWith(
+                    verifiedComplianceOnly: !filters.verifiedComplianceOnly,
+                  ),
                 ),
               ),
               if (filters.categoryId != null)
-                InputChip(
-                  label: Text(filters.categoryName ?? 'Category'),
+                FilterPill(
+                  label: filters.categoryName ?? 'Category',
+                  selected: true,
+                  onTap: null,
+                  deleteTooltip: 'Remove category filter',
                   onDeleted: () => _controller.search(
                     filters: filters.copyWith(
                       categoryId: () => null,
                       categoryName: () => null,
                     ),
                   ),
-                  deleteButtonTooltipMessage: 'Remove category filter',
                 ),
               if (filters.vendorId != null)
-                InputChip(
-                  label: Text(filters.vendorName ?? 'Store'),
+                FilterPill(
+                  label: filters.vendorName ?? 'Store',
+                  selected: true,
+                  onTap: null,
+                  deleteTooltip: 'Remove store filter',
                   onDeleted: () => _controller.search(
                     filters: filters.copyWith(
                       vendorId: () => null,
                       vendorName: () => null,
                     ),
                   ),
-                  deleteButtonTooltipMessage: 'Remove store filter',
                 ),
             ],
           ),
-          const SizedBox(height: 8),
+          const Divider(height: 1),
+        ],
+      ),
+    );
+  }
+
+  Widget _status() {
+    final page = _controller.page;
+    final sort = _controller.effectiveSort;
+    final personalized = page?.personalized ?? false;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           if (page != null && _controller.searchPhase == LoadPhase.ready)
-            Semantics(
-              liveRegion: true,
-              child: Text(
-                '${page.total} result${page.total == 1 ? '' : 's'} within ${_controller.radiusKm} km · ${sort.label} · updated ${formatManilaTimestamp(page.currentAsOf)}',
-                style: const TextStyle(color: BuyerTheme.muted),
-              ),
+            Text(
+              '${page.total} result${page.total == 1 ? '' : 's'} within ${_controller.radiusKm} km · ${sort.label} · updated ${formatManilaTimestamp(page.currentAsOf)}',
+              style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
             ),
           if (personalized &&
               (sort == ListingSort.bestDeal ||
                   sort == ListingSort.favoritesFirst))
             const Padding(
-              padding: EdgeInsets.only(top: 4),
-              child: Row(
-                children: [
-                  Icon(LucideIcons.userCog, size: 16, color: BuyerTheme.action),
-                  SizedBox(width: 4),
-                  Flexible(
-                    child: Text(
-                      'Personalized ranking weights are active.',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ],
+              padding: EdgeInsets.only(top: 2),
+              child: Text(
+                'Personalized ranking weights are active.',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
               ),
             ),
           if (_controller.searchFailure != null &&
@@ -251,37 +432,71 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
                 ),
               ),
             ),
-          const SizedBox(height: 8),
         ],
       ),
     );
   }
+
+  /// Columns follow the available width and text size, so cards never squeeze text at 2x.
+  int _columns(double width) {
+    final scale = MediaQuery.textScalerOf(context).scale(1);
+    final minimum = scale > 1.3 ? 300.0 : 160.0;
+    return (width / minimum).floor().clamp(1, 6);
+  }
+
+  Widget _grid({
+    required int count,
+    required Widget Function(int index) item,
+  }) => SliverLayoutBuilder(
+    builder: (context, constraints) {
+      final columns = _columns(constraints.crossAxisExtent - 24);
+      return SliverPadding(
+        padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+        sliver: SliverList.builder(
+          itemCount: (count / columns).ceil(),
+          itemBuilder: (context, row) => Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (var column = 0; column < columns; column++) ...[
+                    if (column > 0) const SizedBox(width: 10),
+                    Expanded(
+                      child: row * columns + column < count
+                          ? item(row * columns + column)
+                          : const SizedBox.shrink(),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    },
+  );
 
   List<Widget> _results() {
     final phase = _controller.searchPhase;
     final failure = _controller.searchFailure;
     if (phase == LoadPhase.needsOrigin) {
       return [
-        const SliverToBoxAdapter(
+        SliverToBoxAdapter(
           child: StateMessage(
             kind: StateKind.needsLocation,
+            artwork: 'assets/states/location.png',
             title: 'Choose a location first',
             message:
                 'Select a location on the Map to search nearby Verified Vendors.',
+            actionLabel: 'Set location',
+            onAction: () => widget.navigation.openLocation(context),
           ),
         ),
       ];
     }
     if (phase == LoadPhase.loading) {
-      return [
-        SliverList.builder(
-          itemCount: 4,
-          itemBuilder: (_, _) => const Padding(
-            padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: SkeletonBox(height: 120),
-          ),
-        ),
-      ];
+      return [_grid(count: 4, item: (_) => const SkeletonBox(height: 250))];
     }
     if (phase == LoadPhase.failed) {
       return [
@@ -303,84 +518,47 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
     final results = _controller.results;
     if (results.isEmpty) {
       final next = _controller.page?.suggestedRadiusKm;
+      final filtered = _controller.filters.activeCount > 0;
       return [
         SliverToBoxAdapter(
           child: StateMessage(
             kind: StateKind.empty,
-            title: 'No matching Verified Vendor listings',
-            message: _controller.filters.activeCount > 0
-                ? 'Try removing a filter.'
-                : next != null
-                ? 'Nothing matched within ${_controller.radiusKm} km.'
-                : 'Nothing matched at the maximum radius.',
-            actionLabel: _controller.filters.activeCount > 0
+            artwork: 'assets/states/location.png',
+            title: 'Search not found',
+            message: filtered
+                ? 'No Verified Vendor listings match the current filters within ${_controller.radiusKm} km. Try removing a filter.'
+                : 'No matching Verified Vendor listings within ${_controller.radiusKm} km. Try another search or a wider radius.',
+            actionLabel: filtered
                 ? 'Remove filters'
                 : next != null
                 ? 'Search within $next km'
-                : null,
-            onAction: _controller.filters.activeCount > 0
+                : 'Change search',
+            onAction: filtered
                 ? _controller.clearFilters
                 : next != null
                 ? () => _expandRadius(next)
-                : null,
+                : () =>
+                      widget.navigation.openSearch(context, fromResults: true),
           ),
         ),
       ];
     }
     return [
-      SliverLayoutBuilder(
-        builder: (context, constraints) {
-          final columns = constraints.crossAxisExtent >= 720 ? 2 : 1;
-          if (columns == 1) {
-            return SliverList.builder(
-              itemCount: results.length,
-              itemBuilder: (context, index) => Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                child: ListingCard(
-                  card: results[index],
-                  onOpen: () => widget.navigation.openListing(
-                    context,
-                    results[index].listingId,
-                  ),
-                ),
-              ),
-            );
-          }
-          return SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            sliver: SliverList.builder(
-              itemCount: (results.length / 2).ceil(),
-              itemBuilder: (context, row) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: IntrinsicHeight(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      for (var column = 0; column < 2; column++) ...[
-                        if (column == 1) const SizedBox(width: 12),
-                        Expanded(
-                          child: row * 2 + column < results.length
-                              ? ListingCard(
-                                  card: results[row * 2 + column],
-                                  onOpen: () => widget.navigation.openListing(
-                                    context,
-                                    results[row * 2 + column].listingId,
-                                  ),
-                                )
-                              : const SizedBox.shrink(),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
+      _grid(
+        count: results.length,
+        item: (index) => ListingCard(
+          card: results[index],
+          onOpen: () =>
+              widget.navigation.openListing(context, results[index].listingId),
+          onFavorite: _controller.favoriteBusy(results[index].vendorId)
+              ? null
+              : () => _favorite(results[index]),
+          onExplain: () => _explain(results[index]),
+        ),
       ),
       SliverToBoxAdapter(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
           child: _controller.loadingMore
               ? const Center(child: CircularProgressIndicator())
               : _controller.page?.hasMore == true
@@ -388,236 +566,343 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
                   onPressed: _controller.loadMore,
                   child: const Text('Load more results'),
                 )
-              : const Text(
-                  'Only Verified Vendor listings can be purchased. Directory Suppliers are never shown as inventory.',
-                  style: TextStyle(fontSize: 12, color: BuyerTheme.muted),
-                ),
+              : const SizedBox.shrink(),
         ),
       ),
     ];
   }
 }
 
-/// One Tier 2 listing with its best variant under the active sort.
-class ListingCard extends StatelessWidget {
-  const ListingCard({super.key, required this.card, required this.onOpen});
+class _SheetTitle extends StatelessWidget {
+  const _SheetTitle(this.text);
 
-  final ListingCardView card;
-  final VoidCallback onOpen;
+  final String text;
 
   @override
-  Widget build(BuildContext context) {
-    final rating = card.ratingAverage == null ? 'New' : card.ratingLabel;
-    final sold = formatQuantity(card.unitsSold);
-    return Material(
-      color: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: BuyerTheme.border),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Semantics(
-            button: true,
-            label:
-                '${card.displayName}, ${formatPeso(card.unitPriceCentavos)} per ${card.unitName}, ${card.stockLabel == 'IN_STOCK' ? 'In Stock' : 'Limited Stock'}, ${card.vendorName}, ${formatDistance(card.distanceMeters)} away${card.bestPrice ? ', Best Price' : ''}${card.isFavorite ? ', Favorite Supplier' : ''}. Open product details',
-            excludeSemantics: true,
-            child: InkWell(
-              onTap: onOpen,
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _thumbnail(),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            card.displayName,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontWeight: FontWeight.w700),
-                          ),
-                          if (card.variantLabel != null ||
-                              card.optionsCount > 1)
-                            Text(
-                              [
-                                ?card.variantLabel,
-                                if (card.optionsCount > 1)
-                                  '+${card.optionsCount - 1} more option${card.optionsCount == 2 ? '' : 's'}',
-                              ].join(' · '),
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: BuyerTheme.muted,
-                              ),
-                            ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${formatPeso(card.unitPriceCentavos)} / ${card.unitName}',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w800,
-                              color: BuyerTheme.actionPressed,
-                            ),
-                          ),
-                          Text(
-                            card.normalizedUnitPrice == null
-                                ? '${card.vatLabel} · Not Yet Comparable'
-                                : '${card.vatLabel} · ₱${double.parse(card.normalizedUnitPrice!).toStringAsFixed(2)} per ${card.canonicalUnitCode}',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: BuyerTheme.muted,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          StockLabelText(label: card.stockLabel),
-                          Text(
-                            '$rating${sold == '0' ? '' : ' · $sold sold'}',
-                            style: const TextStyle(fontSize: 13),
-                          ),
-                          Text(
-                            '${card.vendorName} · ${card.vendorScore} · ${formatDistance(card.distanceMeters)}',
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 13),
-                          ),
-                          Text(
-                            [
-                              if (card.pickupAvailable) 'Self-Pickup',
-                              if (card.delivery == 'WITHIN_STATED_AREA')
-                                'Site Delivery',
-                              if (card.delivery == 'OUTSIDE_STATED_AREA')
-                                'Delivery outside stated area',
-                            ].join(' · '),
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: BuyerTheme.muted,
-                            ),
-                          ),
-                          if (card.badges.isNotEmpty || card.isFavorite) ...[
-                            const SizedBox(height: 6),
-                            Wrap(
-                              spacing: 6,
-                              runSpacing: 6,
-                              children: [
-                                for (final badge in card.badges)
-                                  ListingBadge(code: badge),
-                                if (card.isFavorite)
-                                  const Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        LucideIcons.heart,
-                                        size: 14,
-                                        color: BuyerTheme.action,
-                                      ),
-                                      SizedBox(width: 4),
-                                      Text(
-                                        'Favorite Supplier',
-                                        style: TextStyle(fontSize: 12),
-                                      ),
-                                    ],
-                                  ),
-                              ],
-                            ),
-                          ],
-                          const SizedBox(height: 4),
-                          Text(
-                            'Stock confirmed ${formatManilaTimestamp(card.stockConfirmedAt)}',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: BuyerTheme.muted,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          const Divider(height: 1),
-          RankingExplanation(card: card),
-        ],
-      ),
-    );
-  }
-
-  Widget _thumbnail() => ClipRRect(
-    borderRadius: BorderRadius.circular(8),
-    child: SizedBox(
-      width: 72,
-      height: 72,
-      child: card.imageUrl == null
-          ? const ColoredBox(
-              color: BuyerTheme.canvas,
-              child: Icon(LucideIcons.package, color: BuyerTheme.muted),
-            )
-          : Image.network(
-              card.imageUrl!,
-              fit: BoxFit.cover,
-              semanticLabel: card.imageAlt,
-              errorBuilder: (_, _, _) => const ColoredBox(
-                color: BuyerTheme.canvas,
-                child: Icon(LucideIcons.imageOff, color: BuyerTheme.muted),
-              ),
-            ),
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+    child: Semantics(
+      header: true,
+      child: Text(text, style: Theme.of(context).textTheme.titleLarge),
     ),
   );
 }
 
-/// Ranking explanation as text rows in a disclosure panel, never a chart.
-class RankingExplanation extends StatelessWidget {
-  const RankingExplanation({super.key, required this.card});
-
+/// One Tier 2 listing as a catalog card, using its server-selected variant under the active sort.
+class ListingCard extends StatelessWidget {
+  const ListingCard({
+    super.key,
+    required this.card,
+    required this.onOpen,
+    this.onFavorite,
+    this.onExplain,
+  });
   final ListingCardView card;
+  final VoidCallback onOpen;
+  final VoidCallback? onFavorite;
+  final VoidCallback? onExplain;
 
   @override
-  Widget build(BuildContext context) => Theme(
-    data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-    child: ExpansionTile(
-      tilePadding: const EdgeInsets.symmetric(horizontal: 12),
-      childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-      expandedCrossAxisAlignment: CrossAxisAlignment.start,
-      title: Text(
-        'Why this ranking · Best Deal score ${card.srs}',
-        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+  Widget build(BuildContext context) {
+    final sold = formatQuantity(card.unitsSold);
+    final delivery = card.delivery != 'NOT_OFFERED';
+    return Material(
+      color: Colors.white,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: BuyerTheme.border),
       ),
-      children: [
-        for (final component in card.components)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 6),
-            child: Semantics(
-              container: true,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      child: Semantics(
+        button: true,
+        label: 'Open product details',
+        child: InkWell(
+          onTap: onOpen,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Stack(
                 children: [
-                  Text(
-                    '${component.label}: ${component.score} × ${component.weightPercent}% = ${component.weighted}',
-                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  AspectRatio(
+                    aspectRatio: 1.15,
+                    child: ColoredBox(
+                      color: BuyerTheme.canvas,
+                      child: card.imageUrl == null
+                          ? const Icon(
+                              LucideIcons.package,
+                              size: 36,
+                              color: BuyerTheme.muted,
+                            )
+                          : Image.network(
+                              card.imageUrl!,
+                              fit: BoxFit.cover,
+                              cacheWidth: 480,
+                              semanticLabel: card.imageAlt,
+                              errorBuilder: (_, _, _) => const Icon(
+                                LucideIcons.imageOff,
+                                color: BuyerTheme.muted,
+                              ),
+                            ),
+                    ),
                   ),
-                  Text(
-                    component.basis,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: BuyerTheme.muted,
+                  if (card.bestPrice)
+                    const Positioned(
+                      left: 8,
+                      top: 8,
+                      right: 52,
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: ListingBadge(code: 'BEST_PRICE', solid: true),
+                      ),
+                    ),
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    child: RoundIconButton(
+                      icon: card.isFavorite
+                          ? LucideIcons.heartOff
+                          : LucideIcons.heart,
+                      tooltip: card.isFavorite
+                          ? 'Remove Favorite Supplier ${card.vendorName}'
+                          : 'Save ${card.vendorName} as a Favorite Supplier',
+                      onPressed: onFavorite,
                     ),
                   ),
                 ],
               ),
-            ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(10, 8, 10, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        card.displayName,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          height: 1.3,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      if (card.variantLabel != null || card.optionsCount > 1)
+                        Text(
+                          [
+                            ?card.variantLabel,
+                            if (card.optionsCount > 1)
+                              '+${card.optionsCount - 1} more option${card.optionsCount == 2 ? '' : 's'}',
+                          ].join(' · '),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: BuyerTheme.muted,
+                          ),
+                        ),
+                      const SizedBox(height: 4),
+                      Text.rich(
+                        TextSpan(
+                          children: [
+                            TextSpan(
+                              text: formatPeso(card.unitPriceCentavos),
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            TextSpan(
+                              text: ' / ${card.unitName}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                        style: const TextStyle(color: BuyerTheme.action),
+                      ),
+                      Text(
+                        card.normalizedUnitPrice == null
+                            ? '${card.vatLabel} · Not Yet Comparable'
+                            : '${card.vatLabel} · ₱${double.parse(card.normalizedUnitPrice!).toStringAsFixed(2)} per ${card.canonicalUnitCode}',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: BuyerTheme.muted,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 2,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          StockLabelText(label: card.stockLabel, compact: true),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                LucideIcons.star,
+                                size: 13,
+                                color: Color(MateryalColorTokens.statusWarning),
+                              ),
+                              const SizedBox(width: 2),
+                              Flexible(
+                                child: Text(
+                                  '${card.ratingAverage == null ? 'New' : card.ratingLabel}${sold == '0' ? '' : ' | $sold sold'}',
+                                  style: const TextStyle(fontSize: 11),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        card.vendorName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        '${card.vendorScore} · ${formatDistance(card.distanceMeters)}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: BuyerTheme.muted,
+                        ),
+                      ),
+                      const Spacer(),
+                      const Divider(height: 14),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          if (delivery)
+                            const _Fulfillment(
+                              icon: LucideIcons.truck,
+                              label: 'Site Delivery',
+                            ),
+                          if (card.pickupAvailable)
+                            const _Fulfillment(
+                              icon: LucideIcons.store,
+                              label: 'Self-Pickup',
+                            ),
+                          if (card.psIccVerified)
+                            const ListingBadge(
+                              code: 'PS_ICC_VERIFIED',
+                              solid: true,
+                            ),
+                        ],
+                      ),
+                      Text(
+                        'Stock confirmed ${formatManilaTimestamp(card.stockConfirmedAt)}',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: BuyerTheme.muted,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              if (onExplain != null)
+                TextButton.icon(
+                  onPressed: onExplain,
+                  style: TextButton.styleFrom(
+                    minimumSize: const Size(0, 44),
+                    alignment: Alignment.centerLeft,
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    textStyle: const TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  icon: const Icon(LucideIcons.info, size: 16),
+                  label: const Text('Why this ranking'),
+                ),
+            ],
           ),
-        const Text(
-          'Scores are normalized to 0–100 and combined as a weighted sum. Ties break by distance, then price, then listing.',
-          style: TextStyle(fontSize: 12, color: BuyerTheme.muted),
         ),
-      ],
-    ),
+      ),
+    );
+  }
+}
+
+class _Fulfillment extends StatelessWidget {
+  const _Fulfillment({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Icon(icon, size: 13, color: BuyerTheme.successStrong),
+      const SizedBox(width: 3),
+      Flexible(
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: BuyerTheme.successStrong,
+          ),
+        ),
+      ),
+    ],
+  );
+}
+
+class RankingExplanation extends StatelessWidget {
+  const RankingExplanation({super.key, required this.card});
+  final ListingCardView card;
+  @override
+  Widget build(BuildContext context) => Column(
+    mainAxisSize: MainAxisSize.min,
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Semantics(
+        header: true,
+        child: Text(
+          'Why this ranking',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+      ),
+      const SizedBox(height: 4),
+      Text(
+        '${card.displayName} · Best Deal score ${card.srs}',
+        style: const TextStyle(fontWeight: FontWeight.w600),
+      ),
+      const Divider(height: 24),
+      for (final component in card.components)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '${component.label}: ${component.score} × ${component.weightPercent}% = ${component.weighted}',
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+              Text(
+                component.basis,
+                style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
+              ),
+            ],
+          ),
+        ),
+      const Text(
+        'Scores are normalized to 0–100 and combined as a weighted sum. Ties break by distance, then price, then listing.',
+        style: TextStyle(fontSize: 12, color: BuyerTheme.muted),
+      ),
+    ],
   );
 }

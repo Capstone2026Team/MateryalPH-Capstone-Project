@@ -65,7 +65,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                                 TextSpan(
                                   text: 'PH',
                                   style: TextStyle(
-                                    color: Theme.of(context).colorScheme.primary,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
                                   ),
                                 ),
                               ],

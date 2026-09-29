@@ -55,7 +55,7 @@ abstract class ListingSearchRequest implements Built<ListingSearchRequest, Listi
 
   @BuiltValueField(wireName: r'sort')
   ListingSearchSort? get sort;
-  // enum sortEnum {  BEST_DEAL,  DISTANCE,  PRICE,  RATING,  FAVORITES_FIRST,  };
+  // enum sortEnum {  BEST_DEAL,  DISTANCE,  PRICE,  RATING,  FAVORITES_FIRST,  DISTANCE_DESC,  PRICE_DESC,  RATING_ASC,  };
 
   @BuiltValueField(wireName: r'category_id')
   String? get categoryId;

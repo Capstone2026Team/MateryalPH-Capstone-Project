@@ -23,6 +23,9 @@ export const ListingSearchSort = {
     Price: 'PRICE',
     Rating: 'RATING',
     FavoritesFirst: 'FAVORITES_FIRST',
+    DistanceDesc: 'DISTANCE_DESC',
+    PriceDesc: 'PRICE_DESC',
+    RatingAsc: 'RATING_ASC',
 } as const;
 export type ListingSearchSort = typeof ListingSearchSort[keyof typeof ListingSearchSort];
 

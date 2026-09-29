@@ -853,7 +853,7 @@ Buyers search comparable active listings, understand Best Price and ranking, per
 
 ## UI/UX and layout architecture
 
-Explore leads with two accessible summary cards built from **one** server snapshot with a shared `current_as_of`; neither shows a false zero while loading. Category entries follow. Ranking explanation is a disclosure panel showing component scores in text, not a chart. The preferences screen enforces a 100% total with live remaining-weight feedback, a visible "personalization active" indicator and Reset to Default. The cart renders one group per Vendor with its own delivery or pickup choice and its own validation band; a stale price, stock, serviceability or Vendor-status result appears inline on the affected group without discarding the rest of the cart. Filters and scroll position survive navigation, and stale async responses are rejected.
+Explore leads with two accessible summary cards built from **one** server snapshot with a shared `current_as_of`; neither shows a false zero while loading. Category entries follow. Ranking explanation is a disclosure panel showing component scores in text, not a chart. The preferences screen automatically redistributes the other Item-Based weights proportionally when one factor changes, uses deterministic rounding to keep the visible total at 100%, and provides a visible "personalization active" indicator and Reset to Default. The cart renders one group per Vendor with its own delivery or pickup choice and its own validation band; a stale price, stock, serviceability or Vendor-status result appears inline on the affected group without discarding the rest of the cart. Filters and scroll position survive navigation, and stale async responses are rejected.
 
 ## Acceptance gate
 

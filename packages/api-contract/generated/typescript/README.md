@@ -147,6 +147,7 @@ All URIs are relative to */api/v1*
 *BuyerDiscoveryApi* | [**addFavoriteSupplier**](docs/BuyerDiscoveryApi.md#addfavoritesupplier) | **PUT** /buyers/favorite-suppliers/{vendorId} |
 *BuyerDiscoveryApi* | [**estimateBuyerRoute**](docs/BuyerDiscoveryApi.md#estimatebuyerroute) | **POST** /buyers/discovery/routes |
 *BuyerDiscoveryApi* | [**getDirectorySupplierDetails**](docs/BuyerDiscoveryApi.md#getdirectorysupplierdetails) | **GET** /buyers/discovery/directory-suppliers/{supplierId} |
+*BuyerDiscoveryApi* | [**getDirectorySupplierPhoto**](docs/BuyerDiscoveryApi.md#getdirectorysupplierphoto) | **GET** /buyers/discovery/directory-suppliers/{supplierId}/photo |
 *BuyerDiscoveryApi* | [**listFavoriteSuppliers**](docs/BuyerDiscoveryApi.md#listfavoritesuppliers) | **GET** /buyers/favorite-suppliers |
 *BuyerDiscoveryApi* | [**removeFavoriteSupplier**](docs/BuyerDiscoveryApi.md#removefavoritesupplier) | **DELETE** /buyers/favorite-suppliers/{vendorId} |
 *BuyerDiscoveryApi* | [**saveBuyerDiscoveryRadius**](docs/BuyerDiscoveryApi.md#savebuyerdiscoveryradius) | **PUT** /buyers/discovery/preferences |
@@ -157,6 +158,7 @@ All URIs are relative to */api/v1*
 *BuyerExploreApi* | [**resetBuyerItemRankingPreferences**](docs/BuyerExploreApi.md#resetbuyeritemrankingpreferences) | **DELETE** /buyers/ranking-preferences/item-based |
 *BuyerExploreApi* | [**saveBuyerItemRankingPreferences**](docs/BuyerExploreApi.md#savebuyeritemrankingpreferences) | **PUT** /buyers/ranking-preferences/item-based |
 *BuyerExploreApi* | [**searchBuyerListings**](docs/BuyerExploreApi.md#searchbuyerlistings) | **POST** /buyers/listings/search |
+*BuyerLocationsApi* | [**autocompleteBuyerLocation**](docs/BuyerLocationsApi.md#autocompletebuyerlocation) | **POST** /buyers/locations/autocomplete |
 *BuyerLocationsApi* | [**createBuyerLocation**](docs/BuyerLocationsApi.md#createbuyerlocation) | **POST** /buyers/locations |
 *BuyerLocationsApi* | [**getBuyerOnboarding**](docs/BuyerLocationsApi.md#getbuyeronboarding) | **GET** /buyers/onboarding |
 *BuyerLocationsApi* | [**listBuyerLocations**](docs/BuyerLocationsApi.md#listbuyerlocations) | **GET** /buyers/locations |
@@ -413,6 +415,8 @@ All URIs are relative to */api/v1*
 - [DirectoryAvailability](docs/DirectoryAvailability.md)
 - [DirectorySupplierDetail](docs/DirectorySupplierDetail.md)
 - [DirectorySupplierDetailEnvelope](docs/DirectorySupplierDetailEnvelope.md)
+- [DirectorySupplierPhoto](docs/DirectorySupplierPhoto.md)
+- [DirectorySupplierPhotoEnvelope](docs/DirectorySupplierPhotoEnvelope.md)
 - [DirectorySupplierSummary](docs/DirectorySupplierSummary.md)
 - [DiscoveryCounts](docs/DiscoveryCounts.md)
 - [DiscoveryPreferences](docs/DiscoveryPreferences.md)
@@ -449,8 +453,12 @@ All URIs are relative to */api/v1*
 - [FleetVehicleListMetaPermissions](docs/FleetVehicleListMetaPermissions.md)
 - [FleetVehiclesSave](docs/FleetVehiclesSave.md)
 - [GenericDataEnvelope](docs/GenericDataEnvelope.md)
+- [GoogleContentAuthor](docs/GoogleContentAuthor.md)
 - [GoogleMobileExchangeRequest](docs/GoogleMobileExchangeRequest.md)
 - [GoogleOidcStartRequest](docs/GoogleOidcStartRequest.md)
+- [GooglePlaceAttribute](docs/GooglePlaceAttribute.md)
+- [GooglePlacePhoto](docs/GooglePlacePhoto.md)
+- [GooglePlaceReview](docs/GooglePlaceReview.md)
 - [GoogleRating](docs/GoogleRating.md)
 - [HealthEnvelope](docs/HealthEnvelope.md)
 - [HealthEnvelopeAllOfData](docs/HealthEnvelopeAllOfData.md)
@@ -495,6 +503,9 @@ All URIs are relative to */api/v1*
 - [ListingVariantOffer](docs/ListingVariantOffer.md)
 - [ListingVariantPrice](docs/ListingVariantPrice.md)
 - [ListingVendorCard](docs/ListingVendorCard.md)
+- [LocationAutocompleteRequest](docs/LocationAutocompleteRequest.md)
+- [LocationSuggestion](docs/LocationSuggestion.md)
+- [LocationSuggestionEnvelope](docs/LocationSuggestionEnvelope.md)
 - [LockVersionRequest](docs/LockVersionRequest.md)
 - [LoginRequest](docs/LoginRequest.md)
 - [MapPoint](docs/MapPoint.md)

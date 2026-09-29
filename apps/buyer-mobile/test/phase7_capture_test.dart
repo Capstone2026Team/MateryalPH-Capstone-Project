@@ -5,6 +5,7 @@ import 'package:materyalph/design_system/theme.dart';
 import 'package:materyalph/features/item_procurement/cart_controller.dart';
 import 'package:materyalph/features/item_procurement/cart_screen.dart';
 import 'package:materyalph/features/item_procurement/checkout_preview_screen.dart';
+import 'package:materyalph/features/item_procurement/checkout_previews.dart';
 import 'package:materyalph/features/item_procurement/explore_controller.dart';
 import 'package:materyalph/features/item_procurement/explore_screen.dart';
 import 'package:materyalph/features/item_procurement/procurement_navigation.dart';
@@ -237,6 +238,24 @@ void main() {
       );
     },
   );
+
+  testWidgets('E-Invoice request design preview', (tester) async {
+    await capture(
+      tester,
+      '390-einvoice-preview',
+      const EInvoiceRequestPreviewScreen(),
+      const Size(390, 1300),
+    );
+  });
+
+  testWidgets('order confirmation design preview', (tester) async {
+    await capture(
+      tester,
+      '390-order-placed-preview',
+      OrderPlacedPreviewScreen(preview: previewFixture()),
+      const Size(390, 1200),
+    );
+  });
 
   testWidgets('checkout preview with a blocked route', (tester) async {
     final (_, cart, _, repository) = await setup();

@@ -9,6 +9,8 @@ import 'package:materyalph_api_client/api.dart';
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **mode** | **String** |  |
+**placeId** | **String** | Required only for PLACE mode. | [optional]
+**sessionToken** | **String** | Required only for PLACE mode; same token as autocomplete. | [optional]
 **latitude** | **double** |  | [optional]
 **longitude** | **double** |  | [optional]
 **addressLine** | **String** |  | [optional]

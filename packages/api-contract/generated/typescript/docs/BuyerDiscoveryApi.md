@@ -7,6 +7,7 @@ All URIs are relative to */api/v1*
 | [**addFavoriteSupplier**](BuyerDiscoveryApi.md#addfavoritesupplier) | **PUT** /buyers/favorite-suppliers/{vendorId} |  |
 | [**estimateBuyerRoute**](BuyerDiscoveryApi.md#estimatebuyerroute) | **POST** /buyers/discovery/routes |  |
 | [**getDirectorySupplierDetails**](BuyerDiscoveryApi.md#getdirectorysupplierdetails) | **GET** /buyers/discovery/directory-suppliers/{supplierId} |  |
+| [**getDirectorySupplierPhoto**](BuyerDiscoveryApi.md#getdirectorysupplierphoto) | **GET** /buyers/discovery/directory-suppliers/{supplierId}/photo |  |
 | [**listFavoriteSuppliers**](BuyerDiscoveryApi.md#listfavoritesuppliers) | **GET** /buyers/favorite-suppliers |  |
 | [**removeFavoriteSupplier**](BuyerDiscoveryApi.md#removefavoritesupplier) | **DELETE** /buyers/favorite-suppliers/{vendorId} |  |
 | [**saveBuyerDiscoveryRadius**](BuyerDiscoveryApi.md#savebuyerdiscoveryradius) | **PUT** /buyers/discovery/preferences |  |
@@ -172,7 +173,7 @@ example().catch(console.error);
 
 
 
-Lazy-loaded, attributed Google Place Details for one unexpired Directory Supplier. Informational only; never exposes VPS, verification, messaging, ordering, reviews, payments or a storefront. A Google rating is labeled Google rating.
+Lazy-loaded, attributed Google Place Details for one unexpired Directory Supplier. Informational only; never exposes VPS, verification, messaging, ordering, MateryalPH reviews, payments or a storefront. Google media and review excerpts are fetched on demand without storage. A Google rating is labeled Google rating.
 
 ### Example
 
@@ -233,6 +234,82 @@ example().catch(console.error);
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **200** | Directory Supplier details. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **404** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **429** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **503** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## getDirectorySupplierPhoto
+
+> DirectorySupplierPhotoEnvelope getDirectorySupplierPhoto(supplierId)
+
+
+
+On-demand thumbnail for one visible, unexpired Directory Supplier. Uses only Google photos and attributions; no photo names or media URLs are persisted. Response is no-store. Does not load reviews or full details.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  BuyerDiscoveryApi,
+} from '@materyalph/api-client-ts';
+import type { GetDirectorySupplierPhotoRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // Configure HTTP bearer authorization: passportBearer
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new BuyerDiscoveryApi(config);
+
+  const body = {
+    // string
+    supplierId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+  } satisfies GetDirectorySupplierPhotoRequest;
+
+  try {
+    const data = await api.getDirectorySupplierPhoto(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **supplierId** | `string` |  | [Defaults to `undefined`] |
+
+### Return type
+
+[**DirectorySupplierPhotoEnvelope**](DirectorySupplierPhotoEnvelope.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | At most one attributed business thumbnail or an empty photos list when unavailable. |  -  |
 | **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 | **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 | **404** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For middleware rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Document and media uploads share a 20/minute user and organization limit within the overall 60/minute account limit; security-action limits remain unchanged. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |

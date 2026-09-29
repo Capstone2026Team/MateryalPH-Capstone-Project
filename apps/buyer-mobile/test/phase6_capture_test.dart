@@ -5,6 +5,7 @@ import 'package:materyalph/design_system/theme.dart';
 import 'package:materyalph/features/map_discovery/device_location.dart';
 import 'package:materyalph/features/map_discovery/discovery_models.dart';
 import 'package:materyalph/features/map_discovery/map_home_screen.dart';
+import 'package:materyalph/features/map_discovery/select_location_screen.dart';
 
 import 'map_discovery_fakes.dart';
 
@@ -85,6 +86,50 @@ void main() {
       matchesGoldenFile('../../../docs/design/evidence/phase-6/$name.png'),
     );
   }
+
+  testWidgets('unified location details at 390 px', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: BuyerTheme.light,
+        home: SelectLocationScreen(
+          repository: repository()
+            ..pointAddress =
+                '629 J Nepomuceno St, Quiapo, Manila, 1001 Metro Manila',
+          deviceLocation: FakeDeviceLocation(
+            const DeviceLocationResult(DeviceLocationStatus.denied),
+          ),
+          savedLocations: const [],
+          mapsAvailable: false,
+          initialPoint: primaryLocation.point,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    await expectLater(
+      find.byType(MaterialApp),
+      matchesGoldenFile(
+        '../../../docs/design/evidence/phase-6/390-unified-location-details.png',
+      ),
+    );
+  });
+
+  testWidgets(
+    'Tier 1 Google reviews section',
+    (tester) => capture(
+      tester,
+      '390-tier1-google-reviews',
+      const Size(390, 844),
+      act: () async {
+        await tester.tap(find.byKey(const ValueKey('marker-d-1')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Reviews'));
+      },
+    ),
+  );
 
   testWidgets(
     'map home list at 390 px',

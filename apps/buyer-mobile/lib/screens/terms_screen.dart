@@ -134,7 +134,9 @@ class _TermsScreenState extends State<TermsScreen> {
                                   Text.rich(
                                     TextSpan(
                                       children: [
-                                        const TextSpan(text: 'Welcome to Materyal'),
+                                        const TextSpan(
+                                          text: 'Welcome to Materyal',
+                                        ),
                                         TextSpan(
                                           text: 'PH',
                                           style: const TextStyle(
@@ -143,7 +145,9 @@ class _TermsScreenState extends State<TermsScreen> {
                                         ),
                                       ],
                                     ),
-                                    style: Theme.of(context).textTheme.titleLarge,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.titleLarge,
                                   ),
                                   const SizedBox(height: 12),
                                   const Text(

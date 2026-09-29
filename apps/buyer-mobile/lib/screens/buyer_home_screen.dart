@@ -84,6 +84,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
           cart: _cart,
           repository: _procurement!,
           openStoreProfile: _openStore,
+          onOpenMap: () => _select(0),
         );
   bool _cartLoaded = false;
 
@@ -181,6 +182,13 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
       return BuyerProfileScreen(
         repository: widget.repository!,
         discoveryRepository: _discovery,
+        onRemoveFavorite: _discoveryController == null
+            ? null
+            : (vendorId) =>
+                  _discoveryController.setFavorite(vendorId, favorite: false),
+        onRankingPreferences: _navigation == null
+            ? null
+            : () => _navigation.openPreferences(context),
         deviceLocation: widget.deviceLocation,
         onSignedOut: _sessionEnded,
         onSignOut: widget.onSignOut,
@@ -196,6 +204,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
           cart: cart,
           navigation: navigation,
           onOpenMap: () => _select(0),
+          onOpenNotifications: () => _unavailable('Notifications'),
         );
       }
       return Scaffold(

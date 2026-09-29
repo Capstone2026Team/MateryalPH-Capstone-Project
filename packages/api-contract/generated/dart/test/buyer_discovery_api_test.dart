@@ -21,10 +21,17 @@ void main() {
       // TODO
     });
 
-    // Lazy-loaded, attributed Google Place Details for one unexpired Directory Supplier. Informational only; never exposes VPS, verification, messaging, ordering, reviews, payments or a storefront. A Google rating is labeled Google rating.
+    // Lazy-loaded, attributed Google Place Details for one unexpired Directory Supplier. Informational only; never exposes VPS, verification, messaging, ordering, MateryalPH reviews, payments or a storefront. Google media and review excerpts are fetched on demand without storage. A Google rating is labeled Google rating.
     //
     //Future<DirectorySupplierDetailEnvelope> getDirectorySupplierDetails(String supplierId) async
     test('test getDirectorySupplierDetails', () async {
+      // TODO
+    });
+
+    // On-demand thumbnail for one visible, unexpired Directory Supplier. Uses only Google photos and attributions; no photo names or media URLs are persisted. Response is no-store. Does not load reviews or full details.
+    //
+    //Future<DirectorySupplierPhotoEnvelope> getDirectorySupplierPhoto(String supplierId) async
+    test('test getDirectorySupplierPhoto', () async {
       // TODO
     });
 

@@ -21,6 +21,12 @@ class ListingSearchSort extends EnumClass {
   static const ListingSearchSort RATING = _$RATING;
   @BuiltValueEnumConst(wireName: r'FAVORITES_FIRST')
   static const ListingSearchSort FAVORITES_FIRST = _$FAVORITES_FIRST;
+  @BuiltValueEnumConst(wireName: r'DISTANCE_DESC')
+  static const ListingSearchSort DISTANCE_DESC = _$DISTANCE_DESC;
+  @BuiltValueEnumConst(wireName: r'PRICE_DESC')
+  static const ListingSearchSort PRICE_DESC = _$PRICE_DESC;
+  @BuiltValueEnumConst(wireName: r'RATING_ASC')
+  static const ListingSearchSort RATING_ASC = _$RATING_ASC;
 
   static Serializer<ListingSearchSort> get serializer => _$listingSearchSortSerializer;
 

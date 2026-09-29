@@ -17,6 +17,12 @@ Name | Type | Description | Notes
 **publicPhone** | **String** |  |
 **websiteUri** | **String** |  |
 **googleMapsUri** | **String** |  |
+**openNow** | **bool** |  | [optional]
+**nextCloseTime** | [**DateTime**](DateTime.md) |  | [optional]
+**photos** | [**BuiltList&lt;GooglePlacePhoto&gt;**](GooglePlacePhoto.md) |  | [optional]
+**reviews** | [**BuiltList&lt;GooglePlaceReview&gt;**](GooglePlaceReview.md) |  | [optional]
+**attributes** | [**BuiltList&lt;GooglePlaceAttribute&gt;**](GooglePlaceAttribute.md) |  | [optional]
+**providerAttributions** | [**BuiltList&lt;GoogleContentAuthor&gt;**](GoogleContentAuthor.md) |  | [optional]
 **openingHours** | **BuiltList&lt;String&gt;** |  |
 **googleRating** | [**GoogleRating**](GoogleRating.md) |  |
 **attribution** | [**ProviderAttribution**](ProviderAttribution.md) |  |

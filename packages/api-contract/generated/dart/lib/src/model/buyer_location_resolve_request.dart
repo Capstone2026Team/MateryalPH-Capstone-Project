@@ -13,6 +13,8 @@ part 'buyer_location_resolve_request.g.dart';
 ///
 /// Properties:
 /// * [mode]
+/// * [placeId] - Required only for PLACE mode.
+/// * [sessionToken] - Required only for PLACE mode; same token as autocomplete.
 /// * [latitude]
 /// * [longitude]
 /// * [addressLine]
@@ -26,7 +28,15 @@ part 'buyer_location_resolve_request.g.dart';
 abstract class BuyerLocationResolveRequest implements Built<BuyerLocationResolveRequest, BuyerLocationResolveRequestBuilder> {
   @BuiltValueField(wireName: r'mode')
   BuyerLocationResolveRequestModeEnum get mode;
-  // enum modeEnum {  PIN,  DEVICE,  ADDRESS,  };
+  // enum modeEnum {  PIN,  DEVICE,  ADDRESS,  PLACE,  };
+
+  /// Required only for PLACE mode.
+  @BuiltValueField(wireName: r'place_id')
+  String? get placeId;
+
+  /// Required only for PLACE mode; same token as autocomplete.
+  @BuiltValueField(wireName: r'session_token')
+  String? get sessionToken;
 
   @BuiltValueField(wireName: r'latitude')
   double? get latitude;
@@ -83,6 +93,20 @@ class _$BuyerLocationResolveRequestSerializer implements PrimitiveSerializer<Buy
       object.mode,
       specifiedType: const FullType(BuyerLocationResolveRequestModeEnum),
     );
+    if (object.placeId != null) {
+      yield r'place_id';
+      yield serializers.serialize(
+        object.placeId,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.sessionToken != null) {
+      yield r'session_token';
+      yield serializers.serialize(
+        object.sessionToken,
+        specifiedType: const FullType(String),
+      );
+    }
     if (object.latitude != null) {
       yield r'latitude';
       yield serializers.serialize(
@@ -175,6 +199,22 @@ class _$BuyerLocationResolveRequestSerializer implements PrimitiveSerializer<Buy
             specifiedType: const FullType(BuyerLocationResolveRequestModeEnum),
           ) as BuyerLocationResolveRequestModeEnum;
           result.mode = valueDes;
+          break;
+        case r'place_id':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.placeId = valueDes;
+          break;
+        case r'session_token':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.sessionToken = valueDes;
           break;
         case r'latitude':
           final valueDes = serializers.deserialize(
@@ -286,6 +326,8 @@ class BuyerLocationResolveRequestModeEnum extends EnumClass {
   static const BuyerLocationResolveRequestModeEnum DEVICE = _$buyerLocationResolveRequestModeEnum_DEVICE;
   @BuiltValueEnumConst(wireName: r'ADDRESS')
   static const BuyerLocationResolveRequestModeEnum ADDRESS = _$buyerLocationResolveRequestModeEnum_ADDRESS;
+  @BuiltValueEnumConst(wireName: r'PLACE')
+  static const BuyerLocationResolveRequestModeEnum PLACE = _$buyerLocationResolveRequestModeEnum_PLACE;
 
   static Serializer<BuyerLocationResolveRequestModeEnum> get serializer => _$buyerLocationResolveRequestModeEnumSerializer;
 

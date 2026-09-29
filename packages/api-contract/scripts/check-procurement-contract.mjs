@@ -62,7 +62,7 @@ const schemas = spec.components.schemas
 assert.deepEqual(schemas.RankingWeightSet.required, ['distance', 'price', 'vps', 'stock', 'product_rating'], 'SRS has exactly five components')
 assert.equal(schemas.RankingWeightSet.additionalProperties, false, 'No hidden or sponsored ranking component can be submitted')
 assert.equal(schemas.RankingPreferences.properties.total_percent.const, 100, 'Weights always total 100%')
-assert.deepEqual(schemas.ListingSearchSort.enum, ['BEST_DEAL', 'DISTANCE', 'PRICE', 'RATING', 'FAVORITES_FIRST'], 'Favorites First is a separate explicit sort')
+assert.deepEqual(schemas.ListingSearchSort.enum, ['BEST_DEAL', 'DISTANCE', 'PRICE', 'RATING', 'FAVORITES_FIRST', 'DISTANCE_DESC', 'PRICE_DESC', 'RATING_ASC'], 'Favorites First is a separate explicit sort')
 assert.deepEqual(schemas.ListingSearchResult.properties.stock_label.enum, ['IN_STOCK', 'LIMITED_STOCK'], 'Out of Stock offers never appear as results')
 assert.deepEqual(schemas.ListingSearchResult.properties.badges.items.enum, ['BEST_PRICE', 'PS_ICC_VERIFIED'], 'Result badges are system-derived only; Favorite is never a badge')
 assert.deepEqual(schemas.RankingComponent.properties.key.enum, ['distance', 'price', 'vps', 'stock', 'product_rating'])

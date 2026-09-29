@@ -186,6 +186,8 @@ import 'package:materyalph_api_client/src/model/delivery_route.dart';
 import 'package:materyalph_api_client/src/model/directory_availability.dart';
 import 'package:materyalph_api_client/src/model/directory_supplier_detail.dart';
 import 'package:materyalph_api_client/src/model/directory_supplier_detail_envelope.dart';
+import 'package:materyalph_api_client/src/model/directory_supplier_photo.dart';
+import 'package:materyalph_api_client/src/model/directory_supplier_photo_envelope.dart';
 import 'package:materyalph_api_client/src/model/directory_supplier_summary.dart';
 import 'package:materyalph_api_client/src/model/discovery_counts.dart';
 import 'package:materyalph_api_client/src/model/discovery_preferences.dart';
@@ -222,8 +224,12 @@ import 'package:materyalph_api_client/src/model/fleet_vehicle_list_meta_limits.d
 import 'package:materyalph_api_client/src/model/fleet_vehicle_list_meta_permissions.dart';
 import 'package:materyalph_api_client/src/model/fleet_vehicles_save.dart';
 import 'package:materyalph_api_client/src/model/generic_data_envelope.dart';
+import 'package:materyalph_api_client/src/model/google_content_author.dart';
 import 'package:materyalph_api_client/src/model/google_mobile_exchange_request.dart';
 import 'package:materyalph_api_client/src/model/google_oidc_start_request.dart';
+import 'package:materyalph_api_client/src/model/google_place_attribute.dart';
+import 'package:materyalph_api_client/src/model/google_place_photo.dart';
+import 'package:materyalph_api_client/src/model/google_place_review.dart';
 import 'package:materyalph_api_client/src/model/google_rating.dart';
 import 'package:materyalph_api_client/src/model/health_envelope.dart';
 import 'package:materyalph_api_client/src/model/health_envelope_all_of_data.dart';
@@ -268,6 +274,9 @@ import 'package:materyalph_api_client/src/model/listing_status_change.dart';
 import 'package:materyalph_api_client/src/model/listing_variant_offer.dart';
 import 'package:materyalph_api_client/src/model/listing_variant_price.dart';
 import 'package:materyalph_api_client/src/model/listing_vendor_card.dart';
+import 'package:materyalph_api_client/src/model/location_autocomplete_request.dart';
+import 'package:materyalph_api_client/src/model/location_suggestion.dart';
+import 'package:materyalph_api_client/src/model/location_suggestion_envelope.dart';
 import 'package:materyalph_api_client/src/model/lock_version_request.dart';
 import 'package:materyalph_api_client/src/model/login_request.dart';
 import 'package:materyalph_api_client/src/model/map_point.dart';
@@ -576,6 +585,8 @@ part 'serializers.g.dart';
   DirectoryAvailability,
   DirectorySupplierDetail,
   DirectorySupplierDetailEnvelope,
+  DirectorySupplierPhoto,
+  DirectorySupplierPhotoEnvelope,
   DirectorySupplierSummary,
   DiscoveryCounts,
   DiscoveryPreferences,
@@ -612,8 +623,12 @@ part 'serializers.g.dart';
   FleetVehicleListMetaPermissions,
   FleetVehiclesSave,
   GenericDataEnvelope,
+  GoogleContentAuthor,
   GoogleMobileExchangeRequest,
   GoogleOidcStartRequest,
+  GooglePlaceAttribute,
+  GooglePlacePhoto,
+  GooglePlaceReview,
   GoogleRating,
   HealthEnvelope,
   HealthEnvelopeAllOfData,
@@ -658,6 +673,9 @@ part 'serializers.g.dart';
   ListingVariantOffer,
   ListingVariantPrice,
   ListingVendorCard,
+  LocationAutocompleteRequest,
+  LocationSuggestion,
+  LocationSuggestionEnvelope,
   LockVersionRequest,
   LoginRequest,
   MapPoint,
@@ -872,6 +890,10 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<DeliveryEstimateOption>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(GooglePlaceReview)]),
+        () => ListBuilder<GooglePlaceReview>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(BuyerLocation)]),
         () => ListBuilder<BuyerLocation>(),
       )
@@ -968,6 +990,10 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<CheckoutGroupPreview>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(GoogleContentAuthor)]),
+        () => ListBuilder<GoogleContentAuthor>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(MaterialCategoryOption)]),
         () => ListBuilder<MaterialCategoryOption>(),
       )
@@ -998,6 +1024,10 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(CartLine)]),
         () => ListBuilder<CartLine>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(GooglePlaceAttribute)]),
+        () => ListBuilder<GooglePlaceAttribute>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(VendorTeamInvitationRecord)]),
@@ -1072,6 +1102,10 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<PsgcAreaOption>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(LocationSuggestion)]),
+        () => ListBuilder<LocationSuggestion>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(int)]),
         () => ListBuilder<int>(),
       )
@@ -1086,6 +1120,10 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(ComplianceRegister)]),
         () => ListBuilder<ComplianceRegister>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(GooglePlacePhoto)]),
+        () => ListBuilder<GooglePlacePhoto>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(String)]),

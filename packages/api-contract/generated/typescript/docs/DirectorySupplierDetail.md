@@ -1,7 +1,7 @@
 
 # DirectorySupplierDetail
 
-Informational Tier 1 details. There is intentionally no VPS, verification, listing, message, order, review, payment or storefront field.
+Informational Tier 1 details. Google photos and review excerpts retain attribution and are never persisted. There is no VPS, verification, listing, message, order, MateryalPH review, payment or storefront field.
 
 ## Properties
 
@@ -16,6 +16,12 @@ Name | Type
 `publicPhone` | string
 `websiteUri` | string
 `googleMapsUri` | string
+`openNow` | boolean
+`nextCloseTime` | Date
+`photos` | [Array&lt;GooglePlacePhoto&gt;](GooglePlacePhoto.md)
+`reviews` | [Array&lt;GooglePlaceReview&gt;](GooglePlaceReview.md)
+`attributes` | [Array&lt;GooglePlaceAttribute&gt;](GooglePlaceAttribute.md)
+`providerAttributions` | [Array&lt;GoogleContentAuthor&gt;](GoogleContentAuthor.md)
 `openingHours` | Array&lt;string&gt;
 `googleRating` | [GoogleRating](GoogleRating.md)
 `attribution` | [ProviderAttribution](ProviderAttribution.md)
@@ -38,6 +44,12 @@ const example = {
   "publicPhone": null,
   "websiteUri": null,
   "googleMapsUri": null,
+  "openNow": null,
+  "nextCloseTime": null,
+  "photos": null,
+  "reviews": null,
+  "attributes": null,
+  "providerAttributions": null,
   "openingHours": null,
   "googleRating": null,
   "attribution": null,

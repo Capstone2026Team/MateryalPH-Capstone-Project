@@ -206,6 +206,18 @@ class _$DirectorySupplierDetail extends DirectorySupplierDetail {
   @override
   final String? googleMapsUri;
   @override
+  final bool? openNow;
+  @override
+  final DateTime? nextCloseTime;
+  @override
+  final BuiltList<GooglePlacePhoto>? photos;
+  @override
+  final BuiltList<GooglePlaceReview>? reviews;
+  @override
+  final BuiltList<GooglePlaceAttribute>? attributes;
+  @override
+  final BuiltList<GoogleContentAuthor>? providerAttributions;
+  @override
   final BuiltList<String> openingHours;
   @override
   final GoogleRating? googleRating;
@@ -230,6 +242,12 @@ class _$DirectorySupplierDetail extends DirectorySupplierDetail {
       this.publicPhone,
       this.websiteUri,
       this.googleMapsUri,
+      this.openNow,
+      this.nextCloseTime,
+      this.photos,
+      this.reviews,
+      this.attributes,
+      this.providerAttributions,
       required this.openingHours,
       this.googleRating,
       required this.attribution,
@@ -258,6 +276,12 @@ class _$DirectorySupplierDetail extends DirectorySupplierDetail {
         publicPhone == other.publicPhone &&
         websiteUri == other.websiteUri &&
         googleMapsUri == other.googleMapsUri &&
+        openNow == other.openNow &&
+        nextCloseTime == other.nextCloseTime &&
+        photos == other.photos &&
+        reviews == other.reviews &&
+        attributes == other.attributes &&
+        providerAttributions == other.providerAttributions &&
         openingHours == other.openingHours &&
         googleRating == other.googleRating &&
         attribution == other.attribution &&
@@ -277,6 +301,12 @@ class _$DirectorySupplierDetail extends DirectorySupplierDetail {
     _$hash = $jc(_$hash, publicPhone.hashCode);
     _$hash = $jc(_$hash, websiteUri.hashCode);
     _$hash = $jc(_$hash, googleMapsUri.hashCode);
+    _$hash = $jc(_$hash, openNow.hashCode);
+    _$hash = $jc(_$hash, nextCloseTime.hashCode);
+    _$hash = $jc(_$hash, photos.hashCode);
+    _$hash = $jc(_$hash, reviews.hashCode);
+    _$hash = $jc(_$hash, attributes.hashCode);
+    _$hash = $jc(_$hash, providerAttributions.hashCode);
     _$hash = $jc(_$hash, openingHours.hashCode);
     _$hash = $jc(_$hash, googleRating.hashCode);
     _$hash = $jc(_$hash, attribution.hashCode);
@@ -298,6 +328,12 @@ class _$DirectorySupplierDetail extends DirectorySupplierDetail {
           ..add('publicPhone', publicPhone)
           ..add('websiteUri', websiteUri)
           ..add('googleMapsUri', googleMapsUri)
+          ..add('openNow', openNow)
+          ..add('nextCloseTime', nextCloseTime)
+          ..add('photos', photos)
+          ..add('reviews', reviews)
+          ..add('attributes', attributes)
+          ..add('providerAttributions', providerAttributions)
           ..add('openingHours', openingHours)
           ..add('googleRating', googleRating)
           ..add('attribution', attribution)
@@ -351,6 +387,39 @@ class DirectorySupplierDetailBuilder
   set googleMapsUri(String? googleMapsUri) =>
       _$this._googleMapsUri = googleMapsUri;
 
+  bool? _openNow;
+  bool? get openNow => _$this._openNow;
+  set openNow(bool? openNow) => _$this._openNow = openNow;
+
+  DateTime? _nextCloseTime;
+  DateTime? get nextCloseTime => _$this._nextCloseTime;
+  set nextCloseTime(DateTime? nextCloseTime) =>
+      _$this._nextCloseTime = nextCloseTime;
+
+  ListBuilder<GooglePlacePhoto>? _photos;
+  ListBuilder<GooglePlacePhoto> get photos =>
+      _$this._photos ??= ListBuilder<GooglePlacePhoto>();
+  set photos(ListBuilder<GooglePlacePhoto>? photos) => _$this._photos = photos;
+
+  ListBuilder<GooglePlaceReview>? _reviews;
+  ListBuilder<GooglePlaceReview> get reviews =>
+      _$this._reviews ??= ListBuilder<GooglePlaceReview>();
+  set reviews(ListBuilder<GooglePlaceReview>? reviews) =>
+      _$this._reviews = reviews;
+
+  ListBuilder<GooglePlaceAttribute>? _attributes;
+  ListBuilder<GooglePlaceAttribute> get attributes =>
+      _$this._attributes ??= ListBuilder<GooglePlaceAttribute>();
+  set attributes(ListBuilder<GooglePlaceAttribute>? attributes) =>
+      _$this._attributes = attributes;
+
+  ListBuilder<GoogleContentAuthor>? _providerAttributions;
+  ListBuilder<GoogleContentAuthor> get providerAttributions =>
+      _$this._providerAttributions ??= ListBuilder<GoogleContentAuthor>();
+  set providerAttributions(
+          ListBuilder<GoogleContentAuthor>? providerAttributions) =>
+      _$this._providerAttributions = providerAttributions;
+
   ListBuilder<String>? _openingHours;
   ListBuilder<String> get openingHours =>
       _$this._openingHours ??= ListBuilder<String>();
@@ -395,6 +464,12 @@ class DirectorySupplierDetailBuilder
       _publicPhone = $v.publicPhone;
       _websiteUri = $v.websiteUri;
       _googleMapsUri = $v.googleMapsUri;
+      _openNow = $v.openNow;
+      _nextCloseTime = $v.nextCloseTime;
+      _photos = $v.photos?.toBuilder();
+      _reviews = $v.reviews?.toBuilder();
+      _attributes = $v.attributes?.toBuilder();
+      _providerAttributions = $v.providerAttributions?.toBuilder();
       _openingHours = $v.openingHours.toBuilder();
       _googleRating = $v.googleRating?.toBuilder();
       _attribution = $v.attribution.toBuilder();
@@ -436,6 +511,12 @@ class DirectorySupplierDetailBuilder
             publicPhone: publicPhone,
             websiteUri: websiteUri,
             googleMapsUri: googleMapsUri,
+            openNow: openNow,
+            nextCloseTime: nextCloseTime,
+            photos: _photos?.build(),
+            reviews: _reviews?.build(),
+            attributes: _attributes?.build(),
+            providerAttributions: _providerAttributions?.build(),
             openingHours: openingHours.build(),
             googleRating: _googleRating?.build(),
             attribution: attribution.build(),
@@ -449,6 +530,14 @@ class DirectorySupplierDetailBuilder
         _$failedField = 'marker';
         marker.build();
 
+        _$failedField = 'photos';
+        _photos?.build();
+        _$failedField = 'reviews';
+        _reviews?.build();
+        _$failedField = 'attributes';
+        _attributes?.build();
+        _$failedField = 'providerAttributions';
+        _providerAttributions?.build();
         _$failedField = 'openingHours';
         openingHours.build();
         _$failedField = 'googleRating';

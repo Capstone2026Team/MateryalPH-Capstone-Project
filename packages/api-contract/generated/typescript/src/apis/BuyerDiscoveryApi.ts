@@ -19,6 +19,11 @@ import {
     DirectorySupplierDetailEnvelopeToJSON,
 } from '../models/DirectorySupplierDetailEnvelope';
 import {
+    type DirectorySupplierPhotoEnvelope,
+    DirectorySupplierPhotoEnvelopeFromJSON,
+    DirectorySupplierPhotoEnvelopeToJSON,
+} from '../models/DirectorySupplierPhotoEnvelope';
+import {
     type DiscoveryPreferences,
     DiscoveryPreferencesFromJSON,
     DiscoveryPreferencesToJSON,
@@ -79,6 +84,13 @@ export interface EstimateBuyerRouteRequest {
 }
 
 export interface GetDirectorySupplierDetailsRequest {
+    /**
+     *
+     */
+    supplierId: string;
+}
+
+export interface GetDirectorySupplierPhotoRequest {
     /**
      *
      */
@@ -262,7 +274,7 @@ export class BuyerDiscoveryApi extends runtime.BaseAPI {
     }
 
     /**
-     * Lazy-loaded, attributed Google Place Details for one unexpired Directory Supplier. Informational only; never exposes VPS, verification, messaging, ordering, reviews, payments or a storefront. A Google rating is labeled Google rating.
+     * Lazy-loaded, attributed Google Place Details for one unexpired Directory Supplier. Informational only; never exposes VPS, verification, messaging, ordering, MateryalPH reviews, payments or a storefront. Google media and review excerpts are fetched on demand without storage. A Google rating is labeled Google rating.
      */
     async getDirectorySupplierDetailsRaw(requestParameters: GetDirectorySupplierDetailsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<DirectorySupplierDetailEnvelope>> {
         const requestOptions = await this.getDirectorySupplierDetailsRequestOpts(requestParameters);
@@ -272,10 +284,63 @@ export class BuyerDiscoveryApi extends runtime.BaseAPI {
     }
 
     /**
-     * Lazy-loaded, attributed Google Place Details for one unexpired Directory Supplier. Informational only; never exposes VPS, verification, messaging, ordering, reviews, payments or a storefront. A Google rating is labeled Google rating.
+     * Lazy-loaded, attributed Google Place Details for one unexpired Directory Supplier. Informational only; never exposes VPS, verification, messaging, ordering, MateryalPH reviews, payments or a storefront. Google media and review excerpts are fetched on demand without storage. A Google rating is labeled Google rating.
      */
     async getDirectorySupplierDetails(requestParameters: GetDirectorySupplierDetailsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<DirectorySupplierDetailEnvelope> {
         const response = await this.getDirectorySupplierDetailsRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for getDirectorySupplierPhoto without sending the request
+     */
+    async getDirectorySupplierPhotoRequestOpts(requestParameters: GetDirectorySupplierPhotoRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['supplierId'] == null) {
+            throw new runtime.RequiredError(
+                'supplierId',
+                'Required parameter "supplierId" was null or undefined when calling getDirectorySupplierPhoto().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("passportBearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/buyers/discovery/directory-suppliers/{supplierId}/photo`;
+        urlPath = urlPath.replace('{supplierId}', encodeURIComponent(String(requestParameters['supplierId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * On-demand thumbnail for one visible, unexpired Directory Supplier. Uses only Google photos and attributions; no photo names or media URLs are persisted. Response is no-store. Does not load reviews or full details.
+     */
+    async getDirectorySupplierPhotoRaw(requestParameters: GetDirectorySupplierPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<DirectorySupplierPhotoEnvelope>> {
+        const requestOptions = await this.getDirectorySupplierPhotoRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => DirectorySupplierPhotoEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * On-demand thumbnail for one visible, unexpired Directory Supplier. Uses only Google photos and attributions; no photo names or media URLs are persisted. Response is no-store. Does not load reviews or full details.
+     */
+    async getDirectorySupplierPhoto(requestParameters: GetDirectorySupplierPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<DirectorySupplierPhotoEnvelope> {
+        const response = await this.getDirectorySupplierPhotoRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

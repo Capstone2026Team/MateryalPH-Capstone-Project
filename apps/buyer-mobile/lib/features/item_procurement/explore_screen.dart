@@ -9,9 +9,9 @@ import 'explore_controller.dart';
 import 'procurement_models.dart';
 import 'procurement_navigation.dart';
 
-/// Explore Materials Catalog. The MAT-01 dashboard sits above the categories: Nearby Verified
-/// Vendors and Available Products (Vendor listings) from one server snapshot with its own time and
-/// scope, and an explicitly unavailable Materials Analytics entry until that feature ships.
+/// Explore Materials Catalog: header with notifications and Cart, search, one slim scope line (active
+/// location, radius and the MAT-01 counts from one server snapshot, labelled as Vendor listings),
+/// the not-yet-available Materials Analytics entry, and the category grid.
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({
     super.key,
@@ -19,12 +19,14 @@ class ExploreScreen extends StatefulWidget {
     required this.cart,
     required this.navigation,
     required this.onOpenMap,
+    this.onOpenNotifications,
   });
 
   final ExploreController controller;
   final CartController cart;
   final ProcurementNavigation navigation;
   final VoidCallback onOpenMap;
+  final VoidCallback? onOpenNotifications;
 
   @override
   State<ExploreScreen> createState() => _ExploreScreenState();
@@ -34,14 +36,12 @@ class _ExploreScreenState extends State<ExploreScreen> {
   late final ScrollController _scroll = ScrollController(
     initialScrollOffset: widget.controller.exploreScrollOffset,
   );
-  final TextEditingController _query = TextEditingController();
 
   ExploreController get _controller => widget.controller;
 
   @override
   void initState() {
     super.initState();
-    _query.text = _controller.query;
     _scroll.addListener(
       () => _controller.rememberExploreScroll(_scroll.offset),
     );
@@ -51,14 +51,16 @@ class _ExploreScreenState extends State<ExploreScreen> {
   @override
   void dispose() {
     _scroll.dispose();
-    _query.dispose();
     super.dispose();
   }
 
-  void _openSearch({String? query, ListingFilters? filters}) {
+  void _openCategory(CategoryCountView category) {
     _controller.search(
-      query: query ?? _query.text,
-      filters: filters ?? const ListingFilters(),
+      query: '',
+      filters: ListingFilters(
+        categoryId: category.id,
+        categoryName: category.name,
+      ),
       sort: () => null,
     );
     widget.navigation.openResults(context);
@@ -78,12 +80,23 @@ class _ExploreScreenState extends State<ExploreScreen> {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             children: [
               _header(),
+              const SizedBox(height: 4),
+              ..._scope(),
               const SizedBox(height: 12),
-              _searchField(),
-              const SizedBox(height: 8),
-              _shortcuts(),
-              ..._dashboard(),
-              SectionHeading('All categories'),
+              PillSearchField(
+                onTap: () => widget.navigation.openSearch(context),
+              ),
+              const SizedBox(height: 16),
+              _analytics(),
+              const SizedBox(height: 24),
+              Semantics(
+                header: true,
+                child: const Text(
+                  'All categories',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+                ),
+              ),
+              const SizedBox(height: 12),
               _categories(),
             ],
           ),
@@ -92,133 +105,144 @@ class _ExploreScreenState extends State<ExploreScreen> {
     ),
   );
 
-  Widget _header() {
-    final origin = _controller.origin;
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Semantics(
-                header: true,
-                child: Text(
-                  'Materials Catalog',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-              ),
-              Row(
-                children: [
-                  const Icon(
-                    LucideIcons.mapPin,
-                    size: 16,
-                    color: BuyerTheme.action,
-                  ),
-                  const SizedBox(width: 4),
-                  Flexible(
-                    child: Text(
-                      origin == null
-                          ? 'No location selected'
-                          : '${origin.label} · ${_controller.radiusKm} km',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: BuyerTheme.muted),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        Badge(
-          isLabelVisible: widget.cart.lineCount > 0,
-          label: Text('${widget.cart.lineCount}'),
-          child: IconButton(
-            tooltip: widget.cart.lineCount > 0
-                ? 'Cart, ${widget.cart.lineCount} lines'
-                : 'Cart',
-            onPressed: () => widget.navigation.openCart(context),
-            icon: const Icon(LucideIcons.shoppingCart),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _searchField() => TextField(
-    controller: _query,
-    textInputAction: TextInputAction.search,
-    onSubmitted: (value) => _openSearch(query: value),
-    decoration: InputDecoration(
-      labelText: 'Search materials',
-      hintText: 'e.g. hollow block, deformed bar',
-      prefixIcon: const Icon(LucideIcons.search),
-      suffixIcon: IconButton(
-        tooltip: 'Search',
-        onPressed: () => _openSearch(),
-        icon: const Icon(LucideIcons.arrowRight),
-      ),
-    ),
-  );
-
-  Widget _shortcuts() => Wrap(
-    spacing: 8,
-    runSpacing: 8,
+  Widget _header() => Row(
     children: [
-      ActionChip(
-        avatar: const Icon(LucideIcons.slidersHorizontal, size: 18),
-        label: const Text('Ranking preferences'),
-        onPressed: () => widget.navigation.openPreferences(context),
+      Expanded(
+        child: Semantics(
+          header: true,
+          child: const Text(
+            'Materials Catalog',
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+          ),
+        ),
       ),
-      ActionChip(
-        avatar: const Icon(LucideIcons.heart, size: 18),
-        label: const Text('Favorite Suppliers'),
-        onPressed: () => _openSearch(
-          query: '',
-          filters: const ListingFilters(favoritesOnly: true),
+      IconButton(
+        tooltip: 'Notifications',
+        onPressed: widget.onOpenNotifications,
+        icon: const Icon(LucideIcons.bell, color: BuyerTheme.ink),
+      ),
+      IconButton(
+        tooltip: widget.cart.lineCount > 0
+            ? 'Cart, ${widget.cart.lineCount} lines'
+            : 'Cart',
+        onPressed: () => widget.navigation.openCart(context),
+        icon: Badge(
+          isLabelVisible: widget.cart.lineCount > 0,
+          backgroundColor: BuyerTheme.ink,
+          label: Text('${widget.cart.lineCount}'),
+          child: const Icon(LucideIcons.shoppingCart, color: BuyerTheme.ink),
         ),
       ),
     ],
   );
 
-  List<Widget> _dashboard() {
+  /// Location, radius and the two MAT-01 counts in one slim line. Loading never shows a false zero;
+  /// a failed refresh keeps the last snapshot and says so.
+  List<Widget> _scope() {
+    final origin = _controller.origin;
     final summary = _controller.summary;
     final failure = _controller.summaryFailure;
-    if (_controller.summaryPhase == LoadPhase.needsOrigin) {
+    if (_controller.summaryPhase == LoadPhase.needsOrigin || origin == null) {
       return [
         StateMessage(
           kind: StateKind.needsLocation,
+          artwork: 'assets/states/location.png',
           title: 'Choose a location first',
           message:
-              'Counts and products depend on where you are buying for. Pick a location on the Map; GPS is optional.',
+              'Products and prices depend on where you are buying for. Pick a location on the Map; GPS is optional.',
           actionLabel: 'Go to Map',
           onAction: widget.onOpenMap,
-        ),
-      ];
-    }
-    if (_controller.summaryPhase == LoadPhase.failed && summary == null) {
-      return [
-        StateMessage(
-          kind: failure?.kind == DiscoveryFailureKind.offline
-              ? StateKind.offline
-              : StateKind.error,
-          title: failure?.kind == DiscoveryFailureKind.offline
-              ? 'You are offline'
-              : 'Nearby counts are unavailable',
-          message: failure?.message ?? 'Please retry.',
-          actionLabel: 'Retry',
-          onAction: _controller.loadSummary,
         ),
       ];
     }
     final loading = _controller.summaryPhase == LoadPhase.loading;
     // While loading, never show the previous scope's numbers as if they were current.
     final shown = loading ? null : summary;
+    final muted = const TextStyle(fontSize: 12, color: BuyerTheme.muted);
     return [
-      const SizedBox(height: 16),
+      Semantics(
+        button: true,
+        label:
+            'Buying for ${origin.label} within ${_controller.radiusKm} km. Change location on the Map',
+        excludeSemantics: true,
+        child: InkWell(
+          onTap: widget.onOpenMap,
+          borderRadius: BorderRadius.circular(8),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 32),
+            child: Row(
+              children: [
+                const Icon(
+                  LucideIcons.mapPin,
+                  size: 14,
+                  color: BuyerTheme.action,
+                ),
+                const SizedBox(width: 4),
+                Flexible(
+                  child: Text(
+                    '${origin.label} · ${_controller.radiusKm} km',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                ),
+                const Icon(LucideIcons.chevronDown, size: 14),
+              ],
+            ),
+          ),
+        ),
+      ),
+      if (_controller.summaryPhase == LoadPhase.failed && summary == null)
+        StatusBand(
+          tone: BandTone.warning,
+          title: failure?.kind == DiscoveryFailureKind.offline
+              ? 'You are offline'
+              : 'Nearby counts are unavailable',
+          message: failure?.message,
+          action: TextButton(
+            onPressed: _controller.loadSummary,
+            child: const Text('Retry'),
+          ),
+        )
+      else
+        Wrap(
+          spacing: 6,
+          runSpacing: 4,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            _Count(
+              label: shown?.vendorsLabel ?? 'Nearby Verified Vendors',
+              value: shown?.verifiedVendors,
+              unit: 'Verified Vendors',
+              announceUnit: false,
+            ),
+            Text('·', style: muted),
+            _Count(
+              label: shown?.listingsLabel ?? 'Available Products',
+              value: shown?.vendorListings,
+              unit: shown?.listingsUnit ?? 'Vendor listings',
+            ),
+            if (shown != null)
+              SizedBox(
+                width: double.infinity,
+                child: Wrap(
+                  spacing: 6,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(
+                      'Updated ${formatManilaTimestamp(shown.currentAsOf)}',
+                      style: muted,
+                    ),
+                    if (shown.datasetLabel != null)
+                      _demoChip(shown.datasetLabel!),
+                  ],
+                ),
+              ),
+          ],
+        ),
       if (_controller.summaryStale && summary != null)
         Padding(
-          padding: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.only(top: 8),
           child: StatusBand(
             tone: BandTone.warning,
             title: 'Showing the last successful update',
@@ -230,122 +254,124 @@ class _ExploreScreenState extends State<ExploreScreen> {
             ),
           ),
         ),
-      LayoutBuilder(
-        builder: (context, constraints) {
-          final stacked =
-              constraints.maxWidth < 340 ||
-              MediaQuery.textScalerOf(context).scale(1) > 1.5;
-          final cards = [
-            SummaryCountCard(
-              label: shown?.vendorsLabel ?? 'Nearby Verified Vendors',
-              icon: LucideIcons.store,
-              value: shown?.verifiedVendors,
-            ),
-            SummaryCountCard(
-              label: shown?.listingsLabel ?? 'Available Products',
-              icon: LucideIcons.package,
-              value: shown?.vendorListings,
-              unit: shown?.listingsUnit ?? 'Vendor listings',
-            ),
-          ];
-          return stacked
-              ? Column(
-                  children: [cards[0], const SizedBox(height: 8), cards[1]],
-                )
-              : Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(child: cards[0]),
-                    const SizedBox(width: 8),
-                    Expanded(child: cards[1]),
-                  ],
-                );
-        },
+    ];
+  }
+
+  /// TEST data is always marked; the full label is announced to screen readers.
+  Widget _demoChip(String label) => Semantics(
+    container: true,
+    label: label,
+    excludeSemantics: true,
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+      decoration: BoxDecoration(
+        color: BuyerTheme.canvas,
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: BuyerTheme.border),
       ),
-      const SizedBox(height: 8),
-      if (shown != null) ...[
-        Text(
-          '${shown.scopeLabel} · before category or search filters',
-          style: const TextStyle(fontSize: 13, color: BuyerTheme.muted),
+      child: const Text(
+        'DEMO',
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w800,
+          color: BuyerTheme.muted,
         ),
-        Text(
-          'Current as of ${formatManilaTimestamp(shown.currentAsOf)}',
-          style: const TextStyle(fontSize: 13, color: BuyerTheme.muted),
+      ),
+    ),
+  );
+
+  Widget _analytics() {
+    final message =
+        _controller.summary?.analyticsMessage ??
+        'Materials Analytics is not available yet.';
+    return Semantics(
+      button: true,
+      enabled: false,
+      label: 'View Materials Analytics. $message',
+      excludeSemantics: true,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: BuyerTheme.border),
         ),
-        if (shown.datasetLabel != null)
-          Text(
-            shown.datasetLabel!,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: BuyerTheme.brandSoft,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                LucideIcons.chartLine,
+                color: BuyerTheme.action,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'View Materials Analytics',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  Text(
+                    message,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: BuyerTheme.muted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Icon(
+              LucideIcons.lockKeyhole,
+              size: 18,
               color: BuyerTheme.muted,
             ),
-          ),
-      ] else
-        const SkeletonBox(height: 14, width: 220),
-      const SizedBox(height: 12),
-      Semantics(
-        button: true,
-        enabled: false,
-        label:
-            'View Materials Analytics, unavailable. ${shown?.analyticsMessage ?? 'Materials Analytics is not available yet.'}',
-        excludeSemantics: true,
-        child: OutlinedButton.icon(
-          onPressed: shown?.analyticsEnabled == true ? () {} : null,
-          icon: const Icon(LucideIcons.chartLine),
-          label: const Text('View Materials Analytics'),
+          ],
         ),
       ),
-      Padding(
-        padding: const EdgeInsets.only(top: 4),
-        child: Text(
-          shown?.analyticsMessage ??
-              'Materials Analytics is not available yet.',
-          style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
-        ),
-      ),
-    ];
+    );
   }
 
   Widget _categories() {
     final summary = _controller.summaryPhase == LoadPhase.loading
         ? null
         : _controller.summary;
+    if (_controller.origin == null) return const SizedBox.shrink();
     return LayoutBuilder(
       builder: (context, constraints) {
         final scale = MediaQuery.textScalerOf(context).scale(1);
-        final columns = constraints.maxWidth >= 720
-            ? 4
-            : constraints.maxWidth >= 340 && scale <= 1.5
-            ? 2
-            : 1;
-        final width = (constraints.maxWidth - (columns - 1) * 8) / columns;
+        final minimum = scale > 1.3 ? 150.0 : 100.0;
+        final columns = (constraints.maxWidth / minimum).floor().clamp(1, 8);
+        final width = (constraints.maxWidth - (columns - 1) * 10) / columns;
         if (summary == null) {
           return Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: 10,
+            runSpacing: 10,
             children: [
               for (var index = 0; index < 6; index++)
-                SizedBox(width: width, child: const SkeletonBox(height: 64)),
+                SizedBox(width: width, child: const SkeletonBox(height: 104)),
             ],
           );
         }
         return Wrap(
-          spacing: 8,
-          runSpacing: 8,
+          spacing: 10,
+          runSpacing: 10,
           children: [
             for (final category in summary.categories)
               SizedBox(
                 width: width,
                 child: _CategoryTile(
                   category: category,
-                  onTap: () => _openSearch(
-                    query: '',
-                    filters: ListingFilters(
-                      categoryId: category.id,
-                      categoryName: category.name,
-                    ),
-                  ),
+                  onTap: () => _openCategory(category),
                 ),
               ),
           ],
@@ -353,6 +379,45 @@ class _ExploreScreenState extends State<ExploreScreen> {
       },
     );
   }
+}
+
+class _Count extends StatelessWidget {
+  const _Count({
+    required this.label,
+    required this.value,
+    required this.unit,
+    this.announceUnit = true,
+  });
+
+  final String label;
+  final int? value;
+  final String unit;
+
+  /// False when the unit only repeats the label (Nearby Verified Vendors: 12).
+  final bool announceUnit;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    container: true,
+    label: value == null
+        ? '$label, loading'
+        : '$label: $value${announceUnit ? ' $unit' : ''}',
+    excludeSemantics: true,
+    child: value == null
+        ? const SkeletonBox(height: 12, width: 90)
+        : Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: '$value',
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+                TextSpan(text: ' $unit'),
+              ],
+            ),
+            style: const TextStyle(fontSize: 12, color: BuyerTheme.ink),
+          ),
+  );
 }
 
 class _CategoryTile extends StatelessWidget {
@@ -363,6 +428,7 @@ class _CategoryTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Semantics(
+    container: true,
     button: true,
     label:
         '${category.name}, ${category.vendorListings} Vendor listing${category.vendorListings == 1 ? '' : 's'}',
@@ -370,48 +436,46 @@ class _CategoryTile extends StatelessWidget {
     child: Material(
       color: Colors.white,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         side: const BorderSide(color: BuyerTheme.border),
       ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         onTap: onTap,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 64),
+          constraints: const BoxConstraints(minHeight: 104),
           child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
+            padding: const EdgeInsets.fromLTRB(8, 12, 8, 10),
+            child: Column(
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        category.name,
-                        style: const TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                      Text(
-                        '${category.vendorListings} Vendor listing${category.vendorListings == 1 ? '' : 's'}',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: BuyerTheme.muted,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
+                  width: 44,
+                  height: 44,
+                  decoration: const BoxDecoration(
                     color: BuyerTheme.brandSoft,
-                    borderRadius: BorderRadius.circular(10),
+                    shape: BoxShape.circle,
                   ),
                   child: Icon(
                     categoryIcon(category.code),
                     size: 22,
                     color: BuyerTheme.actionPressed,
                   ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  category.name,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    height: 1.25,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                Text(
+                  '${category.vendorListings} listing${category.vendorListings == 1 ? '' : 's'}',
+                  style: const TextStyle(fontSize: 11, color: BuyerTheme.muted),
                 ),
               ],
             ),

@@ -184,6 +184,8 @@ doc/DeliveryRoute.md
 doc/DirectoryAvailability.md
 doc/DirectorySupplierDetail.md
 doc/DirectorySupplierDetailEnvelope.md
+doc/DirectorySupplierPhoto.md
+doc/DirectorySupplierPhotoEnvelope.md
 doc/DirectorySupplierSummary.md
 doc/DiscoveryCounts.md
 doc/DiscoveryPreferences.md
@@ -220,8 +222,12 @@ doc/FleetVehicleListMetaLimits.md
 doc/FleetVehicleListMetaPermissions.md
 doc/FleetVehiclesSave.md
 doc/GenericDataEnvelope.md
+doc/GoogleContentAuthor.md
 doc/GoogleMobileExchangeRequest.md
 doc/GoogleOidcStartRequest.md
+doc/GooglePlaceAttribute.md
+doc/GooglePlacePhoto.md
+doc/GooglePlaceReview.md
 doc/GoogleRating.md
 doc/HealthEnvelope.md
 doc/HealthEnvelopeAllOfData.md
@@ -266,6 +272,9 @@ doc/ListingStatusChange.md
 doc/ListingVariantOffer.md
 doc/ListingVariantPrice.md
 doc/ListingVendorCard.md
+doc/LocationAutocompleteRequest.md
+doc/LocationSuggestion.md
+doc/LocationSuggestionEnvelope.md
 doc/LockVersionRequest.md
 doc/LoginRequest.md
 doc/MapPoint.md
@@ -603,6 +612,8 @@ lib/src/model/delivery_route.dart
 lib/src/model/directory_availability.dart
 lib/src/model/directory_supplier_detail.dart
 lib/src/model/directory_supplier_detail_envelope.dart
+lib/src/model/directory_supplier_photo.dart
+lib/src/model/directory_supplier_photo_envelope.dart
 lib/src/model/directory_supplier_summary.dart
 lib/src/model/discovery_counts.dart
 lib/src/model/discovery_preferences.dart
@@ -639,8 +650,12 @@ lib/src/model/fleet_vehicle_list_meta_limits.dart
 lib/src/model/fleet_vehicle_list_meta_permissions.dart
 lib/src/model/fleet_vehicles_save.dart
 lib/src/model/generic_data_envelope.dart
+lib/src/model/google_content_author.dart
 lib/src/model/google_mobile_exchange_request.dart
 lib/src/model/google_oidc_start_request.dart
+lib/src/model/google_place_attribute.dart
+lib/src/model/google_place_photo.dart
+lib/src/model/google_place_review.dart
 lib/src/model/google_rating.dart
 lib/src/model/health_envelope.dart
 lib/src/model/health_envelope_all_of_data.dart
@@ -685,6 +700,9 @@ lib/src/model/listing_status_change.dart
 lib/src/model/listing_variant_offer.dart
 lib/src/model/listing_variant_price.dart
 lib/src/model/listing_vendor_card.dart
+lib/src/model/location_autocomplete_request.dart
+lib/src/model/location_suggestion.dart
+lib/src/model/location_suggestion_envelope.dart
 lib/src/model/lock_version_request.dart
 lib/src/model/login_request.dart
 lib/src/model/map_point.dart
@@ -1000,6 +1018,8 @@ test/delivery_route_test.dart
 test/directory_availability_test.dart
 test/directory_supplier_detail_envelope_test.dart
 test/directory_supplier_detail_test.dart
+test/directory_supplier_photo_envelope_test.dart
+test/directory_supplier_photo_test.dart
 test/directory_supplier_summary_test.dart
 test/discovery_counts_test.dart
 test/discovery_preferences_envelope_test.dart
@@ -1036,8 +1056,12 @@ test/fleet_vehicle_list_meta_test.dart
 test/fleet_vehicle_test.dart
 test/fleet_vehicles_save_test.dart
 test/generic_data_envelope_test.dart
+test/google_content_author_test.dart
 test/google_mobile_exchange_request_test.dart
 test/google_oidc_start_request_test.dart
+test/google_place_attribute_test.dart
+test/google_place_photo_test.dart
+test/google_place_review_test.dart
 test/google_rating_test.dart
 test/health_envelope_all_of_data_test.dart
 test/health_envelope_test.dart
@@ -1082,6 +1106,9 @@ test/listing_status_test.dart
 test/listing_variant_offer_test.dart
 test/listing_variant_price_test.dart
 test/listing_vendor_card_test.dart
+test/location_autocomplete_request_test.dart
+test/location_suggestion_envelope_test.dart
+test/location_suggestion_test.dart
 test/lock_version_request_test.dart
 test/login_request_test.dart
 test/map_point_test.dart

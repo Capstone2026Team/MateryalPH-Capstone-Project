@@ -39,6 +39,35 @@ class ExploreController extends ChangeNotifier {
   DiscoveryFailure? searchFailure;
   bool loadingMore = false;
   bool searchActive = false;
+  final List<String> _recentSearches = [];
+  List<String> get recentSearches => List.unmodifiable(_recentSearches);
+
+  void clearRecentSearches() {
+    _recentSearches.clear();
+    _notify();
+  }
+
+  /// Suggestions use the same authorized, radius-scoped search, without changing
+  /// the catalog's query, filters, cursor or scroll position.
+  Future<List<String>> suggestions(
+    String text, {
+    ListingFilters? withinFilters,
+  }) async {
+    final selectedOrigin = origin;
+    if (selectedOrigin == null || text.trim().isEmpty) return const [];
+    final response = await _repository.search(
+      origin: selectedOrigin,
+      radiusKm: radiusKm,
+      query: text.trim(),
+      filters: withinFilters ?? filters,
+      sort: ListingSort.bestDeal,
+    );
+    return response.items
+        .map((item) => item.displayName)
+        .toSet()
+        .take(8)
+        .toList();
+  }
 
   double exploreScrollOffset = 0;
   double resultsScrollOffset = 0;
@@ -104,9 +133,24 @@ class ExploreController extends ChangeNotifier {
     ListingFilters? filters,
     ValueGetter<ListingSort?>? sort,
   }) async {
-    if (query != null) this.query = query;
+    final previousQuery = this.query;
+    final previousFilters = this.filters;
+    if (query != null) {
+      this.query = query.trim();
+      if (this.query.isNotEmpty) {
+        _recentSearches.removeWhere(
+          (item) => item.toLowerCase() == this.query.toLowerCase(),
+        );
+        _recentSearches.insert(0, this.query);
+        if (_recentSearches.length > 10) _recentSearches.removeLast();
+      }
+    }
     if (filters != null) this.filters = filters;
     if (sort != null) this.sort = sort();
+    if (previousQuery != this.query || previousFilters != this.filters) {
+      results = const [];
+      page = null;
+    }
     searchActive = true;
     resultsScrollOffset = 0;
     await _runSearch();
@@ -124,6 +168,7 @@ class ExploreController extends ChangeNotifier {
         currentOrigin == null) {
       return;
     }
+    if (searchPhase != LoadPhase.ready || searchFailure != null) return;
     final sequence = _searchSequence;
     loadingMore = true;
     _notify();
@@ -143,6 +188,7 @@ class ExploreController extends ChangeNotifier {
         ...next.items.where((card) => !known.contains(card.listingId)),
       ];
       page = next;
+      _applyFavoriteUpdates();
     } on DiscoveryFailure catch (error) {
       if (!_disposed && sequence == _searchSequence) searchFailure = error;
     } finally {
@@ -162,6 +208,11 @@ class ExploreController extends ChangeNotifier {
   void rememberResultsScroll(double offset) => resultsScrollOffset = offset;
 
   /// A Favorite toggled elsewhere updates the visible cards without re-ranking them.
+  bool favoriteBusy(String vendorId) => _discovery.favoriteBusy(vendorId);
+
+  Future<void> setFavorite(String vendorId, {required bool favorite}) =>
+      _discovery.setFavorite(vendorId, favorite: favorite);
+
   void markFavorite(String vendorId, {required bool favorite}) {
     results = [
       for (final card in results)
@@ -237,6 +288,7 @@ class ExploreController extends ChangeNotifier {
       }
       page = result;
       results = result.items;
+      _applyFavoriteUpdates();
       searchPhase = LoadPhase.ready;
     } on DiscoveryFailure catch (error) {
       if (!_stillCurrent(
@@ -268,11 +320,25 @@ class ExploreController extends ChangeNotifier {
       requestedFilters == filters &&
       requestedSort == sort;
 
+  void _applyFavoriteUpdates() {
+    for (final entry in _discovery.favoriteUpdates.entries) {
+      if (results.any(
+        (card) => card.vendorId == entry.key && card.isFavorite != entry.value,
+      )) {
+        markFavorite(entry.key, favorite: entry.value);
+      }
+    }
+  }
+
   void _onDiscoveryChanged() {
+    _applyFavoriteUpdates();
+    _notify();
     final next = _currentScopeKey;
     if (next == _scopeKey) return;
     // A new Map origin or radius makes every count and ranking stale: reload both.
     _scopeKey = next;
+    results = const [];
+    page = null;
     loadSummary();
     if (searchActive) _runSearch();
   }

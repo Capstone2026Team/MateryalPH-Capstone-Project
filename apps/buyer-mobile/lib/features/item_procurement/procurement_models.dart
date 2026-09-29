@@ -4,7 +4,16 @@ enum LoadPhase { needsOrigin, loading, ready, failed }
 
 /// Item-Based sorts. Browsing defaults to distance and a text query to Best Deal (SRS); Favorites
 /// First is a separate explicit choice that never changes Best Deal.
-enum ListingSort { bestDeal, distance, price, rating, favoritesFirst }
+enum ListingSort {
+  bestDeal,
+  distance,
+  price,
+  rating,
+  favoritesFirst,
+  distanceDescending,
+  priceDescending,
+  ratingAscending,
+}
 
 extension ListingSortWire on ListingSort {
   String get wire => switch (this) {
@@ -13,6 +22,9 @@ extension ListingSortWire on ListingSort {
     ListingSort.price => 'PRICE',
     ListingSort.rating => 'RATING',
     ListingSort.favoritesFirst => 'FAVORITES_FIRST',
+    ListingSort.distanceDescending => 'DISTANCE_DESC',
+    ListingSort.priceDescending => 'PRICE_DESC',
+    ListingSort.ratingAscending => 'RATING_ASC',
   };
 
   String get label => switch (this) {
@@ -21,13 +33,41 @@ extension ListingSortWire on ListingSort {
     ListingSort.price => 'Price',
     ListingSort.rating => 'Rating',
     ListingSort.favoritesFirst => 'Favorites First',
+    ListingSort.distanceDescending => 'Distance',
+    ListingSort.priceDescending => 'Price',
+    ListingSort.ratingAscending => 'Rating',
   };
+
+  ListingSort get family => switch (this) {
+    ListingSort.distanceDescending => ListingSort.distance,
+    ListingSort.priceDescending => ListingSort.price,
+    ListingSort.ratingAscending => ListingSort.rating,
+    _ => this,
+  };
+
+  ListingSort get reversed => switch (this) {
+    ListingSort.distance => ListingSort.distanceDescending,
+    ListingSort.distanceDescending => ListingSort.distance,
+    ListingSort.price => ListingSort.priceDescending,
+    ListingSort.priceDescending => ListingSort.price,
+    ListingSort.rating => ListingSort.ratingAscending,
+    ListingSort.ratingAscending => ListingSort.rating,
+    _ => this,
+  };
+
+  bool get descending =>
+      this == ListingSort.distanceDescending ||
+      this == ListingSort.priceDescending ||
+      this == ListingSort.rating;
 
   static ListingSort parse(String value) => switch (value) {
     'BEST_DEAL' => ListingSort.bestDeal,
     'PRICE' => ListingSort.price,
     'RATING' => ListingSort.rating,
     'FAVORITES_FIRST' => ListingSort.favoritesFirst,
+    'DISTANCE_DESC' => ListingSort.distanceDescending,
+    'PRICE_DESC' => ListingSort.priceDescending,
+    'RATING_ASC' => ListingSort.ratingAscending,
     _ => ListingSort.distance,
   };
 }
@@ -309,6 +349,51 @@ class RankingWeights {
     productRating: key == 'product_rating' ? value : productRating,
   );
 
+  /// Largest-remainder allocation with stable factor-order ties. A slider drag should
+  /// use its starting weights as the basis to avoid cumulative rounding drift.
+  RankingWeights rebalance(
+    String key,
+    int value, {
+    required RankingWeights defaults,
+  }) {
+    const keys = ['distance', 'price', 'vps', 'stock', 'product_rating'];
+    if (!keys.contains(key)) throw ArgumentError.value(key, 'key');
+    final target = value.clamp(0, 100);
+    final others = keys.where((item) => item != key).toList();
+    var basis = this;
+    var sum = others.fold(0, (sum, item) => sum + basis.valueOf(item));
+    if (sum == 0) {
+      basis = defaults;
+      sum = others.fold(0, (sum, item) => sum + basis.valueOf(item));
+    }
+    final denominator = sum == 0 ? others.length : sum;
+    final numerators = {
+      for (final item in others)
+        item: (100 - target) * (sum == 0 ? 1 : basis.valueOf(item)),
+    };
+    final allocated = {
+      for (final item in others) item: numerators[item]! ~/ denominator,
+    };
+    final remaining = 100 - target - allocated.values.fold(0, (a, b) => a + b);
+    final order = [...others]
+      ..sort((a, b) {
+        final remainder = (numerators[b]! % denominator).compareTo(
+          numerators[a]! % denominator,
+        );
+        return remainder != 0
+            ? remainder
+            : keys.indexOf(a).compareTo(keys.indexOf(b));
+      });
+    for (var i = 0; i < remaining; i++) {
+      allocated[order[i]] = allocated[order[i]]! + 1;
+    }
+    var result = withValue(key, target);
+    for (final item in others) {
+      result = result.withValue(item, allocated[item]!);
+    }
+    return result;
+  }
+
   @override
   bool operator ==(Object other) =>
       other is RankingWeights &&
@@ -392,6 +477,8 @@ class VariantOfferView {
     this.includedVatCentavos,
     this.availabilityNote,
     this.comparable = false,
+    this.attributes = const {},
+    this.sku,
   });
 
   final String variantId;
@@ -408,6 +495,21 @@ class VariantOfferView {
   final int? includedVatCentavos;
   final String? availabilityNote;
   final bool comparable;
+  final Map<String, String> attributes;
+  final String? sku;
+
+  int? priceForQuantity(int quantity) {
+    var price = unitPriceCentavos;
+    var threshold = 0.0;
+    for (final tier in volumeTiers) {
+      final minimum = double.parse(tier.minimumQuantity);
+      if (minimum <= quantity && minimum >= threshold) {
+        price = tier.amountCentavos;
+        threshold = minimum;
+      }
+    }
+    return price;
+  }
 
   bool get wholeUnits => quantityStep == '1';
 }

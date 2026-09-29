@@ -8,12 +8,17 @@ import 'procurement_models.dart';
 import 'procurement_repository.dart';
 
 /// Item-Based ranking preferences. The five SRS weights are whole percentages that must total
-/// exactly 100 (never all zero); the total and the remaining amount update live. Saving stores a
+/// exactly 100 (never all zero); changing one proportionally balances the others. Saving stores a
 /// separate Buyer override; Reset to Default removes it so platform defaults apply again.
 class RankingPreferencesScreen extends StatefulWidget {
-  const RankingPreferencesScreen({super.key, required this.repository});
+  const RankingPreferencesScreen({
+    super.key,
+    required this.repository,
+    this.onChanged,
+  });
 
   final ProcurementRepository repository;
+  final VoidCallback? onChanged;
 
   @override
   State<RankingPreferencesScreen> createState() =>
@@ -39,6 +44,7 @@ class _RankingPreferencesScreenState extends State<RankingPreferencesScreen> {
 
   RankingPreferencesView? _saved;
   RankingWeights _draft = RankingWeights.approvedDefault;
+  RankingWeights? _dragBasis;
   bool _loading = true;
   bool _saving = false;
   DiscoveryFailure? _failure;
@@ -76,6 +82,7 @@ class _RankingPreferencesScreenState extends State<RankingPreferencesScreen> {
     Future<RankingPreferencesView> Function() action,
     String success,
   ) async {
+    if (_saving) return;
     setState(() {
       _saving = true;
       _notice = null;
@@ -87,6 +94,7 @@ class _RankingPreferencesScreenState extends State<RankingPreferencesScreen> {
         _saved = result;
         _draft = result.weights;
       });
+      widget.onChanged?.call();
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(success)));
@@ -102,7 +110,11 @@ class _RankingPreferencesScreenState extends State<RankingPreferencesScreen> {
 
   Future<void> _reset() async {
     final saved = _saved;
-    if (saved == null) return;
+    if (saved == null || _saving) return;
+    if (!saved.personalized) {
+      setState(() => _draft = saved.defaults);
+      return;
+    }
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -129,8 +141,13 @@ class _RankingPreferencesScreenState extends State<RankingPreferencesScreen> {
     );
   }
 
-  void _set(String key, int value) =>
-      setState(() => _draft = _draft.withValue(key, value.clamp(0, 100)));
+  void _set(String key, int value) => setState(
+    () => _draft = (_dragBasis ?? _draft).rebalance(
+      key,
+      value,
+      defaults: _saved!.defaults,
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -197,7 +214,9 @@ class _RankingPreferencesScreenState extends State<RankingPreferencesScreen> {
                       child: const Text('Save preferences'),
                     ),
                     TextButton(
-                      onPressed: saved.personalized && !_saving ? _reset : null,
+                      onPressed: (saved.personalized || changed) && !_saving
+                          ? _reset
+                          : null,
                       child: const Text('Reset to Default'),
                     ),
                   ],
@@ -242,7 +261,7 @@ class _RankingPreferencesScreenState extends State<RankingPreferencesScreen> {
               ? 'Personalized ranking is active'
               : 'Using the platform default weights',
           message:
-              'Best Deal combines these five scores as a weighted sum. Favorites never change it; use Favorites First to see them first.',
+              'Customize how MateryalPH orders your product results. Adjusting one preference automatically balances the others so the total always remains 100%. Favorites First remains separate.',
         ),
         if (_notice != null) ...[
           const SizedBox(height: 8),
@@ -261,25 +280,39 @@ class _RankingPreferencesScreenState extends State<RankingPreferencesScreen> {
             children: [
               IconButton(
                 tooltip: 'Decrease $label',
-                onPressed: _draft.valueOf(key) > 0
+                onPressed: !_saving && _draft.valueOf(key) > 0
                     ? () => _set(key, _draft.valueOf(key) - 1)
                     : null,
                 icon: const Icon(LucideIcons.minus),
               ),
               Expanded(
-                child: Slider(
-                  value: _draft.valueOf(key).toDouble(),
-                  max: 100,
-                  divisions: 100,
-                  label: '${_draft.valueOf(key)}%',
-                  semanticFormatterCallback: (value) =>
-                      '$label ${value.round()} percent',
-                  onChanged: (value) => _set(key, value.round()),
+                child: SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    thumbShape: const RoundSliderThumbShape(
+                      enabledThumbRadius: 14,
+                    ),
+                    overlayShape: const RoundSliderOverlayShape(
+                      overlayRadius: 26,
+                    ),
+                  ),
+                  child: Slider(
+                    value: _draft.valueOf(key).toDouble(),
+                    max: 100,
+                    divisions: 100,
+                    label: '${_draft.valueOf(key)}%',
+                    semanticFormatterCallback: (value) =>
+                        '$label ${value.round()} percent',
+                    onChangeStart: (_) => _dragBasis = _draft,
+                    onChangeEnd: (_) => _dragBasis = null,
+                    onChanged: _saving
+                        ? null
+                        : (value) => _set(key, value.round()),
+                  ),
                 ),
               ),
               IconButton(
                 tooltip: 'Increase $label',
-                onPressed: _draft.valueOf(key) < 100
+                onPressed: !_saving && _draft.valueOf(key) < 100
                     ? () => _set(key, _draft.valueOf(key) + 1)
                     : null,
                 icon: const Icon(LucideIcons.plus),

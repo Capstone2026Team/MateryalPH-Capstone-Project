@@ -62,7 +62,7 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
   SupplierListView _view = SupplierListView.all;
   bool? _listMode;
   int _recenter = 0;
-  double _sheetExtent = 0.34;
+  double _sheetExtent = 0.25;
   String? _lastSelected;
   bool _onboardingDismissed = false;
   bool _welcomeOpen = false;
@@ -77,7 +77,9 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
   void initState() {
     super.initState();
     _controller.addListener(_onChanged);
-    _controller.initialize();
+    _controller.initialize().then((_) {
+      if (mounted) _onChanged();
+    });
   }
 
   @override
@@ -149,17 +151,18 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
   }
 
   Future<void> _chooseLocation() async {
-    final origin = await Navigator.of(context).push<DiscoveryOrigin>(
-      MaterialPageRoute(
-        builder: (_) => SelectLocationScreen(
-          repository: widget.repository,
-          deviceLocation: widget.deviceLocation,
-          savedLocations: _controller.savedLocations,
-          mapsAvailable: kMapsClientConfigured,
-          initialPoint: _controller.origin?.point,
-        ),
-      ),
-    );
+    final origin = await Navigator.of(context, rootNavigator: true)
+        .push<DiscoveryOrigin>(
+          MaterialPageRoute(
+            builder: (_) => SelectLocationScreen(
+              repository: widget.repository,
+              deviceLocation: widget.deviceLocation,
+              savedLocations: _controller.savedLocations,
+              mapsAvailable: kMapsClientConfigured,
+              initialPoint: _controller.origin?.point,
+            ),
+          ),
+        );
     if (origin == null || !mounted) return;
     await _controller.reloadLocations();
     await _controller.setOrigin(origin);
@@ -284,6 +287,7 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
                   onPressed: _chooseLocation,
                 ),
               ),
+
               IconButton(
                 tooltip: 'Search',
                 onPressed:
@@ -291,11 +295,13 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
                     () => widget.onUnavailable?.call('Search'),
                 icon: const Icon(LucideIcons.search),
               ),
+
               IconButton(
                 tooltip: 'Notifications',
                 onPressed: () => widget.onUnavailable?.call('Notifications'),
                 icon: const Icon(LucideIcons.bell),
               ),
+
               IconButton(
                 tooltip: 'Cart',
                 onPressed:
@@ -422,19 +428,8 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
   );
 
   Widget _floating(IconData icon, String label, VoidCallback onPressed) =>
-      DecoratedBox(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          border: Border.all(color: BuyerTheme.border),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x240F172A),
-              blurRadius: 8,
-              offset: Offset(0, 2),
-            ),
-          ],
-        ),
+      MapFloatingSurface(
+        radius: 999,
         child: IconButton(
           tooltip: label,
           onPressed: onPressed,
@@ -450,6 +445,7 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
           onExpand: _expand,
           onChangeLocation: _chooseLocation,
           onAdjustFilters: _openFilters,
+          onOpenLink: _openLink,
           scrollController: scroll,
         )
       : ListView(
@@ -479,7 +475,7 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
         Positioned.fill(child: _mapStack(constraints.maxHeight * _sheetExtent)),
         DraggableScrollableSheet(
           controller: _sheet,
-          initialChildSize: 0.34,
+          initialChildSize: 0.25,
           minChildSize: _peek,
           maxChildSize: _expanded,
           snap: true,

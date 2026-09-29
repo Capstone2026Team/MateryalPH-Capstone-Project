@@ -7,6 +7,13 @@ void main() {
   final instance = MateryalphApiClient().getBuyerLocationsApi();
 
   group(BuyerLocationsApi, () {
+    // Up to five Google Places suggestions restricted to the Philippines. Query travels in the body; no content is persisted. Reuse the session token when resolving the selected Place ID.
+    //
+    //Future<LocationSuggestionEnvelope> autocompleteBuyerLocation(LocationAutocompleteRequest locationAutocompleteRequest) async
+    test('test autocompleteBuyerLocation', () async {
+      // TODO
+    });
+
     // Saves a location from a resolution_token issued to this Buyer within 30 minutes. The first location becomes primary. When the address provider was unavailable, address_line is required (ADDRESS_DESCRIPTION_REQUIRED). Retrying with the same Idempotency-Key returns the same location.
     //
     //Future<BuyerLocationEnvelope> createBuyerLocation(String idempotencyKey, BuyerLocationCreate buyerLocationCreate) async

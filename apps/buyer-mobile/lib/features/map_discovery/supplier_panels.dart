@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../design_system/components/discovery_controls.dart';
@@ -7,7 +10,9 @@ import '../../design_system/theme.dart';
 import '../../widgets/auth_content.dart';
 import 'discovery_controller.dart';
 import 'discovery_models.dart';
+import 'directory_photo_loader.dart';
 import 'map_geometry.dart';
+import 'google_place_content.dart';
 
 enum SupplierListView { all, verified, directory, favorites }
 
@@ -23,6 +28,7 @@ class SupplierListPanel extends StatelessWidget {
     required this.onChangeLocation,
     required this.onAdjustFilters,
     this.scrollController,
+    this.onOpenLink,
   });
 
   final DiscoveryController controller;
@@ -32,6 +38,7 @@ class SupplierListPanel extends StatelessWidget {
   final VoidCallback onChangeLocation;
   final VoidCallback onAdjustFilters;
   final ScrollController? scrollController;
+  final Future<void> Function(Uri)? onOpenLink;
 
   List<SupplierResultView> get _visible => switch (view) {
     SupplierListView.all => controller.items,
@@ -52,6 +59,9 @@ class SupplierListPanel extends StatelessWidget {
     final visible = _visible;
     return CustomScrollView(
       controller: scrollController,
+      scrollCacheExtent: const ScrollCacheExtent.pixels(
+        0,
+      ), // Do not fetch Google photos for offscreen rows.
       slivers: [
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
@@ -72,7 +82,7 @@ class SupplierListPanel extends StatelessWidget {
                       ? 'Finding suppliers within ${controller.radiusKm} km…'
                       : page == null
                       ? 'Choose a location to see suppliers.'
-                      : '${page.verifiedCount} Verified Vendor${page.verifiedCount == 1 ? '' : 's'} · ${page.directoryCount} Directory Supplier${page.directoryCount == 1 ? '' : 's'} within ${page.radiusKm} km · Updated ${_time(page.currentAsOf)}',
+                      : '${page.verifiedCount} Verified Vendor${page.verifiedCount == 1 ? '' : 's'} · ${page.directoryCount} Directory Supplier${page.directoryCount == 1 ? '' : 's'}\nwithin ${page.radiusKm} km · Updated ${_time(page.currentAsOf)}',
                   style: const TextStyle(color: BuyerTheme.muted),
                 ),
               ),
@@ -148,7 +158,9 @@ class SupplierListPanel extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               child: _FailureState(
                 failure: controller.failure,
-                onRetry: controller.search,
+                onRetry: controller.origin == null
+                    ? controller.initialize
+                    : controller.search,
                 onChangeLocation: onChangeLocation,
               ),
             ),
@@ -178,6 +190,9 @@ class SupplierListPanel extends StatelessWidget {
             separatorBuilder: (_, _) =>
                 const Divider(height: 1, indent: 16, endIndent: 16),
             itemBuilder: (context, index) => SupplierRow(
+              key: ValueKey(visible[index].resultId),
+              photoLoader: controller.directoryPhotos,
+              onOpenLink: onOpenLink,
               item: visible[index],
               selected: visible[index].resultId == controller.selectedId,
               onTap: () => controller.select(visible[index].resultId),
@@ -234,29 +249,87 @@ String _time(DateTime? value) {
   return '$hour:${local.minute.toString().padLeft(2, '0')} ${local.hour < 12 ? 'AM' : 'PM'}';
 }
 
-class SupplierRow extends StatelessWidget {
+class SupplierRow extends StatefulWidget {
   const SupplierRow({
     super.key,
     required this.item,
     required this.selected,
     required this.onTap,
+    this.photoLoader,
+    this.onOpenLink,
   });
 
   final SupplierResultView item;
   final bool selected;
   final VoidCallback onTap;
 
+  final DirectoryPhotoLoader? photoLoader;
+  final Future<void> Function(Uri)? onOpenLink;
+
+  @override
+  State<SupplierRow> createState() => _SupplierRowState();
+}
+
+class _SupplierRowState extends State<SupplierRow> {
+  DirectoryPhotoView? _media;
+  Timer? _debounce;
+  int _sequence = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _schedulePhoto();
+  }
+
+  @override
+  void didUpdateWidget(covariant SupplierRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.item.resultId != widget.item.resultId ||
+        oldWidget.photoLoader != widget.photoLoader) {
+      _evict();
+      _media = null;
+      _schedulePhoto();
+    }
+  }
+
+  void _schedulePhoto() {
+    _debounce?.cancel();
+    final sequence = ++_sequence;
+    if (widget.item.isVerified || widget.photoLoader == null) return;
+    // Let a fast fling pass before making a paid provider request.
+    _debounce = Timer(const Duration(milliseconds: 250), () async {
+      final result = await widget.photoLoader!.load(
+        widget.item.resultId,
+        () => mounted && sequence == _sequence,
+      );
+      if (mounted && sequence == _sequence) setState(() => _media = result);
+    });
+  }
+
+  void _evict() {
+    final uri = _media?.photo?.uri;
+    if (uri != null) NetworkImage(uri).evict();
+  }
+
+  @override
+  void dispose() {
+    _sequence++;
+    _debounce?.cancel();
+    _evict();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final item = widget.item;
+    final selected = widget.selected;
     final open = item.openState;
     return Semantics(
       selected: selected,
       button: true,
-      label:
-          '${item.name}, ${item.isVerified ? 'Verified Vendor' : 'Directory Supplier'}, ${item.scoreText}, ${formatDistance(item.distanceMeters)} away${item.isFavorite ? ', Favorite Supplier' : ''}${selected ? ', selected' : ''}',
-      excludeSemantics: true,
+      container: true,
       child: InkWell(
-        onTap: onTap,
+        onTap: widget.onTap,
         child: Container(
           constraints: const BoxConstraints(minHeight: 72),
           decoration: BoxDecoration(
@@ -272,7 +345,7 @@ class SupplierRow extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _SupplierAvatar(item: item),
+              _SupplierAvatar(item: item, photo: _media?.photo),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -328,6 +401,14 @@ class SupplierRow extends StatelessWidget {
                         fontSize: 13,
                       ),
                     ),
+                    if (_media?.photo != null) ...[
+                      const SizedBox(height: 4),
+                      GooglePlacePhotoCredit(
+                        photo: _media!.photo!,
+                        providerAttributions: _media!.providerAttributions,
+                        onOpenLink: widget.onOpenLink,
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -353,11 +434,13 @@ String _clock(String value) {
 }
 
 class _SupplierAvatar extends StatelessWidget {
-  const _SupplierAvatar({required this.item});
+  const _SupplierAvatar({required this.item, this.photo});
   final SupplierResultView item;
+  final PlacePhotoView? photo;
 
   @override
   Widget build(BuildContext context) {
+    final uri = item.isVerified ? item.logoUrl : photo?.uri;
     final fallback = Icon(
       item.isVerified ? LucideIcons.store : LucideIcons.building2,
       color: item.isVerified ? BuyerTheme.action : BuyerTheme.muted,
@@ -365,18 +448,19 @@ class _SupplierAvatar extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(8),
       child: Container(
-        width: 48,
-        height: 48,
+        width: 56,
+        height: 56,
         color: BuyerTheme.canvas,
         alignment: Alignment.center,
-        child: item.logoUrl == null
+        child: uri == null
             ? fallback
             : Image.network(
-                item.logoUrl!,
-                width: 48,
-                height: 48,
-                fit: BoxFit.cover,
-                semanticLabel: '${item.name} logo',
+                uri,
+                width: 56,
+                height: 56,
+                fit: item.isVerified ? BoxFit.contain : BoxFit.cover,
+                semanticLabel:
+                    '${item.name} ${item.isVerified ? 'store logo' : 'Google Maps business photo'}',
                 errorBuilder: (_, _, _) => fallback,
               ),
       ),
@@ -540,7 +624,7 @@ class SupplierPreview extends StatefulWidget {
   State<SupplierPreview> createState() => _SupplierPreviewState();
 }
 
-enum _DirectorySection { overview, about }
+enum _DirectorySection { overview, reviews, about }
 
 class _SupplierPreviewState extends State<SupplierPreview> {
   _DirectorySection _section = _DirectorySection.overview;
@@ -567,24 +651,8 @@ class _SupplierPreviewState extends State<SupplierPreview> {
     label:
         '${item.name}, ${item.isVerified ? 'Verified Vendor' : 'Directory Supplier'}',
     excludeSemantics: true,
-    child: Text.rich(
-      TextSpan(
-        text: item.name,
-        children: [
-          if (item.isVerified)
-            const WidgetSpan(
-              alignment: PlaceholderAlignment.middle,
-              child: Padding(
-                padding: EdgeInsets.only(left: 6),
-                child: Icon(
-                  LucideIcons.badgeCheck,
-                  size: 20,
-                  color: BuyerTheme.action,
-                ),
-              ),
-            ),
-        ],
-      ),
+    child: Text(
+      item.name,
       style: Theme.of(
         context,
       ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
@@ -601,6 +669,8 @@ class _SupplierPreviewState extends State<SupplierPreview> {
     Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        _SupplierAvatar(item: item),
+        const SizedBox(width: 10),
         Expanded(
           child: Padding(
             padding: const EdgeInsets.only(top: 8),
@@ -674,7 +744,7 @@ class _SupplierPreviewState extends State<SupplierPreview> {
           child: FilledButton.icon(
             onPressed: () => widget.onViewStore(item),
             icon: const Icon(LucideIcons.store, size: 20),
-            label: const Text('View Store'),
+            label: const Text('View Storefront'),
           ),
         ),
         const SizedBox(width: 12),
@@ -730,7 +800,11 @@ class _SupplierPreviewState extends State<SupplierPreview> {
   List<Widget> _directory(BuildContext context, SupplierResultView item) {
     final details = controller.directoryDetails;
     final type = _placeType(item.directoryType);
-    final today = details == null ? null : _todayHours(details.openingHours);
+    final today = details == null
+        ? null
+        : details.openNow == null
+        ? _todayHours(details.openingHours)
+        : '${details.openNow! ? 'Open' : 'Closed'}${details.openNow == true && details.nextCloseTime != null ? ' · Closes ${_time(details.nextCloseTime)}' : ''}';
     final phone = details?.actions.contains('CALL') == true
         ? details?.publicPhone
         : null;
@@ -828,22 +902,38 @@ class _SupplierPreviewState extends State<SupplierPreview> {
               value: _DirectorySection.overview,
               label: Text('Overview'),
             ),
+            ButtonSegment(
+              value: _DirectorySection.reviews,
+              label: Text('Reviews'),
+            ),
             ButtonSegment(value: _DirectorySection.about, label: Text('About')),
           ],
           selected: {_section},
           onSelectionChanged: (value) => setState(() => _section = value.first),
         ),
         const SizedBox(height: 16),
-        const AuthNotice(
-          message:
-              'Directory Supplier from Google Maps. Informational only: it is not a MateryalPH Verified Vendor, and ordering, messaging, reviews and payments are not available. Details may be outdated.',
+        const Text(
+          'Information from Google Maps may not reflect current real-world conditions.',
+          style: TextStyle(fontSize: 12, color: BuyerTheme.muted),
         ),
         const SizedBox(height: 12),
         if (_section == _DirectorySection.overview)
           ..._overview(details, item, phone != null)
-        else
+        else if (_section == _DirectorySection.reviews) ...[
+          if (details.googleRatingValue != null)
+            GoogleRatingBadge(
+              value: details.googleRatingValue!,
+              count: details.googleRatingCount,
+            ),
+          GooglePlaceReviews(
+            reviews: details.reviews,
+            onOpenLink: widget.onOpenLink,
+          ),
+        ] else
           ..._about(details),
         const SizedBox(height: 12),
+        for (final author in details.providerAttributions)
+          GooglePlaceAuthor(author: author, onOpenLink: widget.onOpenLink),
         Text(
           '${details.attribution} Retrieved ${_time(details.fetchedAt)}.',
           style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
@@ -857,6 +947,25 @@ class _SupplierPreviewState extends State<SupplierPreview> {
     SupplierResultView item,
     bool callIsPrimary,
   ) => [
+    GooglePlacePhotos(photos: details.photos, onOpenLink: widget.onOpenLink),
+    const SizedBox(height: 12),
+    if (details.openingHours.isNotEmpty) ...[
+      const Text(
+        'Opening hours',
+        style: TextStyle(fontWeight: FontWeight.w700),
+      ),
+      for (final line in details.openingHours)
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Text(line),
+        ),
+      const SizedBox(height: 12),
+    ],
+    if (details.publicPhone != null) ...[
+      _DetailRow(icon: LucideIcons.phone, text: details.publicPhone!),
+      const SizedBox(height: 12),
+    ],
+
     if (details.formattedAddress != null)
       _DetailRow(icon: LucideIcons.mapPin, text: details.formattedAddress!),
     if (details.googleRatingValue != null) ...[
@@ -888,36 +997,19 @@ class _SupplierPreviewState extends State<SupplierPreview> {
   ];
 
   List<Widget> _about(DirectoryDetailsView details) => [
-    Semantics(
-      header: true,
-      child: const Text(
-        'Opening hours',
-        style: TextStyle(fontWeight: FontWeight.w700),
-      ),
-    ),
-    const SizedBox(height: 4),
-    if (details.openingHours.isEmpty)
+    if (details.attributes.isEmpty)
       const Text(
-        'Google Maps did not return opening hours for this place.',
+        'Google Maps has not provided additional business attributes.',
         style: TextStyle(color: BuyerTheme.muted),
-      )
-    else
-      for (final line in details.openingHours)
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 2),
-          child: Text(line),
-        ),
-    if (details.publicPhone != null) ...[
-      const SizedBox(height: 12),
-      _DetailRow(icon: LucideIcons.phone, text: details.publicPhone!),
-    ],
-    if (details.websiteUri != null) ...[
-      const SizedBox(height: 8),
-      _DetailRow(
-        icon: LucideIcons.globe,
-        text: Uri.tryParse(details.websiteUri!)?.host ?? details.websiteUri!,
       ),
-    ],
+    for (final attribute in details.attributes)
+      Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: _DetailRow(
+          icon: attribute.available ? LucideIcons.check : LucideIcons.x,
+          text: '${attribute.label}: ${attribute.available ? 'Yes' : 'No'}',
+        ),
+      ),
   ];
 
   void _openInMaps(DirectoryDetailsView details, SupplierResultView item) =>
@@ -938,13 +1030,24 @@ String? _placeType(String? type) {
   return '${words[0].toUpperCase()}${words.substring(1)}';
 }
 
-/// Today's line from Google's weekday descriptions (Monday first), in Asia/Manila.
+/// Match the provider's English weekday label; Google does not guarantee Monday-first ordering.
 String? _todayHours(List<String> weekdays) {
-  if (weekdays.length != 7) return null;
+  const names = [
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday',
+  ];
   final today = DateTime.now().toUtc().add(const Duration(hours: 8)).weekday;
-  final line = weekdays[today - 1];
-  final colon = line.indexOf(':');
-  return colon < 0 ? line : 'Today:${line.substring(colon + 1)}';
+  for (final line in weekdays) {
+    if (line.startsWith('${names[today - 1]}:')) {
+      return 'Today:${line.substring(line.indexOf(':') + 1)}';
+    }
+  }
+  return null;
 }
 
 class _OpenStatusLine extends StatelessWidget {

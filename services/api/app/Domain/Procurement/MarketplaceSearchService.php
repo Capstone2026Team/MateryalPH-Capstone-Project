@@ -38,7 +38,7 @@ final class MarketplaceSearchService
     /** Candidate variant rows scored per request; nearest first when a dense area exceeds it. */
     public const MAX_CANDIDATES = 2000;
 
-    public const SORTS = ['BEST_DEAL', 'DISTANCE', 'PRICE', 'RATING', 'FAVORITES_FIRST'];
+    public const SORTS = ['BEST_DEAL', 'DISTANCE', 'PRICE', 'RATING', 'FAVORITES_FIRST', 'DISTANCE_DESC', 'PRICE_DESC', 'RATING_ASC'];
 
     /** Best Price needs a comparison: at least two Vendors offering the same comparable group in the radius. */
     public const BEST_PRICE_MIN_VENDORS = 2;
@@ -201,6 +201,9 @@ final class MarketplaceSearchService
         $rated = $offer['rating']['average'] === null;
 
         return match ($sort) {
+            'DISTANCE_DESC' => [-$offer['distance'], $srs, $offer['price'], $offer['listing_id'], $offer['variant_id']],
+            'PRICE_DESC' => [-$offer['price'], $offer['distance'], $offer['listing_id'], $offer['variant_id']],
+            'RATING_ASC' => [$rated ? 1 : 0, $rated ? 0 : (int) bcmul((string) $offer['rating']['average'], '100', 0), -$offer['rating']['count'], $offer['distance'], $offer['listing_id'], $offer['variant_id']],
             'DISTANCE' => [$offer['distance'], $srs, $offer['price'], $offer['listing_id'], $offer['variant_id']],
             'PRICE' => [$offer['price'], $offer['distance'], $offer['listing_id'], $offer['variant_id']],
             'RATING' => [$rated ? 1 : 0, $rated ? 0 : -(int) bcmul((string) $offer['rating']['average'], '100', 0), -$offer['rating']['count'], $offer['distance'], $offer['listing_id'], $offer['variant_id']],
@@ -213,6 +216,9 @@ final class MarketplaceSearchService
     private function tieBreakers(string $sort): array
     {
         return match ($sort) {
+            'DISTANCE_DESC' => ['distance_desc', 'srs_desc', 'unit_price_asc', 'listing_id_asc'],
+            'PRICE_DESC' => ['unit_price_desc', 'distance_asc', 'listing_id_asc'],
+            'RATING_ASC' => ['rated_first', 'product_rating_asc', 'rating_count_desc', 'distance_asc', 'listing_id_asc'],
             'DISTANCE' => ['distance_asc', 'srs_desc', 'unit_price_asc', 'listing_id_asc'],
             'PRICE' => ['unit_price_asc', 'distance_asc', 'listing_id_asc'],
             'RATING' => ['rated_first', 'product_rating_desc', 'rating_count_desc', 'distance_asc', 'listing_id_asc'],

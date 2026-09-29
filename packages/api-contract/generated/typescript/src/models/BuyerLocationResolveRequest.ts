@@ -24,6 +24,14 @@ export interface BuyerLocationResolveRequest {
      */
     mode: BuyerLocationResolveRequestModeEnum;
     /**
+     * Required only for PLACE mode.
+     */
+    placeId?: string;
+    /**
+     * Required only for PLACE mode; same token as autocomplete.
+     */
+    sessionToken?: string;
+    /**
      *
      */
     latitude?: number;
@@ -69,6 +77,7 @@ export const BuyerLocationResolveRequestModeEnum = {
     Pin: 'PIN',
     Device: 'DEVICE',
     Address: 'ADDRESS',
+    Place: 'PLACE',
 } as const;
 export type BuyerLocationResolveRequestModeEnum = typeof BuyerLocationResolveRequestModeEnum[keyof typeof BuyerLocationResolveRequestModeEnum];
 
@@ -92,6 +101,8 @@ export function BuyerLocationResolveRequestFromJSONTyped(json: any, ignoreDiscri
     return {
 
         'mode': json['mode'],
+        'placeId': json['place_id'] == null ? undefined : json['place_id'],
+        'sessionToken': json['session_token'] == null ? undefined : json['session_token'],
         'latitude': json['latitude'] == null ? undefined : json['latitude'],
         'longitude': json['longitude'] == null ? undefined : json['longitude'],
         'addressLine': json['address_line'] === undefined ? undefined : json['address_line'] === null ? null : json['address_line'],
@@ -116,6 +127,8 @@ export function BuyerLocationResolveRequestToJSONTyped(value?: BuyerLocationReso
     return {
 
         'mode': value['mode'],
+        'place_id': value['placeId'],
+        'session_token': value['sessionToken'],
         'latitude': value['latitude'],
         'longitude': value['longitude'],
         'address_line': value['addressLine'],

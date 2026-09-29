@@ -468,6 +468,11 @@ final class ApiProcurementRepository implements ProcurementRepository {
   VariantOfferView _variant(api.ListingVariantOffer variant) =>
       VariantOfferView(
         variantId: variant.variantId,
+        sku: variant.sku,
+        attributes: {
+          for (final entry in variant.attributes.entries)
+            if (entry.value != null) entry.key: '${entry.value!.value}',
+        },
         label: variant.label ?? variant.sku,
         unitName: variant.unitName,
         quantityStep: variant.quantityStep,

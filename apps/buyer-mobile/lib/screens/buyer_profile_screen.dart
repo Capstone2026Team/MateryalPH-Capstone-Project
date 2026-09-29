@@ -18,9 +18,13 @@ class BuyerProfileScreen extends StatefulWidget {
     required this.onSignedOut,
     required this.onSignOut,
     this.discoveryRepository,
+    this.onRankingPreferences,
+    this.onRemoveFavorite,
     this.deviceLocation = const GeolocatorDeviceLocationService(),
   });
   final AuthRepository repository;
+  final VoidCallback? onRankingPreferences;
+  final Future<void> Function(String vendorId)? onRemoveFavorite;
   final DiscoveryRepository? discoveryRepository;
   final DeviceLocationService deviceLocation;
   final VoidCallback onSignedOut;
@@ -212,8 +216,10 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
                 label: 'Favorite Suppliers',
                 icon: LucideIcons.heart,
                 onTap: () => _open(
-                  (repository) =>
-                      FavoriteSuppliersScreen(repository: repository),
+                  (repository) => FavoriteSuppliersScreen(
+                    repository: repository,
+                    onRemove: widget.onRemoveFavorite,
+                  ),
                   'Favorite Suppliers',
                 ),
               ),
@@ -237,7 +243,9 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
               BuyerMenuRow(
                 label: 'Ranking Preferences',
                 icon: LucideIcons.slidersHorizontal,
-                onTap: () => _unavailable('Ranking Preferences'),
+                onTap:
+                    widget.onRankingPreferences ??
+                    () => _unavailable('Ranking Preferences'),
               ),
               BuyerMenuRow(
                 label: 'Notification Settings',

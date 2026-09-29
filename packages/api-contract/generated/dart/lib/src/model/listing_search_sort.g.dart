@@ -12,6 +12,10 @@ const ListingSearchSort _$PRICE = const ListingSearchSort._('PRICE');
 const ListingSearchSort _$RATING = const ListingSearchSort._('RATING');
 const ListingSearchSort _$FAVORITES_FIRST =
     const ListingSearchSort._('FAVORITES_FIRST');
+const ListingSearchSort _$DISTANCE_DESC =
+    const ListingSearchSort._('DISTANCE_DESC');
+const ListingSearchSort _$PRICE_DESC = const ListingSearchSort._('PRICE_DESC');
+const ListingSearchSort _$RATING_ASC = const ListingSearchSort._('RATING_ASC');
 
 ListingSearchSort _$valueOf(String name) {
   switch (name) {
@@ -25,6 +29,12 @@ ListingSearchSort _$valueOf(String name) {
       return _$RATING;
     case 'FAVORITES_FIRST':
       return _$FAVORITES_FIRST;
+    case 'DISTANCE_DESC':
+      return _$DISTANCE_DESC;
+    case 'PRICE_DESC':
+      return _$PRICE_DESC;
+    case 'RATING_ASC':
+      return _$RATING_ASC;
     default:
       throw ArgumentError(name);
   }
@@ -37,6 +47,9 @@ final BuiltSet<ListingSearchSort> _$values =
   _$PRICE,
   _$RATING,
   _$FAVORITES_FIRST,
+  _$DISTANCE_DESC,
+  _$PRICE_DESC,
+  _$RATING_ASC,
 ]);
 
 class _$ListingSearchSortMeta {
@@ -46,6 +59,9 @@ class _$ListingSearchSortMeta {
   ListingSearchSort get PRICE => _$PRICE;
   ListingSearchSort get RATING => _$RATING;
   ListingSearchSort get FAVORITES_FIRST => _$FAVORITES_FIRST;
+  ListingSearchSort get DISTANCE_DESC => _$DISTANCE_DESC;
+  ListingSearchSort get PRICE_DESC => _$PRICE_DESC;
+  ListingSearchSort get RATING_ASC => _$RATING_ASC;
   ListingSearchSort valueOf(String name) => _$valueOf(name);
   BuiltSet<ListingSearchSort> get values => _$values;
 }
@@ -67,6 +83,9 @@ class _$ListingSearchSortSerializer
     'PRICE': 'PRICE',
     'RATING': 'RATING',
     'FAVORITES_FIRST': 'FAVORITES_FIRST',
+    'DISTANCE_DESC': 'DISTANCE_DESC',
+    'PRICE_DESC': 'PRICE_DESC',
+    'RATING_ASC': 'RATING_ASC',
   };
   static const Map<Object, String> _fromWire = const <Object, String>{
     'BEST_DEAL': 'BEST_DEAL',
@@ -74,6 +93,9 @@ class _$ListingSearchSortSerializer
     'PRICE': 'PRICE',
     'RATING': 'RATING',
     'FAVORITES_FIRST': 'FAVORITES_FIRST',
+    'DISTANCE_DESC': 'DISTANCE_DESC',
+    'PRICE_DESC': 'PRICE_DESC',
+    'RATING_ASC': 'RATING_ASC',
   };
 
   @override

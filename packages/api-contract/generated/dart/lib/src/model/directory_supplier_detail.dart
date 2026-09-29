@@ -5,14 +5,18 @@
 // ignore_for_file: unused_element
 import 'package:materyalph_api_client/src/model/provider_attribution.dart';
 import 'package:built_collection/built_collection.dart';
+import 'package:materyalph_api_client/src/model/google_place_photo.dart';
+import 'package:materyalph_api_client/src/model/google_place_attribute.dart';
+import 'package:materyalph_api_client/src/model/google_place_review.dart';
 import 'package:materyalph_api_client/src/model/google_rating.dart';
+import 'package:materyalph_api_client/src/model/google_content_author.dart';
 import 'package:materyalph_api_client/src/model/map_point.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
 part 'directory_supplier_detail.g.dart';
 
-/// Informational Tier 1 details. There is intentionally no VPS, verification, listing, message, order, review, payment or storefront field.
+/// Informational Tier 1 details. Google photos and review excerpts retain attribution and are never persisted. There is no VPS, verification, listing, message, order, MateryalPH review, payment or storefront field.
 ///
 /// Properties:
 /// * [resultId]
@@ -24,6 +28,12 @@ part 'directory_supplier_detail.g.dart';
 /// * [publicPhone]
 /// * [websiteUri]
 /// * [googleMapsUri]
+/// * [openNow]
+/// * [nextCloseTime]
+/// * [photos]
+/// * [reviews]
+/// * [attributes]
+/// * [providerAttributions]
 /// * [openingHours]
 /// * [googleRating]
 /// * [attribution]
@@ -59,6 +69,24 @@ abstract class DirectorySupplierDetail implements Built<DirectorySupplierDetail,
 
   @BuiltValueField(wireName: r'google_maps_uri')
   String? get googleMapsUri;
+
+  @BuiltValueField(wireName: r'open_now')
+  bool? get openNow;
+
+  @BuiltValueField(wireName: r'next_close_time')
+  DateTime? get nextCloseTime;
+
+  @BuiltValueField(wireName: r'photos')
+  BuiltList<GooglePlacePhoto>? get photos;
+
+  @BuiltValueField(wireName: r'reviews')
+  BuiltList<GooglePlaceReview>? get reviews;
+
+  @BuiltValueField(wireName: r'attributes')
+  BuiltList<GooglePlaceAttribute>? get attributes;
+
+  @BuiltValueField(wireName: r'provider_attributions')
+  BuiltList<GoogleContentAuthor>? get providerAttributions;
 
   @BuiltValueField(wireName: r'opening_hours')
   BuiltList<String> get openingHours;
@@ -144,6 +172,48 @@ class _$DirectorySupplierDetailSerializer implements PrimitiveSerializer<Directo
       object.googleMapsUri,
       specifiedType: const FullType.nullable(String),
     );
+    if (object.openNow != null) {
+      yield r'open_now';
+      yield serializers.serialize(
+        object.openNow,
+        specifiedType: const FullType.nullable(bool),
+      );
+    }
+    if (object.nextCloseTime != null) {
+      yield r'next_close_time';
+      yield serializers.serialize(
+        object.nextCloseTime,
+        specifiedType: const FullType.nullable(DateTime),
+      );
+    }
+    if (object.photos != null) {
+      yield r'photos';
+      yield serializers.serialize(
+        object.photos,
+        specifiedType: const FullType(BuiltList, [FullType(GooglePlacePhoto)]),
+      );
+    }
+    if (object.reviews != null) {
+      yield r'reviews';
+      yield serializers.serialize(
+        object.reviews,
+        specifiedType: const FullType(BuiltList, [FullType(GooglePlaceReview)]),
+      );
+    }
+    if (object.attributes != null) {
+      yield r'attributes';
+      yield serializers.serialize(
+        object.attributes,
+        specifiedType: const FullType(BuiltList, [FullType(GooglePlaceAttribute)]),
+      );
+    }
+    if (object.providerAttributions != null) {
+      yield r'provider_attributions';
+      yield serializers.serialize(
+        object.providerAttributions,
+        specifiedType: const FullType(BuiltList, [FullType(GoogleContentAuthor)]),
+      );
+    }
     yield r'opening_hours';
     yield serializers.serialize(
       object.openingHours,
@@ -258,6 +328,54 @@ class _$DirectorySupplierDetailSerializer implements PrimitiveSerializer<Directo
           ) as String?;
           if (valueDes == null) continue;
           result.googleMapsUri = valueDes;
+          break;
+        case r'open_now':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.openNow = valueDes;
+          break;
+        case r'next_close_time':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(DateTime),
+          ) as DateTime?;
+          if (valueDes == null) continue;
+          result.nextCloseTime = valueDes;
+          break;
+        case r'photos':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltList, [FullType(GooglePlacePhoto)]),
+          ) as BuiltList<GooglePlacePhoto>?;
+          if (valueDes == null) continue;
+          result.photos.replace(valueDes);
+          break;
+        case r'reviews':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltList, [FullType(GooglePlaceReview)]),
+          ) as BuiltList<GooglePlaceReview>?;
+          if (valueDes == null) continue;
+          result.reviews.replace(valueDes);
+          break;
+        case r'attributes':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltList, [FullType(GooglePlaceAttribute)]),
+          ) as BuiltList<GooglePlaceAttribute>?;
+          if (valueDes == null) continue;
+          result.attributes.replace(valueDes);
+          break;
+        case r'provider_attributions':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltList, [FullType(GoogleContentAuthor)]),
+          ) as BuiltList<GoogleContentAuthor>?;
+          if (valueDes == null) continue;
+          result.providerAttributions.replace(valueDes);
           break;
         case r'opening_hours':
           final valueDes = serializers.deserialize(

@@ -9,6 +9,7 @@ All URIs are relative to */api/v1*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
+[**autocompleteBuyerLocation**](BuyerLocationsApi.md#autocompletebuyerlocation) | **POST** /buyers/locations/autocomplete |
 [**createBuyerLocation**](BuyerLocationsApi.md#createbuyerlocation) | **POST** /buyers/locations |
 [**getBuyerOnboarding**](BuyerLocationsApi.md#getbuyeronboarding) | **GET** /buyers/onboarding |
 [**listBuyerLocations**](BuyerLocationsApi.md#listbuyerlocations) | **GET** /buyers/locations |
@@ -19,6 +20,49 @@ Method | HTTP request | Description
 [**saveBuyerOnboarding**](BuyerLocationsApi.md#savebuyeronboarding) | **PUT** /buyers/onboarding |
 [**updateBuyerLocation**](BuyerLocationsApi.md#updatebuyerlocation) | **PATCH** /buyers/locations/{locationId} |
 
+
+# **autocompleteBuyerLocation**
+> LocationSuggestionEnvelope autocompleteBuyerLocation(locationAutocompleteRequest)
+
+
+
+Up to five Google Places suggestions restricted to the Philippines. Query travels in the body; no content is persisted. Reuse the session token when resolving the selected Place ID.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+
+final api = MateryalphApiClient().getBuyerLocationsApi();
+final LocationAutocompleteRequest locationAutocompleteRequest = ; // LocationAutocompleteRequest |
+
+try {
+    final response = api.autocompleteBuyerLocation(locationAutocompleteRequest);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling BuyerLocationsApi->autocompleteBuyerLocation: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **locationAutocompleteRequest** | [**LocationAutocompleteRequest**](LocationAutocompleteRequest.md)|  |
+
+### Return type
+
+[**LocationSuggestionEnvelope**](LocationSuggestionEnvelope.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **createBuyerLocation**
 > BuyerLocationEnvelope createBuyerLocation(idempotencyKey, buyerLocationCreate)

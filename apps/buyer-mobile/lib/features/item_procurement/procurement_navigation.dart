@@ -9,6 +9,7 @@ import 'procurement_repository.dart';
 import 'product_details_screen.dart';
 import 'ranking_preferences_screen.dart';
 import 'search_results_screen.dart';
+import 'material_search_screen.dart';
 
 /// One place that opens the Item-Based pages with the shared controllers, so Search Results,
 /// Product Details, Cart and Checkout always see the same origin, radius, filters and cart.
@@ -18,11 +19,18 @@ class ProcurementNavigation {
     required this.cart,
     required this.repository,
     required this.openStoreProfile,
+    this.onOpenMap,
   });
 
   final ExploreController explore;
   final CartController cart;
   final ProcurementRepository repository;
+  final VoidCallback? onOpenMap;
+
+  void openLocation(BuildContext context) {
+    Navigator.of(context).popUntil((route) => route.isFirst);
+    onOpenMap?.call();
+  }
 
   /// Opens the public Store Profile (saved hours, store details) for a Verified Vendor.
   final void Function(BuildContext context, String vendorId) openStoreProfile;
@@ -34,6 +42,28 @@ class ProcurementNavigation {
     context,
     SearchResultsScreen(controller: explore, navigation: this),
   );
+
+  Future<void> openSearch(
+    BuildContext context, {
+    bool fromResults = false,
+  }) async {
+    final query = await Navigator.of(context).push<String>(
+      MaterialPageRoute(
+        builder: (_) => MaterialSearchScreen(
+          controller: explore,
+          filters: fromResults ? explore.filters : const ListingFilters(),
+          onSetLocation: () => openLocation(context),
+        ),
+      ),
+    );
+    if (query == null || !context.mounted) return;
+    explore.search(
+      query: query,
+      filters: fromResults ? null : const ListingFilters(),
+      sort: () => null,
+    );
+    if (!fromResults) await openResults(context);
+  }
 
   Future<void> openListing(BuildContext context, String listingId) => _push(
     context,
@@ -60,9 +90,21 @@ class ProcurementNavigation {
   );
 
   Future<void> openPreferences(BuildContext context) async {
-    await _push(context, RankingPreferencesScreen(repository: repository));
+    var changed = false;
+    await _push(
+      context,
+      RankingPreferencesScreen(
+        repository: repository,
+        onChanged: () => changed = true,
+      ),
+    );
     // Saved weights re-rank the current Best Deal results.
-    if (explore.searchActive) await explore.retrySearch();
+    if (changed &&
+        explore.searchActive &&
+        (explore.effectiveSort == ListingSort.bestDeal ||
+            explore.effectiveSort == ListingSort.favoritesFirst)) {
+      await explore.retrySearch();
+    }
   }
 
   Future<void> browseStore(

@@ -10,6 +10,7 @@ import '../../design_system/generated/color_tokens.dart';
 import '../../design_system/motion.dart';
 import 'discovery_models.dart';
 import 'map_geometry.dart';
+import 'philippine_map_view.dart';
 
 /// Basemap chosen from the map layers control. Satellite imagery keeps road and place labels.
 enum BaseMapStyle { standard, satellite }
@@ -104,6 +105,7 @@ class _GoogleSupplierMapState extends State<GoogleSupplierMap>
     duration: MateryalMotionTokens.route,
   )..addListener(() => setState(() {}));
   Timer? _debounce;
+  Timer? _cameraFitDebounce;
   int _renderSequence = 0;
 
   SupplierMapProps get props => widget.props;
@@ -118,8 +120,16 @@ class _GoogleSupplierMapState extends State<GoogleSupplierMap>
   void didUpdateWidget(covariant GoogleSupplierMap old) {
     super.didUpdateWidget(old);
     final reduce = BuyerMotion.reduced(context);
+    if (old.props.bottomInset != props.bottomInset &&
+        props.selectedId != null) {
+      _cameraFitDebounce?.cancel();
+      _cameraFitDebounce = Timer(const Duration(milliseconds: 250), () {
+        if (mounted) _fitSelection(reduce);
+      });
+    }
     if (!identical(old.props.items, props.items) ||
-        old.props.selectedId != props.selectedId) {
+        old.props.selectedId != props.selectedId ||
+        old.props.origin != props.origin) {
       _rebuildMarkers();
     }
     if (old.props.routePath != props.routePath) {
@@ -146,6 +156,7 @@ class _GoogleSupplierMapState extends State<GoogleSupplierMap>
   @override
   void dispose() {
     _debounce?.cancel();
+    _cameraFitDebounce?.cancel();
     _reveal.dispose();
     super.dispose();
   }
@@ -317,6 +328,8 @@ class _GoogleSupplierMapState extends State<GoogleSupplierMap>
           ? 'Map of ${props.items.length} suppliers within ${props.radiusKm} kilometres. The supplier list below has the same suppliers in the same order.'
           : 'Map showing only the selected supplier. Close the preview to show all ${props.items.length} suppliers again.',
       child: GoogleMap(
+        cameraTargetBounds: PhilippineMapView.cameraBounds,
+        minMaxZoomPreference: PhilippineMapView.zoomRange,
         initialCameraPosition: CameraPosition(
           target: LatLng(origin.latitude, origin.longitude),
           zoom: 13,

@@ -3626,6 +3626,22 @@ paths:
         "403": { $ref: "#/components/responses/ErrorResponse" }
         "409": { $ref: "#/components/responses/ErrorResponse" }
         "422": { $ref: "#/components/responses/ErrorResponse" }
+  /buyers/locations/autocomplete:
+    post:
+      operationId: autocompleteBuyerLocation
+      description: Up to five Google Places suggestions restricted to the Philippines. Query travels in the body; no content is persisted. Reuse the session token when resolving the selected Place ID.
+      tags: [ Buyer Locations ]
+      security: [ { passportBearer: [] } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/LocationAutocompleteRequest" } } }
+      responses:
+        "200": { description: Attributed Google Places suggestions., content: { application/json: { schema: { $ref: "#/components/schemas/LocationSuggestionEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+        "429": { $ref: "#/components/responses/ErrorResponse" }
+        "503": { $ref: "#/components/responses/ErrorResponse" }
   /buyers/locations/resolve:
     post:
       operationId: resolveBuyerLocation
@@ -3716,13 +3732,28 @@ paths:
   /buyers/discovery/directory-suppliers/{supplierId}:
     get:
       operationId: getDirectorySupplierDetails
-      description: Lazy-loaded, attributed Google Place Details for one unexpired Directory Supplier. Informational only; never exposes VPS, verification, messaging, ordering, reviews, payments or a storefront. A Google rating is labeled Google rating.
+      description: Lazy-loaded, attributed Google Place Details for one unexpired Directory Supplier. Informational only; never exposes VPS, verification, messaging, ordering, MateryalPH reviews, payments or a storefront. Google media and review excerpts are fetched on demand without storage. A Google rating is labeled Google rating.
       tags: [ Buyer Discovery ]
       security: [ { passportBearer: [] } ]
       parameters:
         - { name: supplierId, in: path, required: true, schema: { type: string, format: uuid } }
       responses:
         "200": { description: Directory Supplier details., content: { application/json: { schema: { $ref: "#/components/schemas/DirectorySupplierDetailEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "429": { $ref: "#/components/responses/ErrorResponse" }
+        "503": { $ref: "#/components/responses/ErrorResponse" }
+  /buyers/discovery/directory-suppliers/{supplierId}/photo:
+    get:
+      operationId: getDirectorySupplierPhoto
+      description: On-demand thumbnail for one visible, unexpired Directory Supplier. Uses only Google photos and attributions; no photo names or media URLs are persisted. Response is no-store. Does not load reviews or full details.
+      tags: [ Buyer Discovery ]
+      security: [ { passportBearer: [] } ]
+      parameters:
+        - { name: supplierId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: At most one attributed business thumbnail or an empty photos list when unavailable., content: { application/json: { schema: { $ref: "#/components/schemas/DirectorySupplierPhotoEnvelope" } } } }
         "401": { $ref: "#/components/responses/ErrorResponse" }
         "403": { $ref: "#/components/responses/ErrorResponse" }
         "404": { $ref: "#/components/responses/ErrorResponse" }
@@ -4105,7 +4136,7 @@ components:
         errors: { type: array, items: { type: object, additionalProperties: true } }
     ListingSearchSort:
       type: string
-      enum: [ BEST_DEAL, DISTANCE, PRICE, RATING, FAVORITES_FIRST ]
+      enum: [ BEST_DEAL, DISTANCE, PRICE, RATING, FAVORITES_FIRST, DISTANCE_DESC, PRICE_DESC, RATING_ASC ]
     ListingSearchRequest:
       description: Origin fields as BuyerOriginRequest plus optional filters. ANY means no filter. A cursor is valid only for the same scope, query, sort, weights and filters.
       type: object
@@ -4935,8 +4966,37 @@ components:
         label: { type: string, description: Always Google rating. }
         value: { type: string }
         count: { type: [ integer, 'null' ] }
+    GoogleContentAuthor:
+      type: object
+      required: [ name ]
+      properties:
+        name: { type: string }
+        uri: { type: [ string, 'null' ], format: uri }
+        photo_uri: { type: [ string, 'null' ], format: uri }
+    GooglePlacePhoto:
+      type: object
+      required: [ uri, authors ]
+      properties:
+        uri: { type: string, format: uri, description: Ephemeral Google media URL. Never persist or cache. }
+        authors: { type: array, items: { $ref: "#/components/schemas/GoogleContentAuthor" } }
+        google_maps_uri: { type: [ string, 'null' ], format: uri }
+    GooglePlaceReview:
+      type: object
+      required: [ author, rating ]
+      properties:
+        author: { $ref: "#/components/schemas/GoogleContentAuthor" }
+        rating: { type: number, format: double, minimum: 1, maximum: 5 }
+        text: { type: [ string, 'null' ] }
+        relative_time: { type: [ string, 'null' ] }
+        google_maps_uri: { type: [ string, 'null' ], format: uri }
+    GooglePlaceAttribute:
+      type: object
+      required: [ label, available ]
+      properties:
+        label: { type: string }
+        available: { type: boolean }
     DirectorySupplierDetail:
-      description: Informational Tier 1 details. There is intentionally no VPS, verification, listing, message, order, review, payment or storefront field.
+      description: Informational Tier 1 details. Google photos and review excerpts retain attribution and are never persisted. There is no VPS, verification, listing, message, order, MateryalPH review, payment or storefront field.
       type: object
       additionalProperties: false
       required: [ result_id, tier, tier_label, name, formatted_address, marker, public_phone, website_uri, google_maps_uri, opening_hours, google_rating, attribution, fetched_at, actions ]
@@ -4950,11 +5010,31 @@ components:
         public_phone: { type: [ string, 'null' ] }
         website_uri: { type: [ string, 'null' ], format: uri }
         google_maps_uri: { type: [ string, 'null' ], format: uri }
+        open_now: { type: [ boolean, 'null' ] }
+        next_close_time: { type: [ string, 'null' ], format: date-time }
+        photos: { type: array, maxItems: 4, items: { $ref: "#/components/schemas/GooglePlacePhoto" } }
+        reviews: { type: array, maxItems: 5, items: { $ref: "#/components/schemas/GooglePlaceReview" } }
+        attributes: { type: array, items: { $ref: "#/components/schemas/GooglePlaceAttribute" } }
+        provider_attributions: { type: array, items: { $ref: "#/components/schemas/GoogleContentAuthor" } }
         opening_hours: { type: array, items: { type: string } }
         google_rating: { oneOf: [ { $ref: "#/components/schemas/GoogleRating" }, { type: 'null' } ] }
         attribution: { $ref: "#/components/schemas/ProviderAttribution" }
         fetched_at: { type: string, format: date-time }
         actions: { type: array, items: { type: string, enum: [ CALL, OPEN_IN_MAPS, WEBSITE, SHARE ] } }
+    DirectorySupplierPhoto:
+      type: object
+      additionalProperties: false
+      required: [ photos, provider_attributions ]
+      properties:
+        photos: { type: array, maxItems: 1, items: { $ref: "#/components/schemas/GooglePlacePhoto" } }
+        provider_attributions: { type: array, items: { $ref: "#/components/schemas/GoogleContentAuthor" } }
+    DirectorySupplierPhotoEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { $ref: "#/components/schemas/DirectorySupplierPhoto" }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
     DirectorySupplierDetailEnvelope:
       type: object
       required: [ data, meta, errors ]
@@ -5024,12 +5104,35 @@ components:
         city_municipality: { type: [ string, 'null' ] }
         province: { type: [ string, 'null' ] }
         postal_code: { type: [ string, 'null' ] }
+    LocationAutocompleteRequest:
+      type: object
+      additionalProperties: false
+      required: [ query, session_token ]
+      properties:
+        query: { type: string, minLength: 2, maxLength: 200 }
+        session_token: { type: string, format: uuid }
+    LocationSuggestion:
+      type: object
+      required: [ place_id, title, subtitle ]
+      properties:
+        place_id: { type: string }
+        title: { type: string }
+        subtitle: { type: [ string, 'null' ] }
+    LocationSuggestionEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { type: array, maxItems: 5, items: { $ref: "#/components/schemas/LocationSuggestion" } }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
     BuyerLocationResolveRequest:
       type: object
       additionalProperties: false
       required: [ mode ]
       properties:
-        mode: { type: string, enum: [ PIN, DEVICE, ADDRESS ] }
+        mode: { type: string, enum: [ PIN, DEVICE, ADDRESS, PLACE ] }
+        place_id: { type: string, pattern: '^[A-Za-z0-9_-]{10,300}$', description: Required only for PLACE mode. }
+        session_token: { type: string, format: uuid, description: Required only for PLACE mode; same token as autocomplete. }
         latitude: { type: number, format: double, minimum: -90, maximum: 90 }
         longitude: { type: number, format: double, minimum: -180, maximum: 180 }
         address_line: { type: [ string, 'null' ], maxLength: 200 }

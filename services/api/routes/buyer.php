@@ -15,6 +15,7 @@ Route::prefix('buyers')->middleware(['auth.transport:MOBILE', 'auth:api', 'accou
 
     Route::get('/geography/areas', [BuyerLocationController::class, 'areas']);
     Route::get('/locations', [BuyerLocationController::class, 'index']);
+    Route::post('/locations/autocomplete', [BuyerLocationController::class, 'autocomplete'])->middleware('throttle:buyer-places');
     Route::post('/locations/resolve', [BuyerLocationController::class, 'resolve'])->middleware('throttle:buyer-geocode');
     Route::post('/locations', [BuyerLocationController::class, 'store']);
     Route::patch('/locations/{locationId}', [BuyerLocationController::class, 'update'])->whereUuid('locationId');
@@ -23,6 +24,7 @@ Route::prefix('buyers')->middleware(['auth.transport:MOBILE', 'auth:api', 'accou
 
     Route::post('/discovery/search', [BuyerDiscoveryController::class, 'search'])->middleware('throttle:buyer-discovery');
     Route::get('/discovery/directory-suppliers/{supplierId}', [BuyerDiscoveryController::class, 'directorySupplier'])->whereUuid('supplierId')->middleware('throttle:buyer-places');
+    Route::get('/discovery/directory-suppliers/{supplierId}/photo', [BuyerDiscoveryController::class, 'directorySupplierPhoto'])->whereUuid('supplierId')->middleware('throttle:buyer-places');
     Route::post('/discovery/routes', [BuyerDiscoveryController::class, 'route'])->middleware('throttle:buyer-route');
 
     // Phase 7 Item-Based procurement. Origins stay in bodies; cart and preview never reserve stock.

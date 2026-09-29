@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import 'discovery_models.dart';
+import 'directory_photo_loader.dart';
 import 'discovery_repository.dart';
 
 enum DiscoveryPhase { initializing, needsOrigin, loading, ready, failed }
@@ -16,6 +17,7 @@ class DiscoveryController extends ChangeNotifier {
     : _repository = repository;
 
   final DiscoveryRepository _repository;
+  late final directoryPhotos = DirectoryPhotoLoader(_repository);
 
   DiscoveryPhase phase = DiscoveryPhase.initializing;
   DiscoveryOrigin? origin;
@@ -38,9 +40,11 @@ class DiscoveryController extends ChangeNotifier {
   bool directoryLoading = false;
 
   int _searchSequence = 0;
+  int _loadedPage = 0;
   int _routeSequence = 0;
   int _detailsSequence = 0;
   bool _disposed = false;
+  bool _initializing = false;
 
   SupplierResultView? get selected {
     for (final item in items) {
@@ -52,6 +56,9 @@ class DiscoveryController extends ChangeNotifier {
   int? get suggestedRadiusKm => page?.suggestedRadiusKm;
 
   Future<void> initialize() async {
+    // A shared controller survives tab visits. Never reset a valid active location on remount.
+    if (_initializing || origin?.point?.usable == true) return;
+    _initializing = true;
     phase = DiscoveryPhase.initializing;
     _notify();
     try {
@@ -67,18 +74,24 @@ class DiscoveryController extends ChangeNotifier {
       phase = DiscoveryPhase.failed;
       _notify();
       return;
+    } finally {
+      _initializing = false;
     }
-    final primary = savedLocations.where((location) => location.isPrimary);
-    if (primary.isEmpty) {
+    final valid = savedLocations
+        .where((location) => location.point.usable)
+        .toList();
+    final primary = valid.where((location) => location.isPrimary);
+    if (valid.isEmpty) {
       phase = DiscoveryPhase.needsOrigin;
       _notify();
       return;
     }
+    final restored = primary.isEmpty ? valid.first : primary.first;
     await setOrigin(
       DiscoveryOrigin.saved(
-        locationId: primary.first.id,
-        label: primary.first.label,
-        point: primary.first.point,
+        locationId: restored.id,
+        label: displayAddress(restored.formattedAddress),
+        point: restored.point,
       ),
     );
   }
@@ -133,10 +146,20 @@ class DiscoveryController extends ChangeNotifier {
       return;
     }
     final sequence = ++_searchSequence;
+    loadingMore = false;
     final radius = radiusKm;
     final activeFilters = filters;
     phase = DiscoveryPhase.loading;
     failure = null;
+    _routeSequence++;
+    route = null;
+    routePhase = RoutePhase.idle;
+    if (!keepSelection) {
+      _clearSelection();
+      items = const [];
+      page = null;
+      resultsStale = false;
+    }
     _notify();
     try {
       final result = await _repository.search(
@@ -146,15 +169,35 @@ class DiscoveryController extends ChangeNotifier {
       );
       if (!_current(sequence, currentOrigin, radius, activeFilters)) return;
       page = result;
+      _loadedPage = 1;
       items = result.items;
       resultsStale = false;
       phase = DiscoveryPhase.ready;
       if (!keepSelection || selected == null) _clearSelection();
       _notify();
       if (keepSelection && selected != null) await _requestRoute(selected!);
+      // Outer-radius suppliers may be beyond the first 100 rows. Populate the shared map/list
+      // progressively through the existing paginated endpoint, stopping on failure or scope change.
+      while (_current(sequence, currentOrigin, radius, activeFilters) &&
+          (page?.hasMore ?? false) &&
+          _loadedPage < 50) {
+        final before = _loadedPage;
+        await loadMore();
+        if (_loadedPage == before) break;
+      }
     } on DiscoveryFailure catch (error) {
       if (!_current(sequence, currentOrigin, radius, activeFilters)) return;
       failure = error;
+      if (error.code == 'LOCATION_NOT_FOUND' ||
+          error.code == 'LOCATION_OUTSIDE_PHILIPPINES') {
+        origin = null;
+        items = const [];
+        page = null;
+        _clearSelection();
+        phase = DiscoveryPhase.needsOrigin;
+        _notify();
+        return;
+      }
       // Keep earlier results visible but labelled, and never present an old ETA as current.
       resultsStale = items.isNotEmpty;
       route = null;
@@ -181,7 +224,7 @@ class DiscoveryController extends ChangeNotifier {
         origin: currentOrigin,
         radiusKm: radiusKm,
         filters: filters,
-        page: (items.length ~/ 100) + 1,
+        page: _loadedPage + 1,
       );
       if (sequence != _searchSequence) return;
       final known = items.map((item) => item.resultId).toSet();
@@ -190,6 +233,7 @@ class DiscoveryController extends ChangeNotifier {
         ...next.items.where((item) => !known.contains(item.resultId)),
       ];
       page = next;
+      _loadedPage++;
     } on DiscoveryFailure catch (error) {
       if (sequence == _searchSequence) failure = error;
     } finally {
@@ -256,13 +300,25 @@ class DiscoveryController extends ChangeNotifier {
   /// Favorite from another page (Product Details, Store Profile). Keeps map rows in sync and lets
   /// the caller show a failure instead of swallowing it.
   Future<void> setFavorite(String vendorId, {required bool favorite}) async {
-    await _repository.setFavorite(vendorId, favorite: favorite);
-    items = [
-      for (final item in items)
-        item.resultId == vendorId ? item.withFavorite(favorite) : item,
-    ];
+    if (_favoritePending.contains(vendorId)) return;
+    _favoritePending.add(vendorId);
     _notify();
+    try {
+      await _repository.setFavorite(vendorId, favorite: favorite);
+      favoriteUpdates[vendorId] = favorite;
+      items = [
+        for (final item in items)
+          item.resultId == vendorId ? item.withFavorite(favorite) : item,
+      ];
+    } finally {
+      _favoritePending.remove(vendorId);
+      _notify();
+    }
   }
+
+  final Map<String, bool> favoriteUpdates = {};
+  final Set<String> _favoritePending = {};
+  bool favoriteBusy(String vendorId) => _favoritePending.contains(vendorId);
 
   Future<void> _requestRoute(SupplierResultView supplier) async {
     final currentOrigin = origin;
@@ -354,6 +410,7 @@ class DiscoveryController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    directoryPhotos.dispose();
     super.dispose();
   }
 }

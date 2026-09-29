@@ -153,6 +153,7 @@ Class | Method | HTTP request | Description
 [*BuyerDiscoveryApi*](doc/BuyerDiscoveryApi.md) | [**addFavoriteSupplier**](doc/BuyerDiscoveryApi.md#addfavoritesupplier) | **PUT** /buyers/favorite-suppliers/{vendorId} |
 [*BuyerDiscoveryApi*](doc/BuyerDiscoveryApi.md) | [**estimateBuyerRoute**](doc/BuyerDiscoveryApi.md#estimatebuyerroute) | **POST** /buyers/discovery/routes |
 [*BuyerDiscoveryApi*](doc/BuyerDiscoveryApi.md) | [**getDirectorySupplierDetails**](doc/BuyerDiscoveryApi.md#getdirectorysupplierdetails) | **GET** /buyers/discovery/directory-suppliers/{supplierId} |
+[*BuyerDiscoveryApi*](doc/BuyerDiscoveryApi.md) | [**getDirectorySupplierPhoto**](doc/BuyerDiscoveryApi.md#getdirectorysupplierphoto) | **GET** /buyers/discovery/directory-suppliers/{supplierId}/photo |
 [*BuyerDiscoveryApi*](doc/BuyerDiscoveryApi.md) | [**listFavoriteSuppliers**](doc/BuyerDiscoveryApi.md#listfavoritesuppliers) | **GET** /buyers/favorite-suppliers |
 [*BuyerDiscoveryApi*](doc/BuyerDiscoveryApi.md) | [**removeFavoriteSupplier**](doc/BuyerDiscoveryApi.md#removefavoritesupplier) | **DELETE** /buyers/favorite-suppliers/{vendorId} |
 [*BuyerDiscoveryApi*](doc/BuyerDiscoveryApi.md) | [**saveBuyerDiscoveryRadius**](doc/BuyerDiscoveryApi.md#savebuyerdiscoveryradius) | **PUT** /buyers/discovery/preferences |
@@ -163,6 +164,7 @@ Class | Method | HTTP request | Description
 [*BuyerExploreApi*](doc/BuyerExploreApi.md) | [**resetBuyerItemRankingPreferences**](doc/BuyerExploreApi.md#resetbuyeritemrankingpreferences) | **DELETE** /buyers/ranking-preferences/item-based |
 [*BuyerExploreApi*](doc/BuyerExploreApi.md) | [**saveBuyerItemRankingPreferences**](doc/BuyerExploreApi.md#savebuyeritemrankingpreferences) | **PUT** /buyers/ranking-preferences/item-based |
 [*BuyerExploreApi*](doc/BuyerExploreApi.md) | [**searchBuyerListings**](doc/BuyerExploreApi.md#searchbuyerlistings) | **POST** /buyers/listings/search |
+[*BuyerLocationsApi*](doc/BuyerLocationsApi.md) | [**autocompleteBuyerLocation**](doc/BuyerLocationsApi.md#autocompletebuyerlocation) | **POST** /buyers/locations/autocomplete |
 [*BuyerLocationsApi*](doc/BuyerLocationsApi.md) | [**createBuyerLocation**](doc/BuyerLocationsApi.md#createbuyerlocation) | **POST** /buyers/locations |
 [*BuyerLocationsApi*](doc/BuyerLocationsApi.md) | [**getBuyerOnboarding**](doc/BuyerLocationsApi.md#getbuyeronboarding) | **GET** /buyers/onboarding |
 [*BuyerLocationsApi*](doc/BuyerLocationsApi.md) | [**listBuyerLocations**](doc/BuyerLocationsApi.md#listbuyerlocations) | **GET** /buyers/locations |
@@ -419,6 +421,8 @@ Class | Method | HTTP request | Description
  - [DirectoryAvailability](doc/DirectoryAvailability.md)
  - [DirectorySupplierDetail](doc/DirectorySupplierDetail.md)
  - [DirectorySupplierDetailEnvelope](doc/DirectorySupplierDetailEnvelope.md)
+ - [DirectorySupplierPhoto](doc/DirectorySupplierPhoto.md)
+ - [DirectorySupplierPhotoEnvelope](doc/DirectorySupplierPhotoEnvelope.md)
  - [DirectorySupplierSummary](doc/DirectorySupplierSummary.md)
  - [DiscoveryCounts](doc/DiscoveryCounts.md)
  - [DiscoveryPreferences](doc/DiscoveryPreferences.md)
@@ -455,8 +459,12 @@ Class | Method | HTTP request | Description
  - [FleetVehicleListMetaPermissions](doc/FleetVehicleListMetaPermissions.md)
  - [FleetVehiclesSave](doc/FleetVehiclesSave.md)
  - [GenericDataEnvelope](doc/GenericDataEnvelope.md)
+ - [GoogleContentAuthor](doc/GoogleContentAuthor.md)
  - [GoogleMobileExchangeRequest](doc/GoogleMobileExchangeRequest.md)
  - [GoogleOidcStartRequest](doc/GoogleOidcStartRequest.md)
+ - [GooglePlaceAttribute](doc/GooglePlaceAttribute.md)
+ - [GooglePlacePhoto](doc/GooglePlacePhoto.md)
+ - [GooglePlaceReview](doc/GooglePlaceReview.md)
  - [GoogleRating](doc/GoogleRating.md)
  - [HealthEnvelope](doc/HealthEnvelope.md)
  - [HealthEnvelopeAllOfData](doc/HealthEnvelopeAllOfData.md)
@@ -501,6 +509,9 @@ Class | Method | HTTP request | Description
  - [ListingVariantOffer](doc/ListingVariantOffer.md)
  - [ListingVariantPrice](doc/ListingVariantPrice.md)
  - [ListingVendorCard](doc/ListingVendorCard.md)
+ - [LocationAutocompleteRequest](doc/LocationAutocompleteRequest.md)
+ - [LocationSuggestion](doc/LocationSuggestion.md)
+ - [LocationSuggestionEnvelope](doc/LocationSuggestionEnvelope.md)
  - [LockVersionRequest](doc/LockVersionRequest.md)
  - [LoginRequest](doc/LoginRequest.md)
  - [MapPoint](doc/MapPoint.md)

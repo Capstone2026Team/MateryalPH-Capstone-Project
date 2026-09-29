@@ -184,6 +184,8 @@ docs/DeliveryRoute.md
 docs/DirectoryAvailability.md
 docs/DirectorySupplierDetail.md
 docs/DirectorySupplierDetailEnvelope.md
+docs/DirectorySupplierPhoto.md
+docs/DirectorySupplierPhotoEnvelope.md
 docs/DirectorySupplierSummary.md
 docs/DiscoveryCounts.md
 docs/DiscoveryPreferences.md
@@ -220,8 +222,12 @@ docs/FleetVehicleListMetaLimits.md
 docs/FleetVehicleListMetaPermissions.md
 docs/FleetVehiclesSave.md
 docs/GenericDataEnvelope.md
+docs/GoogleContentAuthor.md
 docs/GoogleMobileExchangeRequest.md
 docs/GoogleOidcStartRequest.md
+docs/GooglePlaceAttribute.md
+docs/GooglePlacePhoto.md
+docs/GooglePlaceReview.md
 docs/GoogleRating.md
 docs/HealthEnvelope.md
 docs/HealthEnvelopeAllOfData.md
@@ -266,6 +272,9 @@ docs/ListingStatusChange.md
 docs/ListingVariantOffer.md
 docs/ListingVariantPrice.md
 docs/ListingVendorCard.md
+docs/LocationAutocompleteRequest.md
+docs/LocationSuggestion.md
+docs/LocationSuggestionEnvelope.md
 docs/LockVersionRequest.md
 docs/LoginRequest.md
 docs/MapPoint.md
@@ -596,6 +605,8 @@ src/models/DeliveryRoute.ts
 src/models/DirectoryAvailability.ts
 src/models/DirectorySupplierDetail.ts
 src/models/DirectorySupplierDetailEnvelope.ts
+src/models/DirectorySupplierPhoto.ts
+src/models/DirectorySupplierPhotoEnvelope.ts
 src/models/DirectorySupplierSummary.ts
 src/models/DiscoveryCounts.ts
 src/models/DiscoveryPreferences.ts
@@ -632,8 +643,12 @@ src/models/FleetVehicleListMetaLimits.ts
 src/models/FleetVehicleListMetaPermissions.ts
 src/models/FleetVehiclesSave.ts
 src/models/GenericDataEnvelope.ts
+src/models/GoogleContentAuthor.ts
 src/models/GoogleMobileExchangeRequest.ts
 src/models/GoogleOidcStartRequest.ts
+src/models/GooglePlaceAttribute.ts
+src/models/GooglePlacePhoto.ts
+src/models/GooglePlaceReview.ts
 src/models/GoogleRating.ts
 src/models/HealthEnvelope.ts
 src/models/HealthEnvelopeAllOfData.ts
@@ -678,6 +693,9 @@ src/models/ListingStatusChange.ts
 src/models/ListingVariantOffer.ts
 src/models/ListingVariantPrice.ts
 src/models/ListingVendorCard.ts
+src/models/LocationAutocompleteRequest.ts
+src/models/LocationSuggestion.ts
+src/models/LocationSuggestionEnvelope.ts
 src/models/LockVersionRequest.ts
 src/models/LoginRequest.ts
 src/models/MapPoint.ts

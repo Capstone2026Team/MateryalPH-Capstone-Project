@@ -11,7 +11,9 @@ These screenshots illustrate layout and states only. They are not live marketpla
 | `390-search-ranking-explained.png` | Best Deal results, personalization indicator, ranking explanation in text |
 | `844x390-search-landscape.png` | Search results in landscape |
 | `390-product-details.png` | Product Details: variants, volume tier, fulfillment choice, store, specification |
-| `390-ranking-preferences.png` | Preferences with the live "remove 1%" total feedback |
+| `390-ranking-preferences.png` | Preferences with automatic proportional rebalancing and an exact 100% total |
 | `390-cart-stale-group.png` | Cart: stale price shown only on the affected Vendor group |
 | `390-checkout-advisory-delivery.png` | Checkout preview: both destinations labelled, advisory estimate vs no confirmed offer |
 | `390-checkout-blocked-route.png` | Checkout preview: blocked route on one group, split notice, other group ready |
+| `390-einvoice-preview.png` | E-Invoice request design preview: labelled, nothing saved, submit disabled |
+| `390-order-placed-preview.png` | Order confirmation design preview from the checkout data; no invented ID, date or payment |

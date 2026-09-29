@@ -64,6 +64,16 @@ import {
     ErrorEnvelopeToJSON,
 } from '../models/ErrorEnvelope';
 import {
+    type LocationAutocompleteRequest,
+    LocationAutocompleteRequestFromJSON,
+    LocationAutocompleteRequestToJSON,
+} from '../models/LocationAutocompleteRequest';
+import {
+    type LocationSuggestionEnvelope,
+    LocationSuggestionEnvelopeFromJSON,
+    LocationSuggestionEnvelopeToJSON,
+} from '../models/LocationSuggestionEnvelope';
+import {
     type LockVersionRequest,
     LockVersionRequestFromJSON,
     LockVersionRequestToJSON,
@@ -73,6 +83,13 @@ import {
     PsgcAreaListEnvelopeFromJSON,
     PsgcAreaListEnvelopeToJSON,
 } from '../models/PsgcAreaListEnvelope';
+
+export interface AutocompleteBuyerLocationRequest {
+    /**
+     *
+     */
+    locationAutocompleteRequest: LocationAutocompleteRequest;
+}
 
 export interface CreateBuyerLocationRequest {
     /**
@@ -155,6 +172,61 @@ export interface UpdateBuyerLocationRequest {
  *
  */
 export class BuyerLocationsApi extends runtime.BaseAPI {
+
+    /**
+     * Creates request options for autocompleteBuyerLocation without sending the request
+     */
+    async autocompleteBuyerLocationRequestOpts(requestParameters: AutocompleteBuyerLocationRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['locationAutocompleteRequest'] == null) {
+            throw new runtime.RequiredError(
+                'locationAutocompleteRequest',
+                'Required parameter "locationAutocompleteRequest" was null or undefined when calling autocompleteBuyerLocation().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("passportBearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/buyers/locations/autocomplete`;
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: LocationAutocompleteRequestToJSON(requestParameters['locationAutocompleteRequest']),
+        };
+    }
+
+    /**
+     * Up to five Google Places suggestions restricted to the Philippines. Query travels in the body; no content is persisted. Reuse the session token when resolving the selected Place ID.
+     */
+    async autocompleteBuyerLocationRaw(requestParameters: AutocompleteBuyerLocationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<LocationSuggestionEnvelope>> {
+        const requestOptions = await this.autocompleteBuyerLocationRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => LocationSuggestionEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * Up to five Google Places suggestions restricted to the Philippines. Query travels in the body; no content is persisted. Reuse the session token when resolving the selected Place ID.
+     */
+    async autocompleteBuyerLocation(requestParameters: AutocompleteBuyerLocationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<LocationSuggestionEnvelope> {
+        const response = await this.autocompleteBuyerLocationRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
 
     /**
      * Creates request options for createBuyerLocation without sending the request

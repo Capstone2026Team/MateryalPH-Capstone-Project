@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:materyalph/design_system/components/procurement_components.dart';
 import 'package:materyalph/design_system/theme.dart';
 import 'package:materyalph/features/item_procurement/cart_controller.dart';
 import 'package:materyalph/features/item_procurement/cart_screen.dart';
@@ -11,6 +12,8 @@ import 'package:materyalph/features/item_procurement/procurement_navigation.dart
 import 'package:materyalph/features/item_procurement/product_details_screen.dart';
 import 'package:materyalph/features/item_procurement/ranking_preferences_screen.dart';
 import 'package:materyalph/features/item_procurement/search_results_screen.dart';
+import 'package:materyalph/features/item_procurement/material_search_screen.dart';
+import 'package:materyalph/features/item_procurement/product_finalization_sheet.dart';
 import 'package:materyalph/features/map_discovery/discovery_controller.dart';
 import 'package:materyalph/features/map_discovery/discovery_models.dart';
 import 'package:materyalph/screens/buyer_store_browse_screen.dart';
@@ -28,6 +31,63 @@ const _gateLocation = SavedLocationView(
   psgc: PsgcSummary(resolution: 'RESOLVED', version: '2025Q2'),
   lockVersion: 1,
 );
+
+/// Removes lines like the server: each call returns the cart without that line and a new version.
+class _RemovingRepository extends FakeProcurementRepository {
+  final List<String> removed = [];
+  final List<int> versions = [];
+
+  @override
+  Future<CartView> removeLine(
+    CartLineView line, {
+    required int cartLockVersion,
+  }) async {
+    removed.add(line.id);
+    versions.add(cartLockVersion);
+    final groups = [
+      for (final group in cartView.groups)
+        if (group.lines.any((item) => item.id != line.id))
+          CartGroupView(
+            vendorId: group.vendorId,
+            vendorName: group.vendorName,
+            vacationMode: group.vacationMode,
+            fulfillmentOptions: group.fulfillmentOptions,
+            fulfillmentMethod: group.fulfillmentMethod,
+            lines: [
+              for (final item in group.lines)
+                if (item.id != line.id) item,
+            ],
+            materialsSubtotalCentavos: group.materialsSubtotalCentavos,
+            status: group.status,
+          ),
+    ];
+    return cartView = CartView(
+      id: cartView.id,
+      lockVersion: cartView.lockVersion + 1,
+      groups: groups,
+      savedForLater: cartView.savedForLater,
+      destination: cartView.destination,
+      lineCount: groups.fold(0, (sum, group) => sum + group.lines.length),
+      materialsSubtotalCentavos: 0,
+      notice: cartView.notice,
+      currentAsOf: cartView.currentAsOf,
+    );
+  }
+}
+
+class _FulfillmentRepository extends FakeProcurementRepository {
+  final List<String> fulfillment = [];
+
+  @override
+  Future<CartView> setFulfillment(
+    String vendorId,
+    String method, {
+    required int cartLockVersion,
+  }) async {
+    fulfillment.add('$vendorId:$method');
+    return cartView;
+  }
+}
 
 class _Harness {
   _Harness(
@@ -112,30 +172,42 @@ void main() {
 
         repository.summaryCalls.single.complete(summaryFixture());
         await tester.pumpAndSettle();
-        expect(find.text('12'), findsOneWidget);
-        expect(find.text('48'), findsOneWidget);
-        expect(find.text('Vendor listings'), findsOneWidget);
+        expect(
+          find.bySemanticsLabel('Nearby Verified Vendors: 12'),
+          findsOneWidget,
+        );
         expect(
           find.bySemanticsLabel('Available Products: 48 Vendor listings'),
           findsOneWidget,
         );
         expect(
-          find.textContaining('before category or search filters'),
+          find.text('48 Vendor listings', findRichText: true),
           findsOneWidget,
         );
-        expect(find.text('Current as of Sep 30, 9:15 AM PHT'), findsOneWidget);
-        expect(find.text('DEMO — Simulated Marketplace Data'), findsOneWidget);
-        final analytics = tester.widget<OutlinedButton>(
-          find.widgetWithText(OutlinedButton, 'View Materials Analytics'),
+        expect(
+          find.textContaining(' · 5 km'),
+          findsOneWidget,
+          reason: 'The active location and radius stay visible.',
+        );
+        expect(find.text('Updated Sep 30, 9:15 AM PHT'), findsOneWidget);
+        expect(
+          find.bySemanticsLabel('DEMO — Simulated Marketplace Data'),
+          findsOneWidget,
         );
         expect(
-          analytics.onPressed,
-          isNull,
+          tester.getSemantics(
+            find.bySemanticsLabel(RegExp('^View Materials Analytics')),
+          ),
+          matchesSemantics(
+            isButton: true,
+            hasEnabledState: true,
+            isEnabled: false,
+          ),
           reason: 'Materials Analytics stays disabled until its feature ships.',
         );
         expect(find.text('Roofing Materials'), findsOneWidget);
         expect(
-          find.text('0 Vendor listings'),
+          find.bySemanticsLabel('Masonry, 0 Vendor listings'),
           findsOneWidget,
           reason: 'A real zero appears only after loading.',
         );
@@ -160,8 +232,14 @@ void main() {
         repository.summaryCalls[0].complete(summaryFixture(vendors: 99));
         await tester.pumpAndSettle();
 
-        expect(find.text('3'), findsOneWidget);
-        expect(find.text('99'), findsNothing);
+        expect(
+          find.bySemanticsLabel('Nearby Verified Vendors: 3'),
+          findsOneWidget,
+        );
+        expect(
+          find.bySemanticsLabel('Nearby Verified Vendors: 99'),
+          findsNothing,
+        );
       },
     );
 
@@ -180,7 +258,10 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Showing the last successful update'), findsOneWidget);
-        expect(find.text('12'), findsOneWidget);
+        expect(
+          find.bySemanticsLabel('Nearby Verified Vendors: 12'),
+          findsOneWidget,
+        );
         expect(find.text('Retry'), findsOneWidget);
       },
     );
@@ -199,31 +280,36 @@ void main() {
         await _pump(tester, _explore(h));
         await tester.pumpAndSettle();
 
-        await tester.enterText(
-          find.widgetWithText(TextField, 'Search materials'),
-          'roofing',
-        );
+        await tester.tap(find.text('Search any materials'));
+        await tester.pumpAndSettle();
+        expect(find.byType(MaterialSearchScreen), findsOneWidget);
+        await tester.enterText(find.byType(TextField), 'roofing');
         await tester.testTextInput.receiveAction(TextInputAction.search);
         await tester.pumpAndSettle();
         expect(find.byType(SearchResultsScreen), findsOneWidget);
         expect(repository.searches.last.query, 'roofing');
+        expect(h.explore.effectiveSort, ListingSort.bestDeal);
         expect(
-          tester
-              .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Best Deal'))
-              .selected,
-          isTrue,
+          find.bySemanticsLabel('Sort by Best Deal'),
+          findsOneWidget,
+          reason: 'The relevance tab is labelled with the active sort.',
         );
-        expect(find.text('Best Price'), findsOneWidget);
-        expect(find.text('PS/ICC evidence verified'), findsOneWidget);
+        final card = find.byType(ListingCard);
+        expect(
+          find.descendant(of: card, matching: find.text('Best Price')),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(of: card, matching: find.text('PS/ICC verified')),
+          findsOneWidget,
+        );
 
-        await tester.tap(find.widgetWithText(FilterChip, 'Favorite Suppliers'));
+        await tester.tap(find.widgetWithText(FilterPill, 'Favorite Suppliers'));
         await tester.pumpAndSettle();
         expect(repository.searches.last.filters.favoritesOnly, isTrue);
-        await tester.ensureVisible(
-          find.widgetWithText(ChoiceChip, 'Favorites First'),
-        );
+        await tester.tap(find.text('Best Deal'));
         await tester.pumpAndSettle();
-        await tester.tap(find.widgetWithText(ChoiceChip, 'Favorites First'));
+        await tester.tap(find.text('Favorites First'));
         await tester.pumpAndSettle();
         expect(repository.searches.last.sort, ListingSort.favoritesFirst);
 
@@ -235,6 +321,8 @@ void main() {
           find.text('New — no product ratings yet (internal neutral score)'),
           findsOneWidget,
         );
+        Navigator.of(tester.element(find.byType(RankingExplanation))).pop();
+        await tester.pumpAndSettle();
 
         Navigator.of(tester.element(find.byType(SearchResultsScreen))).pop();
         await tester.pumpAndSettle();
@@ -242,20 +330,17 @@ void main() {
         await tester.pumpAndSettle();
         expect(
           tester
-              .widget<FilterChip>(
-                find.widgetWithText(FilterChip, 'Favorite Suppliers'),
+              .widget<FilterPill>(
+                find.widgetWithText(FilterPill, 'Favorite Suppliers'),
               )
               .selected,
           isTrue,
         );
         expect(
-          tester
-              .widget<ChoiceChip>(
-                find.widgetWithText(ChoiceChip, 'Favorites First'),
-              )
-              .selected,
-          isTrue,
+          find.bySemanticsLabel('Sort by Favorites First'),
+          findsOneWidget,
         );
+        expect(h.explore.effectiveSort, ListingSort.favoritesFirst);
       },
     );
 
@@ -299,8 +384,9 @@ void main() {
           filters: const ListingFilters(inStockOnly: true),
         );
         await tester.pumpAndSettle();
+        expect(find.text('Search not found'), findsOneWidget);
         expect(
-          find.text('No matching Verified Vendor listings'),
+          find.textContaining('No Verified Vendor listings match'),
           findsOneWidget,
         );
         await tester.tap(find.text('Remove filters'));
@@ -323,7 +409,7 @@ void main() {
 
   group('Ranking preferences', () {
     testWidgets(
-      'require a 100% total with live feedback, reject all-zero, show personalization and reset',
+      'automatically balance to 100%, save personalization and reset',
       (tester) async {
         final repository = FakeProcurementRepository();
         await _pump(tester, RankingPreferencesScreen(repository: repository));
@@ -337,46 +423,18 @@ void main() {
 
         await tester.tap(find.byTooltip('Increase Distance'));
         await tester.pump();
-        expect(
-          find.text('Total 101% — remove 1% to reach 100%'),
-          findsOneWidget,
-        );
-        expect(save().onPressed, isNull);
-        await tester.tap(find.byTooltip('Decrease Price'));
-        await tester.pump();
         expect(find.text('Total 100%'), findsOneWidget);
         expect(save().onPressed, isNotNull);
-
-        for (final slider
-            in tester.widgetList<Slider>(find.byType(Slider)).toList()) {
-          slider.onChanged!(0);
-        }
+        await tester.tap(find.byTooltip('Decrease Distance'));
         await tester.pump();
-        expect(
-          find.text('Total 0%. At least one weight must be above zero.'),
-          findsOneWidget,
-        );
-        expect(save().onPressed, isNull);
-
-        final sliders = tester.widgetList<Slider>(find.byType(Slider)).toList();
-        sliders[0].onChanged!(60);
-        sliders[1].onChanged!(40);
+        expect(find.text('Total 100%'), findsOneWidget);
+        final slider = tester.widget<Slider>(find.byType(Slider).first);
+        slider.onChanged!(40);
         await tester.pump();
-        await tester.ensureVisible(
-          find.widgetWithText(FilledButton, 'Save preferences'),
-        );
         await tester.tap(find.widgetWithText(FilledButton, 'Save preferences'));
         await tester.pumpAndSettle();
-        expect(
-          repository.savedWeights.single,
-          const RankingWeights(
-            distance: 60,
-            price: 40,
-            vps: 0,
-            stock: 0,
-            productRating: 0,
-          ),
-        );
+        expect(repository.savedWeights.single.total, 100);
+        expect(repository.savedWeights.single.distance, 40);
         expect(find.text('Personalized ranking is active'), findsOneWidget);
 
         await tester.tap(find.text('Reset to Default'));
@@ -390,6 +448,75 @@ void main() {
   });
 
   group('Cart and checkout preview', () {
+    testWidgets(
+      'Buy opens finalization and continues to the existing checkout preview',
+      (tester) async {
+        final repository = FakeProcurementRepository()
+          ..detail = listingDetail();
+        final source = repository.cartView;
+        final line = CartLineView(
+          id: 'buy-line',
+          listingId: 'listing-1',
+          variantId: 'variant-red',
+          vendorId: 'vendor-1',
+          displayName: source.groups.first.lines.first.displayName,
+          unitName: 'Piece',
+          quantity: '1.0000',
+          quantityStep: '1',
+          savedForLater: false,
+          issues: const [],
+          status: 'READY',
+          currentUnitPriceCentavos: 137500,
+          lineTotalCentavos: 137500,
+        );
+        repository.cartView = CartView(
+          id: source.id,
+          lockVersion: source.lockVersion,
+          groups: [
+            CartGroupView(
+              vendorId: 'vendor-1',
+              vendorName: source.groups.first.vendorName,
+              vacationMode: false,
+              fulfillmentOptions: const ['PICKUP'],
+              lines: [line],
+              materialsSubtotalCentavos: 137500,
+              status: 'READY',
+              fulfillmentMethod: 'PICKUP',
+            ),
+          ],
+          savedForLater: const [],
+          destination: source.destination,
+          lineCount: 1,
+          materialsSubtotalCentavos: 137500,
+          notice: source.notice,
+          currentAsOf: source.currentAsOf,
+        );
+        final h = await _harness(repository);
+        await _pump(
+          tester,
+          ProductDetailsScreen(
+            listingId: 'listing-1',
+            repository: repository,
+            explore: h.explore,
+            cart: h.cart,
+            navigation: h.navigation,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(FilledButton, 'Buy'));
+        await tester.pumpAndSettle();
+        expect(find.byType(ProductFinalizationSheet), findsOneWidget);
+        expect(repository.addKeys, isEmpty);
+        await tester.tap(find.widgetWithText(FilterPill, 'Self-Pickup').last);
+        await tester.pump();
+        await tester.tap(find.widgetWithText(FilledButton, 'Checkout'));
+        await tester.pumpAndSettle();
+        expect(repository.addKeys, hasLength(1));
+        expect(find.byType(CheckoutPreviewScreen), findsOneWidget);
+        expect(find.byType(ProductFinalizationSheet), findsNothing);
+      },
+    );
+
     testWidgets(
       'a stale price is shown inline on its own Vendor group and the rest of the cart stays',
       (tester) async {
@@ -427,6 +554,35 @@ void main() {
     );
 
     testWidgets(
+      'Delete asks first, then removes each selected line with the latest cart version',
+      (tester) async {
+        final repository = _RemovingRepository();
+        final h = await _harness(repository);
+        await h.cart.load();
+        await _pump(
+          tester,
+          CartScreen(controller: h.cart, navigation: h.navigation),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.widgetWithText(TextButton, 'Delete'));
+        await tester.pumpAndSettle();
+        expect(find.text('Remove 2 selected items?'), findsOneWidget);
+        await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+        await tester.pumpAndSettle();
+        expect(repository.removed, isEmpty);
+
+        await tester.tap(find.widgetWithText(TextButton, 'Delete'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(TextButton, 'Remove'));
+        await tester.pumpAndSettle();
+        expect(repository.removed, ['a', 'b']);
+        expect(repository.versions, [3, 4]);
+        expect(find.text('Your cart is empty'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
       'delivery preview labels both destinations and an estimate that is not a confirmed offer',
       (tester) async {
         final repository = FakeProcurementRepository();
@@ -442,9 +598,11 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(
-          find.text('Intended destination / Project site: 629 J Nepomuceno St'),
+          find.text('Intended destination / Project site'),
           findsOneWidget,
         );
+        expect(find.text('629 J Nepomuceno St'), findsOneWidget);
+        expect(find.text('Project site'), findsOneWidget);
         expect(
           find.text(
             'Actual vehicle drop-off: North gate — used for route distance and the delivery fee',
@@ -485,6 +643,74 @@ void main() {
           isNull,
           reason: 'Order submission ships with Phase 8.',
         );
+      },
+    );
+
+    testWidgets(
+      'Delivery Mode switches per store, unoffered modes are disabled, and the design previews send nothing',
+      (tester) async {
+        final repository = _FulfillmentRepository();
+        final h = await _harness(repository);
+        await h.cart.load();
+        await _pump(
+          tester,
+          CheckoutPreviewScreen(
+            controller: h.cart,
+            savedLocations: () => const [primaryLocation, _gateLocation],
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.bySemanticsLabel('Site Delivery (not offered)'),
+          findsOneWidget,
+          reason: 'Bravo Builders Depot offers Self-Pickup only.',
+        );
+        await tester.tap(find.bySemanticsLabel('Self-Pickup').first);
+        await tester.pumpAndSettle();
+        expect(repository.fulfillment, ['vendor-1:PICKUP']);
+        expect(find.byType(CheckoutPreviewScreen), findsOneWidget);
+
+        await tester.scrollUntilVisible(
+          find.text('Request E-Invoice'),
+          300,
+          scrollable: find.byType(Scrollable).first,
+        );
+        await tester.ensureVisible(find.text('Request E-Invoice'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Request E-Invoice'));
+        await tester.pumpAndSettle();
+        expect(
+          find.text('Design preview — nothing is saved or sent'),
+          findsOneWidget,
+        );
+        expect(
+          tester
+              .widget<FilledButton>(
+                find.widgetWithText(FilledButton, 'Submit Request'),
+              )
+              .onPressed,
+          isNull,
+        );
+        await tester.tap(find.byTooltip('Back'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Preview confirmation'));
+        await tester.pumpAndSettle();
+        expect(
+          find.text('Design preview — no order was created'),
+          findsOneWidget,
+        );
+        expect(find.text('Assigned when submitted'), findsOneWidget);
+        expect(
+          tester
+              .widget<FilledButton>(
+                find.widgetWithText(FilledButton, 'Track Order'),
+              )
+              .onPressed,
+          isNull,
+        );
+        expect(repository.destinations, isEmpty);
       },
     );
 
@@ -626,16 +852,19 @@ void main() {
           findsOneWidget,
         );
 
-        await tester.tap(find.widgetWithText(ChoiceChip, 'Self-Pickup'));
+        await tester.tap(find.widgetWithText(FilterPill, 'Self-Pickup'));
         await tester.pump();
         repository.addFailure = const DiscoveryFailure(
           DiscoveryFailureKind.offline,
           'You appear to be offline. Check your connection and retry.',
         );
-        await tester.tap(find.widgetWithText(FilledButton, 'Add to Cart'));
+        await tester.tap(find.widgetWithText(FilledButton, 'Add to Cart').last);
+        await tester.pumpAndSettle();
+        expect(find.byType(ProductFinalizationSheet), findsOneWidget);
+        await tester.tap(find.widgetWithText(FilledButton, 'Add to Cart').last);
         await tester.pumpAndSettle();
         repository.addFailure = null;
-        await tester.tap(find.widgetWithText(FilledButton, 'Add to Cart'));
+        await tester.tap(find.widgetWithText(FilledButton, 'Add to Cart').last);
         await tester.pumpAndSettle();
         expect(repository.addKeys, hasLength(2));
         expect(repository.addKeys[0], repository.addKeys[1]);
@@ -759,6 +988,12 @@ void main() {
       '320 px at 2x text': (const Size(320, 700), 2.0),
       'landscape': (const Size(844, 390), 1.0),
       '390 px': (const Size(390, 844), 1.0),
+      '375 px': (const Size(375, 812), 1.0),
+      '768 px': (const Size(768, 1024), 1.0),
+      '1024 px': (const Size(1024, 768), 1.0),
+      '1280 px': (const Size(1280, 800), 1.0),
+      '1440 px': (const Size(1440, 900), 1.0),
+      '1920 px': (const Size(1920, 1080), 1.0),
     };
     for (final entry in sizes.entries) {
       testWidgets(

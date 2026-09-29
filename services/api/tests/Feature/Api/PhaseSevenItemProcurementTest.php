@@ -266,6 +266,15 @@ final class PhaseSevenItemProcurementTest extends TestCase
 
         $browse = $this->searchListings()->assertOk()->assertJsonPath('meta.sort', 'DISTANCE')->assertJsonPath('meta.default_sort', 'DISTANCE');
         self::assertSame([$stores['Near']['listing'], $stores['Middle']['listing'], $stores['Farther']['listing']], array_column($browse->json('data'), 'listing_id'));
+        self::assertSame([$stores['Farther']['listing'], $stores['Middle']['listing'], $stores['Near']['listing']], array_column($this->searchListings(['sort' => 'DISTANCE_DESC'])->assertOk()->json('data'), 'listing_id'));
+        self::assertSame($stores['Middle']['listing'], $this->searchListings(['sort' => 'PRICE'])->assertOk()->json('data.0.listing_id'));
+        self::assertSame($stores['Near']['listing'], $this->searchListings(['sort' => 'PRICE_DESC'])->assertOk()->json('data.0.listing_id'));
+        $reverseMiddle = collect($this->searchListings(['sort' => 'PRICE_DESC'])->json('data'))->firstWhere('listing_id', $stores['Middle']['listing']);
+        self::assertSame(1800, $reverseMiddle['price']['unit_price_centavos'], 'The headline variant follows the explicit sort too.');
+        $this->searchListings(['sort' => 'RATING_ASC'])->assertOk()->assertJsonPath('meta.ranking.tie_breakers.0', 'rated_first');
+        $reverseFirst = $this->searchListings(['sort' => 'DISTANCE_DESC', 'per_page' => 1])->assertOk();
+        $this->searchListings(['sort' => 'DISTANCE_DESC', 'per_page' => 1, 'cursor' => $reverseFirst->json('meta.next_cursor')])->assertOk()->assertJsonPath('data.0.listing_id', $stores['Middle']['listing']);
+        $this->searchListings(['sort' => 'DISTANCE', 'per_page' => 1, 'cursor' => $reverseFirst->json('meta.next_cursor')])->assertStatus(422);
         $middle = collect($browse->json('data'))->firstWhere('listing_id', $stores['Middle']['listing']);
         self::assertSame(2, $middle['options_count'], 'Two eligible variants still make one card.');
         self::assertSame(1700, $middle['price']['unit_price_centavos']);
@@ -397,6 +406,14 @@ final class PhaseSevenItemProcurementTest extends TestCase
         $line = $cart->json('data.groups.0.lines.0');
         $this->patchJson('/api/v1/buyers/cart/items/'.$line['id'], ['lock_version' => $cart->json('data.lock_version') - 1, 'quantity' => '2'])->assertStatus(409)->assertJsonPath('errors.0.code', 'CART_VERSION_CONFLICT');
         $this->patchJson('/api/v1/buyers/cart/items/'.$line['id'], ['lock_version' => $cart->json('data.lock_version'), 'quantity' => '2'])->assertOk()->assertJsonPath('data.groups.0.lines.0.quantity', '2.0000');
+
+        $version = $this->getJson('/api/v1/buyers/cart')->assertOk()->json('data.lock_version');
+        $unselected = $this->patchJson('/api/v1/buyers/cart/items/'.$line['id'], ['lock_version' => $version, 'saved_for_later' => true])->assertOk()
+            ->assertJsonCount(0, 'data.groups')->assertJsonCount(1, 'data.saved_for_later');
+        $this->preview()->assertOk()->assertJsonCount(0, 'data.groups');
+        $this->patchJson('/api/v1/buyers/cart/items/'.$line['id'], ['lock_version' => $unselected->json('data.lock_version'), 'saved_for_later' => false])->assertOk()
+            ->assertJsonPath('data.groups.0.lines.0.variant_id', $variant)->assertJsonCount(0, 'data.saved_for_later');
+        $this->preview()->assertOk()->assertJsonCount(1, 'data.groups');
 
         $other = $this->buyer();
         $this->patchJson('/api/v1/buyers/cart/items/'.$line['id'], ['lock_version' => 1, 'quantity' => '1'])->assertNotFound()->assertJsonPath('errors.0.code', 'CART_ITEM_NOT_FOUND');
