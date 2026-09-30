@@ -202,7 +202,12 @@ class _LoginScreenState extends State<LoginScreen> {
                         children: [
                           Icon(Icons.g_mobiledata, size: 32),
                           SizedBox(width: 8),
-                          Text('Continue with Google'),
+                          Flexible(
+                            child: Text(
+                              'Continue with Google',
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
                         ],
                       ),
                     ),

@@ -13,6 +13,8 @@ class _$InventorySettingsUpdate extends InventorySettingsUpdate {
   final String reminderLocalTime;
   @override
   final bool emailReminders;
+  @override
+  final int? autoAcceptReadyLeadDays;
 
   factory _$InventorySettingsUpdate(
           [void Function(InventorySettingsUpdateBuilder)? updates]) =>
@@ -21,7 +23,8 @@ class _$InventorySettingsUpdate extends InventorySettingsUpdate {
   _$InventorySettingsUpdate._(
       {required this.lockVersion,
       required this.reminderLocalTime,
-      required this.emailReminders})
+      required this.emailReminders,
+      this.autoAcceptReadyLeadDays})
       : super._();
   @override
   InventorySettingsUpdate rebuild(
@@ -38,7 +41,8 @@ class _$InventorySettingsUpdate extends InventorySettingsUpdate {
     return other is InventorySettingsUpdate &&
         lockVersion == other.lockVersion &&
         reminderLocalTime == other.reminderLocalTime &&
-        emailReminders == other.emailReminders;
+        emailReminders == other.emailReminders &&
+        autoAcceptReadyLeadDays == other.autoAcceptReadyLeadDays;
   }
 
   @override
@@ -47,6 +51,7 @@ class _$InventorySettingsUpdate extends InventorySettingsUpdate {
     _$hash = $jc(_$hash, lockVersion.hashCode);
     _$hash = $jc(_$hash, reminderLocalTime.hashCode);
     _$hash = $jc(_$hash, emailReminders.hashCode);
+    _$hash = $jc(_$hash, autoAcceptReadyLeadDays.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -56,7 +61,8 @@ class _$InventorySettingsUpdate extends InventorySettingsUpdate {
     return (newBuiltValueToStringHelper(r'InventorySettingsUpdate')
           ..add('lockVersion', lockVersion)
           ..add('reminderLocalTime', reminderLocalTime)
-          ..add('emailReminders', emailReminders))
+          ..add('emailReminders', emailReminders)
+          ..add('autoAcceptReadyLeadDays', autoAcceptReadyLeadDays))
         .toString();
   }
 }
@@ -80,6 +86,11 @@ class InventorySettingsUpdateBuilder
   set emailReminders(bool? emailReminders) =>
       _$this._emailReminders = emailReminders;
 
+  int? _autoAcceptReadyLeadDays;
+  int? get autoAcceptReadyLeadDays => _$this._autoAcceptReadyLeadDays;
+  set autoAcceptReadyLeadDays(int? autoAcceptReadyLeadDays) =>
+      _$this._autoAcceptReadyLeadDays = autoAcceptReadyLeadDays;
+
   InventorySettingsUpdateBuilder() {
     InventorySettingsUpdate._defaults(this);
   }
@@ -90,6 +101,7 @@ class InventorySettingsUpdateBuilder
       _lockVersion = $v.lockVersion;
       _reminderLocalTime = $v.reminderLocalTime;
       _emailReminders = $v.emailReminders;
+      _autoAcceptReadyLeadDays = $v.autoAcceptReadyLeadDays;
       _$v = null;
     }
     return this;
@@ -119,6 +131,7 @@ class InventorySettingsUpdateBuilder
               'reminderLocalTime'),
           emailReminders: BuiltValueNullFieldError.checkNotNull(
               emailReminders, r'InventorySettingsUpdate', 'emailReminders'),
+          autoAcceptReadyLeadDays: autoAcceptReadyLeadDays,
         );
     replace(_$result);
     return _$result;

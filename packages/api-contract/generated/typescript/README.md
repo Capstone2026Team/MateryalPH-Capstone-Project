@@ -1,4 +1,4 @@
-# @materyalph/api-client-ts@1.0.0-phase.7
+# @materyalph/api-client-ts@1.0.0-phase.8
 
 A TypeScript SDK client for the localhost API.
 
@@ -168,6 +168,15 @@ All URIs are relative to */api/v1*
 *BuyerLocationsApi* | [**resolveBuyerLocation**](docs/BuyerLocationsApi.md#resolvebuyerlocation) | **POST** /buyers/locations/resolve |
 *BuyerLocationsApi* | [**saveBuyerOnboarding**](docs/BuyerLocationsApi.md#savebuyeronboarding) | **PUT** /buyers/onboarding |
 *BuyerLocationsApi* | [**updateBuyerLocation**](docs/BuyerLocationsApi.md#updatebuyerlocation) | **PATCH** /buyers/locations/{locationId} |
+*BuyerOrdersApi* | [**acceptBuyerOrderNrpc**](docs/BuyerOrdersApi.md#acceptbuyerordernrpc) | **POST** /buyers/orders/{orderId}/nrpc/accept |
+*BuyerOrdersApi* | [**approveBuyerOrderRevision**](docs/BuyerOrdersApi.md#approvebuyerorderrevision) | **POST** /buyers/orders/{orderId}/revision/approve |
+*BuyerOrdersApi* | [**flagBuyerOrderNrpc**](docs/BuyerOrdersApi.md#flagbuyerordernrpc) | **POST** /buyers/orders/{orderId}/nrpc/flag |
+*BuyerOrdersApi* | [**getBuyerCheckout**](docs/BuyerOrdersApi.md#getbuyercheckout) | **GET** /buyers/checkouts/{checkoutId} |
+*BuyerOrdersApi* | [**getBuyerOrder**](docs/BuyerOrdersApi.md#getbuyerorder) | **GET** /buyers/orders/{orderId} |
+*BuyerOrdersApi* | [**listBuyerOrders**](docs/BuyerOrdersApi.md#listbuyerorders) | **GET** /buyers/orders |
+*BuyerOrdersApi* | [**rejectBuyerOrderNrpc**](docs/BuyerOrdersApi.md#rejectbuyerordernrpc) | **POST** /buyers/orders/{orderId}/nrpc/reject |
+*BuyerOrdersApi* | [**rejectBuyerOrderRevision**](docs/BuyerOrdersApi.md#rejectbuyerorderrevision) | **POST** /buyers/orders/{orderId}/revision/reject |
+*BuyerOrdersApi* | [**submitBuyerCheckout**](docs/BuyerOrdersApi.md#submitbuyercheckout) | **POST** /buyers/checkouts |
 *StoresApi* | [**getPublicStoreProfile**](docs/StoresApi.md#getpublicstoreprofile) | **GET** /stores/{storeId}/profile |
 *StoresApi* | [**listPublicStores**](docs/StoresApi.md#listpublicstores) | **GET** /stores |
 *SystemApi* | [**getApiHealth**](docs/SystemApi.md#getapihealth) | **GET** /health |
@@ -238,6 +247,11 @@ All URIs are relative to */api/v1*
 *VendorOnboardingApi* | [**submitVendorVerification**](docs/VendorOnboardingApi.md#submitvendorverification) | **POST** /vendors/onboarding/verification/submit |
 *VendorOnboardingApi* | [**uploadVendorStoreMedia**](docs/VendorOnboardingApi.md#uploadvendorstoremedia) | **POST** /vendors/onboarding/media |
 *VendorOnboardingApi* | [**uploadVendorVerificationDocument**](docs/VendorOnboardingApi.md#uploadvendorverificationdocument) | **POST** /vendors/onboarding/documents |
+*VendorOrdersApi* | [**confirmVendorOrder**](docs/VendorOrdersApi.md#confirmvendororder) | **POST** /vendor/orders/{orderId}/confirm |
+*VendorOrdersApi* | [**declineVendorOrder**](docs/VendorOrdersApi.md#declinevendororder) | **POST** /vendor/orders/{orderId}/decline |
+*VendorOrdersApi* | [**getVendorOrder**](docs/VendorOrdersApi.md#getvendororder) | **GET** /vendor/orders/{orderId} |
+*VendorOrdersApi* | [**getVendorOrderDeliveryPlan**](docs/VendorOrdersApi.md#getvendororderdeliveryplan) | **POST** /vendor/orders/{orderId}/delivery-recommendations |
+*VendorOrdersApi* | [**listVendorOrders**](docs/VendorOrdersApi.md#listvendororders) | **GET** /vendor/orders |
 
 
 ### Models
@@ -291,6 +305,7 @@ All URIs are relative to */api/v1*
 - [AuthEnvelope](docs/AuthEnvelope.md)
 - [AuthEnvelopeAllOfData](docs/AuthEnvelopeAllOfData.md)
 - [AutoAcceptAllotmentUpdate](docs/AutoAcceptAllotmentUpdate.md)
+- [AutoAcceptOutcome](docs/AutoAcceptOutcome.md)
 - [AutoAcceptPause](docs/AutoAcceptPause.md)
 - [AutoAcceptPolicy](docs/AutoAcceptPolicy.md)
 - [AutoAcceptPolicyConfigure](docs/AutoAcceptPolicyConfigure.md)
@@ -300,6 +315,7 @@ All URIs are relative to */api/v1*
 - [AutoAcceptPolicyDetailScope](docs/AutoAcceptPolicyDetailScope.md)
 - [AutoAcceptPolicyDetailStock](docs/AutoAcceptPolicyDetailStock.md)
 - [AutoAcceptPolicyVersion](docs/AutoAcceptPolicyVersion.md)
+- [AutoAcceptReason](docs/AutoAcceptReason.md)
 - [AutoAcceptResume](docs/AutoAcceptResume.md)
 - [AutoAcceptStatus](docs/AutoAcceptStatus.md)
 - [BotProofEnvelope](docs/BotProofEnvelope.md)
@@ -383,11 +399,15 @@ All URIs are relative to */api/v1*
 - [CatalogVariantsSave](docs/CatalogVariantsSave.md)
 - [CatalogVolumeTier](docs/CatalogVolumeTier.md)
 - [CatalogVolumeTierInput](docs/CatalogVolumeTierInput.md)
+- [CheckoutChildOrder](docs/CheckoutChildOrder.md)
 - [CheckoutGroupPreview](docs/CheckoutGroupPreview.md)
 - [CheckoutPreview](docs/CheckoutPreview.md)
 - [CheckoutPreviewEnvelope](docs/CheckoutPreviewEnvelope.md)
 - [CheckoutPreviewRequest](docs/CheckoutPreviewRequest.md)
 - [CheckoutPreviewSummary](docs/CheckoutPreviewSummary.md)
+- [CheckoutSubmission](docs/CheckoutSubmission.md)
+- [CheckoutSubmissionEnvelope](docs/CheckoutSubmissionEnvelope.md)
+- [CheckoutSubmitRequest](docs/CheckoutSubmitRequest.md)
 - [CheckoutVendorRef](docs/CheckoutVendorRef.md)
 - [ComparableGroupCreate](docs/ComparableGroupCreate.md)
 - [ComparableGroupEnvelope](docs/ComparableGroupEnvelope.md)
@@ -408,10 +428,20 @@ All URIs are relative to */api/v1*
 - [CsrfEnvelopeAllOfData](docs/CsrfEnvelopeAllOfData.md)
 - [DatasetLabel](docs/DatasetLabel.md)
 - [DeliveryAmount](docs/DeliveryAmount.md)
+- [DeliveryConfirmation](docs/DeliveryConfirmation.md)
 - [DeliveryEstimate](docs/DeliveryEstimate.md)
 - [DeliveryEstimateOption](docs/DeliveryEstimateOption.md)
+- [DeliveryPlan](docs/DeliveryPlan.md)
+- [DeliveryPlanEndpoint](docs/DeliveryPlanEndpoint.md)
+- [DeliveryPlanEnvelope](docs/DeliveryPlanEnvelope.md)
+- [DeliveryPlanFormula](docs/DeliveryPlanFormula.md)
+- [DeliveryPlanGroup](docs/DeliveryPlanGroup.md)
+- [DeliveryPlanRequest](docs/DeliveryPlanRequest.md)
+- [DeliveryPlanRoute](docs/DeliveryPlanRoute.md)
+- [DeliveryPlanVehicle](docs/DeliveryPlanVehicle.md)
 - [DeliveryPreview](docs/DeliveryPreview.md)
 - [DeliveryRoute](docs/DeliveryRoute.md)
+- [DeliveryVehicleSelection](docs/DeliveryVehicleSelection.md)
 - [DirectoryAvailability](docs/DirectoryAvailability.md)
 - [DirectorySupplierDetail](docs/DirectorySupplierDetail.md)
 - [DirectorySupplierDetailEnvelope](docs/DirectorySupplierDetailEnvelope.md)
@@ -518,16 +548,62 @@ All URIs are relative to */api/v1*
 - [MfaRecoveryRequest](docs/MfaRecoveryRequest.md)
 - [MfaStatusEnvelope](docs/MfaStatusEnvelope.md)
 - [MfaStatusEnvelopeAllOfData](docs/MfaStatusEnvelopeAllOfData.md)
+- [MoneyBreakdown](docs/MoneyBreakdown.md)
+- [MoneyDelivery](docs/MoneyDelivery.md)
+- [MoneyNrpc](docs/MoneyNrpc.md)
+- [MoneyRange](docs/MoneyRange.md)
+- [NrpcAcceptRequest](docs/NrpcAcceptRequest.md)
+- [NrpcAffectedLine](docs/NrpcAffectedLine.md)
+- [NrpcFlag](docs/NrpcFlag.md)
+- [NrpcFlagRequest](docs/NrpcFlagRequest.md)
+- [NrpcLineAllocation](docs/NrpcLineAllocation.md)
+- [NrpcProposal](docs/NrpcProposal.md)
+- [NrpcRejectRequest](docs/NrpcRejectRequest.md)
+- [NrpcTermsRef](docs/NrpcTermsRef.md)
+- [NrpcTermsVersion](docs/NrpcTermsVersion.md)
 - [OnboardingDraftVersion](docs/OnboardingDraftVersion.md)
 - [OnboardingRequirement](docs/OnboardingRequirement.md)
 - [OnboardingStepCompletion](docs/OnboardingStepCompletion.md)
+- [OrderBuyerRef](docs/OrderBuyerRef.md)
+- [OrderChange](docs/OrderChange.md)
+- [OrderCheckoutRef](docs/OrderCheckoutRef.md)
+- [OrderCommercialVersion](docs/OrderCommercialVersion.md)
+- [OrderConfirmedDelivery](docs/OrderConfirmedDelivery.md)
+- [OrderDeadline](docs/OrderDeadline.md)
+- [OrderDeadlines](docs/OrderDeadlines.md)
+- [OrderDelivery](docs/OrderDelivery.md)
+- [OrderDeliveryEstimate](docs/OrderDeliveryEstimate.md)
+- [OrderDeliveryVehicle](docs/OrderDeliveryVehicle.md)
+- [OrderDestination](docs/OrderDestination.md)
+- [OrderDetail](docs/OrderDetail.md)
+- [OrderDetailEnvelope](docs/OrderDetailEnvelope.md)
+- [OrderFirstLine](docs/OrderFirstLine.md)
+- [OrderLine](docs/OrderLine.md)
+- [OrderLineInventory](docs/OrderLineInventory.md)
+- [OrderLineQuantity](docs/OrderLineQuantity.md)
+- [OrderListEnvelope](docs/OrderListEnvelope.md)
+- [OrderListMeta](docs/OrderListMeta.md)
+- [OrderNrpc](docs/OrderNrpc.md)
+- [OrderPaymentAvailability](docs/OrderPaymentAvailability.md)
+- [OrderPaymentState](docs/OrderPaymentState.md)
+- [OrderPoint](docs/OrderPoint.md)
+- [OrderReservation](docs/OrderReservation.md)
+- [OrderRevisionDecision](docs/OrderRevisionDecision.md)
+- [OrderState](docs/OrderState.md)
+- [OrderStateRow](docs/OrderStateRow.md)
+- [OrderSummary](docs/OrderSummary.md)
+- [OrderTimelineEvent](docs/OrderTimelineEvent.md)
+- [OrderVendorRef](docs/OrderVendorRef.md)
+- [OrderVolumeTier](docs/OrderVolumeTier.md)
 - [PageMeta](docs/PageMeta.md)
 - [PasswordRecoveryRequest](docs/PasswordRecoveryRequest.md)
 - [PasswordResetRequest](docs/PasswordResetRequest.md)
 - [PaymentMethodEligibility](docs/PaymentMethodEligibility.md)
+- [PickupConfirmation](docs/PickupConfirmation.md)
 - [PickupPreview](docs/PickupPreview.md)
 - [PriceHistoryEntry](docs/PriceHistoryEntry.md)
 - [PriceHistoryEnvelope](docs/PriceHistoryEnvelope.md)
+- [ProcessingFee](docs/ProcessingFee.md)
 - [ProcessingFeeAmount](docs/ProcessingFeeAmount.md)
 - [ProductComplianceCaseEnvelope](docs/ProductComplianceCaseEnvelope.md)
 - [ProductComplianceCaseEnvelopeData](docs/ProductComplianceCaseEnvelopeData.md)
@@ -605,6 +681,11 @@ All URIs are relative to */api/v1*
 - [VendorOnboardingSnapshot](docs/VendorOnboardingSnapshot.md)
 - [VendorOnboardingSnapshotSetup](docs/VendorOnboardingSnapshotSetup.md)
 - [VendorOnboardingStep](docs/VendorOnboardingStep.md)
+- [VendorOrderConfirmRequest](docs/VendorOrderConfirmRequest.md)
+- [VendorOrderDeclineReason](docs/VendorOrderDeclineReason.md)
+- [VendorOrderDeclineRequest](docs/VendorOrderDeclineRequest.md)
+- [VendorOrderPermissions](docs/VendorOrderPermissions.md)
+- [VendorOrderPrimaryAction](docs/VendorOrderPrimaryAction.md)
 - [VendorPaymentOnboarding](docs/VendorPaymentOnboarding.md)
 - [VendorPaymentOnboardingEnvelope](docs/VendorPaymentOnboardingEnvelope.md)
 - [VendorPaymentReconciliationEnvelope](docs/VendorPaymentReconciliationEnvelope.md)
@@ -682,8 +763,8 @@ This TypeScript SDK client supports the [Fetch API](https://fetch.spec.whatwg.or
 and is automatically generated by the
 [OpenAPI Generator](https://openapi-generator.tech) project:
 
-- API version: `1.0.0-phase.7`
-- Package version: `1.0.0-phase.7`
+- API version: `1.0.0-phase.8`
+- Package version: `1.0.0-phase.8`
 - Generator version: `7.25.0`
 - Build package: `org.openapitools.codegen.languages.TypeScriptFetchClientCodegen`
 

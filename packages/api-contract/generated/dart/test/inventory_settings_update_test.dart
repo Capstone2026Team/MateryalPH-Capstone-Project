@@ -22,5 +22,11 @@ void main() {
       // TODO
     });
 
+    // Owner/Manager only. Omit to keep the current value.
+    // int autoAcceptReadyLeadDays
+    test('to test the property `autoAcceptReadyLeadDays`', () async {
+      // TODO
+    });
+
   });
 }

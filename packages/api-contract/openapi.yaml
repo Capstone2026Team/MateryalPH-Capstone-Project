@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: MateryalPH API
-  version: 1.0.0-phase.7
+  version: 1.0.0-phase.8
   description: >-
     Versioned Phase 1–4 contract. Vendor onboarding, verification, activation readiness, private evidence, team invitations, the Vendor catalog and product PS/ICC compliance are server-authorized.
     Browser credentials are isolated by configured frontend origin using _vendor and _admin suffixes on access, refresh, CSRF, MFA and bot-proof cookies.
@@ -24,6 +24,8 @@ tags:
   - name: Buyer Discovery
   - name: Buyer Explore
   - name: Buyer Cart
+  - name: Buyer Orders
+  - name: Vendor Orders
 paths:
   /{webAccountPortal}/account/photo:
     parameters:
@@ -4032,6 +4034,262 @@ paths:
         "409": { $ref: "#/components/responses/ErrorResponse" }
         "422": { $ref: "#/components/responses/ErrorResponse" }
         "429": { $ref: "#/components/responses/ErrorResponse" }
+  /buyers/checkouts:
+    post:
+      operationId: submitBuyerCheckout
+      description: >-
+        Submits the selected READY Vendor groups of the cart as one parent checkout with one child order request per Vendor.
+        Each child snapshots its lines (listing, variant, unit, applied price version and frozen volume tiers, tax classification,
+        displayed image) and keeps the intended destination and any heavy-vehicle alternate drop-off as separate references.
+        Submission never reserves stock. Submitting fewer groups than the cart holds requires split_confirmed. A retry with the same
+        Idempotency-Key and body returns the same checkout (200, meta.replayed=true); a changed body under the key is 409
+        IDEMPOTENCY_CONFLICT. After commit each child order gets one all-or-nothing Item-Based auto-accept attempt.
+      tags: [ Buyer Orders ]
+      security: [ { passportBearer: [] } ]
+      parameters:
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CheckoutSubmitRequest" } } }
+      responses:
+        "200": { description: Replayed submission., content: { application/json: { schema: { $ref: "#/components/schemas/CheckoutSubmissionEnvelope" } } } }
+        "201": { description: Child order requests created., content: { application/json: { schema: { $ref: "#/components/schemas/CheckoutSubmissionEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+        "429": { $ref: "#/components/responses/ErrorResponse" }
+  /buyers/checkouts/{checkoutId}:
+    get:
+      operationId: getBuyerCheckout
+      description: The parent checkout with its child orders. The parent status is derived from the children and never replaces them.
+      tags: [ Buyer Orders ]
+      security: [ { passportBearer: [] } ]
+      parameters:
+        - { name: checkoutId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: Checkout., content: { application/json: { schema: { $ref: "#/components/schemas/CheckoutSubmissionEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+  /buyers/orders:
+    get:
+      operationId: listBuyerOrders
+      description: The Buyer's own orders, newest first, grouped by Awaiting Action, Active, Completed, Cancelled and Disputed. Order, payment, fulfillment, refund and dispute states are separate rows. Due windows are resolved before listing.
+      tags: [ Buyer Orders ]
+      security: [ { passportBearer: [] } ]
+      parameters:
+        - { name: group, in: query, required: false, schema: { type: string, enum: [ ALL, AWAITING_ACTION, ACTIVE, COMPLETED, CANCELLED, DISPUTED ] } }
+        - { name: page, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 1000 } }
+      responses:
+        "200": { description: Orders., content: { application/json: { schema: { $ref: "#/components/schemas/OrderListEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /buyers/orders/{orderId}:
+    get:
+      operationId: getBuyerOrder
+      description: >-
+        Order details with immutable line snapshots, the current commercial version and change summary, separate state rows, the
+        MoneyBreakdown (materials, discount, included VAT, delivery, NRPC within the order value, processing fee, total), the NRPC
+        disclosure with its Terms version, the confirmed delivery drop-off before acceptance, deadlines in UTC with Asia/Manila as
+        the display zone, and server-calculated actions. A window that has passed resolves to EXPIRED on read.
+      tags: [ Buyer Orders ]
+      security: [ { passportBearer: [] } ]
+      parameters:
+        - { name: orderId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: Order., content: { application/json: { schema: { $ref: "#/components/schemas/OrderDetailEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+  /buyers/orders/{orderId}/revision/approve:
+    post:
+      operationId: approveBuyerOrderRevision
+      description: Accepts exactly the shown Vendor commercial version (snapshot_version). A stale version is 409 STALE_VERSION. With a proposed NRPC the order moves to AWAITING_NRPC_ACCEPTANCE; otherwise the version is frozen and the order becomes payable.
+      tags: [ Buyer Orders ]
+      security: [ { passportBearer: [] } ]
+      parameters:
+        - { name: orderId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/OrderRevisionDecision" } } }
+      responses:
+        "200": { description: Updated order., content: { application/json: { schema: { $ref: "#/components/schemas/OrderDetailEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /buyers/orders/{orderId}/revision/reject:
+    post:
+      operationId: rejectBuyerOrderRevision
+      description: Rejects the shown Vendor version. The request is cancelled and its hard reservation released.
+      tags: [ Buyer Orders ]
+      security: [ { passportBearer: [] } ]
+      parameters:
+        - { name: orderId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/OrderRevisionDecision" } } }
+      responses:
+        "200": { description: Updated order., content: { application/json: { schema: { $ref: "#/components/schemas/OrderDetailEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /buyers/orders/{orderId}/nrpc/accept:
+    post:
+      operationId: acceptBuyerOrderNrpc
+      description: Explicit acceptance of the current NRPC with the Terms version displayed with it (409 NRPC_TERMS_CHANGED otherwise) and acknowledged=true. Recorded with the Terms version and time; the version is then frozen and the order becomes payable.
+      tags: [ Buyer Orders ]
+      security: [ { passportBearer: [] } ]
+      parameters:
+        - { name: orderId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/NrpcAcceptRequest" } } }
+      responses:
+        "200": { description: Updated order., content: { application/json: { schema: { $ref: "#/components/schemas/OrderDetailEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /buyers/orders/{orderId}/nrpc/reject:
+    post:
+      operationId: rejectBuyerOrderNrpc
+      description: Rejects the current NRPC. The request is cancelled and its hard reservation released.
+      tags: [ Buyer Orders ]
+      security: [ { passportBearer: [] } ]
+      parameters:
+        - { name: orderId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/NrpcRejectRequest" } } }
+      responses:
+        "200": { description: Updated order., content: { application/json: { schema: { $ref: "#/components/schemas/OrderDetailEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /buyers/orders/{orderId}/nrpc/flag:
+    post:
+      operationId: flagBuyerOrderNrpc
+      description: Flags an NRPC as disproportionate for staff review. Separate from acceptance; never accepts, rejects or changes the order. One flag per NRPC.
+      tags: [ Buyer Orders ]
+      security: [ { passportBearer: [] } ]
+      parameters:
+        - { name: orderId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/NrpcFlagRequest" } } }
+      responses:
+        "200": { description: Updated order., content: { application/json: { schema: { $ref: "#/components/schemas/OrderDetailEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /vendor/orders:
+    get:
+      operationId: listVendorOrders
+      description: Status-filtered order workspace for the current organization (NEW, WAITING_ON_BUYER, AWAITING_PAYMENT, CONFIRMED, CLOSED). Fulfillment Staff never see requests before confirmation and payment conditions. Search matches Order ID or Buyer name.
+      tags: [ Vendor Orders ]
+      security: [ { accessCookie: [] } ]
+      parameters:
+        - { name: group, in: query, required: false, schema: { type: string, enum: [ ALL, NEW, WAITING_ON_BUYER, AWAITING_PAYMENT, CONFIRMED, CLOSED ] } }
+        - { name: q, in: query, required: false, schema: { type: string, maxLength: 120 } }
+        - { name: page, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 1000 } }
+      responses:
+        "200": { description: Orders., content: { application/json: { schema: { $ref: "#/components/schemas/OrderListEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /vendor/orders/{orderId}:
+    get:
+      operationId: getVendorOrder
+      description: Job-order detail with lines, authorized inventory, reservations, auto-accept outcome, confirmed delivery, NRPC, money breakdown, history, role-aware permissions and one primary action per state. Buyer coordinates are never returned.
+      tags: [ Vendor Orders ]
+      security: [ { accessCookie: [] } ]
+      parameters:
+        - { name: orderId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: Order., content: { application/json: { schema: { $ref: "#/components/schemas/OrderDetailEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+  /vendor/orders/{orderId}/delivery-recommendations:
+    post:
+      operationId: getVendorOrderDeliveryPlan
+      description: Advisory vehicle, trip and formula-fee options for a Site Delivery request, routed from the store's current address to the order's frozen vehicle drop-off. Advisory only; never a confirmation.
+      tags: [ Vendor Orders ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      parameters:
+        - { name: orderId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryPlanRequest" } } }
+      responses:
+        "200": { description: Advisory plan., content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryPlanEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+        "503": { $ref: "#/components/responses/ErrorResponse" }
+  /vendor/orders/{orderId}/confirm:
+    post:
+      operationId: confirmVendorOrder
+      description: >-
+        Manual confirmation, permitted revision (lower quantities or an order-level discount; never a price increase) and optional
+        manual NRPC. One transaction locks the organization, order and every inventory row in deterministic order, revalidates the
+        store (activation, restriction, public profile), online payment capability, listings, tax classification and stock, and
+        reserves every confirmed line or none (409 STOCK_INSUFFICIENT / STORE_NOT_ELIGIBLE / LINE_NOT_ELIGIBLE). Owner, Manager, Store
+        Staff and Customer Service confirm unchanged orders; revisions and NRPC need Owner, Manager or Store Staff; Site Delivery
+        vehicles, trips and the formula fee need Owner or Manager (409 DELIVERY_FEE_CHANGED if the fee differs from the formula).
+      tags: [ Vendor Orders ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      parameters:
+        - { name: orderId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/VendorOrderConfirmRequest" } } }
+      responses:
+        "200": { description: Updated order., content: { application/json: { schema: { $ref: "#/components/schemas/OrderDetailEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+        "503": { $ref: "#/components/responses/ErrorResponse" }
+  /vendor/orders/{orderId}/decline:
+    post:
+      operationId: declineVendorOrder
+      description: Declines a request awaiting confirmation with a reason code and reason. Nothing is reserved before confirmation, so nothing is released.
+      tags: [ Vendor Orders ]
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      parameters:
+        - { name: orderId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/VendorOrderDeclineRequest" } } }
+      responses:
+        "200": { description: Updated order., content: { application/json: { schema: { $ref: "#/components/schemas/OrderDetailEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
 components:
   securitySchemes:
     passportBearer: { type: http, scheme: bearer, bearerFormat: JWT }
@@ -7744,7 +8002,7 @@ components:
         items: { type: array, minItems: 1, maxItems: 100, items: { $ref: "#/components/schemas/StockConfirmationItem" } }
     InventorySettings:
       type: object
-      required: [ reminder_local_time, email_reminders, in_app_reminders, timezone, reminder_days, hide_after_days, lock_version, can_edit ]
+      required: [ reminder_local_time, email_reminders, in_app_reminders, timezone, reminder_days, hide_after_days, auto_accept_ready_lead_days, lock_version, can_edit ]
       properties:
         reminder_local_time: { type: string, pattern: '^\d{2}:\d{2}$' }
         email_reminders: { type: boolean }
@@ -7752,6 +8010,7 @@ components:
         timezone: { type: string, const: Asia/Manila }
         reminder_days: { type: array, items: { type: integer } }
         hide_after_days: { type: integer }
+        auto_accept_ready_lead_days: { type: [ integer, 'null' ], minimum: 0, maximum: 30, description: Days after acceptance an auto-accepted Self-Pickup order is ready (Asia/Manila). Null routes Self-Pickup auto-accept to manual review. }
         lock_version: { type: integer }
         can_edit: { type: boolean }
     InventorySettingsEnvelope:
@@ -7769,6 +8028,7 @@ components:
         lock_version: { type: integer, minimum: 0 }
         reminder_local_time: { type: string, pattern: '^\d{2}:\d{2}$' }
         email_reminders: { type: boolean }
+        auto_accept_ready_lead_days: { type: [ integer, 'null' ], minimum: 0, maximum: 30, description: Owner/Manager only. Omit to keep the current value. }
     AutoAcceptPolicyVersion:
       type: object
       required: [ version, change_kind, enabled, paused, pause_reason, allotment_quantity, remaining_allotment_quantity, max_unit_count, max_order_amount_centavos, created_at, automated, actor ]
@@ -7972,5 +8232,669 @@ components:
             status: { type: string, const: READY }
             url: { type: string, format: uri }
             expires_at: { type: string, format: date-time }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    OrderState:
+      type: string
+      enum: [ AWAITING_VENDOR_CONFIRMATION, AWAITING_BUYER_APPROVAL, AWAITING_NRPC_ACCEPTANCE, AWAITING_PAYMENT, CONFIRMED, PROCESSING, READY_FOR_PICKUP, OUT_FOR_DELIVERY, DELIVERED, PICKED_UP, COMPLETED, CANCELLATION_REQUESTED, DECLINED, EXPIRED, CANCELLED, DISPUTED ]
+    OrderPaymentState:
+      type: string
+      enum: [ NOT_REQUIRED, PENDING, PAID, FAILED, EXPIRED ]
+    OrderStateRow:
+      type: object
+      description: One of five independent state families; no family implies another.
+      required: [ family, state ]
+      properties:
+        family: { type: string, enum: [ ORDER, PAYMENT, FULFILLMENT, REFUND, DISPUTE ] }
+        state: { type: string }
+    OrderVendorRef:
+      type: object
+      required: [ id, name ]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+    CheckoutSubmitRequest:
+      type: object
+      additionalProperties: false
+      required: [ cart_lock_version, vendor_ids ]
+      properties:
+        cart_lock_version: { type: integer, minimum: 1 }
+        vendor_ids: { type: array, minItems: 1, maxItems: 20, uniqueItems: true, items: { type: string, format: uuid } }
+        split_confirmed: { type: boolean, description: Required when fewer Vendor groups are submitted than the cart holds. }
+    CheckoutChildOrder:
+      type: object
+      required: [ id, reference, vendor, order_state, payment_state, fulfillment_method, payment_method, confirmation_source, materials_centavos, delivery_centavos, commercial_total_centavos, vendor_response_due_at, payment_expires_at ]
+      properties:
+        id: { type: string, format: uuid }
+        reference: { type: string }
+        vendor: { $ref: "#/components/schemas/OrderVendorRef" }
+        order_state: { $ref: "#/components/schemas/OrderState" }
+        payment_state: { $ref: "#/components/schemas/OrderPaymentState" }
+        fulfillment_method: { type: string, enum: [ DELIVERY, PICKUP ] }
+        payment_method: { type: string, enum: [ ONLINE, CASH_ON_DELIVERY, IN_STORE ] }
+        confirmation_source: { type: [ string, 'null' ], enum: [ MANUAL, AUTO_ACCEPT, null ] }
+        materials_centavos: { type: integer, format: int64 }
+        delivery_centavos: { type: [ integer, 'null' ], format: int64, description: Null while the Vendor has not confirmed the delivery fee. }
+        commercial_total_centavos: { type: integer, format: int64 }
+        vendor_response_due_at: { type: [ string, 'null' ], format: date-time }
+        payment_expires_at: { type: [ string, 'null' ], format: date-time }
+    CheckoutSubmission:
+      type: object
+      required: [ id, reference, submitted_at, derived_status, orders, notice ]
+      properties:
+        id: { type: string, format: uuid }
+        reference: { type: string }
+        submitted_at: { type: string, format: date-time }
+        derived_status: { type: string, enum: [ EMPTY, AWAITING_CONFIRMATIONS, AWAITING_PAYMENT, CHILD_ORDERS_UPDATED ] }
+        orders: { type: array, items: { $ref: "#/components/schemas/CheckoutChildOrder" } }
+        notice: { type: string }
+    CheckoutSubmissionEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { $ref: "#/components/schemas/CheckoutSubmission" }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    OrderDeadline:
+      type: object
+      required: [ kind, at ]
+      properties:
+        kind: { type: string, enum: [ VENDOR_RESPONSE, BUYER_RESPONSE, PAYMENT ] }
+        at: { type: string, format: date-time }
+    OrderFirstLine:
+      type: object
+      required: [ display_name, image ]
+      properties:
+        display_name: { type: string }
+        image: { oneOf: [ { $ref: "#/components/schemas/ListingImage" }, { type: 'null' } ] }
+    OrderBuyerRef:
+      type: object
+      required: [ display_name ]
+      properties:
+        display_name: { type: string }
+    OrderSummary:
+      type: object
+      description: Buyer rows add next_action; Vendor rows add buyer, primary_action and nrpc_indicator.
+      required: [ id, reference, vendor, submitted_at, procurement_type, confirmation_source, states, fulfillment_method, payment_method, line_count, first_line, materials_centavos, delivery_centavos, commercial_total_centavos, delivery_pending, deadline, expected_fulfillment_date ]
+      properties:
+        id: { type: string, format: uuid }
+        reference: { type: string }
+        vendor: { $ref: "#/components/schemas/OrderVendorRef" }
+        submitted_at: { type: [ string, 'null' ], format: date-time }
+        procurement_type: { type: string, enum: [ ITEM_BASED, PROJECT_BASED ] }
+        confirmation_source: { type: [ string, 'null' ], enum: [ MANUAL, AUTO_ACCEPT, null ] }
+        states: { type: array, items: { $ref: "#/components/schemas/OrderStateRow" } }
+        fulfillment_method: { type: string, enum: [ DELIVERY, PICKUP ] }
+        payment_method: { type: string, enum: [ ONLINE, CASH_ON_DELIVERY, IN_STORE ] }
+        line_count: { type: integer }
+        first_line: { $ref: "#/components/schemas/OrderFirstLine" }
+        materials_centavos: { type: integer, format: int64 }
+        delivery_centavos: { type: [ integer, 'null' ], format: int64 }
+        commercial_total_centavos: { type: integer, format: int64 }
+        delivery_pending: { type: boolean }
+        deadline: { oneOf: [ { $ref: "#/components/schemas/OrderDeadline" }, { type: 'null' } ] }
+        expected_fulfillment_date: { type: [ string, 'null' ], format: date }
+        next_action: { type: [ string, 'null' ], enum: [ REVIEW_REVISION, REVIEW_NRPC, PAY, null ] }
+        buyer: { $ref: "#/components/schemas/OrderBuyerRef" }
+        primary_action: { $ref: "#/components/schemas/VendorOrderPrimaryAction" }
+        nrpc_indicator: { type: boolean }
+    VendorOrderPrimaryAction:
+      type: string
+      enum: [ CONFIRM, WAITING_FOR_BUYER, WAITING_FOR_PAYMENT, PREPARE_WHEN_AVAILABLE, NONE ]
+    OrderListMeta:
+      type: object
+      additionalProperties: true
+      required: [ group, counts, page, per_page, total, has_more, current_as_of ]
+      properties:
+        group: { type: string }
+        counts: { type: object, additionalProperties: { type: integer } }
+        page: { type: integer }
+        per_page: { type: integer }
+        total: { type: integer }
+        has_more: { type: boolean }
+        current_as_of: { type: string, format: date-time }
+    OrderListEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/OrderSummary" } }
+        meta: { $ref: "#/components/schemas/OrderListMeta" }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    OrderLineInventory:
+      type: object
+      description: Authorized Vendor roles only; never sent to Buyers.
+      required: [ quantity_on_hand, hard_reserved_quantity, available_to_sell ]
+      properties:
+        quantity_on_hand: { type: string }
+        hard_reserved_quantity: { type: string }
+        available_to_sell: { type: string }
+    OrderVolumeTier:
+      type: object
+      required: [ price_version_id, minimum_quantity, amount_centavos ]
+      properties:
+        price_version_id: { type: string, format: uuid }
+        minimum_quantity: { type: string }
+        amount_centavos: { type: integer, format: int64 }
+    OrderLine:
+      type: object
+      required: [ id, line_number, listing_id, listing_variant_id, display_name, variant_label, brand, category, image, unit_code, unit_name, unit_precision, quantity_step, requested_quantity, confirmed_quantity, unit_price_centavos, ordinary_unit_price_centavos, volume_tier_applied, volume_tiers, gross_centavos, discount_centavos, line_total_centavos, included_vat_centavos, tax_category, vat_label, change, price_version_id ]
+      properties:
+        id: { type: string, format: uuid }
+        line_number: { type: integer }
+        listing_id: { type: string, format: uuid }
+        listing_variant_id: { type: string, format: uuid }
+        display_name: { type: string }
+        variant_label: { type: [ string, 'null' ] }
+        brand: { type: [ string, 'null' ] }
+        category: { type: [ string, 'null' ] }
+        image: { oneOf: [ { $ref: "#/components/schemas/ListingImage" }, { type: 'null' } ] }
+        unit_code: { type: string }
+        unit_name: { type: string }
+        unit_precision: { type: integer }
+        quantity_step: { type: string }
+        requested_quantity: { type: string }
+        confirmed_quantity: { type: [ string, 'null' ], description: Null until a Vendor version exists. }
+        unit_price_centavos: { type: integer, format: int64, description: Frozen submission price with the frozen volume tier re-applied to the confirmed quantity. }
+        ordinary_unit_price_centavos: { type: [ integer, 'null' ], format: int64 }
+        volume_tier_applied: { type: boolean }
+        volume_tiers: { type: array, items: { $ref: "#/components/schemas/OrderVolumeTier" } }
+        gross_centavos: { type: integer, format: int64 }
+        discount_centavos: { type: integer, format: int64 }
+        line_total_centavos: { type: integer, format: int64 }
+        included_vat_centavos: { type: integer, format: int64 }
+        tax_category: { $ref: "#/components/schemas/TaxCategory" }
+        vat_label: { type: string }
+        change: { type: [ string, 'null' ], enum: [ QUANTITY_REDUCED, LINE_REMOVED, null ] }
+        price_version_id: { type: [ string, 'null' ], format: uuid }
+        inventory: { oneOf: [ { $ref: "#/components/schemas/OrderLineInventory" }, { type: 'null' } ] }
+    OrderPoint:
+      type: object
+      description: A labelled Buyer location. Coordinates are never returned.
+      required: [ location_id, label, kind, formatted_address ]
+      properties:
+        location_id: { type: [ string, 'null' ], format: uuid }
+        label: { type: [ string, 'null' ] }
+        kind: { type: [ string, 'null' ] }
+        formatted_address: { type: [ string, 'null' ] }
+    OrderDestination:
+      type: object
+      description: The intended destination/Project site and the heavy-vehicle alternate drop-off stay separate; vehicle_endpoint names the actual drop-off.
+      required: [ type ]
+      properties:
+        type: { type: string, enum: [ DELIVERY, PICKUP ] }
+        store_address: { type: [ string, 'null' ] }
+        intended: { oneOf: [ { $ref: "#/components/schemas/OrderPoint" }, { type: 'null' } ] }
+        heavy_vehicle_restriction: { type: [ string, 'null' ], enum: [ 'NO', 'YES', null ] }
+        alternate_drop_off: { oneOf: [ { $ref: "#/components/schemas/OrderPoint" }, { type: 'null' } ] }
+        vehicle_endpoint: { type: [ string, 'null' ], enum: [ INTENDED_LOCATION, ALTERNATE_DROP_OFF, null ] }
+        access_instructions: { type: [ string, 'null' ] }
+    OrderDeliveryEstimate:
+      type: object
+      required: [ fee_min_centavos, fee_max_centavos, trips_min, trips_max ]
+      properties:
+        fee_min_centavos: { type: integer, format: int64 }
+        fee_max_centavos: { type: integer, format: int64 }
+        trips_min: { type: integer }
+        trips_max: { type: integer }
+    OrderDeliveryVehicle:
+      type: object
+      required: [ name, vehicle_category, vehicle_type, custom_type_name, brand, capacity_kg, heavy_classification, configuration_version, rate_version, number_of_vehicles, total_vehicle_trips, per_trip_centavos, trip_total_centavos ]
+      properties:
+        name: { type: [ string, 'null' ] }
+        vehicle_category: { type: [ string, 'null' ] }
+        vehicle_type: { type: [ string, 'null' ] }
+        custom_type_name: { type: [ string, 'null' ] }
+        brand: { type: [ string, 'null' ] }
+        capacity_kg: { type: [ string, 'null' ] }
+        heavy_classification: { type: [ string, 'null' ] }
+        configuration_version: { type: [ integer, 'null' ] }
+        rate_version: { type: [ integer, 'null' ] }
+        number_of_vehicles: { type: integer }
+        total_vehicle_trips: { type: integer }
+        per_trip_centavos: { type: integer, format: int64 }
+        trip_total_centavos: { type: integer, format: int64 }
+    OrderConfirmedDelivery:
+      type: object
+      description: The frozen Owner/Manager-confirmed arrangement. Later vehicle, rate, profile or schedule changes never alter it.
+      required: [ vehicles, distance_meters, route_source, basis, endpoint, heavy_vehicle_restriction, intended, alternate_drop_off, final_fee_centavos, fulfillment_date, arrangement, calculation_version, confirmed_by_role, confirmed_at ]
+      properties:
+        vehicles: { type: array, items: { $ref: "#/components/schemas/OrderDeliveryVehicle" } }
+        distance_meters: { type: integer }
+        route_source: { type: [ string, 'null' ] }
+        basis: { type: [ string, 'null' ], enum: [ ADVISORY_CONFIRMED, MANUAL_REVIEW, null ] }
+        endpoint: { type: [ string, 'null' ], enum: [ INTENDED_LOCATION, ALTERNATE_DROP_OFF, null ] }
+        heavy_vehicle_restriction: { type: boolean }
+        intended: { oneOf: [ { $ref: "#/components/schemas/OrderPoint" }, { type: 'null' } ] }
+        alternate_drop_off: { oneOf: [ { $ref: "#/components/schemas/OrderPoint" }, { type: 'null' } ] }
+        final_fee_centavos: { type: integer, format: int64 }
+        fulfillment_date: { type: [ string, 'null' ], format: date }
+        arrangement: { type: [ string, 'null' ] }
+        calculation_version: { type: [ string, 'null' ] }
+        confirmed_by_role: { type: [ string, 'null' ] }
+        confirmed_at: { type: [ string, 'null' ], format: date-time }
+    OrderDelivery:
+      type: object
+      required: [ status, estimate, confirmed ]
+      properties:
+        status: { type: string, enum: [ NOT_APPLICABLE, ADVISORY_ESTIMATE, PENDING_VENDOR_REVIEW, CONFIRMED ] }
+        estimate: { oneOf: [ { $ref: "#/components/schemas/OrderDeliveryEstimate" }, { type: 'null' } ] }
+        confirmed: { oneOf: [ { $ref: "#/components/schemas/OrderConfirmedDelivery" }, { type: 'null' } ] }
+    MoneyRange:
+      type: object
+      required: [ min_centavos, max_centavos ]
+      properties:
+        min_centavos: { type: integer, format: int64 }
+        max_centavos: { type: integer, format: int64 }
+    MoneyDelivery:
+      type: object
+      required: [ status, amount_centavos, estimate ]
+      properties:
+        status: { type: string, enum: [ NOT_APPLICABLE, PENDING_VENDOR_CONFIRMATION, CONFIRMED ] }
+        amount_centavos: { type: [ integer, 'null' ], format: int64 }
+        estimate: { oneOf: [ { $ref: "#/components/schemas/MoneyRange" }, { type: 'null' } ] }
+    MoneyNrpc:
+      type: object
+      required: [ amount_centavos, within_order_value, status ]
+      properties:
+        amount_centavos: { type: integer, format: int64 }
+        within_order_value: { type: boolean, const: true, description: NRPC is part of the materials value, never added on top. }
+        status: { type: [ string, 'null' ], enum: [ PROPOSED, ACCEPTED, REJECTED, null ] }
+    ProcessingFee:
+      type: object
+      required: [ status, amount_centavos ]
+      properties:
+        status: { type: string, enum: [ PENDING_PAYMENT_CHANNEL, QUOTED, NOT_APPLICABLE ] }
+        amount_centavos: { type: [ integer, 'null' ], format: int64 }
+    MoneyBreakdown:
+      type: object
+      description: >-
+        FIN-02 Buyer amounts in integer centavos. Prices include any Vendor VAT; E = M − V. Online pays M + D + F; COD/In-Store
+        without NRPC pays M + D directly; with NRPC pays N + F online and M + D − N directly. Vendor commission and merchant
+        withholding are never Buyer charges.
+      required: [ currency, calculation_version, status, materials_gross_centavos, vendor_discount_centavos, materials_subtotal_centavos, included_vat_centavos, vat_exclusive_centavos, vat_treatment, delivery, nrpc, processing_fee, commercial_total_centavos, amount_due_online_centavos, online_principal_centavos, physical_balance_centavos, payment_purpose, excludes ]
+      properties:
+        currency: { type: string, const: PHP }
+        calculation_version: { type: string }
+        status: { type: string, enum: [ ADVISORY_UNTIL_VENDOR_CONFIRMATION, AWAITING_BUYER_ACCEPTANCE, ACCEPTED ] }
+        materials_gross_centavos: { type: integer, format: int64 }
+        vendor_discount_centavos: { type: integer, format: int64 }
+        materials_subtotal_centavos: { type: integer, format: int64 }
+        included_vat_centavos: { type: integer, format: int64 }
+        vat_exclusive_centavos: { type: integer, format: int64 }
+        vat_treatment: { type: string, enum: [ PRICES_INCLUDE_VAT, NO_INCLUDED_VAT ] }
+        delivery: { $ref: "#/components/schemas/MoneyDelivery" }
+        nrpc: { $ref: "#/components/schemas/MoneyNrpc" }
+        processing_fee: { $ref: "#/components/schemas/ProcessingFee" }
+        commercial_total_centavos: { type: [ integer, 'null' ], format: int64 }
+        amount_due_online_centavos: { type: [ integer, 'null' ], format: int64 }
+        online_principal_centavos: { type: [ integer, 'null' ], format: int64 }
+        physical_balance_centavos: { type: [ integer, 'null' ], format: int64 }
+        payment_purpose: { type: [ string, 'null' ], enum: [ FULL_ORDER_PAYMENT, NRPC_ASSURANCE_PAYMENT, null ] }
+        excludes: { type: array, items: { type: string, enum: [ VENDOR_COMMISSION, MERCHANT_WITHHOLDING ] } }
+    NrpcAffectedLine:
+      type: object
+      required: [ order_line_id, label, principal_centavos, line_payable_centavos, included_vat_centavos ]
+      properties:
+        order_line_id: { type: string, format: uuid }
+        label: { type: string }
+        principal_centavos: { type: integer, format: int64 }
+        line_payable_centavos: { type: integer, format: int64 }
+        included_vat_centavos: { type: integer, format: int64 }
+    NrpcTermsVersion:
+      type: object
+      required: [ id, version, title, content, content_hash ]
+      properties:
+        id: { type: string, format: uuid }
+        version: { type: integer }
+        title: { type: string }
+        content: { type: [ string, 'null' ], description: Plain text; render as text, never HTML. }
+        content_hash: { type: string }
+    NrpcFlag:
+      type: object
+      required: [ review_state, reason, flagged_at ]
+      properties:
+        review_state: { type: string, enum: [ PENDING_ADMIN_REVIEW ] }
+        reason: { type: string }
+        flagged_at: { type: [ string, 'null' ], format: date-time }
+    OrderNrpc:
+      type: object
+      required: [ id, amount_centavos, reason, eligible_subtotal_centavos, snapshot_version, proposed_at, affected_lines, terms, cancellation_effect, status, accepted_at, flag ]
+      properties:
+        id: { type: string, format: uuid }
+        amount_centavos: { type: integer, format: int64 }
+        reason: { type: string }
+        eligible_subtotal_centavos: { type: [ integer, 'null' ], format: int64 }
+        snapshot_version: { type: integer }
+        proposed_at: { type: [ string, 'null' ], format: date-time }
+        affected_lines: { type: array, items: { $ref: "#/components/schemas/NrpcAffectedLine" } }
+        terms: { oneOf: [ { $ref: "#/components/schemas/NrpcTermsVersion" }, { type: 'null' } ] }
+        cancellation_effect: { type: string }
+        status: { type: string, enum: [ PROPOSED, ACCEPTED, REJECTED ] }
+        accepted_at: { type: [ string, 'null' ], format: date-time }
+        flag: { oneOf: [ { $ref: "#/components/schemas/NrpcFlag" }, { type: 'null' } ] }
+    OrderTimelineEvent:
+      type: object
+      required: [ family, from_state, to_state, source, actor_role, reason_code, snapshot_version, at ]
+      properties:
+        family: { type: string, enum: [ ORDER, PAYMENT, FULFILLMENT, REFUND, DISPUTE ] }
+        from_state: { type: [ string, 'null' ] }
+        to_state: { type: string }
+        source: { type: string, enum: [ BUYER, VENDOR, SYSTEM, AUTO_ACCEPT ] }
+        actor_role: { type: [ string, 'null' ] }
+        reason_code: { type: [ string, 'null' ] }
+        snapshot_version: { type: [ integer, 'null' ] }
+        at: { type: [ string, 'null' ], format: date-time }
+    OrderChange:
+      type: object
+      required: [ type, order_line_id, label, from, to ]
+      properties:
+        type: { type: string, enum: [ QUANTITY_REDUCED, LINE_REMOVED, VENDOR_DISCOUNT ] }
+        order_line_id: { type: [ string, 'null' ], format: uuid }
+        label: { type: string }
+        from: { type: string }
+        to: { type: string }
+    OrderCommercialVersion:
+      type: object
+      required: [ current, accepted, kind, content_hash, recorded_at ]
+      properties:
+        current: { type: integer }
+        accepted: { type: [ integer, 'null' ] }
+        kind: { type: [ string, 'null' ], enum: [ SUBMITTED, VENDOR_CONFIRMED, AUTO_ACCEPTED, null ] }
+        content_hash: { type: [ string, 'null' ] }
+        recorded_at: { type: [ string, 'null' ], format: date-time }
+    OrderDeadlines:
+      type: object
+      required: [ vendor_response_due_at, buyer_response_due_at, payment_expires_at, server_time, timezone ]
+      properties:
+        vendor_response_due_at: { type: [ string, 'null' ], format: date-time }
+        buyer_response_due_at: { type: [ string, 'null' ], format: date-time }
+        payment_expires_at: { type: [ string, 'null' ], format: date-time, description: 45 minutes after the order entered AWAITING_PAYMENT. }
+        server_time: { type: string, format: date-time }
+        timezone: { type: string, const: Asia/Manila }
+    OrderCheckoutRef:
+      type: object
+      required: [ id, reference ]
+      properties:
+        id: { type: string, format: uuid }
+        reference: { type: string }
+    OrderPaymentAvailability:
+      type: object
+      required: [ available, reason, notice ]
+      properties:
+        available: { type: boolean }
+        reason: { type: [ string, 'null' ] }
+        notice: { type: [ string, 'null' ] }
+    AutoAcceptReason:
+      type: object
+      required: [ code, listing_variant_id ]
+      properties:
+        code: { type: string }
+        listing_variant_id: { type: [ string, 'null' ], format: uuid }
+    AutoAcceptOutcome:
+      type: object
+      required: [ accepted, reasons, rule_version, evaluated_at ]
+      properties:
+        accepted: { type: boolean }
+        routed_to: { type: string, enum: [ MANUAL_REVIEW ] }
+        reasons: { type: array, items: { $ref: "#/components/schemas/AutoAcceptReason" } }
+        rule_version: { type: string }
+        evaluated_at: { type: string, format: date-time }
+    OrderReservation:
+      type: object
+      required: [ order_line_id, quantity, state, release_reason, reserved_at, released_at ]
+      properties:
+        order_line_id: { type: string, format: uuid }
+        quantity: { type: string }
+        state: { type: string, enum: [ ACTIVE, RELEASED, FULFILLED ] }
+        release_reason: { type: [ string, 'null' ] }
+        reserved_at: { type: [ string, 'null' ], format: date-time }
+        released_at: { type: [ string, 'null' ], format: date-time }
+    VendorOrderPermissions:
+      type: object
+      description: Display hints only; every action is authorized again on the server.
+      required: [ can_confirm, can_revise, can_set_nrpc, can_confirm_delivery, can_decline, can_view_inventory ]
+      properties:
+        can_confirm: { type: boolean }
+        can_revise: { type: boolean }
+        can_set_nrpc: { type: boolean }
+        can_confirm_delivery: { type: boolean }
+        can_decline: { type: boolean }
+        can_view_inventory: { type: boolean }
+    NrpcTermsRef:
+      type: object
+      required: [ id, version, title, available ]
+      properties:
+        id: { type: string, format: uuid }
+        version: { type: integer }
+        title: { type: string }
+        available: { type: boolean }
+    OrderDetail:
+      type: object
+      description: Buyer responses add available_actions and payment; Vendor responses add buyer, auto_accept, reservations, permissions, primary_action, nrpc_terms and decline_reasons.
+      required: [ id, reference, checkout, vendor, procurement_type, fulfillment_method, payment_method, submitted_at, accepted_at, closed_at, terminal_reason_code, confirmation_source, states, deadlines, commercial_version, changes, expected_fulfillment_date, lines, destination, delivery, money, nrpc, timeline, lock_version ]
+      properties:
+        id: { type: string, format: uuid }
+        reference: { type: string }
+        checkout: { oneOf: [ { $ref: "#/components/schemas/OrderCheckoutRef" }, { type: 'null' } ] }
+        vendor: { $ref: "#/components/schemas/OrderVendorRef" }
+        procurement_type: { type: string, enum: [ ITEM_BASED, PROJECT_BASED ] }
+        fulfillment_method: { type: string, enum: [ DELIVERY, PICKUP ] }
+        payment_method: { type: string, enum: [ ONLINE, CASH_ON_DELIVERY, IN_STORE ] }
+        submitted_at: { type: [ string, 'null' ], format: date-time }
+        accepted_at: { type: [ string, 'null' ], format: date-time }
+        closed_at: { type: [ string, 'null' ], format: date-time }
+        terminal_reason_code: { type: [ string, 'null' ] }
+        confirmation_source: { type: [ string, 'null' ], enum: [ MANUAL, AUTO_ACCEPT, null ] }
+        states: { type: array, items: { $ref: "#/components/schemas/OrderStateRow" } }
+        deadlines: { $ref: "#/components/schemas/OrderDeadlines" }
+        commercial_version: { $ref: "#/components/schemas/OrderCommercialVersion" }
+        changes: { type: array, items: { $ref: "#/components/schemas/OrderChange" } }
+        expected_fulfillment_date: { type: [ string, 'null' ], format: date }
+        lines: { type: array, items: { $ref: "#/components/schemas/OrderLine" } }
+        destination: { oneOf: [ { $ref: "#/components/schemas/OrderDestination" }, { type: 'null' } ] }
+        delivery: { $ref: "#/components/schemas/OrderDelivery" }
+        money: { $ref: "#/components/schemas/MoneyBreakdown" }
+        nrpc: { oneOf: [ { $ref: "#/components/schemas/OrderNrpc" }, { type: 'null' } ] }
+        timeline: { type: array, items: { $ref: "#/components/schemas/OrderTimelineEvent" } }
+        lock_version: { type: integer }
+        available_actions: { type: array, items: { type: string, enum: [ APPROVE_REVISION, REJECT_REVISION, ACCEPT_NRPC, REJECT_NRPC, FLAG_NRPC ] } }
+        payment: { $ref: "#/components/schemas/OrderPaymentAvailability" }
+        buyer: { $ref: "#/components/schemas/OrderBuyerRef" }
+        auto_accept: { oneOf: [ { $ref: "#/components/schemas/AutoAcceptOutcome" }, { type: 'null' } ] }
+        reservations: { type: array, items: { $ref: "#/components/schemas/OrderReservation" } }
+        permissions: { $ref: "#/components/schemas/VendorOrderPermissions" }
+        primary_action: { $ref: "#/components/schemas/VendorOrderPrimaryAction" }
+        nrpc_terms: { oneOf: [ { $ref: "#/components/schemas/NrpcTermsRef" }, { type: 'null' } ] }
+        decline_reasons: { type: array, items: { $ref: "#/components/schemas/VendorOrderDeclineReason" } }
+    OrderDetailEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { $ref: "#/components/schemas/OrderDetail" }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    OrderRevisionDecision:
+      type: object
+      additionalProperties: false
+      required: [ snapshot_version ]
+      properties:
+        snapshot_version: { type: integer, minimum: 1, description: The commercial version the Buyer reviewed. }
+        reason: { type: [ string, 'null' ], maxLength: 1000 }
+    NrpcAcceptRequest:
+      type: object
+      additionalProperties: false
+      required: [ snapshot_version, nrpc_id, terms_version_id, acknowledged ]
+      properties:
+        snapshot_version: { type: integer, minimum: 1 }
+        nrpc_id: { type: string, format: uuid }
+        terms_version_id: { type: string, format: uuid, description: The NRPC Terms version displayed with the proposal. }
+        acknowledged: { type: boolean, const: true }
+    NrpcRejectRequest:
+      type: object
+      additionalProperties: false
+      required: [ snapshot_version, nrpc_id ]
+      properties:
+        snapshot_version: { type: integer, minimum: 1 }
+        nrpc_id: { type: string, format: uuid }
+        reason: { type: [ string, 'null' ], maxLength: 1000 }
+    NrpcFlagRequest:
+      type: object
+      additionalProperties: false
+      required: [ nrpc_id, reason ]
+      properties:
+        nrpc_id: { type: string, format: uuid }
+        reason: { type: string, minLength: 10, maxLength: 1000 }
+    OrderLineQuantity:
+      type: object
+      additionalProperties: false
+      required: [ order_line_id, confirmed_quantity ]
+      properties:
+        order_line_id: { type: string, format: uuid }
+        confirmed_quantity: { type: string, pattern: '^\d{1,7}(\.\d{1,4})?$', description: Between 0 and the requested quantity. }
+    NrpcLineAllocation:
+      type: object
+      additionalProperties: false
+      required: [ order_line_id, principal_centavos ]
+      properties:
+        order_line_id: { type: string, format: uuid }
+        principal_centavos: { type: integer, format: int64, minimum: 1 }
+    NrpcProposal:
+      type: object
+      additionalProperties: false
+      description: Manual only. 0 < amount ≤ the payable value of the affected lines; line principals sum exactly to the amount. No platform cap.
+      required: [ amount_centavos, reason, lines ]
+      properties:
+        amount_centavos: { type: integer, format: int64, minimum: 1 }
+        reason: { type: string, minLength: 10, maxLength: 1000 }
+        lines: { type: array, minItems: 1, items: { $ref: "#/components/schemas/NrpcLineAllocation" } }
+    PickupConfirmation:
+      type: object
+      additionalProperties: false
+      required: [ ready_date ]
+      properties:
+        ready_date: { type: string, format: date, description: Asia/Manila date from today onward. }
+    DeliveryVehicleSelection:
+      type: object
+      additionalProperties: false
+      required: [ vehicle_id, number_of_vehicles, total_vehicle_trips ]
+      properties:
+        vehicle_id: { type: string, format: uuid }
+        number_of_vehicles: { type: integer, minimum: 1 }
+        total_vehicle_trips: { type: integer, minimum: 1 }
+        group_key: { type: string, maxLength: 40 }
+    DeliveryConfirmation:
+      type: object
+      additionalProperties: false
+      required: [ vehicles, final_fee_centavos, fulfillment_date, arrangement, access_confirmed ]
+      properties:
+        vehicles: { type: array, minItems: 1, maxItems: 20, items: { $ref: "#/components/schemas/DeliveryVehicleSelection" } }
+        final_fee_centavos: { type: integer, format: int64, minimum: 0, description: Must equal the disclosed formula for the vehicles, trips and route distance. }
+        fulfillment_date: { type: string, format: date }
+        arrangement: { type: string, minLength: 5, maxLength: 2000 }
+        access_confirmed: { type: boolean }
+        heavy_vehicle_access_confirmed: { type: boolean }
+        manual_review_note: { type: [ string, 'null' ], minLength: 10, maxLength: 2000 }
+    VendorOrderConfirmRequest:
+      type: object
+      additionalProperties: false
+      required: [ lock_version, lines ]
+      properties:
+        lock_version: { type: integer, minimum: 1 }
+        lines: { type: array, minItems: 1, maxItems: 100, items: { $ref: "#/components/schemas/OrderLineQuantity" } }
+        vendor_discount_centavos: { type: integer, format: int64, minimum: 0 }
+        nrpc: { oneOf: [ { $ref: "#/components/schemas/NrpcProposal" }, { type: 'null' } ] }
+        pickup: { oneOf: [ { $ref: "#/components/schemas/PickupConfirmation" }, { type: 'null' } ] }
+        delivery: { oneOf: [ { $ref: "#/components/schemas/DeliveryConfirmation" }, { type: 'null' } ] }
+    VendorOrderDeclineReason:
+      type: string
+      enum: [ STOCK_UNAVAILABLE, OPERATIONAL_INABILITY, DELIVERY_INABILITY, COMPLIANCE_RESTRICTION, BUYER_AGREEMENT, OTHER ]
+    VendorOrderDeclineRequest:
+      type: object
+      additionalProperties: false
+      required: [ lock_version, reason_code, reason ]
+      properties:
+        lock_version: { type: integer, minimum: 1 }
+        reason_code: { $ref: "#/components/schemas/VendorOrderDeclineReason" }
+        reason: { type: string, minLength: 5, maxLength: 1000 }
+    DeliveryPlanRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        lines: { type: array, maxItems: 100, items: { $ref: "#/components/schemas/OrderLineQuantity" } }
+    DeliveryPlanVehicle:
+      type: object
+      required: [ vehicle_id, name, vehicle_category, vehicle_type, custom_type_name, brand, number_available, capacity_kg, mixer_capacity_m3, heavy_classification, maximum_distance_km, base_fee_centavos, per_km_centavos, per_trip_centavos, within_range, rate_version, configuration_version ]
+      properties:
+        vehicle_id: { type: string, format: uuid }
+        name: { type: string }
+        vehicle_category: { type: [ string, 'null' ] }
+        vehicle_type: { type: string }
+        custom_type_name: { type: [ string, 'null' ] }
+        brand: { type: [ string, 'null' ] }
+        number_available: { type: integer }
+        capacity_kg: { type: string }
+        mixer_capacity_m3: { type: [ string, 'null' ] }
+        heavy_classification: { type: string }
+        maximum_distance_km: { type: integer }
+        base_fee_centavos: { type: integer, format: int64 }
+        per_km_centavos: { type: integer, format: int64 }
+        per_trip_centavos: { type: integer, format: int64 }
+        within_range: { type: boolean }
+        rate_version: { type: integer }
+        configuration_version: { type: integer }
+        number_of_vehicles: { type: integer }
+        total_vehicle_trips: { type: integer }
+        estimated_charge_centavos: { type: integer, format: int64 }
+        limiting_factor: { type: string }
+    DeliveryPlanGroup:
+      type: object
+      required: [ key, label, status, manual_review_reasons, candidates ]
+      properties:
+        key: { type: string }
+        label: { type: string }
+        status: { type: string, enum: [ CANDIDATES_AVAILABLE, MANUAL_REVIEW_REQUIRED, NO_ELIGIBLE_VEHICLE ] }
+        manual_review_reasons: { type: array, items: { type: string } }
+        candidates: { type: array, items: { $ref: "#/components/schemas/DeliveryPlanVehicle" } }
+    DeliveryPlanRoute:
+      type: object
+      required: [ distance_meters, duration_seconds, basis, source ]
+      properties:
+        distance_meters: { type: integer }
+        duration_seconds: { type: integer }
+        basis: { type: string, enum: [ ROAD_ROUTE_STORE_TO_VEHICLE_DROP_OFF ] }
+        source: { type: string }
+    DeliveryPlanEndpoint:
+      type: object
+      required: [ kind, heavy_vehicle_restriction, intended, alternate_drop_off ]
+      properties:
+        kind: { type: [ string, 'null' ], enum: [ INTENDED_LOCATION, ALTERNATE_DROP_OFF, null ] }
+        heavy_vehicle_restriction: { type: [ string, 'null' ], enum: [ 'NO', 'YES', null ] }
+        intended: { oneOf: [ { $ref: "#/components/schemas/OrderPoint" }, { type: 'null' } ] }
+        alternate_drop_off: { oneOf: [ { $ref: "#/components/schemas/OrderPoint" }, { type: 'null' } ] }
+    DeliveryPlanFormula:
+      type: object
+      required: [ calculation_version, rounding, final_fee_rule ]
+      properties:
+        calculation_version: { type: string }
+        rounding: { type: string }
+        final_fee_rule: { type: string }
+    DeliveryPlan:
+      type: object
+      required: [ advisory, status, reason, route, endpoint, groups, eligible_vehicles, fee_formula, notice ]
+      properties:
+        advisory: { type: boolean, const: true }
+        status: { type: string, enum: [ CANDIDATES_AVAILABLE, MANUAL_REVIEW_REQUIRED, NO_ELIGIBLE_VEHICLE, ACCESS_NOT_CONFIRMED, ROUTE_REQUIRED ] }
+        reason: { type: string }
+        route: { $ref: "#/components/schemas/DeliveryPlanRoute" }
+        endpoint: { $ref: "#/components/schemas/DeliveryPlanEndpoint" }
+        groups: { type: array, items: { $ref: "#/components/schemas/DeliveryPlanGroup" } }
+        eligible_vehicles: { type: array, items: { $ref: "#/components/schemas/DeliveryPlanVehicle" } }
+        fee_formula: { $ref: "#/components/schemas/DeliveryPlanFormula" }
+        notice: { type: string }
+    DeliveryPlanEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { $ref: "#/components/schemas/DeliveryPlan" }
         meta: { type: object, additionalProperties: true }
         errors: { type: array, items: { type: object, additionalProperties: true } }

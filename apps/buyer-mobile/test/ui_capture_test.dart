@@ -15,6 +15,9 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(() async {
     await (FontLoader(
+      'MaterialIcons',
+    )..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'))).load();
+    await (FontLoader(
       'Inter',
     )..addFont(rootBundle.load('assets/fonts/Inter-Variable.ttf'))).load();
     await (FontLoader('packages/lucide_icons_flutter/Lucide')..addFont(

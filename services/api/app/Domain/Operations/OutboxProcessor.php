@@ -9,6 +9,7 @@ use App\Domain\Catalog\EligibleOfferQuery;
 use App\Mail\AccountSecurityMail;
 use App\Mail\AdminInvitationMail;
 use App\Mail\EmailOtpMail;
+use App\Mail\OrderNoticeMail;
 use App\Mail\ProductComplianceNoticeMail;
 use App\Mail\VendorInventoryNoticeMail;
 use App\Mail\VendorInvitationMail;
@@ -57,12 +58,22 @@ final class OutboxProcessor
         });
     }
 
+    /**
+     * Committed order and fee domain events. They are the durable integration record for later consumers
+     * (realtime order milestones, push, finance statements); in this release they have no external side effect.
+     */
+    private const RECORDED_DOMAIN_EVENTS = ['ORDER_STATE_CHANGED', 'ORDER_SUBMITTED', 'ORDER_VENDOR_CONFIRMED', 'ORDER_AUTO_ACCEPT_EVALUATED', 'ORDER_ACCEPTED', 'NRPC_PROPOSED', 'NRPC_DECIDED', 'NRPC_FLAGGED',
+        'FEE_ASSESSMENT_ESTIMATED', 'FEE_ASSESSMENT_EARNED', 'FEE_ASSESSMENT_CANCELLED', 'INVENTORY_RESERVATION_RELEASED'];
+
     /** @param array<string, mixed> $payload */
     private function deliver(string $eventType, array $payload): void
     {
         if ($eventType === EligibilityInvalidation::EVENT) {
             EligibleOfferQuery::invalidate();
 
+            return;
+        }
+        if (in_array($eventType, self::RECORDED_DOMAIN_EVENTS, true)) {
             return;
         }
         $recipient = $payload['recipient'] ?? null;
@@ -92,6 +103,10 @@ final class OutboxProcessor
                 $this->requiredString($payload, 'message'),
             )),
             'VENDOR_INVENTORY_NOTICE' => Mail::to($recipient)->send(new VendorInventoryNoticeMail(
+                $this->requiredString($payload, 'subject'),
+                $this->requiredString($payload, 'message'),
+            )),
+            'ORDER_NOTICE' => Mail::to($recipient)->send(new OrderNoticeMail(
                 $this->requiredString($payload, 'subject'),
                 $this->requiredString($payload, 'message'),
             )),

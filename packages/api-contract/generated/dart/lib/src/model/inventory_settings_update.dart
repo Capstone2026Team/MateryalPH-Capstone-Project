@@ -14,6 +14,7 @@ part 'inventory_settings_update.g.dart';
 /// * [lockVersion]
 /// * [reminderLocalTime]
 /// * [emailReminders]
+/// * [autoAcceptReadyLeadDays] - Owner/Manager only. Omit to keep the current value.
 @BuiltValue()
 abstract class InventorySettingsUpdate implements Built<InventorySettingsUpdate, InventorySettingsUpdateBuilder> {
   @BuiltValueField(wireName: r'lock_version')
@@ -24,6 +25,10 @@ abstract class InventorySettingsUpdate implements Built<InventorySettingsUpdate,
 
   @BuiltValueField(wireName: r'email_reminders')
   bool get emailReminders;
+
+  /// Owner/Manager only. Omit to keep the current value.
+  @BuiltValueField(wireName: r'auto_accept_ready_lead_days')
+  int? get autoAcceptReadyLeadDays;
 
   InventorySettingsUpdate._();
 
@@ -63,6 +68,13 @@ class _$InventorySettingsUpdateSerializer implements PrimitiveSerializer<Invento
       object.emailReminders,
       specifiedType: const FullType(bool),
     );
+    if (object.autoAcceptReadyLeadDays != null) {
+      yield r'auto_accept_ready_lead_days';
+      yield serializers.serialize(
+        object.autoAcceptReadyLeadDays,
+        specifiedType: const FullType.nullable(int),
+      );
+    }
   }
 
   @override
@@ -106,6 +118,14 @@ class _$InventorySettingsUpdateSerializer implements PrimitiveSerializer<Invento
             specifiedType: const FullType(bool),
           ) as bool;
           result.emailReminders = valueDes;
+          break;
+        case r'auto_accept_ready_lead_days':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.autoAcceptReadyLeadDays = valueDes;
           break;
         default:
           unhandled.add(key);

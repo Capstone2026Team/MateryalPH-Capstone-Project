@@ -62,6 +62,7 @@ import 'package:materyalph_api_client/src/model/api_error.dart';
 import 'package:materyalph_api_client/src/model/auth_envelope.dart';
 import 'package:materyalph_api_client/src/model/auth_envelope_all_of_data.dart';
 import 'package:materyalph_api_client/src/model/auto_accept_allotment_update.dart';
+import 'package:materyalph_api_client/src/model/auto_accept_outcome.dart';
 import 'package:materyalph_api_client/src/model/auto_accept_pause.dart';
 import 'package:materyalph_api_client/src/model/auto_accept_policy.dart';
 import 'package:materyalph_api_client/src/model/auto_accept_policy_configure.dart';
@@ -71,6 +72,7 @@ import 'package:materyalph_api_client/src/model/auto_accept_policy_detail_permis
 import 'package:materyalph_api_client/src/model/auto_accept_policy_detail_scope.dart';
 import 'package:materyalph_api_client/src/model/auto_accept_policy_detail_stock.dart';
 import 'package:materyalph_api_client/src/model/auto_accept_policy_version.dart';
+import 'package:materyalph_api_client/src/model/auto_accept_reason.dart';
 import 'package:materyalph_api_client/src/model/auto_accept_resume.dart';
 import 'package:materyalph_api_client/src/model/auto_accept_status.dart';
 import 'package:materyalph_api_client/src/model/bot_proof_envelope.dart';
@@ -154,11 +156,15 @@ import 'package:materyalph_api_client/src/model/catalog_variant_input.dart';
 import 'package:materyalph_api_client/src/model/catalog_variants_save.dart';
 import 'package:materyalph_api_client/src/model/catalog_volume_tier.dart';
 import 'package:materyalph_api_client/src/model/catalog_volume_tier_input.dart';
+import 'package:materyalph_api_client/src/model/checkout_child_order.dart';
 import 'package:materyalph_api_client/src/model/checkout_group_preview.dart';
 import 'package:materyalph_api_client/src/model/checkout_preview.dart';
 import 'package:materyalph_api_client/src/model/checkout_preview_envelope.dart';
 import 'package:materyalph_api_client/src/model/checkout_preview_request.dart';
 import 'package:materyalph_api_client/src/model/checkout_preview_summary.dart';
+import 'package:materyalph_api_client/src/model/checkout_submission.dart';
+import 'package:materyalph_api_client/src/model/checkout_submission_envelope.dart';
+import 'package:materyalph_api_client/src/model/checkout_submit_request.dart';
 import 'package:materyalph_api_client/src/model/checkout_vendor_ref.dart';
 import 'package:materyalph_api_client/src/model/comparable_group_create.dart';
 import 'package:materyalph_api_client/src/model/comparable_group_envelope.dart';
@@ -179,10 +185,20 @@ import 'package:materyalph_api_client/src/model/csrf_envelope.dart';
 import 'package:materyalph_api_client/src/model/csrf_envelope_all_of_data.dart';
 import 'package:materyalph_api_client/src/model/dataset_label.dart';
 import 'package:materyalph_api_client/src/model/delivery_amount.dart';
+import 'package:materyalph_api_client/src/model/delivery_confirmation.dart';
 import 'package:materyalph_api_client/src/model/delivery_estimate.dart';
 import 'package:materyalph_api_client/src/model/delivery_estimate_option.dart';
+import 'package:materyalph_api_client/src/model/delivery_plan.dart';
+import 'package:materyalph_api_client/src/model/delivery_plan_endpoint.dart';
+import 'package:materyalph_api_client/src/model/delivery_plan_envelope.dart';
+import 'package:materyalph_api_client/src/model/delivery_plan_formula.dart';
+import 'package:materyalph_api_client/src/model/delivery_plan_group.dart';
+import 'package:materyalph_api_client/src/model/delivery_plan_request.dart';
+import 'package:materyalph_api_client/src/model/delivery_plan_route.dart';
+import 'package:materyalph_api_client/src/model/delivery_plan_vehicle.dart';
 import 'package:materyalph_api_client/src/model/delivery_preview.dart';
 import 'package:materyalph_api_client/src/model/delivery_route.dart';
+import 'package:materyalph_api_client/src/model/delivery_vehicle_selection.dart';
 import 'package:materyalph_api_client/src/model/directory_availability.dart';
 import 'package:materyalph_api_client/src/model/directory_supplier_detail.dart';
 import 'package:materyalph_api_client/src/model/directory_supplier_detail_envelope.dart';
@@ -289,16 +305,62 @@ import 'package:materyalph_api_client/src/model/mfa_enrollment_envelope_all_of_d
 import 'package:materyalph_api_client/src/model/mfa_recovery_request.dart';
 import 'package:materyalph_api_client/src/model/mfa_status_envelope.dart';
 import 'package:materyalph_api_client/src/model/mfa_status_envelope_all_of_data.dart';
+import 'package:materyalph_api_client/src/model/money_breakdown.dart';
+import 'package:materyalph_api_client/src/model/money_delivery.dart';
+import 'package:materyalph_api_client/src/model/money_nrpc.dart';
+import 'package:materyalph_api_client/src/model/money_range.dart';
+import 'package:materyalph_api_client/src/model/nrpc_accept_request.dart';
+import 'package:materyalph_api_client/src/model/nrpc_affected_line.dart';
+import 'package:materyalph_api_client/src/model/nrpc_flag.dart';
+import 'package:materyalph_api_client/src/model/nrpc_flag_request.dart';
+import 'package:materyalph_api_client/src/model/nrpc_line_allocation.dart';
+import 'package:materyalph_api_client/src/model/nrpc_proposal.dart';
+import 'package:materyalph_api_client/src/model/nrpc_reject_request.dart';
+import 'package:materyalph_api_client/src/model/nrpc_terms_ref.dart';
+import 'package:materyalph_api_client/src/model/nrpc_terms_version.dart';
 import 'package:materyalph_api_client/src/model/onboarding_draft_version.dart';
 import 'package:materyalph_api_client/src/model/onboarding_requirement.dart';
 import 'package:materyalph_api_client/src/model/onboarding_step_completion.dart';
+import 'package:materyalph_api_client/src/model/order_buyer_ref.dart';
+import 'package:materyalph_api_client/src/model/order_change.dart';
+import 'package:materyalph_api_client/src/model/order_checkout_ref.dart';
+import 'package:materyalph_api_client/src/model/order_commercial_version.dart';
+import 'package:materyalph_api_client/src/model/order_confirmed_delivery.dart';
+import 'package:materyalph_api_client/src/model/order_deadline.dart';
+import 'package:materyalph_api_client/src/model/order_deadlines.dart';
+import 'package:materyalph_api_client/src/model/order_delivery.dart';
+import 'package:materyalph_api_client/src/model/order_delivery_estimate.dart';
+import 'package:materyalph_api_client/src/model/order_delivery_vehicle.dart';
+import 'package:materyalph_api_client/src/model/order_destination.dart';
+import 'package:materyalph_api_client/src/model/order_detail.dart';
+import 'package:materyalph_api_client/src/model/order_detail_envelope.dart';
+import 'package:materyalph_api_client/src/model/order_first_line.dart';
+import 'package:materyalph_api_client/src/model/order_line.dart';
+import 'package:materyalph_api_client/src/model/order_line_inventory.dart';
+import 'package:materyalph_api_client/src/model/order_line_quantity.dart';
+import 'package:materyalph_api_client/src/model/order_list_envelope.dart';
+import 'package:materyalph_api_client/src/model/order_list_meta.dart';
+import 'package:materyalph_api_client/src/model/order_nrpc.dart';
+import 'package:materyalph_api_client/src/model/order_payment_availability.dart';
+import 'package:materyalph_api_client/src/model/order_payment_state.dart';
+import 'package:materyalph_api_client/src/model/order_point.dart';
+import 'package:materyalph_api_client/src/model/order_reservation.dart';
+import 'package:materyalph_api_client/src/model/order_revision_decision.dart';
+import 'package:materyalph_api_client/src/model/order_state.dart';
+import 'package:materyalph_api_client/src/model/order_state_row.dart';
+import 'package:materyalph_api_client/src/model/order_summary.dart';
+import 'package:materyalph_api_client/src/model/order_timeline_event.dart';
+import 'package:materyalph_api_client/src/model/order_vendor_ref.dart';
+import 'package:materyalph_api_client/src/model/order_volume_tier.dart';
 import 'package:materyalph_api_client/src/model/page_meta.dart';
 import 'package:materyalph_api_client/src/model/password_recovery_request.dart';
 import 'package:materyalph_api_client/src/model/password_reset_request.dart';
 import 'package:materyalph_api_client/src/model/payment_method_eligibility.dart';
+import 'package:materyalph_api_client/src/model/pickup_confirmation.dart';
 import 'package:materyalph_api_client/src/model/pickup_preview.dart';
 import 'package:materyalph_api_client/src/model/price_history_entry.dart';
 import 'package:materyalph_api_client/src/model/price_history_envelope.dart';
+import 'package:materyalph_api_client/src/model/processing_fee.dart';
 import 'package:materyalph_api_client/src/model/processing_fee_amount.dart';
 import 'package:materyalph_api_client/src/model/product_compliance_case_envelope.dart';
 import 'package:materyalph_api_client/src/model/product_compliance_case_envelope_data.dart';
@@ -376,6 +438,11 @@ import 'package:materyalph_api_client/src/model/vendor_onboarding_section.dart';
 import 'package:materyalph_api_client/src/model/vendor_onboarding_snapshot.dart';
 import 'package:materyalph_api_client/src/model/vendor_onboarding_snapshot_setup.dart';
 import 'package:materyalph_api_client/src/model/vendor_onboarding_step.dart';
+import 'package:materyalph_api_client/src/model/vendor_order_confirm_request.dart';
+import 'package:materyalph_api_client/src/model/vendor_order_decline_reason.dart';
+import 'package:materyalph_api_client/src/model/vendor_order_decline_request.dart';
+import 'package:materyalph_api_client/src/model/vendor_order_permissions.dart';
+import 'package:materyalph_api_client/src/model/vendor_order_primary_action.dart';
 import 'package:materyalph_api_client/src/model/vendor_payment_onboarding.dart';
 import 'package:materyalph_api_client/src/model/vendor_payment_onboarding_envelope.dart';
 import 'package:materyalph_api_client/src/model/vendor_payment_reconciliation_envelope.dart';
@@ -461,6 +528,7 @@ part 'serializers.g.dart';
   AuthEnvelope,
   AuthEnvelopeAllOfData,
   AutoAcceptAllotmentUpdate,
+  AutoAcceptOutcome,
   AutoAcceptPause,
   AutoAcceptPolicy,
   AutoAcceptPolicyConfigure,
@@ -470,6 +538,7 @@ part 'serializers.g.dart';
   AutoAcceptPolicyDetailScope,
   AutoAcceptPolicyDetailStock,
   AutoAcceptPolicyVersion,
+  AutoAcceptReason,
   AutoAcceptResume,
   AutoAcceptStatus,
   BotProofEnvelope,
@@ -553,11 +622,15 @@ part 'serializers.g.dart';
   CatalogVariantsSave,
   CatalogVolumeTier,
   CatalogVolumeTierInput,
+  CheckoutChildOrder,
   CheckoutGroupPreview,
   CheckoutPreview,
   CheckoutPreviewEnvelope,
   CheckoutPreviewRequest,
   CheckoutPreviewSummary,
+  CheckoutSubmission,
+  CheckoutSubmissionEnvelope,
+  CheckoutSubmitRequest,
   CheckoutVendorRef,
   ComparableGroupCreate,
   ComparableGroupEnvelope,
@@ -578,10 +651,20 @@ part 'serializers.g.dart';
   CsrfEnvelopeAllOfData,
   DatasetLabel,
   DeliveryAmount,
+  DeliveryConfirmation,
   DeliveryEstimate,
   DeliveryEstimateOption,
+  DeliveryPlan,
+  DeliveryPlanEndpoint,
+  DeliveryPlanEnvelope,
+  DeliveryPlanFormula,
+  DeliveryPlanGroup,
+  DeliveryPlanRequest,
+  DeliveryPlanRoute,
+  DeliveryPlanVehicle,
   DeliveryPreview,
   DeliveryRoute,
+  DeliveryVehicleSelection,
   DirectoryAvailability,
   DirectorySupplierDetail,
   DirectorySupplierDetailEnvelope,
@@ -688,16 +771,62 @@ part 'serializers.g.dart';
   MfaRecoveryRequest,
   MfaStatusEnvelope,
   MfaStatusEnvelopeAllOfData,
+  MoneyBreakdown,
+  MoneyDelivery,
+  MoneyNrpc,
+  MoneyRange,
+  NrpcAcceptRequest,
+  NrpcAffectedLine,
+  NrpcFlag,
+  NrpcFlagRequest,
+  NrpcLineAllocation,
+  NrpcProposal,
+  NrpcRejectRequest,
+  NrpcTermsRef,
+  NrpcTermsVersion,
   OnboardingDraftVersion,
   OnboardingRequirement,
   OnboardingStepCompletion,
+  OrderBuyerRef,
+  OrderChange,
+  OrderCheckoutRef,
+  OrderCommercialVersion,
+  OrderConfirmedDelivery,
+  OrderDeadline,
+  OrderDeadlines,
+  OrderDelivery,
+  OrderDeliveryEstimate,
+  OrderDeliveryVehicle,
+  OrderDestination,
+  OrderDetail,
+  OrderDetailEnvelope,
+  OrderFirstLine,
+  OrderLine,
+  OrderLineInventory,
+  OrderLineQuantity,
+  OrderListEnvelope,
+  OrderListMeta,
+  OrderNrpc,
+  OrderPaymentAvailability,
+  OrderPaymentState,
+  OrderPoint,
+  OrderReservation,
+  OrderRevisionDecision,
+  OrderState,
+  OrderStateRow,
+  OrderSummary,
+  OrderTimelineEvent,
+  OrderVendorRef,
+  OrderVolumeTier,
   PageMeta,
   PasswordRecoveryRequest,
   PasswordResetRequest,
   PaymentMethodEligibility,
+  PickupConfirmation,
   PickupPreview,
   PriceHistoryEntry,
   PriceHistoryEnvelope,
+  ProcessingFee,
   ProcessingFeeAmount,
   ProductComplianceCaseEnvelope,
   ProductComplianceCaseEnvelopeData,
@@ -775,6 +904,11 @@ part 'serializers.g.dart';
   VendorOnboardingSnapshot,
   VendorOnboardingSnapshotSetup,
   VendorOnboardingStep,
+  VendorOrderConfirmRequest,
+  VendorOrderDeclineReason,
+  VendorOrderDeclineRequest,
+  VendorOrderPermissions,
+  VendorOrderPrimaryAction,
   VendorPaymentOnboarding,
   VendorPaymentOnboardingEnvelope,
   VendorPaymentReconciliationEnvelope,
@@ -810,36 +944,16 @@ part 'serializers.g.dart';
 ])
 Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(ProductComplianceQueueItem)]),
-        () => ListBuilder<ProductComplianceQueueItem>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(CatalogReference)]),
-        () => ListBuilder<CatalogReference>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(TaxCategory)]),
-        () => ListBuilder<TaxCategory>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(CatalogVariant)]),
-        () => ListBuilder<CatalogVariant>(),
-      )
-      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(AccountMembership)]),
         () => ListBuilder<AccountMembership>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(VolumeTier)]),
-        () => ListBuilder<VolumeTier>(),
+        const FullType(BuiltList, [FullType(DeliveryPlanGroup)]),
+        () => ListBuilder<DeliveryPlanGroup>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(BuiltMap, [FullType(String), FullType(JsonObject)])]),
         () => ListBuilder<BuiltMap<String, JsonObject>>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(StoreHoursDay)]),
-        () => ListBuilder<StoreHoursDay>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(PsgcArea)]),
@@ -858,24 +972,12 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<CatalogCompletionStep>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(BuyerIndustryClassification)]),
-        () => ListBuilder<BuyerIndustryClassification>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(CatalogMaterialMatch)]),
-        () => ListBuilder<CatalogMaterialMatch>(),
-      )
-      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(FleetVehicle)]),
         () => ListBuilder<FleetVehicle>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(CartVendorGroup)]),
-        () => ListBuilder<CartVendorGroup>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltSet, [FullType(String)]),
-        () => SetBuilder<String>(),
+        const FullType(BuiltList, [FullType(NrpcAffectedLine)]),
+        () => ListBuilder<NrpcAffectedLine>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(VendorTeamActivity)]),
@@ -884,6 +986,174 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(ExploreCategoryCount)]),
         () => ListBuilder<ExploreCategoryCount>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(OrderSummary)]),
+        () => ListBuilder<OrderSummary>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ListingStatusChange)]),
+        () => ListBuilder<ListingStatusChange>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(PaymentMethodEligibility)]),
+        () => ListBuilder<PaymentMethodEligibility>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltMap, [FullType(String), FullType(BuiltList, [FullType(String)])]),
+        () => MapBuilder<String, BuiltList<String>>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(OrderReservation)]),
+        () => ListBuilder<OrderReservation>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ListingImage)]),
+        () => ListBuilder<ListingImage>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(AccountSession)]),
+        () => ListBuilder<AccountSession>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltMap, [FullType(String), FullType(String)]),
+        () => MapBuilder<String, String>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(OrderLineQuantity)]),
+        () => ListBuilder<OrderLineQuantity>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(InventoryMovement)]),
+        () => ListBuilder<InventoryMovement>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(OrderStateRow)]),
+        () => ListBuilder<OrderStateRow>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(CheckoutGroupPreview)]),
+        () => ListBuilder<CheckoutGroupPreview>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(MaterialCategoryOption)]),
+        () => ListBuilder<MaterialCategoryOption>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(OrderLine)]),
+        () => ListBuilder<OrderLine>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(CatalogListingSummary)]),
+        () => ListBuilder<CatalogListingSummary>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(VendorSetupDraftVehiclesInner)]),
+        () => ListBuilder<VendorSetupDraftVehiclesInner>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ApiError)]),
+        () => ListBuilder<ApiError>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(CartLine)]),
+        () => ListBuilder<CartLine>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(AccountAgreement)]),
+        () => ListBuilder<AccountAgreement>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltMap, [FullType(String), FullType(BuiltMap)]),
+        () => MapBuilder<String, BuiltMap<String, JsonObject>>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(AdminVendorVerificationQueueItem)]),
+        () => ListBuilder<AdminVendorVerificationQueueItem>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(StoreActivationBlocker)]),
+        () => ListBuilder<StoreActivationBlocker>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(FleetVehicleInput)]),
+        () => ListBuilder<FleetVehicleInput>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(CatalogUnit)]),
+        () => ListBuilder<CatalogUnit>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(PsgcAreaOption)]),
+        () => ListBuilder<PsgcAreaOption>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
+        () => MapBuilder<String, JsonObject?>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(CartIssue)]),
+        () => ListBuilder<CartIssue>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(GooglePlacePhoto)]),
+        () => ListBuilder<GooglePlacePhoto>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(String)]),
+        () => ListBuilder<String>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(FinancialPreviewLine)]),
+        () => ListBuilder<FinancialPreviewLine>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(NrpcLineAllocation)]),
+        () => ListBuilder<NrpcLineAllocation>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ProductComplianceQueueItem)]),
+        () => ListBuilder<ProductComplianceQueueItem>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(CatalogReference)]),
+        () => ListBuilder<CatalogReference>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(TaxCategory)]),
+        () => ListBuilder<TaxCategory>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(CatalogVariant)]),
+        () => ListBuilder<CatalogVariant>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(OrderChange)]),
+        () => ListBuilder<OrderChange>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(VolumeTier)]),
+        () => ListBuilder<VolumeTier>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(StoreHoursDay)]),
+        () => ListBuilder<StoreHoursDay>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(BuyerIndustryClassification)]),
+        () => ListBuilder<BuyerIndustryClassification>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(CatalogMaterialMatch)]),
+        () => ListBuilder<CatalogMaterialMatch>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(CartVendorGroup)]),
+        () => ListBuilder<CartVendorGroup>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltSet, [FullType(String)]),
+        () => SetBuilder<String>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(DeliveryEstimateOption)]),
@@ -906,16 +1176,8 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<OnboardingRequirement>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(ListingStatusChange)]),
-        () => ListBuilder<ListingStatusChange>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(PaymentMethodEligibility)]),
-        () => ListBuilder<PaymentMethodEligibility>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltMap, [FullType(String), FullType(BuiltList, [FullType(String)])]),
-        () => MapBuilder<String, BuiltList<String>>(),
+        const FullType(BuiltList, [FullType(CheckoutChildOrder)]),
+        () => ListBuilder<CheckoutChildOrder>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(CatalogImportRowError)]),
@@ -924,6 +1186,10 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(FavoriteSupplier)]),
         () => ListBuilder<FavoriteSupplier>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(OrderDeliveryVehicle)]),
+        () => ListBuilder<OrderDeliveryVehicle>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(StaleListing)]),
@@ -942,14 +1208,6 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<AccountRole>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(ListingImage)]),
-        () => ListBuilder<ListingImage>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(AccountSession)]),
-        () => ListBuilder<AccountSession>(),
-      )
-      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(ComplianceSubmissionSummary)]),
         () => ListBuilder<ComplianceSubmissionSummary>(),
       )
@@ -958,8 +1216,8 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<CatalogVolumeTierInput>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltMap, [FullType(String), FullType(String)]),
-        () => MapBuilder<String, String>(),
+        const FullType(BuiltList, [FullType(VendorOrderDeclineReason)]),
+        () => ListBuilder<VendorOrderDeclineReason>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(ListingSearchResult)]),
@@ -978,52 +1236,36 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<BotStepUpErrorEnvelopeAllOfErrors>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(InventoryMovement)]),
-        () => ListBuilder<InventoryMovement>(),
-      )
-      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(CatalogVolumeTier)]),
         () => ListBuilder<CatalogVolumeTier>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(CheckoutGroupPreview)]),
-        () => ListBuilder<CheckoutGroupPreview>(),
+        const FullType(BuiltList, [FullType(OrderTimelineEvent)]),
+        () => ListBuilder<OrderTimelineEvent>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(GoogleContentAuthor)]),
         () => ListBuilder<GoogleContentAuthor>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(MaterialCategoryOption)]),
-        () => ListBuilder<MaterialCategoryOption>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(CatalogListingSummary)]),
-        () => ListBuilder<CatalogListingSummary>(),
-      )
-      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(ListingVariantOffer)]),
         () => ListBuilder<ListingVariantOffer>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(VendorSetupDraftVehiclesInner)]),
-        () => ListBuilder<VendorSetupDraftVehiclesInner>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(AutoAcceptPolicyVersion)]),
         () => ListBuilder<AutoAcceptPolicyVersion>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(ApiError)]),
-        () => ListBuilder<ApiError>(),
+        const FullType(BuiltList, [FullType(DeliveryPlanVehicle)]),
+        () => ListBuilder<DeliveryPlanVehicle>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(InventoryRow)]),
         () => ListBuilder<InventoryRow>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(CartLine)]),
-        () => ListBuilder<CartLine>(),
+        const FullType(BuiltList, [FullType(OrderVolumeTier)]),
+        () => ListBuilder<OrderVolumeTier>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(GooglePlaceAttribute)]),
@@ -1038,32 +1280,24 @@ Serializers serializers = (_$serializers.toBuilder()
         () => MapBuilder<String, int>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(AccountAgreement)]),
-        () => ListBuilder<AccountAgreement>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltMap, [FullType(String), FullType(BuiltMap)]),
-        () => MapBuilder<String, BuiltMap<String, JsonObject>>(),
-      )
-      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(CatalogBlocker)]),
         () => ListBuilder<CatalogBlocker>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(AdminVendorVerificationQueueItem)]),
-        () => ListBuilder<AdminVendorVerificationQueueItem>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(CatalogMedia)]),
         () => ListBuilder<CatalogMedia>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(StoreActivationBlocker)]),
-        () => ListBuilder<StoreActivationBlocker>(),
+        const FullType(BuiltList, [FullType(DeliveryVehicleSelection)]),
+        () => ListBuilder<DeliveryVehicleSelection>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(AccountAdministrator)]),
         () => ListBuilder<AccountAdministrator>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(AutoAcceptReason)]),
+        () => ListBuilder<AutoAcceptReason>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(OnboardingDraftVersion)]),
@@ -1074,20 +1308,12 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<PublicStoreSummary>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(FleetVehicleInput)]),
-        () => ListBuilder<FleetVehicleInput>(),
-      )
-      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(CatalogVariantInput)]),
         () => ListBuilder<CatalogVariantInput>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(SupplierResult)]),
         () => ListBuilder<SupplierResult>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(CatalogUnit)]),
-        () => ListBuilder<CatalogUnit>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(StockConfirmationItem)]),
@@ -1098,10 +1324,6 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<OnboardingStepCompletion>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(PsgcAreaOption)]),
-        () => ListBuilder<PsgcAreaOption>(),
-      )
-      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(LocationSuggestion)]),
         () => ListBuilder<LocationSuggestion>(),
       )
@@ -1110,28 +1332,8 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<int>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
-        () => MapBuilder<String, JsonObject?>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(CartIssue)]),
-        () => ListBuilder<CartIssue>(),
-      )
-      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(ComplianceRegister)]),
         () => ListBuilder<ComplianceRegister>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(GooglePlacePhoto)]),
-        () => ListBuilder<GooglePlacePhoto>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(String)]),
-        () => ListBuilder<String>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(FinancialPreviewLine)]),
-        () => ListBuilder<FinancialPreviewLine>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltMap, [FullType(String), FullType(VendorOnboardingSection)]),
@@ -1140,9 +1342,60 @@ Serializers serializers = (_$serializers.toBuilder()
       ..add(SuccessEnvelope.serializer)
       ..add(const OneOfSerializer())
       ..add(const AnyOfSerializer())
+      ..add(_BooleanConstSerializer<AdminInvitationRequestTermsAcceptedEnum>(AdminInvitationRequestTermsAcceptedEnum.true_, true))
+      ..add(_BooleanConstSerializer<AdminInvitationRequestPrivacyAcceptedEnum>(AdminInvitationRequestPrivacyAcceptedEnum.true_, true))
+      ..add(_BooleanConstSerializer<AutoAcceptPolicyDetailScopeItemBasedOnlyEnum>(AutoAcceptPolicyDetailScopeItemBasedOnlyEnum.true_, true))
+      ..add(_BooleanConstSerializer<AutoAcceptPolicyDetailScopeNrpcExcludedEnum>(AutoAcceptPolicyDetailScopeNrpcExcludedEnum.true_, true))
+      ..add(_BooleanConstSerializer<AutoAcceptPolicyDetailScopeProjectBasedExcludedEnum>(AutoAcceptPolicyDetailScopeProjectBasedExcludedEnum.true_, true))
+      ..add(_BooleanConstSerializer<BotProofEnvelopeAllOfDataVerifiedEnum>(BotProofEnvelopeAllOfDataVerifiedEnum.true_, true))
+      ..add(_BooleanConstSerializer<BuyerMobileRegisterRequestTermsAcceptedEnum>(BuyerMobileRegisterRequestTermsAcceptedEnum.true_, true))
+      ..add(_BooleanConstSerializer<BuyerMobileRegisterRequestPrivacyAcceptedEnum>(BuyerMobileRegisterRequestPrivacyAcceptedEnum.true_, true))
+      ..add(_BooleanConstSerializer<CartSummaryReservesStockEnum>(CartSummaryReservesStockEnum.false_, false))
+      ..add(_BooleanConstSerializer<CheckoutPreviewSummaryCreatesOrdersEnum>(CheckoutPreviewSummaryCreatesOrdersEnum.false_, false))
+      ..add(_BooleanConstSerializer<CheckoutPreviewSummaryReservesStockEnum>(CheckoutPreviewSummaryReservesStockEnum.false_, false))
+      ..add(_BooleanConstSerializer<ComplianceSubmissionConfirmedEnum>(ComplianceSubmissionConfirmedEnum.true_, true))
+      ..add(_BooleanConstSerializer<DeliveryPlanAdvisoryEnum>(DeliveryPlanAdvisoryEnum.true_, true))
+      ..add(_BooleanConstSerializer<InventorySettingsInAppRemindersEnum>(InventorySettingsInAppRemindersEnum.true_, true))
+      ..add(_BooleanConstSerializer<MfaStatusEnvelopeAllOfDataMfaRequiredEnum>(MfaStatusEnvelopeAllOfDataMfaRequiredEnum.true_, true))
+      ..add(_BooleanConstSerializer<MoneyNrpcWithinOrderValueEnum>(MoneyNrpcWithinOrderValueEnum.true_, true))
+      ..add(_BooleanConstSerializer<NrpcAcceptRequestAcknowledgedEnum>(NrpcAcceptRequestAcknowledgedEnum.true_, true))
+      ..add(_BooleanConstSerializer<RegisterRequestTermsAcceptedEnum>(RegisterRequestTermsAcceptedEnum.true_, true))
+      ..add(_BooleanConstSerializer<RegisterRequestPrivacyAcceptedEnum>(RegisterRequestPrivacyAcceptedEnum.true_, true))
+      ..add(_BooleanConstSerializer<VendorCommissionAcceptanceAcceptedEnum>(VendorCommissionAcceptanceAcceptedEnum.true_, true))
+      ..add(_BooleanConstSerializer<VendorVerificationSubmitPrivacyAcknowledgedEnum>(VendorVerificationSubmitPrivacyAcknowledgedEnum.true_, true))
       ..add(const DateSerializer())
       ..add(Iso8601DateTimeSerializer())
     ).build();
 
 Serializers standardSerializers =
     (serializers.toBuilder()..addPlugin(StandardJsonPlugin())).build();
+
+// Generated normalization for OpenAPI boolean const schemas.
+class _BooleanConstSerializer<T> implements PrimitiveSerializer<T> {
+  const _BooleanConstSerializer(this.value, this.wireValue);
+
+  final T value;
+  final bool wireValue;
+
+  @override
+  Iterable<Type> get types => [T];
+
+  @override
+  String get wireName => T.toString();
+
+  @override
+  Object serialize(Serializers serializers, T object,
+      {FullType specifiedType = FullType.unspecified}) {
+    if (object != value) throw ArgumentError('Invalid boolean constant');
+    return wireValue;
+  }
+
+  @override
+  T deserialize(Serializers serializers, Object serialized,
+      {FullType specifiedType = FullType.unspecified}) {
+    if (serialized is! bool || serialized != wireValue) {
+      throw ArgumentError('Invalid boolean constant');
+    }
+    return value;
+  }
+}

@@ -248,15 +248,6 @@ void main() {
     );
   });
 
-  testWidgets('order confirmation design preview', (tester) async {
-    await capture(
-      tester,
-      '390-order-placed-preview',
-      OrderPlacedPreviewScreen(preview: previewFixture()),
-      const Size(390, 1200),
-    );
-  });
-
   testWidgets('checkout preview with a blocked route', (tester) async {
     final (_, cart, _, repository) = await setup();
     repository.preview = previewFixture(deliveryStatus: 'BLOCKED');

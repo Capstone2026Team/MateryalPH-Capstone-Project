@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -5,6 +7,9 @@ import '../../design_system/components/procurement_components.dart';
 import '../../design_system/theme.dart';
 import '../../widgets/buyer_account_widgets.dart' show BuyerUnavailableScreen;
 import '../map_discovery/discovery_models.dart';
+import '../map_discovery/discovery_repository.dart' show newIdempotencyKey;
+import '../orders/order_submitted_screen.dart';
+import '../orders/orders_repository.dart';
 import 'cart_controller.dart';
 import 'checkout_previews.dart';
 import 'procurement_models.dart';
@@ -17,10 +22,14 @@ class CheckoutPreviewScreen extends StatefulWidget {
     super.key,
     required this.controller,
     required this.savedLocations,
+    this.orders,
   });
 
   final CartController controller;
   final List<SavedLocationView> Function() savedLocations;
+
+  /// Order submission; without it the submit action stays unavailable.
+  final OrdersRepository? orders;
 
   @override
   State<CheckoutPreviewScreen> createState() => _CheckoutPreviewScreenState();
@@ -28,6 +37,9 @@ class CheckoutPreviewScreen extends StatefulWidget {
 
 class _CheckoutPreviewScreenState extends State<CheckoutPreviewScreen> {
   CartController get _controller => widget.controller;
+  bool _submitting = false;
+  String? _submitError;
+  String? _submitKey;
 
   @override
   void initState() {
@@ -176,48 +188,113 @@ class _CheckoutPreviewScreenState extends State<CheckoutPreviewScreen> {
     );
   }
 
-  Widget _submitBar(CheckoutPreviewView preview) => SafeArea(
-    top: false,
-    child: Container(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: BuyerTheme.border)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Semantics(
-            button: true,
-            enabled: false,
-            label: 'Submit order requests, not available yet',
-            excludeSemantics: true,
-            child: const FilledButton(
-              onPressed: null,
-              child: Text('Submit order requests'),
+  /// Submits every READY Vendor group as its own order request. Groups that still need action stay
+  /// in the cart, and the Buyer confirms that split first. One Idempotency-Key covers retries of the
+  /// same submission so a repeated tap never creates a second checkout.
+  Future<void> _submit(CheckoutPreviewView preview) async {
+    final orders = widget.orders;
+    if (orders == null || _submitting) return;
+    final ready = preview.groups.where((group) => group.status == 'READY').toList();
+    if (ready.isEmpty) return;
+    final split = ready.length < preview.groups.length;
+    if (split) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('Submit ${ready.length} of ${preview.groups.length} stores?'),
+          content: const Text(
+            'Only the ready stores are submitted as separate order requests. The others stay in your cart so you can fix them later.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Go back'),
             ),
-          ),
-          Wrap(
-            alignment: WrapAlignment.center,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              const Text(
-                'Opens in the next release. Nothing is reserved or charged.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12, color: BuyerTheme.muted),
-              ),
-              TextButton(
-                onPressed: () =>
-                    _push(OrderPlacedPreviewScreen(preview: preview)),
-                child: const Text('Preview confirmation'),
-              ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Submit ready stores'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) return;
+    }
+    final key = _submitKey ??= newIdempotencyKey();
+    setState(() {
+      _submitting = true;
+      _submitError = null;
+    });
+    try {
+      final checkout = await orders.submitCheckout(
+        cartLockVersion: preview.cartLockVersion,
+        vendorIds: [for (final group in ready) group.vendorId],
+        splitConfirmed: split,
+        idempotencyKey: key,
+      );
+      _submitKey = null;
+      unawaited(_controller.load());
+      if (!mounted) return;
+      await Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(
+          builder: (_) =>
+              OrderSubmittedScreen(checkout: checkout, repository: orders),
+        ),
+      );
+    } on DiscoveryFailure catch (error) {
+      // Keep the key only when the outcome is unknown (offline), so a retry replays safely.
+      if (error.kind != DiscoveryFailureKind.offline) _submitKey = null;
+      if (!mounted) return;
+      setState(() => _submitError = error.message);
+      if (error.kind == DiscoveryFailureKind.conflict) {
+        await _controller.loadPreview();
+      }
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  Widget _submitBar(CheckoutPreviewView preview) {
+    final ready = preview.groups.where((group) => group.status == 'READY').length;
+    final available = widget.orders != null && ready > 0 && !_submitting;
+    return SafeArea(
+      top: false,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          border: Border(top: BorderSide(color: BuyerTheme.border)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (_submitError != null) ...[
+              StatusBand(tone: BandTone.danger, title: _submitError!),
+              const SizedBox(height: 8),
             ],
-          ),
-        ],
+            FilledButton(
+              onPressed: available ? () => _submit(preview) : null,
+              child: Text(
+                _submitting
+                    ? 'Submitting…'
+                    : ready <= 1
+                    ? 'Submit order request'
+                    : 'Submit $ready order requests',
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              ready == 0
+                  ? 'Resolve the highlighted stores before submitting.'
+                  : 'Each store confirms its own request. Nothing is charged until you accept the final amount.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
+            ),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _Card extends StatelessWidget {

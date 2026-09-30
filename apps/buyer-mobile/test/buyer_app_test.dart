@@ -95,7 +95,9 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.byType(TermsScreen), findsNothing);
         expect(
-          find.text(fromLogin ? 'Login to your account' : 'Welcome to'),
+          find.textContaining(
+            fromLogin ? 'Login to your account' : 'Welcome to',
+          ),
           findsOneWidget,
         );
       },

@@ -18,6 +18,7 @@ import 'package:materyalph_api_client/src/api/buyer_cart_api.dart';
 import 'package:materyalph_api_client/src/api/buyer_discovery_api.dart';
 import 'package:materyalph_api_client/src/api/buyer_explore_api.dart';
 import 'package:materyalph_api_client/src/api/buyer_locations_api.dart';
+import 'package:materyalph_api_client/src/api/buyer_orders_api.dart';
 import 'package:materyalph_api_client/src/api/stores_api.dart';
 import 'package:materyalph_api_client/src/api/system_api.dart';
 import 'package:materyalph_api_client/src/api/vendor_auto_accept_api.dart';
@@ -25,6 +26,7 @@ import 'package:materyalph_api_client/src/api/vendor_catalog_api.dart';
 import 'package:materyalph_api_client/src/api/vendor_fleet_api.dart';
 import 'package:materyalph_api_client/src/api/vendor_inventory_api.dart';
 import 'package:materyalph_api_client/src/api/vendor_onboarding_api.dart';
+import 'package:materyalph_api_client/src/api/vendor_orders_api.dart';
 
 class MateryalphApiClient {
   static const String basePath = r'/api/v1';
@@ -174,6 +176,12 @@ class MateryalphApiClient {
     return BuyerLocationsApi(dio, serializers);
   }
 
+  /// Get BuyerOrdersApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  BuyerOrdersApi getBuyerOrdersApi() {
+    return BuyerOrdersApi(dio, serializers);
+  }
+
   /// Get StoresApi instance, base route and serializer can be overridden by a given but be careful,
   /// by doing that all interceptors will not be executed
   StoresApi getStoresApi() {
@@ -214,5 +222,11 @@ class MateryalphApiClient {
   /// by doing that all interceptors will not be executed
   VendorOnboardingApi getVendorOnboardingApi() {
     return VendorOnboardingApi(dio, serializers);
+  }
+
+  /// Get VendorOrdersApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  VendorOrdersApi getVendorOrdersApi() {
+    return VendorOrdersApi(dio, serializers);
   }
 }

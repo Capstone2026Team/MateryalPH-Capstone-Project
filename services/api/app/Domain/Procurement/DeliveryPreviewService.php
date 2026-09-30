@@ -117,15 +117,43 @@ final class DeliveryPreviewService
      */
     private function loadGroup(array $line): array
     {
-        $quantity = (string) $line['quantity'];
-        $load = $line['load'];
+        return self::loadGroupFor((string) $line['id'], (string) $line['quantity'], $line['load']);
+    }
+
+    /**
+     * One ordinary-cargo load group for a quantity of identical units; unknown measurements stay unknown.
+     *
+     * @param  array{weight_kg: ?string, length_cm: ?string, width_cm: ?string, height_cm: ?string}  $load
+     * @return array<string, mixed>
+     */
+    public static function loadGroupFor(string $key, string $quantity, array $load): array
+    {
         $whole = bccomp($quantity, bcadd($quantity, '0', 0), 4) === 0;
         $cm = static fn (?string $value): ?float => $value === null ? null : (float) $value / 100;
 
-        return ['key' => (string) $line['id'], 'material_kind' => DeliveryRecommendationService::CARGO,
+        return ['key' => $key, 'material_kind' => DeliveryRecommendationService::CARGO,
             'weight_kg' => $load['weight_kg'] === null ? null : (float) bcmul((string) $load['weight_kg'], $quantity, 4),
             'unit_count' => $whole ? (int) $quantity : null,
             'length_m' => $cm($load['length_cm']), 'width_m' => $cm($load['width_cm']), 'height_m' => $cm($load['height_cm'])];
+    }
+
+    /**
+     * Road route from the store's current verified address version to a vehicle endpoint, with the same cache
+     * and basis as the preview. Returns ROUTE_UNAVAILABLE / ROUTE_NOT_FOUND / STORE_ADDRESS_UNAVAILABLE on failure.
+     *
+     * @param  array{latitude: float, longitude: float, address_id: string}  $endpoint
+     * @return array<string, mixed>|string
+     */
+    public function routeFromStore(string $organizationId, array $endpoint): array|string
+    {
+        $store = DB::table('vendor_addresses as va')->join('vendor_address_versions as av', 'av.id', '=', 'va.current_version_id')->where('va.vendor_organization_id', $organizationId)
+            ->whereNotNull('av.location')->first(['av.id', 'av.latitude', 'av.longitude']);
+        if ($store === null) {
+            return 'STORE_ADDRESS_UNAVAILABLE';
+        }
+        $route = $this->route((string) $store->id, (float) $store->latitude, (float) $store->longitude, $endpoint);
+
+        return is_array($route) ? $route + ['store_address_version_id' => (string) $store->id] : $route;
     }
 
     /**

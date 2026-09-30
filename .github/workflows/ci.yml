@@ -102,6 +102,24 @@ jobs:
       - name: Run backend tests
         run: php artisan test
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Check API contracts against Laravel routes
+        run: |
+          npm ci --prefix ../../packages/api-contract
+          php artisan route:list --json --path=api/v1 > /tmp/materyalph-routes.json
+          trap 'rm -f /tmp/materyalph-routes.json' EXIT
+          cd ../../packages/api-contract
+          npm run test:account-contract -- /tmp/materyalph-routes.json
+          npm run test:vendor-contract -- /tmp/materyalph-routes.json
+          npm run test:catalog-contract -- /tmp/materyalph-routes.json
+          npm run test:inventory-contract -- /tmp/materyalph-routes.json
+          npm run test:geography-contract -- /tmp/materyalph-routes.json
+          npm run test:procurement-contract -- /tmp/materyalph-routes.json
+          npm run test:orders-contract -- /tmp/materyalph-routes.json
+
       - name: Generate schema-derived architecture evidence
         run: php artisan materyalph:schema-document
 

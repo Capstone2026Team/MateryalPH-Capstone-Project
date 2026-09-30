@@ -224,6 +224,10 @@ The backend locks the affected inventory and auto-accept configuration rows, rec
 
 An auto-accepted online order has a 45-minute payment expiry displayed as an exact date/time and countdown. Expiry releases the hard reservation. Abuse controls limit repeated unpaid auto-accepted orders per Buyer, device, and Vendor without making an adverse account decision solely from automation.
 
+**Phase 8 order decisions — approved by the project owner on 2026-09-29.** The Buyer has 24 hours from the Vendor revision/NRPC proposal to respond. Expiry sets the order to `EXPIRED` and releases the hard reservation, both through the scheduled sweep and when read. Every online entry into `AWAITING_PAYMENT`, whether manual or auto-accepted, starts the 45-minute payment window. An auto-accepted Self-Pickup date uses the optional Inventory setting **auto-accept ready-for-pickup lead time (days)**, editable only by Owner/Store Manager. If unset, the whole order goes to manual review with `FULFILLMENT_DATE_NOT_CONFIGURED`.
+
+Phase 8 release defaults: submission offers only `ONLINE`; COD and In-Store remain unavailable until Phase 11, while FIN-02 calculations retain all three cases. Site Delivery always needs manual confirmation and Buyer approval of the drop-off, vehicles, trips and fee. Revisions may reduce quantities or add an order-level Vendor discount, never raise prices. Buyer rejection of a revision or NRPC sets `CANCELLED` and releases the reservation. Processing fees remain pending until a payment channel is chosen in Phase 11; no fee or successful payment is invented.
+
 **Core Traceability Records**
 
 | **Record** | **Minimum implementation fields** |

@@ -37,6 +37,12 @@ void main() {
       // TODO
     });
 
+    // Days after acceptance an auto-accepted Self-Pickup order is ready (Asia/Manila). Null routes Self-Pickup auto-accept to manual review.
+    // int autoAcceptReadyLeadDays
+    test('to test the property `autoAcceptReadyLeadDays`', () async {
+      // TODO
+    });
+
     // int lockVersion
     test('to test the property `lockVersion`', () async {
       // TODO

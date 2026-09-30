@@ -13,3 +13,4 @@ FIN and MAT component schemas establish later-phase terminology without publishi
 - The pinned generator's OpenAPI 3.1 beta banner is informational; validation must still exit successfully and generated-client drift remains a failing gate.
 - Generated Dart may be analyzed with `--no-fatal-warnings` for generator-owned unused imports. Analyzer errors, warnings in handwritten Buyer code, or any broader analyzer suppression remain failures.
 - `build_runner build` must finish successfully. Obsolete or ignored command-line options are not retained in local or CI commands.
+- Client generation registers Dart serializers for singleton boolean constants. The pinned generator otherwise treats their wire values as strings; normalization preserves real JSON booleans and rejects values that violate the canonical `const` constraint.

@@ -293,7 +293,7 @@ final class PhaseFiveInventoryDeliveryTest extends TestCase
         foreach (['PROJECT_BASED' => 0, 'ITEM_BASED' => 5000] as $type => $nrpc) {
             $orderId = $this->order($organization, $type);
             if ($nrpc > 0) {
-                DB::table('nrpc_records')->insert(['id' => (string) Str::uuid7(), 'order_id' => $orderId, 'amount_centavos' => $nrpc, 'created_at' => now(), 'updated_at' => now()]);
+                DB::table('nrpc_records')->insert(['id' => (string) Str::uuid7(), 'order_id' => $orderId, 'amount_centavos' => $nrpc, 'state' => 'PROPOSED', 'reason' => 'Custom cutting for this order', 'created_at' => now(), 'updated_at' => now()]);
             }
             try {
                 DB::transaction(fn () => DB::table('vendor_confirmations')->insert(['id' => (string) Str::uuid7(), 'order_id' => $orderId, 'source' => 'AUTO_ACCEPT', 'auto_accept_policy_version_id' => $versionId, 'created_at' => now(), 'updated_at' => now()]));
@@ -305,7 +305,7 @@ final class PhaseFiveInventoryDeliveryTest extends TestCase
         $itemOrder = $this->order($organization, 'ITEM_BASED');
         DB::table('vendor_confirmations')->insert(['id' => (string) Str::uuid7(), 'order_id' => $itemOrder, 'source' => 'AUTO_ACCEPT', 'auto_accept_policy_version_id' => $versionId, 'created_at' => now(), 'updated_at' => now()]);
         $this->expectException(QueryException::class);
-        DB::transaction(fn () => DB::table('nrpc_records')->insert(['id' => (string) Str::uuid7(), 'order_id' => $itemOrder, 'amount_centavos' => 100, 'created_at' => now(), 'updated_at' => now()]));
+        DB::transaction(fn () => DB::table('nrpc_records')->insert(['id' => (string) Str::uuid7(), 'order_id' => $itemOrder, 'amount_centavos' => 100, 'state' => 'PROPOSED', 'reason' => 'Custom cutting for this order', 'created_at' => now(), 'updated_at' => now()]));
     }
 
     public function test_day_7_and_12_reminders_day_15_hide_and_confirmation_restores_the_listing(): void
@@ -558,7 +558,7 @@ final class PhaseFiveInventoryDeliveryTest extends TestCase
         $buyerId = (string) Str::uuid7();
         DB::table('buyer_profiles')->insert(['id' => $buyerId, 'user_id' => $buyer->id, 'buyer_type' => 'INDIVIDUAL', 'created_at' => now(), 'updated_at' => now()]);
         $orderId = (string) Str::uuid7();
-        DB::table('orders')->insert(['id' => $orderId, 'reference' => 'P5-'.Str::upper(Str::random(8)), 'buyer_profile_id' => $buyerId, 'vendor_organization_id' => $organization->id, 'procurement_type' => $type, 'order_state' => 'CONFIRMED', 'fulfillment_method' => 'VENDOR_DELIVERY', 'payment_method' => 'COD', 'commercial_total_centavos' => 100000, 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('orders')->insert(['id' => $orderId, 'reference' => 'P5-'.Str::upper(Str::random(8)), 'buyer_profile_id' => $buyerId, 'vendor_organization_id' => $organization->id, 'procurement_type' => $type, 'order_state' => 'CONFIRMED', 'fulfillment_method' => 'DELIVERY', 'payment_method' => 'CASH_ON_DELIVERY', 'materials_centavos' => 100000, 'commercial_total_centavos' => 100000, 'created_at' => now(), 'updated_at' => now()]);
 
         return $orderId;
     }

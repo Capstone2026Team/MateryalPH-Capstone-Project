@@ -623,6 +623,10 @@ Item-Based is a filtered view of the shared Orders module. The Vendor reviews ea
 
 **Auto-Accept by Stock Threshold**
 
+**Phase 8 decisions — approved by the project owner on 2026-09-29.** Owner and Store Manager alone may edit the optional Inventory setting **auto-accept ready-for-pickup lead time (days)**. Auto-accepted Self-Pickup uses this value for its ready date; if unset, the entire order goes to manual review with `FULFILLMENT_DATE_NOT_CONFIGURED`. Site Delivery never auto-accepts and always requires Buyer approval of the confirmed drop-off, vehicles, trips and fee.
+
+The Buyer revision/NRPC response deadline is 24 hours from the Vendor revision. On expiry the order becomes `EXPIRED` and stock is released; Buyer rejection gives `CANCELLED` and release. Revisions may only reduce quantities or add an order-level discount, never raise prices. Every online entry into `AWAITING_PAYMENT` starts 45 minutes, including manual confirmation. Phase 8 submission offers only Online; COD/In-Store and payment-channel processing fees are deferred to Phase 11, with the processing fee shown as pending.
+
 Auto-accept is optional, disabled by default, and configured per SKU or variant. Vendor Owner and Store Manager may enable or pause the feature, set the remaining stock allotment, and configure independent maximum unit-count and order-value safeguards. Inventory Staff may update the SKU or variant allotment but cannot change monetary safeguards or enable organization-wide authority. Store Staff and Customer Service Staff may view why an order was or was not auto-accepted but cannot modify the policy.
 
 The Vendor-only configuration shows physical quantity on hand, hard-reserved quantity, available-to-sell quantity, soft-held quantity, auto-accept allotment remaining, unit cap, amount cap, pause reason, last editor, and last update. Internal quantities never appear to Buyers.

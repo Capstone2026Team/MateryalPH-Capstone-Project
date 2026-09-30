@@ -389,6 +389,10 @@ Project-Based and Item-Based checkout use the same FIN-02 financial snapshot. Co
 
 ## 6. Purchase Order Generation and Vendor Confirmation
 
+**Phase 8 decisions — approved by the project owner on 2026-09-29.** Respond to a Vendor revision or NRPC proposal within 24 hours of the Vendor revision; expiry sets `EXPIRED` and releases reserved stock. Rejecting either sets `CANCELLED` and releases it. Every online order entering `AWAITING_PAYMENT` starts a 45-minute payment deadline, including manual confirmation and auto-accept. Countdown labels also show the exact Asia/Manila date and time.
+
+For this release, only Online is offered at submission; COD/In-Store and payment-channel processing fees are deferred to Phase 11. A processing fee is pending until the channel is chosen. Site Delivery always requires Buyer approval of the Vendor-confirmed drop-off, vehicles, trips and fee. A revision can only reduce quantities or add an order-level Vendor discount, never raise prices. Auto-accepted Self-Pickup uses the Owner/Manager's optional pickup lead-time setting; an unset value routes the entire order to manual review.
+
 The system creates the Purchase Order after the Vendor confirms and the Buyer accepts the final package. It contains:
 
 - Material lines, specifications, quantities, units, and price snapshots.

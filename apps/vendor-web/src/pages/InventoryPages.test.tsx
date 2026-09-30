@@ -55,7 +55,7 @@ beforeEach(() => {
   vi.mocked(onboarding.getVendorOnboarding).mockResolvedValue({ stepCompletion: [], lockVersion: 1, requirements: [], drafts: [], organization: { store_name: 'Test Supply' }, welcomeRequired: false, permissions: ['portal.products', 'catalog.manage', 'inventory.view', 'inventory.manage'], verification: {}, setup: { status: 'COMPLETED' }, activation: { status: 'ACTIVE', marketplaceDiscoverabilityStatus: 'DISCOVERABLE', readiness: { ready: true, blockers: [], status: 'READY', ruleVersion: 'test' } }, sections: {} })
   vi.mocked(onboarding.getVendorPrivateFileUrl).mockResolvedValue({ url: 'https://example.test/logo', expiresAt: new Date() })
   vi.mocked(inventory.listInventory).mockResolvedValue({ items: [row()], meta: meta() })
-  vi.mocked(inventory.getInventorySettings).mockResolvedValue({ reminderLocalTime: '08:00', emailReminders: true, inAppReminders: true, timezone: 'Asia/Manila', reminderDays: [7, 12], hideAfterDays: 15, lockVersion: 0, canEdit: true })
+  vi.mocked(inventory.getInventorySettings).mockResolvedValue({ reminderLocalTime: '08:00', emailReminders: true, inAppReminders: true, timezone: 'Asia/Manila', reminderDays: [7, 12], hideAfterDays: 15, autoAcceptReadyLeadDays: null, lockVersion: 0, canEdit: true })
 })
 
 function open(path = '/products/inventory') {

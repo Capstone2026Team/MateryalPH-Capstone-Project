@@ -636,18 +636,18 @@ void main() {
         );
         expect(find.text('Includes VAT'), findsWidgets);
         final submit = tester.widget<FilledButton>(
-          find.widgetWithText(FilledButton, 'Submit order requests'),
+          find.widgetWithText(FilledButton, 'Submit 2 order requests'),
         );
         expect(
           submit.onPressed,
           isNull,
-          reason: 'Order submission ships with Phase 8.',
+          reason: 'Submission requires an OrdersRepository connection.',
         );
       },
     );
 
     testWidgets(
-      'Delivery Mode switches per store, unoffered modes are disabled, and the design previews send nothing',
+      'Delivery Mode switches per store, unoffered modes are disabled, and the invoice preview sends nothing',
       (tester) async {
         final repository = _FulfillmentRepository();
         final h = await _harness(repository);
@@ -695,17 +695,11 @@ void main() {
         await tester.tap(find.byTooltip('Back'));
         await tester.pumpAndSettle();
 
-        await tester.tap(find.text('Preview confirmation'));
-        await tester.pumpAndSettle();
-        expect(
-          find.text('Design preview — no order was created'),
-          findsOneWidget,
-        );
-        expect(find.text('Assigned when submitted'), findsOneWidget);
+        expect(find.text('Preview confirmation'), findsNothing);
         expect(
           tester
               .widget<FilledButton>(
-                find.widgetWithText(FilledButton, 'Track Order'),
+                find.widgetWithText(FilledButton, 'Submit 2 order requests'),
               )
               .onPressed,
           isNull,

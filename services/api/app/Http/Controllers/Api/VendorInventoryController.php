@@ -76,9 +76,10 @@ final class VendorInventoryController extends Controller
             'lock_version' => ['required', 'integer', 'min:0'],
             'reminder_local_time' => ['required', 'date_format:H:i'],
             'email_reminders' => ['required', 'boolean'],
+            'auto_accept_ready_lead_days' => ['sometimes', 'nullable', 'integer', 'between:0,30'],
         ]);
 
-        /** @var array{lock_version: int, reminder_local_time: string, email_reminders: bool} $input */
+        /** @var array{lock_version: int, reminder_local_time: string, email_reminders: bool, auto_accept_ready_lead_days?: int|null} $input */
         return ApiResponse::success($this->ledger->saveSettings($request, $input));
     }
 

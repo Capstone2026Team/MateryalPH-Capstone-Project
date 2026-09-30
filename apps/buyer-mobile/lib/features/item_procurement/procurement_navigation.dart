@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../orders/orders_repository.dart';
 import 'cart_controller.dart';
 import 'cart_screen.dart';
 import 'checkout_preview_screen.dart';
@@ -20,12 +21,16 @@ class ProcurementNavigation {
     required this.repository,
     required this.openStoreProfile,
     this.onOpenMap,
+    this.orders,
   });
 
   final ExploreController explore;
   final CartController cart;
   final ProcurementRepository repository;
   final VoidCallback? onOpenMap;
+
+  /// Order submission from Checkout; absent in contexts that only preview.
+  final OrdersRepository? orders;
 
   void openLocation(BuildContext context) {
     Navigator.of(context).popUntil((route) => route.isFirst);
@@ -86,6 +91,7 @@ class ProcurementNavigation {
     CheckoutPreviewScreen(
       controller: cart,
       savedLocations: () => explore.savedLocations,
+      orders: orders,
     ),
   );
 

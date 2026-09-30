@@ -1,0 +1,48 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Domain\Orders;
+
+use App\Domain\Finance\FeeAssessmentService;
+use App\Domain\Inventory\AutoAcceptPolicyService;
+use App\Domain\Inventory\InventoryLedgerWriter;
+use App\Domain\Operations\OutboxPublisher;
+use Illuminate\Support\Facades\DB;
+
+/**
+ * Releases an order's hard reservations when it is rejected, expires or is cancelled, inside the caller's
+ * transaction with the order row locked (order → inventory ascending → policies ascending). Allotment consumed
+ * by auto-accept is returned in whole units, capped at the policy's configured allotment; a pause is never
+ * cleared. An ESTIMATED fee assessment is cancelled because no completed sale exists.
+ */
+final class OrderRelease
+{
+    public function __construct(
+        private readonly InventoryLedgerWriter $ledger,
+        private readonly AutoAcceptPolicyService $policies,
+        private readonly FeeAssessmentService $fees,
+        private readonly OutboxPublisher $outbox,
+    ) {}
+
+    /** @return array<string, string> released quantity per listing variant */
+    public function release(object $order, string $closingState, string $reasonCode, OrderActor $actor): array
+    {
+        $released = $this->ledger->releaseOrder((string) $order->id, $reasonCode, $actor->userId);
+        if ($released !== [] && $order->confirmation_source === 'AUTO_ACCEPT') {
+            foreach (DB::table('auto_accept_policies')->whereIn('listing_variant_id', array_keys($released))->orderBy('id')->lockForUpdate()->get() as $policy) {
+                $room = bcsub(bcadd((string) $policy->allotment_quantity, '0', 0), bcadd((string) $policy->remaining_allotment_quantity, '0', 0), 0);
+                $restore = bccomp(bcadd($released[(string) $policy->listing_variant_id], '0', 0), $room, 0) < 0 ? bcadd($released[(string) $policy->listing_variant_id], '0', 0) : $room;
+                if (bccomp($restore, '0', 0) > 0) {
+                    $this->policies->restore($policy, $restore);
+                }
+            }
+        }
+        $this->fees->cancelForClosedOrder($order, $closingState, $actor->correlationId);
+        if ($released !== []) {
+            $this->outbox->publish('INVENTORY_RESERVATION_RELEASED', 'ORDER', (string) $order->id, ['order_id' => (string) $order->id, 'reason_code' => $reasonCode, 'lines' => count($released)]);
+        }
+
+        return $released;
+    }
+}

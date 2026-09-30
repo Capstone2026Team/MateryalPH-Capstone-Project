@@ -19,11 +19,13 @@ class BuyerProfileScreen extends StatefulWidget {
     required this.onSignOut,
     this.discoveryRepository,
     this.onRankingPreferences,
+    this.onOpenOrders,
     this.onRemoveFavorite,
     this.deviceLocation = const GeolocatorDeviceLocationService(),
   });
   final AuthRepository repository;
   final VoidCallback? onRankingPreferences;
+  final VoidCallback? onOpenOrders;
   final Future<void> Function(String vendorId)? onRemoveFavorite;
   final DiscoveryRepository? discoveryRepository;
   final DeviceLocationService deviceLocation;

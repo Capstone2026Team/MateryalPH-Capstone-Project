@@ -9,6 +9,8 @@ import '../features/item_procurement/explore_screen.dart';
 import '../features/item_procurement/procurement_navigation.dart';
 import '../features/item_procurement/procurement_repository.dart';
 import '../features/map_discovery/device_location.dart';
+import '../features/orders/orders_repository.dart';
+import '../features/orders/orders_screen.dart';
 import '../features/map_discovery/discovery_controller.dart';
 import '../features/map_discovery/discovery_repository.dart';
 import '../features/map_discovery/map_home_screen.dart';
@@ -28,6 +30,7 @@ class BuyerHomeScreen extends StatefulWidget {
     this.onSessionEnded,
     this.discoveryRepository,
     this.procurementRepository,
+    this.ordersRepository,
     this.deviceLocation = const GeolocatorDeviceLocationService(),
     this.mapBuilder = defaultSupplierMapBuilder,
   });
@@ -37,6 +40,7 @@ class BuyerHomeScreen extends StatefulWidget {
   final VoidCallback? onSessionEnded;
   final DiscoveryRepository? discoveryRepository;
   final ProcurementRepository? procurementRepository;
+  final OrdersRepository? ordersRepository;
   final DeviceLocationService deviceLocation;
   final SupplierMapBuilder mapBuilder;
 
@@ -60,6 +64,14 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
       (widget.repository == null
           ? null
           : ApiProcurementRepository(
+              client: widget.repository!.apiClient,
+              onSessionExpired: _expireSession,
+            ));
+  late final OrdersRepository? _orders =
+      widget.ordersRepository ??
+      (widget.repository == null
+          ? null
+          : ApiOrdersRepository(
               client: widget.repository!.apiClient,
               onSessionExpired: _expireSession,
             ));
@@ -186,6 +198,13 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
             ? null
             : (vendorId) =>
                   _discoveryController.setFavorite(vendorId, favorite: false),
+        onOpenOrders: _orders == null
+            ? null
+            : () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => OrdersScreen(repository: _orders),
+                ),
+              ),
         onRankingPreferences: _navigation == null
             ? null
             : () => _navigation.openPreferences(context),

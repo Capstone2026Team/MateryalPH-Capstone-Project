@@ -14,4 +14,5 @@ Schedule::command('materyalph:vendor-media-recover')->everyFifteenMinutes()->wit
 Schedule::command('materyalph:vendor-expiry-scan')->dailyAt('01:00')->withoutOverlapping();
 Schedule::command('materyalph:discoverability-evaluate')->hourly()->withoutOverlapping();
 Schedule::command('materyalph:stock-confirmation-sweep')->everyFifteenMinutes()->withoutOverlapping();
+Schedule::command('materyalph:orders-expire')->everyMinute()->withoutOverlapping();
 Schedule::command('materyalph:geography-cache-prune')->hourly()->withoutOverlapping();
