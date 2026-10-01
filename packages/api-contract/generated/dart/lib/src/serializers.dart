@@ -156,6 +156,39 @@ import 'package:materyalph_api_client/src/model/catalog_variant_input.dart';
 import 'package:materyalph_api_client/src/model/catalog_variants_save.dart';
 import 'package:materyalph_api_client/src/model/catalog_volume_tier.dart';
 import 'package:materyalph_api_client/src/model/catalog_volume_tier_input.dart';
+import 'package:materyalph_api_client/src/model/chat_attachment.dart';
+import 'package:materyalph_api_client/src/model/chat_channel_auth.dart';
+import 'package:materyalph_api_client/src/model/chat_channel_signature.dart';
+import 'package:materyalph_api_client/src/model/chat_create.dart';
+import 'package:materyalph_api_client/src/model/chat_decision.dart';
+import 'package:materyalph_api_client/src/model/chat_decision_result.dart';
+import 'package:materyalph_api_client/src/model/chat_decision_result_response.dart';
+import 'package:materyalph_api_client/src/model/chat_draft_content.dart';
+import 'package:materyalph_api_client/src/model/chat_draft_line.dart';
+import 'package:materyalph_api_client/src/model/chat_draft_save.dart';
+import 'package:materyalph_api_client/src/model/chat_empty_response.dart';
+import 'package:materyalph_api_client/src/model/chat_handler.dart';
+import 'package:materyalph_api_client/src/model/chat_handlers_response.dart';
+import 'package:materyalph_api_client/src/model/chat_id.dart';
+import 'package:materyalph_api_client/src/model/chat_id_response.dart';
+import 'package:materyalph_api_client/src/model/chat_identity.dart';
+import 'package:materyalph_api_client/src/model/chat_message.dart';
+import 'package:materyalph_api_client/src/model/chat_message_page.dart';
+import 'package:materyalph_api_client/src/model/chat_publish.dart';
+import 'package:materyalph_api_client/src/model/chat_quotation.dart';
+import 'package:materyalph_api_client/src/model/chat_quotation_change.dart';
+import 'package:materyalph_api_client/src/model/chat_quotation_content.dart';
+import 'package:materyalph_api_client/src/model/chat_quotation_line.dart';
+import 'package:materyalph_api_client/src/model/chat_quotation_money.dart';
+import 'package:materyalph_api_client/src/model/chat_quotation_page.dart';
+import 'package:materyalph_api_client/src/model/chat_quotation_page_response.dart';
+import 'package:materyalph_api_client/src/model/chat_quotation_version.dart';
+import 'package:materyalph_api_client/src/model/chat_read.dart';
+import 'package:materyalph_api_client/src/model/chat_realtime.dart';
+import 'package:materyalph_api_client/src/model/chat_realtime_response.dart';
+import 'package:materyalph_api_client/src/model/chat_send.dart';
+import 'package:materyalph_api_client/src/model/chat_store.dart';
+import 'package:materyalph_api_client/src/model/chat_transfer.dart';
 import 'package:materyalph_api_client/src/model/checkout_child_order.dart';
 import 'package:materyalph_api_client/src/model/checkout_group_preview.dart';
 import 'package:materyalph_api_client/src/model/checkout_preview.dart';
@@ -181,6 +214,11 @@ import 'package:materyalph_api_client/src/model/compliance_register_list_envelop
 import 'package:materyalph_api_client/src/model/compliance_review_summary.dart';
 import 'package:materyalph_api_client/src/model/compliance_submission.dart';
 import 'package:materyalph_api_client/src/model/compliance_submission_summary.dart';
+import 'package:materyalph_api_client/src/model/conversation_detail.dart';
+import 'package:materyalph_api_client/src/model/conversation_detail_response.dart';
+import 'package:materyalph_api_client/src/model/conversation_page.dart';
+import 'package:materyalph_api_client/src/model/conversation_page_response.dart';
+import 'package:materyalph_api_client/src/model/conversation_view.dart';
 import 'package:materyalph_api_client/src/model/csrf_envelope.dart';
 import 'package:materyalph_api_client/src/model/csrf_envelope_all_of_data.dart';
 import 'package:materyalph_api_client/src/model/dataset_label.dart';
@@ -622,6 +660,39 @@ part 'serializers.g.dart';
   CatalogVariantsSave,
   CatalogVolumeTier,
   CatalogVolumeTierInput,
+  ChatAttachment,
+  ChatChannelAuth,
+  ChatChannelSignature,
+  ChatCreate,
+  ChatDecision,
+  ChatDecisionResult,
+  ChatDecisionResultResponse,
+  ChatDraftContent,
+  ChatDraftLine,
+  ChatDraftSave,
+  ChatEmptyResponse,
+  ChatHandler,
+  ChatHandlersResponse,
+  ChatId,
+  ChatIdResponse,
+  ChatIdentity,
+  ChatMessage,
+  ChatMessagePage,
+  ChatPublish,
+  ChatQuotation,
+  ChatQuotationChange,
+  ChatQuotationContent,
+  ChatQuotationLine,
+  ChatQuotationMoney,
+  ChatQuotationPage,
+  ChatQuotationPageResponse,
+  ChatQuotationVersion,
+  ChatRead,
+  ChatRealtime,
+  ChatRealtimeResponse,
+  ChatSend,
+  ChatStore,
+  ChatTransfer,
   CheckoutChildOrder,
   CheckoutGroupPreview,
   CheckoutPreview,
@@ -647,6 +718,11 @@ part 'serializers.g.dart';
   ComplianceReviewSummary,
   ComplianceSubmission,
   ComplianceSubmissionSummary,
+  ConversationDetail,
+  ConversationDetailResponse,
+  ConversationPage,
+  ConversationPageResponse,
+  ConversationView,
   CsrfEnvelope,
   CsrfEnvelopeAllOfData,
   DatasetLabel,
@@ -1036,6 +1112,14 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<CheckoutGroupPreview>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ChatMessage)]),
+        () => ListBuilder<ChatMessage>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ChatQuotationLine)]),
+        () => ListBuilder<ChatQuotationLine>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(MaterialCategoryOption)]),
         () => ListBuilder<MaterialCategoryOption>(),
       )
@@ -1132,6 +1216,10 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<OrderChange>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ChatDraftLine)]),
+        () => ListBuilder<ChatDraftLine>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(VolumeTier)]),
         () => ListBuilder<VolumeTier>(),
       )
@@ -1156,6 +1244,10 @@ Serializers serializers = (_$serializers.toBuilder()
         () => SetBuilder<String>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ChatAttachment)]),
+        () => ListBuilder<ChatAttachment>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(DeliveryEstimateOption)]),
         () => ListBuilder<DeliveryEstimateOption>(),
       )
@@ -1178,6 +1270,10 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(CheckoutChildOrder)]),
         () => ListBuilder<CheckoutChildOrder>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ChatQuotationVersion)]),
+        () => ListBuilder<ChatQuotationVersion>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(CatalogImportRowError)]),
@@ -1322,6 +1418,18 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(OnboardingStepCompletion)]),
         () => ListBuilder<OnboardingStepCompletion>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ChatHandler)]),
+        () => ListBuilder<ChatHandler>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ConversationView)]),
+        () => ListBuilder<ConversationView>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ChatQuotationChange)]),
+        () => ListBuilder<ChatQuotationChange>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(LocationSuggestion)]),

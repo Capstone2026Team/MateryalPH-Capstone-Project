@@ -790,6 +790,18 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
         ),
         child: Row(
           children: [
+            if (widget.navigation.messaging != null)
+              IconButton(
+                tooltip: 'Message Vendor',
+                onPressed: variant == null
+                    ? null
+                    : () => widget.navigation.openMessage(
+                        context,
+                        detail.vendorId,
+                        variant.variantId,
+                      ),
+                icon: const Icon(Icons.chat_bubble_outline),
+              ),
             Expanded(
               child: FilledButton.icon(
                 style: FilledButton.styleFrom(

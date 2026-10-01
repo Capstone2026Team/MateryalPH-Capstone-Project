@@ -1526,6 +1526,8 @@ Phase 1 platform foundation record.
 | `ended_at` | `timestamp with time zone` | Yes | — | Ended at. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+| `assigned_role` | `character varying` | Yes | — | Assigned role. |
+| `reason` | `character varying` | Yes | — | Reason. |
 
 **Constraints**
 
@@ -1537,6 +1539,7 @@ Phase 1 platform foundation record.
 **Indexes**
 
 - `conversation_assignments_pkey` — `CREATE UNIQUE INDEX conversation_assignments_pkey ON public.conversation_assignments USING btree (id)`
+- `conversation_one_handler` — `CREATE UNIQUE INDEX conversation_one_handler ON public.conversation_assignments USING btree (conversation_id) WHERE (ended_at IS NULL)`
 
 ## `conversation_participants`
 
@@ -1550,6 +1553,7 @@ Phase 1 platform foundation record.
 | `participant_role` | `character varying` | No | — | Participant role. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+| `revoked_at` | `timestamp with time zone` | Yes | — | Revoked at. |
 
 **Constraints**
 
@@ -1577,16 +1581,28 @@ Phase 1 platform foundation record.
 | `state` | `character varying` | No | `'ACTIVE'::character varying` | State. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+| `purpose` | `character varying` | No | `'SALES'::character varying` | Purpose. |
+| `order_id` | `uuid` | Yes | — | Order id. |
+| `handler_user_id` | `bigint` | Yes | — | Handler user id. |
+| `locked_reference` | `jsonb` | No | `'{}'::jsonb` | Locked reference. |
+| `lock_version` | `integer` | No | `1` | Lock version. |
 
 **Constraints**
 
+- `conversation_purpose_order` — CHECK: `CHECK (purpose::text = 'SALES'::text AND order_id IS NULL AND (context_type::text = ANY (ARRAY['ITEM_BASED'::character varying, 'PROJECT_BASED'::character varying]::text[])) OR purpose::text = 'FULFILLMENT'::text AND order_id IS NOT NULL)`
 - `conversations_buyer_profile_id_foreign` — FOREIGN KEY: `FOREIGN KEY (buyer_profile_id) REFERENCES buyer_profiles(id) ON DELETE RESTRICT`
+- `conversations_handler_user_id_foreign` — FOREIGN KEY: `FOREIGN KEY (handler_user_id) REFERENCES users(id) ON DELETE RESTRICT`
+- `conversations_order_id_foreign` — FOREIGN KEY: `FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE RESTRICT`
 - `conversations_vendor_organization_id_foreign` — FOREIGN KEY: `FOREIGN KEY (vendor_organization_id) REFERENCES vendor_organizations(id) ON DELETE RESTRICT`
 - `conversations_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
+- `conversations_order_id_unique` — UNIQUE: `UNIQUE (order_id)`
 
 **Indexes**
 
+- `conversations_buyer_profile_id_updated_at_index` — `CREATE INDEX conversations_buyer_profile_id_updated_at_index ON public.conversations USING btree (buyer_profile_id, updated_at)`
+- `conversations_order_id_unique` — `CREATE UNIQUE INDEX conversations_order_id_unique ON public.conversations USING btree (order_id)`
 - `conversations_pkey` — `CREATE UNIQUE INDEX conversations_pkey ON public.conversations USING btree (id)`
+- `conversations_vendor_organization_id_purpose_updated_at_index` — `CREATE INDEX conversations_vendor_organization_id_purpose_updated_at_index ON public.conversations USING btree (vendor_organization_id, purpose, updated_at)`
 
 ## `data_exports`
 
@@ -2577,6 +2593,7 @@ FIN-01–FIN-12 financial control and evidence record.
 | `order_snapshot_id` | `uuid` | Yes | — | Order snapshot id. |
 | `payment_method` | `character varying` | Yes | — | Payment method. |
 | `payment_matrix` | `jsonb` | Yes | — | Payment matrix. |
+| `price_source` | `character varying` | No | `'PRIVATE_TRANSACTION'::character varying` | Price source. |
 
 **Constraints**
 
@@ -3504,6 +3521,12 @@ Phase 1 platform foundation record.
 | `scan_state` | `character varying` | No | — | Scan state. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+| `disk` | `character varying` | Yes | — | Disk. |
+| `storage_key` | `character varying` | Yes | — | Storage key. |
+| `media_type` | `character varying` | Yes | — | Media type. |
+| `size_bytes` | `bigint` | Yes | — | Size bytes. |
+| `display_name` | `character varying` | Yes | — | Display name. |
+| `purpose` | `character varying` | No | `'SALES'::character varying` | Purpose. |
 
 **Constraints**
 
@@ -3554,6 +3577,8 @@ Phase 1 platform foundation record.
 | `sent_at` | `timestamp with time zone` | No | — | Sent at. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+| `kind` | `character varying` | No | `'TEXT'::character varying` | Kind. |
+| `public_sender` | `jsonb` | No | `'{}'::jsonb` | Public sender. |
 
 **Constraints**
 
@@ -3565,6 +3590,7 @@ Phase 1 platform foundation record.
 **Indexes**
 
 - `messages_conversation_id_client_message_id_unique` — `CREATE UNIQUE INDEX messages_conversation_id_client_message_id_unique ON public.messages USING btree (conversation_id, client_message_id)`
+- `messages_conversation_id_id_index` — `CREATE INDEX messages_conversation_id_id_index ON public.messages USING btree (conversation_id, id)`
 - `messages_pkey` — `CREATE UNIQUE INDEX messages_pkey ON public.messages USING btree (id)`
 
 ## `metric_events`
@@ -3986,6 +4012,32 @@ Procurement or immutable commerce record.
 
 - `order_delivery_snapshots_order_id_unique` — `CREATE UNIQUE INDEX order_delivery_snapshots_order_id_unique ON public.order_delivery_snapshots USING btree (order_id)`
 - `order_delivery_snapshots_pkey` — `CREATE UNIQUE INDEX order_delivery_snapshots_pkey ON public.order_delivery_snapshots USING btree (id)`
+
+## `order_fulfillment_assignments`
+
+Procurement or immutable commerce record.
+
+| Column | Database type | Null | Default | Key / meaning |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | No | — | Primary key. Id. |
+| `order_id` | `uuid` | No | — | Order id. |
+| `user_id` | `bigint` | No | — | User id. |
+| `assigned_by_user_id` | `bigint` | No | — | Assigned by user id. |
+| `ended_at` | `timestamp with time zone` | Yes | — | Ended at. |
+| `created_at` | `timestamp with time zone` | Yes | — | Created at. |
+| `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+
+**Constraints**
+
+- `order_fulfillment_assignments_assigned_by_user_id_foreign` — FOREIGN KEY: `FOREIGN KEY (assigned_by_user_id) REFERENCES users(id) ON DELETE RESTRICT`
+- `order_fulfillment_assignments_order_id_foreign` — FOREIGN KEY: `FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE RESTRICT`
+- `order_fulfillment_assignments_user_id_foreign` — FOREIGN KEY: `FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT`
+- `order_fulfillment_assignments_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
+
+**Indexes**
+
+- `fulfillment_one_assignee` — `CREATE UNIQUE INDEX fulfillment_one_assignee ON public.order_fulfillment_assignments USING btree (order_id) WHERE (ended_at IS NULL)`
+- `order_fulfillment_assignments_pkey` — `CREATE UNIQUE INDEX order_fulfillment_assignments_pkey ON public.order_fulfillment_assignments USING btree (id)`
 
 ## `order_lines`
 
@@ -4928,6 +4980,7 @@ Procurement or immutable commerce record.
 | `substitution` | `boolean` | No | `false` | Substitution. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+| `source_snapshot` | `jsonb` | No | `'{}'::jsonb` | Source snapshot. |
 
 **Constraints**
 
@@ -4961,9 +5014,14 @@ Procurement or immutable commerce record.
 | `content_hash` | `character varying` | No | — | Content hash. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+| `content` | `jsonb` | No | `'{}'::jsonb` | Content. |
+| `actor_role` | `character varying` | Yes | — | Actor role. |
+| `price_source` | `character varying` | No | `'PRIVATE_TRANSACTION'::character varying` | Price source. |
+| `deadline_hours` | `smallint` | No | `'24'::smallint` | Deadline hours. |
 
 **Constraints**
 
+- `quotation_deadline_range` — CHECK: `CHECK (deadline_hours >= 1 AND deadline_hours <= 72 AND price_source::text = 'PRIVATE_TRANSACTION'::text)`
 - `quotation_totals_check` — CHECK: `CHECK (materials_centavos >= 0 AND delivery_centavos >= 0 AND nrpc_centavos >= 0 AND nrpc_centavos <= materials_centavos AND total_centavos >= (materials_centavos + delivery_centavos))`
 - `quotation_versions_created_by_user_id_foreign` — FOREIGN KEY: `FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE RESTRICT`
 - `quotation_versions_quotation_id_foreign` — FOREIGN KEY: `FOREIGN KEY (quotation_id) REFERENCES quotations(id) ON DELETE RESTRICT`
@@ -4993,6 +5051,10 @@ Procurement or immutable commerce record.
 | `accepted_order_id` | `uuid` | Yes | — | Accepted order id. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+| `draft` | `jsonb` | Yes | — | Draft. |
+| `lock_version` | `integer` | No | `1` | Lock version. |
+| `response_due_at` | `timestamp with time zone` | Yes | — | Response due at. |
+| `reminded_at` | `timestamp with time zone` | Yes | — | Reminded at. |
 
 **Constraints**
 
@@ -5006,7 +5068,9 @@ Procurement or immutable commerce record.
 
 **Indexes**
 
+- `conversation_one_quotation` — `CREATE UNIQUE INDEX conversation_one_quotation ON public.quotations USING btree (conversation_id)`
 - `quotations_pkey` — `CREATE UNIQUE INDEX quotations_pkey ON public.quotations USING btree (id)`
+- `quotations_response_due_at_index` — `CREATE INDEX quotations_response_due_at_index ON public.quotations USING btree (response_due_at)`
 
 ## `recovery_codes`
 

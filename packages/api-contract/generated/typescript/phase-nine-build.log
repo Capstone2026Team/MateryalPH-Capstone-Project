@@ -1,0 +1,4 @@
+
+> @materyalph/api-client-ts@1.0.0-phase.9 build
+> tsc && tsc -p tsconfig.esm.json
+

@@ -1,4 +1,4 @@
-# @materyalph/api-client-ts@1.0.0-phase.8
+# @materyalph/api-client-ts@1.0.0-phase.9
 
 A TypeScript SDK client for the localhost API.
 
@@ -177,6 +177,21 @@ All URIs are relative to */api/v1*
 *BuyerOrdersApi* | [**rejectBuyerOrderNrpc**](docs/BuyerOrdersApi.md#rejectbuyerordernrpc) | **POST** /buyers/orders/{orderId}/nrpc/reject |
 *BuyerOrdersApi* | [**rejectBuyerOrderRevision**](docs/BuyerOrdersApi.md#rejectbuyerorderrevision) | **POST** /buyers/orders/{orderId}/revision/reject |
 *BuyerOrdersApi* | [**submitBuyerCheckout**](docs/BuyerOrdersApi.md#submitbuyercheckout) | **POST** /buyers/checkouts |
+*MessagingApi* | [**authorizeChatChannel**](docs/MessagingApi.md#authorizechatchannel) | **POST** /{messagingPortal}/messaging/auth |
+*MessagingApi* | [**createConversation**](docs/MessagingApi.md#createconversation) | **POST** /{messagingPortal}/conversations |
+*MessagingApi* | [**decideChatQuotation**](docs/MessagingApi.md#decidechatquotation) | **POST** /{messagingPortal}/conversations/{conversationId}/quotation/{action} |
+*MessagingApi* | [**downloadChatAttachment**](docs/MessagingApi.md#downloadchatattachment) | **GET** /{messagingPortal}/conversations/{conversationId}/attachments/{attachmentId} |
+*MessagingApi* | [**getChatAvatar**](docs/MessagingApi.md#getchatavatar) | **GET** /{messagingPortal}/conversations/{conversationId}/avatars/{userId} |
+*MessagingApi* | [**getChatRealtime**](docs/MessagingApi.md#getchatrealtime) | **GET** /{messagingPortal}/messaging/realtime |
+*MessagingApi* | [**getConversation**](docs/MessagingApi.md#getconversation) | **GET** /{messagingPortal}/conversations/{conversationId} |
+*MessagingApi* | [**listChatHandlers**](docs/MessagingApi.md#listchathandlers) | **GET** /{messagingPortal}/conversations/{conversationId}/handlers |
+*MessagingApi* | [**listConversations**](docs/MessagingApi.md#listconversations) | **GET** /{messagingPortal}/conversations |
+*MessagingApi* | [**publishChatQuotation**](docs/MessagingApi.md#publishchatquotation) | **POST** /{messagingPortal}/conversations/{conversationId}/quotation/publish |
+*MessagingApi* | [**readChatMessages**](docs/MessagingApi.md#readchatmessages) | **POST** /{messagingPortal}/conversations/{conversationId}/read |
+*MessagingApi* | [**saveChatQuotationDraft**](docs/MessagingApi.md#savechatquotationdraft) | **PUT** /{messagingPortal}/conversations/{conversationId}/quotation/draft |
+*MessagingApi* | [**sendChatMessage**](docs/MessagingApi.md#sendchatmessage) | **POST** /{messagingPortal}/conversations/{conversationId}/messages |
+*MessagingApi* | [**transferChatHandler**](docs/MessagingApi.md#transferchathandler) | **POST** /{messagingPortal}/conversations/{conversationId}/transfer |
+*MessagingApi* | [**uploadChatAttachment**](docs/MessagingApi.md#uploadchatattachment) | **POST** /{messagingPortal}/conversations/{conversationId}/attachments |
 *StoresApi* | [**getPublicStoreProfile**](docs/StoresApi.md#getpublicstoreprofile) | **GET** /stores/{storeId}/profile |
 *StoresApi* | [**listPublicStores**](docs/StoresApi.md#listpublicstores) | **GET** /stores |
 *SystemApi* | [**getApiHealth**](docs/SystemApi.md#getapihealth) | **GET** /health |
@@ -399,6 +414,39 @@ All URIs are relative to */api/v1*
 - [CatalogVariantsSave](docs/CatalogVariantsSave.md)
 - [CatalogVolumeTier](docs/CatalogVolumeTier.md)
 - [CatalogVolumeTierInput](docs/CatalogVolumeTierInput.md)
+- [ChatAttachment](docs/ChatAttachment.md)
+- [ChatChannelAuth](docs/ChatChannelAuth.md)
+- [ChatChannelSignature](docs/ChatChannelSignature.md)
+- [ChatCreate](docs/ChatCreate.md)
+- [ChatDecision](docs/ChatDecision.md)
+- [ChatDecisionResult](docs/ChatDecisionResult.md)
+- [ChatDecisionResultResponse](docs/ChatDecisionResultResponse.md)
+- [ChatDraftContent](docs/ChatDraftContent.md)
+- [ChatDraftLine](docs/ChatDraftLine.md)
+- [ChatDraftSave](docs/ChatDraftSave.md)
+- [ChatEmptyResponse](docs/ChatEmptyResponse.md)
+- [ChatHandler](docs/ChatHandler.md)
+- [ChatHandlersResponse](docs/ChatHandlersResponse.md)
+- [ChatId](docs/ChatId.md)
+- [ChatIdResponse](docs/ChatIdResponse.md)
+- [ChatIdentity](docs/ChatIdentity.md)
+- [ChatMessage](docs/ChatMessage.md)
+- [ChatMessagePage](docs/ChatMessagePage.md)
+- [ChatPublish](docs/ChatPublish.md)
+- [ChatQuotation](docs/ChatQuotation.md)
+- [ChatQuotationChange](docs/ChatQuotationChange.md)
+- [ChatQuotationContent](docs/ChatQuotationContent.md)
+- [ChatQuotationLine](docs/ChatQuotationLine.md)
+- [ChatQuotationMoney](docs/ChatQuotationMoney.md)
+- [ChatQuotationPage](docs/ChatQuotationPage.md)
+- [ChatQuotationPageResponse](docs/ChatQuotationPageResponse.md)
+- [ChatQuotationVersion](docs/ChatQuotationVersion.md)
+- [ChatRead](docs/ChatRead.md)
+- [ChatRealtime](docs/ChatRealtime.md)
+- [ChatRealtimeResponse](docs/ChatRealtimeResponse.md)
+- [ChatSend](docs/ChatSend.md)
+- [ChatStore](docs/ChatStore.md)
+- [ChatTransfer](docs/ChatTransfer.md)
 - [CheckoutChildOrder](docs/CheckoutChildOrder.md)
 - [CheckoutGroupPreview](docs/CheckoutGroupPreview.md)
 - [CheckoutPreview](docs/CheckoutPreview.md)
@@ -424,6 +472,11 @@ All URIs are relative to */api/v1*
 - [ComplianceReviewSummary](docs/ComplianceReviewSummary.md)
 - [ComplianceSubmission](docs/ComplianceSubmission.md)
 - [ComplianceSubmissionSummary](docs/ComplianceSubmissionSummary.md)
+- [ConversationDetail](docs/ConversationDetail.md)
+- [ConversationDetailResponse](docs/ConversationDetailResponse.md)
+- [ConversationPage](docs/ConversationPage.md)
+- [ConversationPageResponse](docs/ConversationPageResponse.md)
+- [ConversationView](docs/ConversationView.md)
 - [CsrfEnvelope](docs/CsrfEnvelope.md)
 - [CsrfEnvelopeAllOfData](docs/CsrfEnvelopeAllOfData.md)
 - [DatasetLabel](docs/DatasetLabel.md)
@@ -763,8 +816,8 @@ This TypeScript SDK client supports the [Fetch API](https://fetch.spec.whatwg.or
 and is automatically generated by the
 [OpenAPI Generator](https://openapi-generator.tech) project:
 
-- API version: `1.0.0-phase.8`
-- Package version: `1.0.0-phase.8`
+- API version: `1.0.0-phase.9`
+- Package version: `1.0.0-phase.9`
 - Generator version: `7.25.0`
 - Build package: `org.openapitools.codegen.languages.TypeScriptFetchClientCodegen`
 

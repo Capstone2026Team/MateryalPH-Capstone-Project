@@ -6,6 +6,7 @@ namespace App\Domain\Operations;
 
 use App\Domain\Catalog\EligibilityInvalidation;
 use App\Domain\Catalog\EligibleOfferQuery;
+use App\Domain\Messaging\ConversationBroadcast;
 use App\Mail\AccountSecurityMail;
 use App\Mail\AdminInvitationMail;
 use App\Mail\EmailOtpMail;
@@ -68,6 +69,11 @@ final class OutboxProcessor
     /** @param array<string, mixed> $payload */
     private function deliver(string $eventType, array $payload): void
     {
+        if ($eventType === 'CONVERSATION_CHANGED') {
+            app(ConversationBroadcast::class)->deliver($this->requiredString($payload, 'conversation_id'));
+
+            return;
+        }
         if ($eventType === EligibilityInvalidation::EVENT) {
             EligibleOfferQuery::invalidate();
 

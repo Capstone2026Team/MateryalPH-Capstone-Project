@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: MateryalPH API
-  version: 1.0.0-phase.8
+  version: 1.0.0-phase.9
   description: >-
     Versioned Phase 1–4 contract. Vendor onboarding, verification, activation readiness, private evidence, team invitations, the Vendor catalog and product PS/ICC compliance are server-authorized.
     Browser credentials are isolated by configured frontend origin using _vendor and _admin suffixes on access, refresh, CSRF, MFA and bot-proof cookies.
@@ -27,6 +27,823 @@ tags:
   - name: Buyer Orders
   - name: Vendor Orders
 paths:
+  /{messagingPortal}/conversations:
+    get:
+      tags:
+        - Messaging
+      operationId: listConversations
+      description: Current purpose, participant, account and fixed-role authority are
+        checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses
+        native bearer transport.
+      security:
+        - passportBearer: []
+        - accessCookie: []
+          webCsrf: []
+      parameters:
+        - name: messagingPortal
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - buyers
+              - vendor
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: Authorized result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConversationPageResponse"
+        "401":
+          description: Authentication required
+        "403":
+          description: Current role or channel access denied
+        "404":
+          description: Conversation unavailable or access revoked
+        "409":
+          description: Recoverable version, deadline, idempotency or stock conflict;
+            re-read the current version
+        "422":
+          description: Invalid fields or undisclosed NRPC
+        "503":
+          description: Provider or scanner unavailable; retry safely
+    post:
+      tags:
+        - Messaging
+      operationId: createConversation
+      description: Buyer-only Item-Based inquiry. Project inquiry entry remains gated
+        until Phase 10; both contexts use the same quotation engine. Fulfillment
+        thread creation has no public endpoint and Phase 12 entry remains
+        disabled.
+      security:
+        - passportBearer: []
+      parameters:
+        - name: messagingPortal
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - buyers
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Authorized result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatIdResponse"
+        "201":
+          description: Conversation created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatIdResponse"
+        "401":
+          description: Authentication required
+        "403":
+          description: Current role or channel access denied
+        "404":
+          description: Conversation unavailable or access revoked
+        "409":
+          description: Recoverable version, deadline, idempotency or stock conflict;
+            re-read the current version
+        "422":
+          description: Invalid fields or undisclosed NRPC
+        "503":
+          description: Provider or scanner unavailable; retry safely
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatCreate"
+  /{messagingPortal}/conversations/{conversationId}:
+    get:
+      tags:
+        - Messaging
+      operationId: getConversation
+      description: Current purpose, participant, account and fixed-role authority are
+        checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses
+        native bearer transport.
+      security:
+        - passportBearer: []
+        - accessCookie: []
+          webCsrf: []
+      parameters:
+        - name: messagingPortal
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - buyers
+              - vendor
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+        - name: before
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Authorized result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConversationDetailResponse"
+        "401":
+          description: Authentication required
+        "403":
+          description: Current role or channel access denied
+        "404":
+          description: Conversation unavailable or access revoked
+        "409":
+          description: Recoverable version, deadline, idempotency or stock conflict;
+            re-read the current version
+        "422":
+          description: Invalid fields or undisclosed NRPC
+        "503":
+          description: Provider or scanner unavailable; retry safely
+  /{messagingPortal}/conversations/{conversationId}/messages:
+    post:
+      tags:
+        - Messaging
+      operationId: sendChatMessage
+      description: Current purpose, participant, account and fixed-role authority are
+        checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses
+        native bearer transport.
+      security:
+        - passportBearer: []
+        - accessCookie: []
+          webCsrf: []
+      parameters:
+        - name: messagingPortal
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - buyers
+              - vendor
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Authorized result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatIdResponse"
+        "201":
+          description: Message saved idempotently by client_message_id
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatIdResponse"
+        "401":
+          description: Authentication required
+        "403":
+          description: Current role or channel access denied
+        "404":
+          description: Conversation unavailable or access revoked
+        "409":
+          description: Recoverable version, deadline, idempotency or stock conflict;
+            re-read the current version
+        "422":
+          description: Invalid fields or undisclosed NRPC
+        "503":
+          description: Provider or scanner unavailable; retry safely
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatSend"
+  /{messagingPortal}/conversations/{conversationId}/read:
+    post:
+      tags:
+        - Messaging
+      operationId: readChatMessages
+      description: Current purpose, participant, account and fixed-role authority are
+        checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses
+        native bearer transport.
+      security:
+        - passportBearer: []
+        - accessCookie: []
+          webCsrf: []
+      parameters:
+        - name: messagingPortal
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - buyers
+              - vendor
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Authorized result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatEmptyResponse"
+        "401":
+          description: Authentication required
+        "403":
+          description: Current role or channel access denied
+        "404":
+          description: Conversation unavailable or access revoked
+        "409":
+          description: Recoverable version, deadline, idempotency or stock conflict;
+            re-read the current version
+        "422":
+          description: Invalid fields or undisclosed NRPC
+        "503":
+          description: Provider or scanner unavailable; retry safely
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatRead"
+  /{messagingPortal}/conversations/{conversationId}/handlers:
+    get:
+      tags:
+        - Messaging
+      operationId: listChatHandlers
+      description: Current purpose, participant, account and fixed-role authority are
+        checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses
+        native bearer transport.
+      security:
+        - accessCookie: []
+          webCsrf: []
+      parameters:
+        - name: messagingPortal
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - vendor
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: Authorized result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatHandlersResponse"
+        "401":
+          description: Authentication required
+        "403":
+          description: Current role or channel access denied
+        "404":
+          description: Conversation unavailable or access revoked
+        "409":
+          description: Recoverable version, deadline, idempotency or stock conflict;
+            re-read the current version
+        "422":
+          description: Invalid fields or undisclosed NRPC
+        "503":
+          description: Provider or scanner unavailable; retry safely
+  /{messagingPortal}/conversations/{conversationId}/transfer:
+    post:
+      tags:
+        - Messaging
+      operationId: transferChatHandler
+      description: Current purpose, participant, account and fixed-role authority are
+        checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses
+        native bearer transport.
+      security:
+        - accessCookie: []
+          webCsrf: []
+      parameters:
+        - name: messagingPortal
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - vendor
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Authorized result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatEmptyResponse"
+        "401":
+          description: Authentication required
+        "403":
+          description: Current role or channel access denied
+        "404":
+          description: Conversation unavailable or access revoked
+        "409":
+          description: Recoverable version, deadline, idempotency or stock conflict;
+            re-read the current version
+        "422":
+          description: Invalid fields or undisclosed NRPC
+        "503":
+          description: Provider or scanner unavailable; retry safely
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatTransfer"
+  /{messagingPortal}/conversations/{conversationId}/quotation/draft:
+    put:
+      tags:
+        - Messaging
+      operationId: saveChatQuotationDraft
+      description: Current purpose, participant, account and fixed-role authority are
+        checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses
+        native bearer transport.
+      security:
+        - accessCookie: []
+          webCsrf: []
+      parameters:
+        - name: messagingPortal
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - vendor
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Authorized result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatQuotationPageResponse"
+        "401":
+          description: Authentication required
+        "403":
+          description: Current role or channel access denied
+        "404":
+          description: Conversation unavailable or access revoked
+        "409":
+          description: Recoverable version, deadline, idempotency or stock conflict;
+            re-read the current version
+        "422":
+          description: Invalid fields or undisclosed NRPC
+        "503":
+          description: Provider or scanner unavailable; retry safely
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatDraftSave"
+  /{messagingPortal}/conversations/{conversationId}/quotation/publish:
+    post:
+      tags:
+        - Messaging
+      operationId: publishChatQuotation
+      description: Current purpose, participant, account and fixed-role authority are
+        checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses
+        native bearer transport.
+      security:
+        - accessCookie: []
+          webCsrf: []
+      parameters:
+        - name: messagingPortal
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - vendor
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Authorized result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatQuotationPageResponse"
+        "401":
+          description: Authentication required
+        "403":
+          description: Current role or channel access denied
+        "404":
+          description: Conversation unavailable or access revoked
+        "409":
+          description: Recoverable version, deadline, idempotency or stock conflict;
+            re-read the current version
+        "422":
+          description: Invalid fields or undisclosed NRPC
+        "503":
+          description: Provider or scanner unavailable; retry safely
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatPublish"
+  /{messagingPortal}/conversations/{conversationId}/quotation/{action}:
+    post:
+      tags:
+        - Messaging
+      operationId: decideChatQuotation
+      description: Current purpose, participant, account and fixed-role authority are
+        checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses
+        native bearer transport.
+      security:
+        - passportBearer: []
+        - accessCookie: []
+          webCsrf: []
+      parameters:
+        - name: messagingPortal
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - buyers
+              - vendor
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: action
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - view
+              - accept
+              - reject
+              - counter
+              - withdraw
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Authorized result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatDecisionResultResponse"
+        "401":
+          description: Authentication required
+        "403":
+          description: Current role or channel access denied
+        "404":
+          description: Conversation unavailable or access revoked
+        "409":
+          description: Recoverable version, deadline, idempotency or stock conflict;
+            re-read the current version
+        "422":
+          description: Invalid fields or undisclosed NRPC
+        "503":
+          description: Provider or scanner unavailable; retry safely
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatDecision"
+  /{messagingPortal}/conversations/{conversationId}/attachments:
+    post:
+      tags:
+        - Messaging
+      operationId: uploadChatAttachment
+      description: Current purpose, participant, account and fixed-role authority are
+        checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses
+        native bearer transport.
+      security:
+        - passportBearer: []
+        - accessCookie: []
+          webCsrf: []
+      parameters:
+        - name: messagingPortal
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - buyers
+              - vendor
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Authorized result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatEmptyResponse"
+        "201":
+          description: Authorized result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatEmptyResponse"
+        "401":
+          description: Authentication required
+        "403":
+          description: Current role or channel access denied
+        "404":
+          description: Conversation unavailable or access revoked
+        "409":
+          description: Recoverable version, deadline, idempotency or stock conflict;
+            re-read the current version
+        "422":
+          description: Invalid fields or undisclosed NRPC
+        "503":
+          description: Provider or scanner unavailable; retry safely
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+                - client_message_id
+              properties:
+                file:
+                  type: string
+                  format: binary
+                client_message_id:
+                  type: string
+                  format: uuid
+  /{messagingPortal}/conversations/{conversationId}/attachments/{attachmentId}:
+    get:
+      tags:
+        - Messaging
+      operationId: downloadChatAttachment
+      description: Current purpose, participant, account and fixed-role authority are
+        checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses
+        native bearer transport.
+      security:
+        - passportBearer: []
+        - accessCookie: []
+          webCsrf: []
+      parameters:
+        - name: messagingPortal
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - buyers
+              - vendor
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: attachmentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Private authorized bytes; no-store. CLEAN files only. Fulfillment
+            cannot retrieve sales or financial attachments.
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "401":
+          description: Authentication required
+        "403":
+          description: Current role or channel access denied
+        "404":
+          description: Conversation unavailable or access revoked
+        "409":
+          description: Recoverable version, deadline, idempotency or stock conflict;
+            re-read the current version
+        "422":
+          description: Invalid fields or undisclosed NRPC
+        "503":
+          description: Provider or scanner unavailable; retry safely
+  /{messagingPortal}/conversations/{conversationId}/avatars/{userId}:
+    get:
+      tags:
+        - Messaging
+      operationId: getChatAvatar
+      description: Current purpose, participant, account and fixed-role authority are
+        checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses
+        native bearer transport.
+      security:
+        - passportBearer: []
+        - accessCookie: []
+          webCsrf: []
+      parameters:
+        - name: messagingPortal
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - buyers
+              - vendor
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Private authorized bytes; no-store. CLEAN files only. Fulfillment
+            cannot retrieve sales or financial attachments.
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "401":
+          description: Authentication required
+        "403":
+          description: Current role or channel access denied
+        "404":
+          description: Conversation unavailable or access revoked
+        "409":
+          description: Recoverable version, deadline, idempotency or stock conflict;
+            re-read the current version
+        "422":
+          description: Invalid fields or undisclosed NRPC
+        "503":
+          description: Provider or scanner unavailable; retry safely
+  /{messagingPortal}/messaging/realtime:
+    get:
+      tags:
+        - Messaging
+      operationId: getChatRealtime
+      description: Current purpose, participant, account and fixed-role authority are
+        checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses
+        native bearer transport.
+      security:
+        - passportBearer: []
+        - accessCookie: []
+          webCsrf: []
+      parameters:
+        - name: messagingPortal
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - buyers
+              - vendor
+      responses:
+        "200":
+          description: Authorized result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatRealtimeResponse"
+        "401":
+          description: Authentication required
+        "403":
+          description: Current role or channel access denied
+        "404":
+          description: Conversation unavailable or access revoked
+        "409":
+          description: Recoverable version, deadline, idempotency or stock conflict;
+            re-read the current version
+        "422":
+          description: Invalid fields or undisclosed NRPC
+        "503":
+          description: Provider or scanner unavailable; retry safely
+  /{messagingPortal}/messaging/auth:
+    post:
+      tags:
+        - Messaging
+      operationId: authorizeChatChannel
+      description: Pusher protocol signature for an authorized per-viewer Reverb
+        channel. Purpose, membership and assignment epoch must match. Broadcasts
+        carry only invalidations; message/file data always requires a fresh
+        authorized REST request. No client events are accepted.
+      security:
+        - passportBearer: []
+        - accessCookie: []
+          webCsrf: []
+      parameters:
+        - name: messagingPortal
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - buyers
+              - vendor
+      responses:
+        "200":
+          description: Authorized result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatChannelSignature"
+        "401":
+          description: Authentication required
+        "403":
+          description: Current role or channel access denied
+        "404":
+          description: Conversation unavailable or access revoked
+        "409":
+          description: Recoverable version, deadline, idempotency or stock conflict;
+            re-read the current version
+        "422":
+          description: Invalid fields or undisclosed NRPC
+        "503":
+          description: Provider or scanner unavailable; retry safely
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatChannelAuth"
   /{webAccountPortal}/account/photo:
     parameters:
       - { name: webAccountPortal, in: path, required: true, schema: { type: string, enum: [vendors, admin] } }
@@ -4327,6 +5144,750 @@ components:
         application/json:
           schema: { $ref: "#/components/schemas/BotStepUpErrorEnvelope" }
   schemas:
+    ChatIdentity:
+      type: object
+      required:
+        - display_name
+        - role
+      properties:
+        display_name:
+          type: string
+        role:
+          type: string
+        avatar_path:
+          type: string
+          nullable: true
+    ChatStore:
+      type: object
+      required:
+        - id
+        - name
+        - verified
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        logo_url:
+          type: string
+          nullable: true
+        verified:
+          type: boolean
+    ConversationView:
+      type: object
+      required:
+        - id
+        - purpose
+        - context_type
+        - lock_version
+        - store
+        - unread_count
+        - channel
+        - locked_reference
+        - updated_at
+        - can_transfer
+        - fulfillment_entry_enabled
+      properties:
+        id:
+          type: string
+          format: uuid
+        purpose:
+          type: string
+          enum:
+            - SALES
+            - FULFILLMENT
+        context_type:
+          type: string
+          enum:
+            - ITEM_BASED
+            - PROJECT_BASED
+        order_id:
+          type: string
+          format: uuid
+          nullable: true
+        lock_version:
+          type: integer
+        store:
+          $ref: "#/components/schemas/ChatStore"
+        handler:
+          $ref: "#/components/schemas/ChatIdentity"
+          nullable: true
+        unread_count:
+          type: integer
+        channel:
+          type: string
+        locked_reference:
+          type: object
+          additionalProperties: true
+        updated_at:
+          type: string
+        can_transfer:
+          type: boolean
+        fulfillment_entry_enabled:
+          type: boolean
+    ChatAttachment:
+      type: object
+      required:
+        - id
+        - display_name
+        - media_type
+        - size_bytes
+        - scan_state
+      properties:
+        id:
+          type: string
+          format: uuid
+        display_name:
+          type: string
+        media_type:
+          type: string
+        size_bytes:
+          type: integer
+        scan_state:
+          type: string
+          enum:
+            - PENDING
+            - CLEAN
+            - REJECTED
+            - FAILED
+    ChatMessage:
+      type: object
+      required:
+        - id
+        - client_message_id
+        - body
+        - kind
+        - sender
+        - sent_at
+        - mine
+        - attachments
+        - read_by_recipient
+      properties:
+        id:
+          type: string
+          format: uuid
+        client_message_id:
+          type: string
+          format: uuid
+        body:
+          type: string
+        kind:
+          type: string
+          enum:
+            - TEXT
+            - SYSTEM
+            - ATTACHMENT
+        sender:
+          $ref: "#/components/schemas/ChatIdentity"
+        sent_at:
+          type: string
+        mine:
+          type: boolean
+        attachments:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatAttachment"
+        read_by_recipient:
+          type: boolean
+    ChatMessagePage:
+      type: object
+      required:
+        - items
+        - has_more
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatMessage"
+        has_more:
+          type: boolean
+        next_before:
+          type: string
+          format: uuid
+          nullable: true
+    ChatQuotationLine:
+      type: object
+      required:
+        - variant_id
+        - quantity
+        - unit_price_centavos
+        - description
+        - unit_code
+        - tax_category
+        - source_price_version_id
+        - source_tax_version_id
+      properties:
+        variant_id:
+          type: string
+          format: uuid
+        quantity:
+          type: string
+        unit_price_centavos:
+          type: integer
+        description:
+          type: string
+        unit_code:
+          type: string
+        tax_category:
+          type: string
+        source_price_version_id:
+          type: string
+          format: uuid
+        source_tax_version_id:
+          type: string
+          format: uuid
+    ChatQuotationChange:
+      type: object
+      required:
+        - path
+        - label
+        - before
+        - after
+      properties:
+        path:
+          type: string
+        label:
+          type: string
+        before: {}
+        after: {}
+    ChatQuotationMoney:
+      type: object
+      required:
+        - materials_payable_centavos
+        - materials_vat_centavos
+        - vendor_discount_centavos
+        - delivery_centavos
+        - nrpc_centavos
+        - commercial_total_centavos
+      properties:
+        materials_payable_centavos:
+          type: integer
+        materials_vat_centavos:
+          type: integer
+        vendor_discount_centavos:
+          type: integer
+        delivery_centavos:
+          type: integer
+        nrpc_centavos:
+          type: integer
+        commercial_total_centavos:
+          type: integer
+    ChatQuotationContent:
+      type: object
+      required:
+        - lines
+        - commercial
+        - fulfillment_method
+        - payment_method
+        - fulfillment_date
+        - changes
+        - original_changes
+        - price_source
+        - processing_fee_status
+      properties:
+        lines:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatQuotationLine"
+        commercial:
+          $ref: "#/components/schemas/ChatQuotationMoney"
+        fulfillment_method:
+          type: string
+        payment_method:
+          type: string
+        fulfillment_date:
+          type: string
+        delivery:
+          type: object
+          additionalProperties: true
+          nullable: true
+        nrpc:
+          type: object
+          additionalProperties: true
+          nullable: true
+        changes:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatQuotationChange"
+        original_changes:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatQuotationChange"
+        price_source:
+          type: string
+          enum:
+            - PRIVATE_TRANSACTION
+        processing_fee_status:
+          type: string
+    ChatQuotationVersion:
+      type: object
+      required:
+        - id
+        - version
+        - latest
+        - state
+        - published_at
+        - expires_at
+        - content_hash
+        - content
+        - viewed
+        - actions
+      properties:
+        id:
+          type: string
+          format: uuid
+        version:
+          type: integer
+        latest:
+          type: boolean
+        state:
+          type: string
+        published_at:
+          type: string
+        expires_at:
+          type: string
+        content_hash:
+          type: string
+        content:
+          $ref: "#/components/schemas/ChatQuotationContent"
+        viewed:
+          type: boolean
+        actions:
+          type: array
+          items:
+            type: string
+    ChatQuotation:
+      type: object
+      required:
+        - id
+        - state
+        - lock_version
+        - can_draft
+        - can_publish
+      properties:
+        id:
+          type: string
+          format: uuid
+        state:
+          type: string
+        lock_version:
+          type: integer
+        current_version_id:
+          type: string
+          format: uuid
+          nullable: true
+        accepted_order_id:
+          type: string
+          format: uuid
+          nullable: true
+        response_due_at:
+          type: string
+          nullable: true
+        draft:
+          type: object
+          additionalProperties: true
+          nullable: true
+        can_draft:
+          type: boolean
+        can_publish:
+          type: boolean
+    ChatQuotationPage:
+      type: object
+      required:
+        - versions
+        - has_more
+      properties:
+        quotation:
+          $ref: "#/components/schemas/ChatQuotation"
+          nullable: true
+        versions:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatQuotationVersion"
+        has_more:
+          type: boolean
+        page:
+          type: integer
+    ConversationDetail:
+      type: object
+      required:
+        - conversation
+        - messages
+        - quotations
+      properties:
+        conversation:
+          $ref: "#/components/schemas/ConversationView"
+        messages:
+          $ref: "#/components/schemas/ChatMessagePage"
+        quotations:
+          $ref: "#/components/schemas/ChatQuotationPage"
+    ConversationPage:
+      type: object
+      required:
+        - items
+        - page
+        - has_more
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConversationView"
+        page:
+          type: integer
+        has_more:
+          type: boolean
+    ChatCreate:
+      type: object
+      required:
+        - vendor_id
+      properties:
+        vendor_id:
+          type: string
+          format: uuid
+        listing_variant_id:
+          type: string
+          format: uuid
+        location_id:
+          type: string
+          format: uuid
+        heavy_vehicle_restriction:
+          type: string
+        alternate_drop_off_location_id:
+          type: string
+          format: uuid
+        access_instructions:
+          type: string
+        context_type:
+          type: string
+          enum:
+            - ITEM_BASED
+            - PROJECT_BASED
+    ChatSend:
+      type: object
+      required:
+        - client_message_id
+        - body
+      properties:
+        client_message_id:
+          type: string
+          format: uuid
+        body:
+          type: string
+          minLength: 1
+          maxLength: 5000
+    ChatRead:
+      type: object
+      required:
+        - through_message_id
+      properties:
+        through_message_id:
+          type: string
+          format: uuid
+    ChatTransfer:
+      type: object
+      required:
+        - handler_user_id
+        - lock_version
+        - reason
+      properties:
+        handler_user_id:
+          type: integer
+        lock_version:
+          type: integer
+        reason:
+          type: string
+          maxLength: 500
+    ChatHandler:
+      type: object
+      required:
+        - id
+        - display_name
+        - role
+      properties:
+        id:
+          type: integer
+        display_name:
+          type: string
+        role:
+          type: string
+    ChatDraftLine:
+      type: object
+      required:
+        - variant_id
+        - quantity
+        - unit_price_centavos
+      properties:
+        variant_id:
+          type: string
+          format: uuid
+        quantity:
+          type: string
+        unit_price_centavos:
+          type: integer
+          minimum: 1
+          maximum: 100000000000
+    ChatDraftContent:
+      type: object
+      required:
+        - lines
+        - fulfillment_method
+        - payment_method
+        - fulfillment_date
+      properties:
+        lines:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatDraftLine"
+          minItems: 1
+          maxItems: 100
+        fulfillment_method:
+          type: string
+          enum:
+            - PICKUP
+            - DELIVERY
+        payment_method:
+          type: string
+          enum:
+            - ONLINE
+        fulfillment_date:
+          type: string
+        deadline_hours:
+          type: integer
+          minimum: 1
+          maximum: 72
+          default: 24
+        vendor_discount_centavos:
+          type: integer
+        delivery:
+          type: object
+          additionalProperties: true
+        nrpc:
+          type: object
+          additionalProperties: true
+    ChatDraftSave:
+      type: object
+      required:
+        - lock_version
+        - draft
+      properties:
+        lock_version:
+          type: integer
+        draft:
+          $ref: "#/components/schemas/ChatDraftContent"
+    ChatPublish:
+      type: object
+      required:
+        - lock_version
+      properties:
+        lock_version:
+          type: integer
+    ChatDecision:
+      type: object
+      required:
+        - version_id
+      properties:
+        version_id:
+          type: string
+          format: uuid
+        content_hash:
+          type: string
+          minLength: 64
+          maxLength: 64
+        reason:
+          type: string
+          maxLength: 2000
+        nrpc_acknowledged:
+          type: boolean
+        nrpc_terms_version_id:
+          type: string
+          format: uuid
+    ChatDecisionResult:
+      type: object
+      required: []
+      properties:
+        order_id:
+          type: string
+          format: uuid
+          nullable: true
+    ChatId:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+          format: uuid
+    ChatRealtime:
+      type: object
+      required:
+        - enabled
+        - port
+        - scheme
+      properties:
+        inbox_channel:
+          type: string
+          nullable: true
+          description: Opaque private Buyer inbox channel without the private- prefix; null for non-Buyers. Receives inbox.changed invalidations only. Re-fetch configuration after reconnecting.
+        enabled:
+          type: boolean
+        key:
+          type: string
+          nullable: true
+        host:
+          type: string
+          nullable: true
+        port:
+          type: integer
+        scheme:
+          type: string
+    ChatChannelAuth:
+      type: object
+      required:
+        - socket_id
+        - channel_name
+      properties:
+        socket_id:
+          type: string
+        channel_name:
+          type: string
+    ChatChannelSignature:
+      type: object
+      required:
+        - auth
+      properties:
+        auth:
+          type: string
+    ConversationDetailResponse:
+      type: object
+      required:
+        - data
+        - meta
+        - errors
+      properties:
+        data:
+          $ref: "#/components/schemas/ConversationDetail"
+        meta:
+          type: object
+          additionalProperties: true
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiError"
+    ConversationPageResponse:
+      type: object
+      required:
+        - data
+        - meta
+        - errors
+      properties:
+        data:
+          $ref: "#/components/schemas/ConversationPage"
+        meta:
+          type: object
+          additionalProperties: true
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiError"
+    ChatQuotationPageResponse:
+      type: object
+      required:
+        - data
+        - meta
+        - errors
+      properties:
+        data:
+          $ref: "#/components/schemas/ChatQuotationPage"
+        meta:
+          type: object
+          additionalProperties: true
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiError"
+    ChatIdResponse:
+      type: object
+      required:
+        - data
+        - meta
+        - errors
+      properties:
+        data:
+          $ref: "#/components/schemas/ChatId"
+        meta:
+          type: object
+          additionalProperties: true
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiError"
+    ChatDecisionResultResponse:
+      type: object
+      required:
+        - data
+        - meta
+        - errors
+      properties:
+        data:
+          $ref: "#/components/schemas/ChatDecisionResult"
+        meta:
+          type: object
+          additionalProperties: true
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiError"
+    ChatRealtimeResponse:
+      type: object
+      required:
+        - data
+        - meta
+        - errors
+      properties:
+        data:
+          $ref: "#/components/schemas/ChatRealtime"
+        meta:
+          type: object
+          additionalProperties: true
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiError"
+    ChatHandlersResponse:
+      type: object
+      required:
+        - data
+        - meta
+        - errors
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatHandler"
+        meta:
+          type: object
+          additionalProperties: true
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiError"
+    ChatEmptyResponse:
+      type: object
+      required:
+        - meta
+        - errors
+      properties:
+        data:
+          nullable: true
+          type: object
+        meta:
+          type: object
+          additionalProperties: true
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiError"
     BuyerOriginRequest:
       description: Send location_id or latitude/longitude (never both). Omit both to use the primary saved location. radius_km defaults to the saved preference.
       type: object

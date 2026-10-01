@@ -59,7 +59,8 @@ final class FinancialSnapshotService
             throw new \LogicException('Financial snapshots are frozen only inside the acceptance transaction.');
         }
         $version = (int) DB::table('financial_snapshots')->where('order_id', $order->id)->max('version') + 1;
-        $feePolicyId = self::currentFeePolicyId();
+        $acceptedContent = json_decode((string) $orderSnapshot->snapshot, true);
+        $feePolicyId = array_key_exists('fee_policy_version_id', $acceptedContent) ? $acceptedContent['fee_policy_version_id'] : self::currentFeePolicyId();
         $matrix = FinancialCalculator::paymentMatrix($commercial, (string) $order->payment_method, null);
         $canonical = json_encode(['order_id' => (string) $order->id, 'version' => $version, 'order_snapshot_version' => (int) $orderSnapshot->version,
             'commercial' => $commercial, 'payment_matrix' => $matrix, 'fee_policy_version_id' => $feePolicyId, 'nrpc_record_id' => $nrpcRecordId], JSON_THROW_ON_ERROR);

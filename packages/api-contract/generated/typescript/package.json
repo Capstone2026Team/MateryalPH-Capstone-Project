@@ -1,6 +1,6 @@
 {
   "name": "@materyalph/api-client-ts",
-  "version": "1.0.0-phase.8",
+  "version": "1.0.0-phase.9",
   "description": "OpenAPI client for @materyalph/api-client-ts",
   "author": "OpenAPI-Generator",
   "repository": {

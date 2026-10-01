@@ -405,6 +405,9 @@ erDiagram
     ORDER_DELIVERY_SNAPSHOTS {
         uuid id PK
     }
+    ORDER_FULFILLMENT_ASSIGNMENTS {
+        uuid id PK
+    }
     ORDER_LINES {
         uuid id PK
     }
@@ -867,6 +870,7 @@ erDiagram
     ORDERS ||--|{ CANCELLATION_DECISIONS : "order_id → id"
     ORDERS ||--|{ CANCELLATION_REQUESTS : "order_id → id"
     ORDERS ||--o{ CHECKOUT_VENDOR_GROUPS : "order_id → id"
+    ORDERS ||--o{ CONVERSATIONS : "order_id → id"
     ORDERS ||--|{ DISPUTE_CASES : "order_id → id"
     ORDERS ||--|{ FEE_ASSESSMENT_EVENTS : "order_id → id"
     ORDERS ||--|{ FEE_ASSESSMENTS : "order_id → id"
@@ -876,6 +880,7 @@ erDiagram
     ORDERS ||--|{ NRPC_ACCEPTANCES : "order_id → id"
     ORDERS ||--|{ NRPC_RECORDS : "order_id → id"
     ORDERS ||--|{ ORDER_DELIVERY_SNAPSHOTS : "order_id → id"
+    ORDERS ||--|{ ORDER_FULFILLMENT_ASSIGNMENTS : "order_id → id"
     ORDERS ||--|{ ORDER_LINES : "order_id → id"
     ORDERS ||--|{ ORDER_SNAPSHOTS : "order_id → id"
     ORDERS ||--|{ ORDER_STATUS_HISTORY : "order_id → id"
@@ -972,6 +977,7 @@ erDiagram
     USERS ||--o{ CONVERSATION_ASSIGNMENTS : "assigned_by_user_id → id"
     USERS ||--|{ CONVERSATION_ASSIGNMENTS : "assigned_user_id → id"
     USERS ||--|{ CONVERSATION_PARTICIPANTS : "user_id → id"
+    USERS ||--o{ CONVERSATIONS : "handler_user_id → id"
     USERS ||--|{ DATA_EXPORTS : "requested_by_user_id → id"
     USERS ||--|{ DELIVERY_ASSIGNMENTS : "assigned_by_user_id → id"
     USERS ||--o{ DISPUTE_APPEALS : "actor_user_id → id"
@@ -1013,6 +1019,8 @@ erDiagram
     USERS ||--o{ NRPC_ACCEPTANCES : "actor_user_id → id"
     USERS ||--o{ NRPC_RECORDS : "actor_user_id → id"
     USERS ||--|{ ORDER_DELIVERY_SNAPSHOTS : "confirmed_by_user_id → id"
+    USERS ||--|{ ORDER_FULFILLMENT_ASSIGNMENTS : "assigned_by_user_id → id"
+    USERS ||--|{ ORDER_FULFILLMENT_ASSIGNMENTS : "user_id → id"
     USERS ||--o{ ORDER_SNAPSHOTS : "created_by_user_id → id"
     USERS ||--o{ ORDER_STATUS_HISTORY : "actor_user_id → id"
     USERS ||--|{ PHYSICAL_PAYMENT_RECORDS : "recorded_by_user_id → id"

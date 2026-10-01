@@ -4,7 +4,8 @@ export { VendorTeamInvitations } from './vendor-team-invitations'
 export { VendorTeamActivity } from './vendor-team-activity'
 export { DateFilter, ALL_DATES, type DateFilterRange } from './date-filter'
 export { SectionWorkspace, PreviewMetrics } from './section-workspace'
-export { DashboardHeader, MetricCard } from './dashboard-patterns'
+export { DashboardHeader, MetricCard, DashboardPanel, DashboardEmptyState, DashboardPreviewSection } from './dashboard-patterns'
+export { useAutomaticRefresh } from './use-automatic-refresh'
 export { Field, FormErrors, type FieldProps } from './field'
 export { StatusMessage } from './status-message'
 export { PhoneField, type PhoneFieldProps } from './phone-field'
@@ -44,3 +45,5 @@ export { StoreOperationSchedule, StoreHours, emptyStoreSchedule, storeScheduleEr
 
 export { ProfileDetails, ProfileSplitPanel } from './profile-details'
 export { OrderStateRows, DeadlineCountdown, MoneyBreakdown, formatPesoCentavos, orderStateLabel, orderStateTone } from './order-patterns'
+
+export { ConversationHeader, ConversationInbox, ChatMessageBubble, ChatAvatar, QuotationVersionCard, ChatAttachmentButton, chatRoleLabel, conversationLabel } from './messaging-patterns'

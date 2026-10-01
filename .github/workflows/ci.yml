@@ -119,6 +119,7 @@ jobs:
           npm run test:geography-contract -- /tmp/materyalph-routes.json
           npm run test:procurement-contract -- /tmp/materyalph-routes.json
           npm run test:orders-contract -- /tmp/materyalph-routes.json
+          npm run test:messaging-contract -- /tmp/materyalph-routes.json
 
       - name: Generate schema-derived architecture evidence
         run: php artisan materyalph:schema-document

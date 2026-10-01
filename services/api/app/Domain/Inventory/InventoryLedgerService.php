@@ -288,7 +288,7 @@ final class InventoryLedgerService
             ->leftJoin('listing_price_versions as pv', fn ($join) => $join->on('pv.listing_variant_id', '=', 'v.id')->where('pv.price_kind', 'ORDINARY')->whereNull('pv.retired_at'))
             ->whereIn('v.id', $variantIds)
             ->get(['v.id', 'v.sku', 'v.label', 'u.code as unit_code', 'l.id as listing_id', 'l.display_name', 'l.status as listing_status',
-                'i.id as item_id', 'i.quantity_on_hand', 'i.hard_reserved_quantity', 'i.soft_held_quantity', 'i.reorder_level', 'i.confirmed_at', 'i.lock_version', 'i.updated_at',
+                'i.id as item_id', 'i.quantity_on_hand', 'i.hard_reserved_quantity', DB::raw("(SELECT COALESCE(SUM(h.quantity), 0) FROM inventory_holds h WHERE h.inventory_item_id = i.id AND h.hold_type = 'SOFT' AND h.state = 'ACTIVE' AND (h.expires_at IS NULL OR h.expires_at > CURRENT_TIMESTAMP)) as soft_held_quantity"), 'i.reorder_level', 'i.confirmed_at', 'i.lock_version', 'i.updated_at',
                 'pv.id as price_id', 'pv.version as price_version', 'pv.amount_centavos', 'pv.tax_category', 'pv.effective_at'])->keyBy('id');
         $policies = DB::table('auto_accept_policies')->whereIn('listing_variant_id', $variantIds)->get()->keyBy('listing_variant_id');
         $comparable = DB::table('listing_comparable_assignments')->whereIn('listing_variant_id', $variantIds)->whereNull('effective_until')->where('mapping_state', 'APPROVED')->pluck('material_comparable_group_version_id', 'listing_variant_id');

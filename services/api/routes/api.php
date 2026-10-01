@@ -87,3 +87,5 @@ Route::prefix('mobile/auth')->middleware('auth.transport:MOBILE')->group(functio
         Route::post('/logout', LogoutController::class);
     });
 });
+
+require __DIR__.'/messaging.php';

@@ -3,7 +3,7 @@ import { useId, useState, type ReactNode } from 'react'
 import { Button } from './button'
 import { ALL_DATES, DateFilter } from './date-filter'
 
-export function SectionWorkspace({ sections, dateFilter = false, beforeSectionChange }: { sections: { label: string; content: ReactNode }[]; dateFilter?: boolean; beforeSectionChange?: () => boolean | Promise<boolean> }) {
+export function SectionWorkspace({ sections, dateFilter = false, beforeSectionChange, dashboard = false }: { sections: { label: string; content: ReactNode }[]; dateFilter?: boolean; beforeSectionChange?: () => boolean | Promise<boolean>; dashboard?: boolean }) {
   const [selected, setSelected] = useState(0)
   const [changing, setChanging] = useState(false)
   async function select(index: number) {
@@ -17,9 +17,9 @@ export function SectionWorkspace({ sections, dateFilter = false, beforeSectionCh
   const [range, setRange] = useState(ALL_DATES)
   const id = useId()
   return <div className="space-y-6">
-    <div className="flex flex-col-reverse gap-4 xl:flex-row xl:items-start xl:justify-between"><nav aria-label="Workspace sections" className="flex min-w-0 max-w-full flex-wrap gap-1 rounded-surface border border-border-default bg-surface-primary p-1">{sections.map((section, index) => <Button key={section.label} className="text-sm" variant={selected === index ? 'primary' : 'quiet'} aria-pressed={selected === index} aria-controls={id} disabled={changing} onClick={() => void select(index)}>{section.label}</Button>)}</nav>{dateFilter && <DateFilter value={range} onChange={setRange} />}</div>
+    <div className="flex flex-col-reverse gap-4 xl:flex-row xl:items-start xl:justify-between"><nav aria-label="Workspace sections" className={`${dashboard ? 'grid grid-cols-2 md:flex md:flex-wrap' : 'flex flex-wrap'} min-w-0 max-w-full gap-1 rounded-surface border border-border-default bg-surface-primary p-1`}>{sections.map((section, index) => <Button key={section.label} className={dashboard ? 'min-w-0 px-3 py-2 text-xs sm:text-sm' : 'text-sm'} variant={selected === index ? 'primary' : 'quiet'} aria-pressed={selected === index} aria-controls={id} disabled={changing} onClick={() => void select(index)}>{section.label}</Button>)}</nav>{dateFilter && <DateFilter value={range} onChange={setRange} />}</div>
     {dateFilter && <p className="border-l-2 border-brand-orange-300 pl-3 text-xs leading-5 text-text-secondary">Period: {range.label}{range.from || range.to ? ` · ${range.from || 'Any start'} — ${range.to || 'Any end'}` : ''}. Date selection is a UI preview; current counts and demonstration data are not date-filtered.</p>}
-    <section id={id} aria-label={sections[selected]?.label}>{sections[selected]?.content}</section>
+    <section id={id} aria-label={sections[selected]?.label} className={dashboard ? 'space-y-5' : undefined}>{dashboard && <div className="flex items-center gap-3"><h2 className="text-xs font-semibold uppercase tracking-widest text-action-primary">{sections[selected]?.label}</h2><div className="h-px flex-1 bg-border-default" /></div>}{sections[selected]?.content}</section>
   </div>
 }
 

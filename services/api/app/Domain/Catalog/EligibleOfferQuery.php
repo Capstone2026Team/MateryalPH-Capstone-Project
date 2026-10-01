@@ -14,7 +14,8 @@ use Illuminate\Support\Facades\DB;
  * current offer lists and the daily capture. An eligible offer is one listing variant of an active Tier 2
  * organization whose listing is ACTIVE and publishable, meets any required product compliance, carries a
  * current finite positive ordinary public price with a permitted tax classification, and has confirmed,
- * non-stale inventory with a positive quantity available to sell. Exact quantities never leave this query.
+ * non-stale inventory with a positive quantity available to sell. Quotation versions and financial snapshots
+ * are PRIVATE_TRANSACTION sources and never join this public ordinary-listing-price relation. Exact quantities never leave this query.
  */
 final class EligibleOfferQuery
 {

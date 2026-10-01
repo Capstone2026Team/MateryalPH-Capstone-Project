@@ -204,6 +204,45 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(CatalogVariantsSave.serializer)
       ..add(CatalogVolumeTier.serializer)
       ..add(CatalogVolumeTierInput.serializer)
+      ..add(ChatAttachment.serializer)
+      ..add(ChatAttachmentScanStateEnum.serializer)
+      ..add(ChatChannelAuth.serializer)
+      ..add(ChatChannelSignature.serializer)
+      ..add(ChatCreate.serializer)
+      ..add(ChatCreateContextTypeEnum.serializer)
+      ..add(ChatDecision.serializer)
+      ..add(ChatDecisionResult.serializer)
+      ..add(ChatDecisionResultResponse.serializer)
+      ..add(ChatDraftContent.serializer)
+      ..add(ChatDraftContentFulfillmentMethodEnum.serializer)
+      ..add(ChatDraftContentPaymentMethodEnum.serializer)
+      ..add(ChatDraftLine.serializer)
+      ..add(ChatDraftSave.serializer)
+      ..add(ChatEmptyResponse.serializer)
+      ..add(ChatHandler.serializer)
+      ..add(ChatHandlersResponse.serializer)
+      ..add(ChatId.serializer)
+      ..add(ChatIdResponse.serializer)
+      ..add(ChatIdentity.serializer)
+      ..add(ChatMessage.serializer)
+      ..add(ChatMessageKindEnum.serializer)
+      ..add(ChatMessagePage.serializer)
+      ..add(ChatPublish.serializer)
+      ..add(ChatQuotation.serializer)
+      ..add(ChatQuotationChange.serializer)
+      ..add(ChatQuotationContent.serializer)
+      ..add(ChatQuotationContentPriceSourceEnum.serializer)
+      ..add(ChatQuotationLine.serializer)
+      ..add(ChatQuotationMoney.serializer)
+      ..add(ChatQuotationPage.serializer)
+      ..add(ChatQuotationPageResponse.serializer)
+      ..add(ChatQuotationVersion.serializer)
+      ..add(ChatRead.serializer)
+      ..add(ChatRealtime.serializer)
+      ..add(ChatRealtimeResponse.serializer)
+      ..add(ChatSend.serializer)
+      ..add(ChatStore.serializer)
+      ..add(ChatTransfer.serializer)
       ..add(CheckoutChildOrder.serializer)
       ..add(CheckoutChildOrderConfirmationSourceEnum.serializer)
       ..add(CheckoutChildOrderFulfillmentMethodEnum.serializer)
@@ -248,6 +287,13 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(ComplianceSubmissionConfirmedEnum.serializer)
       ..add(ComplianceSubmissionSummary.serializer)
       ..add(ComplianceSubmissionSummaryStatusEnum.serializer)
+      ..add(ConversationDetail.serializer)
+      ..add(ConversationDetailResponse.serializer)
+      ..add(ConversationPage.serializer)
+      ..add(ConversationPageResponse.serializer)
+      ..add(ConversationView.serializer)
+      ..add(ConversationViewContextTypeEnum.serializer)
+      ..add(ConversationViewPurposeEnum.serializer)
       ..add(CsrfEnvelope.serializer)
       ..add(CsrfEnvelopeAllOfData.serializer)
       ..add(DatasetLabel.serializer)
@@ -982,6 +1028,66 @@ Serializers _$serializers = (Serializers().toBuilder()
               BuiltList, const [const FullType(CatalogVariantInput)]),
           () => ListBuilder<CatalogVariantInput>())
       ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ChatAttachment)]),
+          () => ListBuilder<ChatAttachment>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ChatDraftLine)]),
+          () => ListBuilder<ChatDraftLine>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ChatHandler)]),
+          () => ListBuilder<ChatHandler>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ApiError)]),
+          () => ListBuilder<ApiError>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ChatMessage)]),
+          () => ListBuilder<ChatMessage>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ChatQuotationLine)]),
+          () => ListBuilder<ChatQuotationLine>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(
+              BuiltList, const [const FullType(ChatQuotationChange)]),
+          () => ListBuilder<ChatQuotationChange>())
+      ..addBuilderFactory(
+          const FullType(
+              BuiltList, const [const FullType(ChatQuotationChange)]),
+          () => ListBuilder<ChatQuotationChange>())
+      ..addBuilderFactory(
+          const FullType(
+              BuiltList, const [const FullType(ChatQuotationVersion)]),
+          () => ListBuilder<ChatQuotationVersion>())
+      ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(CheckoutChildOrder)]),
           () => ListBuilder<CheckoutChildOrder>())
       ..addBuilderFactory(
@@ -1020,6 +1126,9 @@ Serializers _$serializers = (Serializers().toBuilder()
             ])
           ]),
           () => ListBuilder<BuiltMap<String, JsonObject?>>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ConversationView)]),
+          () => ListBuilder<ConversationView>())
       ..addBuilderFactory(
           const FullType(
               BuiltList, const [const FullType(DeliveryEstimateOption)]),
@@ -1409,6 +1518,9 @@ Serializers _$serializers = (Serializers().toBuilder()
           const FullType(BuiltList, const [const FullType(String)]),
           () => ListBuilder<String>())
       ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(String)]),
+          () => ListBuilder<String>())
+      ..addBuilderFactory(
           const FullType(
               BuiltList, const [const FullType(DeliveryPlanVehicle)]),
           () => ListBuilder<DeliveryPlanVehicle>())
@@ -1564,6 +1676,81 @@ Serializers _$serializers = (Serializers().toBuilder()
             const FullType.nullable(JsonObject)
           ]),
           () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ApiError)]),
+          () => ListBuilder<ApiError>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ApiError)]),
+          () => ListBuilder<ApiError>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ApiError)]),
+          () => ListBuilder<ApiError>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ApiError)]),
+          () => ListBuilder<ApiError>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ApiError)]),
+          () => ListBuilder<ApiError>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ApiError)]),
+          () => ListBuilder<ApiError>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ApiError)]),
+          () => ListBuilder<ApiError>())
       ..addBuilderFactory(
           const FullType(BuiltMap, const [
             const FullType(String),

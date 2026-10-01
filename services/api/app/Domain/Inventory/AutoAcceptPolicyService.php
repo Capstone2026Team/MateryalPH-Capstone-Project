@@ -227,7 +227,7 @@ final class AutoAcceptPolicyService
         $row = DB::table('listing_variants as v')->join('vendor_listings as l', 'l.id', '=', 'v.vendor_listing_id')->join('units as u', 'u.id', '=', 'v.unit_id')
             ->leftJoin('inventory_items as i', 'i.listing_variant_id', '=', 'v.id')->leftJoin('auto_accept_policies as a', 'a.listing_variant_id', '=', 'v.id')
             ->where('v.id', $variantId)->where('l.vendor_organization_id', $organizationId)->whereNull('l.removed_at')
-            ->first(['v.id', 'v.sku', 'v.label', 'u.code as unit_code', 'l.id as listing_id', 'l.display_name', 'l.status as listing_status', 'i.quantity_on_hand', 'i.hard_reserved_quantity', 'i.soft_held_quantity', 'a.id as policy_id']);
+            ->first(['v.id', 'v.sku', 'v.label', 'u.code as unit_code', 'l.id as listing_id', 'l.display_name', 'l.status as listing_status', 'i.quantity_on_hand', 'i.hard_reserved_quantity', DB::raw("(SELECT COALESCE(SUM(h.quantity), 0) FROM inventory_holds h WHERE h.inventory_item_id = i.id AND h.hold_type = 'SOFT' AND h.state = 'ACTIVE' AND (h.expires_at IS NULL OR h.expires_at > CURRENT_TIMESTAMP)) as soft_held_quantity"), 'a.id as policy_id']);
         if ($row === null) {
             throw new AuthenticationException('RESOURCE_NOT_FOUND', 'The product variant is unavailable.', 404);
         }

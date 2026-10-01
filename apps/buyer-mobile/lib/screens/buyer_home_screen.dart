@@ -1,3 +1,5 @@
+import '../features/messaging/messaging_repository.dart';
+import '../features/messaging/messaging_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -31,6 +33,7 @@ class BuyerHomeScreen extends StatefulWidget {
     this.discoveryRepository,
     this.procurementRepository,
     this.ordersRepository,
+    this.messagingRepository,
     this.deviceLocation = const GeolocatorDeviceLocationService(),
     this.mapBuilder = defaultSupplierMapBuilder,
   });
@@ -41,6 +44,7 @@ class BuyerHomeScreen extends StatefulWidget {
   final DiscoveryRepository? discoveryRepository;
   final ProcurementRepository? procurementRepository;
   final OrdersRepository? ordersRepository;
+  final MessagingRepository? messagingRepository;
   final DeviceLocationService deviceLocation;
   final SupplierMapBuilder mapBuilder;
 
@@ -96,8 +100,18 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
           cart: _cart,
           repository: _procurement!,
           openStoreProfile: _openStore,
+          messaging: _messaging,
+          orders: _orders,
           onOpenMap: () => _select(0),
         );
+  late final MessagingRepository? _messaging =
+      widget.messagingRepository ??
+      (widget.repository == null
+          ? null
+          : ApiMessagingRepository(
+              client: widget.repository!.apiClient,
+              onSessionExpired: _expireSession,
+            ));
   bool _cartLoaded = false;
 
   @override
@@ -190,6 +204,16 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
   }
 
   Widget _destinationPage() {
+    if (_destination == 3 && _messaging != null) {
+      return MessagingScreen(
+        repository: _messaging,
+        orders: _orders,
+        onOpenCart: _navigation == null
+            ? null
+            : () => _navigation.openCart(context),
+        onOpenNotifications: () => _unavailable('Notifications'),
+      );
+    }
     if (_destination == 4 && widget.repository != null) {
       return BuyerProfileScreen(
         repository: widget.repository!,

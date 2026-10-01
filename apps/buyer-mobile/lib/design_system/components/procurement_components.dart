@@ -550,6 +550,8 @@ class PillSearchField extends StatelessWidget {
     this.onChanged,
     this.onSubmitted,
     this.onSearch,
+    this.onClear,
+    this.textStyle,
     this.autofocus = false,
     this.hintText = 'Search any materials',
   });
@@ -562,6 +564,8 @@ class PillSearchField extends StatelessWidget {
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
   final VoidCallback? onSearch;
+  final VoidCallback? onClear;
+  final TextStyle? textStyle;
   final bool autofocus;
   final String hintText;
 
@@ -626,7 +630,7 @@ class PillSearchField extends StatelessWidget {
       textInputAction: TextInputAction.search,
       onChanged: onChanged,
       onSubmitted: onSubmitted,
-      style: const TextStyle(fontWeight: FontWeight.w600),
+      style: textStyle ?? const TextStyle(fontWeight: FontWeight.w600),
       decoration: InputDecoration(
         hintText: hintText,
         counterText: '',
@@ -638,9 +642,12 @@ class PillSearchField extends StatelessWidget {
           borderSide: const BorderSide(color: BuyerTheme.action, width: 2),
         ),
         suffixIcon: IconButton(
-          tooltip: 'Search',
-          onPressed: onSearch,
-          icon: const Icon(LucideIcons.search, color: BuyerTheme.action),
+          tooltip: onClear == null ? 'Search' : 'Clear search',
+          onPressed: onClear ?? onSearch,
+          icon: Icon(
+            onClear == null ? LucideIcons.search : LucideIcons.x,
+            color: BuyerTheme.action,
+          ),
         ),
       ),
     );
