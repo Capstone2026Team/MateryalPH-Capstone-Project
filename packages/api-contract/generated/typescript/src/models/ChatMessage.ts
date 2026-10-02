@@ -20,6 +20,13 @@ import {
     ChatIdentityToJSON,
     ChatIdentityToJSONTyped,
 } from './ChatIdentity';
+import type { ChatProduct } from './ChatProduct';
+import {
+    ChatProductFromJSON,
+    ChatProductFromJSONTyped,
+    ChatProductToJSON,
+    ChatProductToJSONTyped,
+} from './ChatProduct';
 import type { ChatAttachment } from './ChatAttachment';
 import {
     ChatAttachmentFromJSON,
@@ -70,6 +77,10 @@ export interface ChatMessage {
      *
      */
     readByRecipient: boolean;
+    /**
+     *
+     */
+    product?: ChatProduct;
 }
 
 
@@ -80,6 +91,8 @@ export const ChatMessageKindEnum = {
     Text: 'TEXT',
     System: 'SYSTEM',
     Attachment: 'ATTACHMENT',
+    Product: 'PRODUCT',
+    TextWithProduct: 'TEXT_WITH_PRODUCT',
 } as const;
 export type ChatMessageKindEnum = typeof ChatMessageKindEnum[keyof typeof ChatMessageKindEnum];
 
@@ -119,6 +132,7 @@ export function ChatMessageFromJSONTyped(json: any, ignoreDiscriminator: boolean
         'mine': json['mine'],
         'attachments': ((json['attachments'] as Array<any>).map(ChatAttachmentFromJSON)),
         'readByRecipient': json['read_by_recipient'],
+        'product': json['product'] == null ? undefined : ChatProductFromJSON(json['product']),
     };
 }
 
@@ -142,6 +156,7 @@ export function ChatMessageToJSONTyped(value?: ChatMessage | null, ignoreDiscrim
         'mine': value['mine'],
         'attachments': ((value['attachments'] as Array<any>).map(ChatAttachmentToJSON)),
         'read_by_recipient': value['readByRecipient'],
+        'product': ChatProductToJSON(value['product']),
     };
 }
 

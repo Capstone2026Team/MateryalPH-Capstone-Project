@@ -8,6 +8,7 @@ use App\Domain\Catalog\EligibleOfferQuery;
 use App\Domain\Geography\PlacesProvider;
 use App\Domain\Geography\RouteProvider;
 use App\Domain\Identity\AuthenticationException;
+use App\Domain\Identity\TokenSessionService;
 use App\Domain\Messaging\BuyerInboxChannel;
 use App\Domain\Messaging\ConversationAccess;
 use App\Domain\Messaging\ConversationBroadcast;
@@ -18,6 +19,7 @@ use App\Domain\Vendors\VendorFileScanner;
 use Carbon\CarbonImmutable;
 use Database\Seeders\SystemFoundationSeeder;
 use Illuminate\Contracts\Broadcasting\Broadcaster;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -65,9 +67,204 @@ final class PhaseNineMessagingTest extends TestCase
         return $this->postJson('/api/v1/buyers/conversations', ['vendor_id' => $vendor, 'listing_variant_id' => $variant], ['Idempotency-Key' => (string) Str::uuid7()])->assertCreated()->json('data.id');
     }
 
+    public function test_store_chat_can_start_later_quotations_without_mutating_accepted_terms_or_replaying_into_another_order(): void
+    {
+        [$store, $owner, $listing] = $this->pickupStore('Repeat quotations', [['price' => 1800, 'qty' => '50']]);
+        $variant = $this->variantIds($listing)[0];
+        $buyer = $this->buyer();
+        $id = $this->inquiry($store->id, $variant);
+        $vendorPath = '/api/v1/vendor/conversations/'.$id.'/quotation';
+        $buyerPath = '/api/v1/buyers/conversations/'.$id.'/quotation';
+        $this->signInStoreMember($owner);
+        $first = $this->publishQuote($id, $this->draftInput($variant));
+        $v = $first['versions'][0];
+        $this->postJson($vendorPath.'/start', ['lock_version' => $first['quotation']['lock_version']], ['Idempotency-Key' => (string) Str::uuid7()])->assertConflict();
+        $this->signInBuyer($buyer);
+        $acceptKey = (string) Str::uuid7();
+        $decision = ['version_id' => $v['id'], 'content_hash' => $v['content_hash']];
+        $order = $this->postJson($buyerPath.'/accept', $decision, ['Idempotency-Key' => $acceptKey])->assertOk()->json('data.order_id');
+        $frozen = DB::table('quotation_versions')->where('id', $v['id'])->first();
+        $accepted = DB::table('quotations')->where('id', $first['quotation']['id'])->first();
+        $this->signInStoreMember($owner);
+        $startKey = (string) Str::uuid7();
+        $next = $this->postJson($vendorPath.'/start', ['lock_version' => $accepted->lock_version], ['Idempotency-Key' => $startKey])->assertOk()
+            ->assertJsonPath('data.versions.0.state', 'ACCEPTED')->assertJsonPath('data.versions.0.accepted_order_id', $order)->json('data');
+        $this->postJson($vendorPath.'/start', ['lock_version' => $accepted->lock_version], ['Idempotency-Key' => $startKey])->assertOk()->assertJsonPath('data.quotation.id', $next['quotation']['id']);
+        self::assertNotSame($accepted->id, $next['quotation']['id']);
+        self::assertSame((int) $accepted->lock_version + 1, $next['quotation']['lock_version']);
+        $this->putJson($vendorPath.'/draft', ['lock_version' => $accepted->lock_version, 'draft' => $this->draftInput($variant)])->assertConflict();
+        $saved = $this->putJson($vendorPath.'/draft', ['lock_version' => $next['quotation']['lock_version'], 'draft' => $this->draftInput($variant)])->assertOk()->json('data.quotation.lock_version');
+        $later = $this->postJson($vendorPath.'/publish', ['lock_version' => $saved], ['Idempotency-Key' => (string) Str::uuid7()])->assertOk()->json('data.versions.0');
+        $this->signInBuyer($buyer);
+        $this->postJson($buyerPath.'/accept', $decision, ['Idempotency-Key' => $acceptKey])->assertOk()->assertJsonPath('data.order_id', $order);
+        $this->postJson($buyerPath.'/accept', $decision, ['Idempotency-Key' => (string) Str::uuid7()])->assertConflict();
+        $secondOrder = $this->postJson($buyerPath.'/accept', ['version_id' => $later['id'], 'content_hash' => $later['content_hash']], ['Idempotency-Key' => (string) Str::uuid7()])->assertOk()->json('data.order_id');
+        self::assertNotSame($order, $secondOrder);
+        self::assertEquals($frozen, DB::table('quotation_versions')->where('id', $v['id'])->first());
+        self::assertEquals($accepted, DB::table('quotations')->where('id', $accepted->id)->first());
+        self::assertSame(2, DB::table('quotations')->where('conversation_id', $id)->count());
+        self::assertSame(1, DB::table('conversations')->count());
+        $this->getJson('/api/v1/buyers/conversations/'.$id)->assertOk()->assertJsonPath('data.quotations.versions.1.accepted_order_id', $order);
+        $this->signInStoreMember($owner);
+        DB::table('conversations')->where('id', $id)->update(['context_type' => 'PROJECT_BASED']);
+        $this->postJson($vendorPath.'/start', ['lock_version' => 1], ['Idempotency-Key' => (string) Str::uuid7()])->assertConflict();
+    }
+
+    public function test_inboxes_with_real_profiles_use_user_photo_storage_and_allow_product_free_reuse(): void
+    {
+        [$store, $owner] = $this->pickupStore('Profile regression');
+        $buyer = $this->buyer();
+        foreach ([$owner, $buyer] as $user) {
+            DB::table('user_profiles')->updateOrInsert(['user_id' => $user->id], ['id' => (string) Str::uuid7(), 'full_name' => 'Public participant', 'created_at' => now(), 'updated_at' => now()]);
+        }
+        $owner->forceFill(['profile_photo_key' => 'test-avatar.png', 'profile_photo_disk' => 'local'])->save();
+        Storage::disk('local')->put('test-avatar.png', 'fixture');
+        $key = (string) Str::uuid7();
+        $id = $this->postJson('/api/v1/buyers/conversations', ['vendor_id' => $store->id], ['Idempotency-Key' => $key])->assertCreated()->json('data.id');
+        $this->postJson('/api/v1/buyers/conversations', ['vendor_id' => $store->id], ['Idempotency-Key' => (string) Str::uuid7()])->assertCreated()->assertJsonPath('data.id', $id);
+        $this->postJson('/api/v1/buyers/conversations', ['vendor_id' => $store->id], ['Idempotency-Key' => $key])->assertCreated()->assertJsonPath('data.id', $id);
+        $this->getJson('/api/v1/buyers/conversations')->assertOk()->assertJsonPath('data.items.0.handler.avatar_path', '/conversations/'.$id.'/avatars/'.$owner->id);
+        $this->get('/api/v1/buyers/conversations/'.$id.'/avatars/'.$owner->id)->assertOk();
+        // Exercise the real mobile bearer transport rather than only actingAs.
+        $tokens = app(TokenSessionService::class)->start($buyer, 'MOBILE', null, null, null);
+        $this->app['auth']->forgetGuards();
+        $response = $this->withToken($tokens->accessToken)->getJson('/api/v1/buyers/conversations');
+        $response->assertOk()->assertJsonCount(1, 'data.items')->assertJsonPath('errors', []);
+        $this->flushHeaders();
+        $this->withHeader('X-CSRF-Token', 'test-csrf');
+        $this->signInStoreMember($owner);
+        $this->getJson('/api/v1/vendor/conversations')->assertOk()->assertJsonPath('data.items.0.buyer.display_name', 'Public participant');
+        self::assertSame(1, DB::table('conversations')->where('buyer_profile_id', $this->buyerProfileId($buyer))->count());
+    }
+
+    public function test_product_free_chat_can_set_owned_delivery_details_but_not_change_published_terms(): void
+    {
+        [$store, $owner, $listing] = $this->pickupStore('Delivery later');
+        $buyer = $this->buyer();
+        $location = $this->savedLocation($buyer, 'Delivery site', 0, 0);
+        $id = $this->postJson('/api/v1/buyers/conversations', ['vendor_id' => $store->id], ['Idempotency-Key' => (string) Str::uuid7()])->assertCreated()->json('data.id');
+        $path = '/api/v1/buyers/conversations/'.$id;
+        $input = ['lock_version' => 1, 'location_id' => $location, 'heavy_vehicle_restriction' => 'NO'];
+        $this->putJson($path.'/destination', $input)->assertOk();
+        $this->getJson($path)->assertOk()->assertJsonPath('data.conversation.locked_reference.destination.intended.location_id', $location);
+        $this->putJson($path.'/destination', $input)->assertConflict();
+        $this->putJson($path.'/destination', array_replace($input, ['lock_version' => 2, 'heavy_vehicle_restriction' => 'YES']))->assertUnprocessable();
+        $other = $this->buyer();
+        $otherLocation = $this->savedLocation($other, 'Private site', 0, 0);
+        $this->putJson($path.'/destination', array_replace($input, ['location_id' => $otherLocation]))->assertNotFound();
+        $this->signInBuyer($buyer);
+        $this->putJson($path.'/destination', array_replace($input, ['location_id' => $otherLocation, 'lock_version' => 2]))->assertUnprocessable();
+        $this->signInStoreMember($owner);
+        $variant = $this->variantIds($listing)[0];
+        $published = $this->publishQuote($id, $this->draftInput($variant));
+        $this->signInBuyer($buyer);
+        $this->putJson($path.'/destination', array_replace($input, ['lock_version' => 2]))->assertConflict()->assertJsonPath('errors.0.code', 'DESTINATION_LOCKED');
+        $this->signInStoreMember($owner);
+        $this->postJson('/api/v1/vendor/conversations/'.$id.'/quotation/withdraw', ['version_id' => $published['versions'][0]['id']], ['Idempotency-Key' => (string) Str::uuid7()])->assertOk();
+        $before = DB::table('quotations')->where('conversation_id', $id)->value('lock_version');
+        $this->signInBuyer($buyer);
+        $this->putJson($path.'/destination', array_replace($input, ['lock_version' => 2]))->assertOk();
+        self::assertSame((int) $before + 1, (int) DB::table('quotations')->where('conversation_id', $id)->value('lock_version'));
+        self::assertSame(1, DB::table('quotation_versions')->count());
+    }
+
+    public function test_product_messages_snapshot_reject_cross_store_and_retry_without_duplicate(): void
+    {
+        [$store, $owner, $listing] = $this->pickupStore('Product cards', [['price' => 1800], ['price' => 2200]]);
+        [$other, , $otherListing] = $this->pickupStore('Other store');
+        $variants = $this->variantIds($listing);
+        $this->buyer();
+        $id = $this->inquiry($store->id, $variants[0]);
+        $path = '/api/v1/buyers/conversations/'.$id;
+        $this->getJson($path.'/products')->assertOk()->assertJsonCount(2, 'data.items');
+        $this->getJson($path.'/products?q=does-not-exist')->assertOk()->assertJsonCount(0, 'data.items');
+        $key = (string) Str::uuid7();
+        $input = ['product_id' => $variants[0], 'client_message_id' => $key];
+        $message = $this->postJson($path.'/messages', $input)->assertCreated()->json('data.id');
+        $this->postJson($path.'/messages', $input)->assertCreated()->assertJsonPath('data.id', $message);
+        $this->postJson($path.'/messages', $input + ['body' => 'Changed'])->assertConflict();
+        $this->postJson($path.'/messages', ['product_id' => $this->variantIds($otherListing)[0], 'client_message_id' => (string) Str::uuid7()])->assertUnprocessable();
+        $this->postJson($path.'/messages', ['client_message_id' => (string) Str::uuid7()])->assertUnprocessable();
+        $this->postJson($path.'/messages', ['product_id' => $variants[1], 'body' => 'And this one', 'client_message_id' => (string) Str::uuid7()])->assertCreated();
+        $snapshot = $this->getJson($path)->assertOk()->json('data.messages.items.0.product');
+        DB::table('vendor_listings')->where('id', $listing)->update(['display_name' => 'Changed product', 'status' => 'INACTIVE']);
+        $this->getJson($path)->assertOk()->assertJsonPath('data.messages.items.0.product.name', $snapshot['name'])->assertJsonPath('data.messages.items.0.product.price_centavos', 1800)->assertJsonPath('data.messages.items.0.product.available', false);
+        $this->postJson($path.'/messages', $input)->assertCreated()->assertJsonPath('data.id', $message);
+        $this->signInStoreMember($owner);
+        $this->getJson('/api/v1/vendor/conversations')->assertOk()->assertJsonPath('data.items.0.unread_count', 2);
+        $last = DB::table('messages')->where('conversation_id', $id)->orderByDesc('id')->value('id');
+        $this->postJson('/api/v1/vendor/conversations/'.$id.'/read', ['through_message_id' => $last])->assertOk();
+        $this->getJson('/api/v1/vendor/conversations')->assertOk()->assertJsonPath('data.items.0.unread_count', 0);
+    }
+
+    public function test_typing_and_product_picker_require_current_participation(): void
+    {
+        [$store, $owner, $listing] = $this->pickupStore('Typing access');
+        $buyer = $this->buyer();
+        $id = $this->inquiry($store->id, $this->variantIds($listing)[0]);
+        $this->postJson('/api/v1/buyers/conversations/'.$id.'/typing', ['typing' => true])->assertOk();
+        self::assertSame(0, DB::table('messages')->where('conversation_id', $id)->count());
+        $this->buyer();
+        $this->postJson('/api/v1/buyers/conversations/'.$id.'/typing', ['typing' => true])->assertNotFound();
+        $this->getJson('/api/v1/buyers/conversations/'.$id.'/products')->assertNotFound();
+        $this->signInBuyer($buyer);
+        $this->signInStoreMember($owner);
+        $channel = $this->getJson('/api/v1/vendor/messaging/realtime')->assertOk()->json('data.inbox_channel');
+        self::assertStringStartsWith('vendor-inbox.', $channel);
+        $this->buyer();
+        $this->postJson('/api/v1/buyers/messaging/auth', ['channel_name' => 'private-'.$channel, 'socket_id' => '1.2'])->assertForbidden();
+    }
+
+    public function test_typing_broadcast_is_ephemeral_and_excludes_unassigned_staff(): void
+    {
+        [$store, $owner, $listing] = $this->pickupStore('Ephemeral typing');
+        $this->teamMember($store, 'STORE_STAFF');
+        $buyer = $this->buyer();
+        $id = $this->inquiry($store->id, $this->variantIds($listing)[0]);
+        $c = DB::table('conversations')->where('id', $id)->first();
+        $channel = app(ConversationAccess::class)->channel($owner, $c);
+        $outbox = DB::table('outbox_events')->count();
+        config()->set('broadcasting.default', 'reverb');
+        $broadcast = \Mockery::mock(Broadcaster::class);
+        Broadcast::shouldReceive('connection')->with('reverb')->andReturn($broadcast);
+        $broadcast->shouldReceive('broadcast')->withArgs(fn ($channels, $event, $payload) => $channels === ['private-'.$channel] && $event === 'conversation.typing' && $payload['typing'] === true && is_int($payload['at']) && count($payload) === 2)->once();
+        $this->postJson('/api/v1/buyers/conversations/'.$id.'/typing', ['typing' => true])->assertOk();
+        self::assertSame(0, DB::table('messages')->where('conversation_id', $id)->count());
+        self::assertSame($outbox, DB::table('outbox_events')->count());
+        $owner->update(['account_status' => 'SUSPENDED']);
+        app(ConversationBroadcast::class)->typing($id, $buyer->id, false);
+    }
+
     private function draftInput(string $variant, string $qty = '4'): array
     {
         return ['lines' => [['variant_id' => $variant, 'quantity' => $qty, 'unit_price_centavos' => 1700]], 'fulfillment_method' => 'PICKUP', 'payment_method' => 'ONLINE', 'fulfillment_date' => now()->addDays(3)->toDateString()];
+    }
+
+    public function test_duplicate_migration_preserves_message_and_quotation_history_and_enforces_unique_store_thread(): void
+    {
+        [$store, $owner, $listing] = $this->pickupStore('Legacy duplicate');
+        $buyer = $this->buyer();
+        $id = $this->inquiry($store->id, $this->variantIds($listing)[0]);
+        $this->signInStoreMember($owner);
+        $quote = $this->publishQuote($id, $this->draftInput($this->variantIds($listing)[0]));
+        $originalMessages = DB::table('messages')->where('conversation_id', $id)->pluck('id')->all();
+        $migration = require database_path('migrations/2026_10_06_000000_improve_store_conversations.php');
+        $migration->down();
+        $duplicate = (array) DB::table('conversations')->where('id', $id)->first();
+        $duplicate['id'] = (string) Str::uuid7();
+        $duplicate['created_at'] = now()->addSecond();
+        DB::table('conversations')->insert($duplicate);
+        $migration->up();
+        self::assertSame($id, DB::table('conversations')->where('id', $duplicate['id'])->value('canonical_conversation_id'));
+        self::assertSame($originalMessages, DB::table('messages')->where('conversation_id', $id)->pluck('id')->all());
+        self::assertSame($quote['versions'][0]['content_hash'], DB::table('quotation_versions')->where('id', $quote['versions'][0]['id'])->value('content_hash'));
+        $this->signInBuyer($buyer);
+        $this->getJson('/api/v1/buyers/conversations')->assertOk()->assertJsonCount(1, 'data.items')->assertJsonPath('data.items.0.legacy_conversation_ids.0', $duplicate['id']);
+        $this->getJson('/api/v1/buyers/conversations/'.$duplicate['id'])->assertOk();
+        $this->postJson('/api/v1/buyers/conversations/'.$duplicate['id'].'/messages', ['body' => 'Use current chat', 'client_message_id' => (string) Str::uuid7()])->assertConflict()->assertJsonPath('errors.0.code', 'CONVERSATION_MERGED');
+        $duplicate['id'] = (string) Str::uuid7();
+        $this->expectException(UniqueConstraintViolationException::class);
+        DB::table('conversations')->insert($duplicate);
     }
 
     private function publishQuote(string $id, array $draft, int $lock = 1): array
@@ -219,7 +416,7 @@ final class PhaseNineMessagingTest extends TestCase
         $this->postJson('/api/v1/buyers/messaging/auth', $payload)->assertForbidden();
         [$store, $owner] = $this->pickupStore('Inbox channel restriction');
         $this->signInStoreMember($owner);
-        $this->getJson('/api/v1/vendor/messaging/realtime')->assertOk()->assertJsonPath('data.inbox_channel', null);
+        self::assertStringStartsWith('vendor-inbox.', $this->getJson('/api/v1/vendor/messaging/realtime')->assertOk()->json('data.inbox_channel'));
         $this->postJson('/api/v1/vendor/messaging/auth', $payload)->assertForbidden();
         $this->signInBuyer($buyer);
         DB::table('users')->where('id', $buyer->id)->update(['updated_at' => now()->addMinute()]);
@@ -242,6 +439,7 @@ final class PhaseNineMessagingTest extends TestCase
         Broadcast::shouldReceive('connection')->with('reverb')->andReturn($broadcast);
         $broadcast->shouldReceive('broadcast')->withArgs(fn ($channels, $event, $payload) => $event === 'conversation.changed' && $payload === ['conversation_id' => $id])->times(3);
         $broadcast->shouldReceive('broadcast')->with(['private-'.$channel], 'inbox.changed', [])->once();
+        $broadcast->shouldReceive('broadcast')->with(['private-'.app(BuyerInboxChannel::class)->name($owner)], 'inbox.changed', [])->twice();
         app(ConversationBroadcast::class)->deliver($id);
         $buyer->update(['account_status' => 'SUSPENDED']);
         app(ConversationBroadcast::class)->deliver($id);
@@ -260,6 +458,7 @@ final class PhaseNineMessagingTest extends TestCase
         self::assertSame(1, DB::table('message_attachments')->count());
         $attachment = DB::table('message_attachments')->value('id');
         $this->get('/api/v1/buyers/conversations/'.$id.'/attachments/'.$attachment)->assertOk()->assertHeader('X-Content-Type-Options', 'nosniff');
+        $this->buyer();
         $other = $this->inquiry($store->id, $this->variantIds($listing)[0]);
         $this->get('/api/v1/buyers/conversations/'.$other.'/attachments/'.$attachment)->assertNotFound();
         $this->signInStoreMember($owner);
@@ -323,6 +522,7 @@ final class PhaseNineMessagingTest extends TestCase
         $variant = $this->variantIds($listing)[0];
         $buyer = $this->buyer();
         $first = $this->inquiry($store->id, $variant);
+        $secondBuyer = $this->buyer();
         $second = $this->inquiry($store->id, $variant);
         $this->signInStoreMember($owner);
         $a = $this->publishQuote($first, $this->draftInput($variant))['versions'][0];
@@ -330,6 +530,7 @@ final class PhaseNineMessagingTest extends TestCase
         self::assertSame('0.0000', $this->reserved($variant));
         $this->signInBuyer($buyer);
         $this->postJson('/api/v1/buyers/conversations/'.$first.'/quotation/accept', ['version_id' => $a['id'], 'content_hash' => $a['content_hash']], ['Idempotency-Key' => (string) Str::uuid7()])->assertOk();
+        $this->signInBuyer($secondBuyer);
         $this->postJson('/api/v1/buyers/conversations/'.$second.'/quotation/accept', ['version_id' => $b['id'], 'content_hash' => $b['content_hash']], ['Idempotency-Key' => (string) Str::uuid7()])->assertConflict()->assertJsonPath('errors.0.code', 'STOCK_REVALIDATION_REQUIRED');
         self::assertSame('4.0000', $this->reserved($variant));
         self::assertSame(1, DB::table('orders')->count());

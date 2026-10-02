@@ -14,6 +14,7 @@ use App\Domain\Orders\OrderEligibility;
 use App\Domain\Vendors\NewProcurementAvailability;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -30,13 +31,23 @@ final class ConversationService
         $key = $this->idempotency->requireIdempotencyKey($request);
 
         return DB::transaction(function () use ($request, $input, $buyer, $key): string {
+            if (($input['context_type'] ?? 'ITEM_BASED') !== 'ITEM_BASED') {
+                throw new AuthenticationException('PROJECT_INQUIRY_UNAVAILABLE', 'Use the Work Package inquiry flow for Project-Based procurement.', 409);
+            }
             DB::table('buyer_profiles')->where('id', $buyer)->lockForUpdate()->first();
             // A stable UUID supplied as the request key also identifies the thread on a lost response.
-            if ($this->idempotency->replayed($request, 'CONVERSATION_CREATE', $key, $key)) {
-                return $key;
+            $replayed = $this->idempotency->replayed($request, 'CONVERSATION_CREATE', $key, $key);
+            $existing = DB::table('conversations')->where('buyer_profile_id', $buyer)->where('vendor_organization_id', $input['vendor_id'])
+                ->where('purpose', 'SALES')->where('context_type', 'ITEM_BASED')->whereNull('canonical_conversation_id')->first();
+            if ($existing !== null) {
+                $this->access->require($request->user(), $existing->id);
+                if (! $replayed) {
+                    $this->idempotency->claim($request, 'CONVERSATION_CREATE', $key, $key, 201);
+                }
+
+                return $existing->id;
             }
             app(NewProcurementAvailability::class)->assertAvailable($input['vendor_id']);
-            $reference = [];
             if (isset($input['listing_variant_id'])) {
                 $variant = DB::table('listing_variants as v')->join('vendor_listings as l', 'l.id', '=', 'v.vendor_listing_id')
                     ->where('v.id', $input['listing_variant_id'])->where('l.vendor_organization_id', $input['vendor_id'])->where('l.status', 'ACTIVE')->where('v.active', true)
@@ -44,36 +55,15 @@ final class ConversationService
                 if ($variant === null) {
                     throw new AuthenticationException('PRODUCT_UNAVAILABLE', 'Select an available product from this store.', 422);
                 }
-                $reference = (array) $variant;
+                // Selection belongs to a local unsent draft; only sending snapshots a product.
             }
-            // Phase 10 owns creation of validated Work Package inquiries, through this same engine.
-            if (($input['context_type'] ?? 'ITEM_BASED') !== 'ITEM_BASED') {
-                throw new AuthenticationException('PROJECT_INQUIRY_UNAVAILABLE', 'Project inquiries become available with Work Package procurement.', 409);
-            }
-            if (isset($input['location_id'])) {
-                $point = DB::table('buyer_locations as b')->join('addresses as a', 'a.id', '=', 'b.address_id')->where('b.id', $input['location_id'])
-                    ->where('b.buyer_profile_id', $buyer)->whereNull('b.archived_at')->first(['b.id as location_id', 'b.label', 'a.id as address_id', 'a.latitude', 'a.longitude', 'a.formatted_address']);
-                if ($point === null) {
-                    throw new AuthenticationException('LOCATION_NOT_FOUND', 'Choose your saved delivery location.', 422);
-                }
-                $restriction = $input['heavy_vehicle_restriction'] ?? 'UNANSWERED';
-                $alternate = null;
-                if ($restriction === 'YES') {
-                    $alternate = DB::table('buyer_locations as b')->join('addresses as a', 'a.id', '=', 'b.address_id')->where('b.id', $input['alternate_drop_off_location_id'])
-                        ->where('b.buyer_profile_id', $buyer)->whereNull('b.archived_at')->first(['b.id as location_id', 'b.label', 'a.id as address_id', 'a.latitude', 'a.longitude', 'a.formatted_address']);
-                    if ($alternate === null) {
-                        throw new AuthenticationException('LOCATION_NOT_FOUND', 'Choose your saved alternative vehicle drop-off.', 422);
-                    }
-                }
-                $reference['destination'] = ['type' => 'DELIVERY', 'intended' => (array) $point, 'heavy_vehicle_restriction' => $restriction, 'alternate_drop_off' => $alternate === null ? null : (array) $alternate,
-                    'access_instructions' => $input['access_instructions'] ?? null, 'vehicle_endpoint' => $restriction === 'YES' ? 'ALTERNATE_DROP_OFF' : 'INTENDED_LOCATION'];
-            }
+            $reference = $this->destinationReference($input, $buyer);
             $owner = DB::table('vendor_memberships')->where('vendor_organization_id', $input['vendor_id'])->where('role', 'OWNER')->where('status', 'ACTIVE')->value('user_id');
             if ($owner === null) {
                 throw new AuthenticationException('STORE_UNAVAILABLE', 'This store cannot receive inquiries right now.', 409);
             }
             DB::table('conversations')->insert(['id' => $key, 'buyer_profile_id' => $buyer, 'vendor_organization_id' => $input['vendor_id'], 'purpose' => 'SALES',
-                'context_type' => 'ITEM_BASED', 'context_id' => $input['listing_variant_id'] ?? null, 'handler_user_id' => $owner,
+                'context_type' => 'ITEM_BASED', 'context_id' => null, 'handler_user_id' => $owner,
                 'locked_reference' => json_encode($reference, JSON_THROW_ON_ERROR), 'created_at' => now(), 'updated_at' => now()]);
             $this->participant($key, (int) $request->user()->id, 'BUYER');
             $this->participant($key, (int) $owner, 'OWNER');
@@ -83,6 +73,62 @@ final class ConversationService
             $this->changed($key);
 
             return $key;
+        });
+    }
+
+    /** @param array<string, mixed> $input
+     * @return array<string, mixed> */
+    private function destinationReference(array $input, string $buyer): array
+    {
+        $reference = [];
+        if (isset($input['location_id'])) {
+            $point = DB::table('buyer_locations as b')->join('addresses as a', 'a.id', '=', 'b.address_id')->where('b.id', $input['location_id'])
+                ->where('b.buyer_profile_id', $buyer)->whereNull('b.archived_at')->first(['b.id as location_id', 'b.label', 'a.id as address_id', 'a.latitude', 'a.longitude', 'a.formatted_address']);
+            if ($point === null) {
+                throw new AuthenticationException('LOCATION_NOT_FOUND', 'Choose your saved delivery location.', 422);
+            }
+            $restriction = $input['heavy_vehicle_restriction'] ?? 'UNANSWERED';
+            $alternate = null;
+            if ($restriction === 'YES') {
+                $alternate = DB::table('buyer_locations as b')->join('addresses as a', 'a.id', '=', 'b.address_id')->where('b.id', $input['alternate_drop_off_location_id'])
+                    ->where('b.buyer_profile_id', $buyer)->whereNull('b.archived_at')->first(['b.id as location_id', 'b.label', 'a.id as address_id', 'a.latitude', 'a.longitude', 'a.formatted_address']);
+                if ($alternate === null) {
+                    throw new AuthenticationException('LOCATION_NOT_FOUND', 'Choose your saved alternative vehicle drop-off.', 422);
+                }
+            }
+            $reference['destination'] = ['type' => 'DELIVERY', 'intended' => (array) $point, 'heavy_vehicle_restriction' => $restriction, 'alternate_drop_off' => $alternate === null ? null : (array) $alternate,
+                'access_instructions' => $input['access_instructions'] ?? null, 'vehicle_endpoint' => $restriction === 'YES' ? 'ALTERNATE_DROP_OFF' : 'INTENDED_LOCATION'];
+        }
+
+        return $reference;
+    }
+
+    /** @param array<string, mixed> $input */
+    public function destination(Request $request, string $id, array $input): void
+    {
+        $buyer = $this->buyers->idFor($request);
+        $reference = $this->destinationReference($input, $buyer);
+        DB::transaction(function () use ($request, $id, $input, $reference): void {
+            $c = $this->access->require($request->user(), $id, true);
+            $this->requireCurrent($c);
+            if ($c->purpose !== 'SALES' || $c->context_type !== 'ITEM_BASED') {
+                throw new AuthenticationException('DESTINATION_LOCKED', 'Work Package and fulfillment destinations retain their own workflow.', 409);
+            }
+            if ((int) $c->lock_version !== $input['lock_version']) {
+                throw new AuthenticationException('CONVERSATION_VERSION_CONFLICT', 'The conversation changed. Refresh before updating delivery details.', 409);
+            }
+            $q = DB::table('quotations')->where('conversation_id', $id)->orderByDesc('id')->lockForUpdate()->first();
+            if ($q !== null && in_array($q->state, ['PUBLISHED', 'VIEWED'], true)) {
+                throw new AuthenticationException('DESTINATION_LOCKED', 'Ask the Vendor to withdraw the published quotation before changing delivery details.', 409);
+            }
+            $before = json_decode((string) $c->locked_reference, true);
+            DB::table('conversations')->where('id', $id)->update(['locked_reference' => json_encode(array_replace($before, $reference), JSON_THROW_ON_ERROR),
+                'lock_version' => $c->lock_version + 1, 'updated_at' => now()]);
+            if ($q !== null && $q->state !== 'ACCEPTED') {
+                DB::table('quotations')->where('id', $q->id)->update(['lock_version' => $q->lock_version + 1, 'updated_at' => now()]);
+            }
+            $this->audit->account($request, 'CONVERSATION_DESTINATION_UPDATED', 'CONVERSATION', $id, after: ['lock_version' => $c->lock_version + 1]);
+            $this->changed($id);
         });
     }
 
@@ -121,7 +167,7 @@ final class ConversationService
      * @return array<string, mixed> */
     public function inbox(Request $request): array
     {
-        $query = DB::table('conversations as c');
+        $query = DB::table('conversations as c')->whereNull('canonical_conversation_id');
         if ($request->user()->account_type === 'BUYER') {
             $query->where('buyer_profile_id', $this->buyers->idFor($request));
         } else {
@@ -154,11 +200,21 @@ final class ConversationService
         $unread = DB::table('messages as m')->where('m.conversation_id', $c->id)->where('m.sender_user_id', '<>', $request->user()->id)
             ->whereNotExists(fn ($q) => $q->selectRaw('1')->from('message_read_receipts as r')->whereColumn('r.message_id', 'm.id')->where('r.user_id', $request->user()->id))->count();
 
+        $latest = DB::table('messages')->where('conversation_id', $c->id)->orderByDesc('id')->first();
+        $product = $latest?->product_snapshot === null ? null : json_decode($latest->product_snapshot, true);
+        $buyerUser = User::find(DB::table('buyer_profiles')->where('id', $c->buyer_profile_id)->value('user_id'));
+        $legacy = DB::table('conversations')->where('canonical_conversation_id', $c->id)->orderBy('id')->paginate(25, ['id'], 'legacy_page');
+
         return ['id' => $c->id, 'purpose' => $c->purpose, 'context_type' => $c->context_type, 'order_id' => $c->order_id, 'lock_version' => (int) $c->lock_version,
+            'buyer' => $buyerUser === null ? null : $this->identity($buyerUser, $c),
+            'last_message_preview' => $product === null ? ($latest->body ?? '') : 'Sent a product: '.$product['name'],
+            'latest_product_id' => DB::table('messages')->where('conversation_id', $c->id)->whereNotNull('product_id')->orderByDesc('id')->value('product_id'),
+            'canonical_conversation_id' => $c->canonical_conversation_id,
+            'legacy_conversation_ids' => array_column($legacy->items(), 'id'), 'legacy_has_more' => $legacy->hasMorePages(), 'legacy_page' => $legacy->currentPage(),
             'store' => ['id' => $c->vendor_organization_id, 'name' => $store->public_store_name ?? 'Store', 'logo_url' => $logoData['public_url'] ?? null,
                 'verified' => DB::table('vendor_organizations')->where('id', $c->vendor_organization_id)->where('store_verification_status', 'APPROVED')->exists()],
             'handler' => $handlerIdentity, 'unread_count' => $unread, 'channel' => $this->access->channel($request->user(), $c),
-            'locked_reference' => json_decode((string) $c->locked_reference, true), 'updated_at' => $c->updated_at,
+            'locked_reference' => (object) json_decode((string) $c->locked_reference, true), 'updated_at' => Carbon::parse($c->updated_at)->toIso8601String(),
             'can_transfer' => $request->user()->account_type === 'VENDOR' && $c->purpose === 'SALES', 'fulfillment_entry_enabled' => false];
     }
 
@@ -169,7 +225,7 @@ final class ConversationService
         $profile = DB::table('user_profiles')->where('user_id', $user->id)->first();
 
         return ['display_name' => $profile?->full_name ?: ($user->account_type === 'BUYER' ? 'Buyer' : 'Store team'), 'role' => $this->access->role($user),
-            'avatar_path' => $profile?->profile_photo_key === null ? null : '/conversations/'.$c->id.'/avatars/'.$user->id];
+            'avatar_path' => $user->profile_photo_key === null ? null : '/conversations/'.$c->id.'/avatars/'.$user->id];
     }
 
     /**
@@ -189,32 +245,45 @@ final class ConversationService
             $attachments = DB::table('message_attachments')->where('message_id', $m->id)->get(['id', 'display_name', 'media_type', 'size_bytes', 'scan_state']);
 
             return ['id' => $m->id, 'client_message_id' => $m->client_message_id, 'body' => $m->body, 'kind' => $m->kind, 'sender' => json_decode($m->public_sender, true),
-                'sent_at' => $m->sent_at, 'mine' => (int) $m->sender_user_id === (int) $request->user()->id, 'attachments' => $attachments->all(),
+                'product' => app(ConversationProducts::class)->stored($m),
+                'sent_at' => Carbon::parse($m->sent_at)->toIso8601String(), 'mine' => (int) $m->sender_user_id === (int) $request->user()->id, 'attachments' => $attachments->all(),
                 'read_by_recipient' => DB::table('message_read_receipts')->where('message_id', $m->id)->where('user_id', '<>', $m->sender_user_id)->exists()];
         })->values()->all(), 'has_more' => $hasMore, 'next_before' => $hasMore ? $rows->last()->id : null];
     }
 
-    public function send(Request $request, string $id, string $body, string $clientId): string
+    public function send(Request $request, string $id, string $body, string $clientId, ?string $productId = null): string
     {
-        return DB::transaction(function () use ($request, $id, $body, $clientId): string {
+        return DB::transaction(function () use ($request, $id, $body, $clientId, $productId): string {
             $c = $this->access->require($request->user(), $id, true);
             $old = DB::table('messages')->where('conversation_id', $id)->where('client_message_id', $clientId)->first();
             if ($old !== null) {
-                if ((int) $old->sender_user_id !== (int) $request->user()->id || $old->body !== trim($body)) {
+                if ((int) $old->sender_user_id !== (int) $request->user()->id || $old->body !== trim($body) || $old->product_id !== $productId || ! in_array($old->kind, ['TEXT', 'PRODUCT', 'TEXT_WITH_PRODUCT'], true)) {
                     throw new AuthenticationException('IDEMPOTENCY_CONFLICT', 'Use a new message identifier for changed text.', 409);
                 }
 
                 return (string) $old->id;
             }
+            $this->requireCurrent($c);
 
-            return $this->append($c, $request->user(), trim($body), 'TEXT', $clientId);
+            $product = $productId === null ? null : app(ConversationProducts::class)->snapshot($c, $productId);
+
+            return $this->append($c, $request->user(), trim($body), $product === null ? 'TEXT' : (trim($body) === '' ? 'PRODUCT' : 'TEXT_WITH_PRODUCT'), $clientId, $product);
         });
     }
 
-    public function append(object $c, User $actor, string $body, string $kind = 'SYSTEM', ?string $clientId = null): string
+    public function requireCurrent(object $conversation): void
+    {
+        if ($conversation->canonical_conversation_id !== null) {
+            throw new AuthenticationException('CONVERSATION_MERGED', 'Open the current store conversation to send a new message.', 409, ['conversation_id' => $conversation->canonical_conversation_id]);
+        }
+    }
+
+    /** @param array<string, mixed>|null $product */
+    public function append(object $c, User $actor, string $body, string $kind = 'SYSTEM', ?string $clientId = null, ?array $product = null): string
     {
         $id = (string) Str::uuid7();
         DB::table('messages')->insert(['id' => $id, 'conversation_id' => $c->id, 'sender_user_id' => $actor->id, 'body' => $body, 'kind' => $kind,
+            'product_id' => $product['product_id'] ?? null, 'product_snapshot' => $product === null ? null : json_encode($product, JSON_THROW_ON_ERROR),
             'client_message_id' => $clientId ?? (string) Str::uuid7(), 'public_sender' => json_encode($kind === 'SYSTEM' ? ['display_name' => 'MateryalPH', 'role' => 'SYSTEM', 'avatar_path' => null] : $this->identity($actor, $c), JSON_THROW_ON_ERROR), 'sent_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
         DB::table('conversations')->where('id', $c->id)->update(['updated_at' => now()]);
         $this->changed((string) $c->id);

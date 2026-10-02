@@ -23,6 +23,8 @@ part 'chat_quotation_version.g.dart';
 /// * [content]
 /// * [viewed]
 /// * [actions]
+/// * [quotationId]
+/// * [acceptedOrderId]
 @BuiltValue()
 abstract class ChatQuotationVersion implements Built<ChatQuotationVersion, ChatQuotationVersionBuilder> {
   @BuiltValueField(wireName: r'id')
@@ -54,6 +56,12 @@ abstract class ChatQuotationVersion implements Built<ChatQuotationVersion, ChatQ
 
   @BuiltValueField(wireName: r'actions')
   BuiltList<String> get actions;
+
+  @BuiltValueField(wireName: r'quotation_id')
+  String? get quotationId;
+
+  @BuiltValueField(wireName: r'accepted_order_id')
+  String? get acceptedOrderId;
 
   ChatQuotationVersion._();
 
@@ -128,6 +136,20 @@ class _$ChatQuotationVersionSerializer implements PrimitiveSerializer<ChatQuotat
       object.actions,
       specifiedType: const FullType(BuiltList, [FullType(String)]),
     );
+    if (object.quotationId != null) {
+      yield r'quotation_id';
+      yield serializers.serialize(
+        object.quotationId,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.acceptedOrderId != null) {
+      yield r'accepted_order_id';
+      yield serializers.serialize(
+        object.acceptedOrderId,
+        specifiedType: const FullType(String),
+      );
+    }
   }
 
   @override
@@ -220,6 +242,22 @@ class _$ChatQuotationVersionSerializer implements PrimitiveSerializer<ChatQuotat
             specifiedType: const FullType(BuiltList, [FullType(String)]),
           ) as BuiltList<String>;
           result.actions.replace(valueDes);
+          break;
+        case r'quotation_id':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.quotationId = valueDes;
+          break;
+        case r'accepted_order_id':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.acceptedOrderId = valueDes;
           break;
         default:
           unhandled.add(key);

@@ -17,6 +17,7 @@ Name | Type | Description | Notes
 **mine** | **bool** |  |
 **attachments** | [**BuiltList&lt;ChatAttachment&gt;**](ChatAttachment.md) |  |
 **readByRecipient** | **bool** |  |
+**product** | [**ChatProduct**](ChatProduct.md) |  | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

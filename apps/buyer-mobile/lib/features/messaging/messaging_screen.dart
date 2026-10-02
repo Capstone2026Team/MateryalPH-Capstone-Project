@@ -26,6 +26,8 @@ import '../map_discovery/discovery_models.dart';
 import '../map_discovery/discovery_repository.dart' show newIdempotencyKey;
 
 import 'messaging_repository.dart';
+import 'chat_drafts.dart';
+import 'chat_product_picker.dart';
 import '../orders/orders_repository.dart';
 import '../orders/order_details_screen.dart';
 
@@ -37,6 +39,9 @@ class MessagingScreen extends StatefulWidget {
     this.orders,
     this.onOpenCart,
     this.onOpenNotifications,
+    this.initialProductId,
+    this.onOpenProduct,
+    this.onSetDelivery,
   });
 
   final MessagingRepository repository;
@@ -45,6 +50,9 @@ class MessagingScreen extends StatefulWidget {
   final OrdersRepository? orders;
   final VoidCallback? onOpenCart;
   final VoidCallback? onOpenNotifications;
+  final String? initialProductId;
+  final ValueChanged<String>? onOpenProduct;
+  final Future<void> Function(String, int)? onSetDelivery;
 
   @override
   State<MessagingScreen> createState() => _MessagingScreenState();
@@ -78,6 +86,16 @@ class _MessagingScreenState extends State<MessagingScreen>
   bool _refreshing = false;
   bool _reloadPending = false;
   bool _foreground = true;
+  api.ChatProduct? _product;
+  bool _draftLoaded = false;
+  bool _typing = false;
+  int _typingAt = 0;
+  Timer? _typingExpiry;
+  Timer? _typingDebounce;
+  Timer? _draftTimer;
+  DateTime? _lastTypingSent;
+  final _pending =
+      <String, ({String body, api.ChatProduct? product, bool failed})>{};
 
   int _page = 1;
 
@@ -107,6 +125,10 @@ class _MessagingScreenState extends State<MessagingScreen>
     WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
     _stop?.call();
+    _typingExpiry?.cancel();
+    _typingDebounce?.cancel();
+    _draftTimer?.cancel();
+    _saveDraft();
     _text.dispose();
     _search.dispose();
     super.dispose();
@@ -155,11 +177,85 @@ class _MessagingScreenState extends State<MessagingScreen>
 
         if (mounted) setState(() => _inbox = value);
       } else {
-        final value = await widget.repository.conversation(id);
+        var value = await widget.repository.conversation(id);
+        final previous = _detail?.messages;
+        final anchor = previous?.items.lastOrNull?.id;
+        if (anchor != null && value.messages.items.isNotEmpty) {
+          final incoming = value.messages.items.toList();
+          var cursor = value.messages;
+          while (!incoming.any((message) => message.id == anchor) &&
+              cursor.hasMore &&
+              cursor.nextBefore != null &&
+              cursor.items.isNotEmpty &&
+              cursor.items.first.id.compareTo(anchor) > 0) {
+            final older = await widget.repository.conversation(
+              id,
+              before: cursor.nextBefore,
+            );
+            if (!mounted) return;
+            cursor = older.messages;
+            incoming.insertAll(0, cursor.items);
+          }
+          final merged = {
+            for (final message in previous!.items) message.id: message,
+            for (final message in incoming) message.id: message,
+          }.values.toList()..sort((a, b) => a.id.compareTo(b.id));
+          value = value.rebuild(
+            (b) => b.messages.update(
+              (m) => m
+                ..items.replace(merged)
+                ..hasMore = previous.hasMore
+                ..nextBefore = previous.nextBefore,
+            ),
+          );
+        }
 
         if (!mounted) return;
 
         setState(() => _detail = value);
+        if (!_draftLoaded) {
+          _draftLoaded = true;
+          try {
+            final draft = await ChatDrafts.read(id);
+            if (mounted && draft != null) {
+              _text.text = draft['text'] as String? ?? '';
+              _product = api.standardSerializers.deserializeWith(
+                api.ChatProduct.serializer,
+                draft['product'],
+              );
+            }
+          } catch (_) {
+            /* Storage can be unavailable; keep the active draft in memory. */
+          }
+          if (widget.initialProductId != null &&
+              widget.initialProductId != value.conversation.latestProductId &&
+              _product == null) {
+            try {
+              final products = await widget.repository.products(
+                id,
+                productId: widget.initialProductId,
+              );
+              if (mounted) {
+                setState(() => _product = products.items.firstOrNull);
+              }
+              _saveDraft();
+            } catch (_) {
+              if (mounted) {
+                setState(
+                  () => _notice =
+                      'This product is no longer available to attach.',
+                );
+              }
+            }
+          }
+        }
+        if (!mounted) return;
+        setState(
+          () => _pending.removeWhere(
+            (key, _) =>
+                value.messages.items.any((m) => m.clientMessageId == key),
+          ),
+        );
 
         final latest = value.messages.items.lastOrNull;
 
@@ -196,6 +292,15 @@ class _MessagingScreenState extends State<MessagingScreen>
           final stop = await widget.repository.watch(
             _channel!,
             () => unawaited(_load()),
+            onTyping: (typing, at) {
+              if (!mounted || at <= _typingAt) return;
+              _typingAt = at;
+              _typingExpiry?.cancel();
+              setState(() => _typing = typing);
+              _typingExpiry = Timer(const Duration(seconds: 3), () {
+                if (mounted) setState(() => _typing = false);
+              });
+            },
           );
 
           if (!mounted) {
@@ -244,6 +349,98 @@ class _MessagingScreenState extends State<MessagingScreen>
       if (_reloadPending && mounted && _foreground) {
         _reloadPending = false;
         unawaited(_load());
+      }
+    }
+  }
+
+  void _saveDraft() {
+    final id = widget.conversationId;
+    if (id != null && _draftLoaded) {
+      unawaited(
+        ChatDrafts.save(id, _text.text, _product).catchError((Object _) {}),
+      );
+    }
+  }
+
+  void _edited() {
+    _draftTimer?.cancel();
+    _draftTimer = Timer(const Duration(milliseconds: 300), _saveDraft);
+    final now = DateTime.now();
+    if (_lastTypingSent == null ||
+        now.difference(_lastTypingSent!).inMilliseconds > 1200) {
+      _lastTypingSent = now;
+      _typingDebounce?.cancel();
+      _typingDebounce = Timer(
+        const Duration(milliseconds: 200),
+        () => unawaited(
+          widget.repository
+              .typing(widget.conversationId!, _text.text.trim().isNotEmpty)
+              .catchError((Object _) {}),
+        ),
+      );
+    }
+    setState(() {});
+  }
+
+  Future<void> _pickProduct() async {
+    final product = await Navigator.of(context).push<api.ChatProduct>(
+      MaterialPageRoute(
+        builder: (_) => ChatProductPicker(
+          repository: widget.repository,
+          conversationId: widget.conversationId!,
+        ),
+      ),
+    );
+    if (mounted && product != null) {
+      setState(() => _product = product);
+      _saveDraft();
+    }
+  }
+
+  Future<void> _send([String? retryKey]) async {
+    final key = retryKey ?? _sendKey;
+    final message = retryKey == null
+        ? (body: _text.text.trim(), product: _product, failed: false)
+        : _pending[key];
+    if (message == null || (message.body.isEmpty && message.product == null)) {
+      return;
+    }
+    setState(() {
+      _pending[key] = (
+        body: message.body,
+        product: message.product,
+        failed: false,
+      );
+      if (retryKey == null) {
+        _text.clear();
+        _product = null;
+        _sendKey = newIdempotencyKey();
+      }
+    });
+    _saveDraft();
+    _typingDebounce?.cancel();
+    unawaited(
+      widget.repository
+          .typing(widget.conversationId!, false)
+          .catchError((Object _) {}),
+    );
+    try {
+      await widget.repository.send(
+        widget.conversationId!,
+        message.body,
+        key,
+        productId: message.product?.productId,
+      );
+      await _load();
+    } catch (_) {
+      if (mounted && _pending.containsKey(key)) {
+        setState(
+          () => _pending[key] = (
+            body: message.body,
+            product: message.product,
+            failed: true,
+          ),
+        );
       }
     }
   }
@@ -504,7 +701,10 @@ class _MessagingScreenState extends State<MessagingScreen>
                         title: Text(_error!),
                         trailing: TextButton(
                           onPressed: () {
-                            setState(() => _error = null);
+                            setState(() {
+                              _error = null;
+                              _loading = _inbox == null && _detail == null;
+                            });
                             unawaited(_load());
                           },
                           child: const Text('Retry'),
@@ -609,10 +809,10 @@ class _MessagingScreenState extends State<MessagingScreen>
               kind: StateKind.empty,
               artwork: 'assets/states/inbox.png',
               title: query.isEmpty
-                  ? 'No conversations yet'
+                  ? 'No messages yet'
                   : 'No matching conversations',
               message: query.isEmpty
-                  ? 'Message a Vendor from a product to ask questions or request a quotation.'
+                  ? 'Message a store or a product to ask questions or request a quotation.'
                   : 'Try a different store or handler name.',
             ),
           for (final c in items) ...[
@@ -627,6 +827,8 @@ class _MessagingScreenState extends State<MessagingScreen>
                       onOpenCart: widget.onOpenCart,
                       onOpenNotifications: widget.onOpenNotifications,
                       conversationId: c.id,
+                      onOpenProduct: widget.onOpenProduct,
+                      onSetDelivery: widget.onSetDelivery,
                     ),
                   ),
                 );
@@ -760,15 +962,17 @@ class _MessagingScreenState extends State<MessagingScreen>
                     style: TextStyle(color: BuyerTheme.muted),
                   ),
                 ),
-              if (d.quotations.quotation?.acceptedOrderId != null &&
-                  widget.orders != null)
+              for (final accepted in d.quotations.versions.where(
+                (version) =>
+                    version.acceptedOrderId != null && widget.orders != null,
+              ))
                 FilledButton.tonalIcon(
                   icon: const Icon(Icons.receipt_long_outlined),
                   label: const Text('Open Order Details'),
                   onPressed: () => Navigator.of(context).push<void>(
                     MaterialPageRoute(
                       builder: (_) => OrderDetailsScreen(
-                        orderId: d.quotations.quotation!.acceptedOrderId!,
+                        orderId: accepted.acceptedOrderId!,
                         repository: widget.orders!,
                       ),
                     ),
@@ -819,8 +1023,32 @@ class _MessagingScreenState extends State<MessagingScreen>
                   message: d.messages.items[index],
                   busy: _busy,
                   onOpenFile: (file) => unawaited(_openFile(file)),
+                  onOpenProduct: widget.onOpenProduct,
                 ),
               ],
+
+              for (final item in _pending.entries)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        if (item.value.body.isNotEmpty) Text(item.value.body),
+                        if (item.value.product != null)
+                          ChatProductCard(product: item.value.product!),
+                        if (item.value.failed)
+                          TextButton(
+                            onPressed: () => _send(item.key),
+                            child: const Text('Failed to send · Retry'),
+                          )
+                        else
+                          const Text('Sending…'),
+                      ],
+                    ),
+                  ),
+                ),
 
               for (final version in d.quotations.versions)
                 QuotationVersionCard(
@@ -861,67 +1089,148 @@ class _MessagingScreenState extends State<MessagingScreen>
           ),
         ),
 
-        SafeArea(
-          top: false,
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: const BoxDecoration(
-              border: Border(top: BorderSide(color: BuyerTheme.border)),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                IconButton(
-                  tooltip: d.conversation.purpose.name == 'FULFILLMENT'
-                      ? 'Attach JPG or PNG, up to 10 MB'
-                      : 'Attach JPG, PNG or PDF, up to 10 MB',
-                  onPressed: _busy ? null : () => unawaited(_attach()),
-                  icon: const Icon(Icons.add, color: BuyerTheme.action),
+        if (_typing)
+          const Padding(padding: EdgeInsets.all(8), child: Text('typing...')),
+        for (final legacy in d.conversation.legacyConversationIds ?? <String>[])
+          TextButton(
+            onPressed: () => Navigator.of(context).push<void>(
+              MaterialPageRoute(
+                builder: (_) => MessagingScreen(
+                  repository: widget.repository,
+                  conversationId: legacy,
+                  orders: widget.orders,
+                  onOpenProduct: widget.onOpenProduct,
+                  onSetDelivery: widget.onSetDelivery,
                 ),
-                Expanded(
-                  child: TextField(
-                    controller: _text,
-                    readOnly: _busy,
-                    minLines: 1,
-                    maxLines: 5,
-                    maxLength: 5000,
-                    onChanged: (_) {
-                      _sendKey = newIdempotencyKey();
-                      setState(() {});
-                    },
-                    decoration: const InputDecoration(
-                      hintText: 'Write a message…',
-                      counterText: '',
-                      fillColor: BuyerTheme.canvas,
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
+              ),
+            ),
+            child: const Text('Earlier inquiry history'),
+          ),
+        if (d.conversation.legacyHasMore == true)
+          TextButton(
+            onPressed: () => _mutate(() async {
+              final next = await widget.repository.conversation(
+                d.conversation.id,
+                legacyPage: (d.conversation.legacyPage ?? 1) + 1,
+              );
+              if (!mounted) return;
+              setState(
+                () => _detail = d.rebuild(
+                  (b) => b.conversation.replace(
+                    next.conversation.rebuild(
+                      (c) => c.legacyConversationIds.replace([
+                        ...?d.conversation.legacyConversationIds,
+                        ...?next.conversation.legacyConversationIds,
+                      ]),
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
-                IconButton.filled(
-                  tooltip: 'Send message',
-                  onPressed: _busy || _text.text.trim().isEmpty
-                      ? null
-                      : () => unawaited(
-                          _mutate(() async {
-                            await widget.repository.send(
-                              widget.conversationId!,
-                              _text.text.trim(),
-                              _sendKey,
-                            );
-                            _text.clear();
-                            _sendKey = newIdempotencyKey();
-                          }),
-                        ),
-                  icon: const Icon(Icons.send),
+              );
+            }, refresh: false),
+            child: const Text('More inquiry history'),
+          ),
+        if (d.conversation.canonicalConversationId != null)
+          TextButton(
+            onPressed: () => Navigator.of(context).pushReplacement(
+              MaterialPageRoute<void>(
+                builder: (_) => MessagingScreen(
+                  repository: widget.repository,
+                  conversationId: d.conversation.canonicalConversationId,
+                  orders: widget.orders,
+                  onOpenProduct: widget.onOpenProduct,
+                  onSetDelivery: widget.onSetDelivery,
                 ),
-              ],
+              ),
+            ),
+            child: const Text('Open current conversation'),
+          ),
+        if (_product != null)
+          Row(
+            children: [
+              Expanded(child: ChatProductCard(product: _product!)),
+              IconButton(
+                tooltip: 'Remove product',
+                onPressed: () {
+                  setState(() => _product = null);
+                  _saveDraft();
+                },
+                icon: const Icon(Icons.close),
+              ),
+            ],
+          ),
+        if (d.conversation.purpose.name == 'SALES' &&
+            d.conversation.canonicalConversationId == null)
+          TextButton.icon(
+            onPressed: _pickProduct,
+            icon: const Icon(Icons.inventory_2_outlined),
+            label: const Text('Attach product'),
+          ),
+        if (d.conversation.purpose.name == 'SALES' &&
+            d.conversation.contextType.name == 'ITEM_BASED' &&
+            d.conversation.canonicalConversationId == null &&
+            widget.onSetDelivery != null)
+          TextButton.icon(
+            onPressed: _busy
+                ? null
+                : () => _mutate(
+                    () => widget.onSetDelivery!(
+                      d.conversation.id,
+                      d.conversation.lockVersion,
+                    ),
+                  ),
+            icon: const Icon(Icons.local_shipping_outlined),
+            label: const Text('Delivery details'),
+          ),
+        if (d.conversation.canonicalConversationId == null)
+          SafeArea(
+            top: false,
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: const BoxDecoration(
+                border: Border(top: BorderSide(color: BuyerTheme.border)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  IconButton(
+                    tooltip: d.conversation.purpose.name == 'FULFILLMENT'
+                        ? 'Attach JPG or PNG, up to 10 MB'
+                        : 'Attach JPG, PNG or PDF, up to 10 MB',
+                    onPressed: _busy ? null : () => unawaited(_attach()),
+                    icon: const Icon(Icons.add, color: BuyerTheme.action),
+                  ),
+                  Expanded(
+                    child: TextField(
+                      controller: _text,
+                      readOnly: _busy,
+                      minLines: 1,
+                      maxLines: 5,
+                      maxLength: 5000,
+                      onChanged: (_) => _edited(),
+                      decoration: const InputDecoration(
+                        hintText: 'Write a message…',
+                        counterText: '',
+                        fillColor: BuyerTheme.canvas,
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton.filled(
+                    tooltip: 'Send message',
+                    onPressed:
+                        _busy || (_text.text.trim().isEmpty && _product == null)
+                        ? null
+                        : () => unawaited(_send()),
+                    icon: const Icon(Icons.send),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
       ],
     );
   }

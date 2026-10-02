@@ -15,6 +15,7 @@ Name | Type
 `mine` | boolean
 `attachments` | [Array&lt;ChatAttachment&gt;](ChatAttachment.md)
 `readByRecipient` | boolean
+`product` | [ChatProduct](ChatProduct.md)
 
 ## Example
 
@@ -32,6 +33,7 @@ const example = {
   "mine": null,
   "attachments": null,
   "readByRecipient": null,
+  "product": null,
 } satisfies ChatMessage
 
 console.log(example)

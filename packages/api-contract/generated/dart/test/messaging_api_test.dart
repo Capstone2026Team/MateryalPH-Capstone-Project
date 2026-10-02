@@ -51,7 +51,7 @@ void main() {
 
     // Current purpose, participant, account and fixed-role authority are checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses native bearer transport.
     //
-    //Future<ConversationDetailResponse> getConversation(String messagingPortal, String conversationId, { int page, String before }) async
+    //Future<ConversationDetailResponse> getConversation(String messagingPortal, String conversationId, { int page, String before, int legacyPage }) async
     test('test getConversation', () async {
       // TODO
     });
@@ -60,6 +60,13 @@ void main() {
     //
     //Future<ChatHandlersResponse> listChatHandlers(String messagingPortal, String conversationId, { int page }) async
     test('test listChatHandlers', () async {
+      // TODO
+    });
+
+    // Search active eligible products of this conversation store. product_id filters one listing variant for a local unsent draft.
+    //
+    //Future<ChatProductPageResponse> listChatProducts(String messagingPortal, String conversationId, { String q, String productId, int page }) async
+    test('test listChatProducts', () async {
       // TODO
     });
 
@@ -98,10 +105,31 @@ void main() {
       // TODO
     });
 
+    // Ephemeral authorized conversation.typing event on existing viewer channels, with typing boolean and server millisecond timestamp at. Never persisted; receivers ignore older events and clear after three seconds. Existing account rate limits apply.
+    //
+    //Future<ChatEmptyResponse> sendChatTyping(String messagingPortal, String conversationId, ChatTyping chatTyping) async
+    test('test sendChatTyping', () async {
+      // TODO
+    });
+
+    // Start a separate quotation after acceptance in the canonical general store chat. Prior accepted quotations and orders stay immutable. Work Package and fulfillment threads cannot start a later quotation. Requires the latest quotation lock_version and Idempotency-Key.
+    //
+    //Future<ChatQuotationPageResponse> startNextChatQuotation(String messagingPortal, String conversationId, String idempotencyKey, ChatPublish chatPublish) async
+    test('test startNextChatQuotation', () async {
+      // TODO
+    });
+
     // Current purpose, participant, account and fixed-role authority are checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses native bearer transport.
     //
     //Future<ChatEmptyResponse> transferChatHandler(String messagingPortal, String conversationId, ChatTransfer chatTransfer) async
     test('test transferChatHandler', () async {
+      // TODO
+    });
+
+    // Buyer-owned saved destination and heavy access for a general store chat. Requires the current conversation lock_version; rejects changes while a quotation is published/viewed. Accepted snapshots stay immutable. An active draft must be reviewed against its incremented quotation lock_version.
+    //
+    //Future<ChatEmptyResponse> updateChatDestination(String messagingPortal, String conversationId, ChatDestinationUpdate chatDestinationUpdate) async
+    test('test updateChatDestination', () async {
       // TODO
     });
 

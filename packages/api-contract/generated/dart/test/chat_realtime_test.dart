@@ -7,7 +7,7 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(ChatRealtime, () {
-    // Opaque private Buyer inbox channel without the private- prefix; null for non-Buyers. Receives inbox.changed invalidations only. Re-fetch configuration after reconnecting.
+    // Viewer-bound Buyer or Vendor inbox invalidation channel. Re-fetch configuration on reconnect. No message content is broadcast.
     // String inboxChannel
     test('to test the property `inboxChannel`', () async {
       // TODO

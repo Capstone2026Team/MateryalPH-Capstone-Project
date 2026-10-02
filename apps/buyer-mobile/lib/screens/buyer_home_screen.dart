@@ -88,6 +88,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
               client: widget.repository!.apiClient,
               onSessionExpired: _expireSession,
             ));
+
   /// Completed searches for saved locations, kept on disk so the Map opens instantly. Removed on
   /// sign-out and session expiry because the lists carry this Buyer's favorites.
   late final DiscoveryResultStore _resultStore =
@@ -230,6 +231,9 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
           builder: (_) => BuyerPublicStoreProfileScreen(
             storeId: storeId,
             repository: BuyerStoreRepository(),
+            onMessage: _navigation == null
+                ? null
+                : () => _navigation.openMessage(context, storeId, null),
             onBrowseProducts: _navigation == null
                 ? null
                 : (context, id, name) => _navigation.browseStore(
@@ -280,20 +284,11 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                           : () => navigation.openCart(context),
                       onMessageStore: navigation == null
                           ? null
-                          : (context, supplier) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Choose a product to start a conversation with this store.',
-                                  ),
-                                ),
-                              );
-                              navigation.browseStore(
-                                context,
-                                vendorId: supplier.resultId,
-                                vendorName: supplier.name,
-                              );
-                            },
+                          : (context, supplier) => navigation.openMessage(
+                              context,
+                              supplier.resultId,
+                              null,
+                            ),
                       onOpenStore: (context, supplier) =>
                           _openStore(context, supplier.resultId),
                     ),
@@ -328,6 +323,9 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
             builder: (_) => MessagingScreen(
               repository: _messaging!,
               conversationId: id,
+              onOpenProduct: _navigation == null
+                  ? null
+                  : (id) => _navigation.openListing(context, id),
               orders: _orders,
               onOpenCart: _navigation == null
                   ? null
@@ -353,6 +351,13 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
     if (_destination == 3 && _messaging != null) {
       return MessagingScreen(
         repository: _messaging,
+        onSetDelivery: _navigation == null
+            ? null
+            : (id, version) =>
+                  _navigation.setChatDelivery(context, id, version),
+        onOpenProduct: _navigation == null
+            ? null
+            : (id) => _navigation.openListing(context, id),
         orders: _orders,
         onOpenCart: _navigation == null
             ? null

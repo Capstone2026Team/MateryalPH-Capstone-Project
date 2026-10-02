@@ -21,6 +21,33 @@ final class QuotationService
     public function __construct(private readonly ConversationAccess $access, private readonly ConversationService $messages,
         private readonly QuotationTerms $terms, private readonly CatalogAccess $idempotency) {}
 
+    public function startNext(Request $request, string $conversationId, int $version): void
+    {
+        $key = $this->idempotency->requireIdempotencyKey($request);
+        DB::transaction(function () use ($request, $conversationId, $version, $key): void {
+            $c = $this->access->require($request->user(), $conversationId, true);
+            $this->access->requireSales($request->user(), $c);
+            $this->messages->requireCurrent($c);
+            if ($c->context_type !== 'ITEM_BASED') {
+                throw new AuthenticationException('QUOTATION_CLOSED', 'Work Package quotations retain their original inquiry.', 409);
+            }
+            if ($this->idempotency->replayed($request, 'QUOTATION_START', $key, $conversationId)) {
+                return;
+            }
+            $previous = $this->quotation($c, true);
+            $this->version($previous, $version);
+            if ($previous->state !== 'ACCEPTED') {
+                throw new AuthenticationException('QUOTATION_STILL_OPEN', 'Finish the current quotation before starting another.', 409);
+            }
+            $id = (string) Str::uuid7();
+            DB::table('quotations')->insert(['id' => $id, 'conversation_id' => $c->id, 'buyer_profile_id' => $c->buyer_profile_id,
+                'vendor_organization_id' => $c->vendor_organization_id, 'procurement_type' => 'ITEM_BASED',
+                'lock_version' => $version + 1, 'created_at' => now(), 'updated_at' => now()]);
+            $this->event(DB::table('quotations')->where('id', $id)->first(), $request->user(), 'QUOTATION_STARTED', ['previous_quotation_id' => $previous->id]);
+            $this->idempotency->claim($request, 'QUOTATION_START', $key, $conversationId, 200);
+        });
+    }
+
     /** @param array<string, mixed> $input */
     public function draft(Request $request, string $conversationId, array $input, int $version): void
     {
@@ -49,18 +76,22 @@ final class QuotationService
     {
         $c = $this->access->require($request->user(), $conversationId);
         $this->access->requireSales($request->user(), $c, true);
-        $q = DB::table('quotations')->where('conversation_id', $conversationId)->first();
+        $q = DB::table('quotations')->where('conversation_id', $conversationId)->orderByDesc('id')->first();
         if ($q === null || $q->draft === null) {
             throw new AuthenticationException('DRAFT_REQUIRED', 'Save a quotation draft before publishing.', 422);
         }
         $input = $this->terms->validate(json_decode($q->draft, true));
+        $originalReference = $c->locked_reference;
         $route = $this->terms->route($c, $input); // Network before locks.
         $key = $this->idempotency->requireIdempotencyKey($request);
-        DB::transaction(function () use ($request, $conversationId, $version, $input, $route, $key, $c): void {
+        DB::transaction(function () use ($request, $conversationId, $version, $input, $route, $key, $c, $originalReference): void {
             $this->lockPackage($c);
             $org = DB::table('vendor_organizations')->where('id', $c->vendor_organization_id)->lockForUpdate()->first();
             $c = $this->access->require($request->user(), $conversationId, true);
             $role = $this->access->requireSales($request->user(), $c, true);
+            if ($c->locked_reference !== $originalReference) {
+                throw new AuthenticationException('QUOTATION_VERSION_CONFLICT', 'Delivery details changed. Review the quotation and retry.', 409);
+            }
             if ($this->idempotency->replayed($request, 'QUOTATION_PUBLISH', $key, $conversationId)) {
                 return;
             }
@@ -142,7 +173,7 @@ final class QuotationService
             }
             $q = $this->quotation($c, true);
             if ($this->idempotency->replayed($request, 'QUOTATION_'.$action, $key, $conversationId)) {
-                return $q->accepted_order_id;
+                return DB::table('quotations')->where('conversation_id', $conversationId)->where('current_version_id', $input['version_id'])->value('accepted_order_id');
             }
             $this->expireLocked($q);
             if ($q->state === 'EXPIRED') {
@@ -216,7 +247,7 @@ final class QuotationService
         if ($c->purpose !== 'SALES') {
             return ['quotation' => null, 'versions' => [], 'has_more' => false];
         }
-        $q = DB::table('quotations')->where('conversation_id', $conversationId)->first();
+        $q = DB::table('quotations')->where('conversation_id', $conversationId)->orderByDesc('id')->first();
         if ($q === null) {
             return ['quotation' => null, 'versions' => [], 'has_more' => false];
         }
@@ -225,7 +256,9 @@ final class QuotationService
             $q = DB::table('quotations')->where('id', $q->id)->lockForUpdate()->first();
             $this->expireLocked($q);
         });
-        $page = DB::table('quotation_versions')->where('quotation_id', $q->id)->orderByDesc('version')->paginate(10);
+        $page = DB::table('quotation_versions as v')->join('quotations as q', 'q.id', '=', 'v.quotation_id')
+            ->where('q.conversation_id', $conversationId)->orderByDesc('v.id')
+            ->paginate(10, ['v.*', 'q.state as quotation_state', 'q.current_version_id as quotation_current_version_id', 'q.accepted_order_id']);
         $buyer = $request->user()->account_type === 'BUYER';
         $publish = ! $buyer && $this->access->role($request->user()) !== 'CUSTOMER_SERVICE';
 
@@ -235,7 +268,9 @@ final class QuotationService
             'versions' => array_map(function (object $v) use ($q, $buyer, $publish): array {
                 $latest = $q->current_version_id === $v->id;
 
-                return ['id' => $v->id, 'version' => (int) $v->version, 'latest' => $latest, 'state' => $latest ? $q->state : 'SUPERSEDED', 'published_at' => $v->published_at,
+                return ['id' => $v->id, 'quotation_id' => $v->quotation_id,
+                    'accepted_order_id' => $v->id === $v->quotation_current_version_id ? $v->accepted_order_id : null,
+                    'version' => (int) $v->version, 'latest' => $latest, 'state' => $v->id === $v->quotation_current_version_id ? $v->quotation_state : 'SUPERSEDED', 'published_at' => $v->published_at,
                     'expires_at' => $v->expires_at, 'content_hash' => $v->content_hash, 'content' => json_decode($v->content, true),
                     'viewed' => DB::table('quotation_events')->where('quotation_version_id', $v->id)->where('event_type', 'VIEWED')->exists(),
                     'actions' => $latest && in_array($q->state, self::OPEN, true) ? ($buyer ? ['view', 'accept', 'reject', 'counter'] : ($publish ? ['withdraw'] : [])) : []];
@@ -244,7 +279,7 @@ final class QuotationService
 
     private function quotation(object $c, bool $create): object
     {
-        $q = DB::table('quotations')->where('conversation_id', $c->id)->lockForUpdate()->first();
+        $q = DB::table('quotations')->where('conversation_id', $c->id)->orderByDesc('id')->lockForUpdate()->first();
         if ($q === null && $create) {
             $id = (string) Str::uuid7();
             DB::table('quotations')->insert(['id' => $id, 'conversation_id' => $c->id, 'buyer_profile_id' => $c->buyer_profile_id, 'vendor_organization_id' => $c->vendor_organization_id,

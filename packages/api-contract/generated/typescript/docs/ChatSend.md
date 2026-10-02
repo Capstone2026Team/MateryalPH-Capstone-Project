@@ -1,6 +1,7 @@
 
 # ChatSend
 
+Requires nonblank body or product_id (listing variant UUID), or both. The product must be an eligible product of this conversation store. Retries with the same client_message_id and content return the same message; changed content conflicts.
 
 ## Properties
 
@@ -8,6 +9,7 @@ Name | Type
 ------------ | -------------
 `clientMessageId` | string
 `body` | string
+`productId` | string
 
 ## Example
 
@@ -18,6 +20,7 @@ import type { ChatSend } from '@materyalph/api-client-ts'
 const example = {
   "clientMessageId": null,
   "body": null,
+  "productId": null,
 } satisfies ChatSend
 
 console.log(example)

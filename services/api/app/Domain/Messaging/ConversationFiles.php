@@ -21,6 +21,7 @@ final class ConversationFiles
     public function upload(Request $request, string $id, UploadedFile $file, string $clientId): void
     {
         $c = $this->access->require($request->user(), $id);
+        app(ConversationService::class)->requireCurrent($c);
         if ($c->purpose === 'FULFILLMENT' && $file->getMimeType() === 'application/pdf') {
             throw new AuthenticationException('ATTACHMENT_NOT_PERMITTED', 'Fulfillment threads accept coordination photos only.', 422);
         }
@@ -81,7 +82,7 @@ final class ConversationFiles
         $this->access->require($request->user(), $id);
         $known = DB::table('conversation_participants')->where('conversation_id', $id)->where('user_id', $userId)->exists()
             || DB::table('messages')->where('conversation_id', $id)->where('sender_user_id', $userId)->exists();
-        $profile = $known ? DB::table('user_profiles')->where('user_id', $userId)->first() : null;
+        $profile = $known ? DB::table('users')->where('id', $userId)->first() : null;
         if ($profile?->profile_photo_key === null) {
             throw new AuthenticationException('FILE_NOT_FOUND', 'This avatar is unavailable.', 404);
         }

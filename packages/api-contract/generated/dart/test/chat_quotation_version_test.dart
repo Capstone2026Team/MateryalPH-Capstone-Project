@@ -57,5 +57,15 @@ void main() {
       // TODO
     });
 
+    // String quotationId
+    test('to test the property `quotationId`', () async {
+      // TODO
+    });
+
+    // String acceptedOrderId
+    test('to test the property `acceptedOrderId`', () async {
+      // TODO
+    });
+
   });
 }

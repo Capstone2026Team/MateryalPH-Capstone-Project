@@ -27,6 +27,10 @@ class _$ChatQuotationVersion extends ChatQuotationVersion {
   final bool viewed;
   @override
   final BuiltList<String> actions;
+  @override
+  final String? quotationId;
+  @override
+  final String? acceptedOrderId;
 
   factory _$ChatQuotationVersion(
           [void Function(ChatQuotationVersionBuilder)? updates]) =>
@@ -42,7 +46,9 @@ class _$ChatQuotationVersion extends ChatQuotationVersion {
       required this.contentHash,
       required this.content,
       required this.viewed,
-      required this.actions})
+      required this.actions,
+      this.quotationId,
+      this.acceptedOrderId})
       : super._();
   @override
   ChatQuotationVersion rebuild(
@@ -66,7 +72,9 @@ class _$ChatQuotationVersion extends ChatQuotationVersion {
         contentHash == other.contentHash &&
         content == other.content &&
         viewed == other.viewed &&
-        actions == other.actions;
+        actions == other.actions &&
+        quotationId == other.quotationId &&
+        acceptedOrderId == other.acceptedOrderId;
   }
 
   @override
@@ -82,6 +90,8 @@ class _$ChatQuotationVersion extends ChatQuotationVersion {
     _$hash = $jc(_$hash, content.hashCode);
     _$hash = $jc(_$hash, viewed.hashCode);
     _$hash = $jc(_$hash, actions.hashCode);
+    _$hash = $jc(_$hash, quotationId.hashCode);
+    _$hash = $jc(_$hash, acceptedOrderId.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -98,7 +108,9 @@ class _$ChatQuotationVersion extends ChatQuotationVersion {
           ..add('contentHash', contentHash)
           ..add('content', content)
           ..add('viewed', viewed)
-          ..add('actions', actions))
+          ..add('actions', actions)
+          ..add('quotationId', quotationId)
+          ..add('acceptedOrderId', acceptedOrderId))
         .toString();
   }
 }
@@ -149,6 +161,15 @@ class ChatQuotationVersionBuilder
   ListBuilder<String> get actions => _$this._actions ??= ListBuilder<String>();
   set actions(ListBuilder<String>? actions) => _$this._actions = actions;
 
+  String? _quotationId;
+  String? get quotationId => _$this._quotationId;
+  set quotationId(String? quotationId) => _$this._quotationId = quotationId;
+
+  String? _acceptedOrderId;
+  String? get acceptedOrderId => _$this._acceptedOrderId;
+  set acceptedOrderId(String? acceptedOrderId) =>
+      _$this._acceptedOrderId = acceptedOrderId;
+
   ChatQuotationVersionBuilder() {
     ChatQuotationVersion._defaults(this);
   }
@@ -166,6 +187,8 @@ class ChatQuotationVersionBuilder
       _content = $v.content.toBuilder();
       _viewed = $v.viewed;
       _actions = $v.actions.toBuilder();
+      _quotationId = $v.quotationId;
+      _acceptedOrderId = $v.acceptedOrderId;
       _$v = null;
     }
     return this;
@@ -207,6 +230,8 @@ class ChatQuotationVersionBuilder
             viewed: BuiltValueNullFieldError.checkNotNull(
                 viewed, r'ChatQuotationVersion', 'viewed'),
             actions: actions.build(),
+            quotationId: quotationId,
+            acceptedOrderId: acceptedOrderId,
           );
     } catch (_) {
       late String _$failedField;

@@ -148,6 +148,20 @@ class _$ConversationView extends ConversationView {
   final bool canTransfer;
   @override
   final bool fulfillmentEntryEnabled;
+  @override
+  final ChatIdentity? buyer;
+  @override
+  final String? lastMessagePreview;
+  @override
+  final String? latestProductId;
+  @override
+  final String? canonicalConversationId;
+  @override
+  final BuiltList<String>? legacyConversationIds;
+  @override
+  final bool? legacyHasMore;
+  @override
+  final int? legacyPage;
 
   factory _$ConversationView(
           [void Function(ConversationViewBuilder)? updates]) =>
@@ -166,7 +180,14 @@ class _$ConversationView extends ConversationView {
       required this.lockedReference,
       required this.updatedAt,
       required this.canTransfer,
-      required this.fulfillmentEntryEnabled})
+      required this.fulfillmentEntryEnabled,
+      this.buyer,
+      this.lastMessagePreview,
+      this.latestProductId,
+      this.canonicalConversationId,
+      this.legacyConversationIds,
+      this.legacyHasMore,
+      this.legacyPage})
       : super._();
   @override
   ConversationView rebuild(void Function(ConversationViewBuilder) updates) =>
@@ -192,7 +213,14 @@ class _$ConversationView extends ConversationView {
         lockedReference == other.lockedReference &&
         updatedAt == other.updatedAt &&
         canTransfer == other.canTransfer &&
-        fulfillmentEntryEnabled == other.fulfillmentEntryEnabled;
+        fulfillmentEntryEnabled == other.fulfillmentEntryEnabled &&
+        buyer == other.buyer &&
+        lastMessagePreview == other.lastMessagePreview &&
+        latestProductId == other.latestProductId &&
+        canonicalConversationId == other.canonicalConversationId &&
+        legacyConversationIds == other.legacyConversationIds &&
+        legacyHasMore == other.legacyHasMore &&
+        legacyPage == other.legacyPage;
   }
 
   @override
@@ -211,6 +239,13 @@ class _$ConversationView extends ConversationView {
     _$hash = $jc(_$hash, updatedAt.hashCode);
     _$hash = $jc(_$hash, canTransfer.hashCode);
     _$hash = $jc(_$hash, fulfillmentEntryEnabled.hashCode);
+    _$hash = $jc(_$hash, buyer.hashCode);
+    _$hash = $jc(_$hash, lastMessagePreview.hashCode);
+    _$hash = $jc(_$hash, latestProductId.hashCode);
+    _$hash = $jc(_$hash, canonicalConversationId.hashCode);
+    _$hash = $jc(_$hash, legacyConversationIds.hashCode);
+    _$hash = $jc(_$hash, legacyHasMore.hashCode);
+    _$hash = $jc(_$hash, legacyPage.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -230,7 +265,14 @@ class _$ConversationView extends ConversationView {
           ..add('lockedReference', lockedReference)
           ..add('updatedAt', updatedAt)
           ..add('canTransfer', canTransfer)
-          ..add('fulfillmentEntryEnabled', fulfillmentEntryEnabled))
+          ..add('fulfillmentEntryEnabled', fulfillmentEntryEnabled)
+          ..add('buyer', buyer)
+          ..add('lastMessagePreview', lastMessagePreview)
+          ..add('latestProductId', latestProductId)
+          ..add('canonicalConversationId', canonicalConversationId)
+          ..add('legacyConversationIds', legacyConversationIds)
+          ..add('legacyHasMore', legacyHasMore)
+          ..add('legacyPage', legacyPage))
         .toString();
   }
 }
@@ -296,6 +338,40 @@ class ConversationViewBuilder
   set fulfillmentEntryEnabled(bool? fulfillmentEntryEnabled) =>
       _$this._fulfillmentEntryEnabled = fulfillmentEntryEnabled;
 
+  ChatIdentityBuilder? _buyer;
+  ChatIdentityBuilder get buyer => _$this._buyer ??= ChatIdentityBuilder();
+  set buyer(ChatIdentityBuilder? buyer) => _$this._buyer = buyer;
+
+  String? _lastMessagePreview;
+  String? get lastMessagePreview => _$this._lastMessagePreview;
+  set lastMessagePreview(String? lastMessagePreview) =>
+      _$this._lastMessagePreview = lastMessagePreview;
+
+  String? _latestProductId;
+  String? get latestProductId => _$this._latestProductId;
+  set latestProductId(String? latestProductId) =>
+      _$this._latestProductId = latestProductId;
+
+  String? _canonicalConversationId;
+  String? get canonicalConversationId => _$this._canonicalConversationId;
+  set canonicalConversationId(String? canonicalConversationId) =>
+      _$this._canonicalConversationId = canonicalConversationId;
+
+  ListBuilder<String>? _legacyConversationIds;
+  ListBuilder<String> get legacyConversationIds =>
+      _$this._legacyConversationIds ??= ListBuilder<String>();
+  set legacyConversationIds(ListBuilder<String>? legacyConversationIds) =>
+      _$this._legacyConversationIds = legacyConversationIds;
+
+  bool? _legacyHasMore;
+  bool? get legacyHasMore => _$this._legacyHasMore;
+  set legacyHasMore(bool? legacyHasMore) =>
+      _$this._legacyHasMore = legacyHasMore;
+
+  int? _legacyPage;
+  int? get legacyPage => _$this._legacyPage;
+  set legacyPage(int? legacyPage) => _$this._legacyPage = legacyPage;
+
   ConversationViewBuilder() {
     ConversationView._defaults(this);
   }
@@ -316,6 +392,13 @@ class ConversationViewBuilder
       _updatedAt = $v.updatedAt;
       _canTransfer = $v.canTransfer;
       _fulfillmentEntryEnabled = $v.fulfillmentEntryEnabled;
+      _buyer = $v.buyer?.toBuilder();
+      _lastMessagePreview = $v.lastMessagePreview;
+      _latestProductId = $v.latestProductId;
+      _canonicalConversationId = $v.canonicalConversationId;
+      _legacyConversationIds = $v.legacyConversationIds?.toBuilder();
+      _legacyHasMore = $v.legacyHasMore;
+      _legacyPage = $v.legacyPage;
       _$v = null;
     }
     return this;
@@ -363,6 +446,13 @@ class ConversationViewBuilder
                 fulfillmentEntryEnabled,
                 r'ConversationView',
                 'fulfillmentEntryEnabled'),
+            buyer: _buyer?.build(),
+            lastMessagePreview: lastMessagePreview,
+            latestProductId: latestProductId,
+            canonicalConversationId: canonicalConversationId,
+            legacyConversationIds: _legacyConversationIds?.build(),
+            legacyHasMore: legacyHasMore,
+            legacyPage: legacyPage,
           );
     } catch (_) {
       late String _$failedField;
@@ -374,6 +464,12 @@ class ConversationViewBuilder
 
         _$failedField = 'lockedReference';
         lockedReference.build();
+
+        _$failedField = 'buyer';
+        _buyer?.build();
+
+        _$failedField = 'legacyConversationIds';
+        _legacyConversationIds?.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
             r'ConversationView', _$failedField, e.toString());

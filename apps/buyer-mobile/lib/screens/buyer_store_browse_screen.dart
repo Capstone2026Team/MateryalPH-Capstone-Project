@@ -161,10 +161,12 @@ class BuyerPublicStoreProfileScreen extends StatefulWidget {
     required this.storeId,
     required this.repository,
     this.onBrowseProducts,
+    this.onMessage,
   });
 
   final String storeId;
   final BuyerStoreRepository repository;
+  final VoidCallback? onMessage;
 
   /// Opens this store's eligible listings in Search Results; null where browsing is unavailable.
   final void Function(BuildContext context, String storeId, String storeName)?
@@ -242,6 +244,12 @@ class _BuyerPublicStoreProfileScreenState
                 const SizedBox(height: 12),
                 Text(profile.description!),
               ],
+              if (widget.onMessage != null)
+                FilledButton.icon(
+                  onPressed: widget.onMessage,
+                  icon: const Icon(Icons.chat_bubble_outline),
+                  label: const Text('Message store'),
+                ),
               if (widget.onBrowseProducts != null) ...[
                 const SizedBox(height: 16),
                 FilledButton.icon(

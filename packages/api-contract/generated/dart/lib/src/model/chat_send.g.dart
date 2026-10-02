@@ -10,12 +10,15 @@ class _$ChatSend extends ChatSend {
   @override
   final String clientMessageId;
   @override
-  final String body;
+  final String? body;
+  @override
+  final String? productId;
 
   factory _$ChatSend([void Function(ChatSendBuilder)? updates]) =>
       (ChatSendBuilder()..update(updates))._build();
 
-  _$ChatSend._({required this.clientMessageId, required this.body}) : super._();
+  _$ChatSend._({required this.clientMessageId, this.body, this.productId})
+      : super._();
   @override
   ChatSend rebuild(void Function(ChatSendBuilder) updates) =>
       (toBuilder()..update(updates)).build();
@@ -28,7 +31,8 @@ class _$ChatSend extends ChatSend {
     if (identical(other, this)) return true;
     return other is ChatSend &&
         clientMessageId == other.clientMessageId &&
-        body == other.body;
+        body == other.body &&
+        productId == other.productId;
   }
 
   @override
@@ -36,6 +40,7 @@ class _$ChatSend extends ChatSend {
     var _$hash = 0;
     _$hash = $jc(_$hash, clientMessageId.hashCode);
     _$hash = $jc(_$hash, body.hashCode);
+    _$hash = $jc(_$hash, productId.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -44,7 +49,8 @@ class _$ChatSend extends ChatSend {
   String toString() {
     return (newBuiltValueToStringHelper(r'ChatSend')
           ..add('clientMessageId', clientMessageId)
-          ..add('body', body))
+          ..add('body', body)
+          ..add('productId', productId))
         .toString();
   }
 }
@@ -61,6 +67,10 @@ class ChatSendBuilder implements Builder<ChatSend, ChatSendBuilder> {
   String? get body => _$this._body;
   set body(String? body) => _$this._body = body;
 
+  String? _productId;
+  String? get productId => _$this._productId;
+  set productId(String? productId) => _$this._productId = productId;
+
   ChatSendBuilder() {
     ChatSend._defaults(this);
   }
@@ -70,6 +80,7 @@ class ChatSendBuilder implements Builder<ChatSend, ChatSendBuilder> {
     if ($v != null) {
       _clientMessageId = $v.clientMessageId;
       _body = $v.body;
+      _productId = $v.productId;
       _$v = null;
     }
     return this;
@@ -93,8 +104,8 @@ class ChatSendBuilder implements Builder<ChatSend, ChatSendBuilder> {
         _$ChatSend._(
           clientMessageId: BuiltValueNullFieldError.checkNotNull(
               clientMessageId, r'ChatSend', 'clientMessageId'),
-          body:
-              BuiltValueNullFieldError.checkNotNull(body, r'ChatSend', 'body'),
+          body: body,
+          productId: productId,
         );
     replace(_$result);
     return _$result;

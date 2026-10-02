@@ -532,3 +532,25 @@ The financial source register, calculations, worked examples and acceptance case
 ### Future Enhancements
 
 Buyer organization team accounts, live GPS delivery tracking, machine-learning recommendations, vouchers, and procurement beyond the 50-km platform radius are outside the current capstone scope.
+
+
+### Owner decision — 2026-10-02: Store messaging and product cards (MSG-02)
+
+This decision supersedes the product-required/locked-product entry wording in Phase 9. A Buyer may message an active Tier 2 Vendor directly from Store Profile without a product. General and product inquiries reuse one SALES / ITEM_BASED conversation per Buyer and Vendor store. The owner confirmed that Work Package quotation conversations and order-specific FULFILLMENT threads remain separate with their existing authority and commercial records.
+
+Product Details opens that store conversation and prepares an unsent, removable product draft; opening it never sends a message. Do not attach again when the same product is the latest attached product. Preserve unsent Buyer text/product drafts locally in secure storage, and only restore after current conversation authorization succeeds. The composer offers a searchable, paginated picker restricted to that store's currently eligible active products. Text, product-only and text-with-product messages are supported. Product references use the existing listing variant UUID (`product_id`); snapshot listing ID, name, integer-centavo price and safe public image URL at send time. Preserve the snapshot after catalog changes and display No longer available when the offer is unavailable. Product cards do not modify quotations, inventory, or accepted terms.
+
+Client-generated message IDs bind immutable sender, text and product content. Optimistic messages show Sending, failure and Retry; retry reuses the same identifier. Inbox rows show the public other-party identity/avatar, latest message preview (Sent a product: [name] for product messages), Manila timestamp and unread count, ordered by activity. Opening the thread marks received messages read. Loading, No messages yet and real failures with functional Retry are separate states.
+
+Use existing Reverb viewer-authorized channels and account inbox invalidations. Reconnect reauthorizes and fetches missed history; REST polling is a recovery fallback. Typing is an ephemeral, debounced event with a server timestamp, no database/outbox persistence, and approximately three-second expiry. Read/send/file/channel checks continue to revalidate account, store, role and handler authority; preserve scanner, rate-limit, commercial-history and privacy safeguards. No Admin receives general conversation access through this change.
+
+Legacy duplicate general inquiries are linked to the oldest canonical thread without moving or deleting immutable commercial history. They remain reachable from Earlier inquiry history; new general chat goes to the canonical thread. Existing quotation actions retain their purpose-specific authorization. The unique partial index excludes Work Package and fulfillment threads.
+
+
+### Owner decision — 2026-10-02: Later quotations in a permanent store chat (MSG-03)
+
+The owner approved later, separate quotations in the same general store conversation after an earlier quotation is accepted. Vendor sales staff use New quotation; Customer Service retains draft-only authority. Each quotation keeps its own immutable published versions and accepted order. An idempotent start action requires the current quotation version, and the new draft advances the version counter so a stale editor cannot overwrite it. Earlier accepted quotations remain Accepted with their original order links; they are never relabeled Superseded by a later purchase. Work Package inquiries keep their one-quotation commercial boundary; fulfillment threads cannot create quotations.
+
+A Buyer may add or update the saved delivery location and heavy-vehicle access declaration from Delivery details inside the general thread, without a product or a blocking chat-entry dialog. Only the Buyer's owned, nonarchived locations are permitted; the intended site and alternate drop-off remain separate. Changes require the current conversation version and are rejected while the current quotation is Published or Viewed. An existing draft's version advances, and publication rechecks the delivery reference after route calculation. Existing accepted quotation and order snapshots remain unchanged. This follows from the permanent product-free store chat: delivery must not be fixed to its first entry.
+
+Local runtime verification uses Reverb's private channels. Native Buyer sockets send the explicit application-origin label `https://materyalph-buyer` (not a network endpoint); it grants no channel permission. Browser origins remain explicitly allowlisted. Application keys must not contain a colon because Pusher signatures use `key:signature`. No secret values belong in documentation or client bundles.

@@ -17,5 +17,10 @@ void main() {
       // TODO
     });
 
+    // String productId
+    test('to test the property `productId`', () async {
+      // TODO
+    });
+
   });
 }

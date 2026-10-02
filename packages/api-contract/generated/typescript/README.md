@@ -226,12 +226,16 @@ All URIs are relative to */api/v1*
 *MessagingApi* | [**getChatRealtime**](docs/MessagingApi.md#getchatrealtime) | **GET** /{messagingPortal}/messaging/realtime |
 *MessagingApi* | [**getConversation**](docs/MessagingApi.md#getconversation) | **GET** /{messagingPortal}/conversations/{conversationId} |
 *MessagingApi* | [**listChatHandlers**](docs/MessagingApi.md#listchathandlers) | **GET** /{messagingPortal}/conversations/{conversationId}/handlers |
+*MessagingApi* | [**listChatProducts**](docs/MessagingApi.md#listchatproducts) | **GET** /{messagingPortal}/conversations/{conversationId}/products |
 *MessagingApi* | [**listConversations**](docs/MessagingApi.md#listconversations) | **GET** /{messagingPortal}/conversations |
 *MessagingApi* | [**publishChatQuotation**](docs/MessagingApi.md#publishchatquotation) | **POST** /{messagingPortal}/conversations/{conversationId}/quotation/publish |
 *MessagingApi* | [**readChatMessages**](docs/MessagingApi.md#readchatmessages) | **POST** /{messagingPortal}/conversations/{conversationId}/read |
 *MessagingApi* | [**saveChatQuotationDraft**](docs/MessagingApi.md#savechatquotationdraft) | **PUT** /{messagingPortal}/conversations/{conversationId}/quotation/draft |
 *MessagingApi* | [**sendChatMessage**](docs/MessagingApi.md#sendchatmessage) | **POST** /{messagingPortal}/conversations/{conversationId}/messages |
+*MessagingApi* | [**sendChatTyping**](docs/MessagingApi.md#sendchattyping) | **POST** /{messagingPortal}/conversations/{conversationId}/typing |
+*MessagingApi* | [**startNextChatQuotation**](docs/MessagingApi.md#startnextchatquotation) | **POST** /{messagingPortal}/conversations/{conversationId}/quotation/start |
 *MessagingApi* | [**transferChatHandler**](docs/MessagingApi.md#transferchathandler) | **POST** /{messagingPortal}/conversations/{conversationId}/transfer |
+*MessagingApi* | [**updateChatDestination**](docs/MessagingApi.md#updatechatdestination) | **PUT** /{messagingPortal}/conversations/{conversationId}/destination |
 *MessagingApi* | [**uploadChatAttachment**](docs/MessagingApi.md#uploadchatattachment) | **POST** /{messagingPortal}/conversations/{conversationId}/attachments |
 *PaymentWebhooksApi* | [**receiveXenditPaymentWebhook**](docs/PaymentWebhooksApi.md#receivexenditpaymentwebhook) | **POST** /webhooks/xendit |
 *PaymentWebhooksApi* | [**showPaymentReturnPage**](docs/PaymentWebhooksApi.md#showpaymentreturnpage) | **GET** /payments/return |
@@ -478,6 +482,7 @@ All URIs are relative to */api/v1*
 - [ChatDecision](docs/ChatDecision.md)
 - [ChatDecisionResult](docs/ChatDecisionResult.md)
 - [ChatDecisionResultResponse](docs/ChatDecisionResultResponse.md)
+- [ChatDestinationUpdate](docs/ChatDestinationUpdate.md)
 - [ChatDraftContent](docs/ChatDraftContent.md)
 - [ChatDraftLine](docs/ChatDraftLine.md)
 - [ChatDraftSave](docs/ChatDraftSave.md)
@@ -489,6 +494,9 @@ All URIs are relative to */api/v1*
 - [ChatIdentity](docs/ChatIdentity.md)
 - [ChatMessage](docs/ChatMessage.md)
 - [ChatMessagePage](docs/ChatMessagePage.md)
+- [ChatProduct](docs/ChatProduct.md)
+- [ChatProductPage](docs/ChatProductPage.md)
+- [ChatProductPageResponse](docs/ChatProductPageResponse.md)
 - [ChatPublish](docs/ChatPublish.md)
 - [ChatQuotation](docs/ChatQuotation.md)
 - [ChatQuotationChange](docs/ChatQuotationChange.md)
@@ -504,6 +512,7 @@ All URIs are relative to */api/v1*
 - [ChatSend](docs/ChatSend.md)
 - [ChatStore](docs/ChatStore.md)
 - [ChatTransfer](docs/ChatTransfer.md)
+- [ChatTyping](docs/ChatTyping.md)
 - [CheckoutChildOrder](docs/CheckoutChildOrder.md)
 - [CheckoutGroupPreview](docs/CheckoutGroupPreview.md)
 - [CheckoutPreview](docs/CheckoutPreview.md)

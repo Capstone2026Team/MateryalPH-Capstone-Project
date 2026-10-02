@@ -168,6 +168,7 @@ docs/ChatCreate.md
 docs/ChatDecision.md
 docs/ChatDecisionResult.md
 docs/ChatDecisionResultResponse.md
+docs/ChatDestinationUpdate.md
 docs/ChatDraftContent.md
 docs/ChatDraftLine.md
 docs/ChatDraftSave.md
@@ -179,6 +180,9 @@ docs/ChatIdResponse.md
 docs/ChatIdentity.md
 docs/ChatMessage.md
 docs/ChatMessagePage.md
+docs/ChatProduct.md
+docs/ChatProductPage.md
+docs/ChatProductPageResponse.md
 docs/ChatPublish.md
 docs/ChatQuotation.md
 docs/ChatQuotationChange.md
@@ -194,6 +198,7 @@ docs/ChatRealtimeResponse.md
 docs/ChatSend.md
 docs/ChatStore.md
 docs/ChatTransfer.md
+docs/ChatTyping.md
 docs/CheckoutChildOrder.md
 docs/CheckoutGroupPreview.md
 docs/CheckoutPreview.md
@@ -785,6 +790,7 @@ src/models/ChatCreate.ts
 src/models/ChatDecision.ts
 src/models/ChatDecisionResult.ts
 src/models/ChatDecisionResultResponse.ts
+src/models/ChatDestinationUpdate.ts
 src/models/ChatDraftContent.ts
 src/models/ChatDraftLine.ts
 src/models/ChatDraftSave.ts
@@ -796,6 +802,9 @@ src/models/ChatIdResponse.ts
 src/models/ChatIdentity.ts
 src/models/ChatMessage.ts
 src/models/ChatMessagePage.ts
+src/models/ChatProduct.ts
+src/models/ChatProductPage.ts
+src/models/ChatProductPageResponse.ts
 src/models/ChatPublish.ts
 src/models/ChatQuotation.ts
 src/models/ChatQuotationChange.ts
@@ -811,6 +820,7 @@ src/models/ChatRealtimeResponse.ts
 src/models/ChatSend.ts
 src/models/ChatStore.ts
 src/models/ChatTransfer.ts
+src/models/ChatTyping.ts
 src/models/CheckoutChildOrder.ts
 src/models/CheckoutGroupPreview.ts
 src/models/CheckoutPreview.ts

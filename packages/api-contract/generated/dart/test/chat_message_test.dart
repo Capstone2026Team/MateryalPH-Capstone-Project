@@ -52,5 +52,10 @@ void main() {
       // TODO
     });
 
+    // ChatProduct product
+    test('to test the property `product`', () async {
+      // TODO
+    });
+
   });
 }

@@ -1,3 +1,4 @@
+import '../messaging/chat_delivery_dialog.dart';
 import '../messaging/messaging_repository.dart';
 import '../messaging/messaging_screen.dart';
 import '../map_discovery/discovery_repository.dart' show newIdempotencyKey;
@@ -39,112 +40,15 @@ class ProcurementNavigation {
   Future<void> openMessage(
     BuildContext context,
     String vendorId,
-    String variantId,
+    String? variantId,
   ) async {
     final repository = messaging;
     if (repository == null) return;
-    var restriction = 'UNANSWERED';
-    String? alternate;
-    final instructions = TextEditingController();
-    if (explore.origin?.locationId != null) {
-      final proceed = await showDialog<bool>(
-        context: context,
-        builder: (context) => StatefulBuilder(
-          builder: (context, update) => AlertDialog(
-            title: const Text('Delivery access for this inquiry'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text(
-                    'If you request delivery, are heavy vehicles restricted at your selected location?',
-                  ),
-                  DropdownButtonFormField<String>(
-                    initialValue: restriction,
-                    isExpanded: true,
-                    items: const [
-                      DropdownMenuItem(
-                        value: 'UNANSWERED',
-                        child: Text('Pickup / decide later'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'NO',
-                        child: Text('No restriction'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'YES',
-                        child: Text('Heavy vehicles restricted'),
-                      ),
-                    ],
-                    onChanged: (value) => update(() => restriction = value!),
-                  ),
-                  if (restriction == 'YES') ...[
-                    DropdownButtonFormField<String>(
-                      initialValue: alternate,
-                      isExpanded: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Alternative vehicle drop-off',
-                      ),
-                      items: [
-                        for (final location in explore.savedLocations.where(
-                          (l) => l.id != explore.origin?.locationId,
-                        ))
-                          DropdownMenuItem(
-                            value: location.id,
-                            child: Text(
-                              location.label,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                      ],
-                      onChanged: (value) => update(() => alternate = value),
-                    ),
-                    TextField(
-                      controller: instructions,
-                      maxLength: 500,
-                      decoration: const InputDecoration(
-                        labelText: 'Access and unloading instructions',
-                      ),
-                      onChanged: (_) => update(() {}),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                onPressed:
-                    restriction == 'YES' &&
-                        (alternate == null ||
-                            instructions.text.trim().length < 5)
-                    ? null
-                    : () => Navigator.pop(context, true),
-                child: const Text('Open conversation'),
-              ),
-            ],
-          ),
-        ),
-      );
-      if (proceed != true || !context.mounted) {
-        instructions.dispose();
-        return;
-      }
-    }
     try {
       final id = await repository.create(
         vendorId,
         variantId,
         newIdempotencyKey(),
-        locationId: explore.origin?.locationId,
-        heavyVehicleRestriction: restriction,
-        alternateDropOffLocationId: restriction == 'YES' ? alternate : null,
-        accessInstructions: restriction == 'YES'
-            ? instructions.text.trim()
-            : null,
       );
       if (context.mounted) {
         await _push(
@@ -152,6 +56,10 @@ class ProcurementNavigation {
           MessagingScreen(
             repository: repository,
             conversationId: id,
+            initialProductId: variantId,
+            onSetDelivery: (id, version) =>
+                setChatDelivery(context, id, version),
+            onOpenProduct: (listingId) => openListing(context, listingId),
             orders: orders,
             onOpenCart: () => openCart(context),
           ),
@@ -165,9 +73,23 @@ class ProcurementNavigation {
           ),
         );
       }
-    } finally {
-      instructions.dispose();
     }
+  }
+
+  Future<void> setChatDelivery(
+    BuildContext context,
+    String id,
+    int version,
+  ) async {
+    if (messaging == null) return;
+    await showChatDeliveryDialog(
+      context,
+      repository: messaging!,
+      conversationId: id,
+      lockVersion: version,
+      locations: explore.savedLocations,
+      initialLocation: explore.origin?.locationId,
+    );
   }
 
   void openLocation(BuildContext context) {

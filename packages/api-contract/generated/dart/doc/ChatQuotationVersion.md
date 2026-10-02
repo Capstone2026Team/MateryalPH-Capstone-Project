@@ -18,6 +18,8 @@ Name | Type | Description | Notes
 **content** | [**ChatQuotationContent**](ChatQuotationContent.md) |  |
 **viewed** | **bool** |  |
 **actions** | **BuiltList&lt;String&gt;** |  |
+**quotationId** | **String** |  | [optional]
+**acceptedOrderId** | **String** |  | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

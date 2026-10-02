@@ -28,6 +28,13 @@ part 'conversation_view.g.dart';
 /// * [updatedAt]
 /// * [canTransfer]
 /// * [fulfillmentEntryEnabled]
+/// * [buyer]
+/// * [lastMessagePreview]
+/// * [latestProductId]
+/// * [canonicalConversationId]
+/// * [legacyConversationIds]
+/// * [legacyHasMore]
+/// * [legacyPage]
 @BuiltValue()
 abstract class ConversationView implements Built<ConversationView, ConversationViewBuilder> {
   @BuiltValueField(wireName: r'id')
@@ -70,6 +77,27 @@ abstract class ConversationView implements Built<ConversationView, ConversationV
 
   @BuiltValueField(wireName: r'fulfillment_entry_enabled')
   bool get fulfillmentEntryEnabled;
+
+  @BuiltValueField(wireName: r'buyer')
+  ChatIdentity? get buyer;
+
+  @BuiltValueField(wireName: r'last_message_preview')
+  String? get lastMessagePreview;
+
+  @BuiltValueField(wireName: r'latest_product_id')
+  String? get latestProductId;
+
+  @BuiltValueField(wireName: r'canonical_conversation_id')
+  String? get canonicalConversationId;
+
+  @BuiltValueField(wireName: r'legacy_conversation_ids')
+  BuiltList<String>? get legacyConversationIds;
+
+  @BuiltValueField(wireName: r'legacy_has_more')
+  bool? get legacyHasMore;
+
+  @BuiltValueField(wireName: r'legacy_page')
+  int? get legacyPage;
 
   ConversationView._();
 
@@ -163,6 +191,55 @@ class _$ConversationViewSerializer implements PrimitiveSerializer<ConversationVi
       object.fulfillmentEntryEnabled,
       specifiedType: const FullType(bool),
     );
+    if (object.buyer != null) {
+      yield r'buyer';
+      yield serializers.serialize(
+        object.buyer,
+        specifiedType: const FullType(ChatIdentity),
+      );
+    }
+    if (object.lastMessagePreview != null) {
+      yield r'last_message_preview';
+      yield serializers.serialize(
+        object.lastMessagePreview,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.latestProductId != null) {
+      yield r'latest_product_id';
+      yield serializers.serialize(
+        object.latestProductId,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.canonicalConversationId != null) {
+      yield r'canonical_conversation_id';
+      yield serializers.serialize(
+        object.canonicalConversationId,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.legacyConversationIds != null) {
+      yield r'legacy_conversation_ids';
+      yield serializers.serialize(
+        object.legacyConversationIds,
+        specifiedType: const FullType(BuiltList, [FullType(String)]),
+      );
+    }
+    if (object.legacyHasMore != null) {
+      yield r'legacy_has_more';
+      yield serializers.serialize(
+        object.legacyHasMore,
+        specifiedType: const FullType(bool),
+      );
+    }
+    if (object.legacyPage != null) {
+      yield r'legacy_page';
+      yield serializers.serialize(
+        object.legacyPage,
+        specifiedType: const FullType(int),
+      );
+    }
   }
 
   @override
@@ -278,6 +355,62 @@ class _$ConversationViewSerializer implements PrimitiveSerializer<ConversationVi
             specifiedType: const FullType(bool),
           ) as bool;
           result.fulfillmentEntryEnabled = valueDes;
+          break;
+        case r'buyer':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(ChatIdentity),
+          ) as ChatIdentity?;
+          if (valueDes == null) continue;
+          result.buyer.replace(valueDes);
+          break;
+        case r'last_message_preview':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.lastMessagePreview = valueDes;
+          break;
+        case r'latest_product_id':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.latestProductId = valueDes;
+          break;
+        case r'canonical_conversation_id':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.canonicalConversationId = valueDes;
+          break;
+        case r'legacy_conversation_ids':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltList, [FullType(String)]),
+          ) as BuiltList<String>?;
+          if (valueDes == null) continue;
+          result.legacyConversationIds.replace(valueDes);
+          break;
+        case r'legacy_has_more':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.legacyHasMore = valueDes;
+          break;
+        case r'legacy_page':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.legacyPage = valueDes;
           break;
         default:
           unhandled.add(key);

@@ -166,6 +166,7 @@ import 'package:materyalph_api_client/src/model/chat_create.dart';
 import 'package:materyalph_api_client/src/model/chat_decision.dart';
 import 'package:materyalph_api_client/src/model/chat_decision_result.dart';
 import 'package:materyalph_api_client/src/model/chat_decision_result_response.dart';
+import 'package:materyalph_api_client/src/model/chat_destination_update.dart';
 import 'package:materyalph_api_client/src/model/chat_draft_content.dart';
 import 'package:materyalph_api_client/src/model/chat_draft_line.dart';
 import 'package:materyalph_api_client/src/model/chat_draft_save.dart';
@@ -177,6 +178,9 @@ import 'package:materyalph_api_client/src/model/chat_id_response.dart';
 import 'package:materyalph_api_client/src/model/chat_identity.dart';
 import 'package:materyalph_api_client/src/model/chat_message.dart';
 import 'package:materyalph_api_client/src/model/chat_message_page.dart';
+import 'package:materyalph_api_client/src/model/chat_product.dart';
+import 'package:materyalph_api_client/src/model/chat_product_page.dart';
+import 'package:materyalph_api_client/src/model/chat_product_page_response.dart';
 import 'package:materyalph_api_client/src/model/chat_publish.dart';
 import 'package:materyalph_api_client/src/model/chat_quotation.dart';
 import 'package:materyalph_api_client/src/model/chat_quotation_change.dart';
@@ -192,6 +196,7 @@ import 'package:materyalph_api_client/src/model/chat_realtime_response.dart';
 import 'package:materyalph_api_client/src/model/chat_send.dart';
 import 'package:materyalph_api_client/src/model/chat_store.dart';
 import 'package:materyalph_api_client/src/model/chat_transfer.dart';
+import 'package:materyalph_api_client/src/model/chat_typing.dart';
 import 'package:materyalph_api_client/src/model/checkout_child_order.dart';
 import 'package:materyalph_api_client/src/model/checkout_group_preview.dart';
 import 'package:materyalph_api_client/src/model/checkout_preview.dart';
@@ -749,6 +754,7 @@ part 'serializers.g.dart';
   ChatDecision,
   ChatDecisionResult,
   ChatDecisionResultResponse,
+  ChatDestinationUpdate,
   ChatDraftContent,
   ChatDraftLine,
   ChatDraftSave,
@@ -760,6 +766,9 @@ part 'serializers.g.dart';
   ChatIdentity,
   ChatMessage,
   ChatMessagePage,
+  ChatProduct,
+  ChatProductPage,
+  ChatProductPageResponse,
   ChatPublish,
   ChatQuotation,
   ChatQuotationChange,
@@ -775,6 +784,7 @@ part 'serializers.g.dart';
   ChatSend,
   ChatStore,
   ChatTransfer,
+  ChatTyping,
   CheckoutChildOrder,
   CheckoutGroupPreview,
   CheckoutPreview,
@@ -1408,6 +1418,10 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(StoreHoursDay)]),
         () => ListBuilder<StoreHoursDay>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ChatProduct)]),
+        () => ListBuilder<ChatProduct>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(BuyerIndustryClassification)]),

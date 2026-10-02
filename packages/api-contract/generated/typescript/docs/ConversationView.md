@@ -19,6 +19,13 @@ Name | Type
 `updatedAt` | string
 `canTransfer` | boolean
 `fulfillmentEntryEnabled` | boolean
+`buyer` | [ChatIdentity](ChatIdentity.md)
+`lastMessagePreview` | string
+`latestProductId` | string
+`canonicalConversationId` | string
+`legacyConversationIds` | Array&lt;string&gt;
+`legacyHasMore` | boolean
+`legacyPage` | number
 
 ## Example
 
@@ -40,6 +47,13 @@ const example = {
   "updatedAt": null,
   "canTransfer": null,
   "fulfillmentEntryEnabled": null,
+  "buyer": null,
+  "lastMessagePreview": null,
+  "latestProductId": null,
+  "canonicalConversationId": null,
+  "legacyConversationIds": null,
+  "legacyHasMore": null,
+  "legacyPage": null,
 } satisfies ConversationView
 
 console.log(example)

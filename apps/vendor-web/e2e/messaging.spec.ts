@@ -65,11 +65,26 @@ test('quotation history and public handler identity remain readable across scree
   await page.getByLabel('Message', { exact: true }).fill('Thank you for reviewing the quotation.')
   await expect(page.getByRole('button', { name: 'Send message' })).toBeEnabled()
   await page.getByRole('button', { name: 'Send message' }).click()
-  await expect(page.getByLabel('Message', { exact: true })).toHaveValue('Thank you for reviewing the quotation.')
-  await expect(page.getByRole('button', { name: 'Send message' })).toBeEnabled()
-  await page.getByRole('button', { name: 'Send message' }).click()
+  await expect(page.getByLabel('Message', { exact: true })).toHaveValue('')
+  await page.getByRole('button', { name: 'Failed to send · Retry' }).click()
   await expect(page.getByLabel('Message', { exact: true })).toHaveValue('')
   await expect(page.getByText('Thank you for reviewing the quotation.', { exact: true })).toBeVisible()
   expect(sentKeys).toHaveLength(2)
   expect(sentKeys[0]).toBe(sentKeys[1])
+
+  detail.quotations.quotation.state = 'ACCEPTED'
+  detail.quotations.versions[0]!.state = 'ACCEPTED'
+  detail.quotations.versions[0]!.actions = []
+  Object.assign(detail.quotations.versions[0]!, { accepted_order_id: 'order-one' })
+  await page.route('**/quotation/start', async route => {
+    expect(route.request().headers()['idempotency-key']).toBeTruthy()
+    expect(route.request().postDataJSON()).toEqual({ lock_version: 3 })
+    detail.quotations.quotation = { ...detail.quotations.quotation, id: 'quote-two', state: 'DRAFT', lock_version: 4, current_version_id: '', draft: null }
+    detail.quotations.versions[0]!.latest = false
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: detail.quotations, meta: {}, errors: [] }) })
+  })
+  await page.reload()
+  await page.getByRole('button', { name: 'New quotation', exact: true }).click()
+  await expect(page.getByRole('region', { name: 'Quotation draft' })).toBeVisible()
+  await expect(page.getByRole('link', { name: /Open accepted order/ })).toHaveAttribute('href', '/orders/order-one')
 })

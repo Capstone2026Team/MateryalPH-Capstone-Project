@@ -5,6 +5,7 @@
 // ignore_for_file: unused_element
 import 'package:materyalph_api_client/src/model/chat_attachment.dart';
 import 'package:built_collection/built_collection.dart';
+import 'package:materyalph_api_client/src/model/chat_product.dart';
 import 'package:materyalph_api_client/src/model/chat_identity.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
@@ -23,6 +24,7 @@ part 'chat_message.g.dart';
 /// * [mine]
 /// * [attachments]
 /// * [readByRecipient]
+/// * [product]
 @BuiltValue()
 abstract class ChatMessage implements Built<ChatMessage, ChatMessageBuilder> {
   @BuiltValueField(wireName: r'id')
@@ -36,7 +38,7 @@ abstract class ChatMessage implements Built<ChatMessage, ChatMessageBuilder> {
 
   @BuiltValueField(wireName: r'kind')
   ChatMessageKindEnum get kind;
-  // enum kindEnum {  TEXT,  SYSTEM,  ATTACHMENT,  };
+  // enum kindEnum {  TEXT,  SYSTEM,  ATTACHMENT,  PRODUCT,  TEXT_WITH_PRODUCT,  };
 
   @BuiltValueField(wireName: r'sender')
   ChatIdentity get sender;
@@ -52,6 +54,9 @@ abstract class ChatMessage implements Built<ChatMessage, ChatMessageBuilder> {
 
   @BuiltValueField(wireName: r'read_by_recipient')
   bool get readByRecipient;
+
+  @BuiltValueField(wireName: r'product')
+  ChatProduct? get product;
 
   ChatMessage._();
 
@@ -121,6 +126,13 @@ class _$ChatMessageSerializer implements PrimitiveSerializer<ChatMessage> {
       object.readByRecipient,
       specifiedType: const FullType(bool),
     );
+    if (object.product != null) {
+      yield r'product';
+      yield serializers.serialize(
+        object.product,
+        specifiedType: const FullType(ChatProduct),
+      );
+    }
   }
 
   @override
@@ -207,6 +219,14 @@ class _$ChatMessageSerializer implements PrimitiveSerializer<ChatMessage> {
           ) as bool;
           result.readByRecipient = valueDes;
           break;
+        case r'product':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(ChatProduct),
+          ) as ChatProduct?;
+          if (valueDes == null) continue;
+          result.product.replace(valueDes);
+          break;
         default:
           unhandled.add(key);
           unhandled.add(value);
@@ -245,6 +265,10 @@ class ChatMessageKindEnum extends EnumClass {
   static const ChatMessageKindEnum SYSTEM = _$chatMessageKindEnum_SYSTEM;
   @BuiltValueEnumConst(wireName: r'ATTACHMENT')
   static const ChatMessageKindEnum ATTACHMENT = _$chatMessageKindEnum_ATTACHMENT;
+  @BuiltValueEnumConst(wireName: r'PRODUCT')
+  static const ChatMessageKindEnum PRODUCT = _$chatMessageKindEnum_PRODUCT;
+  @BuiltValueEnumConst(wireName: r'TEXT_WITH_PRODUCT')
+  static const ChatMessageKindEnum TEXT_WITH_PRODUCT = _$chatMessageKindEnum_TEXT_WITH_PRODUCT;
 
   static Serializer<ChatMessageKindEnum> get serializer => _$chatMessageKindEnumSerializer;
 

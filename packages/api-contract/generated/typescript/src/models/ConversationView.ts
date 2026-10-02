@@ -86,6 +86,34 @@ export interface ConversationView {
      *
      */
     fulfillmentEntryEnabled: boolean;
+    /**
+     *
+     */
+    buyer?: ChatIdentity;
+    /**
+     *
+     */
+    lastMessagePreview?: string;
+    /**
+     *
+     */
+    latestProductId?: string;
+    /**
+     *
+     */
+    canonicalConversationId?: string;
+    /**
+     *
+     */
+    legacyConversationIds?: Array<string>;
+    /**
+     *
+     */
+    legacyHasMore?: boolean;
+    /**
+     *
+     */
+    legacyPage?: number;
 }
 
 
@@ -149,6 +177,13 @@ export function ConversationViewFromJSONTyped(json: any, ignoreDiscriminator: bo
         'updatedAt': json['updated_at'],
         'canTransfer': json['can_transfer'],
         'fulfillmentEntryEnabled': json['fulfillment_entry_enabled'],
+        'buyer': json['buyer'] == null ? undefined : ChatIdentityFromJSON(json['buyer']),
+        'lastMessagePreview': json['last_message_preview'] == null ? undefined : json['last_message_preview'],
+        'latestProductId': json['latest_product_id'] == null ? undefined : json['latest_product_id'],
+        'canonicalConversationId': json['canonical_conversation_id'] == null ? undefined : json['canonical_conversation_id'],
+        'legacyConversationIds': json['legacy_conversation_ids'] == null ? undefined : json['legacy_conversation_ids'],
+        'legacyHasMore': json['legacy_has_more'] == null ? undefined : json['legacy_has_more'],
+        'legacyPage': json['legacy_page'] == null ? undefined : json['legacy_page'],
     };
 }
 
@@ -176,6 +211,13 @@ export function ConversationViewToJSONTyped(value?: ConversationView | null, ign
         'updated_at': value['updatedAt'],
         'can_transfer': value['canTransfer'],
         'fulfillment_entry_enabled': value['fulfillmentEntryEnabled'],
+        'buyer': ChatIdentityToJSON(value['buyer']),
+        'last_message_preview': value['lastMessagePreview'],
+        'latest_product_id': value['latestProductId'],
+        'canonical_conversation_id': value['canonicalConversationId'],
+        'legacy_conversation_ids': value['legacyConversationIds'],
+        'legacy_has_more': value['legacyHasMore'],
+        'legacy_page': value['legacyPage'],
     };
 }
 

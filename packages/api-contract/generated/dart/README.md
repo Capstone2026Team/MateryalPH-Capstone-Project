@@ -232,12 +232,16 @@ Class | Method | HTTP request | Description
 [*MessagingApi*](doc/MessagingApi.md) | [**getChatRealtime**](doc/MessagingApi.md#getchatrealtime) | **GET** /{messagingPortal}/messaging/realtime |
 [*MessagingApi*](doc/MessagingApi.md) | [**getConversation**](doc/MessagingApi.md#getconversation) | **GET** /{messagingPortal}/conversations/{conversationId} |
 [*MessagingApi*](doc/MessagingApi.md) | [**listChatHandlers**](doc/MessagingApi.md#listchathandlers) | **GET** /{messagingPortal}/conversations/{conversationId}/handlers |
+[*MessagingApi*](doc/MessagingApi.md) | [**listChatProducts**](doc/MessagingApi.md#listchatproducts) | **GET** /{messagingPortal}/conversations/{conversationId}/products |
 [*MessagingApi*](doc/MessagingApi.md) | [**listConversations**](doc/MessagingApi.md#listconversations) | **GET** /{messagingPortal}/conversations |
 [*MessagingApi*](doc/MessagingApi.md) | [**publishChatQuotation**](doc/MessagingApi.md#publishchatquotation) | **POST** /{messagingPortal}/conversations/{conversationId}/quotation/publish |
 [*MessagingApi*](doc/MessagingApi.md) | [**readChatMessages**](doc/MessagingApi.md#readchatmessages) | **POST** /{messagingPortal}/conversations/{conversationId}/read |
 [*MessagingApi*](doc/MessagingApi.md) | [**saveChatQuotationDraft**](doc/MessagingApi.md#savechatquotationdraft) | **PUT** /{messagingPortal}/conversations/{conversationId}/quotation/draft |
 [*MessagingApi*](doc/MessagingApi.md) | [**sendChatMessage**](doc/MessagingApi.md#sendchatmessage) | **POST** /{messagingPortal}/conversations/{conversationId}/messages |
+[*MessagingApi*](doc/MessagingApi.md) | [**sendChatTyping**](doc/MessagingApi.md#sendchattyping) | **POST** /{messagingPortal}/conversations/{conversationId}/typing |
+[*MessagingApi*](doc/MessagingApi.md) | [**startNextChatQuotation**](doc/MessagingApi.md#startnextchatquotation) | **POST** /{messagingPortal}/conversations/{conversationId}/quotation/start |
 [*MessagingApi*](doc/MessagingApi.md) | [**transferChatHandler**](doc/MessagingApi.md#transferchathandler) | **POST** /{messagingPortal}/conversations/{conversationId}/transfer |
+[*MessagingApi*](doc/MessagingApi.md) | [**updateChatDestination**](doc/MessagingApi.md#updatechatdestination) | **PUT** /{messagingPortal}/conversations/{conversationId}/destination |
 [*MessagingApi*](doc/MessagingApi.md) | [**uploadChatAttachment**](doc/MessagingApi.md#uploadchatattachment) | **POST** /{messagingPortal}/conversations/{conversationId}/attachments |
 [*PaymentWebhooksApi*](doc/PaymentWebhooksApi.md) | [**receiveXenditPaymentWebhook**](doc/PaymentWebhooksApi.md#receivexenditpaymentwebhook) | **POST** /webhooks/xendit |
 [*PaymentWebhooksApi*](doc/PaymentWebhooksApi.md) | [**showPaymentReturnPage**](doc/PaymentWebhooksApi.md#showpaymentreturnpage) | **GET** /payments/return |
@@ -484,6 +488,7 @@ Class | Method | HTTP request | Description
  - [ChatDecision](doc/ChatDecision.md)
  - [ChatDecisionResult](doc/ChatDecisionResult.md)
  - [ChatDecisionResultResponse](doc/ChatDecisionResultResponse.md)
+ - [ChatDestinationUpdate](doc/ChatDestinationUpdate.md)
  - [ChatDraftContent](doc/ChatDraftContent.md)
  - [ChatDraftLine](doc/ChatDraftLine.md)
  - [ChatDraftSave](doc/ChatDraftSave.md)
@@ -495,6 +500,9 @@ Class | Method | HTTP request | Description
  - [ChatIdentity](doc/ChatIdentity.md)
  - [ChatMessage](doc/ChatMessage.md)
  - [ChatMessagePage](doc/ChatMessagePage.md)
+ - [ChatProduct](doc/ChatProduct.md)
+ - [ChatProductPage](doc/ChatProductPage.md)
+ - [ChatProductPageResponse](doc/ChatProductPageResponse.md)
  - [ChatPublish](doc/ChatPublish.md)
  - [ChatQuotation](doc/ChatQuotation.md)
  - [ChatQuotationChange](doc/ChatQuotationChange.md)
@@ -510,6 +518,7 @@ Class | Method | HTTP request | Description
  - [ChatSend](doc/ChatSend.md)
  - [ChatStore](doc/ChatStore.md)
  - [ChatTransfer](doc/ChatTransfer.md)
+ - [ChatTyping](doc/ChatTyping.md)
  - [CheckoutChildOrder](doc/CheckoutChildOrder.md)
  - [CheckoutGroupPreview](doc/CheckoutGroupPreview.md)
  - [CheckoutPreview](doc/CheckoutPreview.md)

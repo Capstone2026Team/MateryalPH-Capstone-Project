@@ -72,5 +72,40 @@ void main() {
       // TODO
     });
 
+    // ChatIdentity buyer
+    test('to test the property `buyer`', () async {
+      // TODO
+    });
+
+    // String lastMessagePreview
+    test('to test the property `lastMessagePreview`', () async {
+      // TODO
+    });
+
+    // String latestProductId
+    test('to test the property `latestProductId`', () async {
+      // TODO
+    });
+
+    // String canonicalConversationId
+    test('to test the property `canonicalConversationId`', () async {
+      // TODO
+    });
+
+    // BuiltList<String> legacyConversationIds
+    test('to test the property `legacyConversationIds`', () async {
+      // TODO
+    });
+
+    // bool legacyHasMore
+    test('to test the property `legacyHasMore`', () async {
+      // TODO
+    });
+
+    // int legacyPage
+    test('to test the property `legacyPage`', () async {
+      // TODO
+    });
+
   });
 }

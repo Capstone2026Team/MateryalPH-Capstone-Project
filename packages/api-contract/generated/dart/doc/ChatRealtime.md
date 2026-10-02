@@ -8,7 +8,7 @@ import 'package:materyalph_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**inboxChannel** | **String** | Opaque private Buyer inbox channel without the private- prefix; null for non-Buyers. Receives inbox.changed invalidations only. Re-fetch configuration after reconnecting. | [optional]
+**inboxChannel** | **String** | Viewer-bound Buyer or Vendor inbox invalidation channel. Re-fetch configuration on reconnect. No message content is broadcast. | [optional]
 **enabled** | **bool** |  |
 **key** | **String** |  | [optional]
 **host** | **String** |  | [optional]

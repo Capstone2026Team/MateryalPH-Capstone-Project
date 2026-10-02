@@ -30,7 +30,7 @@ for (const [path, methods] of Object.entries(spec.paths)) {
       assert.match(middleware, portal === 'buyers' ? /RequireAccountAccess:BUYER|account.access:BUYER/ : /RequireAccountAccess:VENDOR|account.access:VENDOR/)
       if (portal === 'vendor' && method !== 'get') assert.match(middleware, /VerifyAccountCsrf/)
     }
-    if (['publishChatQuotation', 'decideChatQuotation', 'createConversation'].includes(operation.operationId)) {
+    if (['publishChatQuotation', 'startNextChatQuotation', 'decideChatQuotation', 'createConversation'].includes(operation.operationId)) {
       assert.ok(operation.parameters.some(p => p.name === 'Idempotency-Key' && p.required))
     }
   }

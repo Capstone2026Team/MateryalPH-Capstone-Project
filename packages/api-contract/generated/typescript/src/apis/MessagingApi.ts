@@ -39,6 +39,11 @@ import {
     ChatDecisionResultResponseToJSON,
 } from '../models/ChatDecisionResultResponse';
 import {
+    type ChatDestinationUpdate,
+    ChatDestinationUpdateFromJSON,
+    ChatDestinationUpdateToJSON,
+} from '../models/ChatDestinationUpdate';
+import {
     type ChatDraftSave,
     ChatDraftSaveFromJSON,
     ChatDraftSaveToJSON,
@@ -58,6 +63,11 @@ import {
     ChatIdResponseFromJSON,
     ChatIdResponseToJSON,
 } from '../models/ChatIdResponse';
+import {
+    type ChatProductPageResponse,
+    ChatProductPageResponseFromJSON,
+    ChatProductPageResponseToJSON,
+} from '../models/ChatProductPageResponse';
 import {
     type ChatPublish,
     ChatPublishFromJSON,
@@ -88,6 +98,11 @@ import {
     ChatTransferFromJSON,
     ChatTransferToJSON,
 } from '../models/ChatTransfer';
+import {
+    type ChatTyping,
+    ChatTypingFromJSON,
+    ChatTypingToJSON,
+} from '../models/ChatTyping';
 import {
     type ConversationDetailResponse,
     ConversationDetailResponseFromJSON,
@@ -202,6 +217,10 @@ export interface GetConversationRequest {
      *
      */
     before?: string;
+    /**
+     * Page of preserved legacy inquiry references, 25 per page.
+     */
+    legacyPage?: number;
 }
 
 export interface ListChatHandlersRequest {
@@ -213,6 +232,29 @@ export interface ListChatHandlersRequest {
      *
      */
     conversationId: string;
+    /**
+     *
+     */
+    page?: number;
+}
+
+export interface ListChatProductsRequest {
+    /**
+     *
+     */
+    messagingPortal: ListChatProductsMessagingPortalEnum;
+    /**
+     *
+     */
+    conversationId: string;
+    /**
+     *
+     */
+    q?: string;
+    /**
+     *
+     */
+    productId?: string;
     /**
      *
      */
@@ -294,6 +336,40 @@ export interface SendChatMessageRequest {
     chatSend: ChatSend;
 }
 
+export interface SendChatTypingRequest {
+    /**
+     *
+     */
+    messagingPortal: SendChatTypingMessagingPortalEnum;
+    /**
+     *
+     */
+    conversationId: string;
+    /**
+     *
+     */
+    chatTyping: ChatTyping;
+}
+
+export interface StartNextChatQuotationRequest {
+    /**
+     *
+     */
+    messagingPortal: StartNextChatQuotationMessagingPortalEnum;
+    /**
+     *
+     */
+    conversationId: string;
+    /**
+     *
+     */
+    idempotencyKey: string;
+    /**
+     *
+     */
+    chatPublish: ChatPublish;
+}
+
 export interface TransferChatHandlerRequest {
     /**
      *
@@ -307,6 +383,21 @@ export interface TransferChatHandlerRequest {
      *
      */
     chatTransfer: ChatTransfer;
+}
+
+export interface UpdateChatDestinationRequest {
+    /**
+     *
+     */
+    messagingPortal: UpdateChatDestinationMessagingPortalEnum;
+    /**
+     *
+     */
+    conversationId: string;
+    /**
+     *
+     */
+    chatDestinationUpdate: ChatDestinationUpdate;
 }
 
 export interface UploadChatAttachmentRequest {
@@ -799,6 +890,10 @@ export class MessagingApi extends runtime.BaseAPI {
             queryParameters['before'] = requestParameters['before'];
         }
 
+        if (requestParameters['legacyPage'] != null) {
+            queryParameters['legacy_page'] = requestParameters['legacyPage'];
+        }
+
         const headerParameters: runtime.HTTPHeaders = {};
 
         if (this.configuration && this.configuration.accessToken) {
@@ -902,6 +997,83 @@ export class MessagingApi extends runtime.BaseAPI {
      */
     async listChatHandlers(requestParameters: ListChatHandlersRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ChatHandlersResponse> {
         const response = await this.listChatHandlersRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for listChatProducts without sending the request
+     */
+    async listChatProductsRequestOpts(requestParameters: ListChatProductsRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['messagingPortal'] == null) {
+            throw new runtime.RequiredError(
+                'messagingPortal',
+                'Required parameter "messagingPortal" was null or undefined when calling listChatProducts().'
+            );
+        }
+
+        if (requestParameters['conversationId'] == null) {
+            throw new runtime.RequiredError(
+                'conversationId',
+                'Required parameter "conversationId" was null or undefined when calling listChatProducts().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['q'] != null) {
+            queryParameters['q'] = requestParameters['q'];
+        }
+
+        if (requestParameters['productId'] != null) {
+            queryParameters['product_id'] = requestParameters['productId'];
+        }
+
+        if (requestParameters['page'] != null) {
+            queryParameters['page'] = requestParameters['page'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("passportBearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/{messagingPortal}/conversations/{conversationId}/products`;
+        urlPath = urlPath.replace('{messagingPortal}', encodeURIComponent(String(requestParameters['messagingPortal'])));
+        urlPath = urlPath.replace('{conversationId}', encodeURIComponent(String(requestParameters['conversationId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Search active eligible products of this conversation store. product_id filters one listing variant for a local unsent draft.
+     */
+    async listChatProductsRaw(requestParameters: ListChatProductsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ChatProductPageResponse>> {
+        const requestOptions = await this.listChatProductsRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ChatProductPageResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Search active eligible products of this conversation store. product_id filters one listing variant for a local unsent draft.
+     */
+    async listChatProducts(requestParameters: ListChatProductsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ChatProductPageResponse> {
+        const response = await this.listChatProductsRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -1262,6 +1434,159 @@ export class MessagingApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates request options for sendChatTyping without sending the request
+     */
+    async sendChatTypingRequestOpts(requestParameters: SendChatTypingRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['messagingPortal'] == null) {
+            throw new runtime.RequiredError(
+                'messagingPortal',
+                'Required parameter "messagingPortal" was null or undefined when calling sendChatTyping().'
+            );
+        }
+
+        if (requestParameters['conversationId'] == null) {
+            throw new runtime.RequiredError(
+                'conversationId',
+                'Required parameter "conversationId" was null or undefined when calling sendChatTyping().'
+            );
+        }
+
+        if (requestParameters['chatTyping'] == null) {
+            throw new runtime.RequiredError(
+                'chatTyping',
+                'Required parameter "chatTyping" was null or undefined when calling sendChatTyping().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("passportBearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/{messagingPortal}/conversations/{conversationId}/typing`;
+        urlPath = urlPath.replace('{messagingPortal}', encodeURIComponent(String(requestParameters['messagingPortal'])));
+        urlPath = urlPath.replace('{conversationId}', encodeURIComponent(String(requestParameters['conversationId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ChatTypingToJSON(requestParameters['chatTyping']),
+        };
+    }
+
+    /**
+     * Ephemeral authorized conversation.typing event on existing viewer channels, with typing boolean and server millisecond timestamp at. Never persisted; receivers ignore older events and clear after three seconds. Existing account rate limits apply.
+     */
+    async sendChatTypingRaw(requestParameters: SendChatTypingRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ChatEmptyResponse>> {
+        const requestOptions = await this.sendChatTypingRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ChatEmptyResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Ephemeral authorized conversation.typing event on existing viewer channels, with typing boolean and server millisecond timestamp at. Never persisted; receivers ignore older events and clear after three seconds. Existing account rate limits apply.
+     */
+    async sendChatTyping(requestParameters: SendChatTypingRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ChatEmptyResponse> {
+        const response = await this.sendChatTypingRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for startNextChatQuotation without sending the request
+     */
+    async startNextChatQuotationRequestOpts(requestParameters: StartNextChatQuotationRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['messagingPortal'] == null) {
+            throw new runtime.RequiredError(
+                'messagingPortal',
+                'Required parameter "messagingPortal" was null or undefined when calling startNextChatQuotation().'
+            );
+        }
+
+        if (requestParameters['conversationId'] == null) {
+            throw new runtime.RequiredError(
+                'conversationId',
+                'Required parameter "conversationId" was null or undefined when calling startNextChatQuotation().'
+            );
+        }
+
+        if (requestParameters['idempotencyKey'] == null) {
+            throw new runtime.RequiredError(
+                'idempotencyKey',
+                'Required parameter "idempotencyKey" was null or undefined when calling startNextChatQuotation().'
+            );
+        }
+
+        if (requestParameters['chatPublish'] == null) {
+            throw new runtime.RequiredError(
+                'chatPublish',
+                'Required parameter "chatPublish" was null or undefined when calling startNextChatQuotation().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (requestParameters['idempotencyKey'] != null) {
+            headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
+        }
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/{messagingPortal}/conversations/{conversationId}/quotation/start`;
+        urlPath = urlPath.replace('{messagingPortal}', encodeURIComponent(String(requestParameters['messagingPortal'])));
+        urlPath = urlPath.replace('{conversationId}', encodeURIComponent(String(requestParameters['conversationId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ChatPublishToJSON(requestParameters['chatPublish']),
+        };
+    }
+
+    /**
+     * Start a separate quotation after acceptance in the canonical general store chat. Prior accepted quotations and orders stay immutable. Work Package and fulfillment threads cannot start a later quotation. Requires the latest quotation lock_version and Idempotency-Key.
+     */
+    async startNextChatQuotationRaw(requestParameters: StartNextChatQuotationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ChatQuotationPageResponse>> {
+        const requestOptions = await this.startNextChatQuotationRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ChatQuotationPageResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Start a separate quotation after acceptance in the canonical general store chat. Prior accepted quotations and orders stay immutable. Work Package and fulfillment threads cannot start a later quotation. Requires the latest quotation lock_version and Idempotency-Key.
+     */
+    async startNextChatQuotation(requestParameters: StartNextChatQuotationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ChatQuotationPageResponse> {
+        const response = await this.startNextChatQuotationRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Creates request options for transferChatHandler without sending the request
      */
     async transferChatHandlerRequestOpts(requestParameters: TransferChatHandlerRequest): Promise<runtime.RequestOpts> {
@@ -1325,6 +1650,81 @@ export class MessagingApi extends runtime.BaseAPI {
      */
     async transferChatHandler(requestParameters: TransferChatHandlerRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ChatEmptyResponse> {
         const response = await this.transferChatHandlerRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for updateChatDestination without sending the request
+     */
+    async updateChatDestinationRequestOpts(requestParameters: UpdateChatDestinationRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['messagingPortal'] == null) {
+            throw new runtime.RequiredError(
+                'messagingPortal',
+                'Required parameter "messagingPortal" was null or undefined when calling updateChatDestination().'
+            );
+        }
+
+        if (requestParameters['conversationId'] == null) {
+            throw new runtime.RequiredError(
+                'conversationId',
+                'Required parameter "conversationId" was null or undefined when calling updateChatDestination().'
+            );
+        }
+
+        if (requestParameters['chatDestinationUpdate'] == null) {
+            throw new runtime.RequiredError(
+                'chatDestinationUpdate',
+                'Required parameter "chatDestinationUpdate" was null or undefined when calling updateChatDestination().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("passportBearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/{messagingPortal}/conversations/{conversationId}/destination`;
+        urlPath = urlPath.replace('{messagingPortal}', encodeURIComponent(String(requestParameters['messagingPortal'])));
+        urlPath = urlPath.replace('{conversationId}', encodeURIComponent(String(requestParameters['conversationId'])));
+
+        return {
+            path: urlPath,
+            method: 'PUT',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ChatDestinationUpdateToJSON(requestParameters['chatDestinationUpdate']),
+        };
+    }
+
+    /**
+     * Buyer-owned saved destination and heavy access for a general store chat. Requires the current conversation lock_version; rejects changes while a quotation is published/viewed. Accepted snapshots stay immutable. An active draft must be reviewed against its incremented quotation lock_version.
+     */
+    async updateChatDestinationRaw(requestParameters: UpdateChatDestinationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ChatEmptyResponse>> {
+        const requestOptions = await this.updateChatDestinationRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ChatEmptyResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Buyer-owned saved destination and heavy access for a general store chat. Requires the current conversation lock_version; rejects changes while a quotation is published/viewed. Accepted snapshots stay immutable. An active draft must be reviewed against its incremented quotation lock_version.
+     */
+    async updateChatDestination(requestParameters: UpdateChatDestinationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ChatEmptyResponse> {
+        const response = await this.updateChatDestinationRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -1510,6 +1910,14 @@ export type ListChatHandlersMessagingPortalEnum = typeof ListChatHandlersMessagi
 /**
  * @export
  */
+export const ListChatProductsMessagingPortalEnum = {
+    Buyers: 'buyers',
+    Vendor: 'vendor',
+} as const;
+export type ListChatProductsMessagingPortalEnum = typeof ListChatProductsMessagingPortalEnum[keyof typeof ListChatProductsMessagingPortalEnum];
+/**
+ * @export
+ */
 export const ListConversationsMessagingPortalEnum = {
     Buyers: 'buyers',
     Vendor: 'vendor',
@@ -1548,10 +1956,32 @@ export type SendChatMessageMessagingPortalEnum = typeof SendChatMessageMessaging
 /**
  * @export
  */
+export const SendChatTypingMessagingPortalEnum = {
+    Buyers: 'buyers',
+    Vendor: 'vendor',
+} as const;
+export type SendChatTypingMessagingPortalEnum = typeof SendChatTypingMessagingPortalEnum[keyof typeof SendChatTypingMessagingPortalEnum];
+/**
+ * @export
+ */
+export const StartNextChatQuotationMessagingPortalEnum = {
+    Vendor: 'vendor',
+} as const;
+export type StartNextChatQuotationMessagingPortalEnum = typeof StartNextChatQuotationMessagingPortalEnum[keyof typeof StartNextChatQuotationMessagingPortalEnum];
+/**
+ * @export
+ */
 export const TransferChatHandlerMessagingPortalEnum = {
     Vendor: 'vendor',
 } as const;
 export type TransferChatHandlerMessagingPortalEnum = typeof TransferChatHandlerMessagingPortalEnum[keyof typeof TransferChatHandlerMessagingPortalEnum];
+/**
+ * @export
+ */
+export const UpdateChatDestinationMessagingPortalEnum = {
+    Buyers: 'buyers',
+} as const;
+export type UpdateChatDestinationMessagingPortalEnum = typeof UpdateChatDestinationMessagingPortalEnum[keyof typeof UpdateChatDestinationMessagingPortalEnum];
 /**
  * @export
  */

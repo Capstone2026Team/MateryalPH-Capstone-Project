@@ -5,24 +5,41 @@ import 'package:dio/dio.dart';
 import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 import 'package:web_socket_channel/web_socket_channel.dart';
 import '../../core/api_guard.dart';
+import 'chat_socket.dart';
 
 abstract interface class MessagingRepository {
+  Future<void> updateDestination(
+    String id,
+    int version,
+    String location,
+    String restriction, {
+    String? alternate,
+    String? instructions,
+  });
   Future<api.ConversationPage> inbox({int page = 1});
   Future<api.ConversationDetail> conversation(
     String id, {
     String? before,
     int page = 1,
+    int legacyPage = 1,
   });
   Future<String> create(
     String vendorId,
-    String variantId,
+    String? variantId,
     String key, {
     String? locationId,
     String? heavyVehicleRestriction,
     String? alternateDropOffLocationId,
     String? accessInstructions,
   });
-  Future<void> send(String id, String body, String key);
+  Future<void> send(String id, String body, String key, {String? productId});
+  Future<api.ChatProductPage> products(
+    String id, {
+    String? query,
+    String? productId,
+    int page = 1,
+  });
+  Future<void> typing(String id, bool typing);
   Future<void> read(String id, String through);
   Future<String?> decide(
     String id,
@@ -37,7 +54,11 @@ abstract interface class MessagingRepository {
   Future<void> upload(String id, Uint8List bytes, String name, String key);
   Future<Uint8List> attachment(String id, String attachmentId);
   Future<Uint8List> avatar(String id, int userId);
-  Future<void Function()> watch(String channel, void Function() refresh);
+  Future<void Function()> watch(
+    String channel,
+    void Function() refresh, {
+    void Function(bool, int)? onTyping,
+  });
   Future<void Function()> watchInbox(void Function() refresh);
 }
 
@@ -50,6 +71,32 @@ final class ApiMessagingRepository implements MessagingRepository {
   final api.MateryalphApiClient _client;
   final ApiGuard _guard;
   api.MessagingApi get _api => _client.getMessagingApi();
+
+  @override
+  Future<void> updateDestination(
+    String id,
+    int version,
+    String location,
+    String restriction, {
+    String? alternate,
+    String? instructions,
+  }) => _guard(() async {
+    await _api.updateChatDestination(
+      messagingPortal: 'buyers',
+      conversationId: id,
+      chatDestinationUpdate: api.ChatDestinationUpdate(
+        (b) => b
+          ..lockVersion = version
+          ..locationId = location
+          ..heavyVehicleRestriction =
+              api.ChatDestinationUpdateHeavyVehicleRestrictionEnum.valueOf(
+                restriction,
+              )
+          ..alternateDropOffLocationId = alternate
+          ..accessInstructions = instructions,
+      ),
+    );
+  });
 
   @override
   Future<api.ConversationPage> inbox({int page = 1}) => _guard(
@@ -65,6 +112,7 @@ final class ApiMessagingRepository implements MessagingRepository {
     String id, {
     String? before,
     int page = 1,
+    int legacyPage = 1,
   }) => _guard(
     () async => _guard.required(
       (await _api.getConversation(
@@ -72,13 +120,14 @@ final class ApiMessagingRepository implements MessagingRepository {
         conversationId: id,
         before: before,
         page: page,
+        legacyPage: legacyPage,
       )).data?.data,
     ),
   );
   @override
   Future<String> create(
     String vendorId,
-    String variantId,
+    String? variantId,
     String key, {
     String? locationId,
     String? heavyVehicleRestriction,
@@ -104,17 +153,45 @@ final class ApiMessagingRepository implements MessagingRepository {
         .id,
   );
   @override
-  Future<void> send(String id, String body, String key) => _guard(() async {
-    await _api.sendChatMessage(
+  Future<void> send(String id, String body, String key, {String? productId}) =>
+      _guard(() async {
+        await _api.sendChatMessage(
+          messagingPortal: 'buyers',
+          conversationId: id,
+          chatSend: api.ChatSend(
+            (b) => b
+              ..body = body.isEmpty ? null : body
+              ..productId = productId
+              ..clientMessageId = key,
+          ),
+        );
+      });
+  @override
+  Future<api.ChatProductPage> products(
+    String id, {
+    String? query,
+    String? productId,
+    int page = 1,
+  }) => _guard(
+    () async => _guard.required(
+      (await _api.listChatProducts(
+        messagingPortal: 'buyers',
+        conversationId: id,
+        q: query,
+        productId: productId,
+        page: page,
+      )).data?.data,
+    ),
+  );
+  @override
+  Future<void> typing(String id, bool typing) async {
+    await _api.sendChatTyping(
       messagingPortal: 'buyers',
       conversationId: id,
-      chatSend: api.ChatSend(
-        (b) => b
-          ..body = body
-          ..clientMessageId = key,
-      ),
+      chatTyping: api.ChatTyping((b) => b..typing = typing),
     );
-  });
+  }
+
   @override
   Future<void> read(String id, String through) => _guard(() async {
     await _api.readChatMessages(
@@ -181,8 +258,11 @@ final class ApiMessagingRepository implements MessagingRepository {
     ),
   );
   @override
-  Future<void Function()> watch(String channel, void Function() refresh) =>
-      _watch(channel, refresh);
+  Future<void Function()> watch(
+    String channel,
+    void Function() refresh, {
+    void Function(bool, int)? onTyping,
+  }) => _watch(channel, refresh, onTyping: onTyping);
 
   @override
   Future<void Function()> watchInbox(void Function() refresh) =>
@@ -190,8 +270,9 @@ final class ApiMessagingRepository implements MessagingRepository {
 
   Future<void Function()> _watch(
     String? channel,
-    void Function() refresh,
-  ) async {
+    void Function() refresh, {
+    void Function(bool, int)? onTyping,
+  }) async {
     var stopped = false;
     var retrySeconds = 1;
     Timer? retry;
@@ -238,7 +319,7 @@ final class ApiMessagingRepository implements MessagingRepository {
           reconnect();
           return;
         }
-        final current = WebSocketChannel.connect(
+        final current = connectChatSocket(
           Uri(
             scheme: config.scheme == 'https' ? 'wss' : 'ws',
             host: config.host,
@@ -295,6 +376,15 @@ final class ApiMessagingRepository implements MessagingRepository {
                 handshake?.cancel();
                 retrySeconds = 1;
                 refresh(); // Catch changes between the first REST fetch and subscription/reconnection.
+              } else if (message['event'] == 'conversation.typing') {
+                final data = message['data'] is String
+                    ? jsonDecode(message['data'] as String)
+                    : message['data'];
+                if (data is Map &&
+                    data['typing'] is bool &&
+                    data['at'] is int) {
+                  onTyping?.call(data['typing'] as bool, data['at'] as int);
+                }
               } else if (message['event'] == 'conversation.changed' ||
                   message['event'] == 'inbox.changed') {
                 refresh();

@@ -168,6 +168,7 @@ doc/ChatCreate.md
 doc/ChatDecision.md
 doc/ChatDecisionResult.md
 doc/ChatDecisionResultResponse.md
+doc/ChatDestinationUpdate.md
 doc/ChatDraftContent.md
 doc/ChatDraftLine.md
 doc/ChatDraftSave.md
@@ -179,6 +180,9 @@ doc/ChatIdResponse.md
 doc/ChatIdentity.md
 doc/ChatMessage.md
 doc/ChatMessagePage.md
+doc/ChatProduct.md
+doc/ChatProductPage.md
+doc/ChatProductPageResponse.md
 doc/ChatPublish.md
 doc/ChatQuotation.md
 doc/ChatQuotationChange.md
@@ -194,6 +198,7 @@ doc/ChatRealtimeResponse.md
 doc/ChatSend.md
 doc/ChatStore.md
 doc/ChatTransfer.md
+doc/ChatTyping.md
 doc/CheckoutChildOrder.md
 doc/CheckoutGroupPreview.md
 doc/CheckoutPreview.md
@@ -791,6 +796,7 @@ lib/src/model/chat_create.dart
 lib/src/model/chat_decision.dart
 lib/src/model/chat_decision_result.dart
 lib/src/model/chat_decision_result_response.dart
+lib/src/model/chat_destination_update.dart
 lib/src/model/chat_draft_content.dart
 lib/src/model/chat_draft_line.dart
 lib/src/model/chat_draft_save.dart
@@ -802,6 +808,9 @@ lib/src/model/chat_id_response.dart
 lib/src/model/chat_identity.dart
 lib/src/model/chat_message.dart
 lib/src/model/chat_message_page.dart
+lib/src/model/chat_product.dart
+lib/src/model/chat_product_page.dart
+lib/src/model/chat_product_page_response.dart
 lib/src/model/chat_publish.dart
 lib/src/model/chat_quotation.dart
 lib/src/model/chat_quotation_change.dart
@@ -817,6 +826,7 @@ lib/src/model/chat_realtime_response.dart
 lib/src/model/chat_send.dart
 lib/src/model/chat_store.dart
 lib/src/model/chat_transfer.dart
+lib/src/model/chat_typing.dart
 lib/src/model/checkout_child_order.dart
 lib/src/model/checkout_group_preview.dart
 lib/src/model/checkout_preview.dart
@@ -1386,6 +1396,7 @@ test/chat_create_test.dart
 test/chat_decision_result_response_test.dart
 test/chat_decision_result_test.dart
 test/chat_decision_test.dart
+test/chat_destination_update_test.dart
 test/chat_draft_content_test.dart
 test/chat_draft_line_test.dart
 test/chat_draft_save_test.dart
@@ -1397,6 +1408,9 @@ test/chat_id_test.dart
 test/chat_identity_test.dart
 test/chat_message_page_test.dart
 test/chat_message_test.dart
+test/chat_product_page_response_test.dart
+test/chat_product_page_test.dart
+test/chat_product_test.dart
 test/chat_publish_test.dart
 test/chat_quotation_change_test.dart
 test/chat_quotation_content_test.dart
@@ -1412,6 +1426,7 @@ test/chat_realtime_test.dart
 test/chat_send_test.dart
 test/chat_store_test.dart
 test/chat_transfer_test.dart
+test/chat_typing_test.dart
 test/checkout_child_order_test.dart
 test/checkout_group_preview_test.dart
 test/checkout_preview_envelope_test.dart

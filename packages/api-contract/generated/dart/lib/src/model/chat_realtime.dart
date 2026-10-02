@@ -11,7 +11,7 @@ part 'chat_realtime.g.dart';
 /// ChatRealtime
 ///
 /// Properties:
-/// * [inboxChannel] - Opaque private Buyer inbox channel without the private- prefix; null for non-Buyers. Receives inbox.changed invalidations only. Re-fetch configuration after reconnecting.
+/// * [inboxChannel] - Viewer-bound Buyer or Vendor inbox invalidation channel. Re-fetch configuration on reconnect. No message content is broadcast.
 /// * [enabled]
 /// * [key]
 /// * [host]
@@ -19,7 +19,7 @@ part 'chat_realtime.g.dart';
 /// * [scheme]
 @BuiltValue()
 abstract class ChatRealtime implements Built<ChatRealtime, ChatRealtimeBuilder> {
-  /// Opaque private Buyer inbox channel without the private- prefix; null for non-Buyers. Receives inbox.changed invalidations only. Re-fetch configuration after reconnecting.
+  /// Viewer-bound Buyer or Vendor inbox invalidation channel. Re-fetch configuration on reconnect. No message content is broadcast.
   @BuiltValueField(wireName: r'inbox_channel')
   String? get inboxChannel;
 

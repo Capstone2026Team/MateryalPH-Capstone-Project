@@ -15,6 +15,34 @@ String chatRole(String role) => switch (role) {
 };
 String chatMoney(int cents) => '₱${(cents / 100).toStringAsFixed(2)}';
 
+class ChatProductCard extends StatelessWidget {
+  const ChatProductCard({super.key, required this.product, this.onOpen});
+  final api.ChatProduct product;
+  final VoidCallback? onOpen;
+  @override
+  Widget build(BuildContext context) => ListTile(
+    contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    onTap: product.available ? onOpen : null,
+    leading: product.imageUrl == null
+        ? const Icon(Icons.inventory_2_outlined)
+        : Image.network(
+            product.imageUrl!,
+            width: 48,
+            height: 48,
+            fit: BoxFit.cover,
+            errorBuilder: (_, error, stack) =>
+                const Icon(Icons.inventory_2_outlined),
+          ),
+    title: Text(product.name, maxLines: 2, overflow: TextOverflow.ellipsis),
+    subtitle: Text(
+      '${chatMoney(product.priceCentavos)}${product.available ? '' : '\nNo longer available'}',
+    ),
+    trailing: product.available && onOpen != null
+        ? const Icon(Icons.chevron_right)
+        : null,
+  );
+}
+
 DateTime chatManilaTime(String value) =>
     DateTime.parse(value).toUtc().add(const Duration(hours: 8));
 
@@ -111,9 +139,13 @@ class ConversationInboxTile extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    c.purpose.name == 'FULFILLMENT'
+                    c.lastMessagePreview?.isNotEmpty == true
+                        ? c.lastMessagePreview!
+                        : c.purpose.name == 'FULFILLMENT'
                         ? 'Order coordination'
                         : 'Sales & quotations',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 12,
                       color: BuyerTheme.muted,
@@ -166,10 +198,12 @@ class ConversationMessageBubble extends StatelessWidget {
     required this.message,
     required this.onOpenFile,
     this.busy = false,
+    this.onOpenProduct,
   });
   final api.ChatMessage message;
   final ValueChanged<api.ChatAttachment> onOpenFile;
   final bool busy;
+  final ValueChanged<String>? onOpenProduct;
 
   @override
   Widget build(BuildContext context) {
@@ -226,6 +260,13 @@ class ConversationMessageBubble extends StatelessWidget {
                     Text(
                       m.body,
                       style: const TextStyle(fontSize: 14, height: 1.5),
+                    ),
+                  if (m.product != null)
+                    ChatProductCard(
+                      product: m.product!,
+                      onOpen: onOpenProduct == null
+                          ? null
+                          : () => onOpenProduct!(m.product!.listingId),
                     ),
                   for (final file in m.attachments)
                     TextButton.icon(
@@ -385,7 +426,11 @@ class QuotationVersionCard extends StatelessWidget {
                 ),
               ),
               Text(
-                version.latest ? 'Latest version' : 'Superseded',
+                version.state == 'ACCEPTED'
+                    ? 'Accepted'
+                    : version.latest
+                    ? 'Latest version'
+                    : 'Superseded',
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
             ],
@@ -453,12 +498,13 @@ class QuotationVersionCard extends StatelessWidget {
               ],
             ),
           ),
-          DeadlineCountdown(
-            deadline: due,
-            label: 'Buyer deadline · Asia/Manila',
-            endedLabel: 'Quotation deadline passed',
-          ),
-          if (!version.latest)
+          if (version.state != 'ACCEPTED')
+            DeadlineCountdown(
+              deadline: due,
+              label: 'Buyer deadline · Asia/Manila',
+              endedLabel: 'Quotation deadline passed',
+            ),
+          if (!version.latest && version.state != 'ACCEPTED')
             const Padding(
               padding: EdgeInsets.only(top: 12),
               child: Text(

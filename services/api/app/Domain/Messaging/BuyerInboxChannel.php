@@ -14,23 +14,23 @@ final class BuyerInboxChannel
     public function name(User $user): ?string
     {
         $user->refresh();
-        if ($user->account_type !== 'BUYER') {
+        if (! in_array($user->account_type, ['BUYER', 'VENDOR'], true)) {
             return null;
         }
         try {
-            app(AccountAccess::class)->resolve($user);
+            $scope = app(AccountAccess::class)->resolve($user);
         } catch (AuthenticationException) {
             return null;
         }
-        $epoch = hash_hmac('sha256', implode('|', [$user->id, $user->account_status, $user->updated_at]), (string) config('app.key'));
+        $epoch = hash_hmac('sha256', implode('|', [$user->id, $user->account_status, $user->updated_at, json_encode($scope)]), (string) config('app.key'));
 
-        return 'buyer-inbox.'.$epoch;
+        return strtolower($user->account_type).'-inbox.'.$epoch;
     }
 
     public function join(User $user, string $epoch): bool
     {
         $channel = $this->name($user);
 
-        return $channel !== null && hash_equals($channel, 'buyer-inbox.'.$epoch);
+        return $channel !== null && hash_equals($channel, strtolower($user->account_type).'-inbox.'.$epoch);
     }
 }

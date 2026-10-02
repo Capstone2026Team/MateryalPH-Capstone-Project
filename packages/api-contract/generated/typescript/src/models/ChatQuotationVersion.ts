@@ -67,6 +67,14 @@ export interface ChatQuotationVersion {
      *
      */
     actions: Array<string>;
+    /**
+     *
+     */
+    quotationId?: string;
+    /**
+     *
+     */
+    acceptedOrderId?: string;
 }
 
 /**
@@ -106,6 +114,8 @@ export function ChatQuotationVersionFromJSONTyped(json: any, ignoreDiscriminator
         'content': ChatQuotationContentFromJSON(json['content']),
         'viewed': json['viewed'],
         'actions': json['actions'],
+        'quotationId': json['quotation_id'] == null ? undefined : json['quotation_id'],
+        'acceptedOrderId': json['accepted_order_id'] == null ? undefined : json['accepted_order_id'],
     };
 }
 
@@ -130,6 +140,8 @@ export function ChatQuotationVersionToJSONTyped(value?: ChatQuotationVersion | n
         'content': ChatQuotationContentToJSON(value['content']),
         'viewed': value['viewed'],
         'actions': value['actions'],
+        'quotation_id': value['quotationId'],
+        'accepted_order_id': value['acceptedOrderId'],
     };
 }
 

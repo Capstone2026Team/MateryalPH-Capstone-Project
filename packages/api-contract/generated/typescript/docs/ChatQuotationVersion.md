@@ -16,6 +16,8 @@ Name | Type
 `content` | [ChatQuotationContent](ChatQuotationContent.md)
 `viewed` | boolean
 `actions` | Array&lt;string&gt;
+`quotationId` | string
+`acceptedOrderId` | string
 
 ## Example
 
@@ -34,6 +36,8 @@ const example = {
   "content": null,
   "viewed": null,
   "actions": null,
+  "quotationId": null,
+  "acceptedOrderId": null,
 } satisfies ChatQuotationVersion
 
 console.log(example)

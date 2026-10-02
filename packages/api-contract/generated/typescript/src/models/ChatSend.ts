@@ -14,7 +14,7 @@
 
 import { mapValues } from '../runtime';
 /**
- *
+ * Requires nonblank body or product_id (listing variant UUID), or both. The product must be an eligible product of this conversation store. Retries with the same client_message_id and content return the same message; changed content conflicts.
  * @export
  * @interface ChatSend
  */
@@ -26,7 +26,11 @@ export interface ChatSend {
     /**
      *
      */
-    body: string;
+    body?: string;
+    /**
+     *
+     */
+    productId?: string;
 }
 
 /**
@@ -34,7 +38,6 @@ export interface ChatSend {
  */
 export function instanceOfChatSend(value: object): value is ChatSend {
     if ((!('clientMessageId' in (value as Record<string, any>)) && !('client_message_id' in (value as Record<string, any>))) || ((value as Record<string, any>)['clientMessageId'] === undefined && (value as Record<string, any>)['client_message_id'] === undefined)) return false;
-    if (!('body' in value) || value['body'] === undefined) return false;
     return true;
 }
 
@@ -49,7 +52,8 @@ export function ChatSendFromJSONTyped(json: any, ignoreDiscriminator: boolean): 
     return {
 
         'clientMessageId': json['client_message_id'],
-        'body': json['body'],
+        'body': json['body'] == null ? undefined : json['body'],
+        'productId': json['product_id'] == null ? undefined : json['product_id'],
     };
 }
 
@@ -66,6 +70,7 @@ export function ChatSendToJSONTyped(value?: ChatSend | null, ignoreDiscriminator
 
         'client_message_id': value['clientMessageId'],
         'body': value['body'],
+        'product_id': value['productId'],
     };
 }
 

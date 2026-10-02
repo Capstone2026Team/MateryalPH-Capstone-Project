@@ -12,12 +12,16 @@ All URIs are relative to */api/v1*
 | [**getChatRealtime**](MessagingApi.md#getchatrealtime) | **GET** /{messagingPortal}/messaging/realtime |  |
 | [**getConversation**](MessagingApi.md#getconversation) | **GET** /{messagingPortal}/conversations/{conversationId} |  |
 | [**listChatHandlers**](MessagingApi.md#listchathandlers) | **GET** /{messagingPortal}/conversations/{conversationId}/handlers |  |
+| [**listChatProducts**](MessagingApi.md#listchatproducts) | **GET** /{messagingPortal}/conversations/{conversationId}/products |  |
 | [**listConversations**](MessagingApi.md#listconversations) | **GET** /{messagingPortal}/conversations |  |
 | [**publishChatQuotation**](MessagingApi.md#publishchatquotation) | **POST** /{messagingPortal}/conversations/{conversationId}/quotation/publish |  |
 | [**readChatMessages**](MessagingApi.md#readchatmessages) | **POST** /{messagingPortal}/conversations/{conversationId}/read |  |
 | [**saveChatQuotationDraft**](MessagingApi.md#savechatquotationdraft) | **PUT** /{messagingPortal}/conversations/{conversationId}/quotation/draft |  |
 | [**sendChatMessage**](MessagingApi.md#sendchatmessage) | **POST** /{messagingPortal}/conversations/{conversationId}/messages |  |
+| [**sendChatTyping**](MessagingApi.md#sendchattyping) | **POST** /{messagingPortal}/conversations/{conversationId}/typing |  |
+| [**startNextChatQuotation**](MessagingApi.md#startnextchatquotation) | **POST** /{messagingPortal}/conversations/{conversationId}/quotation/start |  |
 | [**transferChatHandler**](MessagingApi.md#transferchathandler) | **POST** /{messagingPortal}/conversations/{conversationId}/transfer |  |
+| [**updateChatDestination**](MessagingApi.md#updatechatdestination) | **PUT** /{messagingPortal}/conversations/{conversationId}/destination |  |
 | [**uploadChatAttachment**](MessagingApi.md#uploadchatattachment) | **POST** /{messagingPortal}/conversations/{conversationId}/attachments |  |
 
 
@@ -540,7 +544,7 @@ example().catch(console.error);
 
 ## getConversation
 
-> ConversationDetailResponse getConversation(messagingPortal, conversationId, page, before)
+> ConversationDetailResponse getConversation(messagingPortal, conversationId, page, before, legacyPage)
 
 
 
@@ -576,6 +580,8 @@ async function example() {
     page: 56,
     // string (optional)
     before: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // number | Page of preserved legacy inquiry references, 25 per page. (optional)
+    legacyPage: 56,
   } satisfies GetConversationRequest;
 
   try {
@@ -599,6 +605,7 @@ example().catch(console.error);
 | **conversationId** | `string` |  | [Defaults to `undefined`] |
 | **page** | `number` |  | [Optional] [Defaults to `undefined`] |
 | **before** | `string` |  | [Optional] [Defaults to `undefined`] |
+| **legacyPage** | `number` | Page of preserved legacy inquiry references, 25 per page. | [Optional] [Defaults to `undefined`] |
 
 ### Return type
 
@@ -692,6 +699,99 @@ example().catch(console.error);
 ### Authorization
 
 [accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Authorized result |  -  |
+| **401** | Authentication required |  -  |
+| **403** | Current role or channel access denied |  -  |
+| **404** | Conversation unavailable or access revoked |  -  |
+| **409** | Recoverable version, deadline, idempotency or stock conflict; re-read the current version |  -  |
+| **422** | Invalid fields or undisclosed NRPC |  -  |
+| **503** | Provider or scanner unavailable; retry safely |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## listChatProducts
+
+> ChatProductPageResponse listChatProducts(messagingPortal, conversationId, q, productId, page)
+
+
+
+Search active eligible products of this conversation store. product_id filters one listing variant for a local unsent draft.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  MessagingApi,
+} from '@materyalph/api-client-ts';
+import type { ListChatProductsRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // To configure API key authorization: accessCookie
+    apiKey: "YOUR API KEY",
+    // Configure HTTP bearer authorization: passportBearer
+    accessToken: "YOUR BEARER TOKEN",
+    // To configure API key authorization: webCsrf
+    apiKey: "YOUR API KEY",
+  });
+  const api = new MessagingApi(config);
+
+  const body = {
+    // 'buyers' | 'vendor'
+    messagingPortal: messagingPortal_example,
+    // string
+    conversationId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // string (optional)
+    q: q_example,
+    // string (optional)
+    productId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // number (optional)
+    page: 56,
+  } satisfies ListChatProductsRequest;
+
+  try {
+    const data = await api.listChatProducts(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **messagingPortal** | `buyers`, `vendor` |  | [Defaults to `undefined`] [Enum: buyers, vendor] |
+| **conversationId** | `string` |  | [Defaults to `undefined`] |
+| **q** | `string` |  | [Optional] [Defaults to `undefined`] |
+| **productId** | `string` |  | [Optional] [Defaults to `undefined`] |
+| **page** | `number` |  | [Optional] [Defaults to `undefined`] |
+
+### Return type
+
+[**ChatProductPageResponse**](ChatProductPageResponse.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [passportBearer](../README.md#passportBearer), [webCsrf](../README.md#webCsrf)
 
 ### HTTP request headers
 
@@ -1145,6 +1245,181 @@ example().catch(console.error);
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
+## sendChatTyping
+
+> ChatEmptyResponse sendChatTyping(messagingPortal, conversationId, chatTyping)
+
+
+
+Ephemeral authorized conversation.typing event on existing viewer channels, with typing boolean and server millisecond timestamp at. Never persisted; receivers ignore older events and clear after three seconds. Existing account rate limits apply.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  MessagingApi,
+} from '@materyalph/api-client-ts';
+import type { SendChatTypingRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // To configure API key authorization: accessCookie
+    apiKey: "YOUR API KEY",
+    // Configure HTTP bearer authorization: passportBearer
+    accessToken: "YOUR BEARER TOKEN",
+    // To configure API key authorization: webCsrf
+    apiKey: "YOUR API KEY",
+  });
+  const api = new MessagingApi(config);
+
+  const body = {
+    // 'buyers' | 'vendor'
+    messagingPortal: messagingPortal_example,
+    // string
+    conversationId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // ChatTyping
+    chatTyping: ...,
+  } satisfies SendChatTypingRequest;
+
+  try {
+    const data = await api.sendChatTyping(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **messagingPortal** | `buyers`, `vendor` |  | [Defaults to `undefined`] [Enum: buyers, vendor] |
+| **conversationId** | `string` |  | [Defaults to `undefined`] |
+| **chatTyping** | [ChatTyping](ChatTyping.md) |  | |
+
+### Return type
+
+[**ChatEmptyResponse**](ChatEmptyResponse.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [passportBearer](../README.md#passportBearer), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Authorized result |  -  |
+| **401** | Authentication required |  -  |
+| **403** | Current role or channel access denied |  -  |
+| **404** | Conversation unavailable or access revoked |  -  |
+| **409** | Recoverable version, deadline, idempotency or stock conflict; re-read the current version |  -  |
+| **422** | Invalid fields or undisclosed NRPC |  -  |
+| **503** | Provider or scanner unavailable; retry safely |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## startNextChatQuotation
+
+> ChatQuotationPageResponse startNextChatQuotation(messagingPortal, conversationId, idempotencyKey, chatPublish)
+
+
+
+Start a separate quotation after acceptance in the canonical general store chat. Prior accepted quotations and orders stay immutable. Work Package and fulfillment threads cannot start a later quotation. Requires the latest quotation lock_version and Idempotency-Key.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  MessagingApi,
+} from '@materyalph/api-client-ts';
+import type { StartNextChatQuotationRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // To configure API key authorization: accessCookie
+    apiKey: "YOUR API KEY",
+    // To configure API key authorization: webCsrf
+    apiKey: "YOUR API KEY",
+  });
+  const api = new MessagingApi(config);
+
+  const body = {
+    // 'vendor'
+    messagingPortal: messagingPortal_example,
+    // string
+    conversationId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // string
+    idempotencyKey: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // ChatPublish
+    chatPublish: ...,
+  } satisfies StartNextChatQuotationRequest;
+
+  try {
+    const data = await api.startNextChatQuotation(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **messagingPortal** | `vendor` |  | [Defaults to `undefined`] [Enum: vendor] |
+| **conversationId** | `string` |  | [Defaults to `undefined`] |
+| **idempotencyKey** | `string` |  | [Defaults to `undefined`] |
+| **chatPublish** | [ChatPublish](ChatPublish.md) |  | |
+
+### Return type
+
+[**ChatQuotationPageResponse**](ChatQuotationPageResponse.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Authorized result |  -  |
+| **401** | Authentication required |  -  |
+| **403** | Current role or channel access denied |  -  |
+| **404** | Conversation unavailable or access revoked |  -  |
+| **409** | Recoverable version, deadline, idempotency or stock conflict; re-read the current version |  -  |
+| **422** | Invalid fields or undisclosed NRPC |  -  |
+| **503** | Provider or scanner unavailable; retry safely |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
 ## transferChatHandler
 
 > ChatEmptyResponse transferChatHandler(messagingPortal, conversationId, chatTransfer)
@@ -1209,6 +1484,93 @@ example().catch(console.error);
 ### Authorization
 
 [accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Authorized result |  -  |
+| **401** | Authentication required |  -  |
+| **403** | Current role or channel access denied |  -  |
+| **404** | Conversation unavailable or access revoked |  -  |
+| **409** | Recoverable version, deadline, idempotency or stock conflict; re-read the current version |  -  |
+| **422** | Invalid fields or undisclosed NRPC |  -  |
+| **503** | Provider or scanner unavailable; retry safely |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## updateChatDestination
+
+> ChatEmptyResponse updateChatDestination(messagingPortal, conversationId, chatDestinationUpdate)
+
+
+
+Buyer-owned saved destination and heavy access for a general store chat. Requires the current conversation lock_version; rejects changes while a quotation is published/viewed. Accepted snapshots stay immutable. An active draft must be reviewed against its incremented quotation lock_version.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  MessagingApi,
+} from '@materyalph/api-client-ts';
+import type { UpdateChatDestinationRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // To configure API key authorization: accessCookie
+    apiKey: "YOUR API KEY",
+    // Configure HTTP bearer authorization: passportBearer
+    accessToken: "YOUR BEARER TOKEN",
+    // To configure API key authorization: webCsrf
+    apiKey: "YOUR API KEY",
+  });
+  const api = new MessagingApi(config);
+
+  const body = {
+    // 'buyers'
+    messagingPortal: messagingPortal_example,
+    // string
+    conversationId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // ChatDestinationUpdate
+    chatDestinationUpdate: ...,
+  } satisfies UpdateChatDestinationRequest;
+
+  try {
+    const data = await api.updateChatDestination(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **messagingPortal** | `buyers` |  | [Defaults to `undefined`] [Enum: buyers] |
+| **conversationId** | `string` |  | [Defaults to `undefined`] |
+| **chatDestinationUpdate** | [ChatDestinationUpdate](ChatDestinationUpdate.md) |  | |
+
+### Return type
+
+[**ChatEmptyResponse**](ChatEmptyResponse.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [passportBearer](../README.md#passportBearer), [webCsrf](../README.md#webCsrf)
 
 ### HTTP request headers
 

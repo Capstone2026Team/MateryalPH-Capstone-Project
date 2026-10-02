@@ -6,8 +6,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Domain\Messaging\BuyerInboxChannel;
 use App\Domain\Messaging\ConversationAccess;
+use App\Domain\Messaging\ConversationBroadcast;
 use App\Domain\Messaging\ConversationChannel;
 use App\Domain\Messaging\ConversationFiles;
+use App\Domain\Messaging\ConversationProducts;
 use App\Domain\Messaging\ConversationService;
 use App\Domain\Messaging\QuotationService;
 use App\Http\ApiResponse;
@@ -40,7 +42,7 @@ final class ConversationController extends Controller
     public function show(Request $request, string $conversationId, QuotationService $quotations): JsonResponse
     {
         $c = $this->access->require($request->user(), $conversationId);
-        $request->validate(['before' => ['sometimes', 'uuid'], 'page' => ['sometimes', 'integer', 'between:1,10000']]);
+        $request->validate(['before' => ['sometimes', 'uuid'], 'page' => ['sometimes', 'integer', 'between:1,10000'], 'legacy_page' => ['sometimes', 'integer', 'between:1,10000']]);
 
         return ApiResponse::success(['conversation' => $this->conversations->header($request, $c), 'messages' => $this->conversations->messages($request, $conversationId),
             'quotations' => $quotations->show($request, $conversationId)]);
@@ -48,9 +50,35 @@ final class ConversationController extends Controller
 
     public function send(Request $request, string $conversationId): JsonResponse
     {
-        $input = $request->validate(['body' => ['required', 'string', 'max:5000', 'not_regex:/^\s*$/u'], 'client_message_id' => ['required', 'uuid']]);
+        $input = $request->validate(['body' => ['required_without:product_id', 'nullable', 'string', 'max:5000', 'not_regex:/^\s*$/u'], 'product_id' => ['nullable', 'uuid'], 'client_message_id' => ['required', 'uuid']]);
 
-        return ApiResponse::success(['id' => $this->conversations->send($request, $conversationId, $input['body'], $input['client_message_id'])], [], 201);
+        return ApiResponse::success(['id' => $this->conversations->send($request, $conversationId, $input['body'] ?? '', $input['client_message_id'], $input['product_id'] ?? null)], [], 201);
+    }
+
+    public function products(Request $request, string $conversationId, ConversationProducts $products): JsonResponse
+    {
+        $request->validate(['q' => ['nullable', 'string', 'max:120'], 'product_id' => ['nullable', 'uuid'], 'page' => ['sometimes', 'integer', 'between:1,10000']]);
+
+        return ApiResponse::success($products->page($request, $conversationId));
+    }
+
+    public function destination(Request $request, string $conversationId): JsonResponse
+    {
+        $input = $request->validate(['lock_version' => ['required', 'integer', 'min:1'], 'location_id' => ['required', 'uuid'],
+            'heavy_vehicle_restriction' => ['required', 'in:NO,YES'], 'alternate_drop_off_location_id' => ['required_if:heavy_vehicle_restriction,YES', 'nullable', 'uuid', 'different:location_id'],
+            'access_instructions' => ['required_if:heavy_vehicle_restriction,YES', 'nullable', 'string', 'min:5', 'max:500']]);
+        $this->conversations->destination($request, $conversationId, $input);
+
+        return ApiResponse::success();
+    }
+
+    public function typing(Request $request, string $conversationId, ConversationBroadcast $broadcast): JsonResponse
+    {
+        $input = $request->validate(['typing' => ['required', 'boolean']]);
+        $this->conversations->requireCurrent($this->access->require($request->user(), $conversationId));
+        $broadcast->typing($conversationId, (int) $request->user()->id, $input['typing']);
+
+        return ApiResponse::success();
     }
 
     public function read(Request $request, string $conversationId): JsonResponse
@@ -93,6 +121,14 @@ final class ConversationController extends Controller
         return ApiResponse::success($quotations->show($request, $conversationId));
     }
 
+    public function startQuotation(Request $request, string $conversationId, QuotationService $quotations): JsonResponse
+    {
+        $input = $request->validate(['lock_version' => ['required', 'integer', 'min:1']]);
+        $quotations->startNext($request, $conversationId, $input['lock_version']);
+
+        return ApiResponse::success($quotations->show($request, $conversationId));
+    }
+
     public function decision(Request $request, string $conversationId, string $action, QuotationService $quotations): JsonResponse
     {
         $input = $request->validate(['version_id' => ['required', 'uuid'], 'content_hash' => ['required_if:action,accept', 'sometimes', 'string', 'size:64'],
@@ -125,7 +161,7 @@ final class ConversationController extends Controller
         $request->validate(['socket_id' => ['required', 'regex:/^\d+\.\d+$/'], 'channel_name' => ['required', 'string', 'max:240']]);
         $channel = (string) $request->input('channel_name');
         $parts = explode('.', $channel);
-        if (count($parts) === 2 && $parts[0] === 'private-buyer-inbox') {
+        if (count($parts) === 2 && $parts[0] === 'private-'.strtolower($request->user()->account_type).'-inbox') {
             abort_unless(app(BuyerInboxChannel::class)->join($request->user(), $parts[1]), 403);
         } else {
             if (count($parts) !== 5 || $parts[0] !== 'private-conversation' || ! Str::isUuid($parts[2])) {
@@ -142,6 +178,7 @@ final class ConversationController extends Controller
         $broadcaster = Broadcast::connection('reverb');
         $broadcaster->channel('conversation.{purpose}.{id}.{viewer}.{epoch}', ConversationChannel::class, ['guards' => ['api']]);
         $broadcaster->channel('buyer-inbox.{epoch}', BuyerInboxChannel::class, ['guards' => ['api']]);
+        $broadcaster->channel('vendor-inbox.{epoch}', BuyerInboxChannel::class, ['guards' => ['api']]);
 
         return response()->json($broadcaster->auth($request));
     }
@@ -149,6 +186,6 @@ final class ConversationController extends Controller
     public function realtime(Request $request): JsonResponse
     {
         return ApiResponse::success(['inbox_channel' => app(BuyerInboxChannel::class)->name($request->user()), 'enabled' => config('broadcasting.default') === 'reverb', 'key' => config('broadcasting.connections.reverb.key'),
-            'host' => config('broadcasting.connections.reverb.options.host'), 'port' => config('broadcasting.connections.reverb.options.port'), 'scheme' => config('broadcasting.connections.reverb.options.scheme')]);
+            'host' => config('reverb.public.host') ?: $request->getHost(), 'port' => config('reverb.public.port'), 'scheme' => config('reverb.public.scheme')]);
     }
 }

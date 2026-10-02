@@ -1,0 +1,8 @@
+W These options have been removed and were ignored: --delete-conflicting-outputs
+  0s built_value_generator:built_value on 1225 inputs; lib/materyalph_api_client.dart
+  0s built_value_generator:built_value on 1225 inputs: 1 skipped; lib/src/api.dart
+  2s built_value_generator:built_value on 1225 inputs: 611 skipped, 1 not triggered, 1 output, 5 same; spent 1s analyzing; test/account_admin_change_test.dart
+  2s built_value_generator:built_value on 1225 inputs: 1216 skipped, 3 not triggered, 1 output, 5 same; spent 1s analyzing
+  0s source_gen:combining_builder on 1225 inputs; lib/materyalph_api_client.dart
+  0s source_gen:combining_builder on 1225 inputs: 1219 skipped, 1 output, 5 same
+  Built with build_runner/aot in 23s; wrote 12 outputs.

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:materyalph/design_system/components/messaging_components.dart';
 import 'package:materyalph/design_system/components/procurement_components.dart';
@@ -65,7 +66,51 @@ class LayoutMessagingRepository implements MessagingRepository {
   bool failSend = false;
   bool failInbox = false;
   bool hasMore = false;
+  bool paginateMessages = false;
+  final requestedCursors = <String?>[];
   final sendKeys = <String>[];
+  final sentProducts = <String?>[];
+  final typingEvents = <bool>[];
+  void Function(bool, int)? typingChanged;
+  Completer<void>? sendGate;
+  String? latestProduct;
+  final catalog = [
+    api.ChatProduct(
+      (b) => b
+        ..productId = 'product-one'
+        ..listingId = 'listing-one'
+        ..name = 'Fixture cement'
+        ..priceCentavos = 1800
+        ..available = true,
+    ),
+    api.ChatProduct(
+      (b) => b
+        ..productId = 'product-two'
+        ..listingId = 'listing-two'
+        ..name = 'Fixture sand'
+        ..priceCentavos = 2200
+        ..available = true,
+    ),
+  ];
+  @override
+  Future<api.ChatProductPage> products(
+    String id, {
+    String? query,
+    String? productId,
+    int page = 1,
+  }) async => api.ChatProductPage(
+    (b) => b
+      ..items.addAll(
+        catalog.where(
+          (p) =>
+              (productId == null || productId == p.productId) &&
+              (query == null ||
+                  p.name.toLowerCase().contains(query.toLowerCase())),
+        ),
+      )
+      ..page = page
+      ..hasMore = false,
+  );
   VoidCallback? inboxChanged;
   VoidCallback? conversationChanged;
   bool inboxStopped = false;
@@ -98,28 +143,60 @@ class LayoutMessagingRepository implements MessagingRepository {
     String id, {
     String? before,
     int page = 1,
-  }) async => api.ConversationDetail(
-    (b) => b
-      ..conversation.replace(stores.first)
-      ..messages.update(
-        (m) => m
-          ..items.addAll(messages)
-          ..hasMore = false,
-      )
-      ..quotations.update((q) => q..hasMore = false),
-  );
+    int legacyPage = 1,
+  }) async {
+    requestedCursors.add(before);
+    final eligible = messages
+        .where((m) => before == null || m.id.compareTo(before) < 0)
+        .toList();
+    final pageItems = paginateMessages && eligible.length > 50
+        ? eligible.sublist(eligible.length - 50)
+        : eligible;
+    return api.ConversationDetail(
+      (b) => b
+        ..conversation.replace(
+          stores.first.rebuild((c) => c..latestProductId = latestProduct),
+        )
+        ..messages.update(
+          (m) => m
+            ..items.addAll(pageItems)
+            ..hasMore = paginateMessages && eligible.length > 50
+            ..nextBefore = paginateMessages && eligible.length > 50
+                ? pageItems.first.id
+                : null,
+        )
+        ..quotations.update((q) => q..hasMore = false),
+    );
+  }
 
   @override
-  Future<void> send(String id, String body, String key) async {
+  Future<void> send(
+    String id,
+    String body,
+    String key, {
+    String? productId,
+  }) async {
     sendKeys.add(key);
+    sentProducts.add(productId);
+    await sendGate?.future;
     if (failSend) throw StateError('fixture offline');
-    messages.add(message('sent', body, mine: true));
+    messages.add(message(key, body, mine: true));
   }
 
   @override
   Future<void> read(String id, String through) async {}
   @override
-  Future<void Function()> watch(String channel, void Function() refresh) async {
+  Future<void> typing(String id, bool typing) async {
+    typingEvents.add(typing);
+  }
+
+  @override
+  Future<void Function()> watch(
+    String channel,
+    void Function() refresh, {
+    void Function(bool, int)? onTyping,
+  }) async {
+    typingChanged = onTyping;
     conversationChanged = refresh;
     return () => conversationChanged = null;
   }
@@ -144,6 +221,7 @@ Future<void> mount(
   WidgetTester tester,
   LayoutMessagingRepository repository, {
   bool thread = false,
+  String? initialProductId,
   double width = 390,
   double scale = 1,
 }) async {
@@ -159,6 +237,7 @@ Future<void> mount(
       theme: BuyerTheme.light,
       home: MessagingScreen(
         repository: repository,
+        initialProductId: initialProductId,
         conversationId: thread ? 'one' : null,
         onOpenCart: () {},
         onOpenNotifications: () {},
@@ -169,6 +248,96 @@ Future<void> mount(
 }
 
 void main() {
+  setUp(() => FlutterSecureStorage.setMockInitialValues({}));
+  testWidgets(
+    'reconnect fills a gap larger than one page without duplicate messages',
+    (tester) async {
+      final repository = LayoutMessagingRepository()..paginateMessages = true;
+      repository.messages.clear();
+      repository.messages.add(message('000001', 'Before disconnect'));
+      await mount(tester, repository, thread: true);
+      for (var i = 2; i <= 76; i++) {
+        repository.messages.add(
+          message(i.toString().padLeft(6, '0'), 'Gap message $i'),
+        );
+      }
+      repository.conversationChanged!();
+      await tester.pumpAndSettle();
+      expect(repository.requestedCursors, contains('000027'));
+      expect(find.text('Before disconnect'), findsOneWidget);
+      expect(find.text('Gap message 2'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('Gap message 76'),
+        600,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('Gap message 76'), findsOneWidget);
+      repository.conversationChanged!();
+      await tester.pumpAndSettle();
+      expect(find.text('Gap message 76'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+  testWidgets(
+    'product entry is an unsent persistent removable draft and picker adds another product',
+    (tester) async {
+      final repository = LayoutMessagingRepository();
+      await mount(
+        tester,
+        repository,
+        thread: true,
+        initialProductId: 'product-one',
+      );
+      expect(find.text('Fixture cement'), findsOneWidget);
+      expect(repository.sendKeys, isEmpty);
+      await tester.enterText(find.byType(TextField), 'Please quote');
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pumpWidget(const SizedBox());
+      await mount(tester, repository, thread: true);
+      expect(find.text('Fixture cement'), findsOneWidget);
+      expect(find.text('Please quote'), findsOneWidget);
+      await tester.tap(find.byTooltip('Remove product'));
+      await tester.tap(find.text('Attach product'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'sand');
+      await tester.tap(find.byTooltip('Search products'));
+      await tester.pumpAndSettle();
+      expect(find.text('Fixture cement'), findsNothing);
+      await tester.tap(find.text('Fixture sand'));
+      await tester.pumpAndSettle();
+      repository.sendGate = Completer<void>();
+      await tester.tap(find.byTooltip('Send message'));
+      await tester.pump();
+      expect(find.text('Sending…'), findsOneWidget);
+      expect(repository.sentProducts, ['product-two']);
+      repository.sendGate!.complete();
+      await tester.pumpAndSettle();
+      expect(find.text('Sending…'), findsNothing);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+  testWidgets(
+    'latest attached product is not reattached and typing expires without history',
+    (tester) async {
+      final repository = LayoutMessagingRepository()
+        ..latestProduct = 'product-one';
+      await mount(
+        tester,
+        repository,
+        thread: true,
+        initialProductId: 'product-one',
+      );
+      expect(find.text('Fixture cement'), findsNothing);
+      repository.typingChanged!(true, 2);
+      repository.typingChanged!(false, 1);
+      await tester.pump();
+      expect(find.text('typing...'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 3));
+      expect(find.text('typing...'), findsNothing);
+      expect(repository.messages, hasLength(3));
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
   testWidgets('invalidation during a fetch is queued instead of dropped', (
     tester,
   ) async {
@@ -281,7 +450,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Please confirm the dimensions.'), findsOneWidget);
     repository.failSend = false;
-    await tester.tap(find.byTooltip('Send message'));
+    await tester.ensureVisible(find.text('Failed to send · Retry'));
+    await tester.tap(find.text('Failed to send · Retry'));
     await tester.pumpAndSettle();
     expect(repository.sendKeys, hasLength(2));
     expect(repository.sendKeys[0], repository.sendKeys[1]);
@@ -302,7 +472,7 @@ void main() {
     repository.failInbox = false;
     await tester.tap(find.text('Retry'));
     await tester.pumpAndSettle();
-    expect(find.text('No conversations yet'), findsOneWidget);
+    expect(find.text('No messages yet'), findsOneWidget);
     expect(find.text('Previous'), findsNothing);
     expect(find.text('Next'), findsNothing);
     expect(find.text('Retry'), findsNothing);

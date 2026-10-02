@@ -12,6 +12,10 @@ const ChatMessageKindEnum _$chatMessageKindEnum_SYSTEM =
     const ChatMessageKindEnum._('SYSTEM');
 const ChatMessageKindEnum _$chatMessageKindEnum_ATTACHMENT =
     const ChatMessageKindEnum._('ATTACHMENT');
+const ChatMessageKindEnum _$chatMessageKindEnum_PRODUCT =
+    const ChatMessageKindEnum._('PRODUCT');
+const ChatMessageKindEnum _$chatMessageKindEnum_TEXT_WITH_PRODUCT =
+    const ChatMessageKindEnum._('TEXT_WITH_PRODUCT');
 
 ChatMessageKindEnum _$chatMessageKindEnumValueOf(String name) {
   switch (name) {
@@ -21,6 +25,10 @@ ChatMessageKindEnum _$chatMessageKindEnumValueOf(String name) {
       return _$chatMessageKindEnum_SYSTEM;
     case 'ATTACHMENT':
       return _$chatMessageKindEnum_ATTACHMENT;
+    case 'PRODUCT':
+      return _$chatMessageKindEnum_PRODUCT;
+    case 'TEXT_WITH_PRODUCT':
+      return _$chatMessageKindEnum_TEXT_WITH_PRODUCT;
     default:
       throw ArgumentError(name);
   }
@@ -31,6 +39,8 @@ final BuiltSet<ChatMessageKindEnum> _$chatMessageKindEnumValues =
   _$chatMessageKindEnum_TEXT,
   _$chatMessageKindEnum_SYSTEM,
   _$chatMessageKindEnum_ATTACHMENT,
+  _$chatMessageKindEnum_PRODUCT,
+  _$chatMessageKindEnum_TEXT_WITH_PRODUCT,
 ]);
 
 Serializer<ChatMessageKindEnum> _$chatMessageKindEnumSerializer =
@@ -42,11 +52,15 @@ class _$ChatMessageKindEnumSerializer
     'TEXT': 'TEXT',
     'SYSTEM': 'SYSTEM',
     'ATTACHMENT': 'ATTACHMENT',
+    'PRODUCT': 'PRODUCT',
+    'TEXT_WITH_PRODUCT': 'TEXT_WITH_PRODUCT',
   };
   static const Map<Object, String> _fromWire = const <Object, String>{
     'TEXT': 'TEXT',
     'SYSTEM': 'SYSTEM',
     'ATTACHMENT': 'ATTACHMENT',
+    'PRODUCT': 'PRODUCT',
+    'TEXT_WITH_PRODUCT': 'TEXT_WITH_PRODUCT',
   };
 
   @override
@@ -85,6 +99,8 @@ class _$ChatMessage extends ChatMessage {
   final BuiltList<ChatAttachment> attachments;
   @override
   final bool readByRecipient;
+  @override
+  final ChatProduct? product;
 
   factory _$ChatMessage([void Function(ChatMessageBuilder)? updates]) =>
       (ChatMessageBuilder()..update(updates))._build();
@@ -98,7 +114,8 @@ class _$ChatMessage extends ChatMessage {
       required this.sentAt,
       required this.mine,
       required this.attachments,
-      required this.readByRecipient})
+      required this.readByRecipient,
+      this.product})
       : super._();
   @override
   ChatMessage rebuild(void Function(ChatMessageBuilder) updates) =>
@@ -119,7 +136,8 @@ class _$ChatMessage extends ChatMessage {
         sentAt == other.sentAt &&
         mine == other.mine &&
         attachments == other.attachments &&
-        readByRecipient == other.readByRecipient;
+        readByRecipient == other.readByRecipient &&
+        product == other.product;
   }
 
   @override
@@ -134,6 +152,7 @@ class _$ChatMessage extends ChatMessage {
     _$hash = $jc(_$hash, mine.hashCode);
     _$hash = $jc(_$hash, attachments.hashCode);
     _$hash = $jc(_$hash, readByRecipient.hashCode);
+    _$hash = $jc(_$hash, product.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -149,7 +168,8 @@ class _$ChatMessage extends ChatMessage {
           ..add('sentAt', sentAt)
           ..add('mine', mine)
           ..add('attachments', attachments)
-          ..add('readByRecipient', readByRecipient))
+          ..add('readByRecipient', readByRecipient)
+          ..add('product', product))
         .toString();
   }
 }
@@ -197,6 +217,10 @@ class ChatMessageBuilder implements Builder<ChatMessage, ChatMessageBuilder> {
   set readByRecipient(bool? readByRecipient) =>
       _$this._readByRecipient = readByRecipient;
 
+  ChatProductBuilder? _product;
+  ChatProductBuilder get product => _$this._product ??= ChatProductBuilder();
+  set product(ChatProductBuilder? product) => _$this._product = product;
+
   ChatMessageBuilder() {
     ChatMessage._defaults(this);
   }
@@ -213,6 +237,7 @@ class ChatMessageBuilder implements Builder<ChatMessage, ChatMessageBuilder> {
       _mine = $v.mine;
       _attachments = $v.attachments.toBuilder();
       _readByRecipient = $v.readByRecipient;
+      _product = $v.product?.toBuilder();
       _$v = null;
     }
     return this;
@@ -251,6 +276,7 @@ class ChatMessageBuilder implements Builder<ChatMessage, ChatMessageBuilder> {
             attachments: attachments.build(),
             readByRecipient: BuiltValueNullFieldError.checkNotNull(
                 readByRecipient, r'ChatMessage', 'readByRecipient'),
+            product: _product?.build(),
           );
     } catch (_) {
       late String _$failedField;
@@ -260,6 +286,9 @@ class ChatMessageBuilder implements Builder<ChatMessage, ChatMessageBuilder> {
 
         _$failedField = 'attachments';
         attachments.build();
+
+        _$failedField = 'product';
+        _product?.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
             r'ChatMessage', _$failedField, e.toString());

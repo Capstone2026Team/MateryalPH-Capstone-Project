@@ -216,6 +216,8 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(ChatDecision.serializer)
       ..add(ChatDecisionResult.serializer)
       ..add(ChatDecisionResultResponse.serializer)
+      ..add(ChatDestinationUpdate.serializer)
+      ..add(ChatDestinationUpdateHeavyVehicleRestrictionEnum.serializer)
       ..add(ChatDraftContent.serializer)
       ..add(ChatDraftContentFulfillmentMethodEnum.serializer)
       ..add(ChatDraftContentPaymentMethodEnum.serializer)
@@ -230,6 +232,9 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(ChatMessage.serializer)
       ..add(ChatMessageKindEnum.serializer)
       ..add(ChatMessagePage.serializer)
+      ..add(ChatProduct.serializer)
+      ..add(ChatProductPage.serializer)
+      ..add(ChatProductPageResponse.serializer)
       ..add(ChatPublish.serializer)
       ..add(ChatQuotation.serializer)
       ..add(ChatQuotationChange.serializer)
@@ -246,6 +251,7 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(ChatSend.serializer)
       ..add(ChatStore.serializer)
       ..add(ChatTransfer.serializer)
+      ..add(ChatTyping.serializer)
       ..add(CheckoutChildOrder.serializer)
       ..add(CheckoutChildOrderConfirmationSourceEnum.serializer)
       ..add(CheckoutChildOrderFulfillmentMethodEnum.serializer)
@@ -1276,6 +1282,9 @@ Serializers _$serializers = (Serializers().toBuilder()
           const FullType(BuiltList, const [const FullType(ChatMessage)]),
           () => ListBuilder<ChatMessage>())
       ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ChatProduct)]),
+          () => ListBuilder<ChatProduct>())
+      ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(ChatQuotationLine)]),
           () => ListBuilder<ChatQuotationLine>())
       ..addBuilderFactory(
@@ -1991,6 +2000,9 @@ Serializers _$serializers = (Serializers().toBuilder()
             const FullType.nullable(JsonObject)
           ]),
           () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ApiError)]),
+          () => ListBuilder<ApiError>())
       ..addBuilderFactory(
           const FullType(BuiltMap, const [
             const FullType(String),
@@ -2965,6 +2977,15 @@ Serializers _$serializers = (Serializers().toBuilder()
           const FullType(
               BuiltList, const [const FullType(PaymentChannelOption)]),
           () => ListBuilder<PaymentChannelOption>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(String)]),
+          () => ListBuilder<String>())
       ..addBuilderFactory(
           const FullType(BuiltMap, const [
             const FullType(String),

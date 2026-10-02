@@ -15,6 +15,13 @@ return [
 
     'default' => env('REVERB_SERVER', 'reverb'),
 
+    // Socket clients use a reachable public address, not the server-to-server Docker hostname.
+    'public' => [
+        'host' => env('REVERB_PUBLIC_HOST'),
+        'port' => (int) env('REVERB_PUBLIC_PORT', env('REVERB_PORT', 443)),
+        'scheme' => env('REVERB_PUBLIC_SCHEME', env('REVERB_SCHEME', 'https')),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Reverb Servers
@@ -82,7 +89,7 @@ return [
                     'scheme' => env('REVERB_SCHEME', 'https'),
                     'useTLS' => env('REVERB_SCHEME', 'https') === 'https',
                 ],
-                'allowed_origins' => array_values(array_filter(explode(',', (string) env('REVERB_ALLOWED_ORIGINS', '')))),
+                'allowed_origins' => array_values(array_unique(array_merge(['materyalph-buyer'], array_filter(explode(',', (string) env('REVERB_ALLOWED_ORIGINS', '')))))),
                 'ping_interval' => env('REVERB_APP_PING_INTERVAL', 60),
                 'activity_timeout' => env('REVERB_APP_ACTIVITY_TIMEOUT', 30),
                 'max_connections' => env('REVERB_APP_MAX_CONNECTIONS'),

@@ -8,18 +8,22 @@ import 'package:built_value/serializer.dart';
 
 part 'chat_send.g.dart';
 
-/// ChatSend
+/// Requires nonblank body or product_id (listing variant UUID), or both. The product must be an eligible product of this conversation store. Retries with the same client_message_id and content return the same message; changed content conflicts.
 ///
 /// Properties:
 /// * [clientMessageId]
 /// * [body]
+/// * [productId]
 @BuiltValue()
 abstract class ChatSend implements Built<ChatSend, ChatSendBuilder> {
   @BuiltValueField(wireName: r'client_message_id')
   String get clientMessageId;
 
   @BuiltValueField(wireName: r'body')
-  String get body;
+  String? get body;
+
+  @BuiltValueField(wireName: r'product_id')
+  String? get productId;
 
   ChatSend._();
 
@@ -49,11 +53,20 @@ class _$ChatSendSerializer implements PrimitiveSerializer<ChatSend> {
       object.clientMessageId,
       specifiedType: const FullType(String),
     );
-    yield r'body';
-    yield serializers.serialize(
-      object.body,
-      specifiedType: const FullType(String),
-    );
+    if (object.body != null) {
+      yield r'body';
+      yield serializers.serialize(
+        object.body,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.productId != null) {
+      yield r'product_id';
+      yield serializers.serialize(
+        object.productId,
+        specifiedType: const FullType(String),
+      );
+    }
   }
 
   @override
@@ -87,9 +100,18 @@ class _$ChatSendSerializer implements PrimitiveSerializer<ChatSend> {
         case r'body':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(String),
-          ) as String;
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
           result.body = valueDes;
+          break;
+        case r'product_id':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.productId = valueDes;
           break;
         default:
           unhandled.add(key);
