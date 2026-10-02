@@ -449,6 +449,7 @@ class OrderDetailView {
     this.expectedFulfillmentDate,
     this.terminalReasonCode,
     this.paymentNotice,
+    this.projectContext,
   });
 
   final String id;
@@ -475,6 +476,7 @@ class OrderDetailView {
   final String? expectedFulfillmentDate;
   final String? terminalReasonCode;
   final String? paymentNotice;
+  final Map<String, Object?>? projectContext;
 
   String state(String family) =>
       states.firstWhere((row) => row.family == family).state;

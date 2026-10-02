@@ -7,6 +7,7 @@ import '../theme.dart';
 
 /// Shared floating map surface for search, location details and map controls.
 class MapFloatingSurface extends StatelessWidget {
+  static const shadowColor = Color(0x240F172A);
   const MapFloatingSurface({super.key, required this.child, this.radius = 16});
   final Widget child;
   final double radius;
@@ -19,7 +20,7 @@ class MapFloatingSurface extends StatelessWidget {
       border: Border.all(color: BuyerTheme.border),
       boxShadow: const [
         BoxShadow(
-          color: Color(0x240F172A),
+          color: shadowColor,
           blurRadius: 8,
           offset: Offset(0, 2),
         ),

@@ -60,6 +60,8 @@ class _$NrpcAcceptRequestAcknowledgedEnumSerializer
 
 class _$NrpcAcceptRequest extends NrpcAcceptRequest {
   @override
+  final String? budgetOverrideReason;
+  @override
   final int snapshotVersion;
   @override
   final String nrpcId;
@@ -73,7 +75,8 @@ class _$NrpcAcceptRequest extends NrpcAcceptRequest {
       (NrpcAcceptRequestBuilder()..update(updates))._build();
 
   _$NrpcAcceptRequest._(
-      {required this.snapshotVersion,
+      {this.budgetOverrideReason,
+      required this.snapshotVersion,
       required this.nrpcId,
       required this.termsVersionId,
       required this.acknowledged})
@@ -90,6 +93,7 @@ class _$NrpcAcceptRequest extends NrpcAcceptRequest {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is NrpcAcceptRequest &&
+        budgetOverrideReason == other.budgetOverrideReason &&
         snapshotVersion == other.snapshotVersion &&
         nrpcId == other.nrpcId &&
         termsVersionId == other.termsVersionId &&
@@ -99,6 +103,7 @@ class _$NrpcAcceptRequest extends NrpcAcceptRequest {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, budgetOverrideReason.hashCode);
     _$hash = $jc(_$hash, snapshotVersion.hashCode);
     _$hash = $jc(_$hash, nrpcId.hashCode);
     _$hash = $jc(_$hash, termsVersionId.hashCode);
@@ -110,6 +115,7 @@ class _$NrpcAcceptRequest extends NrpcAcceptRequest {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'NrpcAcceptRequest')
+          ..add('budgetOverrideReason', budgetOverrideReason)
           ..add('snapshotVersion', snapshotVersion)
           ..add('nrpcId', nrpcId)
           ..add('termsVersionId', termsVersionId)
@@ -121,6 +127,11 @@ class _$NrpcAcceptRequest extends NrpcAcceptRequest {
 class NrpcAcceptRequestBuilder
     implements Builder<NrpcAcceptRequest, NrpcAcceptRequestBuilder> {
   _$NrpcAcceptRequest? _$v;
+
+  String? _budgetOverrideReason;
+  String? get budgetOverrideReason => _$this._budgetOverrideReason;
+  set budgetOverrideReason(String? budgetOverrideReason) =>
+      _$this._budgetOverrideReason = budgetOverrideReason;
 
   int? _snapshotVersion;
   int? get snapshotVersion => _$this._snapshotVersion;
@@ -148,6 +159,7 @@ class NrpcAcceptRequestBuilder
   NrpcAcceptRequestBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _budgetOverrideReason = $v.budgetOverrideReason;
       _snapshotVersion = $v.snapshotVersion;
       _nrpcId = $v.nrpcId;
       _termsVersionId = $v.termsVersionId;
@@ -173,6 +185,7 @@ class NrpcAcceptRequestBuilder
   _$NrpcAcceptRequest _build() {
     final _$result = _$v ??
         _$NrpcAcceptRequest._(
+          budgetOverrideReason: budgetOverrideReason,
           snapshotVersion: BuiltValueNullFieldError.checkNotNull(
               snapshotVersion, r'NrpcAcceptRequest', 'snapshotVersion'),
           nrpcId: BuiltValueNullFieldError.checkNotNull(

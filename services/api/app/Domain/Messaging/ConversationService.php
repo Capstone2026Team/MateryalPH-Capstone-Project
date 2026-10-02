@@ -10,6 +10,7 @@ use App\Domain\Geography\BuyerProfiles;
 use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Operations\OutboxPublisher;
+use App\Domain\Orders\OrderEligibility;
 use App\Domain\Vendors\NewProcurementAvailability;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -93,6 +94,27 @@ final class ConversationService
         } else {
             DB::table('conversation_participants')->insert(['id' => (string) Str::uuid7(), 'conversation_id' => $id, 'user_id' => $userId, 'participant_role' => $role, 'created_at' => now(), 'updated_at' => now()]);
         }
+    }
+
+    /** Internal Phase 10 entry: caller has authorized and locked the Project/version and compiled candidate.
+     * @param array<string, mixed> $reference */
+    public function createProject(Request $request, string $id, string $vendor, string $package, array $reference): void
+    {
+        app(NewProcurementAvailability::class)->assertAvailable($vendor);
+        $org = DB::table('vendor_organizations')->where('id', $vendor)->first();
+        if (app(OrderEligibility::class)->storeBlockers($org) !== [] || ! DB::table('store_profiles')->where('vendor_organization_id', $vendor)->where('bulk_capability', true)->exists()) {
+            throw new AuthenticationException('PROJECT_VENDOR_INELIGIBLE', 'This Vendor is no longer eligible for new Project-Based work.', 409);
+        }
+        $owner = DB::table('vendor_memberships')->where('vendor_organization_id', $vendor)->where('role', 'OWNER')->where('status', 'ACTIVE')->value('user_id');
+        if ($owner === null) {
+            throw new AuthenticationException('STORE_UNAVAILABLE', 'This store cannot receive inquiries right now.', 409);
+        }
+        DB::table('conversations')->insert(['id' => $id, 'buyer_profile_id' => $this->buyers->idFor($request), 'vendor_organization_id' => $vendor, 'purpose' => 'SALES',
+            'context_type' => 'PROJECT_BASED', 'context_id' => $package, 'handler_user_id' => $owner, 'locked_reference' => json_encode($reference, JSON_THROW_ON_ERROR), 'created_at' => now(), 'updated_at' => now()]);
+        $this->participant($id, (int) $request->user()->id, 'BUYER');
+        $this->participant($id, (int) $owner, 'OWNER');
+        DB::table('conversation_assignments')->insert(['id' => (string) Str::uuid7(), 'conversation_id' => $id, 'assigned_user_id' => $owner, 'assigned_role' => 'OWNER', 'created_at' => now(), 'updated_at' => now()]);
+        $this->changed($id);
     }
 
     /**

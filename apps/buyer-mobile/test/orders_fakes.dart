@@ -240,6 +240,7 @@ class FakeOrdersRepository implements OrdersRepository {
     String orderId, {
     required int snapshotVersion,
     required String idempotencyKey,
+    String? budgetOverrideReason,
   }) => _answer('approve:$snapshotVersion', _decide('approve', idempotencyKey));
 
   @override
@@ -256,6 +257,7 @@ class FakeOrdersRepository implements OrdersRepository {
     required String nrpcId,
     required String termsVersionId,
     required String idempotencyKey,
+    String? budgetOverrideReason,
   }) => _answer(
     'acceptNrpc:$nrpcId:$termsVersionId',
     _decide('acceptNrpc', idempotencyKey),

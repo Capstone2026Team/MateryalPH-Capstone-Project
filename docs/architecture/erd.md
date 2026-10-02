@@ -705,6 +705,9 @@ erDiagram
     WORK_PACKAGE_LINES {
         uuid id PK
     }
+    WORK_PACKAGE_MISSING_LINES {
+        uuid id PK
+    }
     WORK_PACKAGE_VERSIONS {
         uuid id PK
     }
@@ -752,6 +755,7 @@ erDiagram
     CHECKOUT_GROUPS ||--|{ CHECKOUT_VENDOR_GROUPS : "checkout_group_id → id"
     CHECKOUT_GROUPS ||--o{ ORDERS : "checkout_group_id → id"
     COMPILED_ESTIMATE_VENDORS ||--|{ COMPILED_ESTIMATE_LINES : "compiled_estimate_vendor_id → id"
+    COMPILED_ESTIMATE_VENDORS ||--o{ ORDERS : "compiled_estimate_vendor_id → id"
     COMPILED_ESTIMATES ||--|{ COMPILED_ESTIMATE_VENDORS : "compiled_estimate_id → id"
     COMPLIANCE_EVIDENCE ||--o{ COMPLIANCE_EXTRACTIONS : "compliance_evidence_id → id"
     COMPLIANCE_REFERENCE_REGISTERS ||--|{ COMPLIANCE_REFERENCE_RECORDS : "compliance_reference_register_id → id"
@@ -867,6 +871,7 @@ erDiagram
     ORDER_LINES ||--o{ INVENTORY_HOLDS : "order_line_id → id"
     ORDER_LINES ||--|{ NRPC_LINE_ALLOCATIONS : "order_line_id → id"
     ORDER_SNAPSHOTS ||--o{ FINANCIAL_SNAPSHOTS : "order_snapshot_id → id"
+    ORDERS ||--o{ BUDGET_OVERRIDES : "order_id → id"
     ORDERS ||--|{ CANCELLATION_DECISIONS : "order_id → id"
     ORDERS ||--|{ CANCELLATION_REQUESTS : "order_id → id"
     ORDERS ||--o{ CHECKOUT_VENDOR_GROUPS : "order_id → id"
@@ -892,6 +897,7 @@ erDiagram
     ORDERS ||--|{ REVIEWS : "order_id → id"
     ORDERS ||--o{ TAX_ADJUSTMENTS : "order_id → id"
     ORDERS ||--|{ VENDOR_CONFIRMATIONS : "order_id → id"
+    ORDERS ||--o{ WORK_PACKAGE_MISSING_LINES : "linked_order_id → id"
     PAYMENTS ||--|{ FEE_PAYMENT_ALLOCATIONS : "payment_id → id"
     PAYMENTS ||--|{ PAYMENT_ATTEMPTS : "payment_id → id"
     PAYMENTS ||--|{ PAYMENT_EVENTS : "payment_id → id"
@@ -1076,6 +1082,8 @@ erDiagram
     USERS ||--o{ VENDOR_VEHICLE_VERSIONS : "created_by_user_id → id"
     USERS ||--o{ VENDOR_VEHICLES : "updated_by_user_id → id"
     USERS ||--|{ VENDOR_VERIFICATION_CHANGE_HISTORY : "actor_user_id → id"
+    USERS ||--o{ WORK_PACKAGE_MISSING_LINES : "waived_by_user_id → id"
+    USERS ||--o{ WORK_PACKAGE_VERSIONS : "created_by_user_id → id"
     VEHICLE_RATE_VERSIONS ||--|{ DELIVERY_QUOTES : "vehicle_rate_version_id → id"
     VENDOR_ADDRESS_VERSIONS ||--o{ VENDOR_ADDRESSES : "current_version_id → id"
     VENDOR_ADDRESSES ||--|{ VENDOR_ADDRESS_VERSIONS : "vendor_address_id → id"
@@ -1156,8 +1164,11 @@ erDiagram
     VENDOR_VEHICLES ||--|{ VENDOR_VEHICLE_VERSIONS : "vendor_vehicle_id → id"
     WITHHOLDING_ASSIGNMENTS ||--|{ REMITTANCE_GROUPS : "withholding_assignment_id → id"
     WORK_PACKAGE_LINES ||--|{ COMPILED_ESTIMATE_LINES : "work_package_line_id → id"
+    WORK_PACKAGE_LINES ||--|{ WORK_PACKAGE_MISSING_LINES : "work_package_line_id → id"
     WORK_PACKAGE_VERSIONS ||--|{ COMPILED_ESTIMATES : "work_package_version_id → id"
+    WORK_PACKAGE_VERSIONS ||--o{ ORDERS : "work_package_version_id → id"
     WORK_PACKAGE_VERSIONS ||--|{ WORK_PACKAGE_LINES : "work_package_version_id → id"
+    WORK_PACKAGE_VERSIONS ||--|{ WORK_PACKAGE_MISSING_LINES : "work_package_version_id → id"
     WORK_PACKAGE_VERSIONS ||--o{ WORK_PACKAGES : "current_version_id → id"
     WORK_PACKAGES ||--o{ BUDGET_OVERRIDES : "work_package_id → id"
     WORK_PACKAGES ||--o{ ORDERS : "work_package_id → id"

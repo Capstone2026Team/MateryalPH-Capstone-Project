@@ -27,7 +27,8 @@ final class QuotationService
         $c = $this->access->require($request->user(), $conversationId);
         $this->access->requireSales($request->user(), $c);
         $input = $this->terms->validate($input);
-        DB::transaction(function () use ($request, $conversationId, $input, $version): void {
+        DB::transaction(function () use ($request, $conversationId, $input, $version, $c): void {
+            $this->lockPackage($c);
             $c = $this->access->require($request->user(), $conversationId, true);
             $role = $this->access->requireSales($request->user(), $c);
             $q = $this->quotation($c, true);
@@ -74,6 +75,9 @@ final class QuotationService
             if (app(OrderEligibility::class)->storeBlockers($org) !== []) {
                 throw new AuthenticationException('STORE_NOT_ELIGIBLE', 'This store cannot publish new commercial terms.', 409);
             }
+            if ($c->context_type === 'PROJECT_BASED' && ! DB::table('store_profiles')->where('vendor_organization_id', $org->id)->where('bulk_capability', true)->exists()) {
+                throw new AuthenticationException('PROJECT_VENDOR_INELIGIBLE', 'Bulk capability is required for new Project-Based quotations.', 409);
+            }
             $content = $this->terms->freeze($request->user(), $c, $input, $route);
             $previous = $q->current_version_id === null ? null : DB::table('quotation_versions')->where('id', $q->current_version_id)->first();
             $before = $previous === null ? [] : json_decode($previous->content, true);
@@ -84,7 +88,8 @@ final class QuotationService
                     'label' => 'Buyer response window changed from '.$previous->deadline_hours.' hours to '.$hours.' hours.'];
             }
             $content['changes'] = $changes;
-            $content['original_changes'] = QuotationTerms::changes(json_decode((string) $c->locked_reference, true), $content);
+            $reference = json_decode((string) $c->locked_reference, true);
+            $content['original_changes'] = isset($reference['work_package']) ? QuotationTerms::projectChanges($reference['work_package'], $content) : QuotationTerms::changes($reference, $content);
             $json = json_encode($content, JSON_THROW_ON_ERROR);
             $id = (string) Str::uuid7();
             $expires = CarbonImmutable::now()->addHours($hours);
@@ -163,7 +168,9 @@ final class QuotationService
                 DB::table('quotations')->where('id', $q->id)->update(['accepted_order_id' => $order]);
                 $this->state($q, 'ACCEPTED');
                 if ($q->work_package_id !== null) {
-                    DB::table('work_packages')->where('id', $q->work_package_id)->update(['selected_vendor_organization_id' => $q->vendor_organization_id, 'status' => 'VENDOR_SELECTED', 'updated_at' => now()]);
+                    $package = DB::table('work_packages')->where('id', $q->work_package_id)->first();
+                    DB::table('work_packages')->where('id', $q->work_package_id)->update(['selected_vendor_organization_id' => $q->vendor_organization_id, 'status' => 'AWAITING_PAYMENT', 'lock_version' => $package->lock_version + 1, 'updated_at' => now()]);
+                    $this->expireForPackage($q->work_package_id, $q->id);
                     foreach (DB::table('quotations')->where('work_package_id', $q->work_package_id)->where('id', '<>', $q->id)->whereIn('state', [...self::OPEN, 'COUNTERED'])->orderBy('id')->lockForUpdate()->get() as $other) {
                         $this->release($other, 'WORK_PACKAGE_ASSIGNED');
                         $this->state($other, 'EXPIRED');
@@ -338,11 +345,35 @@ final class QuotationService
         if ($c->context_type !== 'PROJECT_BASED') {
             return;
         }
+        $projectId = DB::table('work_packages')->where('id', $c->context_id)->value('project_id');
+        $project = DB::table('projects')->where('id', $projectId)->lockForUpdate()->first();
+        if ($project !== null && $project->status !== 'ACTIVE') {
+            throw new AuthenticationException('PROJECT_CLOSED', 'This Project is read-only. Quotation history remains available.', 409);
+        }
         $package = DB::table('work_packages')->where('id', $c->context_id)->lockForUpdate()->first();
         DB::table('conversations')->where('context_type', 'PROJECT_BASED')->where('context_id', $c->context_id)->orderBy('id')->lockForUpdate()->get(['id']);
         $owned = $package !== null && DB::table('projects')->where('id', $package->project_id)->where('buyer_profile_id', $c->buyer_profile_id)->exists();
+        $reference = json_decode((string) $c->locked_reference, true);
+        if (isset($reference['version_id']) && ($package->current_version_id !== $reference['version_id'] || in_array($package->status, ['DRAFT', 'CANCELLED'], true))) {
+            throw new AuthenticationException('WORK_PACKAGE_VERSION_CONFLICT', 'This inquiry belongs to an older or closed Work Package version. Its history remains readable.', 409);
+        }
         if (! $owned || ($requireUnassigned && $package->selected_vendor_organization_id !== null && ! DB::table('quotations')->where('conversation_id', $c->id)->whereNotNull('accepted_order_id')->exists())) {
             throw new AuthenticationException('WORK_PACKAGE_ALREADY_ASSIGNED', 'This Work Package is unavailable or already assigned. Its quotation history remains readable.', 409);
+        }
+    }
+
+    public function expireForPackage(string $packageId, ?string $except = null): void
+    {
+        $query = DB::table('quotations')->where('work_package_id', $packageId)->whereIn('state', [...self::OPEN, 'COUNTERED', 'DRAFT']);
+        if ($except !== null) {
+            $query->where('id', '<>', $except);
+        }
+        foreach ($query->orderBy('id')->lockForUpdate()->get() as $q) {
+            $this->release($q, 'WORK_PACKAGE_VERSION_CLOSED');
+            $this->state($q, 'EXPIRED');
+            if ($q->current_version_id !== null) {
+                $this->systemEvent($q, 'WORK_PACKAGE_ASSIGNED');
+            }
         }
     }
 }

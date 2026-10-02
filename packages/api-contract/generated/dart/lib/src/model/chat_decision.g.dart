@@ -8,6 +8,8 @@ part of 'chat_decision.dart';
 
 class _$ChatDecision extends ChatDecision {
   @override
+  final String? budgetOverrideReason;
+  @override
   final String versionId;
   @override
   final String? contentHash;
@@ -22,7 +24,8 @@ class _$ChatDecision extends ChatDecision {
       (ChatDecisionBuilder()..update(updates))._build();
 
   _$ChatDecision._(
-      {required this.versionId,
+      {this.budgetOverrideReason,
+      required this.versionId,
       this.contentHash,
       this.reason,
       this.nrpcAcknowledged,
@@ -39,6 +42,7 @@ class _$ChatDecision extends ChatDecision {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is ChatDecision &&
+        budgetOverrideReason == other.budgetOverrideReason &&
         versionId == other.versionId &&
         contentHash == other.contentHash &&
         reason == other.reason &&
@@ -49,6 +53,7 @@ class _$ChatDecision extends ChatDecision {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, budgetOverrideReason.hashCode);
     _$hash = $jc(_$hash, versionId.hashCode);
     _$hash = $jc(_$hash, contentHash.hashCode);
     _$hash = $jc(_$hash, reason.hashCode);
@@ -61,6 +66,7 @@ class _$ChatDecision extends ChatDecision {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'ChatDecision')
+          ..add('budgetOverrideReason', budgetOverrideReason)
           ..add('versionId', versionId)
           ..add('contentHash', contentHash)
           ..add('reason', reason)
@@ -73,6 +79,11 @@ class _$ChatDecision extends ChatDecision {
 class ChatDecisionBuilder
     implements Builder<ChatDecision, ChatDecisionBuilder> {
   _$ChatDecision? _$v;
+
+  String? _budgetOverrideReason;
+  String? get budgetOverrideReason => _$this._budgetOverrideReason;
+  set budgetOverrideReason(String? budgetOverrideReason) =>
+      _$this._budgetOverrideReason = budgetOverrideReason;
 
   String? _versionId;
   String? get versionId => _$this._versionId;
@@ -103,6 +114,7 @@ class ChatDecisionBuilder
   ChatDecisionBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _budgetOverrideReason = $v.budgetOverrideReason;
       _versionId = $v.versionId;
       _contentHash = $v.contentHash;
       _reason = $v.reason;
@@ -129,6 +141,7 @@ class ChatDecisionBuilder
   _$ChatDecision _build() {
     final _$result = _$v ??
         _$ChatDecision._(
+          budgetOverrideReason: budgetOverrideReason,
           versionId: BuiltValueNullFieldError.checkNotNull(
               versionId, r'ChatDecision', 'versionId'),
           contentHash: contentHash,

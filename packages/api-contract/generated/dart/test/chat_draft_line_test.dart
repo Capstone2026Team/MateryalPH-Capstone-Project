@@ -7,6 +7,16 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(ChatDraftLine, () {
+    // String description
+    test('to test the property `description`', () async {
+      // TODO
+    });
+
+    // BuiltMap<String, String> specifications
+    test('to test the property `specifications`', () async {
+      // TODO
+    });
+
     // String variantId
     test('to test the property `variantId`', () async {
       // TODO

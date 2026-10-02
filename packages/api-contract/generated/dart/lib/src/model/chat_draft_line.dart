@@ -3,6 +3,7 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:built_collection/built_collection.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -11,11 +12,19 @@ part 'chat_draft_line.g.dart';
 /// ChatDraftLine
 ///
 /// Properties:
+/// * [description]
+/// * [specifications]
 /// * [variantId]
 /// * [quantity]
 /// * [unitPriceCentavos]
 @BuiltValue()
 abstract class ChatDraftLine implements Built<ChatDraftLine, ChatDraftLineBuilder> {
+  @BuiltValueField(wireName: r'description')
+  String? get description;
+
+  @BuiltValueField(wireName: r'specifications')
+  BuiltMap<String, String>? get specifications;
+
   @BuiltValueField(wireName: r'variant_id')
   String get variantId;
 
@@ -48,6 +57,20 @@ class _$ChatDraftLineSerializer implements PrimitiveSerializer<ChatDraftLine> {
     ChatDraftLine object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.description != null) {
+      yield r'description';
+      yield serializers.serialize(
+        object.description,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.specifications != null) {
+      yield r'specifications';
+      yield serializers.serialize(
+        object.specifications,
+        specifiedType: const FullType(BuiltMap, [FullType(String), FullType(String)]),
+      );
+    }
     yield r'variant_id';
     yield serializers.serialize(
       object.variantId,
@@ -86,6 +109,22 @@ class _$ChatDraftLineSerializer implements PrimitiveSerializer<ChatDraftLine> {
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'description':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.description = valueDes;
+          break;
+        case r'specifications':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltMap, [FullType(String), FullType(String)]),
+          ) as BuiltMap<String, String>?;
+          if (valueDes == null) continue;
+          result.specifications.replace(valueDes);
+          break;
         case r'variant_id':
           final valueDes = serializers.deserialize(
             value,

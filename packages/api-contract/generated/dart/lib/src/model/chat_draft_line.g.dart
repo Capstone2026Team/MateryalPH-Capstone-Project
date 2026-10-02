@@ -8,6 +8,10 @@ part of 'chat_draft_line.dart';
 
 class _$ChatDraftLine extends ChatDraftLine {
   @override
+  final String? description;
+  @override
+  final BuiltMap<String, String>? specifications;
+  @override
   final String variantId;
   @override
   final String quantity;
@@ -18,7 +22,9 @@ class _$ChatDraftLine extends ChatDraftLine {
       (ChatDraftLineBuilder()..update(updates))._build();
 
   _$ChatDraftLine._(
-      {required this.variantId,
+      {this.description,
+      this.specifications,
+      required this.variantId,
       required this.quantity,
       required this.unitPriceCentavos})
       : super._();
@@ -33,6 +39,8 @@ class _$ChatDraftLine extends ChatDraftLine {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is ChatDraftLine &&
+        description == other.description &&
+        specifications == other.specifications &&
         variantId == other.variantId &&
         quantity == other.quantity &&
         unitPriceCentavos == other.unitPriceCentavos;
@@ -41,6 +49,8 @@ class _$ChatDraftLine extends ChatDraftLine {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, description.hashCode);
+    _$hash = $jc(_$hash, specifications.hashCode);
     _$hash = $jc(_$hash, variantId.hashCode);
     _$hash = $jc(_$hash, quantity.hashCode);
     _$hash = $jc(_$hash, unitPriceCentavos.hashCode);
@@ -51,6 +61,8 @@ class _$ChatDraftLine extends ChatDraftLine {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'ChatDraftLine')
+          ..add('description', description)
+          ..add('specifications', specifications)
           ..add('variantId', variantId)
           ..add('quantity', quantity)
           ..add('unitPriceCentavos', unitPriceCentavos))
@@ -61,6 +73,16 @@ class _$ChatDraftLine extends ChatDraftLine {
 class ChatDraftLineBuilder
     implements Builder<ChatDraftLine, ChatDraftLineBuilder> {
   _$ChatDraftLine? _$v;
+
+  String? _description;
+  String? get description => _$this._description;
+  set description(String? description) => _$this._description = description;
+
+  MapBuilder<String, String>? _specifications;
+  MapBuilder<String, String> get specifications =>
+      _$this._specifications ??= MapBuilder<String, String>();
+  set specifications(MapBuilder<String, String>? specifications) =>
+      _$this._specifications = specifications;
 
   String? _variantId;
   String? get variantId => _$this._variantId;
@@ -82,6 +104,8 @@ class ChatDraftLineBuilder
   ChatDraftLineBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _description = $v.description;
+      _specifications = $v.specifications?.toBuilder();
       _variantId = $v.variantId;
       _quantity = $v.quantity;
       _unitPriceCentavos = $v.unitPriceCentavos;
@@ -104,15 +128,30 @@ class ChatDraftLineBuilder
   ChatDraftLine build() => _build();
 
   _$ChatDraftLine _build() {
-    final _$result = _$v ??
-        _$ChatDraftLine._(
-          variantId: BuiltValueNullFieldError.checkNotNull(
-              variantId, r'ChatDraftLine', 'variantId'),
-          quantity: BuiltValueNullFieldError.checkNotNull(
-              quantity, r'ChatDraftLine', 'quantity'),
-          unitPriceCentavos: BuiltValueNullFieldError.checkNotNull(
-              unitPriceCentavos, r'ChatDraftLine', 'unitPriceCentavos'),
-        );
+    _$ChatDraftLine _$result;
+    try {
+      _$result = _$v ??
+          _$ChatDraftLine._(
+            description: description,
+            specifications: _specifications?.build(),
+            variantId: BuiltValueNullFieldError.checkNotNull(
+                variantId, r'ChatDraftLine', 'variantId'),
+            quantity: BuiltValueNullFieldError.checkNotNull(
+                quantity, r'ChatDraftLine', 'quantity'),
+            unitPriceCentavos: BuiltValueNullFieldError.checkNotNull(
+                unitPriceCentavos, r'ChatDraftLine', 'unitPriceCentavos'),
+          );
+    } catch (_) {
+      late String _$failedField;
+      try {
+        _$failedField = 'specifications';
+        _specifications?.build();
+      } catch (e) {
+        throw BuiltValueNestedFieldError(
+            r'ChatDraftLine', _$failedField, e.toString());
+      }
+      rethrow;
+    }
     replace(_$result);
     return _$result;
   }

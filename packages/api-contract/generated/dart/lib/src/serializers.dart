@@ -406,6 +406,34 @@ import 'package:materyalph_api_client/src/model/product_compliance_decision.dart
 import 'package:materyalph_api_client/src/model/product_compliance_queue_envelope.dart';
 import 'package:materyalph_api_client/src/model/product_compliance_queue_item.dart';
 import 'package:materyalph_api_client/src/model/product_rating_summary.dart';
+import 'package:materyalph_api_client/src/model/project_budget.dart';
+import 'package:materyalph_api_client/src/model/project_candidate.dart';
+import 'package:materyalph_api_client/src/model/project_candidate_request.dart';
+import 'package:materyalph_api_client/src/model/project_compile.dart';
+import 'package:materyalph_api_client/src/model/project_compiled_estimate.dart';
+import 'package:materyalph_api_client/src/model/project_create.dart';
+import 'package:materyalph_api_client/src/model/project_estimate_page.dart';
+import 'package:materyalph_api_client/src/model/project_estimate_page_response.dart';
+import 'package:materyalph_api_client/src/model/project_import_preview.dart';
+import 'package:materyalph_api_client/src/model/project_import_preview_response.dart';
+import 'package:materyalph_api_client/src/model/project_import_request.dart';
+import 'package:materyalph_api_client/src/model/project_material_page.dart';
+import 'package:materyalph_api_client/src/model/project_material_page_response.dart';
+import 'package:materyalph_api_client/src/model/project_missing_resolve.dart';
+import 'package:materyalph_api_client/src/model/project_page.dart';
+import 'package:materyalph_api_client/src/model/project_page_response.dart';
+import 'package:materyalph_api_client/src/model/project_preference_reset.dart';
+import 'package:materyalph_api_client/src/model/project_preference_save.dart';
+import 'package:materyalph_api_client/src/model/project_preferences.dart';
+import 'package:materyalph_api_client/src/model/project_preferences_response.dart';
+import 'package:materyalph_api_client/src/model/project_route.dart';
+import 'package:materyalph_api_client/src/model/project_route_response.dart';
+import 'package:materyalph_api_client/src/model/project_site.dart';
+import 'package:materyalph_api_client/src/model/project_summary.dart';
+import 'package:materyalph_api_client/src/model/project_update.dart';
+import 'package:materyalph_api_client/src/model/project_version_request.dart';
+import 'package:materyalph_api_client/src/model/project_view.dart';
+import 'package:materyalph_api_client/src/model/project_view_response.dart';
 import 'package:materyalph_api_client/src/model/provider_attribution.dart';
 import 'package:materyalph_api_client/src/model/psgc_area.dart';
 import 'package:materyalph_api_client/src/model/psgc_area_list_envelope.dart';
@@ -510,6 +538,14 @@ import 'package:materyalph_api_client/src/model/verified_vendor_summary.dart';
 import 'package:materyalph_api_client/src/model/verify_bot_challenge_request.dart';
 import 'package:materyalph_api_client/src/model/verify_email_request.dart';
 import 'package:materyalph_api_client/src/model/volume_tier.dart';
+import 'package:materyalph_api_client/src/model/work_package_input.dart';
+import 'package:materyalph_api_client/src/model/work_package_line_input.dart';
+import 'package:materyalph_api_client/src/model/work_package_page.dart';
+import 'package:materyalph_api_client/src/model/work_package_summary.dart';
+import 'package:materyalph_api_client/src/model/work_package_version.dart';
+import 'package:materyalph_api_client/src/model/work_package_version_page.dart';
+import 'package:materyalph_api_client/src/model/work_package_view.dart';
+import 'package:materyalph_api_client/src/model/work_package_view_response.dart';
 import 'package:materyalph_api_client/src/model/xendit_account_verification_webhook.dart';
 import 'package:materyalph_api_client/src/model/xendit_account_verification_webhook_data.dart';
 import 'package:materyalph_api_client/src/model/xendit_account_verification_webhook_data_account_info.dart';
@@ -910,6 +946,34 @@ part 'serializers.g.dart';
   ProductComplianceQueueEnvelope,
   ProductComplianceQueueItem,
   ProductRatingSummary,
+  ProjectBudget,
+  ProjectCandidate,
+  ProjectCandidateRequest,
+  ProjectCompile,
+  ProjectCompiledEstimate,
+  ProjectCreate,
+  ProjectEstimatePage,
+  ProjectEstimatePageResponse,
+  ProjectImportPreview,
+  ProjectImportPreviewResponse,
+  ProjectImportRequest,
+  ProjectMaterialPage,
+  ProjectMaterialPageResponse,
+  ProjectMissingResolve,
+  ProjectPage,
+  ProjectPageResponse,
+  ProjectPreferenceReset,
+  ProjectPreferenceSave,
+  ProjectPreferences,
+  ProjectPreferencesResponse,
+  ProjectRoute,
+  ProjectRouteResponse,
+  ProjectSite,
+  ProjectSummary,
+  ProjectUpdate,
+  ProjectVersionRequest,
+  ProjectView,
+  ProjectViewResponse,
   ProviderAttribution,
   PsgcArea,
   PsgcAreaListEnvelope,
@@ -1014,6 +1078,14 @@ part 'serializers.g.dart';
   VerifyBotChallengeRequest,
   VerifyEmailRequest,
   VolumeTier,
+  WorkPackageInput,
+  WorkPackageLineInput,
+  WorkPackagePage,
+  WorkPackageSummary,
+  WorkPackageVersion,
+  WorkPackageVersionPage,
+  WorkPackageView,
+  WorkPackageViewResponse,
   XenditAccountVerificationWebhook,
   XenditAccountVerificationWebhookData,
   XenditAccountVerificationWebhookDataAccountInfo,
@@ -1034,6 +1106,10 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(PsgcArea)]),
         () => ListBuilder<PsgcArea>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ProjectSite)]),
+        () => ListBuilder<ProjectSite>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(Agreement)]),
@@ -1170,6 +1246,10 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(PsgcAreaOption)]),
         () => ListBuilder<PsgcAreaOption>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(WorkPackageLineInput)]),
+        () => ListBuilder<WorkPackageLineInput>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
@@ -1348,6 +1428,10 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<ListingVariantOffer>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ProjectSummary)]),
+        () => ListBuilder<ProjectSummary>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(AutoAcceptPolicyVersion)]),
         () => ListBuilder<AutoAcceptPolicyVersion>(),
       )
@@ -1380,6 +1464,10 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<CatalogBlocker>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(WorkPackageVersion)]),
+        () => ListBuilder<WorkPackageVersion>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(CatalogMedia)]),
         () => ListBuilder<CatalogMedia>(),
       )
@@ -1402,6 +1490,10 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(PublicStoreSummary)]),
         () => ListBuilder<PublicStoreSummary>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ProjectCandidate)]),
+        () => ListBuilder<ProjectCandidate>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(CatalogVariantInput)]),
@@ -1438,6 +1530,10 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(int)]),
         () => ListBuilder<int>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(WorkPackageSummary)]),
+        () => ListBuilder<WorkPackageSummary>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(ComplianceRegister)]),

@@ -32,6 +32,7 @@ abstract interface class MessagingRepository {
     String? reason,
     bool nrpcAcknowledged = false,
     String? termsId,
+    String? budgetOverrideReason,
   });
   Future<void> upload(String id, Uint8List bytes, String name, String key);
   Future<Uint8List> attachment(String id, String attachmentId);
@@ -131,6 +132,7 @@ final class ApiMessagingRepository implements MessagingRepository {
     String? reason,
     bool nrpcAcknowledged = false,
     String? termsId,
+    String? budgetOverrideReason,
   }) => _guard(
     () async => (await _api.decideChatQuotation(
       messagingPortal: 'buyers',
@@ -143,7 +145,8 @@ final class ApiMessagingRepository implements MessagingRepository {
           ..contentHash = version.contentHash
           ..reason = reason
           ..nrpcAcknowledged = nrpcAcknowledged
-          ..nrpcTermsVersionId = termsId,
+          ..nrpcTermsVersionId = termsId
+          ..budgetOverrideReason = budgetOverrideReason,
       ),
     )).data?.data.orderId,
   );

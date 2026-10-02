@@ -1,4 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
+import '../../design_system/components/work_package_attachment.dart';
+import '../projects/projects_repository.dart';
 
 import 'dart:typed_data';
 
@@ -267,6 +270,7 @@ class _MessagingScreenState extends State<MessagingScreen>
 
   Future<void> _decide(String action, api.ChatQuotationVersion version) async {
     final reason = TextEditingController();
+    final budgetOverride = TextEditingController();
 
     var acknowledged = false;
 
@@ -300,6 +304,23 @@ class _MessagingScreenState extends State<MessagingScreen>
                   ),
 
                   if (action == 'accept') ...[
+                    ...version.content.originalChanges.map(
+                      (change) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Text(change.label),
+                      ),
+                    ),
+                    if (_detail?.conversation.contextType.name ==
+                        'PROJECT_BASED')
+                      TextField(
+                        controller: budgetOverride,
+                        maxLength: 2000,
+                        decoration: const InputDecoration(
+                          labelText: 'Written budget override reason',
+                          helperText:
+                              'Required if either Project budget is exceeded',
+                        ),
+                      ),
                     const SizedBox(height: 12),
                     const Text(
                       'Acceptance reserves available stock and opens Order Details. Review the payment-channel fee before paying.',
@@ -365,6 +386,8 @@ class _MessagingScreenState extends State<MessagingScreen>
     );
 
     final explanation = reason.text.trim();
+    final overrideReason = budgetOverride.text.trim();
+    budgetOverride.dispose();
 
     reason.dispose();
 
@@ -379,6 +402,7 @@ class _MessagingScreenState extends State<MessagingScreen>
         reason: explanation.isEmpty ? null : explanation,
         nrpcAcknowledged: acknowledged,
         termsId: termsMap['id'] as String?,
+        budgetOverrideReason: overrideReason.isEmpty ? null : overrideReason,
       );
 
       if (mounted) {
@@ -660,6 +684,41 @@ class _MessagingScreenState extends State<MessagingScreen>
           child: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             children: [
+              if (d.conversation.contextType.name == 'PROJECT_BASED')
+                WorkPackageAttachment(
+                  original: projectObject(
+                    projectObject(
+                      jsonDecode(
+                        jsonEncode(
+                          d.conversation.lockedReference
+                              .map((k, v) => MapEntry(k, v?.value))
+                              .toMap(),
+                        ),
+                      ),
+                    )['work_package'],
+                  ),
+                  proposed: d.quotations.versions.isEmpty
+                      ? projectObject(
+                          jsonDecode(
+                            jsonEncode(
+                              d
+                                  .conversation
+                                  .lockedReference['working_duplicate']
+                                  ?.value,
+                            ),
+                          ),
+                        )
+                      : projectObject(
+                          jsonDecode(
+                            jsonEncode(
+                              api.standardSerializers.serializeWith(
+                                api.ChatQuotationContent.serializer,
+                                d.quotations.versions.first.content,
+                              ),
+                            ),
+                          ),
+                        ),
+                ),
               if (d.conversation.handler != null)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 16),

@@ -41,7 +41,7 @@ final class DeliveryPreviewService
      * @param  list<array<string, mixed>>  $lines  valid cart lines of this group
      * @return array<string, mixed>
      */
-    public function preview(string $organizationId, array $destination, array $lines): array
+    public function preview(string $organizationId, array $destination, array $lines, bool $includeRateBasis = false): array
     {
         $base = ['status' => 'ACTION_REQUIRED', 'issues' => [], 'endpoint' => $destination['vehicle_endpoint'], 'route' => null, 'straight_line_meters' => null, 'coverage_km' => null,
             'estimate' => null, 'manual_review_reasons' => [], 'confirmed_offer' => null, 'calculation_version' => DeliveryRecommendationService::CALCULATION_VERSION,
@@ -105,7 +105,7 @@ final class DeliveryPreviewService
                 'message' => 'The Vendor must review this load manually. Vehicles, trips and the delivery fee will be shown after the Vendor confirms.']]]);
         }
 
-        return array_replace($base, ['status' => 'ADVISORY_ESTIMATE', 'estimate' => $this->summarize($result['groups'])]);
+        return array_replace($base, ['status' => 'ADVISORY_ESTIMATE', 'estimate' => $this->summarize($result['groups'], $includeRateBasis)]);
     }
 
     /**
@@ -123,11 +123,16 @@ final class DeliveryPreviewService
     /**
      * One ordinary-cargo load group for a quantity of identical units; unknown measurements stay unknown.
      *
-     * @param  array{weight_kg: ?string, length_cm: ?string, width_cm: ?string, height_cm: ?string}  $load
+     * @param  array{weight_kg: ?string, length_cm: ?string, width_cm: ?string, height_cm: ?string, material_kind?: string, volume_m3_per_unit?: ?string}  $load
      * @return array<string, mixed>
      */
     public static function loadGroupFor(string $key, string $quantity, array $load): array
     {
+        if (($load['material_kind'] ?? null) === DeliveryRecommendationService::READY_MIXED_CONCRETE) {
+            return ['key' => $key, 'material_kind' => DeliveryRecommendationService::READY_MIXED_CONCRETE,
+                'volume_m3' => empty($load['volume_m3_per_unit']) ? null : (float) bcmul($quantity, (string) $load['volume_m3_per_unit'], 4),
+                'weight_kg' => $load['weight_kg'] === null ? null : (float) bcmul((string) $load['weight_kg'], $quantity, 4)];
+        }
         $whole = bccomp($quantity, bcadd($quantity, '0', 0), 4) === 0;
         $cm = static fn (?string $value): ?float => $value === null ? null : (float) $value / 100;
 
@@ -162,7 +167,7 @@ final class DeliveryPreviewService
      * @param  list<array<string, mixed>>  $groups
      * @return array<string, mixed>
      */
-    private function summarize(array $groups): array
+    private function summarize(array $groups, bool $includeRateBasis): array
     {
         $summary = ['fee_min_centavos' => 0, 'fee_max_centavos' => 0, 'trips_min' => 0, 'trips_max' => 0, 'vehicles_min' => 0, 'vehicles_max' => 0, 'options' => []];
         foreach ($groups as $group) {
@@ -177,9 +182,15 @@ final class DeliveryPreviewService
             $summary['vehicles_max'] += max($vehicles);
             foreach ($group['candidates'] as $candidate) {
                 $vehicle = $candidate['vehicle'];
-                $summary['options'][] = ['load_key' => (string) $group['key'], 'vehicle_name' => (string) $vehicle['name'], 'vehicle_type' => (string) $vehicle['vehicle_type'],
+                $option = ['load_key' => (string) $group['key'], 'vehicle_name' => (string) $vehicle['name'], 'vehicle_type' => (string) $vehicle['vehicle_type'],
                     'vehicles' => (int) $candidate['number_of_vehicles'], 'trips' => (int) $candidate['total_vehicle_trips'], 'fee_centavos' => (int) $candidate['estimated_charge_centavos'],
                     'fee_per_trip_centavos' => (int) $candidate['fee']['per_trip_centavos']];
+                if ($includeRateBasis) {
+                    $option += [
+                        'base_fee_centavos' => (int) $candidate['fee']['base_fee_centavos'], 'per_km_centavos' => (int) $candidate['fee']['per_km_centavos'],
+                        'rounding' => (string) $candidate['fee']['rounding'], 'vehicle_version_id' => $vehicle['vehicle_version_id'], 'rate_version_id' => $vehicle['rate_version_id']];
+                }
+                $summary['options'][] = $option;
             }
         }
 
@@ -199,7 +210,7 @@ final class DeliveryPreviewService
             return $payload + ['cached' => true];
         }
         try {
-            $route = $this->routes->drive($latitude, $longitude, $endpoint['latitude'], $endpoint['longitude']);
+            $route = $this->routes->drive($latitude, $longitude, (float) $endpoint['latitude'], (float) $endpoint['longitude']);
         } catch (GeographyProviderUnavailable) {
             return 'ROUTE_UNAVAILABLE';
         }

@@ -8,6 +8,8 @@ part of 'order_revision_decision.dart';
 
 class _$OrderRevisionDecision extends OrderRevisionDecision {
   @override
+  final String? budgetOverrideReason;
+  @override
   final int snapshotVersion;
   @override
   final String? reason;
@@ -16,7 +18,8 @@ class _$OrderRevisionDecision extends OrderRevisionDecision {
           [void Function(OrderRevisionDecisionBuilder)? updates]) =>
       (OrderRevisionDecisionBuilder()..update(updates))._build();
 
-  _$OrderRevisionDecision._({required this.snapshotVersion, this.reason})
+  _$OrderRevisionDecision._(
+      {this.budgetOverrideReason, required this.snapshotVersion, this.reason})
       : super._();
   @override
   OrderRevisionDecision rebuild(
@@ -31,6 +34,7 @@ class _$OrderRevisionDecision extends OrderRevisionDecision {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is OrderRevisionDecision &&
+        budgetOverrideReason == other.budgetOverrideReason &&
         snapshotVersion == other.snapshotVersion &&
         reason == other.reason;
   }
@@ -38,6 +42,7 @@ class _$OrderRevisionDecision extends OrderRevisionDecision {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, budgetOverrideReason.hashCode);
     _$hash = $jc(_$hash, snapshotVersion.hashCode);
     _$hash = $jc(_$hash, reason.hashCode);
     _$hash = $jf(_$hash);
@@ -47,6 +52,7 @@ class _$OrderRevisionDecision extends OrderRevisionDecision {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'OrderRevisionDecision')
+          ..add('budgetOverrideReason', budgetOverrideReason)
           ..add('snapshotVersion', snapshotVersion)
           ..add('reason', reason))
         .toString();
@@ -56,6 +62,11 @@ class _$OrderRevisionDecision extends OrderRevisionDecision {
 class OrderRevisionDecisionBuilder
     implements Builder<OrderRevisionDecision, OrderRevisionDecisionBuilder> {
   _$OrderRevisionDecision? _$v;
+
+  String? _budgetOverrideReason;
+  String? get budgetOverrideReason => _$this._budgetOverrideReason;
+  set budgetOverrideReason(String? budgetOverrideReason) =>
+      _$this._budgetOverrideReason = budgetOverrideReason;
 
   int? _snapshotVersion;
   int? get snapshotVersion => _$this._snapshotVersion;
@@ -73,6 +84,7 @@ class OrderRevisionDecisionBuilder
   OrderRevisionDecisionBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _budgetOverrideReason = $v.budgetOverrideReason;
       _snapshotVersion = $v.snapshotVersion;
       _reason = $v.reason;
       _$v = null;
@@ -96,6 +108,7 @@ class OrderRevisionDecisionBuilder
   _$OrderRevisionDecision _build() {
     final _$result = _$v ??
         _$OrderRevisionDecision._(
+          budgetOverrideReason: budgetOverrideReason,
           snapshotVersion: BuiltValueNullFieldError.checkNotNull(
               snapshotVersion, r'OrderRevisionDecision', 'snapshotVersion'),
           reason: reason,

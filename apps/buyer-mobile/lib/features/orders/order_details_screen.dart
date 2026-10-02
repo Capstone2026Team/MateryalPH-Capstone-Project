@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../design_system/components/work_package_attachment.dart';
+import '../projects/projects_repository.dart';
+import '../projects/projects_screen.dart' show ProjectBudgetCard;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../design_system/components/order_components.dart';
@@ -38,6 +41,12 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
   String? _notice;
   bool _busy = false;
   String? _decisionKey;
+  final _budgetReason = TextEditingController();
+  @override
+  void dispose() {
+    _budgetReason.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -184,6 +193,9 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                       (key) => widget.repository.approveRevision(
                         order.id,
                         snapshotVersion: order.snapshotVersion,
+                        budgetOverrideReason: _budgetReason.text.trim().isEmpty
+                            ? null
+                            : _budgetReason.text.trim(),
                         idempotencyKey: key,
                       ),
                       'Approved. Your order moves to the next step.',
@@ -227,6 +239,31 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
       children: [
+        if (order.projectContext != null) ...[
+          WorkPackageAttachment(
+            original: projectObject(order.projectContext!['work_package']),
+            version: order.projectContext!['version'],
+          ),
+          ProjectBudgetCard(
+            budget: projectObject(order.projectContext!['budget']),
+          ),
+          if (order.projectContext!['note'] != null)
+            Text(
+              'Informational Note: ${order.projectContext!['note']} · No Vendor response required',
+            ),
+          if (order.actions.contains('APPROVE_REVISION'))
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: TextField(
+                controller: _budgetReason,
+                maxLength: 2000,
+                decoration: const InputDecoration(
+                  labelText: 'Written budget override reason',
+                  helperText: 'Required when either budget is exceeded',
+                ),
+              ),
+            ),
+        ],
         _Header(order: order),
         const SizedBox(height: 10),
         if (_notice != null) ...[

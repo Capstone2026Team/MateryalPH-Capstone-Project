@@ -7,6 +7,11 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(ChatDecision, () {
+    // String budgetOverrideReason
+    test('to test the property `budgetOverrideReason`', () async {
+      // TODO
+    });
+
     // String versionId
     test('to test the property `versionId`', () async {
       // TODO

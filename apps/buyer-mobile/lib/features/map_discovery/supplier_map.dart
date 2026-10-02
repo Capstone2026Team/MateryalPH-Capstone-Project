@@ -15,6 +15,8 @@ import 'philippine_map_view.dart';
 /// Basemap chosen from the map layers control. Satellite imagery keeps road and place labels.
 enum BaseMapStyle { standard, satellite }
 
+enum SupplierMapContext { itemBased, projectBased }
+
 /// Everything a map surface needs; the same [items] and order as the synchronized list.
 class SupplierMapProps {
   const SupplierMapProps({
@@ -27,6 +29,7 @@ class SupplierMapProps {
     required this.bottomInset,
     required this.recenterToken,
     this.baseMap = BaseMapStyle.standard,
+    this.procurementContext = SupplierMapContext.itemBased,
   });
 
   final List<SupplierResultView> items;
@@ -43,6 +46,7 @@ class SupplierMapProps {
   final int recenterToken;
 
   final BaseMapStyle baseMap;
+  final SupplierMapContext procurementContext;
 }
 
 typedef SupplierMapBuilder =

@@ -10,6 +10,7 @@ export * from './BuyerDiscoveryApi';
 export * from './BuyerExploreApi';
 export * from './BuyerLocationsApi';
 export * from './BuyerOrdersApi';
+export * from './BuyerProjectsApi';
 export * from './MessagingApi';
 export * from './StoresApi';
 export * from './SystemApi';

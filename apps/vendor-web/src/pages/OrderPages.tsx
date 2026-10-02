@@ -1,3 +1,4 @@
+import { WorkPackageAttachment } from '../components/WorkPackageAttachment'
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Bot, CheckCircle2, ClipboardList, Hand, MapPin, PackageSearch, Search, ShieldAlert, Store, Truck } from 'lucide-react'
@@ -77,7 +78,7 @@ function OrdersWorkspace() {
   const columns: RecordColumn<OrderSummary>[] = [
     { key: 'order', header: 'Order', cell: row => <OrderIdentity row={row} /> },
     { key: 'buyer', header: 'Buyer', cell: row => row.buyer?.displayName ?? '—' },
-    { key: 'source', header: 'Type · source', cell: row => <span className="inline-flex flex-wrap items-center gap-1.5">Item-Based · {row.confirmationSource === 'AUTO_ACCEPT' ? <span className="inline-flex items-center gap-1 font-semibold"><Bot size={14} aria-hidden="true" />Auto-accepted</span> : row.confirmationSource === 'MANUAL' ? 'Manual' : 'Awaiting review'}</span> },
+    { key: 'source', header: 'Type · source', cell: row => <span className="inline-flex flex-wrap items-center gap-1.5">{row.procurementType === 'PROJECT_BASED' ? 'Project-Based' : 'Item-Based'} · {row.confirmationSource === 'AUTO_ACCEPT' ? <span className="inline-flex items-center gap-1 font-semibold"><Bot size={14} aria-hidden="true" />Auto-accepted</span> : row.confirmationSource === 'MANUAL' ? 'Manual' : 'Awaiting review'}</span> },
     { key: 'status', header: 'Status', cell: row => <StatusStack row={row} /> },
     { key: 'deadline', header: 'Deadline', cell: row => row.deadline ? <span className="grid gap-0.5"><span className="font-semibold">{row.deadline.kind === 'VENDOR_RESPONSE' ? 'Your response' : row.deadline.kind === 'BUYER_RESPONSE' ? 'Buyer response' : 'Payment'}</span><span className="text-xs text-text-secondary">{formatManilaDateTime(row.deadline.at)}</span></span> : <span className="text-text-secondary">—</span> },
     { key: 'total', header: 'Total', cell: row => <span className="grid gap-0.5"><span className="font-semibold tabular-nums">{formatPesoCentavos(row.commercialTotalCentavos)}</span>{row.deliveryPending && <span className="text-xs text-text-secondary">+ delivery to confirm</span>}{row.nrpcIndicator && <span className="text-xs font-semibold text-amber-900">Includes NRPC</span>}</span> },
@@ -180,6 +181,7 @@ function OrderDetailWorkspace({ orderId }: { orderId: string }) {
     </dl>
     {deadline?.at && <DeadlineCountdown at={deadline.at} label={deadline.label} onExpire={load} />}
     {notice && <StatusMessage tone={notice.tone}>{notice.text}</StatusMessage>}
+    {order.projectContext && <><WorkPackageAttachment reference={order.projectContext} />{order.projectContext.note != null && <StatusMessage tone="info">Informational Note: {String(order.projectContext.note)} · No response required</StatusMessage>}</>}
     <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
       <div className="grid min-w-0 content-start gap-6">
         {order.primaryAction === 'CONFIRM' && order.permissions?.canConfirm

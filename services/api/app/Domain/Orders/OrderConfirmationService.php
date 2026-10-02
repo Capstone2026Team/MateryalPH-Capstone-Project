@@ -11,6 +11,7 @@ use App\Domain\Inventory\InventoryLedgerWriter;
 use App\Domain\Inventory\InventoryLocks;
 use App\Domain\Inventory\StockAvailability;
 use App\Domain\Operations\OutboxPublisher;
+use App\Domain\Projects\ProjectInquiryService;
 use App\Domain\Vendors\ConfirmedDeliverySnapshot;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
@@ -106,12 +107,21 @@ final class OrderConfirmationService
         $actor = OrderActor::vendor($request, $scope['role']);
 
         DB::transaction(function () use ($request, $scope, $orderId, $input, $key, $lines, $quantities, $discount, $changes, $nrpcInput, $terms, $route, $actor): void {
+            $projectOrder = DB::table('orders')->where('id', $orderId)->first(['work_package_id']);
+            if ($projectOrder->work_package_id !== null) {
+                $projectId = DB::table('work_packages')->where('id', $projectOrder->work_package_id)->value('project_id');
+                DB::table('projects')->where('id', $projectId)->lockForUpdate()->first();
+                DB::table('work_packages')->where('id', $projectOrder->work_package_id)->lockForUpdate()->first();
+            }
             $organization = DB::table('vendor_organizations')->where('id', $scope['organization_id'])->lockForUpdate()->first();
             if ($this->idempotency->replayed($request, 'ORDER_VENDOR_CONFIRM', $key, $orderId)) {
                 return;
             }
             $order = $this->access->vendorOrder($scope, $orderId, true);
             $this->assertPending($order, (int) $input['lock_version']);
+            if ($order->procurement_type === 'PROJECT_BASED' && ! DB::table('store_profiles')->where('vendor_organization_id', $order->vendor_organization_id)->where('bulk_capability', true)->exists()) {
+                throw new AuthenticationException('PROJECT_VENDOR_INELIGIBLE', 'Bulk capability is required to confirm new Project-Based work. Accepted obligations are retained.', 409);
+            }
             $blockers = $this->eligibility->storeBlockers($organization);
             if ($blockers !== []) {
                 throw new AuthenticationException('STORE_NOT_ELIGIBLE', 'This store cannot accept new orders right now. Existing accepted orders are unaffected.', 409, ['blockers' => $blockers]);
@@ -152,6 +162,12 @@ final class OrderConfirmationService
                 'nrpc' => $nrpc === null ? null : ['amount_centavos' => $nrpc['amount_centavos'], 'reason' => trim((string) $nrpcInput['reason']), 'allocations' => $nrpc['allocations'], 'terms_version_id' => $terms['id']],
             ], $commercial, $actor);
             $nrpcRecordId = $nrpc === null ? null : $this->recordNrpc($order, $snapshot, $commercial, trim((string) $nrpcInput['reason']), (string) $terms['id'], $actor);
+            if ($order->procurement_type === 'PROJECT_BASED' && $order->work_package_version_id !== null) {
+                $supplied = array_map(static function (object $line) use ($quantities): array {
+                    return ['quantity' => $quantities[(string) $line->id], 'unit_id' => $line->unit_id] + json_decode($line->snapshot, true);
+                }, $lines);
+                app(ProjectInquiryService::class)->acceptedMissing(DB::table('work_packages')->where('id', $order->work_package_id)->first(), $supplied);
+            }
             DB::table('vendor_confirmations')->insert(['id' => (string) Str::uuid7(), 'order_id' => $order->id, 'actor_user_id' => $actor->userId, 'actor_role' => $actor->role,
                 'state' => $changes === [] ? 'CONFIRMED' : 'REVISED', 'source' => 'MANUAL', 'order_snapshot_version' => (int) $snapshot->version,
                 'payload' => json_encode(['changes' => $changes, 'nrpc_record_id' => $nrpcRecordId, 'delivery_snapshot_id' => $deliverySummary['snapshot_id'] ?? null], JSON_THROW_ON_ERROR),
@@ -162,7 +178,7 @@ final class OrderConfirmationService
                 'nrpc_centavos' => $commercial['nrpc_centavos'], 'commercial_total_centavos' => $commercial['commercial_total_centavos'], 'updated_at' => now(),
             ]);
             $order = DB::table('orders')->where('id', $order->id)->first();
-            $buyerDecision = $changes !== [] || $order->fulfillment_method === 'DELIVERY';
+            $buyerDecision = $changes !== [] || $order->fulfillment_method === 'DELIVERY' || $order->procurement_type === 'PROJECT_BASED';
             if ($buyerDecision || $nrpc !== null) {
                 $due = CarbonImmutable::now()->addHours(self::BUYER_RESPONSE_HOURS);
                 $next = $buyerDecision ? OrderStates::AWAITING_BUYER_APPROVAL : OrderStates::AWAITING_NRPC_ACCEPTANCE;

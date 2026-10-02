@@ -30,6 +30,7 @@ class NrpcDisclosureScreen extends StatefulWidget {
 
 class _NrpcDisclosureScreenState extends State<NrpcDisclosureScreen> {
   final _scroll = ScrollController();
+  final _budgetReason = TextEditingController();
   bool _reachedEnd = false;
   bool _acknowledged = false;
   bool _busy = false;
@@ -58,6 +59,7 @@ class _NrpcDisclosureScreenState extends State<NrpcDisclosureScreen> {
   @override
   void dispose() {
     _scroll.dispose();
+    _budgetReason.dispose();
     super.dispose();
   }
 
@@ -166,6 +168,15 @@ class _NrpcDisclosureScreenState extends State<NrpcDisclosureScreen> {
                       style: const TextStyle(fontSize: 13),
                     ),
                   ),
+                  if (widget.order.projectContext != null)
+                    TextField(
+                      controller: _budgetReason,
+                      maxLength: 2000,
+                      decoration: const InputDecoration(
+                        labelText: 'Written budget override reason',
+                        helperText: 'Required when either budget is exceeded',
+                      ),
+                    ),
                   Row(
                     children: [
                       Expanded(
@@ -192,6 +203,10 @@ class _NrpcDisclosureScreenState extends State<NrpcDisclosureScreen> {
                                           widget.order.snapshotVersion,
                                       nrpcId: nrpc.id,
                                       termsVersionId: nrpc.terms!.id,
+                                      budgetOverrideReason:
+                                          _budgetReason.text.trim().isEmpty
+                                          ? null
+                                          : _budgetReason.text.trim(),
                                       idempotencyKey: key,
                                     ),
                                   )

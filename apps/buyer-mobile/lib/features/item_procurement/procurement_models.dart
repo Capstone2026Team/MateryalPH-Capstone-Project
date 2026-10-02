@@ -1,3 +1,4 @@
+import '../../design_system/ranking_weights.dart';
 import 'package:flutter/foundation.dart';
 
 enum LoadPhase { needsOrigin, loading, ready, failed }
@@ -349,50 +350,27 @@ class RankingWeights {
     productRating: key == 'product_rating' ? value : productRating,
   );
 
-  /// Largest-remainder allocation with stable factor-order ties. A slider drag should
-  /// use its starting weights as the basis to avoid cumulative rounding drift.
+  Map<String, int> toMap() => {
+    'distance': distance,
+    'price': price,
+    'vps': vps,
+    'stock': stock,
+    'product_rating': productRating,
+  };
+  factory RankingWeights.fromMap(Map<String, int> values) => RankingWeights(
+    distance: values['distance']!,
+    price: values['price']!,
+    vps: values['vps']!,
+    stock: values['stock']!,
+    productRating: values['product_rating']!,
+  );
   RankingWeights rebalance(
     String key,
     int value, {
     required RankingWeights defaults,
-  }) {
-    const keys = ['distance', 'price', 'vps', 'stock', 'product_rating'];
-    if (!keys.contains(key)) throw ArgumentError.value(key, 'key');
-    final target = value.clamp(0, 100);
-    final others = keys.where((item) => item != key).toList();
-    var basis = this;
-    var sum = others.fold(0, (sum, item) => sum + basis.valueOf(item));
-    if (sum == 0) {
-      basis = defaults;
-      sum = others.fold(0, (sum, item) => sum + basis.valueOf(item));
-    }
-    final denominator = sum == 0 ? others.length : sum;
-    final numerators = {
-      for (final item in others)
-        item: (100 - target) * (sum == 0 ? 1 : basis.valueOf(item)),
-    };
-    final allocated = {
-      for (final item in others) item: numerators[item]! ~/ denominator,
-    };
-    final remaining = 100 - target - allocated.values.fold(0, (a, b) => a + b);
-    final order = [...others]
-      ..sort((a, b) {
-        final remainder = (numerators[b]! % denominator).compareTo(
-          numerators[a]! % denominator,
-        );
-        return remainder != 0
-            ? remainder
-            : keys.indexOf(a).compareTo(keys.indexOf(b));
-      });
-    for (var i = 0; i < remaining; i++) {
-      allocated[order[i]] = allocated[order[i]]! + 1;
-    }
-    var result = withValue(key, target);
-    for (final item in others) {
-      result = result.withValue(item, allocated[item]!);
-    }
-    return result;
-  }
+  }) => RankingWeights.fromMap(
+    rebalanceRankingWeights(toMap(), key, value, defaults: defaults.toMap()),
+  );
 
   @override
   bool operator ==(Object other) =>

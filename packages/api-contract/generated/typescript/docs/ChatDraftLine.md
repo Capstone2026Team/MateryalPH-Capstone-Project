@@ -6,6 +6,8 @@
 
 Name | Type
 ------------ | -------------
+`description` | string
+`specifications` | { [key: string]: string; }
 `variantId` | string
 `quantity` | string
 `unitPriceCentavos` | number
@@ -17,6 +19,8 @@ import type { ChatDraftLine } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "description": null,
+  "specifications": null,
   "variantId": null,
   "quantity": null,
   "unitPriceCentavos": null,

@@ -8,6 +8,7 @@ import 'package:materyalph_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
+**projectContext** | [**BuiltMap&lt;String, JsonObject&gt;**](JsonObject.md) |  | [optional]
 **id** | **String** |  |
 **reference** | **String** |  |
 **checkout** | [**OrderCheckoutRef**](OrderCheckoutRef.md) |  |

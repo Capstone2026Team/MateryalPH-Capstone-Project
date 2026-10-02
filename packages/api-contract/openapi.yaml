@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: MateryalPH API
-  version: 1.0.0-phase.9
+  version: 1.0.0-phase.10
   description: >-
     Versioned Phase 1–4 contract. Vendor onboarding, verification, activation readiness, private evidence, team invitations, the Vendor catalog and product PS/ICC compliance are server-authorized.
     Browser credentials are isolated by configured frontend origin using _vendor and _admin suffixes on access, refresh, CSRF, MFA and bot-proof cookies.
@@ -5107,6 +5107,970 @@ paths:
         "404": { $ref: "#/components/responses/ErrorResponse" }
         "409": { $ref: "#/components/responses/ErrorResponse" }
         "422": { $ref: "#/components/responses/ErrorResponse" }
+  # Phase 10 Project operations
+  "/buyers/projects":
+    "get":
+      "tags":
+        - "Buyer Projects"
+      "operationId": "listProjects"
+      "description": "Paginated owned Projects and disjoint FIN-11 metrics."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "page"
+          "in": "query"
+          "schema":
+            "type": "integer"
+            "minimum": 1
+            "maximum": 10000
+      "responses":
+        "200":
+          "description": "Authorized Project procurement result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/ProjectPageResponse"
+        "401":
+          "description": "Authentication required."
+        "403":
+          "description": "Current Buyer authorization required."
+        "404":
+          "description": "No owned resource or current candidate."
+        "409":
+          "description": "Stale version, expired estimate, source change or already
+            selected Vendor; no mutation."
+        "422":
+          "description": "Validation, fulfillment review or written budget override required."
+        "503":
+          "description": "Provider unavailable; retry without fabricated values."
+    "post":
+      "tags":
+        - "Buyer Projects"
+      "operationId": "createProject"
+      "description": "Create an Active Project with a frozen site copied from the
+        authenticated Buyer saved location."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/ProjectCreate"
+      "responses":
+        "201":
+          "description": "Authorized Project procurement result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/ProjectViewResponse"
+        "401":
+          "description": "Authentication required."
+        "403":
+          "description": "Current Buyer authorization required."
+        "404":
+          "description": "No owned resource or current candidate."
+        "409":
+          "description": "Stale version, expired estimate, source change or already
+            selected Vendor; no mutation."
+        "422":
+          "description": "Validation, fulfillment review or written budget override required."
+        "503":
+          "description": "Provider unavailable; retry without fabricated values."
+  "/buyers/projects/{projectId}":
+    "get":
+      "tags":
+        - "Buyer Projects"
+      "operationId": "getProject"
+      "description": "Project sites and paginated Work Packages."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "projectId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "page"
+          "in": "query"
+          "schema":
+            "type": "integer"
+            "minimum": 1
+            "maximum": 10000
+      "responses":
+        "200":
+          "description": "Authorized Project procurement result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/ProjectViewResponse"
+        "401":
+          "description": "Authentication required."
+        "403":
+          "description": "Current Buyer authorization required."
+        "404":
+          "description": "No owned resource or current candidate."
+        "409":
+          "description": "Stale version, expired estimate, source change or already
+            selected Vendor; no mutation."
+        "422":
+          "description": "Validation, fulfillment review or written budget override required."
+        "503":
+          "description": "Provider unavailable; retry without fabricated values."
+    "patch":
+      "tags":
+        - "Buyer Projects"
+      "operationId": "updateProject"
+      "description": "Edit before procurement history; complete/archive afterward. A
+        site never replaces an accepted destination."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "projectId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/ProjectUpdate"
+      "responses":
+        "200":
+          "description": "Authorized Project procurement result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/ProjectViewResponse"
+        "401":
+          "description": "Authentication required."
+        "403":
+          "description": "Current Buyer authorization required."
+        "404":
+          "description": "No owned resource or current candidate."
+        "409":
+          "description": "Stale version, expired estimate, source change or already
+            selected Vendor; no mutation."
+        "422":
+          "description": "Validation, fulfillment review or written budget override required."
+        "503":
+          "description": "Provider unavailable; retry without fabricated values."
+    "delete":
+      "tags":
+        - "Buyer Projects"
+      "operationId": "deleteProject"
+      "description": "Delete only when no Work Packages or procurement history exists.
+        Otherwise archive."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "projectId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/ProjectVersionRequest"
+      "responses":
+        "200":
+          "description": "Authorized Project procurement result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/ChatEmptyResponse"
+        "401":
+          "description": "Authentication required."
+        "403":
+          "description": "Current Buyer authorization required."
+        "404":
+          "description": "No owned resource or current candidate."
+        "409":
+          "description": "Stale version, expired estimate, source change or already
+            selected Vendor; no mutation."
+        "422":
+          "description": "Validation, fulfillment review or written budget override required."
+        "503":
+          "description": "Provider unavailable; retry without fabricated values."
+  "/buyers/projects/{projectId}/work-packages":
+    "post":
+      "tags":
+        - "Buyer Projects"
+      "operationId": "createWorkPackage"
+      "description": "Save a Draft. Normalized units, positive quantities, explicit
+        site and access are validated."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "projectId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/WorkPackageInput"
+      "responses":
+        "201":
+          "description": "Authorized Project procurement result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/WorkPackageViewResponse"
+        "401":
+          "description": "Authentication required."
+        "403":
+          "description": "Current Buyer authorization required."
+        "404":
+          "description": "No owned resource or current candidate."
+        "409":
+          "description": "Stale version, expired estimate, source change or already
+            selected Vendor; no mutation."
+        "422":
+          "description": "Validation, fulfillment review or written budget override required."
+        "503":
+          "description": "Provider unavailable; retry without fabricated values."
+  "/buyers/work-packages/{packageId}":
+    "get":
+      "tags":
+        - "Buyer Projects"
+      "operationId": "getWorkPackage"
+      "description": "Locked original, paginated version history, missing-item
+        resolution and budget metrics. PDF generation remains Phase 15."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "packageId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "page"
+          "in": "query"
+          "schema":
+            "type": "integer"
+            "minimum": 1
+            "maximum": 10000
+      "responses":
+        "200":
+          "description": "Authorized Project procurement result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/WorkPackageViewResponse"
+        "401":
+          "description": "Authentication required."
+        "403":
+          "description": "Current Buyer authorization required."
+        "404":
+          "description": "No owned resource or current candidate."
+        "409":
+          "description": "Stale version, expired estimate, source change or already
+            selected Vendor; no mutation."
+        "422":
+          "description": "Validation, fulfillment review or written budget override required."
+        "503":
+          "description": "Provider unavailable; retry without fabricated values."
+    "put":
+      "tags":
+        - "Buyer Projects"
+      "operationId": "editWorkPackage"
+      "description": "Editable Draft only; saves an append-only draft version."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "packageId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/WorkPackageInput"
+      "responses":
+        "200":
+          "description": "Authorized Project procurement result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/WorkPackageViewResponse"
+        "401":
+          "description": "Authentication required."
+        "403":
+          "description": "Current Buyer authorization required."
+        "404":
+          "description": "No owned resource or current candidate."
+        "409":
+          "description": "Stale version, expired estimate, source change or already
+            selected Vendor; no mutation."
+        "422":
+          "description": "Validation, fulfillment review or written budget override required."
+        "503":
+          "description": "Provider unavailable; retry without fabricated values."
+    "delete":
+      "tags":
+        - "Buyer Projects"
+      "operationId": "deleteWorkPackage"
+      "description": "Delete only a Draft with no locked historical version. Retain
+        activated evidence."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "packageId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/ProjectVersionRequest"
+      "responses":
+        "200":
+          "description": "Authorized Project procurement result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/ChatEmptyResponse"
+        "401":
+          "description": "Authentication required."
+        "403":
+          "description": "Current Buyer authorization required."
+        "404":
+          "description": "No owned resource or current candidate."
+        "409":
+          "description": "Stale version, expired estimate, source change or already
+            selected Vendor; no mutation."
+        "422":
+          "description": "Validation, fulfillment review or written budget override required."
+        "503":
+          "description": "Provider unavailable; retry without fabricated values."
+  "/buyers/work-packages/{packageId}/versions":
+    "post":
+      "tags":
+        - "Buyer Projects"
+      "operationId": "createWorkPackageVersion"
+      "description": "Explicit correction version invalidates estimates and expires
+        inquiries. Selected work requires prior order cancellation."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "packageId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/WorkPackageInput"
+      "responses":
+        "200":
+          "description": "Authorized Project procurement result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/WorkPackageViewResponse"
+        "401":
+          "description": "Authentication required."
+        "403":
+          "description": "Current Buyer authorization required."
+        "404":
+          "description": "No owned resource or current candidate."
+        "409":
+          "description": "Stale version, expired estimate, source change or already
+            selected Vendor; no mutation."
+        "422":
+          "description": "Validation, fulfillment review or written budget override required."
+        "503":
+          "description": "Provider unavailable; retry without fabricated values."
+  "/buyers/work-packages/{packageId}/activate":
+    "post":
+      "tags":
+        - "Buyer Projects"
+      "operationId": "activateWorkPackage"
+      "description": "Lock the original version; scan explicitly afterward."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "packageId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/ProjectVersionRequest"
+      "responses":
+        "200":
+          "description": "Authorized Project procurement result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/WorkPackageViewResponse"
+        "401":
+          "description": "Authentication required."
+        "403":
+          "description": "Current Buyer authorization required."
+        "404":
+          "description": "No owned resource or current candidate."
+        "409":
+          "description": "Stale version, expired estimate, source change or already
+            selected Vendor; no mutation."
+        "422":
+          "description": "Validation, fulfillment review or written budget override required."
+        "503":
+          "description": "Provider unavailable; retry without fabricated values."
+  "/buyers/work-packages/{packageId}/close":
+    "post":
+      "tags":
+        - "Buyer Projects"
+      "operationId": "closeWorkPackage"
+      "description": "Cancel an unassigned package, retaining every locked version.
+        Selected work follows order cancellation rules."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "packageId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/ProjectVersionRequest"
+      "responses":
+        "200":
+          "description": "Authorized Project procurement result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/WorkPackageViewResponse"
+        "401":
+          "description": "Authentication required."
+        "403":
+          "description": "Current Buyer authorization required."
+        "404":
+          "description": "No owned resource or current candidate."
+        "409":
+          "description": "Stale version, expired estimate, source change or already
+            selected Vendor; no mutation."
+        "422":
+          "description": "Validation, fulfillment review or written budget override required."
+        "503":
+          "description": "Provider unavailable; retry without fabricated values."
+  "/buyers/work-packages/{packageId}/estimates":
+    "get":
+      "tags":
+        - "Buyer Projects"
+      "operationId": "getProjectEstimates"
+      "description": "Immutable, paginated snapshots. Complete one-Vendor matches
+        first; missing lines explicit. Expiry is exactly 48 hours."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "packageId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "page"
+          "in": "query"
+          "schema":
+            "type": "integer"
+            "minimum": 1
+            "maximum": 10000
+      "responses":
+        "200":
+          "description": "Authorized Project procurement result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/ProjectEstimatePageResponse"
+        "401":
+          "description": "Authentication required."
+        "403":
+          "description": "Current Buyer authorization required."
+        "404":
+          "description": "No owned resource or current candidate."
+        "409":
+          "description": "Stale version, expired estimate, source change or already
+            selected Vendor; no mutation."
+        "422":
+          "description": "Validation, fulfillment review or written budget override required."
+        "503":
+          "description": "Provider unavailable; retry without fabricated values."
+    "post":
+      "tags":
+        - "Buyer Projects"
+      "operationId": "compileProjectEstimates"
+      "description": "Scan eligible Bulk Yes Tier 2 offers within the confirmed radius
+        from the Project site. FMS uses exact normalized weights. Unknown delivery
+        cost remains pending; schedules never change validity or score."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "packageId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/ProjectCompile"
+      "responses":
+        "200":
+          "description": "Authorized Project procurement result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/ProjectEstimatePageResponse"
+        "401":
+          "description": "Authentication required."
+        "403":
+          "description": "Current Buyer authorization required."
+        "404":
+          "description": "No owned resource or current candidate."
+        "409":
+          "description": "Stale version, expired estimate, source change or already
+            selected Vendor; no mutation."
+        "422":
+          "description": "Validation, fulfillment review or written budget override required."
+        "503":
+          "description": "Provider unavailable; retry without fabricated values."
+  "/buyers/work-packages/{packageId}/inquiries":
+    "post":
+      "tags":
+        - "Buyer Projects"
+      "operationId": "inquireProjectVendor"
+      "description": "Open/resume this eligible candidate inquiry only; attach locked
+        original and Vendor-editable duplicate to the shared quotation engine."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "packageId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/ProjectCandidateRequest"
+      "responses":
+        "201":
+          "description": "Authorized Project procurement result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/ChatIdResponse"
+        "401":
+          "description": "Authentication required."
+        "403":
+          "description": "Current Buyer authorization required."
+        "404":
+          "description": "No owned resource or current candidate."
+        "409":
+          "description": "Stale version, expired estimate, source change or already
+            selected Vendor; no mutation."
+        "422":
+          "description": "Validation, fulfillment review or written budget override required."
+        "503":
+          "description": "Provider unavailable; retry without fabricated values."
+  "/buyers/work-packages/{packageId}/selection":
+    "post":
+      "tags":
+        - "Buyer Projects"
+      "operationId": "selectProjectVendor"
+      "description": "Select exactly one Vendor from a fresh estimate and expire other
+        active quotations. Creates a manual 24-hour package request. Optional Note
+        needs no Vendor response. No auto-accept."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "packageId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/ProjectCandidateRequest"
+      "responses":
+        "201":
+          "description": "Authorized Project procurement result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/ChatIdResponse"
+        "401":
+          "description": "Authentication required."
+        "403":
+          "description": "Current Buyer authorization required."
+        "404":
+          "description": "No owned resource or current candidate."
+        "409":
+          "description": "Stale version, expired estimate, source change or already
+            selected Vendor; no mutation."
+        "422":
+          "description": "Validation, fulfillment review or written budget override required."
+        "503":
+          "description": "Provider unavailable; retry without fabricated values."
+  "/buyers/work-packages/{packageId}/candidates/{candidateId}/route":
+    "post":
+      "tags":
+        - "Buyer Projects"
+      "operationId": "getProjectCandidateRoute"
+      "description": "One decision route from the frozen Project site. Separate
+        delivery endpoint/rate basis remains in the advisory estimate."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "packageId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "candidateId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "responses":
+        "200":
+          "description": "Authorized Project procurement result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/ProjectRouteResponse"
+        "401":
+          "description": "Authentication required."
+        "403":
+          "description": "Current Buyer authorization required."
+        "404":
+          "description": "No owned resource or current candidate."
+        "409":
+          "description": "Stale version, expired estimate, source change or already
+            selected Vendor; no mutation."
+        "422":
+          "description": "Validation, fulfillment review or written budget override required."
+        "503":
+          "description": "Provider unavailable; retry without fabricated values."
+  "/buyers/work-packages/{packageId}/missing-lines/{lineId}":
+    "put":
+      "tags":
+        - "Buyer Projects"
+      "operationId": "resolveProjectMissingLine"
+      "description": "Link a covering owned Item-Based order or explicitly waive with
+        a reason. Linked child orders enter budgets once."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "packageId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "lineId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/ProjectMissingResolve"
+      "responses":
+        "200":
+          "description": "Authorized Project procurement result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/WorkPackageViewResponse"
+        "401":
+          "description": "Authentication required."
+        "403":
+          "description": "Current Buyer authorization required."
+        "404":
+          "description": "No owned resource or current candidate."
+        "409":
+          "description": "Stale version, expired estimate, source change or already
+            selected Vendor; no mutation."
+        "422":
+          "description": "Validation, fulfillment review or written budget override required."
+        "503":
+          "description": "Provider unavailable; retry without fabricated values."
+  "/buyers/work-packages/import-preview":
+    "post":
+      "tags":
+        - "Buyer Projects"
+      "operationId": "previewWorkPackageCsv"
+      "description": "Validate at most 100 CSV lines without saving. Header:
+        material_code,name,unit_code,quantity,preferred_brand,specifications."
+      "security":
+        - "passportBearer": []
+      "parameters": []
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/ProjectImportRequest"
+      "responses":
+        "200":
+          "description": "Authorized Project procurement result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/ProjectImportPreviewResponse"
+        "401":
+          "description": "Authentication required."
+        "403":
+          "description": "Current Buyer authorization required."
+        "404":
+          "description": "No owned resource or current candidate."
+        "409":
+          "description": "Stale version, expired estimate, source change or already
+            selected Vendor; no mutation."
+        "422":
+          "description": "Validation, fulfillment review or written budget override required."
+        "503":
+          "description": "Provider unavailable; retry without fabricated values."
+  "/buyers/project-ranking-preferences":
+    "get":
+      "tags":
+        - "Buyer Projects"
+      "operationId": "getProjectRankingPreferences"
+      "description": "Separate Project-Based preference record and active personalized
+        indicator."
+      "security":
+        - "passportBearer": []
+      "parameters": []
+      "responses":
+        "200":
+          "description": "Authorized Project procurement result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/ProjectPreferencesResponse"
+        "401":
+          "description": "Authentication required."
+        "403":
+          "description": "Current Buyer authorization required."
+        "404":
+          "description": "No owned resource or current candidate."
+        "409":
+          "description": "Stale version, expired estimate, source change or already
+            selected Vendor; no mutation."
+        "422":
+          "description": "Validation, fulfillment review or written budget override required."
+        "503":
+          "description": "Provider unavailable; retry without fabricated values."
+    "put":
+      "tags":
+        - "Buyer Projects"
+      "operationId": "saveProjectRankingPreferences"
+      "description": "Exactly four integer weights in [0,100] totaling 100. Defaults:
+        material_match 40, budget_fit 25, distance 20, vps 15."
+      "security":
+        - "passportBearer": []
+      "parameters": []
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/ProjectPreferenceSave"
+      "responses":
+        "200":
+          "description": "Authorized Project procurement result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/ProjectPreferencesResponse"
+        "401":
+          "description": "Authentication required."
+        "403":
+          "description": "Current Buyer authorization required."
+        "404":
+          "description": "No owned resource or current candidate."
+        "409":
+          "description": "Stale version, expired estimate, source change or already
+            selected Vendor; no mutation."
+        "422":
+          "description": "Validation, fulfillment review or written budget override required."
+        "503":
+          "description": "Provider unavailable; retry without fabricated values."
+  "/buyers/project-ranking-preferences/reset":
+    "post":
+      "tags":
+        - "Buyer Projects"
+      "operationId": "resetProjectRankingPreferences"
+      "description": "Reset to current platform defaults with version conflict protection."
+      "security":
+        - "passportBearer": []
+      "parameters": []
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/ProjectPreferenceReset"
+      "responses":
+        "200":
+          "description": "Authorized Project procurement result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/ProjectPreferencesResponse"
+        "401":
+          "description": "Authentication required."
+        "403":
+          "description": "Current Buyer authorization required."
+        "404":
+          "description": "No owned resource or current candidate."
+        "409":
+          "description": "Stale version, expired estimate, source change or already
+            selected Vendor; no mutation."
+        "422":
+          "description": "Validation, fulfillment review or written budget override required."
+        "503":
+          "description": "Provider unavailable; retry without fabricated values."
+  "/buyers/project-materials":
+    "get":
+      "tags":
+        - "Buyer Projects"
+      "operationId": "searchProjectMaterials"
+      "description": "Up to eight canonical material suggestions, each with compatible
+        normalized units. Buyer must explicitly select a suggestion."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "query"
+          "in": "query"
+          "required": true
+          "schema":
+            "type": "string"
+            "minLength": 2
+            "maxLength": 100
+      "responses":
+        "200":
+          "description": "Authorized Project procurement result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/ProjectMaterialPageResponse"
+        "401":
+          "description": "Authentication required."
+        "403":
+          "description": "Current Buyer authorization required."
+        "404":
+          "description": "No owned resource or current candidate."
+        "409":
+          "description": "Stale version, expired estimate, source change or already
+            selected Vendor; no mutation."
+        "422":
+          "description": "Validation, fulfillment review or written budget override required."
+        "503":
+          "description": "Provider unavailable; retry without fabricated values."
 components:
   securitySchemes:
     passportBearer: { type: http, scheme: bearer, bearerFormat: JWT }
@@ -5618,6 +6582,8 @@ components:
         - quantity
         - unit_price_centavos
       properties:
+        description: { type: string, maxLength: 200 }
+        specifications: { type: object, additionalProperties: { type: string } }
         variant_id:
           type: string
           format: uuid
@@ -5687,6 +6653,7 @@ components:
       required:
         - version_id
       properties:
+        budget_override_reason: { type: string, minLength: 10, maxLength: 2000 }
         version_id:
           type: string
           format: uuid
@@ -10234,6 +11201,7 @@ components:
       description: Buyer responses add available_actions and payment; Vendor responses add buyer, auto_accept, reservations, permissions, primary_action, nrpc_terms and decline_reasons.
       required: [ id, reference, checkout, vendor, procurement_type, fulfillment_method, payment_method, submitted_at, accepted_at, closed_at, terminal_reason_code, confirmation_source, states, deadlines, commercial_version, changes, expected_fulfillment_date, lines, destination, delivery, money, nrpc, timeline, lock_version ]
       properties:
+        project_context: { type: object, additionalProperties: true, nullable: true }
         id: { type: string, format: uuid }
         reference: { type: string }
         checkout: { oneOf: [ { $ref: "#/components/schemas/OrderCheckoutRef" }, { type: 'null' } ] }
@@ -10279,6 +11247,7 @@ components:
       additionalProperties: false
       required: [ snapshot_version ]
       properties:
+        budget_override_reason: { type: string, minLength: 10, maxLength: 2000 }
         snapshot_version: { type: integer, minimum: 1, description: The commercial version the Buyer reviewed. }
         reason: { type: [ string, 'null' ], maxLength: 1000 }
     NrpcAcceptRequest:
@@ -10286,6 +11255,7 @@ components:
       additionalProperties: false
       required: [ snapshot_version, nrpc_id, terms_version_id, acknowledged ]
       properties:
+        budget_override_reason: { type: string, minLength: 10, maxLength: 2000 }
         snapshot_version: { type: integer, minimum: 1 }
         nrpc_id: { type: string, format: uuid }
         terms_version_id: { type: string, format: uuid, description: The NRPC Terms version displayed with the proposal. }
@@ -10459,3 +11429,915 @@ components:
         data: { $ref: "#/components/schemas/DeliveryPlan" }
         meta: { type: object, additionalProperties: true }
         errors: { type: array, items: { type: object, additionalProperties: true } }
+
+    # Phase 10 Project schemas
+    "ProjectBudget":
+      "type": "object"
+      "required":
+        - "budget_centavos"
+        - "pending_centavos"
+        - "actual_centavos"
+        - "awaiting_recovery_centavos"
+        - "committed_centavos"
+        - "remaining_centavos"
+        - "utilization_percent"
+        - "warning"
+        - "label"
+        - "allocated_centavos"
+        - "unallocated_centavos"
+        - "pending_confirmation_count"
+        - "processing_fee_status"
+      "properties":
+        "budget_centavos":
+          "type": "integer"
+        "pending_centavos":
+          "type": "integer"
+        "actual_centavos":
+          "type": "integer"
+        "awaiting_recovery_centavos":
+          "type": "integer"
+        "committed_centavos":
+          "type": "integer"
+        "remaining_centavos":
+          "type": "integer"
+        "utilization_percent":
+          "type": "string"
+        "warning":
+          "type": "boolean"
+        "label":
+          "type": "string"
+        "allocated_centavos":
+          "type": "integer"
+        "unallocated_centavos":
+          "type": "integer"
+        "pending_confirmation_count":
+          "type": "integer"
+        "processing_fee_status":
+          "type": "string"
+    "ProjectSite":
+      "type": "object"
+      "required":
+        - "id"
+        - "name"
+        - "discovery_origin"
+        - "point"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "name":
+          "type": "string"
+        "discovery_origin":
+          "type": "string"
+        "point":
+          "type": "object"
+          "additionalProperties": true
+    "ProjectSummary":
+      "type": "object"
+      "required":
+        - "id"
+        - "name"
+        - "status"
+        - "budget_centavos"
+        - "lock_version"
+        - "budget"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "name":
+          "type": "string"
+        "status":
+          "type": "string"
+          "enum":
+            - "ACTIVE"
+            - "COMPLETED"
+            - "ARCHIVED"
+        "budget_centavos":
+          "type": "integer"
+        "starts_on":
+          "type": "string"
+          "nullable": true
+        "ends_on":
+          "type": "string"
+          "nullable": true
+        "lock_version":
+          "type": "integer"
+        "budget":
+          "$ref": "#/components/schemas/ProjectBudget"
+    "WorkPackageSummary":
+      "type": "object"
+      "required":
+        - "id"
+        - "project_id"
+        - "name"
+        - "status"
+        - "budget_centavos"
+        - "lock_version"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "project_id":
+          "type": "string"
+          "format": "uuid"
+        "name":
+          "type": "string"
+        "status":
+          "type": "string"
+          "enum":
+            - "DRAFT"
+            - "ACTIVE"
+            - "QUOTATION_INQUIRY"
+            - "VENDOR_SELECTED"
+            - "AWAITING_PAYMENT"
+            - "IN_PROGRESS"
+            - "COMPLETED"
+            - "CANCELLED"
+        "budget_centavos":
+          "type": "integer"
+        "lock_version":
+          "type": "integer"
+        "current_version_id":
+          "type": "string"
+          "format": "uuid"
+          "nullable": true
+        "selected_vendor_id":
+          "type": "string"
+          "format": "uuid"
+          "nullable": true
+        "order_id":
+          "type": "string"
+          "format": "uuid"
+          "nullable": true
+    "WorkPackagePage":
+      "type": "object"
+      "required":
+        - "items"
+        - "page"
+        - "has_more"
+      "properties":
+        "items":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/WorkPackageSummary"
+        "page":
+          "type": "integer"
+        "has_more":
+          "type": "boolean"
+    "ProjectPage":
+      "type": "object"
+      "required":
+        - "items"
+        - "page"
+        - "has_more"
+      "properties":
+        "items":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ProjectSummary"
+        "page":
+          "type": "integer"
+        "has_more":
+          "type": "boolean"
+    "ProjectView":
+      "type": "object"
+      "required":
+        - "id"
+        - "name"
+        - "status"
+        - "budget_centavos"
+        - "lock_version"
+        - "budget"
+        - "sites"
+        - "packages"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "name":
+          "type": "string"
+        "status":
+          "type": "string"
+        "budget_centavos":
+          "type": "integer"
+        "starts_on":
+          "type": "string"
+          "nullable": true
+        "ends_on":
+          "type": "string"
+          "nullable": true
+        "lock_version":
+          "type": "integer"
+        "budget":
+          "$ref": "#/components/schemas/ProjectBudget"
+        "sites":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ProjectSite"
+        "packages":
+          "$ref": "#/components/schemas/WorkPackagePage"
+    "WorkPackageVersion":
+      "type": "object"
+      "required":
+        - "id"
+        - "version"
+        - "content_hash"
+        - "content"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "version":
+          "type": "integer"
+        "content_hash":
+          "type": "string"
+        "locked_at":
+          "type": "string"
+          "nullable": true
+        "content":
+          "type": "object"
+          "additionalProperties": true
+    "WorkPackageVersionPage":
+      "type": "object"
+      "required":
+        - "items"
+        - "page"
+        - "has_more"
+      "properties":
+        "items":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/WorkPackageVersion"
+        "page":
+          "type": "integer"
+        "has_more":
+          "type": "boolean"
+    "WorkPackageView":
+      "type": "object"
+      "required":
+        - "id"
+        - "project_id"
+        - "project_status"
+        - "name"
+        - "status"
+        - "budget_centavos"
+        - "lock_version"
+        - "versions"
+        - "budget"
+        - "missing_lines"
+        - "document"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "project_id":
+          "type": "string"
+          "format": "uuid"
+        "project_status":
+          "type": "string"
+          "enum":
+            - "ACTIVE"
+            - "COMPLETED"
+            - "ARCHIVED"
+        "name":
+          "type": "string"
+        "status":
+          "type": "string"
+        "budget_centavos":
+          "type": "integer"
+        "lock_version":
+          "type": "integer"
+        "current_version_id":
+          "type": "string"
+          "format": "uuid"
+          "nullable": true
+        "selected_vendor_id":
+          "type": "string"
+          "format": "uuid"
+          "nullable": true
+        "order_id":
+          "type": "string"
+          "format": "uuid"
+          "nullable": true
+        "version":
+          "$ref": "#/components/schemas/WorkPackageVersion"
+          "nullable": true
+        "versions":
+          "$ref": "#/components/schemas/WorkPackageVersionPage"
+        "budget":
+          "$ref": "#/components/schemas/ProjectBudget"
+        "missing_lines":
+          "type": "array"
+          "items":
+            "type": "object"
+            "additionalProperties": true
+        "document":
+          "type": "object"
+          "additionalProperties": true
+    "ProjectCreate":
+      "type": "object"
+      "required":
+        - "name"
+        - "budget_centavos"
+        - "starts_on"
+        - "ends_on"
+        - "location_id"
+      "properties":
+        "name":
+          "type": "string"
+          "maxLength": 150
+        "budget_centavos":
+          "type": "integer"
+          "minimum": 0
+          "maximum": 100000000000
+        "starts_on":
+          "type": "string"
+        "ends_on":
+          "type": "string"
+        "location_id":
+          "type": "string"
+          "format": "uuid"
+    "ProjectUpdate":
+      "type": "object"
+      "required":
+        - "lock_version"
+      "properties":
+        "lock_version":
+          "type": "integer"
+        "name":
+          "type": "string"
+        "budget_centavos":
+          "type": "integer"
+          "minimum": 0
+          "maximum": 100000000000
+        "starts_on":
+          "type": "string"
+        "ends_on":
+          "type": "string"
+        "location_id":
+          "type": "string"
+          "format": "uuid"
+        "status":
+          "type": "string"
+          "enum":
+            - "ACTIVE"
+            - "COMPLETED"
+            - "ARCHIVED"
+    "WorkPackageLineInput":
+      "type": "object"
+      "required":
+        - "material_id"
+        - "name"
+        - "unit_id"
+        - "quantity"
+        - "specifications"
+      "properties":
+        "material_id":
+          "type": "string"
+          "format": "uuid"
+        "name":
+          "type": "string"
+          "maxLength": 200
+        "unit_id":
+          "type": "string"
+          "format": "uuid"
+        "quantity":
+          "type": "string"
+          "pattern": "^\\d{1,7}(\\.\\d{1,4})?$"
+          "description": "Positive quantity within the selected normalized unit precision;
+            maximum 1,000,000."
+        "specifications":
+          "type": "object"
+          "additionalProperties":
+            "type": "string"
+        "preferred_brand":
+          "type": "string"
+          "nullable": true
+    "WorkPackageInput":
+      "type": "object"
+      "required":
+        - "name"
+        - "budget_centavos"
+        - "site_id"
+        - "radius_km"
+        - "fulfillment_method"
+        - "payment_method"
+        - "lines"
+      "properties":
+        "lock_version":
+          "type": "integer"
+        "name":
+          "type": "string"
+        "description":
+          "type": "string"
+          "nullable": true
+        "budget_centavos":
+          "type": "integer"
+          "minimum": 0
+          "maximum": 100000000000
+        "site_id":
+          "type": "string"
+          "format": "uuid"
+        "radius_km":
+          "type": "integer"
+          "enum":
+            - 5
+            - 10
+            - 20
+            - 30
+            - 40
+            - 50
+        "fulfillment_method":
+          "type": "string"
+          "enum":
+            - "PICKUP"
+            - "DELIVERY"
+        "payment_method":
+          "type": "string"
+          "enum":
+            - "ONLINE"
+        "site_contact":
+          "type": "string"
+          "nullable": true
+        "heavy_vehicle_restriction":
+          "type": "string"
+          "enum":
+            - "YES"
+            - "NO"
+        "alternate_drop_off_location_id":
+          "type": "string"
+          "format": "uuid"
+          "nullable": true
+        "access_instructions":
+          "type": "string"
+          "nullable": true
+        "lines":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/WorkPackageLineInput"
+          "minItems": 1
+          "maxItems": 100
+    "ProjectVersionRequest":
+      "type": "object"
+      "required":
+        - "lock_version"
+      "properties":
+        "lock_version":
+          "type": "integer"
+          "minimum": 1
+    "ProjectCompile":
+      "type": "object"
+      "required":
+        - "lock_version"
+        - "radius_km"
+      "properties":
+        "lock_version":
+          "type": "integer"
+        "radius_km":
+          "type": "integer"
+          "enum":
+            - 5
+            - 10
+            - 20
+            - 30
+            - 40
+            - 50
+    "ProjectCandidateRequest":
+      "type": "object"
+      "required":
+        - "lock_version"
+        - "candidate_id"
+      "properties":
+        "lock_version":
+          "type": "integer"
+        "candidate_id":
+          "type": "string"
+          "format": "uuid"
+        "note":
+          "type": "string"
+          "maxLength": 2000
+          "nullable": true
+        "budget_override_reason":
+          "type": "string"
+          "minLength": 10
+          "maxLength": 2000
+          "nullable": true
+    "ProjectCandidate":
+      "type": "object"
+      "required":
+        - "id"
+        - "estimate_id"
+        - "vendor_id"
+        - "store_name"
+        - "rank"
+        - "latitude"
+        - "longitude"
+        - "score_label"
+        - "fms"
+        - "complete"
+        - "fulfillment_percent"
+        - "missing_lines"
+        - "lines"
+        - "materials_centavos"
+        - "included_vat_centavos"
+        - "processing_fee_status"
+        - "budget_label"
+        - "distance_meters"
+        - "distance_basis"
+        - "fulfillment_method"
+        - "payment_method"
+        - "delivery"
+        - "destination"
+        - "expires_at"
+        - "stale"
+        - "label"
+        - "current_quotation_state"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "estimate_id":
+          "type": "string"
+          "format": "uuid"
+        "vendor_id":
+          "type": "string"
+          "format": "uuid"
+        "store_name":
+          "type": "string"
+        "rank":
+          "type": "integer"
+        "latitude":
+          "type": "number"
+        "longitude":
+          "type": "number"
+        "score_label":
+          "type": "string"
+        "vps":
+          "type": "string"
+          "nullable": true
+        "fms":
+          "type": "object"
+          "additionalProperties": true
+        "complete":
+          "type": "boolean"
+        "fulfillment_percent":
+          "type": "string"
+        "missing_lines":
+          "type": "array"
+          "items":
+            "type": "object"
+            "additionalProperties": true
+        "lines":
+          "type": "array"
+          "items":
+            "type": "object"
+            "additionalProperties": true
+        "materials_centavos":
+          "type": "integer"
+        "included_vat_centavos":
+          "type": "integer"
+        "delivery_centavos":
+          "type": "integer"
+          "nullable": true
+        "processing_fee_centavos":
+          "type": "integer"
+          "nullable": true
+        "processing_fee_status":
+          "type": "string"
+        "projected_total_centavos":
+          "type": "integer"
+          "nullable": true
+        "budget_label":
+          "type": "string"
+        "distance_meters":
+          "type": "integer"
+        "distance_basis":
+          "type": "string"
+        "eta_seconds":
+          "type": "integer"
+          "nullable": true
+        "fulfillment_method":
+          "type": "string"
+        "payment_method":
+          "type": "string"
+        "delivery":
+          "type": "object"
+          "additionalProperties": true
+        "destination":
+          "type": "object"
+          "additionalProperties": true
+        "expires_at":
+          "type": "string"
+        "stale":
+          "type": "boolean"
+        "label":
+          "type": "string"
+        "current_quotation_state":
+          "type": "string"
+    "ProjectCompiledEstimate":
+      "type": "object"
+      "required":
+        - "id"
+        - "version_id"
+        - "created_at"
+        - "expires_at"
+        - "state"
+        - "context"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "version_id":
+          "type": "string"
+          "format": "uuid"
+        "created_at":
+          "type": "string"
+        "expires_at":
+          "type": "string"
+        "state":
+          "type": "string"
+        "context":
+          "type": "object"
+          "additionalProperties": true
+    "ProjectEstimatePage":
+      "type": "object"
+      "required":
+        - "items"
+        - "page"
+        - "has_more"
+        - "total"
+      "properties":
+        "estimate":
+          "$ref": "#/components/schemas/ProjectCompiledEstimate"
+          "nullable": true
+        "items":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ProjectCandidate"
+        "page":
+          "type": "integer"
+        "has_more":
+          "type": "boolean"
+        "total":
+          "type": "integer"
+        "suggested_radius_km":
+          "type": "integer"
+          "nullable": true
+    "ProjectPreferences":
+      "type": "object"
+      "required":
+        - "weights"
+        - "default_weights"
+        - "personalized"
+        - "version"
+        - "defaults_version"
+        - "algorithm_version"
+      "properties":
+        "weights":
+          "type": "object"
+          "additionalProperties": true
+        "default_weights":
+          "type": "object"
+          "additionalProperties": true
+        "personalized":
+          "type": "boolean"
+        "version":
+          "type": "integer"
+        "defaults_version":
+          "type": "integer"
+        "algorithm_version":
+          "type": "string"
+    "ProjectPreferenceSave":
+      "type": "object"
+      "required":
+        - "version"
+        - "weights"
+      "properties":
+        "version":
+          "type": "integer"
+        "weights":
+          "type": "object"
+          "additionalProperties": true
+    "ProjectPreferenceReset":
+      "type": "object"
+      "required":
+        - "version"
+      "properties":
+        "version":
+          "type": "integer"
+    "ProjectMissingResolve":
+      "type": "object"
+      "required":
+        - "lock_version"
+      "properties":
+        "lock_version":
+          "type": "integer"
+        "order_id":
+          "type": "string"
+          "format": "uuid"
+          "nullable": true
+        "reason":
+          "type": "string"
+          "minLength": 10
+          "maxLength": 2000
+          "nullable": true
+        "budget_override_reason":
+          "type": "string"
+          "nullable": true
+    "ProjectImportRequest":
+      "type": "object"
+      "required":
+        - "csv"
+      "properties":
+        "csv":
+          "type": "string"
+          "maxLength": 100000
+    "ProjectImportPreview":
+      "type": "object"
+      "required":
+        - "lines"
+        - "validation_errors"
+        - "valid"
+      "properties":
+        "lines":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/WorkPackageLineInput"
+        "validation_errors":
+          "type": "array"
+          "items":
+            "type": "object"
+            "additionalProperties": true
+        "valid":
+          "type": "boolean"
+    "ProjectRoute":
+      "type": "object"
+      "required":
+        - "candidate_id"
+        - "version_id"
+        - "origin"
+        - "distance_meters"
+        - "duration_seconds"
+        - "encoded_polyline"
+        - "duration_basis"
+        - "computed_at"
+      "properties":
+        "candidate_id":
+          "type": "string"
+          "format": "uuid"
+        "version_id":
+          "type": "string"
+          "format": "uuid"
+        "origin":
+          "type": "string"
+          "enum":
+            - "PROJECT_SITE"
+        "distance_meters":
+          "type": "integer"
+        "duration_seconds":
+          "type": "integer"
+        "encoded_polyline":
+          "type": "string"
+        "duration_basis":
+          "type": "string"
+        "computed_at":
+          "type": "string"
+    "ProjectMaterialPage":
+      "type": "object"
+      "required":
+        - "items"
+      "properties":
+        "items":
+          "type": "array"
+          "items":
+            "type": "object"
+            "additionalProperties": true
+    "ProjectViewResponse":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/ProjectView"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "ProjectPageResponse":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/ProjectPage"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "WorkPackageViewResponse":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/WorkPackageView"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "ProjectEstimatePageResponse":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/ProjectEstimatePage"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "ProjectPreferencesResponse":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/ProjectPreferences"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "ProjectImportPreviewResponse":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/ProjectImportPreview"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "ProjectRouteResponse":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/ProjectRoute"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "ProjectMaterialPageResponse":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/ProjectMaterialPage"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"

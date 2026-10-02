@@ -15,6 +15,7 @@ import 'discovery_repository.dart';
 import 'location_welcome_screen.dart';
 import 'select_location_screen.dart';
 import 'supplier_map.dart';
+import 'supplier_preview_sheet.dart';
 import 'supplier_panels.dart';
 
 typedef StoreProfileOpener =
@@ -463,62 +464,32 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
           ],
         );
 
-  Widget _stacked(
-    BoxConstraints constraints,
-  ) => NotificationListener<DraggableScrollableNotification>(
-    onNotification: (notification) {
-      setState(() => _sheetExtent = notification.extent);
-      return false;
-    },
-    child: Stack(
-      children: [
-        Positioned.fill(child: _mapStack(constraints.maxHeight * _sheetExtent)),
-        DraggableScrollableSheet(
-          controller: _sheet,
-          initialChildSize: 0.25,
-          minChildSize: _peek,
-          maxChildSize: _expanded,
-          snap: true,
-          snapSizes: const [_peek, _half, _expanded],
-          builder: (context, scroll) => DecoratedBox(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-              boxShadow: [
-                BoxShadow(
-                  color: Color(0x240F172A),
-                  blurRadius: 24,
-                  offset: Offset(0, -8),
-                ),
-              ],
+  Widget _stacked(BoxConstraints constraints) =>
+      NotificationListener<DraggableScrollableNotification>(
+        onNotification: (notification) {
+          setState(() => _sheetExtent = notification.extent);
+          return false;
+        },
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: _mapStack(constraints.maxHeight * _sheetExtent),
             ),
-            child: Column(
-              children: [
-                Semantics(
-                  label: 'Supplier sheet handle. Swipe up for more details.',
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(vertical: 8),
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: BuyerTheme.border,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: RefreshIndicator(
-                    onRefresh: _controller.refresh,
-                    child: _panel(scroll),
-                  ),
-                ),
-              ],
+            SupplierPreviewSheet(
+              cornerRadius: 16,
+              controller: _sheet,
+              initialSize: .25,
+              minSize: _peek,
+              maxSize: _expanded,
+              snapSizes: const [_peek, _half, _expanded],
+              builder: (context, scroll) => RefreshIndicator(
+                onRefresh: _controller.refresh,
+                child: _panel(scroll),
+              ),
             ),
-          ),
+          ],
         ),
-      ],
-    ),
-  );
+      );
 
   Widget _split(BoxConstraints constraints) => Row(
     children: [

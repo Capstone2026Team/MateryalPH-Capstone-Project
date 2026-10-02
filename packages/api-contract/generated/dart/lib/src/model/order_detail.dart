@@ -25,6 +25,7 @@ import 'package:materyalph_api_client/src/model/order_delivery.dart';
 import 'package:materyalph_api_client/src/model/order_line.dart';
 import 'package:materyalph_api_client/src/model/order_commercial_version.dart';
 import 'package:materyalph_api_client/src/model/order_change.dart';
+import 'package:built_value/json_object.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -33,6 +34,7 @@ part 'order_detail.g.dart';
 /// Buyer responses add available_actions and payment; Vendor responses add buyer, auto_accept, reservations, permissions, primary_action, nrpc_terms and decline_reasons.
 ///
 /// Properties:
+/// * [projectContext]
 /// * [id]
 /// * [reference]
 /// * [checkout]
@@ -68,6 +70,9 @@ part 'order_detail.g.dart';
 /// * [declineReasons]
 @BuiltValue()
 abstract class OrderDetail implements Built<OrderDetail, OrderDetailBuilder> {
+  @BuiltValueField(wireName: r'project_context')
+  BuiltMap<String, JsonObject?>? get projectContext;
+
   @BuiltValueField(wireName: r'id')
   String get id;
 
@@ -196,6 +201,13 @@ class _$OrderDetailSerializer implements PrimitiveSerializer<OrderDetail> {
     OrderDetail object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.projectContext != null) {
+      yield r'project_context';
+      yield serializers.serialize(
+        object.projectContext,
+        specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
+      );
+    }
     yield r'id';
     yield serializers.serialize(
       object.id,
@@ -402,6 +414,14 @@ class _$OrderDetailSerializer implements PrimitiveSerializer<OrderDetail> {
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'project_context':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
+          ) as BuiltMap<String, JsonObject?>?;
+          if (valueDes == null) continue;
+          result.projectContext.replace(valueDes);
+          break;
         case r'id':
           final valueDes = serializers.deserialize(
             value,

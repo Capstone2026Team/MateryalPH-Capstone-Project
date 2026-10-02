@@ -11,6 +11,7 @@ part 'chat_decision.g.dart';
 /// ChatDecision
 ///
 /// Properties:
+/// * [budgetOverrideReason]
 /// * [versionId]
 /// * [contentHash]
 /// * [reason]
@@ -18,6 +19,9 @@ part 'chat_decision.g.dart';
 /// * [nrpcTermsVersionId]
 @BuiltValue()
 abstract class ChatDecision implements Built<ChatDecision, ChatDecisionBuilder> {
+  @BuiltValueField(wireName: r'budget_override_reason')
+  String? get budgetOverrideReason;
+
   @BuiltValueField(wireName: r'version_id')
   String get versionId;
 
@@ -56,6 +60,13 @@ class _$ChatDecisionSerializer implements PrimitiveSerializer<ChatDecision> {
     ChatDecision object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.budgetOverrideReason != null) {
+      yield r'budget_override_reason';
+      yield serializers.serialize(
+        object.budgetOverrideReason,
+        specifiedType: const FullType(String),
+      );
+    }
     yield r'version_id';
     yield serializers.serialize(
       object.versionId,
@@ -112,6 +123,14 @@ class _$ChatDecisionSerializer implements PrimitiveSerializer<ChatDecision> {
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'budget_override_reason':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.budgetOverrideReason = valueDes;
+          break;
         case r'version_id':
           final valueDes = serializers.deserialize(
             value,

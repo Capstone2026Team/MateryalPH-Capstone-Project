@@ -13,6 +13,10 @@ import '../features/item_procurement/procurement_repository.dart';
 import '../features/map_discovery/device_location.dart';
 import '../features/orders/orders_repository.dart';
 import '../features/orders/orders_screen.dart';
+import '../features/orders/order_details_screen.dart';
+import '../features/projects/projects_repository.dart';
+import '../features/projects/projects_screen.dart';
+import '../features/map_discovery/discovery_models.dart';
 import '../features/map_discovery/discovery_controller.dart';
 import '../features/map_discovery/discovery_repository.dart';
 import '../features/map_discovery/map_home_screen.dart';
@@ -113,6 +117,72 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
               onSessionExpired: _expireSession,
             ));
   bool _cartLoaded = false;
+  bool _projectsVisited = false;
+  late final ProjectsRepository? _projects = widget.repository == null
+      ? null
+      : ProjectsRepository(
+          client: widget.repository!.apiClient,
+          onSessionExpired: _expireSession,
+        );
+
+  Future<void> _projectAnalysis(BuildContext context, ProjectData site) async {
+    final point = projectObject(site['point']);
+    final discovery = DiscoveryController(repository: _discovery!);
+    await discovery.setOrigin(
+      DiscoveryOrigin.point(
+        point: GeoPoint(
+          double.parse(projectText(point['latitude'])),
+          double.parse(projectText(point['longitude'])),
+        ),
+        source: OriginSource.savedLocation,
+        label: projectText(site['name']),
+      ),
+    );
+    if (!context.mounted) {
+      discovery.dispose();
+      return;
+    }
+    final explore = ExploreController(
+      repository: _procurement!,
+      discovery: discovery,
+    );
+    final navigation = ProcurementNavigation(
+      explore: explore,
+      cart: _cart!,
+      repository: _procurement,
+      openStoreProfile: _openStore,
+      messaging: _messaging,
+      orders: _orders,
+      onOpenMap: () {},
+    );
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          appBar: AppBar(title: Text('Market analysis · ${site['name']}')),
+          body: Column(
+            children: [
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Text(
+                  'Browse current listings for this selected Project site. Historical Materials Analytics becomes available in Phase 14.',
+                ),
+              ),
+              Expanded(
+                child: ExploreScreen(
+                  controller: explore,
+                  cart: _cart,
+                  navigation: navigation,
+                  onOpenMap: () => Navigator.pop(context),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    explore.dispose();
+    discovery.dispose();
+  }
 
   @override
   void dispose() {
@@ -156,6 +226,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
       );
 
   void _select(int index) {
+    if (index == 2) _projectsVisited = true;
     if (index == 1 && !_cartLoaded) {
       _cartLoaded = true;
       _cart?.load();
@@ -196,11 +267,50 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                     ),
             ),
           ),
-          if (_destination != 0) Positioned.fill(child: _destinationPage()),
+          if (_projectsVisited)
+            Offstage(
+              offstage: _destination != 2,
+              child: TickerMode(
+                enabled: _destination == 2,
+                child: _projectsPage(),
+              ),
+            ),
+          if (_destination != 0 && _destination != 2)
+            Positioned.fill(child: _destinationPage()),
         ],
       ),
       bottomNavigationBar: _navigationBar(),
     );
+  }
+
+  Widget _projectsPage() {
+    if (_projects != null && _discovery != null) {
+      return ProjectsScreen(
+        active: _destination == 2,
+        repository: _projects,
+        discovery: _discovery,
+        deviceLocation: widget.deviceLocation,
+        mapBuilder: widget.mapBuilder,
+        openConversation: (context, id) => Navigator.of(context).push<void>(
+          MaterialPageRoute(
+            builder: (_) => MessagingScreen(
+              repository: _messaging!,
+              conversationId: id,
+              orders: _orders,
+            ),
+          ),
+        ),
+        openOrder: (context, id) => Navigator.of(context).push<void>(
+          MaterialPageRoute(
+            builder: (_) =>
+                OrderDetailsScreen(orderId: id, repository: _orders!),
+          ),
+        ),
+        openStore: _openStore,
+        openAnalysis: _projectAnalysis,
+      );
+    }
+    return const SafeArea(child: BuyerUnavailableContent());
   }
 
   Widget _destinationPage() {

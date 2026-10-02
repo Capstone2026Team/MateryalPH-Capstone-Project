@@ -8,6 +8,7 @@ import 'package:materyalph_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
+**budgetOverrideReason** | **String** |  | [optional]
 **snapshotVersion** | **int** | The commercial version the Buyer reviewed. |
 **reason** | **String** |  | [optional]
 

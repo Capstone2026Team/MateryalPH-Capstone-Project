@@ -55,7 +55,7 @@ final class BuyerOrderController extends Controller
 
     public function approveRevision(Request $request, string $orderId): JsonResponse
     {
-        $input = $request->validate(['snapshot_version' => ['required', 'integer', 'min:1']]);
+        $input = $request->validate(['snapshot_version' => ['required', 'integer', 'min:1'], 'budget_override_reason' => ['nullable', 'string', 'min:10', 'max:2000']]);
         $this->decisions->approveRevision($request, $orderId, $input);
 
         return $this->show($request, $orderId);
@@ -76,6 +76,7 @@ final class BuyerOrderController extends Controller
             'nrpc_id' => ['required', 'uuid'],
             'terms_version_id' => ['required', 'uuid'],
             'acknowledged' => ['required', 'accepted'],
+            'budget_override_reason' => ['sometimes', 'nullable', 'string', 'min:10', 'max:2000'],
         ]);
         $this->decisions->acceptNrpc($request, $orderId, ['acknowledged' => true] + $input);
 

@@ -676,10 +676,13 @@ Phase 1 platform foundation record.
 | `reason` | `text` | No | — | Reason. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+| `order_id` | `uuid` | Yes | — | Order id. |
+| `snapshot` | `jsonb` | No | `'{}'::jsonb` | Snapshot. |
 
 **Constraints**
 
 - `budget_overrides_buyer_user_id_foreign` — FOREIGN KEY: `FOREIGN KEY (buyer_user_id) REFERENCES users(id) ON DELETE RESTRICT`
+- `budget_overrides_order_id_foreign` — FOREIGN KEY: `FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE RESTRICT`
 - `budget_overrides_project_id_foreign` — FOREIGN KEY: `FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE RESTRICT`
 - `budget_overrides_work_package_id_foreign` — FOREIGN KEY: `FOREIGN KEY (work_package_id) REFERENCES work_packages(id) ON DELETE RESTRICT`
 - `budget_overrides_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
@@ -886,11 +889,13 @@ Buyer identity, profile, or saved-context record.
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
 | `updated_by_user_id` | `bigint` | Yes | — | Updated by user id. |
+| `is_personalized` | `boolean` | No | `true` | Is personalized. |
 
 **Constraints**
 
 - `buyer_ranking_item_weights_check` — CHECK: `CHECK (procurement_type::text <> 'ITEM_BASED'::text OR jsonb_typeof(weights) = 'object'::text AND jsonb_exists_all(weights, ARRAY['distance'::text, 'price'::text, 'vps'::text, 'stock'::text, 'product_rating'::text]) AND (weights - ARRAY['distance'::text, 'price'::text, 'vps'::text, 'stock'::text, 'product_rating'::text]) = '{}'::jsonb AND (weights ->> 'distance'::text) ~ '^[0-9]{1,3}$'::text AND (weights ->> 'price'::text) ~ '^[0-9]{1,3}$'::text AND (weights ->> 'vps'::text) ~ '^[0-9]{1,3}$'::text AND (weights ->> 'stock'::text) ~ '^[0-9]{1,3}$'::text AND (weights ->> 'product_rating'::text) ~ '^[0-9]{1,3}$'::text AND (((weights ->> 'distance'::text)::integer) + ((weights ->> 'price'::text)::integer) + ((weights ->> 'vps'::text)::integer) + ((weights ->> 'stock'::text)::integer) + ((weights ->> 'product_rating'::text)::integer)) = 100)`
 - `buyer_ranking_procurement_type_check` — CHECK: `CHECK (procurement_type::text = ANY (ARRAY['ITEM_BASED'::character varying, 'PROJECT_BASED'::character varying]::text[]))`
+- `buyer_ranking_project_weights_check` — CHECK: `CHECK (procurement_type::text <> 'PROJECT_BASED'::text OR jsonb_typeof(weights) = 'object'::text AND jsonb_exists_all(weights, ARRAY['material_match'::text, 'budget_fit'::text, 'distance'::text, 'vps'::text]) AND (weights - ARRAY['material_match'::text, 'budget_fit'::text, 'distance'::text, 'vps'::text]) = '{}'::jsonb AND (weights ->> 'material_match'::text) ~ '^[0-9]{1,3}$'::text AND (weights ->> 'budget_fit'::text) ~ '^[0-9]{1,3}$'::text AND (weights ->> 'distance'::text) ~ '^[0-9]{1,3}$'::text AND (weights ->> 'vps'::text) ~ '^[0-9]{1,3}$'::text AND ((weights ->> 'material_match'::text)::integer) >= 0 AND ((weights ->> 'material_match'::text)::integer) <= 100 AND ((weights ->> 'budget_fit'::text)::integer) >= 0 AND ((weights ->> 'budget_fit'::text)::integer) <= 100 AND ((weights ->> 'distance'::text)::integer) >= 0 AND ((weights ->> 'distance'::text)::integer) <= 100 AND ((weights ->> 'vps'::text)::integer) >= 0 AND ((weights ->> 'vps'::text)::integer) <= 100 AND (((weights ->> 'material_match'::text)::integer) + ((weights ->> 'budget_fit'::text)::integer) + ((weights ->> 'distance'::text)::integer) + ((weights ->> 'vps'::text)::integer)) = 100)`
 - `buyer_ranking_preferences_buyer_profile_id_foreign` — FOREIGN KEY: `FOREIGN KEY (buyer_profile_id) REFERENCES buyer_profiles(id) ON DELETE RESTRICT`
 - `buyer_ranking_preferences_updated_by_user_id_foreign` — FOREIGN KEY: `FOREIGN KEY (updated_by_user_id) REFERENCES users(id) ON DELETE RESTRICT`
 - `buyer_ranking_preferences_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
@@ -1221,6 +1226,7 @@ Phase 1 platform foundation record.
 | `amount_centavos` | `bigint` | Yes | — | Integer Philippine centavos. Amount centavos. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+| `snapshot` | `jsonb` | No | `'{}'::jsonb` | Snapshot. |
 
 **Constraints**
 
@@ -1242,10 +1248,11 @@ Phase 1 platform foundation record.
 | `id` | `uuid` | No | — | Primary key. Id. |
 | `compiled_estimate_id` | `uuid` | No | — | Compiled estimate id. |
 | `vendor_organization_id` | `uuid` | No | — | Vendor organization id. |
-| `fms` | `numeric` | No | — | Fms. |
-| `projected_total_centavos` | `bigint` | No | — | Integer Philippine centavos. Projected total centavos. |
+| `fms` | `numeric` | Yes | — | Fms. |
+| `projected_total_centavos` | `bigint` | Yes | — | Integer Philippine centavos. Projected total centavos. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+| `snapshot` | `jsonb` | No | `'{}'::jsonb` | Snapshot. |
 
 **Constraints**
 
@@ -1271,6 +1278,8 @@ Phase 1 platform foundation record.
 | `state` | `character varying` | No | `'ACTIVE'::character varying` | State. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+| `context` | `jsonb` | No | `'{}'::jsonb` | Context. |
+| `invalidated_at` | `timestamp with time zone` | Yes | — | Invalidated at. |
 
 **Constraints**
 
@@ -4201,6 +4210,9 @@ Procurement or immutable commerce record.
 | `destination` | `jsonb` | Yes | — | Destination. |
 | `access_instructions_encrypted` | `text` | Yes | — | Access instructions encrypted. |
 | `terminal_reason_code` | `character varying` | Yes | — | Terminal reason code. |
+| `work_package_version_id` | `uuid` | Yes | — | Work package version id. |
+| `compiled_estimate_vendor_id` | `uuid` | Yes | — | Compiled estimate vendor id. |
+| `project_note` | `text` | Yes | — | Project note. |
 
 **Constraints**
 
@@ -4218,14 +4230,17 @@ Procurement or immutable commerce record.
 - `order_state_check` — CHECK: `CHECK (order_state::text = ANY (ARRAY['AWAITING_VENDOR_CONFIRMATION'::character varying, 'AWAITING_BUYER_APPROVAL'::character varying, 'AWAITING_NRPC_ACCEPTANCE'::character varying, 'AWAITING_PAYMENT'::character varying, 'CONFIRMED'::character varying, 'PROCESSING'::character varying, 'READY_FOR_PICKUP'::character varying, 'OUT_FOR_DELIVERY'::character varying, 'DELIVERED'::character varying, 'PICKED_UP'::character varying, 'COMPLETED'::character varying, 'CANCELLATION_REQUESTED'::character varying, 'DECLINED'::character varying, 'EXPIRED'::character varying, 'CANCELLED'::character varying, 'DISPUTED'::character varying]::text[]))`
 - `orders_buyer_profile_id_foreign` — FOREIGN KEY: `FOREIGN KEY (buyer_profile_id) REFERENCES buyer_profiles(id) ON DELETE RESTRICT`
 - `orders_checkout_group_id_foreign` — FOREIGN KEY: `FOREIGN KEY (checkout_group_id) REFERENCES checkout_groups(id) ON DELETE RESTRICT`
+- `orders_compiled_estimate_vendor_id_foreign` — FOREIGN KEY: `FOREIGN KEY (compiled_estimate_vendor_id) REFERENCES compiled_estimate_vendors(id) ON DELETE RESTRICT`
 - `orders_quotation_version_id_foreign` — FOREIGN KEY: `FOREIGN KEY (quotation_version_id) REFERENCES quotation_versions(id) ON DELETE RESTRICT`
 - `orders_vendor_organization_id_foreign` — FOREIGN KEY: `FOREIGN KEY (vendor_organization_id) REFERENCES vendor_organizations(id) ON DELETE RESTRICT`
 - `orders_work_package_id_foreign` — FOREIGN KEY: `FOREIGN KEY (work_package_id) REFERENCES work_packages(id) ON DELETE RESTRICT`
+- `orders_work_package_version_id_foreign` — FOREIGN KEY: `FOREIGN KEY (work_package_version_id) REFERENCES work_package_versions(id) ON DELETE RESTRICT`
 - `orders_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
 - `orders_reference_unique` — UNIQUE: `UNIQUE (reference)`
 
 **Indexes**
 
+- `one_project_order_per_version` — `CREATE UNIQUE INDEX one_project_order_per_version ON public.orders USING btree (work_package_version_id) WHERE (((procurement_type)::text = 'PROJECT_BASED'::text) AND ((order_state)::text <> ALL ((ARRAY['CANCELLED'::character varying, 'DECLINED'::character varying, 'EXPIRED'::character varying])::text[])))`
 - `orders_buyer_profile_id_created_at_index` — `CREATE INDEX orders_buyer_profile_id_created_at_index ON public.orders USING btree (buyer_profile_id, created_at)`
 - `orders_checkout_group_id_index` — `CREATE INDEX orders_checkout_group_id_index ON public.orders USING btree (checkout_group_id)`
 - `orders_open_deadlines` — `CREATE INDEX orders_open_deadlines ON public.orders USING btree (order_state, vendor_response_due_at, buyer_response_due_at, payment_expires_at) WHERE (closed_at IS NULL)`
@@ -4755,6 +4770,9 @@ Phase 1 platform foundation record.
 | `active` | `boolean` | No | `true` | Active. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+| `name` | `character varying` | Yes | — | Name. |
+| `snapshot` | `jsonb` | No | `'{}'::jsonb` | Snapshot. |
+| `discovery_origin` | `character varying` | Yes | — | Discovery origin. |
 
 **Constraints**
 
@@ -4783,9 +4801,12 @@ Phase 1 platform foundation record.
 | `ends_on` | `date` | Yes | — | Ends on. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+| `lock_version` | `integer` | No | `1` | Lock version. |
 
 **Constraints**
 
+- `project_dates_check` — CHECK: `CHECK (starts_on IS NULL OR ends_on IS NULL OR ends_on >= starts_on)`
+- `project_status_check` — CHECK: `CHECK (status::text = ANY (ARRAY['ACTIVE'::character varying, 'COMPLETED'::character varying, 'ARCHIVED'::character varying]::text[]))`
 - `projects_budget_check` — CHECK: `CHECK (budget_centavos >= 0)`
 - `projects_buyer_profile_id_foreign` — FOREIGN KEY: `FOREIGN KEY (buyer_profile_id) REFERENCES buyer_profiles(id) ON DELETE RESTRICT`
 - `projects_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
@@ -7217,6 +7238,9 @@ Procurement or immutable commerce record.
 | `specifications` | `jsonb` | Yes | — | Specifications. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+| `line_number` | `smallint` | Yes | — | Line number. |
+| `name` | `character varying` | Yes | — | Name. |
+| `preferred_brand` | `character varying` | Yes | — | Preferred brand. |
 
 **Constraints**
 
@@ -7225,10 +7249,43 @@ Procurement or immutable commerce record.
 - `work_package_lines_unit_id_foreign` — FOREIGN KEY: `FOREIGN KEY (unit_id) REFERENCES units(id) ON DELETE RESTRICT`
 - `work_package_lines_work_package_version_id_foreign` — FOREIGN KEY: `FOREIGN KEY (work_package_version_id) REFERENCES work_package_versions(id) ON DELETE RESTRICT`
 - `work_package_lines_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
+- `work_package_lines_work_package_version_id_line_number_unique` — UNIQUE: `UNIQUE (work_package_version_id, line_number)`
 
 **Indexes**
 
 - `work_package_lines_pkey` — `CREATE UNIQUE INDEX work_package_lines_pkey ON public.work_package_lines USING btree (id)`
+- `work_package_lines_work_package_version_id_line_number_unique` — `CREATE UNIQUE INDEX work_package_lines_work_package_version_id_line_number_unique ON public.work_package_lines USING btree (work_package_version_id, line_number)`
+
+## `work_package_missing_lines`
+
+Procurement or immutable commerce record.
+
+| Column | Database type | Null | Default | Key / meaning |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | No | — | Primary key. Id. |
+| `work_package_version_id` | `uuid` | No | — | Work package version id. |
+| `work_package_line_id` | `uuid` | No | — | Work package line id. |
+| `quantity` | `numeric` | No | — | Quantity. |
+| `linked_order_id` | `uuid` | Yes | — | Linked order id. |
+| `waived_by_user_id` | `bigint` | Yes | — | Waived by user id. |
+| `waiver_reason` | `text` | Yes | — | Waiver reason. |
+| `created_at` | `timestamp with time zone` | Yes | — | Created at. |
+| `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+
+**Constraints**
+
+- `missing_line_check` — CHECK: `CHECK (quantity > 0::numeric AND NOT (linked_order_id IS NOT NULL AND waived_by_user_id IS NOT NULL))`
+- `work_package_missing_lines_linked_order_id_foreign` — FOREIGN KEY: `FOREIGN KEY (linked_order_id) REFERENCES orders(id) ON DELETE RESTRICT`
+- `work_package_missing_lines_waived_by_user_id_foreign` — FOREIGN KEY: `FOREIGN KEY (waived_by_user_id) REFERENCES users(id) ON DELETE RESTRICT`
+- `work_package_missing_lines_work_package_line_id_foreign` — FOREIGN KEY: `FOREIGN KEY (work_package_line_id) REFERENCES work_package_lines(id) ON DELETE RESTRICT`
+- `work_package_missing_lines_work_package_version_id_foreign` — FOREIGN KEY: `FOREIGN KEY (work_package_version_id) REFERENCES work_package_versions(id) ON DELETE RESTRICT`
+- `work_package_missing_lines_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
+- `work_package_missing_lines_work_package_version_id_work_package` — UNIQUE: `UNIQUE (work_package_version_id, work_package_line_id)`
+
+**Indexes**
+
+- `work_package_missing_lines_pkey` — `CREATE UNIQUE INDEX work_package_missing_lines_pkey ON public.work_package_missing_lines USING btree (id)`
+- `work_package_missing_lines_work_package_version_id_work_package` — `CREATE UNIQUE INDEX work_package_missing_lines_work_package_version_id_work_package ON public.work_package_missing_lines USING btree (work_package_version_id, work_package_line_id)`
 
 ## `work_package_versions`
 
@@ -7243,9 +7300,12 @@ Procurement or immutable commerce record.
 | `locked_at` | `timestamp with time zone` | Yes | — | Locked at. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+| `content` | `jsonb` | No | `'{}'::jsonb` | Content. |
+| `created_by_user_id` | `bigint` | Yes | — | Created by user id. |
 
 **Constraints**
 
+- `work_package_versions_created_by_user_id_foreign` — FOREIGN KEY: `FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE RESTRICT`
 - `work_package_versions_work_package_id_foreign` — FOREIGN KEY: `FOREIGN KEY (work_package_id) REFERENCES work_packages(id) ON DELETE RESTRICT`
 - `work_package_versions_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
 - `work_package_versions_work_package_id_version_unique` — UNIQUE: `UNIQUE (work_package_id, version)`
@@ -7270,9 +7330,11 @@ Procurement or immutable commerce record.
 | `current_version_id` | `uuid` | Yes | — | Current version id. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+| `lock_version` | `integer` | No | `1` | Lock version. |
 
 **Constraints**
 
+- `package_status_check` — CHECK: `CHECK (status::text = ANY (ARRAY['DRAFT'::character varying, 'ACTIVE'::character varying, 'QUOTATION_INQUIRY'::character varying, 'VENDOR_SELECTED'::character varying, 'AWAITING_PAYMENT'::character varying, 'IN_PROGRESS'::character varying, 'COMPLETED'::character varying, 'CANCELLED'::character varying]::text[]))`
 - `work_packages_budget_check` — CHECK: `CHECK (budget_centavos >= 0)`
 - `work_packages_current_version_id_foreign` — FOREIGN KEY: `FOREIGN KEY (current_version_id) REFERENCES work_package_versions(id) ON DELETE RESTRICT`
 - `work_packages_project_id_foreign` — FOREIGN KEY: `FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE RESTRICT`

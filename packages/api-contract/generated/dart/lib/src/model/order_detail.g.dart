@@ -333,6 +333,8 @@ class _$OrderDetailAvailableActionsEnumSerializer
 
 class _$OrderDetail extends OrderDetail {
   @override
+  final BuiltMap<String, JsonObject?>? projectContext;
+  @override
   final String id;
   @override
   final String reference;
@@ -403,7 +405,8 @@ class _$OrderDetail extends OrderDetail {
       (OrderDetailBuilder()..update(updates))._build();
 
   _$OrderDetail._(
-      {required this.id,
+      {this.projectContext,
+      required this.id,
       required this.reference,
       this.checkout,
       required this.vendor,
@@ -448,6 +451,7 @@ class _$OrderDetail extends OrderDetail {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is OrderDetail &&
+        projectContext == other.projectContext &&
         id == other.id &&
         reference == other.reference &&
         checkout == other.checkout &&
@@ -486,6 +490,7 @@ class _$OrderDetail extends OrderDetail {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, projectContext.hashCode);
     _$hash = $jc(_$hash, id.hashCode);
     _$hash = $jc(_$hash, reference.hashCode);
     _$hash = $jc(_$hash, checkout.hashCode);
@@ -526,6 +531,7 @@ class _$OrderDetail extends OrderDetail {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'OrderDetail')
+          ..add('projectContext', projectContext)
           ..add('id', id)
           ..add('reference', reference)
           ..add('checkout', checkout)
@@ -565,6 +571,12 @@ class _$OrderDetail extends OrderDetail {
 
 class OrderDetailBuilder implements Builder<OrderDetail, OrderDetailBuilder> {
   _$OrderDetail? _$v;
+
+  MapBuilder<String, JsonObject?>? _projectContext;
+  MapBuilder<String, JsonObject?> get projectContext =>
+      _$this._projectContext ??= MapBuilder<String, JsonObject?>();
+  set projectContext(MapBuilder<String, JsonObject?>? projectContext) =>
+      _$this._projectContext = projectContext;
 
   String? _id;
   String? get id => _$this._id;
@@ -747,6 +759,7 @@ class OrderDetailBuilder implements Builder<OrderDetail, OrderDetailBuilder> {
   OrderDetailBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _projectContext = $v.projectContext?.toBuilder();
       _id = $v.id;
       _reference = $v.reference;
       _checkout = $v.checkout?.toBuilder();
@@ -803,6 +816,7 @@ class OrderDetailBuilder implements Builder<OrderDetail, OrderDetailBuilder> {
     try {
       _$result = _$v ??
           _$OrderDetail._(
+            projectContext: _projectContext?.build(),
             id: BuiltValueNullFieldError.checkNotNull(id, r'OrderDetail', 'id'),
             reference: BuiltValueNullFieldError.checkNotNull(
                 reference, r'OrderDetail', 'reference'),
@@ -845,6 +859,9 @@ class OrderDetailBuilder implements Builder<OrderDetail, OrderDetailBuilder> {
     } catch (_) {
       late String _$failedField;
       try {
+        _$failedField = 'projectContext';
+        _projectContext?.build();
+
         _$failedField = 'checkout';
         _checkout?.build();
         _$failedField = 'vendor';

@@ -1,32 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
-
-import '../../design_system/components/procurement_components.dart';
-import '../../design_system/theme.dart';
-import '../map_discovery/discovery_models.dart';
+import '../../design_system/components/ranking_preferences_editor.dart';
 import 'procurement_models.dart';
 import 'procurement_repository.dart';
 
-/// Item-Based ranking preferences. The five SRS weights are whole percentages that must total
-/// exactly 100 (never all zero); changing one proportionally balances the others. Saving stores a
-/// separate Buyer override; Reset to Default removes it so platform defaults apply again.
-class RankingPreferencesScreen extends StatefulWidget {
+class RankingPreferencesScreen extends StatelessWidget {
   const RankingPreferencesScreen({
     super.key,
     required this.repository,
     this.onChanged,
   });
-
   final ProcurementRepository repository;
   final VoidCallback? onChanged;
-
-  @override
-  State<RankingPreferencesScreen> createState() =>
-      _RankingPreferencesScreenState();
-}
-
-class _RankingPreferencesScreenState extends State<RankingPreferencesScreen> {
-  static const _components = [
+  static const factors = [
     ('distance', 'Distance', 'Closer stores score higher within your radius.'),
     ('price', 'Price', 'Lower price than comparable offers scores higher.'),
     (
@@ -41,290 +26,30 @@ class _RankingPreferencesScreenState extends State<RankingPreferencesScreen> {
       'Verified product ratings; unrated products use a neutral value.',
     ),
   ];
-
-  RankingPreferencesView? _saved;
-  RankingWeights _draft = RankingWeights.approvedDefault;
-  RankingWeights? _dragBasis;
-  bool _loading = true;
-  bool _saving = false;
-  DiscoveryFailure? _failure;
-  String? _notice;
-
+  RankingPreferenceSnapshot _snapshot(RankingPreferencesView p) =>
+      RankingPreferenceSnapshot(
+        weights: p.weights.toMap(),
+        defaults: p.defaults.toMap(),
+        personalized: p.personalized,
+        version: p.version,
+      );
   @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _failure = null;
-    });
-    try {
-      final preferences = await widget.repository.preferences();
-      if (!mounted) return;
-      setState(() {
-        _saved = preferences;
-        _draft = preferences.weights;
-        _loading = false;
-      });
-    } on DiscoveryFailure catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _failure = error;
-        _loading = false;
-      });
-    }
-  }
-
-  Future<void> _run(
-    Future<RankingPreferencesView> Function() action,
-    String success,
-  ) async {
-    if (_saving) return;
-    setState(() {
-      _saving = true;
-      _notice = null;
-    });
-    try {
-      final result = await action();
-      if (!mounted) return;
-      setState(() {
-        _saved = result;
-        _draft = result.weights;
-      });
-      widget.onChanged?.call();
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(success)));
-    } on DiscoveryFailure catch (error) {
-      if (!mounted) return;
-      setState(() => _notice = error.message);
-      if (error.kind == DiscoveryFailureKind.conflict) await _load();
-      if (mounted) setState(() => _notice = error.message);
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
-  }
-
-  Future<void> _reset() async {
-    final saved = _saved;
-    if (saved == null || _saving) return;
-    if (!saved.personalized) {
-      setState(() => _draft = saved.defaults);
-      return;
-    }
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Reset to Default?'),
-        content: const Text(
-          'Best Deal will use the current platform weights again. Your personal weights are removed.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Keep mine'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Reset to Default'),
-          ),
-        ],
+  Widget build(BuildContext context) => RankingPreferencesEditor(
+    title: 'Ranking preferences',
+    description:
+        'Customize how MateryalPH orders your product results. Adjusting one preference automatically balances the others so the total always remains 100%. Favorites First remains separate.',
+    resetMessage:
+        'Best Deal will use the current platform weights again. Your personal weights are removed.',
+    factors: factors,
+    load: () async => _snapshot(await repository.preferences()),
+    save: (weights, version) async => _snapshot(
+      await repository.savePreferences(
+        RankingWeights.fromMap(weights),
+        version: version,
       ),
-    );
-    if (confirmed != true) return;
-    await _run(
-      () => widget.repository.resetPreferences(version: saved.version),
-      'Ranking reset to the platform defaults.',
-    );
-  }
-
-  void _set(String key, int value) => setState(
-    () => _draft = (_dragBasis ?? _draft).rebalance(
-      key,
-      value,
-      defaults: _saved!.defaults,
     ),
+    reset: (version) async =>
+        _snapshot(await repository.resetPreferences(version: version)),
+    onChanged: onChanged,
   );
-
-  @override
-  Widget build(BuildContext context) {
-    final saved = _saved;
-    final total = _draft.total;
-    final remaining = 100 - total;
-    final allZero = total == 0;
-    final valid = _draft.valid;
-    final changed = saved != null && _draft != saved.weights;
-    return Scaffold(
-      appBar: AppBar(title: const Text('Ranking preferences')),
-      bottomNavigationBar: saved == null
-          ? null
-          : SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Semantics(
-                      liveRegion: true,
-                      child: Row(
-                        children: [
-                          Icon(
-                            valid
-                                ? LucideIcons.circleCheck
-                                : LucideIcons.triangleAlert,
-                            size: 18,
-                            color: valid
-                                ? BuyerTheme.success
-                                : BuyerTheme.actionPressed,
-                          ),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              allZero
-                                  ? 'Total 0%. At least one weight must be above zero.'
-                                  : valid
-                                  ? 'Total 100%'
-                                  : remaining > 0
-                                  ? 'Total $total% — add $remaining% to reach 100%'
-                                  : 'Total $total% — remove ${-remaining}% to reach 100%',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    FilledButton(
-                      onPressed: valid && changed && !_saving
-                          ? () => _run(
-                              () => widget.repository.savePreferences(
-                                _draft,
-                                version: saved.version,
-                              ),
-                              'Ranking preferences saved.',
-                            )
-                          : null,
-                      child: const Text('Save preferences'),
-                    ),
-                    TextButton(
-                      onPressed: (saved.personalized || changed) && !_saving
-                          ? _reset
-                          : null,
-                      child: const Text('Reset to Default'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-      body: SafeArea(child: _body()),
-    );
-  }
-
-  Widget _body() {
-    if (_loading && _saved == null) {
-      return ListView(
-        padding: const EdgeInsets.all(16),
-        children: const [
-          SkeletonBox(height: 60),
-          SizedBox(height: 12),
-          SkeletonBox(height: 60),
-          SizedBox(height: 12),
-          SkeletonBox(height: 60),
-        ],
-      );
-    }
-    final saved = _saved;
-    if (saved == null) {
-      return StateMessage(
-        kind: _failure?.kind == DiscoveryFailureKind.offline
-            ? StateKind.offline
-            : StateKind.error,
-        title: 'Ranking preferences could not load',
-        message: _failure?.message ?? 'Please retry.',
-        actionLabel: 'Retry',
-        onAction: _load,
-      );
-    }
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-      children: [
-        StatusBand(
-          tone: saved.personalized ? BandTone.warning : BandTone.info,
-          title: saved.personalized
-              ? 'Personalized ranking is active'
-              : 'Using the platform default weights',
-          message:
-              'Customize how MateryalPH orders your product results. Adjusting one preference automatically balances the others so the total always remains 100%. Favorites First remains separate.',
-        ),
-        if (_notice != null) ...[
-          const SizedBox(height: 8),
-          StatusBand(tone: BandTone.danger, title: _notice!),
-        ],
-        for (final (key, label, help) in _components) ...[
-          SectionHeading(
-            label,
-            trailing: Text(
-              '${_draft.valueOf(key)}%',
-              style: const TextStyle(fontWeight: FontWeight.w800),
-            ),
-          ),
-          Text(help, style: const TextStyle(color: BuyerTheme.muted)),
-          Row(
-            children: [
-              IconButton(
-                tooltip: 'Decrease $label',
-                onPressed: !_saving && _draft.valueOf(key) > 0
-                    ? () => _set(key, _draft.valueOf(key) - 1)
-                    : null,
-                icon: const Icon(LucideIcons.minus),
-              ),
-              Expanded(
-                child: SliderTheme(
-                  data: SliderTheme.of(context).copyWith(
-                    thumbShape: const RoundSliderThumbShape(
-                      enabledThumbRadius: 14,
-                    ),
-                    overlayShape: const RoundSliderOverlayShape(
-                      overlayRadius: 26,
-                    ),
-                  ),
-                  child: Slider(
-                    value: _draft.valueOf(key).toDouble(),
-                    max: 100,
-                    divisions: 100,
-                    label: '${_draft.valueOf(key)}%',
-                    semanticFormatterCallback: (value) =>
-                        '$label ${value.round()} percent',
-                    onChangeStart: (_) => _dragBasis = _draft,
-                    onChangeEnd: (_) => _dragBasis = null,
-                    onChanged: _saving
-                        ? null
-                        : (value) => _set(key, value.round()),
-                  ),
-                ),
-              ),
-              IconButton(
-                tooltip: 'Increase $label',
-                onPressed: !_saving && _draft.valueOf(key) < 100
-                    ? () => _set(key, _draft.valueOf(key) + 1)
-                    : null,
-                icon: const Icon(LucideIcons.plus),
-              ),
-            ],
-          ),
-          Text(
-            'Platform default ${saved.defaults.valueOf(key)}%',
-            style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
-          ),
-        ],
-      ],
-    );
-  }
 }

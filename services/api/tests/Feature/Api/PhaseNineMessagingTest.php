@@ -339,6 +339,7 @@ final class PhaseNineMessagingTest extends TestCase
     {
         [$store, $owner, $listing] = $this->pickupStore('Project Vendor');
         [$otherStore, $otherOwner, $otherListing] = $this->pickupStore('Competing Vendor');
+        DB::table('store_profiles')->whereIn('vendor_organization_id', [$store->id, $otherStore->id])->update(['bulk_capability' => true]);
         $buyer = $this->buyer();
         $first = $this->inquiry($store->id, $this->variantIds($listing)[0]);
         $second = $this->inquiry($otherStore->id, $this->variantIds($otherListing)[0]);

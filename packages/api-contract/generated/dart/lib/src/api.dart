@@ -19,6 +19,7 @@ import 'package:materyalph_api_client/src/api/buyer_discovery_api.dart';
 import 'package:materyalph_api_client/src/api/buyer_explore_api.dart';
 import 'package:materyalph_api_client/src/api/buyer_locations_api.dart';
 import 'package:materyalph_api_client/src/api/buyer_orders_api.dart';
+import 'package:materyalph_api_client/src/api/buyer_projects_api.dart';
 import 'package:materyalph_api_client/src/api/messaging_api.dart';
 import 'package:materyalph_api_client/src/api/stores_api.dart';
 import 'package:materyalph_api_client/src/api/system_api.dart';
@@ -181,6 +182,12 @@ class MateryalphApiClient {
   /// by doing that all interceptors will not be executed
   BuyerOrdersApi getBuyerOrdersApi() {
     return BuyerOrdersApi(dio, serializers);
+  }
+
+  /// Get BuyerProjectsApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  BuyerProjectsApi getBuyerProjectsApi() {
+    return BuyerProjectsApi(dio, serializers);
   }
 
   /// Get MessagingApi instance, base route and serializer can be overridden by a given but be careful,

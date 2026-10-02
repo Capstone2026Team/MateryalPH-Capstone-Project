@@ -22,6 +22,7 @@ abstract interface class OrdersRepository {
     String orderId, {
     required int snapshotVersion,
     required String idempotencyKey,
+    String? budgetOverrideReason,
   });
 
   Future<OrderDetailView> rejectRevision(
@@ -36,6 +37,7 @@ abstract interface class OrdersRepository {
     required String nrpcId,
     required String termsVersionId,
     required String idempotencyKey,
+    String? budgetOverrideReason,
   });
 
   Future<OrderDetailView> rejectNrpc(
@@ -110,12 +112,15 @@ final class ApiOrdersRepository implements OrdersRepository {
     String orderId, {
     required int snapshotVersion,
     required String idempotencyKey,
+    String? budgetOverrideReason,
   }) => _api(() async {
     final response = await _orders.approveBuyerOrderRevision(
       orderId: orderId,
       idempotencyKey: idempotencyKey,
       orderRevisionDecision: api.OrderRevisionDecision(
-        (b) => b..snapshotVersion = snapshotVersion,
+        (b) => b
+          ..snapshotVersion = snapshotVersion
+          ..budgetOverrideReason = budgetOverrideReason,
       ),
     );
     return _detail(_api.required(response.data?.data));
@@ -127,11 +132,14 @@ final class ApiOrdersRepository implements OrdersRepository {
     required int snapshotVersion,
     required String idempotencyKey,
   }) => _api(() async {
+    const String? budgetOverrideReason = null;
     final response = await _orders.rejectBuyerOrderRevision(
       orderId: orderId,
       idempotencyKey: idempotencyKey,
       orderRevisionDecision: api.OrderRevisionDecision(
-        (b) => b..snapshotVersion = snapshotVersion,
+        (b) => b
+          ..snapshotVersion = snapshotVersion
+          ..budgetOverrideReason = budgetOverrideReason,
       ),
     );
     return _detail(_api.required(response.data?.data));
@@ -144,6 +152,7 @@ final class ApiOrdersRepository implements OrdersRepository {
     required String nrpcId,
     required String termsVersionId,
     required String idempotencyKey,
+    String? budgetOverrideReason,
   }) => _api(() async {
     final response = await _orders.acceptBuyerOrderNrpc(
       orderId: orderId,
@@ -153,6 +162,7 @@ final class ApiOrdersRepository implements OrdersRepository {
           ..snapshotVersion = snapshotVersion
           ..nrpcId = nrpcId
           ..termsVersionId = termsVersionId
+          ..budgetOverrideReason = budgetOverrideReason
           ..acknowledged = api.NrpcAcceptRequestAcknowledgedEnum.true_,
       ),
     );
@@ -261,6 +271,9 @@ final class ApiOrdersRepository implements OrdersRepository {
     return OrderDetailView(
       id: order.id,
       reference: order.reference,
+      projectContext: order.projectContext
+          ?.map((k, v) => MapEntry(k, v?.value))
+          .toMap(),
       vendorName: order.vendor.name,
       fulfillmentMethod: order.fulfillmentMethod.name,
       submittedAt: order.submittedAt,

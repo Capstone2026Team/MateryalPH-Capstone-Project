@@ -11,10 +11,14 @@ part 'order_revision_decision.g.dart';
 /// OrderRevisionDecision
 ///
 /// Properties:
+/// * [budgetOverrideReason]
 /// * [snapshotVersion] - The commercial version the Buyer reviewed.
 /// * [reason]
 @BuiltValue()
 abstract class OrderRevisionDecision implements Built<OrderRevisionDecision, OrderRevisionDecisionBuilder> {
+  @BuiltValueField(wireName: r'budget_override_reason')
+  String? get budgetOverrideReason;
+
   /// The commercial version the Buyer reviewed.
   @BuiltValueField(wireName: r'snapshot_version')
   int get snapshotVersion;
@@ -45,6 +49,13 @@ class _$OrderRevisionDecisionSerializer implements PrimitiveSerializer<OrderRevi
     OrderRevisionDecision object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.budgetOverrideReason != null) {
+      yield r'budget_override_reason';
+      yield serializers.serialize(
+        object.budgetOverrideReason,
+        specifiedType: const FullType(String),
+      );
+    }
     yield r'snapshot_version';
     yield serializers.serialize(
       object.snapshotVersion,
@@ -80,6 +91,14 @@ class _$OrderRevisionDecisionSerializer implements PrimitiveSerializer<OrderRevi
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'budget_override_reason':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.budgetOverrideReason = valueDes;
+          break;
         case r'snapshot_version':
           final valueDes = serializers.deserialize(
             value,

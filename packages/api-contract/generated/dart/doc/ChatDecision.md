@@ -8,6 +8,7 @@ import 'package:materyalph_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
+**budgetOverrideReason** | **String** |  | [optional]
 **versionId** | **String** |  |
 **contentHash** | **String** |  | [optional]
 **reason** | **String** |  | [optional]

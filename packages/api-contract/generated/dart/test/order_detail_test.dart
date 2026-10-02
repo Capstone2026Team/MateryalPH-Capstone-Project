@@ -7,6 +7,11 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(OrderDetail, () {
+    // BuiltMap<String, JsonObject> projectContext
+    test('to test the property `projectContext`', () async {
+      // TODO
+    });
+
     // String id
     test('to test the property `id`', () async {
       // TODO

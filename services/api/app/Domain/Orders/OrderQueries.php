@@ -8,6 +8,7 @@ use App\Domain\Finance\FinancialCalculator;
 use App\Domain\Inventory\InventoryAccess;
 use App\Domain\Inventory\StockAvailability;
 use App\Domain\Procurement\ListingPublicFacts;
+use App\Domain\Projects\ProjectBudget;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
@@ -174,8 +175,12 @@ final class OrderQueries
         $submitted = $snapshots->get(1) === null ? [] : OrderCommercial::content($snapshots->get(1));
         $commercial = $content['commercial'] ?? null;
         $confirmedLines = [];
+        $orderLineIds = DB::table('order_lines')->where('order_id', $order->id)->pluck('id', 'listing_variant_id')->all();
         foreach (($content['lines'] ?? []) as $line) {
-            $confirmedLines[(string) $line['order_line_id']] = $line;
+            $lineId = $line['order_line_id'] ?? $orderLineIds[$line['variant_id'] ?? ''] ?? null;
+            if ($lineId !== null) {
+                $confirmedLines[(string) $lineId] = $line + ['confirmed_quantity' => $line['quantity'] ?? null];
+            }
         }
         $vendorVersion = (int) $order->current_snapshot_version > 1;
         $computed = [];
@@ -205,11 +210,23 @@ final class OrderQueries
         $vendor = DB::table('store_profiles')->where('vendor_organization_id', $order->vendor_organization_id)->first(['public_store_name', 'logo_file_id']);
         $destination = OrderDeliveryPlanner::destination($order);
         $nrpc = $this->nrpc($order, $lines);
+        $projectContext = null;
+        if ($order->work_package_version_id !== null) {
+            $version = DB::table('work_package_versions as v')->join('work_packages as w', 'w.id', '=', 'v.work_package_id')->join('projects as p', 'p.id', '=', 'w.project_id')
+                ->where('v.id', $order->work_package_version_id)->first(['v.id', 'v.version', 'v.content_hash', 'v.content', 'p.name as project_name']);
+            if ($version !== null) {
+                $projectContext = ['version_id' => $version->id, 'version' => (int) $version->version, 'content_hash' => $version->content_hash, 'project_name' => $version->project_name,
+                    'work_package' => json_decode($version->content, true), 'note' => $order->project_note, 'note_response_required' => false,
+                    'budget' => $forVendor ? null : app(ProjectBudget::class)->metrics(DB::table('projects as p')->join('work_packages as w', 'w.project_id', '=', 'p.id')->where('w.id', $order->work_package_id)->first(['p.*']), DB::table('work_packages')->where('id', $order->work_package_id)->first()),
+                    'document_status' => 'PHASE_15_PDF_PENDING'];
+            }
+        }
 
         return [
             'id' => (string) $order->id, 'reference' => (string) $order->reference, 'checkout' => $this->checkout($order),
             'vendor' => ['id' => (string) $order->vendor_organization_id, 'name' => (string) ($vendor->public_store_name ?? 'Store')],
             'procurement_type' => (string) $order->procurement_type, 'fulfillment_method' => (string) $order->fulfillment_method, 'payment_method' => (string) $order->payment_method,
+            'project_context' => $projectContext,
             'submitted_at' => self::iso($order->submitted_at ?? $order->created_at), 'accepted_at' => self::iso($order->accepted_at), 'closed_at' => self::iso($order->closed_at),
             'terminal_reason_code' => $order->terminal_reason_code, 'confirmation_source' => $order->confirmation_source,
             'states' => $this->states($order),

@@ -7,6 +7,7 @@ Buyer responses add available_actions and payment; Vendor responses add buyer, a
 
 Name | Type
 ------------ | -------------
+`projectContext` | { [key: string]: any; }
 `id` | string
 `reference` | string
 `checkout` | [OrderCheckoutRef](OrderCheckoutRef.md)
@@ -48,6 +49,7 @@ import type { OrderDetail } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "projectContext": null,
   "id": null,
   "reference": null,
   "checkout": null,

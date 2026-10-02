@@ -1,4 +1,4 @@
-# @materyalph/api-client-ts@1.0.0-phase.9
+# @materyalph/api-client-ts@1.0.0-phase.10
 
 A TypeScript SDK client for the localhost API.
 
@@ -177,6 +177,29 @@ All URIs are relative to */api/v1*
 *BuyerOrdersApi* | [**rejectBuyerOrderNrpc**](docs/BuyerOrdersApi.md#rejectbuyerordernrpc) | **POST** /buyers/orders/{orderId}/nrpc/reject |
 *BuyerOrdersApi* | [**rejectBuyerOrderRevision**](docs/BuyerOrdersApi.md#rejectbuyerorderrevision) | **POST** /buyers/orders/{orderId}/revision/reject |
 *BuyerOrdersApi* | [**submitBuyerCheckout**](docs/BuyerOrdersApi.md#submitbuyercheckout) | **POST** /buyers/checkouts |
+*BuyerProjectsApi* | [**activateWorkPackage**](docs/BuyerProjectsApi.md#activateworkpackage) | **POST** /buyers/work-packages/{packageId}/activate |
+*BuyerProjectsApi* | [**closeWorkPackage**](docs/BuyerProjectsApi.md#closeworkpackage) | **POST** /buyers/work-packages/{packageId}/close |
+*BuyerProjectsApi* | [**compileProjectEstimates**](docs/BuyerProjectsApi.md#compileprojectestimates) | **POST** /buyers/work-packages/{packageId}/estimates |
+*BuyerProjectsApi* | [**createProject**](docs/BuyerProjectsApi.md#createproject) | **POST** /buyers/projects |
+*BuyerProjectsApi* | [**createWorkPackage**](docs/BuyerProjectsApi.md#createworkpackage) | **POST** /buyers/projects/{projectId}/work-packages |
+*BuyerProjectsApi* | [**createWorkPackageVersion**](docs/BuyerProjectsApi.md#createworkpackageversion) | **POST** /buyers/work-packages/{packageId}/versions |
+*BuyerProjectsApi* | [**deleteProject**](docs/BuyerProjectsApi.md#deleteproject) | **DELETE** /buyers/projects/{projectId} |
+*BuyerProjectsApi* | [**deleteWorkPackage**](docs/BuyerProjectsApi.md#deleteworkpackage) | **DELETE** /buyers/work-packages/{packageId} |
+*BuyerProjectsApi* | [**editWorkPackage**](docs/BuyerProjectsApi.md#editworkpackage) | **PUT** /buyers/work-packages/{packageId} |
+*BuyerProjectsApi* | [**getProject**](docs/BuyerProjectsApi.md#getproject) | **GET** /buyers/projects/{projectId} |
+*BuyerProjectsApi* | [**getProjectCandidateRoute**](docs/BuyerProjectsApi.md#getprojectcandidateroute) | **POST** /buyers/work-packages/{packageId}/candidates/{candidateId}/route |
+*BuyerProjectsApi* | [**getProjectEstimates**](docs/BuyerProjectsApi.md#getprojectestimates) | **GET** /buyers/work-packages/{packageId}/estimates |
+*BuyerProjectsApi* | [**getProjectRankingPreferences**](docs/BuyerProjectsApi.md#getprojectrankingpreferences) | **GET** /buyers/project-ranking-preferences |
+*BuyerProjectsApi* | [**getWorkPackage**](docs/BuyerProjectsApi.md#getworkpackage) | **GET** /buyers/work-packages/{packageId} |
+*BuyerProjectsApi* | [**inquireProjectVendor**](docs/BuyerProjectsApi.md#inquireprojectvendor) | **POST** /buyers/work-packages/{packageId}/inquiries |
+*BuyerProjectsApi* | [**listProjects**](docs/BuyerProjectsApi.md#listprojects) | **GET** /buyers/projects |
+*BuyerProjectsApi* | [**previewWorkPackageCsv**](docs/BuyerProjectsApi.md#previewworkpackagecsv) | **POST** /buyers/work-packages/import-preview |
+*BuyerProjectsApi* | [**resetProjectRankingPreferences**](docs/BuyerProjectsApi.md#resetprojectrankingpreferences) | **POST** /buyers/project-ranking-preferences/reset |
+*BuyerProjectsApi* | [**resolveProjectMissingLine**](docs/BuyerProjectsApi.md#resolveprojectmissingline) | **PUT** /buyers/work-packages/{packageId}/missing-lines/{lineId} |
+*BuyerProjectsApi* | [**saveProjectRankingPreferences**](docs/BuyerProjectsApi.md#saveprojectrankingpreferences) | **PUT** /buyers/project-ranking-preferences |
+*BuyerProjectsApi* | [**searchProjectMaterials**](docs/BuyerProjectsApi.md#searchprojectmaterials) | **GET** /buyers/project-materials |
+*BuyerProjectsApi* | [**selectProjectVendor**](docs/BuyerProjectsApi.md#selectprojectvendor) | **POST** /buyers/work-packages/{packageId}/selection |
+*BuyerProjectsApi* | [**updateProject**](docs/BuyerProjectsApi.md#updateproject) | **PATCH** /buyers/projects/{projectId} |
 *MessagingApi* | [**authorizeChatChannel**](docs/MessagingApi.md#authorizechatchannel) | **POST** /{messagingPortal}/messaging/auth |
 *MessagingApi* | [**createConversation**](docs/MessagingApi.md#createconversation) | **POST** /{messagingPortal}/conversations |
 *MessagingApi* | [**decideChatQuotation**](docs/MessagingApi.md#decidechatquotation) | **POST** /{messagingPortal}/conversations/{conversationId}/quotation/{action} |
@@ -664,6 +687,34 @@ All URIs are relative to */api/v1*
 - [ProductComplianceQueueEnvelope](docs/ProductComplianceQueueEnvelope.md)
 - [ProductComplianceQueueItem](docs/ProductComplianceQueueItem.md)
 - [ProductRatingSummary](docs/ProductRatingSummary.md)
+- [ProjectBudget](docs/ProjectBudget.md)
+- [ProjectCandidate](docs/ProjectCandidate.md)
+- [ProjectCandidateRequest](docs/ProjectCandidateRequest.md)
+- [ProjectCompile](docs/ProjectCompile.md)
+- [ProjectCompiledEstimate](docs/ProjectCompiledEstimate.md)
+- [ProjectCreate](docs/ProjectCreate.md)
+- [ProjectEstimatePage](docs/ProjectEstimatePage.md)
+- [ProjectEstimatePageResponse](docs/ProjectEstimatePageResponse.md)
+- [ProjectImportPreview](docs/ProjectImportPreview.md)
+- [ProjectImportPreviewResponse](docs/ProjectImportPreviewResponse.md)
+- [ProjectImportRequest](docs/ProjectImportRequest.md)
+- [ProjectMaterialPage](docs/ProjectMaterialPage.md)
+- [ProjectMaterialPageResponse](docs/ProjectMaterialPageResponse.md)
+- [ProjectMissingResolve](docs/ProjectMissingResolve.md)
+- [ProjectPage](docs/ProjectPage.md)
+- [ProjectPageResponse](docs/ProjectPageResponse.md)
+- [ProjectPreferenceReset](docs/ProjectPreferenceReset.md)
+- [ProjectPreferenceSave](docs/ProjectPreferenceSave.md)
+- [ProjectPreferences](docs/ProjectPreferences.md)
+- [ProjectPreferencesResponse](docs/ProjectPreferencesResponse.md)
+- [ProjectRoute](docs/ProjectRoute.md)
+- [ProjectRouteResponse](docs/ProjectRouteResponse.md)
+- [ProjectSite](docs/ProjectSite.md)
+- [ProjectSummary](docs/ProjectSummary.md)
+- [ProjectUpdate](docs/ProjectUpdate.md)
+- [ProjectVersionRequest](docs/ProjectVersionRequest.md)
+- [ProjectView](docs/ProjectView.md)
+- [ProjectViewResponse](docs/ProjectViewResponse.md)
 - [ProviderAttribution](docs/ProviderAttribution.md)
 - [PsgcArea](docs/PsgcArea.md)
 - [PsgcAreaListEnvelope](docs/PsgcAreaListEnvelope.md)
@@ -768,6 +819,14 @@ All URIs are relative to */api/v1*
 - [VerifyBotChallengeRequest](docs/VerifyBotChallengeRequest.md)
 - [VerifyEmailRequest](docs/VerifyEmailRequest.md)
 - [VolumeTier](docs/VolumeTier.md)
+- [WorkPackageInput](docs/WorkPackageInput.md)
+- [WorkPackageLineInput](docs/WorkPackageLineInput.md)
+- [WorkPackagePage](docs/WorkPackagePage.md)
+- [WorkPackageSummary](docs/WorkPackageSummary.md)
+- [WorkPackageVersion](docs/WorkPackageVersion.md)
+- [WorkPackageVersionPage](docs/WorkPackageVersionPage.md)
+- [WorkPackageView](docs/WorkPackageView.md)
+- [WorkPackageViewResponse](docs/WorkPackageViewResponse.md)
 - [XenditAccountVerificationWebhook](docs/XenditAccountVerificationWebhook.md)
 - [XenditAccountVerificationWebhookData](docs/XenditAccountVerificationWebhookData.md)
 - [XenditAccountVerificationWebhookDataAccountInfo](docs/XenditAccountVerificationWebhookDataAccountInfo.md)
@@ -816,8 +875,8 @@ This TypeScript SDK client supports the [Fetch API](https://fetch.spec.whatwg.or
 and is automatically generated by the
 [OpenAPI Generator](https://openapi-generator.tech) project:
 
-- API version: `1.0.0-phase.9`
-- Package version: `1.0.0-phase.9`
+- API version: `1.0.0-phase.10`
+- Package version: `1.0.0-phase.10`
 - Generator version: `7.25.0`
 - Build package: `org.openapitools.codegen.languages.TypeScriptFetchClientCodegen`
 

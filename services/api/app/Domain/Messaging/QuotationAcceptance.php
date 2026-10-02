@@ -13,6 +13,8 @@ use App\Domain\Orders\OrderActor;
 use App\Domain\Orders\OrderCommercial;
 use App\Domain\Orders\OrderEligibility;
 use App\Domain\Orders\OrderTransitionService;
+use App\Domain\Projects\ProjectBudget;
+use App\Domain\Projects\ProjectInquiryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -46,6 +48,13 @@ final class QuotationAcceptance
             throw new AuthenticationException('QUOTATION_REVALIDATION_REQUIRED', 'The fulfillment date passed. Ask the Vendor to revise it.', 409);
         }
         $nrpc = $content['nrpc'];
+        $package = null;
+        if ($q->work_package_id !== null) {
+            $package = DB::table('work_packages')->where('id', $q->work_package_id)->first();
+            if (! DB::table('store_profiles')->where('vendor_organization_id', $org->id)->where('bulk_capability', true)->exists()) {
+                throw new AuthenticationException('PROJECT_VENDOR_INELIGIBLE', 'This Vendor is no longer eligible for a new Project award.', 409);
+            }
+        }
         if ($nrpc !== null && (! ($input['nrpc_acknowledged'] ?? false) || ($input['nrpc_terms_version_id'] ?? null) !== $nrpc['terms']['id'])) {
             throw new AuthenticationException('NRPC_ACCEPTANCE_REQUIRED', 'Review the NRPC amount, reason, affected lines and Terms, then acknowledge them.', 422);
         }
@@ -60,11 +69,16 @@ final class QuotationAcceptance
         $money = $content['commercial'];
         DB::table('orders')->insert(['id' => $id, 'reference' => 'ORD-'.now('Asia/Manila')->format('Y').'-'.Str::upper(Str::random(10)),
             'buyer_profile_id' => $q->buyer_profile_id, 'vendor_organization_id' => $q->vendor_organization_id, 'work_package_id' => $q->work_package_id,
-            'quotation_version_id' => $v->id, 'procurement_type' => $q->procurement_type, 'order_state' => 'AWAITING_VENDOR_CONFIRMATION', 'payment_state' => 'NOT_REQUIRED',
+            'quotation_version_id' => $v->id, 'work_package_version_id' => $package?->current_version_id,
+            'procurement_type' => $q->procurement_type, 'order_state' => 'AWAITING_VENDOR_CONFIRMATION', 'payment_state' => 'NOT_REQUIRED',
             'fulfillment_method' => $content['fulfillment_method'], 'payment_method' => $content['payment_method'], 'commercial_total_centavos' => $money['commercial_total_centavos'],
             'materials_centavos' => $money['materials_payable_centavos'], 'vendor_discount_centavos' => $money['vendor_discount_centavos'], 'delivery_centavos' => $money['delivery_centavos'],
             'nrpc_centavos' => $money['nrpc_centavos'], 'confirmation_source' => 'MANUAL', 'expected_fulfillment_date' => $content['fulfillment_date'],
             'destination' => json_encode($content['destination'], JSON_THROW_ON_ERROR), 'submitted_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
+        if ($package !== null) {
+            app(ProjectBudget::class)->guard($request, $package, (int) $money['commercial_total_centavos'], $input, $id);
+            app(ProjectInquiryService::class)->acceptedMissing($package, $content['lines']);
+        }
         foreach ($content['lines'] as $index => $line) {
             $lineId = (string) Str::uuid7();
             $computed = array_values(array_filter($money['lines'], static fn (array $row): bool => $row['line_id'] === $line['variant_id']))[0];

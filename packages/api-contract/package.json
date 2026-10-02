@@ -15,7 +15,8 @@
     "test:geography-contract": "node scripts/check-geography-contract.mjs",
     "test:procurement-contract": "node scripts/check-procurement-contract.mjs",
     "test:orders-contract": "node scripts/check-orders-contract.mjs",
-    "test:messaging-contract": "node scripts/check-messaging-contract.mjs"
+    "test:messaging-contract": "node scripts/check-messaging-contract.mjs",
+    "test:projects-contract": "node scripts/check-projects-contract.mjs"
   },
   "devDependencies": {
     "@openapitools/openapi-generator-cli": "^2.41.0",

@@ -96,7 +96,8 @@ final class ConversationController extends Controller
     public function decision(Request $request, string $conversationId, string $action, QuotationService $quotations): JsonResponse
     {
         $input = $request->validate(['version_id' => ['required', 'uuid'], 'content_hash' => ['required_if:action,accept', 'sometimes', 'string', 'size:64'],
-            'reason' => [$action === 'counter' ? 'required' : 'nullable', 'string', 'min:3', 'max:2000'], 'nrpc_acknowledged' => ['sometimes', 'boolean'], 'nrpc_terms_version_id' => ['nullable', 'uuid']]);
+            'reason' => [$action === 'counter' ? 'required' : 'nullable', 'string', 'min:3', 'max:2000'], 'nrpc_acknowledged' => ['sometimes', 'boolean'], 'nrpc_terms_version_id' => ['nullable', 'uuid'],
+            'budget_override_reason' => ['nullable', 'string', 'min:10', 'max:2000']]);
 
         return ApiResponse::success(['order_id' => $quotations->decide($request, $conversationId, $action, $input)]);
     }

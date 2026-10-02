@@ -13,6 +13,7 @@ use App\Domain\Orders\NrpcTerms;
 use App\Domain\Orders\OrderDeliveryPlanner;
 use App\Domain\Orders\OrderEligibility;
 use App\Domain\Vendors\ConfirmedDeliverySnapshot;
+use App\Domain\Vendors\DeliveryRecommendationService;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -30,6 +31,8 @@ final class QuotationTerms
             'lines.*.variant_id' => ['required', 'uuid', 'distinct'],
             'lines.*.quantity' => ['required', 'regex:/^\d{1,10}(\.\d{1,4})?$/', 'numeric', 'gt:0'],
             'lines.*.unit_price_centavos' => ['required', 'integer', 'between:1,100000000000'],
+            'lines.*.description' => ['sometimes', 'string', 'max:200'], 'lines.*.specifications' => ['sometimes', 'array', 'max:30'],
+            'lines.*.specifications.*' => ['string', 'max:200'],
             'fulfillment_method' => ['required', 'in:PICKUP,DELIVERY'], 'payment_method' => ['required', 'in:ONLINE'],
             'fulfillment_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:'.now('Asia/Manila')->toDateString()],
             'deadline_hours' => ['sometimes', 'integer', 'between:1,72'], 'vendor_discount_centavos' => ['sometimes', 'integer', 'min:0'],
@@ -92,14 +95,16 @@ final class QuotationTerms
                 throw new AuthenticationException('PAYABLE_TAX_CATEGORY_UNKNOWN', 'A verified payable tax category is required before publication.', 422);
             }
             $qty = StockAvailability::quantity($line['quantity']);
+            $product = DB::table('vendor_listings as l')->join('products as p', 'p.id', '=', 'l.product_id')->where('l.id', $v->vendor_listing_id)->first(['p.material_id', 'p.brand', 'l.technical_attributes']);
             if (bccomp($qty, bcadd($qty, '0', (int) $v->precision), 4) !== 0) {
                 throw new AuthenticationException('INVALID_QUANTITY', 'Use the product unit precision.', 422);
             }
             $lines[] = ['line_id' => (string) $v->id, 'variant_id' => (string) $v->id, 'listing_id' => (string) $v->vendor_listing_id, 'unit_id' => (string) $v->unit_id,
-                'description' => (string) $v->display_name, 'variant_label' => (string) $v->label, 'unit_code' => $v->unit_code, 'quantity' => $qty,
+                'description' => $line['description'] ?? (string) $v->display_name, 'specifications' => $line['specifications'] ?? array_merge(json_decode($product->technical_attributes ?? '{}', true), json_decode($v->attributes ?? '{}', true)),
+                'material_id' => $product->material_id, 'brand' => $product->brand, 'preferred_brand' => $product->brand, 'variant_label' => (string) $v->label, 'unit_code' => $v->unit_code, 'quantity' => $qty,
                 'unit_price_centavos' => (int) $line['unit_price_centavos'], 'tax_category' => (string) $v->tax_category, 'tax_basis' => $v->tax_basis,
                 'source_price_version_id' => (string) $v->price_version_id, 'source_tax_version_id' => $taxVersion, 'publication_version' => (int) $v->publication_version,
-                'load' => ['weight_kg' => $v->weight_kg, 'length_cm' => $v->length_cm, 'width_cm' => $v->width_cm, 'height_cm' => $v->height_cm]];
+                'load' => ['weight_kg' => $v->weight_kg, 'length_cm' => $v->length_cm, 'width_cm' => $v->width_cm, 'height_cm' => $v->height_cm] + $this->materialLoad($v)];
         }
         $blockers = app(OrderEligibility::class)->lineBlockers((string) $c->vendor_organization_id, array_column($lines, 'tax_category', 'variant_id'));
         if ($blockers !== []) {
@@ -128,6 +133,14 @@ final class QuotationTerms
             'fee_policy_version_id' => FinancialSnapshotService::currentFeePolicyId(), 'processing_fee_status' => 'PENDING_PAYMENT_CHANNEL'];
     }
 
+    /** @return array<string, mixed> */
+    private function materialLoad(object $variant): array
+    {
+        $code = DB::table('vendor_listings as l')->join('products as p', 'p.id', '=', 'l.product_id')->join('materials as m', 'm.id', '=', 'p.material_id')->where('l.id', $variant->vendor_listing_id)->value('m.code');
+
+        return $code === 'READY_MIXED_CONCRETE' ? ['material_kind' => DeliveryRecommendationService::READY_MIXED_CONCRETE, 'volume_m3_per_unit' => $variant->unit_code === 'M3' ? '1' : null] : [];
+    }
+
     /** Full field-level before/after, including removals.
      * @param array<string, mixed> $before
      * @param array<string, mixed> $after
@@ -153,6 +166,21 @@ final class QuotationTerms
         }
 
         return $changes;
+    }
+
+    /** @param array<string, mixed> $original
+     * @param array<string, mixed> $proposed
+     * @return list<array<string, mixed>> */
+    public static function projectChanges(array $original, array $proposed): array
+    {
+        $before = ['lines' => array_map(static fn (array $l): array => ['description' => $l['name'], 'quantity' => $l['quantity'], 'unit_code' => $l['unit_code'],
+            'specifications' => $l['specifications'], 'preferred_brand' => $l['preferred_brand']], $original['lines']),
+            'fulfillment_method' => $original['fulfillment_method'], 'payment_method' => $original['payment_method'], 'destination' => $original['destination'],
+            'fulfillment_date' => null, 'delivery' => null, 'nrpc' => null];
+        $after = array_intersect_key($proposed, $before);
+        $after['lines'] = array_map(static fn (array $l): array => array_intersect_key($l, array_flip(['description', 'quantity', 'unit_code', 'specifications', 'preferred_brand', 'variant_id', 'unit_price_centavos'])), $proposed['lines']);
+
+        return self::changes($before, $after);
     }
 
     private static function describe(mixed $value, string $path): string

@@ -8,6 +8,8 @@ use App\Domain\Catalog\CatalogAccess;
 use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Operations\OutboxPublisher;
+use App\Domain\Projects\ProjectBudget;
+use App\Domain\Projects\ProjectService;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -135,9 +137,16 @@ final class BuyerOrderDecisionService
         $key = $this->idempotency->requireIdempotencyKey($request);
         $actor = OrderActor::buyer($request);
         DB::transaction(function () use ($request, $orderId, $endpoint, $apply, $key, $actor): void {
+            $preview = $this->access->buyerOrder($request, $orderId);
+            if ($preview->work_package_id !== null) {
+                $package = app(ProjectService::class)->package($request, $preview->work_package_id, true);
+            }
             $order = $this->access->buyerOrder($request, $orderId, true);
             if ($this->idempotency->replayed($request, $endpoint, $key, $orderId)) {
                 return;
+            }
+            if (isset($package) && in_array($endpoint, ['ORDER_BUYER_APPROVE', 'ORDER_NRPC_ACCEPT'], true)) {
+                app(ProjectBudget::class)->guard($request, $package, (int) $order->commercial_total_centavos, $request->all(), $orderId);
             }
             $apply($order, $actor);
             $this->idempotency->claim($request, $endpoint, $key, $orderId, 200);

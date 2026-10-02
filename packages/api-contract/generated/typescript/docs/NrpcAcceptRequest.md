@@ -6,6 +6,7 @@
 
 Name | Type
 ------------ | -------------
+`budgetOverrideReason` | string
 `snapshotVersion` | number
 `nrpcId` | string
 `termsVersionId` | string
@@ -18,6 +19,7 @@ import type { NrpcAcceptRequest } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "budgetOverrideReason": null,
   "snapshotVersion": null,
   "nrpcId": null,
   "termsVersionId": null,
