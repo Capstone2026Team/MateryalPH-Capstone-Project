@@ -1,6 +1,7 @@
 
 # OrderPaymentAvailability
 
+Order-specific payment state. Buyers see their attempts; Vendor staff see operational status only. Store-wide finance stays Owner-only in Vendor Finance.
 
 ## Properties
 
@@ -9,6 +10,13 @@ Name | Type
 `available` | boolean
 `reason` | string
 `notice` | string
+`purpose` | string
+`principalCentavos` | number
+`latestAttempt` | [PaymentAttempt](PaymentAttempt.md)
+`verifiedPayment` | [PaymentAttempt](PaymentAttempt.md)
+`attempts` | [Array&lt;PaymentAttempt&gt;](PaymentAttempt.md)
+`physical` | [PhysicalPaymentSummary](PhysicalPaymentSummary.md)
+`environment` | string
 
 ## Example
 
@@ -20,6 +28,13 @@ const example = {
   "available": null,
   "reason": null,
   "notice": null,
+  "purpose": null,
+  "principalCentavos": null,
+  "latestAttempt": null,
+  "verifiedPayment": null,
+  "attempts": null,
+  "physical": null,
+  "environment": null,
 } satisfies OrderPaymentAvailability
 
 console.log(example)

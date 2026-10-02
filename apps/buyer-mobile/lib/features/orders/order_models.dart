@@ -1,5 +1,9 @@
 import 'package:flutter/foundation.dart';
 
+import 'payment_models.dart';
+
+export 'payment_models.dart';
+
 /// Immutable Buyer order view models. Order, payment, fulfillment, refund and dispute stay separate
 /// fields; money is integer centavos; deadlines are UTC instants shown in Asia/Manila.
 
@@ -48,7 +52,7 @@ String orderStateLabel(String state) => switch (state) {
   'AWAITING_VENDOR_CONFIRMATION' => 'Waiting for the Vendor',
   'AWAITING_BUYER_APPROVAL' => 'Needs your approval',
   'AWAITING_NRPC_ACCEPTANCE' => 'Review preparation cost',
-  'AWAITING_PAYMENT' => 'Ready for payment',
+  'AWAITING_PAYMENT' => 'Pending payment',
   'CONFIRMED' => 'Confirmed',
   'PROCESSING' => 'Preparing',
   'READY_FOR_PICKUP' => 'Ready for pickup',
@@ -144,6 +148,7 @@ class OrderSummaryView {
     required this.deadline,
     required this.nextAction,
     required this.autoAccepted,
+    this.paymentRetryable = false,
   });
 
   final String id;
@@ -161,6 +166,7 @@ class OrderSummaryView {
 
   /// REVIEW_REVISION, REVIEW_NRPC, PAY or null.
   final String? nextAction;
+  final bool paymentRetryable;
   final bool autoAccepted;
 
   String state(String family) =>
@@ -450,6 +456,7 @@ class OrderDetailView {
     this.terminalReasonCode,
     this.paymentNotice,
     this.projectContext,
+    this.payment,
   });
 
   final String id;
@@ -477,6 +484,9 @@ class OrderDetailView {
   final String? terminalReasonCode;
   final String? paymentNotice;
   final Map<String, Object?>? projectContext;
+
+  /// Payment state for this order. Null only for responses that carry no payment block.
+  final OrderPaymentView? payment;
 
   String state(String family) =>
       states.firstWhere((row) => row.family == family).state;

@@ -14,7 +14,7 @@ part 'order_deadlines.g.dart';
 /// Properties:
 /// * [vendorResponseDueAt]
 /// * [buyerResponseDueAt]
-/// * [paymentExpiresAt] - 45 minutes after the order entered AWAITING_PAYMENT.
+/// * [paymentExpiresAt] - 24 hours after the order entered AWAITING_PAYMENT (Pending Payment). The server clock decides; clients only display it.
 /// * [serverTime]
 /// * [timezone]
 @BuiltValue()
@@ -25,7 +25,7 @@ abstract class OrderDeadlines implements Built<OrderDeadlines, OrderDeadlinesBui
   @BuiltValueField(wireName: r'buyer_response_due_at')
   DateTime? get buyerResponseDueAt;
 
-  /// 45 minutes after the order entered AWAITING_PAYMENT.
+  /// 24 hours after the order entered AWAITING_PAYMENT (Pending Payment). The server clock decides; clients only display it.
   @BuiltValueField(wireName: r'payment_expires_at')
   DateTime? get paymentExpiresAt;
 

@@ -69,7 +69,7 @@ void main() {
         payment: state == 'AWAITING_PAYMENT' ? 'PENDING' : 'NOT_REQUIRED',
         vendorResponseDueAt: now.add(const Duration(hours: 24)),
         buyerResponseDueAt: now.add(const Duration(hours: 24)),
-        paymentExpiresAt: now.add(const Duration(minutes: 45)),
+        paymentExpiresAt: now.add(const Duration(hours: 24)),
         confirmedQuantity: state == 'AWAITING_BUYER_APPROVAL' ? '8.0000' : null,
         amounts: money(
           materials: state == 'AWAITING_BUYER_APPROVAL' ? 14400 : 18000,

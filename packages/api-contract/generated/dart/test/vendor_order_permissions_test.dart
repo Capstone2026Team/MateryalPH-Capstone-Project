@@ -37,5 +37,15 @@ void main() {
       // TODO
     });
 
+    // bool canRecordPhysicalPayment
+    test('to test the property `canRecordPhysicalPayment`', () async {
+      // TODO
+    });
+
+    // bool canApproveOnlineBalance
+    test('to test the property `canApproveOnlineBalance`', () async {
+      // TODO
+    });
+
   });
 }

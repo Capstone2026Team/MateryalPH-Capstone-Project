@@ -245,6 +245,9 @@ erDiagram
     FILING_DEADLINES {
         uuid id PK
     }
+    FINANCE_REVIEW_ITEMS {
+        uuid id PK
+    }
     FINANCIAL_ALLOCATIONS {
         uuid id PK
     }
@@ -427,6 +430,9 @@ erDiagram
         character_varying email PK
     }
     PAYMENT_ATTEMPTS {
+        uuid id PK
+    }
+    PAYMENT_CHANNEL_FEE_VERSIONS {
         uuid id PK
     }
     PAYMENT_EVENTS {
@@ -673,6 +679,9 @@ erDiagram
     VENDOR_PAYMENT_ACCOUNTS {
         uuid id PK
     }
+    VENDOR_PAYMENT_SETTINGS {
+        uuid id PK
+    }
     VENDOR_PENDING_DOCUMENTS {
         uuid id PK
     }
@@ -695,6 +704,12 @@ erDiagram
         uuid id PK
     }
     VENDOR_VERIFICATION_CHANGES {
+    }
+    VENDOR_WITHHOLDING_ACCUMULATORS {
+        uuid id PK
+    }
+    VENDOR_WITHHOLDING_STATUS_EVENTS {
+        uuid id PK
     }
     WEBHOOK_EVENTS {
         uuid id PK
@@ -746,6 +761,7 @@ erDiagram
     BUYER_PROFILES ||--|{ CONVERSATIONS : "buyer_profile_id → id"
     BUYER_PROFILES ||--|{ FAVORITE_VENDORS : "buyer_profile_id → id"
     BUYER_PROFILES ||--|{ ORDERS : "buyer_profile_id → id"
+    BUYER_PROFILES ||--o{ PAYMENTS : "buyer_profile_id → id"
     BUYER_PROFILES ||--|{ PROJECTS : "buyer_profile_id → id"
     BUYER_PROFILES ||--|{ QUOTATIONS : "buyer_profile_id → id"
     CARTS ||--|{ CART_ITEMS : "cart_id → id"
@@ -785,6 +801,7 @@ erDiagram
     FEE_ASSESSMENTS ||--|{ FEE_ASSESSMENT_EVENTS : "fee_assessment_id → id"
     FEE_ASSESSMENTS ||--o{ FEE_STATEMENT_LINES : "fee_assessment_id → id"
     FEE_POLICY_VERSIONS ||--|{ FEE_ASSESSMENTS : "fee_policy_version_id → id"
+    FEE_POLICY_VERSIONS ||--o{ FEE_STATEMENTS : "fee_policy_version_id → id"
     FEE_POLICY_VERSIONS ||--o{ FINANCIAL_SNAPSHOTS : "fee_policy_version_id → id"
     FEE_STATEMENTS ||--|{ FEE_PAYMENT_ALLOCATIONS : "fee_statement_id → id"
     FEE_STATEMENTS ||--|{ FEE_STATEMENT_LINES : "fee_statement_id → id"
@@ -819,6 +836,7 @@ erDiagram
     FINANCIAL_SNAPSHOTS ||--|{ FEE_ASSESSMENTS : "financial_snapshot_id → id"
     FINANCIAL_SNAPSHOTS ||--|{ FINANCIAL_ALLOCATIONS : "financial_snapshot_id → id"
     FINANCIAL_SNAPSHOTS ||--|{ FINANCIAL_SNAPSHOT_LINES : "financial_snapshot_id → id"
+    FINANCIAL_SNAPSHOTS ||--o{ PAYMENTS : "financial_snapshot_id → id"
     FINANCIAL_SNAPSHOTS ||--|{ REMITTANCE_ASSESSMENTS : "financial_snapshot_id → id"
     FULFILLMENTS ||--|{ FULFILLMENT_MILESTONES : "fulfillment_id → id"
     FULFILLMENTS ||--|{ FULFILLMENT_PROOFS : "fulfillment_id → id"
@@ -898,12 +916,17 @@ erDiagram
     ORDERS ||--o{ TAX_ADJUSTMENTS : "order_id → id"
     ORDERS ||--|{ VENDOR_CONFIRMATIONS : "order_id → id"
     ORDERS ||--o{ WORK_PACKAGE_MISSING_LINES : "linked_order_id → id"
+    PAYMENT_CHANNEL_FEE_VERSIONS ||--o{ PAYMENTS : "channel_fee_version_id → id"
+    PAYMENT_CHANNEL_FEE_VERSIONS ||--o{ PROCESSING_FEE_SNAPSHOTS : "channel_fee_version_id → id"
     PAYMENTS ||--|{ FEE_PAYMENT_ALLOCATIONS : "payment_id → id"
     PAYMENTS ||--|{ PAYMENT_ATTEMPTS : "payment_id → id"
     PAYMENTS ||--|{ PAYMENT_EVENTS : "payment_id → id"
+    PAYMENTS ||--o{ PHYSICAL_PAYMENT_RECORDS : "online_payment_id → id"
     PAYMENTS ||--|{ PROCESSING_FEE_SNAPSHOTS : "payment_id → id"
     PAYMENTS ||--|{ REFUNDS : "source_payment_id → id"
+    PAYMENTS ||--o{ REMITTANCE_ASSESSMENTS : "payment_id → id"
     PAYMENTS ||--|{ REMITTANCE_COLLECTIONS : "payment_id → id"
+    PAYMENTS ||--o{ REMITTANCE_GROUPS : "payment_id → id"
     PERMISSIONS ||--|{ ROLE_PERMISSIONS : "permission_id → id"
     PHYSICAL_PAYMENT_RECORDS ||--o{ PHYSICAL_PAYMENT_RECORDS : "original_record_id → id"
     PHYSICAL_PAYMENT_RECORDS ||--|{ PHYSICAL_REIMBURSEMENTS : "physical_payment_record_id → id"
@@ -937,6 +960,7 @@ erDiagram
     REGULATED_MATERIAL_RULES ||--o{ COMPLIANCE_SUBMISSIONS : "regulated_material_rule_id → id"
     REGULATED_MATERIAL_RULES ||--o{ VENDOR_LISTINGS : "regulated_material_rule_id → id"
     REMITTANCE_ASSESSMENTS ||--o{ TAX_ADJUSTMENTS : "remittance_assessment_id → id"
+    REMITTANCE_ASSESSMENTS ||--o{ VENDOR_WITHHOLDING_ACCUMULATORS : "crossing_assessment_id → id"
     REMITTANCE_GROUPS ||--|{ REMITTANCE_ASSESSMENTS : "remittance_group_id → id"
     REMITTANCE_GROUPS ||--|{ REMITTANCE_COLLECTIONS : "remittance_group_id → id"
     REVIEWS ||--|{ REVIEW_MEDIA : "review_id → id"
@@ -944,6 +968,8 @@ erDiagram
     STORE_PROFILES ||--|{ OPERATING_HOURS : "store_profile_id → id"
     STORE_PROFILES ||--|{ STORE_MEDIA : "store_profile_id → id"
     STORE_PROFILES ||--|{ STORE_OPERATION_DATE_OVERRIDES : "store_profile_id → id"
+    TAX_EVIDENCE ||--o{ REMITTANCE_ASSESSMENTS : "relief_basis_id → id"
+    TAX_EVIDENCE ||--o{ VENDOR_WITHHOLDING_ACCUMULATORS : "effective_declaration_id → id"
     TAX_REPORT_PACKAGES ||--|{ TAX_REPORT_PACKAGE_LINES : "tax_report_package_id → id"
     TAX_RULE_VERSIONS ||--o{ FINANCIAL_SNAPSHOTS : "tax_rule_version_id → id"
     TAX_RULE_VERSIONS ||--|{ WITHHOLDING_ASSIGNMENTS : "tax_rule_version_id → id"
@@ -999,8 +1025,10 @@ erDiagram
     USERS ||--|{ FEE_ADJUSTMENTS : "approved_by_user_id → id"
     USERS ||--|{ FEE_ADJUSTMENTS : "prepared_by_user_id → id"
     USERS ||--o{ FEE_POLICY_VERSIONS : "approved_by_user_id → id"
+    USERS ||--o{ FEE_STATEMENTS : "approved_by_user_id → id"
     USERS ||--o{ FILES : "uploaded_by_user_id → id"
     USERS ||--o{ FILING_CALENDAR_VERSIONS : "approved_by_user_id → id"
+    USERS ||--o{ FINANCE_REVIEW_ITEMS : "resolved_by_user_id → id"
     USERS ||--o{ FINANCIAL_LEDGER_ENTRIES : "actor_user_id → id"
     USERS ||--o{ FINANCIAL_POSTING_BATCHES : "prepared_by_user_id → id"
     USERS ||--o{ FINANCIAL_POSTING_BATCHES : "reviewed_by_user_id → id"
@@ -1029,7 +1057,10 @@ erDiagram
     USERS ||--|{ ORDER_FULFILLMENT_ASSIGNMENTS : "user_id → id"
     USERS ||--o{ ORDER_SNAPSHOTS : "created_by_user_id → id"
     USERS ||--o{ ORDER_STATUS_HISTORY : "actor_user_id → id"
-    USERS ||--|{ PHYSICAL_PAYMENT_RECORDS : "recorded_by_user_id → id"
+    USERS ||--o{ ORDERS : "online_balance_approved_by_user_id → id"
+    USERS ||--o{ PAYMENTS : "created_by_user_id → id"
+    USERS ||--o{ PHYSICAL_PAYMENT_RECORDS : "buyer_acknowledged_by_user_id → id"
+    USERS ||--o{ PHYSICAL_PAYMENT_RECORDS : "recorded_by_user_id → id"
     USERS ||--o{ PHYSICAL_REIMBURSEMENTS : "confirmed_by_user_id → id"
     USERS ||--|{ PHYSICAL_REIMBURSEMENTS : "recorded_by_user_id → id"
     USERS ||--o{ PICKUP_AUTHORIZATIONS : "actor_user_id → id"
@@ -1047,7 +1078,7 @@ erDiagram
     USERS ||--|{ STOCK_CONFIRMATION_EVENTS : "actor_user_id → id"
     USERS ||--|{ STORE_OPERATION_DATE_OVERRIDES : "created_by_user_id → id"
     USERS ||--|{ STORE_OPERATION_DATE_OVERRIDES : "updated_by_user_id → id"
-    USERS ||--|{ TAX_ADJUSTMENTS : "prepared_by_user_id → id"
+    USERS ||--o{ TAX_ADJUSTMENTS : "prepared_by_user_id → id"
     USERS ||--o{ TAX_ADJUSTMENTS : "reviewed_by_user_id → id"
     USERS ||--o{ TAX_CERTIFICATES : "verified_by_user_id → id"
     USERS ||--o{ TAX_EVIDENCE : "reviewed_by_user_id → id"
@@ -1072,6 +1103,7 @@ erDiagram
     USERS ||--o{ VENDOR_ONBOARDING_DRAFTS : "updated_by_user_id → id"
     USERS ||--o{ VENDOR_ONBOARDING_REQUIREMENTS : "reviewed_by_user_id → id"
     USERS ||--o{ VENDOR_ONBOARDING_REQUIREMENTS : "submitted_by_user_id → id"
+    USERS ||--o{ VENDOR_PAYMENT_SETTINGS : "updated_by_user_id → id"
     USERS ||--o{ VENDOR_REPRESENTATIVE_VERSIONS : "account_user_id → id"
     USERS ||--|{ VENDOR_REPRESENTATIVE_VERSIONS : "created_by_user_id → id"
     USERS ||--o{ VENDOR_TAX_PROFILE_VERSIONS : "approved_by_user_id → id"
@@ -1120,10 +1152,12 @@ erDiagram
     VENDOR_ORGANIZATIONS ||--|{ FAVORITE_VENDORS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ FEE_ASSESSMENTS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ FEE_STATEMENTS : "vendor_organization_id → id"
+    VENDOR_ORGANIZATIONS ||--o{ FINANCE_REVIEW_ITEMS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ INVOICE_RECORDS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ METRIC_EVENTS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ ORDER_DELIVERY_SNAPSHOTS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ ORDERS : "vendor_organization_id → id"
+    VENDOR_ORGANIZATIONS ||--o{ PAYMENTS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ PRICE_OBSERVATIONS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ PRIVACY_ACKNOWLEDGMENTS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--o{ PRODUCTS : "vendor_organization_id → id"
@@ -1146,11 +1180,13 @@ erDiagram
     VENDOR_ORGANIZATIONS ||--|{ VENDOR_ONBOARDING_DRAFTS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ VENDOR_ONBOARDING_REQUIREMENTS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ VENDOR_PAYMENT_ACCOUNTS : "vendor_organization_id → id"
+    VENDOR_ORGANIZATIONS ||--|{ VENDOR_PAYMENT_SETTINGS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ VENDOR_PENDING_DOCUMENTS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ VENDOR_REPRESENTATIVE_VERSIONS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ VENDOR_TAX_PROFILES : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ VENDOR_VEHICLES : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ VENDOR_VERIFICATION_CHANGE_HISTORY : "vendor_organization_id → id"
+    VENDOR_ORGANIZATIONS ||--|{ VENDOR_WITHHOLDING_ACCUMULATORS : "organization_id → id"
     VENDOR_ORGANIZATIONS ||--o{ WORK_PACKAGES : "selected_vendor_organization_id → id"
     VENDOR_REPRESENTATIVE_VERSIONS ||--o{ AGREEMENT_ACCEPTANCES : "representative_version_id → id"
     VENDOR_REPRESENTATIVE_VERSIONS ||--|{ VENDOR_AUTHORITY_REVIEWS : "representative_version_id → id"
@@ -1162,6 +1198,10 @@ erDiagram
     VENDOR_VEHICLES ||--|{ DELIVERY_ASSIGNMENTS : "vendor_vehicle_id → id"
     VENDOR_VEHICLES ||--|{ VEHICLE_RATE_VERSIONS : "vendor_vehicle_id → id"
     VENDOR_VEHICLES ||--|{ VENDOR_VEHICLE_VERSIONS : "vendor_vehicle_id → id"
+    VENDOR_WITHHOLDING_ACCUMULATORS ||--o{ REMITTANCE_ASSESSMENTS : "accumulator_id → id"
+    VENDOR_WITHHOLDING_ACCUMULATORS ||--o{ TAX_ADJUSTMENTS : "accumulator_id → id"
+    VENDOR_WITHHOLDING_ACCUMULATORS ||--|{ VENDOR_WITHHOLDING_STATUS_EVENTS : "accumulator_id → id"
+    WEBHOOK_EVENTS ||--o{ PAYMENT_EVENTS : "webhook_event_id → id"
     WITHHOLDING_ASSIGNMENTS ||--|{ REMITTANCE_GROUPS : "withholding_assignment_id → id"
     WORK_PACKAGE_LINES ||--|{ COMPILED_ESTIMATE_LINES : "work_package_line_id → id"
     WORK_PACKAGE_LINES ||--|{ WORK_PACKAGE_MISSING_LINES : "work_package_line_id → id"

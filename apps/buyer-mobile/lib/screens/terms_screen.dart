@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../design_system/components/buyer_app_bar.dart';
 import 'package:materyalph_api_client/materyalph_api_client.dart';
 import '../auth/auth_repository.dart';
 import '../design_system/theme.dart';
@@ -77,14 +77,7 @@ class _TermsScreenState extends State<TermsScreen> {
     },
     child: Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        leading: IconButton(
-          tooltip: 'Back',
-          onPressed: widget.onBack,
-          icon: const Icon(LucideIcons.arrowLeft, color: BuyerTheme.action),
-        ),
-        title: const Text('Terms of Service'),
-      ),
+      appBar: buyerAppBar(context, 'Terms of Service', onBack: widget.onBack),
       body: SafeArea(
         top: false,
         child: Center(

@@ -37,6 +37,7 @@ part 'order_summary.g.dart';
 /// * [deadline]
 /// * [expectedFulfillmentDate]
 /// * [nextAction]
+/// * [paymentRetryable] - Buyer list only. True when the order is Pending Payment and its latest checkout attempt failed or expired. Retry uses the same order and principal.
 /// * [buyer]
 /// * [primaryAction]
 /// * [nrpcIndicator]
@@ -100,6 +101,10 @@ abstract class OrderSummary implements Built<OrderSummary, OrderSummaryBuilder> 
   @BuiltValueField(wireName: r'next_action')
   OrderSummaryNextActionEnum? get nextAction;
   // enum nextActionEnum {  REVIEW_REVISION,  REVIEW_NRPC,  PAY,  ,  };
+
+  /// Buyer list only. True when the order is Pending Payment and its latest checkout attempt failed or expired. Retry uses the same order and principal.
+  @BuiltValueField(wireName: r'payment_retryable')
+  bool? get paymentRetryable;
 
   @BuiltValueField(wireName: r'buyer')
   OrderBuyerRef? get buyer;
@@ -224,6 +229,13 @@ class _$OrderSummarySerializer implements PrimitiveSerializer<OrderSummary> {
       yield serializers.serialize(
         object.nextAction,
         specifiedType: const FullType.nullable(OrderSummaryNextActionEnum),
+      );
+    }
+    if (object.paymentRetryable != null) {
+      yield r'payment_retryable';
+      yield serializers.serialize(
+        object.paymentRetryable,
+        specifiedType: const FullType(bool),
       );
     }
     if (object.buyer != null) {
@@ -401,6 +413,14 @@ class _$OrderSummarySerializer implements PrimitiveSerializer<OrderSummary> {
           ) as OrderSummaryNextActionEnum?;
           if (valueDes == null) continue;
           result.nextAction = valueDes;
+          break;
+        case r'payment_retryable':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.paymentRetryable = valueDes;
           break;
         case r'buyer':
           final valueDes = serializers.deserialize(

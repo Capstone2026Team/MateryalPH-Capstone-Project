@@ -47,3 +47,4 @@ export { ProfileDetails, ProfileSplitPanel } from './profile-details'
 export { OrderStateRows, DeadlineCountdown, MoneyBreakdown, formatPesoCentavos, orderStateLabel, orderStateTone } from './order-patterns'
 
 export { ConversationHeader, ConversationInbox, ChatMessageBubble, ChatAvatar, QuotationVersionCard, ChatAttachmentButton, chatRoleLabel, conversationLabel } from './messaging-patterns'
+export { DemoLabel, WithholdingStatusBadge, ThresholdPanel, PaymentAttemptBadge, PaymentChannelList, FinanceSection, type ThresholdPanelData, type PaymentChannelRow } from './finance-patterns'

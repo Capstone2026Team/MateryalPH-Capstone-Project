@@ -13,8 +13,9 @@ import '../map_discovery/discovery_models.dart';
 import '../map_discovery/discovery_repository.dart' show newIdempotencyKey;
 import 'nrpc_disclosure_screen.dart';
 import 'order_models.dart';
+import 'order_payment_screen.dart';
 import 'orders_repository.dart';
-import 'orders_screen.dart' show orderAppBar;
+import '../../design_system/components/buyer_app_bar.dart';
 
 /// Order Details. Server-calculated actions only: approve or reject the Vendor's exact version,
 /// review an NRPC on its own disclosure page, or flag it. The confirmed drop-off, vehicles, trips and
@@ -25,11 +26,13 @@ class OrderDetailsScreen extends StatefulWidget {
     required this.orderId,
     required this.repository,
     this.now,
+    this.paymentLauncher = launchPaymentPage,
   });
 
   final String orderId;
   final OrdersRepository repository;
   final DateTime Function()? now;
+  final PaymentLauncher paymentLauncher;
 
   @override
   State<OrderDetailsScreen> createState() => _OrderDetailsScreenState();
@@ -144,7 +147,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     final order = _order;
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: orderAppBar(context, 'Order details'),
+      appBar: buyerAppBar(context, 'Order details'),
       bottomNavigationBar: order == null ? null : _actionBar(order),
       body: SafeArea(
         child: order == null
@@ -219,8 +222,83 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
         ],
       );
     }
+    final payingBalance = order.payment?.purpose == 'ORDER_BALANCE_PAYMENT';
+    if (order.actions.contains('PAY') &&
+        (order.state('ORDER') == 'AWAITING_PAYMENT' || payingBalance)) {
+      final latest = order.payment?.latestAttempt;
+      final pending = latest?.pending ?? false;
+      // After a failed or abandoned checkout the same order and amount can be paid again.
+      final retry = latest?.retryable ?? false;
+      return _Bar(
+        children: [
+          Expanded(
+            child: FilledButton.icon(
+              onPressed: _busy
+                  ? null
+                  : pending
+                  ? () => _openPending(order.payment!.latestAttempt!)
+                  : () => _openPayment(order),
+              icon: Icon(
+                pending
+                    ? LucideIcons.hourglass
+                    : retry
+                    ? LucideIcons.rotateCcw
+                    : LucideIcons.creditCard,
+                size: 18,
+              ),
+              label: Text(
+                pending
+                    ? 'View pending payment'
+                    : payingBalance
+                    ? 'Pay remaining balance'
+                    : retry
+                    ? 'Re-process payment'
+                    : 'Pay now',
+              ),
+            ),
+          ),
+        ],
+      );
+    }
     return null;
   }
+
+  Future<void> _openPayment(OrderDetailView order) async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => OrderPaymentScreen(
+          orderId: order.id,
+          repository: widget.repository,
+          launcher: widget.paymentLauncher,
+        ),
+      ),
+    );
+    if (mounted) await _load();
+  }
+
+  Future<void> _openPending(PaymentAttemptView attempt) async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => PaymentPendingScreen(
+          paymentId: attempt.id,
+          repository: widget.repository,
+          initial: attempt,
+          launcher: widget.paymentLauncher,
+        ),
+      ),
+    );
+    if (mounted) await _load();
+  }
+
+  Future<void> _acknowledge(OrderDetailView order, PhysicalRecordView record) =>
+      _decide((key) async {
+        await widget.repository.acknowledgePhysicalPayment(
+          order.id,
+          recordId: record.id,
+          idempotencyKey: key,
+        );
+        return widget.repository.order(order.id);
+      }, 'Thanks — you confirmed the Vendor’s payment record.');
 
   Widget _content(OrderDetailView order) {
     final state = order.state('ORDER');
@@ -233,7 +311,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
         order.buyerResponseDueAt,
         'Respond within',
       ),
-      'AWAITING_PAYMENT' => (order.paymentExpiresAt, 'Pay within'),
+      'AWAITING_PAYMENT' => (order.paymentExpiresAt, 'Pay before'),
       _ => (null, ''),
     };
     return ListView(
@@ -306,6 +384,15 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
         _FulfillmentSection(order: order),
         const SizedBox(height: 16),
         MoneyBreakdownCard(money: order.money),
+        if (order.payment != null && _hasPaymentDetail(order.payment!)) ...[
+          const SizedBox(height: 16),
+          const _Heading('Payment'),
+          _PaymentSection(
+            payment: order.payment!,
+            busy: _busy,
+            onAcknowledge: (record) => _acknowledge(order, record),
+          ),
+        ],
         if (order.nrpc != null) ...[
           const SizedBox(height: 16),
           _NrpcSummary(
@@ -320,6 +407,153 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
       ],
     );
   }
+}
+
+bool _hasPaymentDetail(OrderPaymentView payment) =>
+    payment.latestAttempt != null ||
+    payment.verifiedPayment != null ||
+    payment.physicalApplicable;
+
+/// Verified online payment, the latest attempt and the Vendor's physical payment records. A record is
+/// the Vendor's statement of what it collected; the Buyer may confirm it once and nothing else.
+class _PaymentSection extends StatelessWidget {
+  const _PaymentSection({
+    required this.payment,
+    required this.busy,
+    required this.onAcknowledge,
+  });
+
+  final OrderPaymentView payment;
+  final bool busy;
+  final ValueChanged<PhysicalRecordView> onAcknowledge;
+
+  @override
+  Widget build(BuildContext context) {
+    final verified = payment.verifiedPayment;
+    final latest = payment.latestAttempt;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        border: Border.all(color: BuyerTheme.border),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (verified != null)
+            _PaymentLine(
+              icon: LucideIcons.badgeCheck,
+              title: '${paymentPurposeLabel(verified.purpose)} · verified',
+              detail:
+                  '${formatPeso(verified.totalCentavos)} incl. ${formatPeso(verified.processingFeeCentavos)} Payment Processing Fee${verified.channelName == null ? '' : ' · ${verified.channelName}'}',
+            ),
+          if (latest != null && latest.id != verified?.id)
+            _PaymentLine(
+              icon: latest.pending ? LucideIcons.hourglass : LucideIcons.info,
+              title: switch (latest.status) {
+                'PENDING' => 'Payment pending verification',
+                'FAILED' => 'Last payment attempt failed',
+                'EXPIRED' => 'Last payment attempt expired',
+                'CAPTURED_LATE_REFUND_PENDING' =>
+                  'Late payment — refund queued',
+                _ => paymentPurposeLabel(latest.purpose),
+              },
+              detail: latest.message,
+            ),
+          if (payment.physicalApplicable) ...[
+            _PaymentLine(
+              icon: LucideIcons.banknote,
+              title: switch (payment.physicalMethod) {
+                'CASH_ON_DELIVERY' => 'Cash on delivery',
+                'CASH_ON_PICKUP' => 'Cash on pickup',
+                'BANK_DEPOSIT' => 'Bank deposit',
+                _ => 'Physical payment',
+              },
+              detail: payment.physicalRemainingCentavos == null
+                  ? 'Pay the Vendor directly as agreed.'
+                  : 'Remaining per the Vendor’s records: ${formatPeso(payment.physicalRemainingCentavos!)}',
+            ),
+            for (final record in payment.physicalRecords.where(
+              (record) =>
+                  record.kind == 'COLLECTION' ||
+                  record.kind == 'ONLINE_BALANCE_CREDIT',
+            ))
+              Padding(
+                padding: const EdgeInsets.only(left: 30, bottom: 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '${record.kind == 'COLLECTION' ? 'Vendor recorded' : 'Online balance credited'} ${formatPeso(record.amountCentavos)}',
+                        style: const TextStyle(fontSize: 13),
+                      ),
+                    ),
+                    if (record.kind == 'COLLECTION' &&
+                        record.acknowledgedAt == null)
+                      TextButton(
+                        onPressed: busy ? null : () => onAcknowledge(record),
+                        style: TextButton.styleFrom(
+                          minimumSize: const Size(44, 44),
+                        ),
+                        child: const Text('Confirm'),
+                      )
+                    else if (record.acknowledgedAt != null)
+                      Text(
+                        'Confirmed',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: BuyerTheme.successStrong,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+          ],
+          if (payment.notice != null)
+            Text(
+              payment.notice!,
+              style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PaymentLine extends StatelessWidget {
+  const _PaymentLine({
+    required this.icon,
+    required this.title,
+    required this.detail,
+  });
+
+  final IconData icon;
+  final String title;
+  final String detail;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 18, color: BuyerTheme.ink),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+              Text(
+                detail,
+                style: const TextStyle(fontSize: 13, color: BuyerTheme.muted),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class _Bar extends StatelessWidget {
@@ -487,10 +721,10 @@ class _StateBand extends StatelessWidget {
     ),
     'AWAITING_PAYMENT' => StatusBand(
       tone: BandTone.info,
-      title: 'Order accepted — ready for payment',
+      title: 'Pending payment — the Vendor confirmed your order',
       message:
           order.paymentNotice ??
-          'Pay before the window ends to keep the reserved stock.',
+          'Pay before the deadline to keep the reserved stock. If a payment fails or you leave the payment page, you can pay again until then.',
     ),
     'CONFIRMED' => const StatusBand(
       tone: BandTone.success,
@@ -504,9 +738,11 @@ class _StateBand extends StatelessWidget {
     ),
     'EXPIRED' => StatusBand(
       tone: BandTone.danger,
-      title: 'This order expired',
+      title: order.terminalReasonCode == 'PAYMENT_WINDOW_EXPIRED'
+          ? 'Cancelled — payment expired'
+          : 'This order expired',
       message: order.terminalReasonCode == 'PAYMENT_WINDOW_EXPIRED'
-          ? 'Payment was not completed within 45 minutes, so the reserved stock was released.'
+          ? 'Payment was not completed within 24 hours, so the order was cancelled automatically and the reserved stock was released. You were not charged.'
           : 'A response window ended, so the request expired. You were not charged.',
     ),
     'CANCELLED' => const StatusBand(

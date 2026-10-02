@@ -82,6 +82,8 @@ return [
         'webhook_token' => env('XENDIT_WEBHOOK_VERIFICATION_TOKEN'),
         'base_url' => env('XENDIT_API_BASE_URL', 'https://api.xendit.co'),
         'timeout_seconds' => (int) env('XENDIT_TIMEOUT_SECONDS', 5),
+        // Empty means platform-fee payments are collected by the master account itself (no for-user-id).
+        'platform_account_id' => env('XENDIT_PLATFORM_ACCOUNT_ID'),
     ],
 
 ];

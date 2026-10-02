@@ -11,6 +11,7 @@ use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Inventory\StockAvailability;
 use App\Domain\Operations\OutboxPublisher;
+use App\Domain\Payments\PaymentMethodPolicy;
 use App\Domain\Procurement\CartService;
 use App\Domain\Procurement\CheckoutPreviewService;
 use App\Domain\Procurement\ListingPublicFacts;
@@ -49,10 +50,11 @@ final class OrderSubmissionService
         private readonly OutboxPublisher $outbox,
         private readonly AuditRecorder $audit,
         private readonly CatalogAccess $idempotency,
+        private readonly PaymentMethodPolicy $paymentMethods,
     ) {}
 
     /**
-     * @param  array{cart_lock_version: int, vendor_ids: list<string>, split_confirmed?: bool}  $input
+     * @param  array{cart_lock_version: int, vendor_ids: list<string>, split_confirmed?: bool, payment_methods?: array<string, string>}  $input
      * @return array{checkout: array<string, mixed>, replayed: bool}
      */
     public function submit(Request $request, array $input): array
@@ -61,7 +63,13 @@ final class OrderSubmissionService
         $key = $this->idempotency->requireIdempotencyKey($request);
         $vendorIds = array_values(array_unique(array_map('strval', $input['vendor_ids'])));
         sort($vendorIds);
-        $requestHash = hash_hmac('sha256', json_encode(['cart' => (int) $input['cart_lock_version'], 'vendors' => $vendorIds, 'split' => (bool) ($input['split_confirmed'] ?? false)], JSON_THROW_ON_ERROR), (string) config('app.key'));
+        // Each child order uses the Buyer's chosen method for that Vendor; Online when none is given.
+        $methods = [];
+        foreach ($vendorIds as $vendorId) {
+            $methods[$vendorId] = (string) ($input['payment_methods'][$vendorId] ?? 'ONLINE');
+        }
+        $requestHash = hash_hmac('sha256', json_encode(['cart' => (int) $input['cart_lock_version'], 'vendors' => $vendorIds, 'split' => (bool) ($input['split_confirmed'] ?? false)]
+            + (array_values(array_unique($methods)) === ['ONLINE'] ? [] : ['methods' => $methods]), JSON_THROW_ON_ERROR), (string) config('app.key'));
         $scopedKey = hash('sha256', 'checkout|'.$buyerId.'|'.$key);
         if (($existing = $this->replay($scopedKey, $requestHash)) !== null) {
             return ['checkout' => $this->present($existing), 'replayed' => true];
@@ -78,7 +86,7 @@ final class OrderSubmissionService
             $group = $groups[$vendorId] ?? null;
             if ($group === null) {
                 $problems[$vendorId] = ['status' => 'NOT_IN_CART', 'issues' => []];
-            } elseif ($group['status'] !== 'READY' || ! $this->onlineAvailable($group)) {
+            } elseif ($group['status'] !== 'READY' || ! $this->methodAvailable($group, $methods[$vendorId])) {
                 $problems[$vendorId] = ['status' => $group['status'], 'issues' => array_column($group['issues'], 'code')];
             }
         }
@@ -90,7 +98,7 @@ final class OrderSubmissionService
         }
 
         try {
-            $checkoutId = DB::transaction(function () use ($request, $input, $buyerId, $vendorIds, $groups, $scopedKey, $requestHash): string {
+            $checkoutId = DB::transaction(function () use ($request, $input, $buyerId, $vendorIds, $groups, $scopedKey, $requestHash, $methods): string {
                 $cart = $this->carts->cart($buyerId, true);
                 if (($existing = $this->replay($scopedKey, $requestHash)) !== null) {
                     return (string) $existing->id;
@@ -109,7 +117,8 @@ final class OrderSubmissionService
                     $this->availability->assertAvailable($vendorId);
                     $vendorLines = array_values(array_filter($lines, static fn (array $line): bool => $line['vendor_id'] === $vendorId));
                     $this->assertUnchanged($vendorLines);
-                    $orderId = $this->createOrder($checkoutId, $buyerId, $vendorId, $groups[$vendorId], $vendorLines, $destination, $cart, $actor);
+                    $this->paymentMethods->assertAllowed($vendorId, (string) $groups[$vendorId]['fulfillment_method'], $methods[$vendorId]);
+                    $orderId = $this->createOrder($checkoutId, $buyerId, $vendorId, $groups[$vendorId], $vendorLines, $destination, $cart, $actor, $methods[$vendorId]);
                     DB::table('checkout_vendor_groups')->insert(['id' => (string) Str::uuid7(), 'checkout_group_id' => $checkoutId, 'vendor_organization_id' => $vendorId, 'order_id' => $orderId, 'created_at' => now(), 'updated_at' => now()]);
                     DB::table('cart_items')->whereIn('id', array_column($vendorLines, 'id'))->delete();
                     DB::table('cart_vendor_groups')->where('cart_id', $cart->id)->where('vendor_organization_id', $vendorId)->delete();
@@ -196,10 +205,10 @@ final class OrderSubmissionService
     }
 
     /** @param array<string, mixed> $group */
-    private function onlineAvailable(array $group): bool
+    private function methodAvailable(array $group, string $paymentMethod): bool
     {
         foreach ($group['payment_methods'] as $method) {
-            if ($method['method'] === 'ONLINE' && $method['available']) {
+            if ($method['method'] === $paymentMethod && $method['available']) {
                 return true;
             }
         }
@@ -223,7 +232,7 @@ final class OrderSubmissionService
      * @param  list<array<string, mixed>>  $lines
      * @param  array<string, mixed>  $destination
      */
-    private function createOrder(string $checkoutId, string $buyerId, string $vendorId, array $group, array $lines, array $destination, object $cart, OrderActor $actor): string
+    private function createOrder(string $checkoutId, string $buyerId, string $vendorId, array $group, array $lines, array $destination, object $cart, OrderActor $actor, string $paymentMethod): string
     {
         $method = (string) $group['fulfillment_method'];
         $orderId = (string) Str::uuid7();
@@ -266,7 +275,7 @@ final class OrderSubmissionService
         DB::table('orders')->insert([
             'id' => $orderId, 'reference' => $this->reference('ORD'), 'buyer_profile_id' => $buyerId, 'vendor_organization_id' => $vendorId, 'checkout_group_id' => $checkoutId,
             'procurement_type' => 'ITEM_BASED', 'order_state' => OrderStates::AWAITING_VENDOR_CONFIRMATION, 'payment_state' => 'NOT_REQUIRED', 'refund_state' => 'NOT_REQUESTED',
-            'fulfillment_state' => 'NOT_STARTED', 'dispute_state' => 'NONE', 'fulfillment_method' => $method, 'payment_method' => 'ONLINE',
+            'fulfillment_state' => 'NOT_STARTED', 'dispute_state' => 'NONE', 'fulfillment_method' => $method, 'payment_method' => $paymentMethod,
             'materials_centavos' => $materials, 'vendor_discount_centavos' => 0, 'delivery_centavos' => $delivery, 'nrpc_centavos' => 0, 'commercial_total_centavos' => $materials + (int) $delivery,
             'submitted_at' => $now, 'vendor_response_due_at' => $now->addHours(self::VENDOR_RESPONSE_HOURS), 'current_snapshot_version' => 1,
             'destination' => json_encode($this->destination($method, $destination, $group), JSON_THROW_ON_ERROR),
@@ -277,7 +286,7 @@ final class OrderSubmissionService
         $order = DB::table('orders')->where('id', $orderId)->first();
         $commercial = $this->commercial->compute($this->commercial->lines($orderId), [], 0, $delivery);
         $this->commercial->record($order, 'SUBMITTED', [
-            'fulfillment_method' => $method, 'payment_method' => 'ONLINE',
+            'fulfillment_method' => $method, 'payment_method' => $paymentMethod,
             'delivery_estimate' => $method === 'DELIVERY' ? array_intersect_key($group['delivery'], array_flip(['status', 'estimate', 'route', 'endpoint', 'manual_review_reasons', 'calculation_version'])) : null,
             'lines' => array_map(static fn (array $row): array => ['order_line_id' => $row['id'], 'line_number' => $row['line_number'], 'quantity' => $row['quantity'], 'unit_price_centavos' => $row['unit_price_centavos']], $rows),
         ], $commercial, $actor);

@@ -14,6 +14,7 @@ import { newIdempotencyKey } from '../lib/onboarding-api'
 import { storeName } from '../lib/catalog-access'
 import { useOnboardingSnapshot } from '../lib/vendor-status'
 import { ErrorState, LoadingState, PageHeader, VendorShell } from './PhaseThreeVendorPages'
+import { OrderPaymentPanel } from './OrderPaymentPanel'
 
 const GROUPS: { value: OrderGroup; label: string }[] = [
   { value: 'NEW', label: 'New requests' }, { value: 'WAITING_ON_BUYER', label: 'Waiting on Buyer' }, { value: 'AWAITING_PAYMENT', label: 'Awaiting payment' },
@@ -194,6 +195,7 @@ function OrderDetailWorkspace({ orderId }: { orderId: string }) {
       <aside className="grid min-w-0 content-start gap-6" aria-label="Order summary">
         <section aria-labelledby="status-heading" className="grid gap-2"><h2 id="status-heading" className="text-base font-semibold">Status</h2><OrderStateRows states={order.states} /></section>
         <div className="rounded-surface border border-border-default bg-surface-primary p-4"><MoneyBreakdown money={order.money} title="Buyer payment breakdown" /><p className="mt-3 border-t border-border-default pt-3 text-xs text-text-secondary">The Buyer total never includes your 2% monthly commission or merchant withholding; those are settled separately.</p></div>
+        <OrderPaymentPanel order={order} onChanged={load} />
         <DestinationPanel order={order} />
         {order.nrpc && <NrpcSummary order={order} />}
       </aside>
@@ -205,7 +207,7 @@ function primaryDescription(order: OrderDetail): string {
   switch (order.primaryAction) {
     case 'CONFIRM': return 'Confirm the quantities you can supply and the fulfillment date. Confirming reserves the stock; nothing is charged until the Buyer pays.'
     case 'WAITING_FOR_BUYER': return 'Your confirmed version is with the Buyer. The stock stays reserved until they approve, reject or the window ends.'
-    case 'WAITING_FOR_PAYMENT': return 'The Buyer accepted the order. The stock is reserved until payment is verified or the 45-minute window ends.'
+    case 'WAITING_FOR_PAYMENT': return 'The Buyer accepted the order. The stock is reserved until payment is verified or the 24-hour payment window ends.'
     case 'PREPARE_WHEN_AVAILABLE': return 'The order is confirmed. Preparation and fulfillment milestones open in the fulfillment release.'
     default: return order.terminalReasonCode ? `This order is closed (${order.terminalReasonCode.toLowerCase().replaceAll('_', ' ')}).` : 'This order is closed.'
   }
@@ -273,7 +275,7 @@ function ConfirmationWorkspace({ order, onDone, onReload }: { order: OrderDetail
   const changed = order.lines.some(line => quantityText(line.requestedQuantity) !== (quantities[line.id] ?? '').trim()) || (pesoInputToCentavos(discount || '0') ?? 0) > 0
   const nrpcTotal = Object.values(nrpcLines).reduce((sum, value) => sum + (pesoInputToCentavos(value || '0') ?? 0), 0)
   const deliveryFee = choices.reduce((sum, choice) => sum + choice.perTrip * choice.trips, 0)
-  const nextStep = changed || delivery ? 'The Buyer reviews and approves this version within 24 hours before paying.' : nrpcOn ? 'The Buyer reviews and accepts the NRPC within 24 hours before paying.' : 'The order becomes payable right away with a 45-minute payment window.'
+  const nextStep = changed || delivery ? 'The Buyer reviews and approves this version within 24 hours before paying.' : nrpcOn ? 'The Buyer reviews and accepts the NRPC within 24 hours before paying.' : 'The order becomes payable right away with a 24-hour payment window.'
 
   async function loadPlan() {
     setPlanBusy(true); setMessage(null)
@@ -328,7 +330,7 @@ function ConfirmationWorkspace({ order, onDone, onReload }: { order: OrderDetail
     try {
       const next = await confirmOrder(order.id, request, idempotencyKey.current)
       idempotencyKey.current = newIdempotencyKey()
-      onDone(next, changed || delivery ? 'Sent to the Buyer for approval. The confirmed stock is reserved.' : nrpcOn ? 'NRPC sent to the Buyer. The confirmed stock is reserved.' : 'Order confirmed and stock reserved. The Buyer has 45 minutes to pay.')
+      onDone(next, changed || delivery ? 'Sent to the Buyer for approval. The confirmed stock is reserved.' : nrpcOn ? 'NRPC sent to the Buyer. The confirmed stock is reserved.' : 'Order confirmed and stock reserved. The Buyer has 24 hours to pay.')
     } catch (cause) {
       idempotencyKey.current = newIdempotencyKey()
       const failure = await apiFailure(cause)

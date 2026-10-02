@@ -73,6 +73,7 @@ final class FeeAssessmentService
             }
             DB::table('fee_assessments')->where('id', $assessment->id)->update(['state' => 'EARNED', 'earned_centavos' => (int) $assessment->earned_target_centavos, 'earned_at' => now(), 'updated_at' => now()]);
             $this->event((string) $assessment->id, $orderId, 'EARNED', 'COMPLETED', (int) $assessment->earned_target_centavos, $correlationId);
+            app(CommissionService::class)->postEarning($assessment, (int) $assessment->earned_target_centavos, $correlationId);
 
             return (int) $assessment->earned_target_centavos;
         });

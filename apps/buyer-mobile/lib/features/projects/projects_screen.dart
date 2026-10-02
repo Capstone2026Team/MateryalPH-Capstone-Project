@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import '../../design_system/components/work_package_attachment.dart';
+import '../../design_system/components/buyer_app_bar.dart';
 import '../../design_system/components/form_dialog.dart';
 import '../../design_system/components/procurement_components.dart';
 import '../../design_system/theme.dart';
@@ -398,17 +399,15 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     },
     child: Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: AppBar(
-        leading: _project == null
+      appBar: buyerAppBar(
+        context,
+        projectText(_package?['name'] ?? _project?['name'] ?? 'Projects'),
+        // Inside a Project the back control steps up the Project hierarchy, not the route stack.
+        onBack: _project == null
             ? null
-            : IconButton(
-                onPressed: _busy ? null : _back,
-                icon: const Icon(Icons.arrow_back),
-                tooltip: 'Back',
-              ),
-        title: Text(
-          projectText(_package?['name'] ?? _project?['name'] ?? 'Projects'),
-        ),
+            : () {
+                if (!_busy) _back();
+              },
         actions: [
           IconButton(
             onPressed: _busy ? null : _preferences,
@@ -1809,10 +1808,9 @@ class _WorkPackageEditorState extends State<WorkPackageEditor> {
   Widget build(BuildContext context) => PopScope(
     canPop: !busy,
     child: Scaffold(
-      appBar: AppBar(
-        title: Text(
-          widget.newVersion ? 'New Work Package version' : 'Work Package Draft',
-        ),
+      appBar: buyerAppBar(
+        context,
+        widget.newVersion ? 'New Work Package version' : 'Work Package Draft',
       ),
       bottomNavigationBar: SafeArea(
         top: false,

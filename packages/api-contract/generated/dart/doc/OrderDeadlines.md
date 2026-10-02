@@ -10,7 +10,7 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **vendorResponseDueAt** | [**DateTime**](DateTime.md) |  |
 **buyerResponseDueAt** | [**DateTime**](DateTime.md) |  |
-**paymentExpiresAt** | [**DateTime**](DateTime.md) | 45 minutes after the order entered AWAITING_PAYMENT. |
+**paymentExpiresAt** | [**DateTime**](DateTime.md) | 24 hours after the order entered AWAITING_PAYMENT (Pending Payment). The server clock decides; clients only display it. |
 **serverTime** | [**DateTime**](DateTime.md) |  |
 **timezone** | **String** |  |
 

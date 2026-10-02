@@ -3,6 +3,12 @@ import 'package:flutter/foundation.dart';
 import 'discovery_models.dart';
 import 'directory_photo_loader.dart';
 import 'discovery_repository.dart';
+import 'discovery_result_cache.dart';
+
+/// Directory details (hours, phone, reviews) are live Google content: kept in memory for this app
+/// session only and never written to disk. Reselecting a supplier inside this window reuses them
+/// instead of paying for another Place Details call.
+const Duration kDirectoryDetailsSessionTtl = Duration(minutes: 15);
 
 enum DiscoveryPhase { initializing, needsOrigin, loading, ready, failed }
 
@@ -13,11 +19,22 @@ enum RoutePhase { idle, loading, ready, failed }
 /// sequence and the origin/selection it was requested for; a result that no longer matches the
 /// current origin, radius or selection is discarded so a slow response never overwrites newer state.
 class DiscoveryController extends ChangeNotifier {
-  DiscoveryController({required DiscoveryRepository repository})
-    : _repository = repository;
+  DiscoveryController({
+    required DiscoveryRepository repository,
+    DiscoveryResultStore? store,
+    DateTime Function()? now,
+  }) : _repository = repository,
+       _store = store,
+       _now = now ?? DateTime.now;
 
   final DiscoveryRepository _repository;
+  final DiscoveryResultStore? _store;
+  final DateTime Function() _now;
   late final directoryPhotos = DirectoryPhotoLoader(_repository);
+  final Map<String, (DirectoryDetailsView, DateTime)> _detailsCache = {};
+
+  /// True while the list on screen came from the saved copy and has not been confirmed yet.
+  bool showingSavedResults = false;
 
   DiscoveryPhase phase = DiscoveryPhase.initializing;
   DiscoveryOrigin? origin;
@@ -136,9 +153,10 @@ class DiscoveryController extends ChangeNotifier {
   }
 
   /// Pull-to-refresh: reruns the search without changing saved preferences.
-  Future<void> refresh() => search(keepSelection: true);
+  Future<void> refresh() => search(keepSelection: true, force: true);
 
-  Future<void> search({bool keepSelection = false}) async {
+  /// [force] skips the saved copy's fresh window (pull-to-refresh, retry) and always asks the server.
+  Future<void> search({bool keepSelection = false, bool force = false}) async {
     final currentOrigin = origin;
     if (currentOrigin == null) {
       phase = DiscoveryPhase.needsOrigin;
@@ -149,7 +167,32 @@ class DiscoveryController extends ChangeNotifier {
     loadingMore = false;
     final radius = radiusKm;
     final activeFilters = filters;
-    phase = DiscoveryPhase.loading;
+    final cacheKey = discoveryCacheKey(currentOrigin, radius, activeFilters);
+    // A saved copy of this exact location + radius is shown immediately, before any request.
+    final saved = cacheKey == null || force || _store == null
+        ? null
+        : await _store.read(cacheKey);
+    if (!_current(sequence, currentOrigin, radius, activeFilters)) return;
+    if (saved != null && !saved.isExpired(_now())) {
+      _clearSelection();
+      page = saved.page;
+      items = saved.items;
+      _loadedPage = 1;
+      failure = null;
+      resultsStale = false;
+      showingSavedResults = true;
+      phase = DiscoveryPhase.ready;
+      _notify();
+      // Recent enough: no request at all. The server's own place cache covers Google separately.
+      if (saved.isFresh(_now())) {
+        showingSavedResults = false;
+        _notify();
+        return;
+      }
+      keepSelection = true;
+    }
+    // With a saved copy on screen the list stays visible while the server confirms it.
+    if (!showingSavedResults) phase = DiscoveryPhase.loading;
     failure = null;
     _routeSequence++;
     route = null;
@@ -168,6 +211,35 @@ class DiscoveryController extends ChangeNotifier {
         filters: activeFilters,
       );
       if (!_current(sequence, currentOrigin, radius, activeFilters)) return;
+      if (showingSavedResults) {
+        // Swap once, after every page arrived, so the visible list never shrinks to page 1 and regrows.
+        var latest = result;
+        var loaded = 1;
+        final merged = [...result.items];
+        final known = merged.map((item) => item.resultId).toSet();
+        while (latest.hasMore && loaded < 50) {
+          latest = await _repository.search(
+            origin: currentOrigin,
+            radiusKm: radius,
+            filters: activeFilters,
+            page: loaded + 1,
+          );
+          if (!_current(sequence, currentOrigin, radius, activeFilters)) return;
+          loaded++;
+          merged.addAll(latest.items.where((item) => known.add(item.resultId)));
+        }
+        page = latest;
+        items = merged;
+        _loadedPage = loaded;
+        showingSavedResults = false;
+        resultsStale = false;
+        phase = DiscoveryPhase.ready;
+        if (selected == null) _clearSelection();
+        _notify();
+        if (selected != null) await _requestRoute(selected!);
+        await _persist();
+        return;
+      }
       page = result;
       _loadedPage = 1;
       items = result.items;
@@ -185,8 +257,10 @@ class DiscoveryController extends ChangeNotifier {
         await loadMore();
         if (_loadedPage == before) break;
       }
+      await _persist();
     } on DiscoveryFailure catch (error) {
       if (!_current(sequence, currentOrigin, radius, activeFilters)) return;
+      showingSavedResults = false;
       failure = error;
       if (error.code == 'LOCATION_NOT_FOUND' ||
           error.code == 'LOCATION_OUTSIDE_PHILIPPINES') {
@@ -206,6 +280,31 @@ class DiscoveryController extends ChangeNotifier {
       _notify();
     }
   }
+
+  /// Saves the complete result set for this saved location + radius. Never saves a partial set, a
+  /// stale one, or one for device/pin coordinates.
+  Future<void> _persist() async {
+    final store = _store;
+    final currentOrigin = origin;
+    final current = page;
+    if (store == null ||
+        currentOrigin == null ||
+        current == null ||
+        current.hasMore ||
+        resultsStale ||
+        failure != null) {
+      return;
+    }
+    final key = discoveryCacheKey(currentOrigin, radiusKm, filters);
+    if (key == null) return;
+    await store.write(
+      key,
+      CachedDiscovery(items: items, page: current, savedAt: _now()),
+    );
+  }
+
+  /// Forget every saved result set (sign-out, expired session).
+  Future<void> clearSavedResults() async => _store?.clear();
 
   Future<void> loadMore() async {
     final current = page;
@@ -287,6 +386,7 @@ class DiscoveryController extends ChangeNotifier {
     _notify();
     try {
       await _repository.setFavorite(supplier.resultId, favorite: next);
+      await _persist();
     } on DiscoveryFailure catch (error) {
       items = [
         for (final item in items)
@@ -310,6 +410,7 @@ class DiscoveryController extends ChangeNotifier {
         for (final item in items)
           item.resultId == vendorId ? item.withFavorite(favorite) : item,
       ];
+      await _persist();
     } finally {
       _favoritePending.remove(vendorId);
       _notify();
@@ -357,11 +458,24 @@ class DiscoveryController extends ChangeNotifier {
 
   Future<void> _loadDirectoryDetails(SupplierResultView supplier) async {
     final sequence = ++_detailsSequence;
+    final reusable = _detailsCache[supplier.resultId];
+    if (reusable != null &&
+        _now().difference(reusable.$2) < kDirectoryDetailsSessionTtl) {
+      directoryDetails = reusable.$1;
+      directoryLoading = false;
+      directoryFailure = null;
+      _notify();
+      return;
+    }
     directoryLoading = true;
     directoryFailure = null;
     _notify();
     try {
       final details = await _repository.directoryDetails(supplier.resultId);
+      if (_detailsCache.length >= 50) {
+        _detailsCache.remove(_detailsCache.keys.first);
+      }
+      _detailsCache[supplier.resultId] = (details, _now());
       if (sequence != _detailsSequence || selectedId != supplier.resultId) {
         return;
       }

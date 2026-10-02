@@ -128,6 +128,7 @@ void main() {
         home: BuyerHomeScreen(
           repository: account_fixtures.repository(),
           discoveryRepository: FakeDiscoveryRepository(),
+          resultStore: MemoryDiscoveryResultStore(),
           onSignOut: () async => throw Exception('private server detail'),
         ),
       ),

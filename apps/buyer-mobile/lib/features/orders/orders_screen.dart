@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../design_system/components/buyer_app_bar.dart';
 import '../../design_system/components/order_components.dart';
 import '../../design_system/components/procurement_components.dart';
 import '../../design_system/theme.dart';
@@ -8,27 +9,8 @@ import '../item_procurement/procurement_models.dart' show formatPeso;
 import '../map_discovery/discovery_models.dart';
 import 'order_details_screen.dart';
 import 'order_models.dart';
+import 'order_payment_screen.dart';
 import 'orders_repository.dart';
-
-PreferredSizeWidget orderAppBar(BuildContext context, String title) => AppBar(
-  automaticallyImplyLeading: false,
-  leadingWidth: 60,
-  leading: (ModalRoute.of(context)?.canPop ?? false)
-      ? Center(
-          child: RoundIconButton(
-            icon: LucideIcons.arrowLeft,
-            tooltip: 'Back',
-            filled: true,
-            onPressed: () => Navigator.of(context).maybePop(),
-          ),
-        )
-      : null,
-  centerTitle: true,
-  title: Text(
-    title,
-    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-  ),
-);
 
 /// The Buyer order hub: Needs action, Active, Completed, Cancelled and Disputed, each card showing
 /// separate order and payment states, the next step and any deadline in Philippine time.
@@ -37,10 +19,12 @@ class OrdersScreen extends StatefulWidget {
     super.key,
     required this.repository,
     this.initialGroup = 'AWAITING_ACTION',
+    this.paymentLauncher = launchPaymentPage,
   });
 
   final OrdersRepository repository;
   final String initialGroup;
+  final PaymentLauncher paymentLauncher;
 
   @override
   State<OrdersScreen> createState() => _OrdersScreenState();
@@ -101,6 +85,22 @@ class _OrdersScreenState extends State<OrdersScreen> {
         builder: (_) => OrderDetailsScreen(
           orderId: order.id,
           repository: widget.repository,
+          paymentLauncher: widget.paymentLauncher,
+        ),
+      ),
+    );
+    if (mounted) await _load();
+  }
+
+  /// Pay now from the list: the payment page resumes a checkout that is already open instead of
+  /// starting a second one, so the same order and amount are never charged twice.
+  Future<void> _pay(OrderSummaryView order) async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => OrderPaymentScreen(
+          orderId: order.id,
+          repository: widget.repository,
+          launcher: widget.paymentLauncher,
         ),
       ),
     );
@@ -110,7 +110,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: Colors.white,
-    appBar: orderAppBar(context, 'My orders'),
+    appBar: buyerAppBar(context, 'My orders'),
     body: SafeArea(
       child: Column(
         children: [
@@ -195,7 +195,13 @@ class _OrdersScreenState extends State<OrdersScreen> {
           }
           return _OrderCard(
             order: _items[index],
+            onDeadline: _load,
             onTap: () => _open(_items[index]),
+            onPay:
+                _items[index].state('ORDER') == 'AWAITING_PAYMENT' &&
+                    _items[index].nextAction == 'PAY'
+                ? () => _pay(_items[index])
+                : null,
           );
         },
       ),
@@ -204,15 +210,24 @@ class _OrdersScreenState extends State<OrdersScreen> {
 }
 
 class _OrderCard extends StatelessWidget {
-  const _OrderCard({required this.order, required this.onTap});
+  const _OrderCard({
+    required this.order,
+    required this.onTap,
+    required this.onDeadline,
+    this.onPay,
+  });
 
   final OrderSummaryView order;
   final VoidCallback onTap;
+  final VoidCallback onDeadline;
+
+  /// Present only while the order is Pending Payment.
+  final VoidCallback? onPay;
 
   String? get _next => switch (order.nextAction) {
     'REVIEW_REVISION' => 'Review the Vendor’s confirmed version',
     'REVIEW_NRPC' => 'Review the preparation cost',
-    'PAY' => 'Ready for payment',
+    'PAY' => 'Payment needed',
     _ => null,
   };
 
@@ -222,7 +237,7 @@ class _OrderCard extends StatelessWidget {
     final prefix = switch (deadline.kind) {
       'VENDOR_RESPONSE' => 'Vendor responds by',
       'BUYER_RESPONSE' => 'Respond by',
-      _ => 'Pay by',
+      _ => 'Pay before',
     };
     return '$prefix ${formatManilaDateTime(deadline.at)}';
   }
@@ -373,6 +388,28 @@ class _OrderCard extends StatelessWidget {
                       ),
                     ),
                   ],
+                ),
+              ),
+            ],
+            if (onPay != null) ...[
+              if (order.deadline != null)
+                DeadlineCountdown(
+                  deadline: order.deadline!.at,
+                  label: 'Pay before',
+                  onExpired: onDeadline,
+                ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: onPay,
+                  icon: const Icon(LucideIcons.creditCard, size: 18),
+                  label: Text(
+                    order.paymentRetryable ? 'Re-process payment' : 'Pay now',
+                  ),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(44),
+                  ),
                 ),
               ),
             ],

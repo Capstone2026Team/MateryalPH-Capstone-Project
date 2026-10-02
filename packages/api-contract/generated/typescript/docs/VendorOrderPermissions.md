@@ -13,6 +13,8 @@ Name | Type
 `canConfirmDelivery` | boolean
 `canDecline` | boolean
 `canViewInventory` | boolean
+`canRecordPhysicalPayment` | boolean
+`canApproveOnlineBalance` | boolean
 
 ## Example
 
@@ -27,6 +29,8 @@ const example = {
   "canConfirmDelivery": null,
   "canDecline": null,
   "canViewInventory": null,
+  "canRecordPhysicalPayment": null,
+  "canApproveOnlineBalance": null,
 } satisfies VendorOrderPermissions
 
 console.log(example)

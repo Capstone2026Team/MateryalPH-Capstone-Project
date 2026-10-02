@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api;
 use App\Domain\Orders\BuyerOrderDecisionService;
 use App\Domain\Orders\OrderQueries;
 use App\Domain\Orders\OrderSubmissionService;
+use App\Domain\Payments\PaymentMethodPolicy;
 use App\Http\ApiResponse;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
@@ -25,8 +26,10 @@ final class BuyerOrderController extends Controller
             'vendor_ids' => ['required', 'array', 'min:1', 'max:'.OrderSubmissionService::MAX_GROUPS],
             'vendor_ids.*' => ['required', 'uuid', 'distinct'],
             'split_confirmed' => ['sometimes', 'boolean'],
+            'payment_methods' => ['sometimes', 'array', 'max:'.OrderSubmissionService::MAX_GROUPS],
+            'payment_methods.*' => ['required', Rule::in(PaymentMethodPolicy::METHODS)],
         ]);
-        /** @var array{cart_lock_version: int, vendor_ids: list<string>, split_confirmed?: bool} $input */
+        /** @var array{cart_lock_version: int, vendor_ids: list<string>, split_confirmed?: bool, payment_methods?: array<string, string>} $input */
         $result = $submission->submit($request, $input);
 
         return ApiResponse::success($result['checkout'], ['replayed' => $result['replayed']], $result['replayed'] ? 200 : 201);

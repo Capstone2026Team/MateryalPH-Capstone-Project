@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:materyalph_api_client/materyalph_api_client.dart';
 
+import '../design_system/components/buyer_app_bar.dart';
 import '../design_system/components/procurement_components.dart';
 import '../features/item_procurement/procurement_models.dart';
 import '../features/item_procurement/procurement_repository.dart';
@@ -204,7 +205,7 @@ class _BuyerPublicStoreProfileScreenState
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Store Profile')),
+    appBar: buyerAppBar(context, 'Store Profile'),
     body: FutureBuilder<PublicStoreProfile>(
       future: _profile,
       builder: (context, snapshot) {

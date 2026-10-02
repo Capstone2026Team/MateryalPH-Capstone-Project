@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:materyalph/design_system/theme.dart';
@@ -11,7 +12,7 @@ import 'map_discovery_fakes.dart';
 
 void main() {
   testWidgets(
-    'directory photo attribution links do not select the supplier; rebuilds do not refetch',
+    'directory rows show the photo without credit links; rebuilds do not refetch',
     (tester) async {
       final repo = FakeDiscoveryRepository()
         ..photo = const DirectoryPhotoView(
@@ -25,7 +26,6 @@ void main() {
           [],
         );
       final loader = DirectoryPhotoLoader(repo);
-      final links = <Uri>[];
       var selections = 0;
       Widget row(bool selected) => MaterialApp(
         theme: BuyerTheme.light,
@@ -35,7 +35,6 @@ void main() {
             selected: selected,
             photoLoader: loader,
             onTap: () => selections++,
-            onOpenLink: (uri) async => links.add(uri),
           ),
         ),
       );
@@ -44,12 +43,15 @@ void main() {
       await tester.pumpAndSettle();
       expect(repo.photoCalls, 1);
       expect(repo.detailCalls, 0);
-      expect(find.text('Store Owner'), findsOneWidget);
+      expect(find.text('Store Owner'), findsNothing);
+      expect(find.text('Google Maps'), findsNothing);
+      // A Directory Supplier cannot be saved, so it has no save control.
+      expect(find.byIcon(Icons.bookmark_border), findsNothing);
       final image = tester.widget<Image>(find.byType(Image).first);
-      expect((image.image as NetworkImage).url, repo.photo.photo!.uri);
-      await tester.tap(find.text('Google Maps'));
-      await tester.pumpAndSettle();
-      expect(links.single.toString(), 'https://maps.google.com/photo/1');
+      expect(
+        ((image.image as ResizeImage).imageProvider as NetworkImage).url,
+        repo.photo.photo!.uri,
+      );
       expect(selections, 0);
       await tester.pumpWidget(row(true));
       await tester.pump(const Duration(seconds: 1));
@@ -82,18 +84,42 @@ void main() {
         ),
       );
       await tester.pump(const Duration(seconds: 1));
-      final image = tester.widget<Image>(find.byType(Image));
-      expect(
-        (image.image as NetworkImage).url,
-        'https://media.example.test/store-logo',
+      // The logo is our own public media, so it goes through the on-disk image cache under a
+      // stable key (the URL); Google photos never do.
+      final logo = tester.widget<CachedNetworkImage>(
+        find.byType(CachedNetworkImage),
       );
-      expect(image.fit, BoxFit.contain);
+      expect(logo.imageUrl, 'https://media.example.test/store-logo');
+      expect(logo.cacheKey, 'store-logo|https://media.example.test/store-logo');
+      expect(logo.fit, BoxFit.contain);
       expect(repo.photoCalls, 0);
       expect(find.text('Google Maps'), findsNothing);
       await tester.pumpWidget(const SizedBox());
       loader.dispose();
     },
   );
+
+  testWidgets('a Verified Vendor row has a save icon that does not open the row', (
+    tester,
+  ) async {
+    var saved = 0;
+    var opened = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SupplierRow(
+            item: verifiedSupplier('verified'),
+            selected: false,
+            onTap: () => opened++,
+            onToggleFavorite: () => saved++,
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.byIcon(Icons.bookmark_border));
+    expect(saved, 1);
+    expect(opened, 0);
+  });
 
   testWidgets('rows removed during a fling do not fetch photos', (
     tester,

@@ -347,6 +347,8 @@ class _$OrderSummary extends OrderSummary {
   @override
   final OrderSummaryNextActionEnum? nextAction;
   @override
+  final bool? paymentRetryable;
+  @override
   final OrderBuyerRef? buyer;
   @override
   final VendorOrderPrimaryAction? primaryAction;
@@ -375,6 +377,7 @@ class _$OrderSummary extends OrderSummary {
       this.deadline,
       this.expectedFulfillmentDate,
       this.nextAction,
+      this.paymentRetryable,
       this.buyer,
       this.primaryAction,
       this.nrpcIndicator})
@@ -408,6 +411,7 @@ class _$OrderSummary extends OrderSummary {
         deadline == other.deadline &&
         expectedFulfillmentDate == other.expectedFulfillmentDate &&
         nextAction == other.nextAction &&
+        paymentRetryable == other.paymentRetryable &&
         buyer == other.buyer &&
         primaryAction == other.primaryAction &&
         nrpcIndicator == other.nrpcIndicator;
@@ -434,6 +438,7 @@ class _$OrderSummary extends OrderSummary {
     _$hash = $jc(_$hash, deadline.hashCode);
     _$hash = $jc(_$hash, expectedFulfillmentDate.hashCode);
     _$hash = $jc(_$hash, nextAction.hashCode);
+    _$hash = $jc(_$hash, paymentRetryable.hashCode);
     _$hash = $jc(_$hash, buyer.hashCode);
     _$hash = $jc(_$hash, primaryAction.hashCode);
     _$hash = $jc(_$hash, nrpcIndicator.hashCode);
@@ -462,6 +467,7 @@ class _$OrderSummary extends OrderSummary {
           ..add('deadline', deadline)
           ..add('expectedFulfillmentDate', expectedFulfillmentDate)
           ..add('nextAction', nextAction)
+          ..add('paymentRetryable', paymentRetryable)
           ..add('buyer', buyer)
           ..add('primaryAction', primaryAction)
           ..add('nrpcIndicator', nrpcIndicator))
@@ -564,6 +570,11 @@ class OrderSummaryBuilder
   set nextAction(OrderSummaryNextActionEnum? nextAction) =>
       _$this._nextAction = nextAction;
 
+  bool? _paymentRetryable;
+  bool? get paymentRetryable => _$this._paymentRetryable;
+  set paymentRetryable(bool? paymentRetryable) =>
+      _$this._paymentRetryable = paymentRetryable;
+
   OrderBuyerRefBuilder? _buyer;
   OrderBuyerRefBuilder get buyer => _$this._buyer ??= OrderBuyerRefBuilder();
   set buyer(OrderBuyerRefBuilder? buyer) => _$this._buyer = buyer;
@@ -603,6 +614,7 @@ class OrderSummaryBuilder
       _deadline = $v.deadline?.toBuilder();
       _expectedFulfillmentDate = $v.expectedFulfillmentDate;
       _nextAction = $v.nextAction;
+      _paymentRetryable = $v.paymentRetryable;
       _buyer = $v.buyer?.toBuilder();
       _primaryAction = $v.primaryAction;
       _nrpcIndicator = $v.nrpcIndicator;
@@ -658,6 +670,7 @@ class OrderSummaryBuilder
             deadline: _deadline?.build(),
             expectedFulfillmentDate: expectedFulfillmentDate,
             nextAction: nextAction,
+            paymentRetryable: paymentRetryable,
             buyer: _buyer?.build(),
             primaryAction: primaryAction,
             nrpcIndicator: nrpcIndicator,

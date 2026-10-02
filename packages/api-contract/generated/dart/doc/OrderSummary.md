@@ -26,6 +26,7 @@ Name | Type | Description | Notes
 **deadline** | [**OrderDeadline**](OrderDeadline.md) |  |
 **expectedFulfillmentDate** | [**Date**](Date.md) |  |
 **nextAction** | **String** |  | [optional]
+**paymentRetryable** | **bool** | Buyer list only. True when the order is Pending Payment and its latest checkout attempt failed or expired. Retry uses the same order and principal. | [optional]
 **buyer** | [**OrderBuyerRef**](OrderBuyerRef.md) |  | [optional]
 **primaryAction** | [**VendorOrderPrimaryAction**](VendorOrderPrimaryAction.md) |  | [optional]
 **nrpcIndicator** | **bool** |  | [optional]

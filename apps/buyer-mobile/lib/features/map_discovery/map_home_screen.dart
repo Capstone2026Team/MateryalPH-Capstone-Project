@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:share_plus/share_plus.dart';
@@ -37,6 +39,7 @@ class MapHomeScreen extends StatefulWidget {
     this.controller,
     this.onOpenSearch,
     this.onOpenCart,
+    this.onMessageStore,
   });
 
   final DiscoveryRepository repository;
@@ -52,6 +55,10 @@ class MapHomeScreen extends StatefulWidget {
   final VoidCallback? onOpenSearch;
   final VoidCallback? onOpenCart;
 
+  /// A conversation is about a product, so Message on a store opens that store's products.
+  final void Function(BuildContext context, SupplierResultView supplier)?
+  onMessageStore;
+
   @override
   State<MapHomeScreen> createState() => _MapHomeScreenState();
 }
@@ -64,6 +71,7 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
   bool? _listMode;
   int _recenter = 0;
   double _sheetExtent = 0.25;
+  Timer? _settleTimer;
   String? _lastSelected;
   bool _onboardingDismissed = false;
   bool _welcomeOpen = false;
@@ -85,6 +93,7 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
 
   @override
   void dispose() {
+    _settleTimer?.cancel();
     _controller.removeListener(_onChanged);
     if (widget.controller == null) _controller.dispose();
     _sheet.dispose();
@@ -446,7 +455,6 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
           onExpand: _expand,
           onChangeLocation: _chooseLocation,
           onAdjustFilters: _openFilters,
-          onOpenLink: _openLink,
           scrollController: scroll,
         )
       : ListView(
@@ -456,7 +464,9 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
               key: ValueKey(_controller.selectedId),
               controller: _controller,
               onViewStore: (supplier) => widget.onOpenStore(context, supplier),
-              onMessage: (_) => widget.onUnavailable?.call('Messages'),
+              onMessage: (supplier) => widget.onMessageStore != null
+                  ? widget.onMessageStore!(context, supplier)
+                  : widget.onUnavailable?.call('Messages'),
               onClose: _controller.clearSelection,
               onOpenLink: _openLink,
               onShare: _share,
@@ -467,7 +477,15 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
   Widget _stacked(BoxConstraints constraints) =>
       NotificationListener<DraggableScrollableNotification>(
         onNotification: (notification) {
-          setState(() => _sheetExtent = notification.extent);
+          // Rebuilding the whole screen (and re-padding the Google map) on every drag frame is what
+          // made the sheet lag. Wait until the finger stops, then apply the final size once.
+          _settleTimer?.cancel();
+          final extent = notification.extent;
+          _settleTimer = Timer(const Duration(milliseconds: 120), () {
+            if (mounted && (extent - _sheetExtent).abs() > 0.002) {
+              setState(() => _sheetExtent = extent);
+            }
+          });
           return false;
         },
         child: Stack(
@@ -482,9 +500,11 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
               minSize: _peek,
               maxSize: _expanded,
               snapSizes: const [_peek, _half, _expanded],
-              builder: (context, scroll) => RefreshIndicator(
-                onRefresh: _controller.refresh,
-                child: _panel(scroll),
+              builder: (context, scroll) => RepaintBoundary(
+                child: RefreshIndicator(
+                  onRefresh: _controller.refresh,
+                  child: _panel(scroll),
+                ),
               ),
             ),
           ],

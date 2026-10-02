@@ -17,6 +17,8 @@ part 'vendor_order_permissions.g.dart';
 /// * [canConfirmDelivery]
 /// * [canDecline]
 /// * [canViewInventory]
+/// * [canRecordPhysicalPayment]
+/// * [canApproveOnlineBalance]
 @BuiltValue()
 abstract class VendorOrderPermissions implements Built<VendorOrderPermissions, VendorOrderPermissionsBuilder> {
   @BuiltValueField(wireName: r'can_confirm')
@@ -36,6 +38,12 @@ abstract class VendorOrderPermissions implements Built<VendorOrderPermissions, V
 
   @BuiltValueField(wireName: r'can_view_inventory')
   bool get canViewInventory;
+
+  @BuiltValueField(wireName: r'can_record_physical_payment')
+  bool? get canRecordPhysicalPayment;
+
+  @BuiltValueField(wireName: r'can_approve_online_balance')
+  bool? get canApproveOnlineBalance;
 
   VendorOrderPermissions._();
 
@@ -90,6 +98,20 @@ class _$VendorOrderPermissionsSerializer implements PrimitiveSerializer<VendorOr
       object.canViewInventory,
       specifiedType: const FullType(bool),
     );
+    if (object.canRecordPhysicalPayment != null) {
+      yield r'can_record_physical_payment';
+      yield serializers.serialize(
+        object.canRecordPhysicalPayment,
+        specifiedType: const FullType(bool),
+      );
+    }
+    if (object.canApproveOnlineBalance != null) {
+      yield r'can_approve_online_balance';
+      yield serializers.serialize(
+        object.canApproveOnlineBalance,
+        specifiedType: const FullType(bool),
+      );
+    }
   }
 
   @override
@@ -154,6 +176,22 @@ class _$VendorOrderPermissionsSerializer implements PrimitiveSerializer<VendorOr
             specifiedType: const FullType(bool),
           ) as bool;
           result.canViewInventory = valueDes;
+          break;
+        case r'can_record_physical_payment':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.canRecordPhysicalPayment = valueDes;
+          break;
+        case r'can_approve_online_balance':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.canApproveOnlineBalance = valueDes;
           break;
         default:
           unhandled.add(key);

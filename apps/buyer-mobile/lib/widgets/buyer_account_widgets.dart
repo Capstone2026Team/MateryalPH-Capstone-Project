@@ -1,22 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:materyalph_api_client/materyalph_api_client.dart';
+import '../design_system/components/buyer_app_bar.dart';
 import '../design_system/theme.dart';
 
-AppBar buyerAccountBar(BuildContext context, String title) => AppBar(
-  title: Text(title),
-  centerTitle: true,
-  toolbarHeight:
-      56 + (MediaQuery.textScalerOf(context).scale(20) - 20).clamp(0, 48),
-  backgroundColor: Colors.white,
-  leading: Navigator.canPop(context)
-      ? IconButton(
-          tooltip: 'Back',
-          icon: const Icon(LucideIcons.arrowLeft, color: BuyerTheme.action),
-          onPressed: () => Navigator.pop(context),
-        )
-      : null,
-);
+PreferredSizeWidget buyerAccountBar(BuildContext context, String title) =>
+    buyerAppBar(context, title);
 
 class BuyerMenuRow extends StatelessWidget {
   const BuyerMenuRow({

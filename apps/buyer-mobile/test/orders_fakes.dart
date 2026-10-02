@@ -63,6 +63,8 @@ OrderDetailView orderDetail({
   DateTime? vendorResponseDueAt,
   bool autoAccepted = false,
   ConfirmedDeliveryView? confirmedDelivery,
+  OrderPaymentView? paymentView,
+  String? terminalReasonCode,
 }) => OrderDetailView(
   id: 'order-1',
   reference: 'ORD-2026-ABCD1234',
@@ -135,8 +137,10 @@ OrderDetailView orderDetail({
   vendorResponseDueAt: vendorResponseDueAt,
   buyerResponseDueAt: buyerResponseDueAt,
   paymentExpiresAt: paymentExpiresAt,
+  payment: paymentView,
+  terminalReasonCode: terminalReasonCode,
   paymentNotice: state == 'AWAITING_PAYMENT'
-      ? 'Online payment opens in the payments release. Your stock stays reserved until the payment window ends.'
+      ? 'TEST — no real charge. The order is confirmed only after the payment provider verifies your payment.'
       : null,
 );
 
@@ -166,6 +170,7 @@ OrderSummaryView orderSummary({
   String state = 'AWAITING_BUYER_APPROVAL',
   String? nextAction = 'REVIEW_REVISION',
   OrderDeadlineView? deadline,
+  bool paymentRetryable = false,
 }) => OrderSummaryView(
   id: id,
   reference: 'ORD-2026-ABCD1234',
@@ -180,6 +185,7 @@ OrderSummaryView orderSummary({
   deliveryPending: false,
   deadline: deadline,
   nextAction: nextAction,
+  paymentRetryable: paymentRetryable,
   autoAccepted: false,
 );
 
@@ -190,6 +196,7 @@ class FakeOrdersRepository implements OrdersRepository {
   OrderListPage? list;
   CheckoutView? checkout;
   DiscoveryFailure? failure;
+  DiscoveryFailure? paymentStartFailure;
   final List<String> calls = [];
   final List<String> keys = [];
   final List<Map<String, Object?>> submissions = [];
@@ -208,12 +215,14 @@ class FakeOrdersRepository implements OrdersRepository {
     required List<String> vendorIds,
     required bool splitConfirmed,
     required String idempotencyKey,
+    Map<String, String> paymentMethods = const {},
   }) async {
     keys.add(idempotencyKey);
     submissions.add({
       'cartLockVersion': cartLockVersion,
       'vendorIds': vendorIds,
       'splitConfirmed': splitConfirmed,
+      'paymentMethods': paymentMethods,
     });
     if (failure != null) {
       calls.add('submit');
@@ -279,4 +288,48 @@ class FakeOrdersRepository implements OrdersRepository {
     required String idempotencyKey,
   }) =>
       _answer('flagNrpc:$nrpcId:$reason', _decide('flagNrpc', idempotencyKey));
+
+  // Phase 11 payments: scripted provider-side results; a fake never marks anything paid by itself.
+  PaymentOptionsView? options;
+  PaymentAttemptView? attempt;
+  final List<PaymentAttemptView> refreshes = [];
+
+  @override
+  Future<PaymentOptionsView> paymentOptions(String orderId) =>
+      _answer('paymentOptions:$orderId', options!);
+
+  @override
+  Future<PaymentAttemptView> startPayment(
+    String orderId, {
+    required String channelCode,
+    required int expectedTotalCentavos,
+    required String idempotencyKey,
+  }) {
+    keys.add(idempotencyKey);
+    if (paymentStartFailure != null) return Future.error(paymentStartFailure!);
+    return _answer(
+      'startPayment:$channelCode:$expectedTotalCentavos',
+      attempt!,
+    );
+  }
+
+  @override
+  Future<PaymentAttemptView> payment(String paymentId) =>
+      _answer('payment:$paymentId', attempt!);
+
+  @override
+  Future<PaymentAttemptView> refreshPayment(String paymentId) => _answer(
+    'refreshPayment:$paymentId',
+    refreshes.isEmpty ? attempt! : refreshes.removeAt(0),
+  );
+
+  @override
+  Future<void> acknowledgePhysicalPayment(
+    String orderId, {
+    required String recordId,
+    required String idempotencyKey,
+  }) {
+    keys.add(idempotencyKey);
+    return _answer('acknowledge:$recordId', null);
+  }
 }

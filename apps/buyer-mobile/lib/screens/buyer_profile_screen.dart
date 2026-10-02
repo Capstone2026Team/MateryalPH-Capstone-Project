@@ -20,12 +20,18 @@ class BuyerProfileScreen extends StatefulWidget {
     this.discoveryRepository,
     this.onRankingPreferences,
     this.onOpenOrders,
+    this.onOpenCart,
+    this.onOpenSearch,
+    this.onOpenNotifications,
     this.onRemoveFavorite,
     this.deviceLocation = const GeolocatorDeviceLocationService(),
   });
   final AuthRepository repository;
   final VoidCallback? onRankingPreferences;
   final VoidCallback? onOpenOrders;
+  final VoidCallback? onOpenCart;
+  final VoidCallback? onOpenSearch;
+  final VoidCallback? onOpenNotifications;
   final Future<void> Function(String vendorId)? onRemoveFavorite;
   final DiscoveryRepository? discoveryRepository;
   final DeviceLocationService deviceLocation;
@@ -101,6 +107,12 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
               BuyerUnavailableScreen(title: title, artwork: artwork),
         ),
       );
+
+  /// Bell and Notification Settings share one destination, the same one the other tabs use.
+  void _openNotifications() => widget.onOpenNotifications != null
+      ? widget.onOpenNotifications!()
+      : _unavailable('Notifications', 'notifications');
+
   void _open(
     Widget Function(DiscoveryRepository repository) builder,
     String title, [
@@ -165,22 +177,24 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
             if (_profile != null) ...[
               BuyerIdentity(
                 profile: _profile!,
-                onSearch: () => ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Not yet implemented.')),
-                ),
-                onNotifications: () =>
-                    _unavailable('Notifications', 'notifications'),
+                onSearch:
+                    widget.onOpenSearch ??
+                    () => ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Not yet implemented.')),
+                    ),
+                onNotifications: _openNotifications,
               ),
               const BuyerSectionLabel('My purchases'),
               BuyerMenuRow(
                 label: 'Orders',
                 icon: LucideIcons.package,
-                onTap: () => _unavailable('Orders'),
+                onTap: widget.onOpenOrders ?? () => _unavailable('Orders'),
               ),
               BuyerMenuRow(
                 label: 'Cart',
                 icon: LucideIcons.shoppingCart,
-                onTap: () => _unavailable('Cart', 'cart'),
+                onTap:
+                    widget.onOpenCart ?? () => _unavailable('Cart', 'cart'),
               ),
               BuyerMenuRow(
                 label: 'Cancellations & Refunds',
@@ -252,8 +266,7 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
               BuyerMenuRow(
                 label: 'Notification Settings',
                 icon: LucideIcons.bell,
-                onTap: () =>
-                    _unavailable('Notification Settings', 'notifications'),
+                onTap: _openNotifications,
               ),
               const BuyerSectionLabel('Support'),
               BuyerMenuRow(

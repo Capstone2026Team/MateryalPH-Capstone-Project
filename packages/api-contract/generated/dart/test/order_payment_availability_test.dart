@@ -22,5 +22,40 @@ void main() {
       // TODO
     });
 
+    // String purpose
+    test('to test the property `purpose`', () async {
+      // TODO
+    });
+
+    // int principalCentavos
+    test('to test the property `principalCentavos`', () async {
+      // TODO
+    });
+
+    // PaymentAttempt latestAttempt
+    test('to test the property `latestAttempt`', () async {
+      // TODO
+    });
+
+    // PaymentAttempt verifiedPayment
+    test('to test the property `verifiedPayment`', () async {
+      // TODO
+    });
+
+    // BuiltList<PaymentAttempt> attempts
+    test('to test the property `attempts`', () async {
+      // TODO
+    });
+
+    // PhysicalPaymentSummary physical
+    test('to test the property `physical`', () async {
+      // TODO
+    });
+
+    // String environment
+    test('to test the property `environment`', () async {
+      // TODO
+    });
+
   });
 }

@@ -360,7 +360,9 @@ final class PhaseTenProjectsTest extends TestCase
         $this->signInBuyer($buyer);
         $order = $this->postJson('/api/v1/buyers/conversations/'.$chat.'/quotation/accept', ['version_id' => $quote['id'], 'content_hash' => $quote['content_hash']], $this->key())->assertOk()->json('data.order_id');
         $payment = (string) Str::uuid7();
-        DB::table('payments')->insert(['id' => $payment, 'order_id' => $order, 'purpose' => 'FULL_ORDER_PAYMENT', 'principal_centavos' => 17000, 'processing_fee_centavos' => 300, 'total_centavos' => 17300, 'state' => 'PAID', 'idempotency_key' => (string) Str::uuid7(), 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('payments')->insert(['id' => $payment, 'order_id' => $order, 'purpose' => 'FULL_ORDER_PAYMENT', 'principal_centavos' => 17000, 'processing_fee_centavos' => 300, 'total_centavos' => 17300, 'state' => 'PAID', 'idempotency_key' => (string) Str::uuid7(),
+            // Phase 11: a PAID row always carries its provider session, account and evidence origin.
+            'provider_account_id' => 'sim-sub-account', 'provider_session_id' => 'ps-sim'.Str::lower(Str::random(21)), 'paid_at' => now(), 'gateway_mode' => 'SIMULATED', 'evidence_origin' => 'SIMULATED', 'created_at' => now(), 'updated_at' => now()]);
         $this->getJson('/api/v1/buyers/work-packages/'.$w['id'])->assertOk()->assertJsonPath('data.budget.pending_centavos', 17300)->assertJsonPath('data.budget.actual_centavos', 0);
         // Synthetic financial facts exercise the Phase 10 read model; Phase 12 owns cancellation actions.
         DB::table('orders')->where('id', $order)->update(['order_state' => 'CANCELLED']);

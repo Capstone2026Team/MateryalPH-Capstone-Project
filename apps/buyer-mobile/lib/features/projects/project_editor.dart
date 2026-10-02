@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../design_system/components/buyer_app_bar.dart';
 import '../../design_system/components/procurement_components.dart';
 import '../map_discovery/discovery_models.dart';
 import 'projects_repository.dart';
@@ -114,8 +115,9 @@ class _ProjectEditorState extends State<ProjectEditor> {
   Widget build(BuildContext context) => PopScope(
     canPop: !_busy,
     child: Scaffold(
-      appBar: AppBar(
-        title: Text(_editing ? 'Edit Project planning' : 'Create Project'),
+      appBar: buyerAppBar(
+        context,
+        _editing ? 'Edit Project planning' : 'Create Project',
       ),
       bottomNavigationBar: SafeArea(
         top: false,

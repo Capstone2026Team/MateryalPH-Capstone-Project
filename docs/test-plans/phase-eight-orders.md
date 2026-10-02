@@ -26,7 +26,7 @@ Approved by the project owner on **2026-09-29**; these are not new interpretatio
 | Decision | Behavior |
 | --- | --- |
 | Buyer revision/NRPC window | 24 hours from Vendor revision/proposal; expiry sets `EXPIRED` and releases the hard reservation |
-| Online payment window | 45 minutes whenever the order enters `AWAITING_PAYMENT`, manually or automatically |
+| Online payment window | 24 hours whenever the order enters `AWAITING_PAYMENT`, manually or automatically (approved 2026-10-02) |
 | Auto-accept pickup date | Optional Inventory lead time in days, editable by Owner/Store Manager only; unset means whole-order manual review with `FULFILLMENT_DATE_NOT_CONFIGURED` |
 
 Preserved defaults: only Online at submission; COD/In-Store await Phase 11 but remain in FIN-02 matrix tests. Site Delivery never auto-accepts and needs Buyer approval of the confirmed drop-off, vehicles, trips and fee. Revisions may only reduce quantities or add an order-level Vendor discount. Rejecting revision/NRPC sets `CANCELLED` and releases stock. The processing fee remains pending until a payment channel is chosen in Phase 11.
@@ -36,7 +36,7 @@ Preserved defaults: only Online at submission; COD/In-Store await Phase 11 but r
 | Requirement | Automated evidence |
 | --- | --- |
 | Revision and NRPC expire exactly at 24 hours from Vendor action, not checkout | Four `test_buyer_window_is_24_hours_from_vendor_revision_and_releases_on_read_or_sweep` cases; delayed Vendor action, one second before deadline, exact boundary, release and repeated sweep |
-| Manual and auto-accepted online orders get 45 minutes | Manual confirmation test's exact UTC timestamp and 44:59/45:00 boundary; auto-accept test's exact deadline assertion and release/allotment restoration |
+| Manual and auto-accepted online orders get 24 hours | Manual confirmation test's exact UTC timestamp and 23:59:59/24:00:00 boundary; auto-accept test's exact deadline assertion and release/allotment restoration |
 | Missing lead time falls back, only Owner/Manager may edit | Existing whole-order fallback test; new six-role lead-time settings test, including denied writes retaining lock version |
 | Site Delivery needs manual confirmation and Buyer approval | Delivery confirmation/snapshot test, alternate versus intended endpoint, Owner/Manager authority, private coordinates and frozen commercial evidence |
 | Submission cannot offer cash or accept price overrides | New malicious COD/In-Store and unit-price-input test: only Online is persisted, submitted prices remain authoritative, negative discount rejected |

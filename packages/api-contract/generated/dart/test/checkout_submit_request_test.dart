@@ -23,5 +23,11 @@ void main() {
       // TODO
     });
 
+    // Vendor id => chosen method; Online when omitted. COD pairs with Site Delivery, In-Store with Self-Pickup, each only when the Vendor enabled it.
+    // BuiltMap<String, String> paymentMethods
+    test('to test the property `paymentMethods`', () async {
+      // TODO
+    });
+
   });
 }

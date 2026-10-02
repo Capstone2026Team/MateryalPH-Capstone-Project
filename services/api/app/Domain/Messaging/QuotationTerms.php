@@ -12,6 +12,7 @@ use App\Domain\Inventory\StockAvailability;
 use App\Domain\Orders\NrpcTerms;
 use App\Domain\Orders\OrderDeliveryPlanner;
 use App\Domain\Orders\OrderEligibility;
+use App\Domain\Payments\PaymentMethodPolicy;
 use App\Domain\Vendors\ConfirmedDeliverySnapshot;
 use App\Domain\Vendors\DeliveryRecommendationService;
 use App\Models\User;
@@ -33,7 +34,7 @@ final class QuotationTerms
             'lines.*.unit_price_centavos' => ['required', 'integer', 'between:1,100000000000'],
             'lines.*.description' => ['sometimes', 'string', 'max:200'], 'lines.*.specifications' => ['sometimes', 'array', 'max:30'],
             'lines.*.specifications.*' => ['string', 'max:200'],
-            'fulfillment_method' => ['required', 'in:PICKUP,DELIVERY'], 'payment_method' => ['required', 'in:ONLINE'],
+            'fulfillment_method' => ['required', 'in:PICKUP,DELIVERY'], 'payment_method' => ['required', 'in:ONLINE,CASH_ON_DELIVERY,IN_STORE'],
             'fulfillment_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:'.now('Asia/Manila')->toDateString()],
             'deadline_hours' => ['sometimes', 'integer', 'between:1,72'], 'vendor_discount_centavos' => ['sometimes', 'integer', 'min:0'],
             'delivery' => ['nullable', 'array'], 'delivery.vehicles' => ['required_if:fulfillment_method,DELIVERY', 'array', 'min:1', 'max:20'],
@@ -106,6 +107,7 @@ final class QuotationTerms
                 'source_price_version_id' => (string) $v->price_version_id, 'source_tax_version_id' => $taxVersion, 'publication_version' => (int) $v->publication_version,
                 'load' => ['weight_kg' => $v->weight_kg, 'length_cm' => $v->length_cm, 'width_cm' => $v->width_cm, 'height_cm' => $v->height_cm] + $this->materialLoad($v)];
         }
+        app(PaymentMethodPolicy::class)->assertAllowed((string) $c->vendor_organization_id, (string) $input['fulfillment_method'], (string) $input['payment_method']);
         $blockers = app(OrderEligibility::class)->lineBlockers((string) $c->vendor_organization_id, array_column($lines, 'tax_category', 'variant_id'));
         if ($blockers !== []) {
             throw new AuthenticationException('LINE_NOT_ELIGIBLE', 'A product is no longer available for quotation.', 409);

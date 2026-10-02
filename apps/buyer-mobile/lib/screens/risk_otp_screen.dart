@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../design_system/components/buyer_app_bar.dart';
 
 import '../widgets/auth_content.dart';
 import 'package:flutter/services.dart';
@@ -102,7 +103,7 @@ class _RiskOtpScreenState extends State<RiskOtpScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Security check')),
+    appBar: buyerAppBar(context, 'Security check'),
     body: SafeArea(
       child: AuthContent(
         padding: const EdgeInsets.all(24),

@@ -19,8 +19,28 @@ class DirectoryPhotoLoader {
   bool _disposed = false;
   DateTime? _suspendedUntil;
 
+  /// Thumbnails already fetched this session. Each fetch costs two Google Places calls (photo
+  /// reference, then the image URL), so a place is looked up at most once per [sessionTtl]. Held in
+  /// memory only: Google's terms do not allow storing Places photos, so nothing here touches disk.
+  static const Duration sessionTtl = Duration(minutes: 30);
+  static const int _maxSessionEntries = 300;
+  final _session = <String, (DirectoryPhotoView, DateTime)>{};
+
+  /// The thumbnail if it was fetched recently, so a row can paint it on its first frame.
+  DirectoryPhotoView? cached(String id) {
+    final entry = _session[id];
+    if (entry == null) return null;
+    if (_now().difference(entry.$2) >= sessionTtl) {
+      _session.remove(id);
+      return null;
+    }
+    return entry.$1;
+  }
+
   Future<DirectoryPhotoView?> load(String id, bool Function() isVisible) {
     if (_disposed) return Future.value();
+    final hit = cached(id);
+    if (hit != null) return Future.value(hit);
     final request = _PhotoRequest(id, isVisible);
     _pending.add(request);
     scheduleMicrotask(_pump);
@@ -59,7 +79,12 @@ class DirectoryPhotoLoader {
   Future<void> _run(_PhotoRequest request) async {
     DirectoryPhotoView? photo;
     try {
-      photo = await repository.directoryPhoto(request.id);
+      // The same place may have been fetched while this request waited in the queue.
+      photo = cached(request.id) ?? await repository.directoryPhoto(request.id);
+      if (_session.length >= _maxSessionEntries) {
+        _session.remove(_session.keys.first);
+      }
+      _session[request.id] = (photo, _now());
     } on DiscoveryFailure catch (failure) {
       if (failure.kind == DiscoveryFailureKind.rateLimited ||
           failure.kind == DiscoveryFailureKind.provider ||

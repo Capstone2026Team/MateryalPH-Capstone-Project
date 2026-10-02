@@ -17,7 +17,7 @@ void main() {
       // TODO
     });
 
-    // 45 minutes after the order entered AWAITING_PAYMENT.
+    // 24 hours after the order entered AWAITING_PAYMENT (Pending Payment). The server clock decides; clients only display it.
     // DateTime paymentExpiresAt
     test('to test the property `paymentExpiresAt`', () async {
       // TODO

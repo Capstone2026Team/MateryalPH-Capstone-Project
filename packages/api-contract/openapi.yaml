@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: MateryalPH API
-  version: 1.0.0-phase.10
+  version: 1.0.0-phase.11
   description: >-
     Versioned Phase 1–4 contract. Vendor onboarding, verification, activation readiness, private evidence, team invitations, the Vendor catalog and product PS/ICC compliance are server-authorized.
     Browser credentials are isolated by configured frontend origin using _vendor and _admin suffixes on access, refresh, CSRF, MFA and bot-proof cookies.
@@ -9,6 +9,10 @@ info:
 servers:
   - url: /api/v1
 tags:
+  - name: Payment Webhooks
+  - name: Admin Finance
+  - name: Vendor Finance
+  - name: Buyer Payments
   - name: System
   - name: Agreements
   - name: Authentication
@@ -5107,6 +5111,1096 @@ paths:
         "404": { $ref: "#/components/responses/ErrorResponse" }
         "409": { $ref: "#/components/responses/ErrorResponse" }
         "422": { $ref: "#/components/responses/ErrorResponse" }
+  # Phase 11 payment and finance operations
+  "/webhooks/xendit":
+    "post":
+      "operationId": "receiveXenditPaymentWebhook"
+      "tags":
+        - "Payment Webhooks"
+      "description": "Fast inbox. Verifies x-callback-token in constant time (Xendit documents no HMAC signature header), stores the raw event once by webhook-id, acknowledges, then processes asynchronously. Processing re-reads the session authoritatively and checks identifier, reference, amount, currency, account and transition before anything is PAID. Forged, duplicate, reordered, mismatched or unknown events never create a paid order."
+      "security": []
+      "parameters":
+        - "name": "x-callback-token"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+        - "name": "webhook-id"
+          "in": "header"
+          "required": false
+          "schema":
+            "type": "string"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/PaymentWebhookPayload"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/PaymentWebhookAckEnvelope"
+        "400":
+          "$ref": "#/components/responses/ErrorResponse"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "413":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+        "503":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/payments/return":
+    "get":
+      "operationId": "showPaymentReturnPage"
+      "tags":
+        - "Payment Webhooks"
+      "description": "Browser return page after the hosted payment page. Always renders Pending with a deep link back to the app; never reads or changes payment state."
+      "security": []
+      "parameters":
+        - "name": "attempt"
+          "in": "query"
+          "required": false
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "responses":
+        "200":
+          "description": "Pending HTML page."
+          "content":
+            "text/html":
+              "schema":
+                "type": "string"
+        "429":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/buyers/orders/{orderId}/payment-options":
+    "get":
+      "operationId": "getBuyerPaymentOptions"
+      "tags":
+        - "Buyer Payments"
+      "description": "Server-computed purpose, principal and per-channel Payment Processing Fee (versioned DEMO schedule, grossed up, no markup). Refund-incompatible channels are listed as unavailable with a reason."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "orderId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/PaymentOptionsEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+        "503":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/buyers/orders/{orderId}/payments":
+    "post":
+      "operationId": "createBuyerPayment"
+      "tags":
+        - "Buyer Payments"
+      "description": "Opens one provider session for the due purpose through the reconciled Vendor TEST sub-account. expected_total_centavos must equal the server total (409 PAYMENT_AMOUNT_CHANGED). An open attempt blocks another charge (409 PAYMENT_ATTEMPT_IN_PROGRESS). Payment and provisioning idempotency are separate scopes."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "orderId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/PaymentCreateRequest"
+      "responses":
+        "200":
+          "description": "Idempotent replay."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/PaymentAttemptEnvelope"
+        "201":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/PaymentAttemptEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+        "503":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/buyers/payments/{paymentId}":
+    "get":
+      "operationId": "getBuyerPayment"
+      "tags":
+        - "Buyer Payments"
+      "description": "The Buyer's own attempt. Pending until a verified event or authoritative reconciliation."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "paymentId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/PaymentAttemptEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/buyers/payments/{paymentId}/refresh":
+    "post":
+      "operationId": "refreshBuyerPayment"
+      "tags":
+        - "Buyer Payments"
+      "description": "Asks the provider for the authoritative session state; a provider outage keeps the attempt pending."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "paymentId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/PaymentAttemptEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "429":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/buyers/orders/{orderId}/physical-payments/{recordId}/acknowledge":
+    "post":
+      "operationId": "acknowledgePhysicalPayment"
+      "tags":
+        - "Buyer Payments"
+      "description": "Acknowledge one Vendor-recorded direct collection. Set once; never an online payment confirmation."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "orderId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "recordId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/PhysicalPaymentSummaryEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/finance":
+    "get":
+      "operationId": "getVendorFinanceOverview"
+      "tags":
+        - "Vendor Finance"
+      "description": "Owner-only. Separate Xendit connection, Vendor Tax Profile summary, withholding arrangement (Production assignment unconfirmed), FIN-04A threshold panel, Commission Terms, online channels, physical payments and refund capability. Every simulated figure is DEMO."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/VendorFinanceOverviewEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/finance/physical-payments":
+    "put":
+      "operationId": "updateVendorPhysicalPayments"
+      "tags":
+        - "Vendor Finance"
+      "description": "Owner-only. Enable Cash on Delivery (Site Delivery) or In-Store Payment (Self-Pickup) for future orders; both default off. lock_version 0 before the first save."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/PhysicalPaymentSettingsUpdate"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/PhysicalPaymentSettingsEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/finance/transactions":
+    "get":
+      "operationId": "listVendorTransactions"
+      "tags":
+        - "Vendor Finance"
+      "description": "Owner-only read-only Transaction History (former Wallet label). No balance, wallet or escrow."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "tab"
+          "in": "query"
+          "required": false
+          "schema":
+            "type": "string"
+            "enum":
+              - "PAYMENTS"
+              - "PHYSICAL"
+              - "REMITTANCES"
+              - "STATEMENTS"
+              - "REFUNDS"
+              - "TAX_DOCUMENTS"
+        - "name": "page"
+          "in": "query"
+          "schema":
+            "type": "integer"
+            "minimum": 1
+            "maximum": 1000
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/FinanceTransactionListEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/finance/transactions/export":
+    "get":
+      "operationId": "exportVendorTransactions"
+      "tags":
+        - "Vendor Finance"
+      "description": "Owner-only audited CSV export: Internal Operational Report — Not a Tax Invoice."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "tab"
+          "in": "query"
+          "required": true
+          "schema":
+            "type": "string"
+            "enum":
+              - "PAYMENTS"
+              - "PHYSICAL"
+              - "REMITTANCES"
+              - "STATEMENTS"
+              - "REFUNDS"
+              - "TAX_DOCUMENTS"
+      "responses":
+        "200":
+          "description": "CSV export."
+          "content":
+            "text/csv":
+              "schema":
+                "type": "string"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/finance/earnings":
+    "get":
+      "operationId": "getVendorEarnings"
+      "tags":
+        - "Vendor Finance"
+      "description": "Owner-only FIN-11 Earnings with separate sales, collections, charges, simulated CWT and commission."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/VendorEarningsEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/finance/statements/{statementId}":
+    "get":
+      "operationId": "getVendorFeeStatement"
+      "tags":
+        - "Vendor Finance"
+      "description": "Owner-only issued commission statement with lines, payments and payable channels (platform absorbs its bill processing charge)."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "statementId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/FeeStatementDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/finance/statements/{statementId}/payments":
+    "post":
+      "operationId": "payVendorFeeStatement"
+      "tags":
+        - "Vendor Finance"
+      "description": "Owner-only PLATFORM_FEE_PAYMENT to the platform TEST account, 45-minute attempt, optional installment amount. No auto debit or split. Open attempts are reconciled first."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "statementId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/StatementPaymentRequest"
+      "responses":
+        "200":
+          "description": "Idempotent replay."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/PaymentAttemptEnvelope"
+        "201":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/PaymentAttemptEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+        "503":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/finance/payments/{paymentId}":
+    "get":
+      "operationId": "getVendorFeePayment"
+      "tags":
+        - "Vendor Finance"
+      "description": "Owner-only platform-fee payment attempt."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "paymentId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/PaymentAttemptEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/finance/payments/{paymentId}/refresh":
+    "post":
+      "operationId": "refreshVendorFeePayment"
+      "tags":
+        - "Vendor Finance"
+      "description": "Owner-only authoritative status check."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "paymentId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/PaymentAttemptEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "429":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/orders/{orderId}/physical-payments":
+    "post":
+      "operationId": "recordVendorPhysicalPayment"
+      "tags":
+        - "Vendor Finance"
+      "description": "Owner, Store Manager or Store Staff (payments.record_physical) record cash received with private evidence. Partial collection leaves an outstanding balance; never above it; never an online success."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "orderId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "multipart/form-data":
+            "schema":
+              "$ref": "#/components/schemas/PhysicalPaymentRecordForm"
+      "responses":
+        "200":
+          "description": "Idempotent replay."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/PhysicalPaymentSummaryEnvelope"
+        "201":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/PhysicalPaymentSummaryEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+        "503":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/orders/{orderId}/online-balance/approve":
+    "post":
+      "operationId": "approveVendorOnlineBalance"
+      "tags":
+        - "Vendor Finance"
+      "description": "Owner, Manager or Store Staff approve paying the uncollected physical balance online (ORDER_BALANCE_PAYMENT)."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "orderId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/FinanceActionResultEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/finance/payments":
+    "get":
+      "operationId": "listAdminPayments"
+      "tags":
+        - "Admin Finance"
+      "description": "finance.view. Payment log with evidence origin and reconciliation state."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "page"
+          "in": "query"
+          "schema":
+            "type": "integer"
+            "minimum": 1
+            "maximum": 1000
+        - "name": "state"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "enum":
+              - "CREATING"
+              - "PENDING"
+              - "UNCERTAIN"
+              - "PAID"
+              - "FAILED"
+              - "EXPIRED"
+              - "CANCELLED"
+        - "name": "purpose"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "enum":
+              - "FULL_ORDER_PAYMENT"
+              - "NRPC_ASSURANCE_PAYMENT"
+              - "ORDER_BALANCE_PAYMENT"
+              - "PLATFORM_FEE_PAYMENT"
+        - "name": "evidence_origin"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "enum":
+              - "XENDIT_TEST"
+              - "SIMULATED"
+        - "name": "reconciliation_state"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "enum":
+              - "NOT_REQUIRED"
+              - "PENDING"
+              - "RECONCILED"
+              - "EXCEPTION"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/AdminPaymentListEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/finance/review-items":
+    "get":
+      "operationId": "listFinanceReviewItems"
+      "tags":
+        - "Admin Finance"
+      "description": "finance.view. Reconciliation exceptions, payment mismatches, late captures, unresolved overlap, threshold adjustments, base reviews, overdue statements and fee-credit proposals."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "page"
+          "in": "query"
+          "schema":
+            "type": "integer"
+            "minimum": 1
+            "maximum": 1000
+        - "name": "state"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "enum":
+              - "OPEN"
+              - "RESOLVED"
+        - "name": "kind"
+          "in": "query"
+          "schema":
+            "type": "string"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/FinanceReviewItemListEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/finance/review-items/{itemId}/resolve":
+    "post":
+      "operationId": "resolveFinanceReviewItem"
+      "tags":
+        - "Admin Finance"
+      "description": "finance.record_external_evidence. Record a reasoned resolution."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "itemId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/ReviewResolveRequest"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/FinanceActionResultEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/finance/withholding-accumulators":
+    "get":
+      "operationId": "listWithholdingAccumulators"
+      "tags":
+        - "Admin Finance"
+      "description": "finance.view. FIN-04A accumulators."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "page"
+          "in": "query"
+          "schema":
+            "type": "integer"
+            "minimum": 1
+            "maximum": 1000
+        - "name": "status"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "enum":
+              - "RELIEF_ACTIVE"
+              - "SUBJECT_STANDARD"
+              - "SUBJECT_THRESHOLD_BREACHED"
+              - "SUBJECT_PRIOR_YEAR"
+              - "UNDER_REVIEW"
+        - "name": "taxable_year"
+          "in": "query"
+          "schema":
+            "type": "integer"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/WithholdingAccumulatorListEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/finance/withholding-accumulators/{accumulatorId}":
+    "get":
+      "operationId": "getWithholdingAccumulator"
+      "tags":
+        - "Admin Finance"
+      "description": "finance.view. Figures, prior-year position, declaration year, overlap, breach, reason code and status-event history. Raw TIN never returned."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "accumulatorId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/WithholdingAccumulatorDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/finance/withholding-accumulators/{accumulatorId}/overlap":
+    "post":
+      "operationId": "resolveWithholdingOverlap"
+      "tags":
+        - "Admin Finance"
+      "description": "finance.review_tax. Record the outside-platform overlap of an UNDER_REVIEW accumulator; a total above the limit breaches."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "accumulatorId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/OverlapResolveRequest"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/WithholdingAccumulatorDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+        "503":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/finance/statements":
+    "get":
+      "operationId": "listFeeStatements"
+      "tags":
+        - "Admin Finance"
+      "description": "finance.view. Monthly commission statements."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "page"
+          "in": "query"
+          "schema":
+            "type": "integer"
+            "minimum": 1
+            "maximum": 1000
+        - "name": "state"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "enum":
+              - "DRAFT"
+              - "ISSUED"
+              - "PARTIALLY_PAID"
+              - "PAID"
+              - "VOIDED"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/FeeStatementListEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/finance/statements/draft":
+    "post":
+      "operationId": "draftFeeStatements"
+      "tags":
+        - "Admin Finance"
+      "description": "finance.approve_statements. Idempotently draft last month's statements (also scheduled 00:05 Asia/Manila on the 1st)."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/FinanceActionResultEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/finance/statements/{statementId}/approve":
+    "post":
+      "operationId": "approveFeeStatement"
+      "tags":
+        - "Admin Finance"
+      "description": "finance.approve_statements. Issue a DRAFT; due = max(15th of next month, issue + 12 days)."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "statementId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/StatementApproveRequest"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/FeeStatementEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+        "503":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/finance/fee-credits":
+    "post":
+      "operationId": "proposeFeeCredit"
+      "tags":
+        - "Admin Finance"
+      "description": "finance.review_tax. Prepare a FIN-03 credit from returned exclusive value after completion."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/FeeCreditProposalRequest"
+      "responses":
+        "200":
+          "description": "Idempotent replay."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/FinanceActionResultEnvelope"
+        "201":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/FinanceActionResultEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/finance/fee-credits/{proposalId}/approve":
+    "post":
+      "operationId": "approveFeeCredit"
+      "tags":
+        - "Admin Finance"
+      "description": "finance.approve_statements by a user different from the preparer (403 PREPARER_REVIEWER_SAME)."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "proposalId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/FinanceActionResultEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/finance/channel-fees":
+    "get":
+      "operationId": "listChannelFees"
+      "tags":
+        - "Admin Finance"
+      "description": "finance.view. Versioned TEST channel fee schedule (DEMO published rates; validate against the active Xendit agreement)."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/ChannelFeeVersionListEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/finance/reconciliation/run":
+    "post":
+      "operationId": "runPaymentReconciliation"
+      "tags":
+        - "Admin Finance"
+      "description": "finance.view. Run the bounded reconciliation sweep now."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/FinanceActionResultEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
   # Phase 10 Project operations
   "/buyers/projects":
     "get":
@@ -6616,6 +7710,8 @@ components:
           type: string
           enum:
             - ONLINE
+            - CASH_ON_DELIVERY
+            - IN_STORE
         fulfillment_date:
           type: string
         deadline_hours:
@@ -10789,6 +11885,7 @@ components:
         cart_lock_version: { type: integer, minimum: 1 }
         vendor_ids: { type: array, minItems: 1, maxItems: 20, uniqueItems: true, items: { type: string, format: uuid } }
         split_confirmed: { type: boolean, description: Required when fewer Vendor groups are submitted than the cart holds. }
+        payment_methods: { type: object, additionalProperties: { type: string, enum: [ ONLINE, CASH_ON_DELIVERY, IN_STORE ] }, description: "Vendor id => chosen method; Online when omitted. COD pairs with Site Delivery, In-Store with Self-Pickup, each only when the Vendor enabled it." }
     CheckoutChildOrder:
       type: object
       required: [ id, reference, vendor, order_state, payment_state, fulfillment_method, payment_method, confirmation_source, materials_centavos, delivery_centavos, commercial_total_centavos, vendor_response_due_at, payment_expires_at ]
@@ -10863,6 +11960,7 @@ components:
         deadline: { oneOf: [ { $ref: "#/components/schemas/OrderDeadline" }, { type: 'null' } ] }
         expected_fulfillment_date: { type: [ string, 'null' ], format: date }
         next_action: { type: [ string, 'null' ], enum: [ REVIEW_REVISION, REVIEW_NRPC, PAY, null ] }
+        payment_retryable: { type: boolean, description: Buyer list only. True when the order is Pending Payment and its latest checkout attempt failed or expired. Retry uses the same order and principal. }
         buyer: { $ref: "#/components/schemas/OrderBuyerRef" }
         primary_action: { $ref: "#/components/schemas/VendorOrderPrimaryAction" }
         nrpc_indicator: { type: boolean }
@@ -11136,7 +12234,7 @@ components:
       properties:
         vendor_response_due_at: { type: [ string, 'null' ], format: date-time }
         buyer_response_due_at: { type: [ string, 'null' ], format: date-time }
-        payment_expires_at: { type: [ string, 'null' ], format: date-time, description: 45 minutes after the order entered AWAITING_PAYMENT. }
+        payment_expires_at: { type: [ string, 'null' ], format: date-time, description: 24 hours after the order entered AWAITING_PAYMENT (Pending Payment). The server clock decides; clients only display it. }
         server_time: { type: string, format: date-time }
         timezone: { type: string, const: Asia/Manila }
     OrderCheckoutRef:
@@ -11147,11 +12245,19 @@ components:
         reference: { type: string }
     OrderPaymentAvailability:
       type: object
+      description: Order-specific payment state. Buyers see their attempts; Vendor staff see operational status only. Store-wide finance stays Owner-only in Vendor Finance.
       required: [ available, reason, notice ]
       properties:
         available: { type: boolean }
         reason: { type: [ string, 'null' ] }
         notice: { type: [ string, 'null' ] }
+        purpose: { type: [ string, 'null' ], enum: [ FULL_ORDER_PAYMENT, NRPC_ASSURANCE_PAYMENT, ORDER_BALANCE_PAYMENT, null ] }
+        principal_centavos: { type: [ integer, 'null' ] }
+        latest_attempt: { oneOf: [ { $ref: "#/components/schemas/PaymentAttempt" }, { type: 'null' } ] }
+        verified_payment: { oneOf: [ { $ref: "#/components/schemas/PaymentAttempt" }, { type: 'null' } ] }
+        attempts: { type: array, items: { $ref: "#/components/schemas/PaymentAttempt" } }
+        physical: { $ref: "#/components/schemas/PhysicalPaymentSummary" }
+        environment: { type: string, enum: [ TEST ] }
     AutoAcceptReason:
       type: object
       required: [ code, listing_variant_id ]
@@ -11188,6 +12294,8 @@ components:
         can_confirm_delivery: { type: boolean }
         can_decline: { type: boolean }
         can_view_inventory: { type: boolean }
+        can_record_physical_payment: { type: boolean }
+        can_approve_online_balance: { type: boolean }
     NrpcTermsRef:
       type: object
       required: [ id, version, title, available ]
@@ -11226,7 +12334,7 @@ components:
         nrpc: { oneOf: [ { $ref: "#/components/schemas/OrderNrpc" }, { type: 'null' } ] }
         timeline: { type: array, items: { $ref: "#/components/schemas/OrderTimelineEvent" } }
         lock_version: { type: integer }
-        available_actions: { type: array, items: { type: string, enum: [ APPROVE_REVISION, REJECT_REVISION, ACCEPT_NRPC, REJECT_NRPC, FLAG_NRPC ] } }
+        available_actions: { type: array, items: { type: string, enum: [ APPROVE_REVISION, REJECT_REVISION, ACCEPT_NRPC, REJECT_NRPC, FLAG_NRPC, PAY ] } }
         payment: { $ref: "#/components/schemas/OrderPaymentAvailability" }
         buyer: { $ref: "#/components/schemas/OrderBuyerRef" }
         auto_accept: { oneOf: [ { $ref: "#/components/schemas/AutoAcceptOutcome" }, { type: 'null' } ] }
@@ -11430,6 +12538,1411 @@ components:
         meta: { type: object, additionalProperties: true }
         errors: { type: array, items: { type: object, additionalProperties: true } }
 
+    # Phase 11 payment and finance schemas
+    "PaymentChannelOption":
+      "type": "object"
+      "required":
+        - "code"
+        - "display_name"
+        - "kind"
+        - "available"
+        - "refund_supported"
+        - "fee_version"
+        - "rate_label"
+        - "fee_bearer"
+        - "rate_source"
+      "properties":
+        "code":
+          "type": "string"
+        "display_name":
+          "type": "string"
+        "kind":
+          "type": "string"
+          "enum":
+            - "CARD"
+            - "EWALLET"
+            - "QR"
+            - "OVER_THE_COUNTER"
+            - "DIRECT_DEBIT"
+            - "BANK_TRANSFER"
+        "available":
+          "type": "boolean"
+        "unavailable_reason":
+          "type": "string"
+          "nullable": true
+        "refund_supported":
+          "type": "boolean"
+        "fee_version":
+          "type": "integer"
+        "rate_label":
+          "type": "string"
+        "fee_centavos":
+          "type": "integer"
+          "minimum": 0
+          "nullable": true
+        "total_centavos":
+          "type": "integer"
+          "minimum": 0
+          "nullable": true
+        "fee_bearer":
+          "type": "string"
+          "enum":
+            - "BUYER"
+            - "PLATFORM"
+        "rate_source":
+          "type": "string"
+          "enum":
+            - "DEMO_PUBLISHED_RATE"
+    "PaymentAttempt":
+      "type": "object"
+      "required":
+        - "id"
+        - "purpose"
+        - "status"
+        - "attempt_number"
+        - "principal_centavos"
+        - "processing_fee_centavos"
+        - "total_centavos"
+        - "fee_bearer"
+        - "environment"
+        - "evidence_origin"
+        - "can_check_status"
+        - "message"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "purpose":
+          "type": "string"
+          "enum":
+            - "FULL_ORDER_PAYMENT"
+            - "NRPC_ASSURANCE_PAYMENT"
+            - "ORDER_BALANCE_PAYMENT"
+            - "PLATFORM_FEE_PAYMENT"
+        "status":
+          "type": "string"
+          "enum":
+            - "PENDING"
+            - "PAID"
+            - "FAILED"
+            - "EXPIRED"
+            - "CAPTURED_LATE_REFUND_PENDING"
+        "attempt_number":
+          "type": "integer"
+        "order_id":
+          "type": "string"
+          "format": "uuid"
+          "nullable": true
+        "statement_id":
+          "type": "string"
+          "format": "uuid"
+          "nullable": true
+        "channel_code":
+          "type": "string"
+          "nullable": true
+        "channel_name":
+          "type": "string"
+          "nullable": true
+        "principal_centavos":
+          "type": "integer"
+          "minimum": 0
+        "processing_fee_centavos":
+          "type": "integer"
+          "minimum": 0
+        "total_centavos":
+          "type": "integer"
+          "minimum": 0
+        "fee_bearer":
+          "type": "string"
+          "enum":
+            - "BUYER"
+            - "PLATFORM"
+        "expires_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "paid_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "created_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "environment":
+          "type": "string"
+          "enum":
+            - "TEST"
+        "evidence_origin":
+          "type": "string"
+          "enum":
+            - "XENDIT_TEST"
+            - "SIMULATED"
+        "checkout_url":
+          "type": "string"
+          "format": "uri"
+          "nullable": true
+        "can_check_status":
+          "type": "boolean"
+        "message":
+          "type": "string"
+      "description": "Client view of one payment attempt. Everything before a verified provider capture reads PENDING; a redirect never yields PAID. The hosted checkout link is returned only to its payer while open."
+    "PaymentCreateRequest":
+      "type": "object"
+      "required":
+        - "channel_code"
+        - "expected_total_centavos"
+      "properties":
+        "channel_code":
+          "type": "string"
+          "maxLength": 32
+        "expected_total_centavos":
+          "type": "integer"
+          "minimum": 1
+    "StatementPaymentRequest":
+      "type": "object"
+      "required":
+        - "channel_code"
+      "properties":
+        "channel_code":
+          "type": "string"
+          "maxLength": 32
+        "amount_centavos":
+          "type": "integer"
+          "minimum": 1
+          "nullable": true
+    "PaymentOptions":
+      "type": "object"
+      "required":
+        - "order_id"
+        - "order_reference"
+        - "payment_due"
+        - "channels"
+        - "environment"
+        - "evidence_origin"
+        - "provider_ready"
+        - "notice"
+      "properties":
+        "order_id":
+          "type": "string"
+          "format": "uuid"
+        "order_reference":
+          "type": "string"
+        "payment_due":
+          "type": "boolean"
+        "purpose":
+          "type": "string"
+          "enum":
+            - "FULL_ORDER_PAYMENT"
+            - "NRPC_ASSURANCE_PAYMENT"
+            - "ORDER_BALANCE_PAYMENT"
+            - "PLATFORM_FEE_PAYMENT"
+          "nullable": true
+        "principal_centavos":
+          "type": "integer"
+          "minimum": 0
+          "nullable": true
+        "breakdown":
+          "type": "object"
+          "additionalProperties": true
+          "nullable": true
+        "channels":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/PaymentChannelOption"
+        "pay_by":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "environment":
+          "type": "string"
+          "enum":
+            - "TEST"
+        "evidence_origin":
+          "type": "string"
+          "enum":
+            - "XENDIT_TEST"
+            - "SIMULATED"
+        "provider_ready":
+          "type": "boolean"
+        "latest_attempt":
+          "$ref": "#/components/schemas/PaymentAttempt"
+          "nullable": true
+        "notice":
+          "type": "string"
+    "PhysicalPaymentRecord":
+      "type": "object"
+      "required":
+        - "id"
+        - "kind"
+        - "method"
+        - "amount_centavos"
+        - "remaining_centavos"
+        - "state"
+        - "recorded_at"
+        - "has_evidence"
+        - "source"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "kind":
+          "type": "string"
+          "enum":
+            - "OBLIGATION_OPENED"
+            - "COLLECTION"
+            - "ONLINE_BALANCE_CREDIT"
+            - "CORRECTION"
+            - "CANCELLATION_RELEASE"
+        "method":
+          "type": "string"
+        "amount_centavos":
+          "type": "integer"
+          "minimum": 0
+        "remaining_centavos":
+          "type": "integer"
+          "minimum": 0
+        "state":
+          "type": "string"
+          "enum":
+            - "UNPAID"
+            - "PARTIALLY_RECORDED"
+            - "PHYSICAL_PAYMENT_RECORDED"
+            - "CANCELLED_UNPAID"
+        "recorded_at":
+          "type": "string"
+          "format": "date-time"
+        "recorded_role":
+          "type": "string"
+          "nullable": true
+        "has_evidence":
+          "type": "boolean"
+        "source":
+          "type": "string"
+          "enum":
+            - "VENDOR_RECORD"
+            - "VERIFIED_ONLINE_PAYMENT"
+            - "SYSTEM"
+        "buyer_acknowledged_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+    "PhysicalPaymentSummary":
+      "type": "object"
+      "required":
+        - "applicable"
+        - "method"
+        - "state"
+        - "online_balance_approved"
+        - "records"
+        - "notice"
+      "properties":
+        "applicable":
+          "type": "boolean"
+        "method":
+          "type": "string"
+        "state":
+          "type": "string"
+        "remaining_centavos":
+          "type": "integer"
+          "minimum": 0
+          "nullable": true
+        "online_balance_approved":
+          "type": "boolean"
+        "records":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/PhysicalPaymentRecord"
+        "notice":
+          "type": "string"
+    "PhysicalPaymentSettings":
+      "type": "object"
+      "required":
+        - "cod_enabled"
+        - "in_store_enabled"
+        - "lock_version"
+      "properties":
+        "cod_enabled":
+          "type": "boolean"
+        "in_store_enabled":
+          "type": "boolean"
+        "lock_version":
+          "type": "integer"
+        "updated_at":
+          "type": "string"
+          "nullable": true
+    "PhysicalPaymentSettingsUpdate":
+      "type": "object"
+      "required":
+        - "lock_version"
+        - "cod_enabled"
+        - "in_store_enabled"
+      "properties":
+        "lock_version":
+          "type": "integer"
+          "minimum": 0
+        "cod_enabled":
+          "type": "boolean"
+        "in_store_enabled":
+          "type": "boolean"
+    "PhysicalPaymentRecordForm":
+      "type": "object"
+      "required":
+        - "amount_centavos"
+        - "file"
+      "properties":
+        "amount_centavos":
+          "type": "integer"
+          "minimum": 1
+        "received_at":
+          "type": "string"
+          "format": "date-time"
+        "note":
+          "type": "string"
+          "maxLength": 500
+        "file":
+          "type": "string"
+          "format": "binary"
+          "description": "Private receipt evidence: JPG, PNG, WebP or PDF up to 10 MB; scanned fail-closed."
+    "ThresholdStatusEvent":
+      "type": "object"
+      "required":
+        - "to_status"
+        - "reason_code"
+        - "g_before_centavos"
+        - "g_after_centavos"
+        - "actor_type"
+      "properties":
+        "from_status":
+          "type": "string"
+          "enum":
+            - "RELIEF_ACTIVE"
+            - "SUBJECT_STANDARD"
+            - "SUBJECT_THRESHOLD_BREACHED"
+            - "SUBJECT_PRIOR_YEAR"
+            - "UNDER_REVIEW"
+          "nullable": true
+        "to_status":
+          "type": "string"
+          "enum":
+            - "RELIEF_ACTIVE"
+            - "SUBJECT_STANDARD"
+            - "SUBJECT_THRESHOLD_BREACHED"
+            - "SUBJECT_PRIOR_YEAR"
+            - "UNDER_REVIEW"
+        "reason_code":
+          "type": "string"
+        "g_before_centavos":
+          "type": "integer"
+          "minimum": 0
+        "g_after_centavos":
+          "type": "integer"
+          "minimum": 0
+        "actor_type":
+          "type": "string"
+          "enum":
+            - "SYSTEM"
+            - "ADMIN"
+            - "VENDOR"
+        "occurred_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+    "WithholdingThresholdPanel":
+      "type": "object"
+      "required":
+        - "demo"
+        - "taxable_year"
+        - "year_start_at"
+        - "year_end_at"
+        - "threshold_centavos"
+        - "cumulative_gross_centavos"
+        - "remaining_allowance_centavos"
+        - "local_gross_centavos"
+        - "external_declared_centavos"
+        - "external_overlap_centavos"
+        - "external_overlap_state"
+        - "percent_of_threshold"
+        - "advisory"
+        - "status"
+        - "status_label"
+        - "status_icon"
+        - "final_for_year_notice"
+        - "events"
+      "properties":
+        "demo":
+          "type": "boolean"
+        "taxable_year":
+          "type": "integer"
+        "year_start_at":
+          "type": "string"
+          "format": "date-time"
+        "year_end_at":
+          "type": "string"
+          "format": "date-time"
+        "threshold_centavos":
+          "type": "integer"
+          "minimum": 0
+        "cumulative_gross_centavos":
+          "type": "integer"
+          "minimum": 0
+        "remaining_allowance_centavos":
+          "type": "integer"
+          "minimum": 0
+        "local_gross_centavos":
+          "type": "integer"
+          "minimum": 0
+        "external_declared_centavos":
+          "type": "integer"
+          "minimum": 0
+        "external_overlap_centavos":
+          "type": "integer"
+          "minimum": 0
+        "external_overlap_state":
+          "type": "string"
+          "enum":
+            - "NONE"
+            - "UNRESOLVED"
+            - "RESOLVED"
+        "percent_of_threshold":
+          "type": "integer"
+        "advisory":
+          "type": "boolean"
+        "status":
+          "type": "string"
+          "enum":
+            - "RELIEF_ACTIVE"
+            - "SUBJECT_STANDARD"
+            - "SUBJECT_THRESHOLD_BREACHED"
+            - "SUBJECT_PRIOR_YEAR"
+            - "UNDER_REVIEW"
+            - "NOT_STARTED"
+        "status_label":
+          "type": "string"
+        "status_icon":
+          "type": "string"
+        "reason_code":
+          "type": "string"
+          "nullable": true
+        "crossed_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "crossed_at_manila":
+          "type": "string"
+          "nullable": true
+        "prior_year_total_centavos":
+          "type": "integer"
+          "minimum": 0
+          "nullable": true
+        "final_for_year_notice":
+          "type": "string"
+        "events":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ThresholdStatusEvent"
+      "description": "FIN-04A panel. Status never uses EXEMPT/SUBJECT_TO_WITHHOLDING; remaining allowance is floored at zero; every figure is DEMO."
+    "VendorFinanceNotice":
+      "type": "object"
+      "required":
+        - "id"
+        - "mandatory"
+        - "title"
+        - "body"
+        - "read"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "mandatory":
+          "type": "boolean"
+        "title":
+          "type": "string"
+        "body":
+          "type": "string"
+        "created_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "read":
+          "type": "boolean"
+    "VendorFinanceOverview":
+      "type": "object"
+      "required":
+        - "demo_label"
+        - "xendit_connection"
+        - "tax_profile"
+        - "withholding_arrangement"
+        - "commission_terms"
+        - "online_channels"
+        - "physical_payments"
+        - "refund_capability"
+        - "statements"
+        - "notices"
+      "properties":
+        "demo_label":
+          "type": "string"
+        "xendit_connection":
+          "type": "object"
+          "additionalProperties": true
+        "tax_profile":
+          "type": "object"
+          "additionalProperties": true
+        "withholding_arrangement":
+          "type": "object"
+          "additionalProperties": true
+        "threshold":
+          "$ref": "#/components/schemas/WithholdingThresholdPanel"
+          "nullable": true
+        "commission_terms":
+          "type": "object"
+          "additionalProperties": true
+        "online_channels":
+          "type": "object"
+          "additionalProperties": true
+        "physical_payments":
+          "type": "object"
+          "additionalProperties": true
+        "refund_capability":
+          "type": "object"
+          "additionalProperties": true
+        "statements":
+          "type": "object"
+          "additionalProperties": true
+        "notices":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/VendorFinanceNotice"
+    "FeeStatement":
+      "type": "object"
+      "required":
+        - "id"
+        - "reference"
+        - "state"
+        - "overdue"
+        - "period_start"
+        - "period_end"
+        - "issued_on"
+        - "due_on"
+        - "charges_centavos"
+        - "credits_centavos"
+        - "paid_centavos"
+        - "outstanding_centavos"
+        - "disputed_held_centavos"
+        - "lock_version"
+        - "sample_notice"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "reference":
+          "type": "string"
+        "state":
+          "type": "string"
+          "enum":
+            - "DRAFT"
+            - "ISSUED"
+            - "PARTIALLY_PAID"
+            - "PAID"
+            - "VOIDED"
+        "overdue":
+          "type": "boolean"
+        "period_start":
+          "type": "string"
+        "period_end":
+          "type": "string"
+        "issued_on":
+          "type": "string"
+        "due_on":
+          "type": "string"
+        "charges_centavos":
+          "type": "integer"
+          "minimum": 0
+        "credits_centavos":
+          "type": "integer"
+          "minimum": 0
+        "paid_centavos":
+          "type": "integer"
+          "minimum": 0
+        "outstanding_centavos":
+          "type": "integer"
+          "minimum": 0
+        "disputed_held_centavos":
+          "type": "integer"
+          "minimum": 0
+        "lock_version":
+          "type": "integer"
+        "sample_notice":
+          "type": "string"
+    "FeeStatementDetail":
+      "type": "object"
+      "required":
+        - "id"
+        - "reference"
+        - "state"
+        - "overdue"
+        - "period_start"
+        - "period_end"
+        - "issued_on"
+        - "due_on"
+        - "charges_centavos"
+        - "credits_centavos"
+        - "paid_centavos"
+        - "outstanding_centavos"
+        - "disputed_held_centavos"
+        - "lock_version"
+        - "sample_notice"
+        - "lines"
+        - "payments"
+        - "channels"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "reference":
+          "type": "string"
+        "state":
+          "type": "string"
+        "overdue":
+          "type": "boolean"
+        "period_start":
+          "type": "string"
+        "period_end":
+          "type": "string"
+        "issued_on":
+          "type": "string"
+        "due_on":
+          "type": "string"
+        "charges_centavos":
+          "type": "integer"
+          "minimum": 0
+        "credits_centavos":
+          "type": "integer"
+          "minimum": 0
+        "paid_centavos":
+          "type": "integer"
+          "minimum": 0
+        "outstanding_centavos":
+          "type": "integer"
+          "minimum": 0
+        "disputed_held_centavos":
+          "type": "integer"
+          "minimum": 0
+        "lock_version":
+          "type": "integer"
+        "sample_notice":
+          "type": "string"
+        "lines":
+          "type": "array"
+          "items":
+            "type": "object"
+            "additionalProperties": true
+        "payments":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/PaymentAttempt"
+        "channels":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/PaymentChannelOption"
+    "VendorEarnings":
+      "type": "object"
+      "required":
+        - "demo"
+        - "environment"
+        - "notice"
+        - "commercial_sales_centavos"
+        - "included_vat_centavos"
+        - "online_collections_centavos"
+        - "buyer_processing_fees_centavos"
+        - "physical_collections_centavos"
+        - "provider_charges_centavos"
+        - "simulated_cwt_centavos"
+        - "estimated_remittance_cash_centavos"
+        - "earned_commission_centavos"
+        - "estimated_commission_centavos"
+        - "unpaid_statements_centavos"
+      "properties":
+        "demo":
+          "type": "boolean"
+        "environment":
+          "type": "string"
+        "notice":
+          "type": "string"
+        "commercial_sales_centavos":
+          "type": "integer"
+          "minimum": 0
+        "included_vat_centavos":
+          "type": "integer"
+          "minimum": 0
+        "online_collections_centavos":
+          "type": "integer"
+          "minimum": 0
+        "buyer_processing_fees_centavos":
+          "type": "integer"
+          "minimum": 0
+        "physical_collections_centavos":
+          "type": "integer"
+          "minimum": 0
+        "provider_charges_centavos":
+          "type": "integer"
+          "minimum": 0
+        "simulated_cwt_centavos":
+          "type": "integer"
+          "minimum": 0
+        "estimated_remittance_cash_centavos":
+          "type": "integer"
+        "earned_commission_centavos":
+          "type": "integer"
+          "minimum": 0
+        "estimated_commission_centavos":
+          "type": "integer"
+          "minimum": 0
+        "unpaid_statements_centavos":
+          "type": "integer"
+          "minimum": 0
+    "FinanceReviewItem":
+      "type": "object"
+      "required":
+        - "id"
+        - "kind"
+        - "state"
+        - "reason_code"
+        - "summary"
+        - "source_type"
+        - "source_id"
+        - "expected"
+        - "reported"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "kind":
+          "type": "string"
+        "state":
+          "type": "string"
+          "enum":
+            - "OPEN"
+            - "RESOLVED"
+        "reason_code":
+          "type": "string"
+        "summary":
+          "type": "string"
+        "vendor":
+          "type": "object"
+          "additionalProperties": true
+          "nullable": true
+        "source_type":
+          "type": "string"
+        "source_id":
+          "type": "string"
+          "format": "uuid"
+        "expected":
+          "type": "object"
+          "additionalProperties": true
+        "reported":
+          "type": "object"
+          "additionalProperties": true
+        "resolution":
+          "type": "string"
+          "nullable": true
+        "created_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "resolved_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+    "WithholdingAccumulatorView":
+      "type": "object"
+      "required":
+        - "id"
+        - "vendor"
+        - "environment"
+        - "taxpayer_key_suffix"
+        - "taxable_year"
+        - "threshold_centavos"
+        - "g_accumulated_centavos"
+        - "g_external_declared_centavos"
+        - "g_external_overlap_centavos"
+        - "g_effective_centavos"
+        - "remaining_allowance_centavos"
+        - "external_overlap_state"
+        - "status"
+        - "status_label"
+        - "reason_code"
+        - "breached"
+        - "lock_version"
+        - "demo"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "vendor":
+          "type": "object"
+          "additionalProperties": true
+        "environment":
+          "type": "string"
+        "taxpayer_key_suffix":
+          "type": "string"
+        "taxable_year":
+          "type": "integer"
+        "threshold_centavos":
+          "type": "integer"
+          "minimum": 0
+        "g_accumulated_centavos":
+          "type": "integer"
+          "minimum": 0
+        "g_external_declared_centavos":
+          "type": "integer"
+          "minimum": 0
+        "g_external_overlap_centavos":
+          "type": "integer"
+          "minimum": 0
+        "g_effective_centavos":
+          "type": "integer"
+          "minimum": 0
+        "remaining_allowance_centavos":
+          "type": "integer"
+          "minimum": 0
+        "external_overlap_state":
+          "type": "string"
+        "status":
+          "type": "string"
+          "enum":
+            - "RELIEF_ACTIVE"
+            - "SUBJECT_STANDARD"
+            - "SUBJECT_THRESHOLD_BREACHED"
+            - "SUBJECT_PRIOR_YEAR"
+            - "UNDER_REVIEW"
+        "status_label":
+          "type": "string"
+        "reason_code":
+          "type": "string"
+        "breached":
+          "type": "boolean"
+        "crossed_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "prior_year_total_centavos":
+          "type": "integer"
+          "minimum": 0
+          "nullable": true
+        "lock_version":
+          "type": "integer"
+        "demo":
+          "type": "boolean"
+    "WithholdingAccumulatorDetail":
+      "type": "object"
+      "required":
+        - "id"
+        - "vendor"
+        - "environment"
+        - "taxpayer_key_suffix"
+        - "taxable_year"
+        - "threshold_centavos"
+        - "g_accumulated_centavos"
+        - "g_external_declared_centavos"
+        - "g_external_overlap_centavos"
+        - "g_effective_centavos"
+        - "remaining_allowance_centavos"
+        - "external_overlap_state"
+        - "status"
+        - "status_label"
+        - "reason_code"
+        - "breached"
+        - "lock_version"
+        - "demo"
+        - "tax_profile"
+        - "events"
+        - "assessments"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "vendor":
+          "type": "object"
+          "additionalProperties": true
+        "environment":
+          "type": "string"
+        "taxpayer_key_suffix":
+          "type": "string"
+        "taxable_year":
+          "type": "integer"
+        "threshold_centavos":
+          "type": "integer"
+          "minimum": 0
+        "g_accumulated_centavos":
+          "type": "integer"
+          "minimum": 0
+        "g_external_declared_centavos":
+          "type": "integer"
+          "minimum": 0
+        "g_external_overlap_centavos":
+          "type": "integer"
+          "minimum": 0
+        "g_effective_centavos":
+          "type": "integer"
+          "minimum": 0
+        "remaining_allowance_centavos":
+          "type": "integer"
+          "minimum": 0
+        "external_overlap_state":
+          "type": "string"
+        "status":
+          "type": "string"
+          "enum":
+            - "RELIEF_ACTIVE"
+            - "SUBJECT_STANDARD"
+            - "SUBJECT_THRESHOLD_BREACHED"
+            - "SUBJECT_PRIOR_YEAR"
+            - "UNDER_REVIEW"
+        "status_label":
+          "type": "string"
+        "reason_code":
+          "type": "string"
+        "breached":
+          "type": "boolean"
+        "crossed_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "prior_year_total_centavos":
+          "type": "integer"
+          "minimum": 0
+          "nullable": true
+        "lock_version":
+          "type": "integer"
+        "demo":
+          "type": "boolean"
+        "tax_profile":
+          "type": "object"
+          "additionalProperties": true
+        "events":
+          "type": "array"
+          "items":
+            "type": "object"
+            "additionalProperties": true
+        "assessments":
+          "type": "array"
+          "items":
+            "type": "object"
+            "additionalProperties": true
+    "OverlapResolveRequest":
+      "type": "object"
+      "required":
+        - "overlap_centavos"
+        - "lock_version"
+        - "reason"
+      "properties":
+        "overlap_centavos":
+          "type": "integer"
+          "minimum": 0
+        "lock_version":
+          "type": "integer"
+          "minimum": 1
+        "reason":
+          "type": "string"
+          "minLength": 10
+          "maxLength": 2000
+    "ReviewResolveRequest":
+      "type": "object"
+      "required":
+        - "resolution"
+      "properties":
+        "resolution":
+          "type": "string"
+          "minLength": 10
+          "maxLength": 2000
+    "StatementApproveRequest":
+      "type": "object"
+      "required":
+        - "lock_version"
+      "properties":
+        "lock_version":
+          "type": "integer"
+          "minimum": 1
+    "FeeCreditProposalRequest":
+      "type": "object"
+      "required":
+        - "fee_assessment_id"
+        - "returned_exclusive_centavos"
+        - "reason"
+      "properties":
+        "fee_assessment_id":
+          "type": "string"
+          "format": "uuid"
+        "returned_exclusive_centavos":
+          "type": "integer"
+          "minimum": 1
+        "reason":
+          "type": "string"
+          "minLength": 10
+          "maxLength": 2000
+    "ChannelFeeVersion":
+      "type": "object"
+      "required":
+        - "code"
+        - "display_name"
+        - "kind"
+        - "version"
+        - "rate_ppm"
+        - "fixed_centavos"
+        - "fee_vat_basis_points"
+        - "rate_includes_vat"
+        - "refund_supported"
+        - "enabled"
+        - "source_type"
+        - "source_reference"
+      "properties":
+        "code":
+          "type": "string"
+        "display_name":
+          "type": "string"
+        "kind":
+          "type": "string"
+        "version":
+          "type": "integer"
+        "rate_ppm":
+          "type": "integer"
+        "fixed_centavos":
+          "type": "integer"
+          "minimum": 0
+        "fee_vat_basis_points":
+          "type": "integer"
+        "rate_includes_vat":
+          "type": "boolean"
+        "refund_supported":
+          "type": "boolean"
+        "enabled":
+          "type": "boolean"
+        "disabled_reason":
+          "type": "string"
+          "nullable": true
+        "source_type":
+          "type": "string"
+        "source_reference":
+          "type": "string"
+        "effective_from":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+    "PaymentWebhookAck":
+      "type": "object"
+      "required":
+        - "received"
+        - "duplicate"
+      "properties":
+        "received":
+          "type": "boolean"
+        "duplicate":
+          "type": "boolean"
+    "PaymentOptionsEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/PaymentOptions"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "PaymentAttemptEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/PaymentAttempt"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "PhysicalPaymentSummaryEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/PhysicalPaymentSummary"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "PhysicalPaymentSettingsEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/PhysicalPaymentSettings"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "VendorFinanceOverviewEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/VendorFinanceOverview"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "FeeStatementDetailEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/FeeStatementDetail"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "VendorEarningsEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/VendorEarnings"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "PaymentWebhookAckEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/PaymentWebhookAck"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "WithholdingAccumulatorDetailEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/WithholdingAccumulatorDetail"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "FeeStatementEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/FeeStatement"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "FinanceTransactionListEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "type": "array"
+          "items":
+            "type": "object"
+            "additionalProperties": true
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "AdminPaymentListEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "type": "array"
+          "items":
+            "type": "object"
+            "additionalProperties": true
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "FinanceReviewItemListEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/FinanceReviewItem"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "WithholdingAccumulatorListEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/WithholdingAccumulatorView"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "FeeStatementListEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "type": "array"
+          "items":
+            "type": "object"
+            "additionalProperties": true
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "ChannelFeeVersionListEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ChannelFeeVersion"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "FinanceActionResultEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "type": "object"
+          "additionalProperties": true
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "PaymentWebhookPayload":
+      "type": "object"
+      "required":
+        - "event"
+        - "data"
+      "additionalProperties": true
+      "properties":
+        "event":
+          "type": "string"
+        "business_id":
+          "type": "string"
+        "created":
+          "type": "string"
+        "data":
+          "type": "object"
+          "additionalProperties": true
     # Phase 10 Project schemas
     "ProjectBudget":
       "type": "object"
@@ -11857,6 +14370,8 @@ components:
           "type": "string"
           "enum":
             - "ONLINE"
+            - "CASH_ON_DELIVERY"
+            - "IN_STORE"
         "site_contact":
           "type": "string"
           "nullable": true

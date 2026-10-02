@@ -1,6 +1,7 @@
 import '../features/messaging/messaging_repository.dart';
 import '../features/messaging/messaging_screen.dart';
 import 'package:flutter/material.dart';
+import '../design_system/components/buyer_app_bar.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../auth/auth_repository.dart';
@@ -19,6 +20,7 @@ import '../features/projects/projects_screen.dart';
 import '../features/map_discovery/discovery_models.dart';
 import '../features/map_discovery/discovery_controller.dart';
 import '../features/map_discovery/discovery_repository.dart';
+import '../features/map_discovery/discovery_result_cache.dart';
 import '../features/map_discovery/map_home_screen.dart';
 import '../features/map_discovery/supplier_map.dart';
 import '../widgets/buyer_account_widgets.dart';
@@ -40,8 +42,11 @@ class BuyerHomeScreen extends StatefulWidget {
     this.messagingRepository,
     this.deviceLocation = const GeolocatorDeviceLocationService(),
     this.mapBuilder = defaultSupplierMapBuilder,
+    this.resultStore,
   });
 
+  /// Where completed map searches are kept between launches; the on-disk store when omitted.
+  final DiscoveryResultStore? resultStore;
   final Future<void> Function() onSignOut;
   final AuthRepository? repository;
   final VoidCallback? onSessionEnded;
@@ -83,9 +88,13 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
               client: widget.repository!.apiClient,
               onSessionExpired: _expireSession,
             ));
+  /// Completed searches for saved locations, kept on disk so the Map opens instantly. Removed on
+  /// sign-out and session expiry because the lists carry this Buyer's favorites.
+  late final DiscoveryResultStore _resultStore =
+      widget.resultStore ?? FileDiscoveryResultStore();
   late final DiscoveryController? _discoveryController = _discovery == null
       ? null
-      : DiscoveryController(repository: _discovery);
+      : DiscoveryController(repository: _discovery, store: _resultStore);
   late final ExploreController? _explore =
       _procurement == null || _discoveryController == null
       ? null
@@ -158,7 +167,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
     await Navigator.of(context).push<void>(
       MaterialPageRoute(
         builder: (context) => Scaffold(
-          appBar: AppBar(title: Text('Market analysis · ${site['name']}')),
+          appBar: buyerAppBar(context, 'Market analysis · ${site['name']}'),
           body: Column(
             children: [
               const Padding(
@@ -173,6 +182,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                   cart: _cart,
                   navigation: navigation,
                   onOpenMap: () => Navigator.pop(context),
+                  onOpenNotifications: () => _unavailable('Notifications'),
                 ),
               ),
             ],
@@ -193,6 +203,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
   }
 
   Future<void> _expireSession() async {
+    await _resultStore.clear();
     await widget.repository?.clearAccountSession();
     if (mounted) _sessionEnded();
   }
@@ -202,9 +213,14 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
     widget.onSessionEnded?.call();
   }
 
+  /// The one placeholder destination for features that are not built yet, so every entry point to
+  /// the same feature (for example the bell on each tab) opens the same page.
   void _unavailable(String title) => Navigator.of(context).push(
     MaterialPageRoute<void>(
-      builder: (_) => BuyerUnavailableScreen(title: title),
+      builder: (_) => BuyerUnavailableScreen(
+        title: title,
+        artwork: title == 'Notifications' ? 'notifications' : 'not-implemented',
+      ),
     ),
   );
 
@@ -258,10 +274,26 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                       onUnavailable: _unavailable,
                       onOpenSearch: navigation == null
                           ? null
-                          : () => _select(1),
+                          : () => navigation.openSearch(context),
                       onOpenCart: navigation == null
                           ? null
                           : () => navigation.openCart(context),
+                      onMessageStore: navigation == null
+                          ? null
+                          : (context, supplier) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Choose a product to start a conversation with this store.',
+                                  ),
+                                ),
+                              );
+                              navigation.browseStore(
+                                context,
+                                vendorId: supplier.resultId,
+                                vendorName: supplier.name,
+                              );
+                            },
                       onOpenStore: (context, supplier) =>
                           _openStore(context, supplier.resultId),
                     ),
@@ -297,6 +329,10 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
               repository: _messaging!,
               conversationId: id,
               orders: _orders,
+              onOpenCart: _navigation == null
+                  ? null
+                  : () => _navigation.openCart(context),
+              onOpenNotifications: () => _unavailable('Notifications'),
             ),
           ),
         ),
@@ -339,12 +375,22 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                   builder: (_) => OrdersScreen(repository: _orders),
                 ),
               ),
+        onOpenCart: _navigation == null
+            ? null
+            : () => _navigation.openCart(context),
+        onOpenSearch: _navigation == null
+            ? null
+            : () => _navigation.openSearch(context),
+        onOpenNotifications: () => _unavailable('Notifications'),
         onRankingPreferences: _navigation == null
             ? null
             : () => _navigation.openPreferences(context),
         deviceLocation: widget.deviceLocation,
         onSignedOut: _sessionEnded,
-        onSignOut: widget.onSignOut,
+        onSignOut: () async {
+          await _resultStore.clear();
+          await widget.onSignOut();
+        },
       );
     }
     if (_destination == 1) {
@@ -361,13 +407,13 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
         );
       }
       return Scaffold(
-        appBar: AppBar(title: const Text('Explore stores')),
+        appBar: buyerAppBar(context, 'Explore stores'),
         body: const BuyerStoreBrowseScreen(),
       );
     }
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(title: Text(_labels[_destination]), centerTitle: true),
+      appBar: buyerAppBar(context, _labels[_destination]),
       body: SafeArea(
         child: BuyerUnavailableContent(
           artwork: _destination == 3 ? 'inbox' : 'not-implemented',

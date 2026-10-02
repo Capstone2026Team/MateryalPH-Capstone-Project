@@ -93,6 +93,7 @@ for (const schema of ['OrderSummary', 'CheckoutChildOrder', 'MoneyBreakdown']) {
 assert.match(schemas.OrderLineInventory.description, /Vendor roles only/, 'Line inventory is Vendor-only')
 assert.deepEqual(schemas.OrderDestination.properties.vehicle_endpoint.enum, ['INTENDED_LOCATION', 'ALTERNATE_DROP_OFF', null], 'The actual drop-off is named separately from the intended site')
 assert.equal(schemas.OrderDeadlines.properties.timezone.const, 'Asia/Manila')
+assert.equal(schemas.OrderSummary.properties.payment_retryable.type, 'boolean', 'Buyer lists expose the latest attempt retry state without fetching each order')
 assert.deepEqual(schemas.VendorOrderPrimaryAction.enum, ['CONFIRM', 'WAITING_FOR_BUYER', 'WAITING_FOR_PAYMENT', 'PREPARE_WHEN_AVAILABLE', 'NONE'], 'One primary action per state')
 assert.equal(schemas.DeliveryPlan.properties.advisory.const, true, 'A delivery plan is advisory only')
 for (const request of ['CheckoutSubmitRequest', 'OrderRevisionDecision', 'NrpcAcceptRequest', 'NrpcRejectRequest', 'NrpcFlagRequest', 'VendorOrderConfirmRequest', 'VendorOrderDeclineRequest', 'DeliveryPlanRequest', 'NrpcProposal', 'DeliveryConfirmation']) {

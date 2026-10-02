@@ -65,8 +65,8 @@ final class AccountAccess
     public function vendorPermissions(string $role, bool $delegated = false): array
     {
         $permissions = match ($role) {
-            'OWNER', 'STORE_MANAGER' => ['quotations.publish', 'orders.set_nrpc', 'orders.confirm', 'orders.revise', 'catalog.manage', 'inventory.view', 'inventory.manage', 'inventory.settings', 'compliance.submit', 'auto_accept.configure', 'fulfillment.record', 'vehicles.manage', 'materials_analytics.view_competitors'],
-            'STORE_STAFF' => ['quotations.publish', 'orders.set_nrpc', 'orders.confirm', 'orders.revise', 'catalog.manage', 'inventory.view', 'inventory.manage', 'compliance.submit', 'auto_accept.view_outcomes'],
+            'OWNER', 'STORE_MANAGER' => ['quotations.publish', 'orders.set_nrpc', 'orders.confirm', 'orders.revise', 'catalog.manage', 'inventory.view', 'inventory.manage', 'inventory.settings', 'compliance.submit', 'auto_accept.configure', 'fulfillment.record', 'vehicles.manage', 'materials_analytics.view_competitors', 'payments.record_physical'],
+            'STORE_STAFF' => ['quotations.publish', 'orders.set_nrpc', 'orders.confirm', 'orders.revise', 'catalog.manage', 'inventory.view', 'inventory.manage', 'compliance.submit', 'auto_accept.view_outcomes', 'payments.record_physical'],
             'CUSTOMER_SERVICE' => ['orders.confirm', 'inventory.view', 'auto_accept.view_outcomes'],
             'INVENTORY' => ['catalog.manage', 'inventory.view', 'inventory.manage', 'compliance.submit', 'auto_accept.manage_allotment'],
             'FULFILLMENT' => ['fulfillment.record', 'vehicles.view_assigned'],

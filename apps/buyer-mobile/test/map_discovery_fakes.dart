@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:materyalph/features/map_discovery/device_location.dart';
 import 'package:materyalph/features/map_discovery/discovery_models.dart';
 import 'package:materyalph/features/map_discovery/discovery_repository.dart';
+import 'package:materyalph/features/map_discovery/discovery_result_cache.dart';
 import 'package:materyalph/features/map_discovery/map_geometry.dart';
 import 'package:materyalph/features/map_discovery/supplier_map.dart';
 
@@ -102,6 +103,18 @@ const primaryLocation = SavedLocationView(
   ),
   lockVersion: 1,
 );
+
+/// In-memory stand-in for the on-disk result store, so tests never touch the file system.
+class MemoryDiscoveryResultStore implements DiscoveryResultStore {
+  final entries = <String, CachedDiscovery>{};
+  @override
+  Future<CachedDiscovery?> read(String key) async => entries[key];
+  @override
+  Future<void> write(String key, CachedDiscovery value) async =>
+      entries[key] = value;
+  @override
+  Future<void> clear() async => entries.clear();
+}
 
 class SearchCall {
   SearchCall(

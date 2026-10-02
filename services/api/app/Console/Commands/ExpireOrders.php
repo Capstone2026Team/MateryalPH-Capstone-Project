@@ -11,7 +11,7 @@ final class ExpireOrders extends Command
 {
     protected $signature = 'materyalph:orders-expire {--limit=200}';
 
-    protected $description = 'Expire orders whose Vendor, Buyer or 45-minute payment window has passed and release their reservations';
+    protected $description = 'Expire orders whose Vendor, Buyer or 24-hour Pending Payment window has passed and release their reservations';
 
     public function handle(OrderExpiryService $expiry): int
     {

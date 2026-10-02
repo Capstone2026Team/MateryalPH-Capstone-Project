@@ -101,7 +101,7 @@ test('customer service confirms the request as submitted: quantities are read-on
   expect(quantity).toBeDisabled()
   expect(screen.queryByText(/Non-Recoverable Preparation Cost \(optional\)/)).not.toBeInTheDocument()
   expect(screen.getByText(/only the Owner, Store Manager or Store Staff can publish a revision/)).toBeInTheDocument()
-  expect(screen.getByText(/The order becomes payable right away with a 45-minute payment window/)).toBeInTheDocument()
+  expect(screen.getByText(/The order becomes payable right away with a 24-hour payment window/)).toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: 'Confirm order' }))
   const dialog = await screen.findByRole('dialog', { name: 'Reserve stock and confirm?' })
   fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm order' }))

@@ -13,6 +13,7 @@ use App\Domain\Orders\OrderActor;
 use App\Domain\Orders\OrderCommercial;
 use App\Domain\Orders\OrderNotifier;
 use App\Domain\Orders\OrderTransitionService;
+use App\Domain\Payments\PaymentMethodPolicy;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
@@ -101,6 +102,7 @@ final class ProjectInquiryService
             if ($s['delivery']['status'] === 'BLOCKED') {
                 throw new AuthenticationException('FULFILLMENT_REVIEW_REQUIRED', 'Resolve the delivery endpoint or coverage before selection.', 422);
             }
+            app(PaymentMethodPolicy::class)->assertAllowed((string) $s['vendor_id'], (string) $s['fulfillment_method'], (string) $s['payment_method']);
             $actor = OrderActor::buyer($request);
             $buyer = DB::table('projects')->where('id', $w->project_id)->value('buyer_profile_id');
             DB::table('orders')->insert(['id' => $key, 'reference' => 'ORD-'.now('Asia/Manila')->format('Y').'-'.Str::upper(Str::random(10)), 'buyer_profile_id' => $buyer,

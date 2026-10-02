@@ -19,6 +19,10 @@ class _$VendorOrderPermissions extends VendorOrderPermissions {
   final bool canDecline;
   @override
   final bool canViewInventory;
+  @override
+  final bool? canRecordPhysicalPayment;
+  @override
+  final bool? canApproveOnlineBalance;
 
   factory _$VendorOrderPermissions(
           [void Function(VendorOrderPermissionsBuilder)? updates]) =>
@@ -30,7 +34,9 @@ class _$VendorOrderPermissions extends VendorOrderPermissions {
       required this.canSetNrpc,
       required this.canConfirmDelivery,
       required this.canDecline,
-      required this.canViewInventory})
+      required this.canViewInventory,
+      this.canRecordPhysicalPayment,
+      this.canApproveOnlineBalance})
       : super._();
   @override
   VendorOrderPermissions rebuild(
@@ -50,7 +56,9 @@ class _$VendorOrderPermissions extends VendorOrderPermissions {
         canSetNrpc == other.canSetNrpc &&
         canConfirmDelivery == other.canConfirmDelivery &&
         canDecline == other.canDecline &&
-        canViewInventory == other.canViewInventory;
+        canViewInventory == other.canViewInventory &&
+        canRecordPhysicalPayment == other.canRecordPhysicalPayment &&
+        canApproveOnlineBalance == other.canApproveOnlineBalance;
   }
 
   @override
@@ -62,6 +70,8 @@ class _$VendorOrderPermissions extends VendorOrderPermissions {
     _$hash = $jc(_$hash, canConfirmDelivery.hashCode);
     _$hash = $jc(_$hash, canDecline.hashCode);
     _$hash = $jc(_$hash, canViewInventory.hashCode);
+    _$hash = $jc(_$hash, canRecordPhysicalPayment.hashCode);
+    _$hash = $jc(_$hash, canApproveOnlineBalance.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -74,7 +84,9 @@ class _$VendorOrderPermissions extends VendorOrderPermissions {
           ..add('canSetNrpc', canSetNrpc)
           ..add('canConfirmDelivery', canConfirmDelivery)
           ..add('canDecline', canDecline)
-          ..add('canViewInventory', canViewInventory))
+          ..add('canViewInventory', canViewInventory)
+          ..add('canRecordPhysicalPayment', canRecordPhysicalPayment)
+          ..add('canApproveOnlineBalance', canApproveOnlineBalance))
         .toString();
   }
 }
@@ -109,6 +121,16 @@ class VendorOrderPermissionsBuilder
   set canViewInventory(bool? canViewInventory) =>
       _$this._canViewInventory = canViewInventory;
 
+  bool? _canRecordPhysicalPayment;
+  bool? get canRecordPhysicalPayment => _$this._canRecordPhysicalPayment;
+  set canRecordPhysicalPayment(bool? canRecordPhysicalPayment) =>
+      _$this._canRecordPhysicalPayment = canRecordPhysicalPayment;
+
+  bool? _canApproveOnlineBalance;
+  bool? get canApproveOnlineBalance => _$this._canApproveOnlineBalance;
+  set canApproveOnlineBalance(bool? canApproveOnlineBalance) =>
+      _$this._canApproveOnlineBalance = canApproveOnlineBalance;
+
   VendorOrderPermissionsBuilder() {
     VendorOrderPermissions._defaults(this);
   }
@@ -122,6 +144,8 @@ class VendorOrderPermissionsBuilder
       _canConfirmDelivery = $v.canConfirmDelivery;
       _canDecline = $v.canDecline;
       _canViewInventory = $v.canViewInventory;
+      _canRecordPhysicalPayment = $v.canRecordPhysicalPayment;
+      _canApproveOnlineBalance = $v.canApproveOnlineBalance;
       _$v = null;
     }
     return this;
@@ -157,6 +181,8 @@ class VendorOrderPermissionsBuilder
               canDecline, r'VendorOrderPermissions', 'canDecline'),
           canViewInventory: BuiltValueNullFieldError.checkNotNull(
               canViewInventory, r'VendorOrderPermissions', 'canViewInventory'),
+          canRecordPhysicalPayment: canRecordPhysicalPayment,
+          canApproveOnlineBalance: canApproveOnlineBalance,
         );
     replace(_$result);
     return _$result;

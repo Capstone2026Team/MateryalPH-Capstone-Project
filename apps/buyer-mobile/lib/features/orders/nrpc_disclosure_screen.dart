@@ -8,7 +8,7 @@ import '../map_discovery/discovery_models.dart';
 import '../map_discovery/discovery_repository.dart' show newIdempotencyKey;
 import 'order_models.dart';
 import 'orders_repository.dart';
-import 'orders_screen.dart' show orderAppBar;
+import '../../design_system/components/buyer_app_bar.dart';
 
 /// The dedicated NRPC disclosure. The acceptance control activates only after the amount, reason,
 /// affected lines and the versioned Terms have all been shown (scrolled through) and the Buyer ticks
@@ -137,7 +137,7 @@ class _NrpcDisclosureScreenState extends State<NrpcDisclosureScreen> {
         _pending && _termsAvailable && _reachedEnd && _acknowledged && !_busy;
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: orderAppBar(context, 'Preparation cost'),
+      appBar: buyerAppBar(context, 'Preparation cost'),
       bottomNavigationBar: SafeArea(
         top: false,
         child: Material(

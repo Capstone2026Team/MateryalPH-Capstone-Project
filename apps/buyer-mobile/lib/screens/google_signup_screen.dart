@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../design_system/components/buyer_app_bar.dart';
 
 import '../widgets/auth_content.dart';
 import '../widgets/phone_number_field.dart';
@@ -63,14 +64,7 @@ class _GoogleSignupScreenState extends State<GoogleSignupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          onPressed: widget.onBack,
-          tooltip: 'Back',
-          icon: const Icon(Icons.arrow_back),
-        ),
-        title: const Text('Sign up with Google'),
-      ),
+      appBar: buyerAppBar(context, 'Sign up with Google', onBack: widget.onBack),
       body: SafeArea(
         top: false,
         child: AuthContent(

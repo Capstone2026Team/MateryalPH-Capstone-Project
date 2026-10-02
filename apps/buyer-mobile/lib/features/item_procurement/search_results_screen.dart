@@ -251,13 +251,11 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
             child: Row(
               children: [
                 if (canPop)
-                  IconButton(
+                  RoundIconButton(
+                    icon: LucideIcons.arrowLeft,
                     tooltip: 'Back',
+                    filled: true,
                     onPressed: () => Navigator.of(context).maybePop(),
-                    icon: const Icon(
-                      LucideIcons.arrowLeft,
-                      color: BuyerTheme.action,
-                    ),
                   ),
                 Expanded(
                   child: PillSearchField(

@@ -97,6 +97,12 @@ void main() {
       // TODO
     });
 
+    // Buyer list only. True when the order is Pending Payment and its latest checkout attempt failed or expired. Retry uses the same order and principal.
+    // bool paymentRetryable
+    test('to test the property `paymentRetryable`', () async {
+      // TODO
+    });
+
     // OrderBuyerRef buyer
     test('to test the property `buyer`', () async {
       // TODO

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../design_system/components/buyer_app_bar.dart';
 import '../../design_system/theme.dart';
 import '../../widgets/auth_content.dart';
 import 'discovery_models.dart';
@@ -86,7 +87,7 @@ class _BuyerOnboardingScreenState extends State<BuyerOnboardingScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: Colors.white,
-    appBar: AppBar(title: const Text('About your work')),
+    appBar: buyerAppBar(context, 'About your work'),
     body: SafeArea(
       child: AuthContent(
         child: Form(

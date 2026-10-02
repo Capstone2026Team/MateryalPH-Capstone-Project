@@ -7,6 +7,9 @@ namespace App\Domain\Orders;
 use App\Domain\Finance\FinancialCalculator;
 use App\Domain\Inventory\InventoryAccess;
 use App\Domain\Inventory\StockAvailability;
+use App\Domain\Payments\PayableAmounts;
+use App\Domain\Payments\PaymentPresenter;
+use App\Domain\Payments\PhysicalPaymentService;
 use App\Domain\Procurement\ListingPublicFacts;
 use App\Domain\Projects\ProjectBudget;
 use Carbon\CarbonImmutable;
@@ -63,17 +66,18 @@ final class OrderQueries
             $query->whereIn('o.order_state', self::BUYER_GROUPS[$group]);
         }
 
-        return $this->page($query, (int) ($filters['page'] ?? 1), fn (object $order): array => $this->summary($order) + ['next_action' => $this->buyerNextAction($order)], ['group' => $group,
-            'counts' => $this->counts(DB::table('orders')->where('buyer_profile_id', $buyerId), self::BUYER_GROUPS)]);
+        return $this->page($query, (int) ($filters['page'] ?? 1), fn (object $order): array => $this->summary($order) + ['next_action' => $this->buyerNextAction($order),
+            'payment_retryable' => $order->order_state === OrderStates::AWAITING_PAYMENT && in_array(DB::table('payments')->where('order_id', $order->id)->orderByDesc('created_at')->orderByDesc('id')->value('state'), ['FAILED', 'EXPIRED'], true)], ['group' => $group,
+                'counts' => $this->counts(DB::table('orders')->where('buyer_profile_id', $buyerId), self::BUYER_GROUPS)]);
     }
 
     /** @return array<string, mixed> */
     public function buyerDetail(Request $request, string $orderId): array
     {
         $order = $this->access->buyerOrder($request, $orderId);
-        if ($this->expiry->expireIfDue((string) $order->id)) {
-            $order = $this->access->buyerOrder($request, $orderId);
-        }
+        $this->expiry->expireIfDue((string) $order->id);
+        // Reconciliation can confirm the order instead of expiring it.
+        $order = $this->access->buyerOrder($request, $orderId);
         $detail = $this->detail($order, false);
         $nrpc = $detail['nrpc'];
         if (($detail['destination']['type'] ?? null) === 'DELIVERY') {
@@ -86,9 +90,9 @@ final class OrderQueries
             $order->order_state === OrderStates::AWAITING_NRPC_ACCEPTANCE ? 'ACCEPT_NRPC' : null,
             $order->order_state === OrderStates::AWAITING_NRPC_ACCEPTANCE ? 'REJECT_NRPC' : null,
             $nrpc !== null && $nrpc['flag'] === null && ! OrderStates::isClosed((string) $order->order_state) ? 'FLAG_NRPC' : null,
+            app(PayableAmounts::class)->resolve($order) !== null ? 'PAY' : null,
         ]));
-        $detail['payment'] = ['available' => false, 'reason' => $order->order_state === OrderStates::AWAITING_PAYMENT ? 'ONLINE_PAYMENT_NOT_YET_ENABLED' : null,
-            'notice' => $order->order_state === OrderStates::AWAITING_PAYMENT ? 'Online payment opens in the payments release. Your stock stays reserved until the payment window ends.' : null];
+        $detail['payment'] = $this->payment($order, true);
 
         return $detail;
     }
@@ -159,6 +163,10 @@ final class OrderQueries
             'can_decline' => $pending && OrderAccess::allows($scope, OrderAccess::CONFIRM),
             'can_view_inventory' => OrderAccess::allows($scope, InventoryAccess::VIEW),
         ];
+        $detail['permissions']['can_record_physical_payment'] = $order->payment_method !== 'ONLINE' && OrderAccess::allows($scope, PhysicalPaymentService::RECORD_PERMISSION);
+        $detail['permissions']['can_approve_online_balance'] = $order->payment_method !== 'ONLINE' && $order->online_balance_approved_at === null && OrderAccess::allows($scope, OrderAccess::REVISE);
+        // Order-specific payment status only; store-wide finance stays Owner-only in Finance.
+        $detail['payment'] = $this->payment($order, false);
         $detail['primary_action'] = $this->vendorPrimaryAction($order);
         $detail['nrpc_terms'] = $terms === null ? null : ['id' => $terms['id'], 'version' => $terms['version'], 'title' => $terms['title'], 'available' => $terms['content'] !== null];
         $detail['decline_reasons'] = OrderConfirmationService::DECLINE_REASONS;
@@ -238,7 +246,7 @@ final class OrderQueries
             'expected_fulfillment_date' => $order->expected_fulfillment_date,
             'lines' => $lines,
             'destination' => $destination === [] ? null : (($destination['type'] ?? null) === 'PICKUP'
-                ? ['type' => 'PICKUP', 'store_address' => $destination['store_address'] ?? null]
+                ? ['type' => 'PICKUP', 'store_address' => self::addressText($destination['store_address'] ?? null)]
                 : ['type' => 'DELIVERY', 'intended' => OrderDeliveryPlanner::publicPoint($destination['intended'] ?? null), 'heavy_vehicle_restriction' => $destination['heavy_vehicle_restriction'] ?? null,
                     'alternate_drop_off' => OrderDeliveryPlanner::publicPoint($destination['alternate_drop_off'] ?? null), 'vehicle_endpoint' => $destination['vehicle_endpoint'] ?? null,
                     'access_instructions' => $forVendor && $order->access_instructions_encrypted !== null ? Crypt::decryptString((string) $order->access_instructions_encrypted) : null]),
@@ -250,6 +258,51 @@ final class OrderQueries
                 ->map(static fn (object $row): array => ['family' => (string) $row->state_family, 'from_state' => $row->from_state, 'to_state' => (string) $row->to_state, 'source' => (string) $row->source,
                     'actor_role' => $row->actor_role, 'reason_code' => $row->reason_code, 'snapshot_version' => $row->snapshot_version === null ? null : (int) $row->snapshot_version, 'at' => self::iso($row->created_at)])->all(),
             'lock_version' => (int) $order->lock_version,
+        ];
+    }
+
+    /**
+     * The contract declares the pickup address as one line of text. A stored snapshot may hold either
+     * that text or the structured store address, so both are accepted and only the text is returned.
+     */
+    private static function addressText(mixed $address): ?string
+    {
+        if (is_string($address)) {
+            return $address === '' ? null : $address;
+        }
+        if (! is_array($address)) {
+            return null;
+        }
+        $formatted = $address['formatted_address'] ?? null;
+        if (is_string($formatted) && $formatted !== '') {
+            return $formatted;
+        }
+        $parts = array_filter([$address['city_municipality'] ?? null, $address['province'] ?? null], static fn (mixed $part): bool => is_string($part) && $part !== '');
+
+        return $parts === [] ? null : implode(', ', $parts);
+    }
+
+    /** @return array<string, mixed> */
+    private function payment(object $order, bool $forBuyer): array
+    {
+        $due = app(PayableAmounts::class)->resolve($order);
+        $presenter = app(PaymentPresenter::class);
+        $attempts = DB::table('payments')->where('order_id', $order->id)->orderByDesc('created_at')->orderByDesc('id')->get();
+        $verified = $attempts->first(static fn (object $payment): bool => $payment->state === 'PAID' && ! (bool) $payment->late_capture);
+
+        return [
+            'available' => $due !== null, 'purpose' => $due['purpose'] ?? null, 'principal_centavos' => $due['principal_centavos'] ?? null,
+            'reason' => $due === null && $order->order_state === OrderStates::AWAITING_PAYMENT ? 'PAYMENT_NOT_DUE' : null,
+            'latest_attempt' => $attempts->isEmpty() ? null : $presenter->attempt($attempts->first(), false),
+            'verified_payment' => $verified === null ? null : $presenter->attempt($verified, false),
+            'attempts' => $forBuyer ? $attempts->take(5)->map(static fn (object $payment): array => $presenter->attempt($payment, false))->values()->all() : [],
+            'physical' => app(PhysicalPaymentService::class)->summary($order),
+            'environment' => 'TEST',
+            'notice' => match (true) {
+                $due !== null && $due['purpose'] === 'NRPC_ASSURANCE_PAYMENT' => 'Pay the accepted NRPC online now; it is credited once against the balance you pay the Vendor directly. Its processing fee is not credited.',
+                $due !== null => 'TEST — no real charge. The order is confirmed only after the payment provider verifies your payment.',
+                default => null,
+            },
         ];
     }
 
@@ -276,6 +329,13 @@ final class OrderQueries
             $estimate = is_array($range) ? ['min_centavos' => (int) $range['fee_min_centavos'], 'max_centavos' => (int) $range['fee_max_centavos']] : null;
         }
         $matrix = $commercial !== null && $commercial['commercial_total_centavos'] !== null ? FinancialCalculator::paymentMatrix($commercial, (string) $order->payment_method, null) : null;
+        $paid = $matrix === null || $matrix['purpose'] === null ? null : DB::table('payments')->where('order_id', $order->id)->where('purpose', $matrix['purpose'])
+            ->where('state', 'PAID')->where('late_capture', false)->first(['processing_fee_centavos', 'total_centavos']);
+        if ($paid !== null) {
+            // The disclosed fee of the verified payment is now part of the record; it is never credited as principal.
+            $matrix['processing_fee'] = ['status' => 'PAID', 'amount_centavos' => (int) $paid->processing_fee_centavos];
+            $matrix['amount_due_online_centavos'] = (int) $paid->total_centavos;
+        }
         $vat = (int) ($commercial['materials_vat_centavos'] ?? 0);
 
         return [

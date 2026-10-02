@@ -30,6 +30,7 @@ import { VendorInventoryPage } from './pages/InventoryPages'
 import { VendorFleetPage } from './pages/FleetPages'
 import { VendorMessagesPage } from './pages/MessagingPage'
 import { VendorOrderDetailPage, VendorOrdersPage } from './pages/OrderPages'
+import { VendorEarningsPage, VendorFinancePage, VendorStatementPage, VendorTransactionHistoryPage } from './pages/FinancePages'
 import { VendorAccountPage, VendorStoreProfilePage, VendorDashboardPage, VendorSetupPage, VendorTeamPage, VendorVerificationPage, VendorWelcomePage } from './pages/PhaseThreeVendorPages'
 
 function App() {
@@ -63,6 +64,10 @@ function App() {
           <Route path="/messages" element={<VendorMessagesPage />} />
           <Route path="/orders" element={<VendorOrdersPage />} />
           <Route path="/orders/:orderId" element={<VendorOrderDetailPage />} />
+          <Route path="/finance" element={<VendorFinancePage />} />
+          <Route path="/finance/transactions" element={<VendorTransactionHistoryPage />} />
+          <Route path="/finance/statements/:statementId" element={<VendorStatementPage />} />
+          <Route path="/finance/earnings" element={<VendorEarningsPage />} />
           <Route path="/products/import" element={<VendorCatalogImportPage />} />
           <Route path="/products/:listingId" element={<VendorListingEditorPage />} />
         </Route>

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -28,7 +29,6 @@ class SupplierListPanel extends StatelessWidget {
     required this.onChangeLocation,
     required this.onAdjustFilters,
     this.scrollController,
-    this.onOpenLink,
   });
 
   final DiscoveryController controller;
@@ -38,7 +38,6 @@ class SupplierListPanel extends StatelessWidget {
   final VoidCallback onChangeLocation;
   final VoidCallback onAdjustFilters;
   final ScrollController? scrollController;
-  final Future<void> Function(Uri)? onOpenLink;
 
   List<SupplierResultView> get _visible => switch (view) {
     SupplierListView.all => controller.items,
@@ -192,7 +191,9 @@ class SupplierListPanel extends StatelessWidget {
             itemBuilder: (context, index) => SupplierRow(
               key: ValueKey(visible[index].resultId),
               photoLoader: controller.directoryPhotos,
-              onOpenLink: onOpenLink,
+              onToggleFavorite: visible[index].isVerified
+                  ? () => controller.toggleFavorite(visible[index])
+                  : null,
               item: visible[index],
               selected: visible[index].resultId == controller.selectedId,
               onTap: () => controller.select(visible[index].resultId),
@@ -256,15 +257,17 @@ class SupplierRow extends StatefulWidget {
     required this.selected,
     required this.onTap,
     this.photoLoader,
-    this.onOpenLink,
+    this.onToggleFavorite,
   });
 
   final SupplierResultView item;
   final bool selected;
   final VoidCallback onTap;
 
+  /// Save / remove Favorite Supplier. Null for a Directory Supplier, which cannot be saved.
+  final VoidCallback? onToggleFavorite;
+
   final DirectoryPhotoLoader? photoLoader;
-  final Future<void> Function(Uri)? onOpenLink;
 
   @override
   State<SupplierRow> createState() => _SupplierRowState();
@@ -286,7 +289,6 @@ class _SupplierRowState extends State<SupplierRow> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.item.resultId != widget.item.resultId ||
         oldWidget.photoLoader != widget.photoLoader) {
-      _evict();
       _media = null;
       _schedulePhoto();
     }
@@ -296,6 +298,12 @@ class _SupplierRowState extends State<SupplierRow> {
     _debounce?.cancel();
     final sequence = ++_sequence;
     if (widget.item.isVerified || widget.photoLoader == null) return;
+    // Seen recently: paint it on the first frame, with no request and no wait.
+    final seen = widget.photoLoader!.cached(widget.item.resultId);
+    if (seen != null) {
+      _media = seen;
+      return;
+    }
     // Let a fast fling pass before making a paid provider request.
     _debounce = Timer(const Duration(milliseconds: 250), () async {
       final result = await widget.photoLoader!.load(
@@ -306,16 +314,12 @@ class _SupplierRowState extends State<SupplierRow> {
     });
   }
 
-  void _evict() {
-    final uri = _media?.photo?.uri;
-    if (uri != null) NetworkImage(uri).evict();
-  }
-
   @override
   void dispose() {
     _sequence++;
     _debounce?.cancel();
-    _evict();
+    // The decoded thumbnail is deliberately left in Flutter's bounded in-memory image cache (never
+    // on disk), so scrolling back or reopening the list paints it again with no download.
     super.dispose();
   }
 
@@ -324,101 +328,112 @@ class _SupplierRowState extends State<SupplierRow> {
     final item = widget.item;
     final selected = widget.selected;
     final open = item.openState;
-    return Semantics(
-      selected: selected,
-      button: true,
-      container: true,
-      child: InkWell(
-        onTap: widget.onTap,
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 72),
-          decoration: BoxDecoration(
-            color: selected ? BuyerTheme.brandSoft : null,
-            border: Border(
-              left: BorderSide(
-                color: selected ? BuyerTheme.ink : Colors.transparent,
-                width: 4,
-              ),
-            ),
-          ),
-          padding: const EdgeInsets.fromLTRB(12, 12, 16, 12),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _SupplierAvatar(item: item, photo: _media?.photo),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.name,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 16,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 4,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        TierBadge(tier: item.tier),
-                        ScoreBadge(kind: item.scoreKind, text: item.scoreText),
-                        if (item.isFavorite)
-                          const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                LucideIcons.star,
-                                size: 14,
-                                color: BuyerTheme.ink,
-                              ),
-                              SizedBox(width: 2),
-                              Text(
-                                'Favorite Supplier',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      [
-                        '${formatDistance(item.distanceMeters)} away',
-                        if (open != null) _openText(open),
-                        if (item.vacationMode) 'Vacation Mode',
-                      ].join(' · '),
-                      style: const TextStyle(
-                        color: BuyerTheme.muted,
-                        fontSize: 13,
-                      ),
-                    ),
-                    if (_media?.photo != null) ...[
-                      const SizedBox(height: 4),
-                      GooglePlacePhotoCredit(
-                        photo: _media!.photo!,
-                        providerAttributions: _media!.providerAttributions,
-                        onOpenLink: widget.onOpenLink,
-                      ),
-                    ],
-                  ],
+    final favorite = widget.onToggleFavorite;
+    // Isolated repaint layer: a drag or fling repaints rows independently of the map and sheet.
+    return RepaintBoundary(
+      child: Semantics(
+        selected: selected,
+        button: true,
+        container: true,
+        child: InkWell(
+          onTap: widget.onTap,
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 84),
+            decoration: BoxDecoration(
+              color: selected ? BuyerTheme.brandSoft : null,
+              border: Border(
+                left: BorderSide(
+                  color: selected ? BuyerTheme.action : Colors.transparent,
+                  width: 4,
                 ),
               ),
-            ],
+            ),
+            padding: EdgeInsets.fromLTRB(12, 12, favorite == null ? 16 : 4, 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _SupplierAvatar(item: item, photo: _media?.photo),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 16,
+                          height: 1.2,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          TierBadge(tier: item.tier),
+                          // A Directory Supplier has no score, so its "Directory" chip only repeats the tier.
+                          if (item.scoreKind != ScoreKind.directory)
+                            ScoreBadge(
+                              kind: item.scoreKind,
+                              text: item.scoreText,
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          const Icon(
+                            LucideIcons.navigation,
+                            size: 13,
+                            color: BuyerTheme.muted,
+                          ),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              [
+                                '${formatDistance(item.distanceMeters)} away',
+                                if (open != null) _openText(open),
+                                if (item.vacationMode) 'Vacation Mode',
+                              ].join(' · '),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: BuyerTheme.muted,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                if (favorite != null)
+                  IconButton(
+                    tooltip: item.isFavorite
+                        ? 'Remove ${item.name} from Favorite Suppliers'
+                        : 'Save ${item.name} as a Favorite Supplier',
+                    onPressed: favorite,
+                    icon: Icon(
+                      item.isFavorite ? Icons.bookmark : Icons.bookmark_border,
+                      color: BuyerTheme.action,
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 }
+
+/// Decode size of the 56 dp row thumbnail at 3x density.
+const _thumbnailPixels = 168;
 
 String _openText(SupplierOpenState open) => switch (open.status) {
   'OPEN' =>
@@ -446,7 +461,7 @@ class _SupplierAvatar extends StatelessWidget {
       color: item.isVerified ? BuyerTheme.action : BuyerTheme.muted,
     );
     return ClipRRect(
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(12),
       child: Container(
         width: 56,
         height: 56,
@@ -454,10 +469,34 @@ class _SupplierAvatar extends StatelessWidget {
         alignment: Alignment.center,
         child: uri == null
             ? fallback
+            : item.isVerified
+            // A store logo is our own public media at a stable URL: kept on disk so it shows
+            // instantly on every later open. Google photos below are never written to disk.
+            ? Semantics(
+                image: true,
+                label: '${item.name} store logo',
+                child: CachedNetworkImage(
+                  imageUrl: uri,
+                  cacheKey: 'store-logo|$uri',
+                  width: 56,
+                  height: 56,
+                  memCacheWidth: _thumbnailPixels,
+                  memCacheHeight: _thumbnailPixels,
+                  fit: BoxFit.contain,
+                  fadeInDuration: Duration.zero,
+                  fadeOutDuration: Duration.zero,
+                  placeholder: (_, _) => fallback,
+                  errorWidget: (_, _, _) => fallback,
+                ),
+              )
             : Image.network(
                 uri,
                 width: 56,
                 height: 56,
+                // Decode at thumbnail size; a full-resolution photo per row is what made scrolling stutter.
+                cacheWidth: _thumbnailPixels,
+                cacheHeight: _thumbnailPixels,
+                filterQuality: FilterQuality.low,
                 fit: item.isVerified ? BoxFit.contain : BoxFit.cover,
                 semanticLabel:
                     '${item.name} ${item.isVerified ? 'store logo' : 'Google Maps business photo'}',

@@ -6,10 +6,19 @@ namespace App\Domain\Operations;
 
 use App\Domain\Catalog\EligibilityInvalidation;
 use App\Domain\Catalog\EligibleOfferQuery;
+use App\Domain\Finance\RemittanceAssessmentService;
+use App\Domain\Finance\WithholdingThresholdService;
+use App\Domain\Identity\AuthenticationException;
 use App\Domain\Messaging\ConversationBroadcast;
+use App\Domain\Payments\PaymentGateway;
+use App\Domain\Payments\PaymentProviderException;
+use App\Domain\Payments\PaymentReconciliationService;
+use App\Domain\Payments\PaymentSettlement;
+use App\Domain\Payments\XenditWebhookProcessor;
 use App\Mail\AccountSecurityMail;
 use App\Mail\AdminInvitationMail;
 use App\Mail\EmailOtpMail;
+use App\Mail\FinanceNoticeMail;
 use App\Mail\OrderNoticeMail;
 use App\Mail\ProductComplianceNoticeMail;
 use App\Mail\VendorInventoryNoticeMail;
@@ -85,6 +94,9 @@ final class OutboxProcessor
         if (in_array($eventType, self::RECORDED_DOMAIN_EVENTS, true)) {
             return;
         }
+        if ($this->deliverPaymentEvent($eventType, $payload)) {
+            return;
+        }
         $recipient = $payload['recipient'] ?? null;
         if (! is_string($recipient)) {
             throw new RuntimeException('The outbox email recipient is invalid.');
@@ -119,8 +131,62 @@ final class OutboxProcessor
                 $this->requiredString($payload, 'subject'),
                 $this->requiredString($payload, 'message'),
             )),
+            'FINANCE_NOTICE' => Mail::to($recipient)->send(new FinanceNoticeMail(
+                $this->requiredString($payload, 'subject'),
+                $this->requiredString($payload, 'message'),
+            )),
             default => throw new RuntimeException('Unsupported outbox event type.'),
         };
+    }
+
+    /**
+     * Phase 11 post-commit work: webhook processing, merchant-remittance assessment after a verified capture,
+     * technical-compensation refunds and best-effort provider session cancellation. None of it runs under a lock
+     * held by the transaction that published it.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    private function deliverPaymentEvent(string $eventType, array $payload): bool
+    {
+        switch ($eventType) {
+            case 'XENDIT_WEBHOOK_RECEIVED':
+                // A failed provider read leaves the inbox row RECEIVED; scheduled reconciliation retries it.
+                app(XenditWebhookProcessor::class)->process($this->requiredString($payload, 'webhook_event_id'));
+
+                return true;
+            case 'PAYMENT_CAPTURED':
+                $paymentId = $this->requiredString($payload, 'payment_id');
+                if (($payload['purpose'] ?? null) !== 'PLATFORM_FEE_PAYMENT') {
+                    try {
+                        app(RemittanceAssessmentService::class)->assessCollection($paymentId, is_string($payload['correlation_id'] ?? null) ? $payload['correlation_id'] : null);
+                    } catch (AuthenticationException $exception) {
+                        $payment = DB::table('payments')->where('id', $paymentId)->first(['vendor_organization_id']);
+                        app(WithholdingThresholdService::class)->reviewItem('TEST', $payment?->vendor_organization_id, 'BASE_REVIEW_REQUIRED', $paymentId, $exception->errorCode,
+                            'The verified collection could not be assessed automatically: '.$exception->getMessage(), [], [], 'PAYMENT');
+                    }
+                }
+
+                return true;
+            case 'PAYMENT_REFUND_REQUESTED':
+                app(PaymentSettlement::class)->sendRefund($this->requiredString($payload, 'refund_id'), (string) ($payload['correlation_id'] ?? ''));
+
+                return true;
+            case 'PAYMENT_SESSION_CANCEL_REQUESTED':
+                $payment = DB::table('payments')->where('id', $this->requiredString($payload, 'payment_id'))->first();
+                if ($payment !== null && $payment->provider_session_id !== null) {
+                    try {
+                        app(PaymentGateway::class)->cancelSession((string) $payment->provider_session_id, PaymentReconciliationService::forUserId($payment));
+                    } catch (PaymentProviderException) {
+                        // The provider expiry equals the attempt expiry; a later capture is compensated.
+                    }
+                }
+
+                return true;
+            case 'PAYMENT_ATTEMPT_CREATED': case 'WITHHOLDING_ACCUMULATOR_POSTED': case 'FEE_STATEMENT_DRAFTED': case 'FEE_STATEMENT_ISSUED': case 'FEE_CREDIT_APPROVED':
+                return true;
+            default:
+                return false;
+        }
     }
 
     /** @param array<string, mixed> $payload */

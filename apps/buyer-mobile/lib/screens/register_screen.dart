@@ -1,6 +1,7 @@
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'terms_screen.dart';
 import 'package:flutter/material.dart';
+import '../design_system/components/buyer_app_bar.dart';
 
 import '../widgets/auth_content.dart';
 import '../widgets/phone_number_field.dart';
@@ -108,13 +109,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        leading: IconButton(
-          onPressed: widget.onBack,
-          tooltip: 'Back',
-          icon: const Icon(LucideIcons.arrowLeft, color: BuyerTheme.action),
-        ),
-      ),
+      appBar: buyerAppBar(context, '', onBack: widget.onBack),
       body: SafeArea(
         top: false,
         child: AuthContent(

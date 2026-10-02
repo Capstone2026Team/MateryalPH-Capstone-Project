@@ -2179,6 +2179,7 @@ FIN-01–FIN-12 financial control and evidence record.
 | `calculation_hash` | `character varying` | No | — | Calculation hash. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+| `billed_at` | `timestamp with time zone` | Yes | — | Billed at. |
 
 **Constraints**
 
@@ -2312,19 +2313,36 @@ FIN-01–FIN-12 financial control and evidence record.
 | `version` | `integer` | No | `1` | Version. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+| `statement_reference` | `character varying` | Yes | — | Statement reference. |
+| `fee_policy_version_id` | `uuid` | Yes | — | Fee policy version id. |
+| `drafted_at` | `timestamp with time zone` | Yes | — | Drafted at. |
+| `issued_at` | `timestamp with time zone` | Yes | — | Issued at. |
+| `due_at` | `timestamp with time zone` | Yes | — | Due at. |
+| `approved_by_user_id` | `bigint` | Yes | — | Approved by user id. |
+| `approved_at` | `timestamp with time zone` | Yes | — | Approved at. |
+| `disputed_held_centavos` | `bigint` | No | `'0'::bigint` | Integer Philippine centavos. Disputed held centavos. |
+| `overdue_notices_sent` | `smallint` | No | `'0'::smallint` | Overdue notices sent. |
+| `last_overdue_notice_at` | `timestamp with time zone` | Yes | — | Last overdue notice at. |
+| `finance_review_at` | `timestamp with time zone` | Yes | — | Finance review at. |
+| `lock_version` | `integer` | No | `1` | Lock version. |
 
 **Constraints**
 
 - `fee_statement_amounts_check` — CHECK: `CHECK (charges_centavos >= 0 AND credits_centavos >= 0 AND paid_centavos >= 0 AND balance_centavos >= 0 AND outstanding_centavos = balance_centavos AND balance_centavos = (charges_centavos - credits_centavos - paid_centavos))`
+- `fee_statement_approval_check` — CHECK: `CHECK ((state::text = ANY (ARRAY['DRAFT'::character varying, 'VOIDED'::character varying]::text[])) = (approved_at IS NULL) AND (approved_at IS NULL OR approved_by_user_id IS NOT NULL))`
 - `fee_statement_dates_check` — CHECK: `CHECK (period_start <= period_end AND issued_on <= due_on)`
 - `fee_statement_state_check` — CHECK: `CHECK (state::text = ANY (ARRAY['DRAFT'::character varying, 'ISSUED'::character varying, 'PARTIALLY_PAID'::character varying, 'PAID'::character varying, 'VOIDED'::character varying]::text[]))`
+- `fee_statements_approved_by_user_id_foreign` — FOREIGN KEY: `FOREIGN KEY (approved_by_user_id) REFERENCES users(id) ON DELETE RESTRICT`
+- `fee_statements_fee_policy_version_id_foreign` — FOREIGN KEY: `FOREIGN KEY (fee_policy_version_id) REFERENCES fee_policy_versions(id) ON DELETE RESTRICT`
 - `fee_statements_vendor_organization_id_foreign` — FOREIGN KEY: `FOREIGN KEY (vendor_organization_id) REFERENCES vendor_organizations(id) ON DELETE RESTRICT`
 - `fee_statements_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
+- `fee_statements_statement_reference_unique` — UNIQUE: `UNIQUE (statement_reference)`
 - `fee_statements_vendor_organization_id_period_start_period_end_v` — UNIQUE: `UNIQUE (vendor_organization_id, period_start, period_end, version)`
 
 **Indexes**
 
 - `fee_statements_pkey` — `CREATE UNIQUE INDEX fee_statements_pkey ON public.fee_statements USING btree (id)`
+- `fee_statements_statement_reference_unique` — `CREATE UNIQUE INDEX fee_statements_statement_reference_unique ON public.fee_statements USING btree (statement_reference)`
 - `fee_statements_vendor_organization_id_period_start_period_end_v` — `CREATE UNIQUE INDEX fee_statements_vendor_organization_id_period_start_period_end_v ON public.fee_statements USING btree (vendor_organization_id, period_start, period_end, version)`
 
 ## `files`
@@ -2415,6 +2433,44 @@ Phase 1 platform foundation record.
 
 - `filing_deadlines_filing_calendar_version_id_obligation_code_tax` — `CREATE UNIQUE INDEX filing_deadlines_filing_calendar_version_id_obligation_code_tax ON public.filing_deadlines USING btree (filing_calendar_version_id, obligation_code, taxpayer_class)`
 - `filing_deadlines_pkey` — `CREATE UNIQUE INDEX filing_deadlines_pkey ON public.filing_deadlines USING btree (id)`
+
+## `finance_review_items`
+
+Phase 1 platform foundation record.
+
+| Column | Database type | Null | Default | Key / meaning |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | No | — | Primary key. Id. |
+| `environment` | `character varying` | No | `'TEST'::character varying` | Environment. |
+| `kind` | `character varying` | No | — | Kind. |
+| `vendor_organization_id` | `uuid` | Yes | — | Vendor organization id. |
+| `source_type` | `character varying` | No | — | Source type. |
+| `source_id` | `uuid` | No | — | Source id. |
+| `reason_code` | `character varying` | No | — | Reason code. |
+| `summary` | `text` | No | — | Summary. |
+| `expected` | `jsonb` | Yes | — | Expected. |
+| `reported` | `jsonb` | Yes | — | Reported. |
+| `state` | `character varying` | No | `'OPEN'::character varying` | State. |
+| `resolution` | `text` | Yes | — | Resolution. |
+| `resolved_by_user_id` | `bigint` | Yes | — | Resolved by user id. |
+| `resolved_at` | `timestamp with time zone` | Yes | — | Resolved at. |
+| `dedupe_key` | `character varying` | No | — | Dedupe key. |
+| `created_at` | `timestamp with time zone` | Yes | — | Created at. |
+| `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+
+**Constraints**
+
+- `finance_review_item_check` — CHECK: `CHECK ((environment::text = ANY (ARRAY['TEST'::character varying, 'DEMO'::character varying, 'LIVE'::character varying]::text[])) AND (kind::text = ANY (ARRAY['RECONCILIATION_EXCEPTION'::character varying, 'PAYMENT_MISMATCH'::character varying, 'LATE_CAPTURE_COMPENSATION'::character varying, 'OVERLAP_UNRESOLVED'::character varying, 'THRESHOLD_ADJUSTMENT_REQUIRED'::character varying, 'BASE_REVIEW_REQUIRED'::character varying, 'FEE_OVERPAYMENT'::character varying, 'STATEMENT_OVERDUE'::character varying, 'FEE_CREDIT_PROPOSAL'::character varying, 'PAID_FEE_CREDIT_PAYABLE'::character varying]::text[])) AND (state::text = ANY (ARRAY['OPEN'::character varying, 'RESOLVED'::character varying]::text[])) AND (state::text = 'OPEN'::text) = (resolved_at IS NULL))`
+- `finance_review_items_resolved_by_user_id_foreign` — FOREIGN KEY: `FOREIGN KEY (resolved_by_user_id) REFERENCES users(id) ON DELETE RESTRICT`
+- `finance_review_items_vendor_organization_id_foreign` — FOREIGN KEY: `FOREIGN KEY (vendor_organization_id) REFERENCES vendor_organizations(id) ON DELETE RESTRICT`
+- `finance_review_items_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
+- `finance_review_items_dedupe_key_unique` — UNIQUE: `UNIQUE (dedupe_key)`
+
+**Indexes**
+
+- `finance_review_items_dedupe_key_unique` — `CREATE UNIQUE INDEX finance_review_items_dedupe_key_unique ON public.finance_review_items USING btree (dedupe_key)`
+- `finance_review_items_pkey` — `CREATE UNIQUE INDEX finance_review_items_pkey ON public.finance_review_items USING btree (id)`
+- `finance_review_items_state_kind_created_at_index` — `CREATE INDEX finance_review_items_state_kind_created_at_index ON public.finance_review_items USING btree (state, kind, created_at)`
 
 ## `financial_allocations`
 
@@ -4213,6 +4269,8 @@ Procurement or immutable commerce record.
 | `work_package_version_id` | `uuid` | Yes | — | Work package version id. |
 | `compiled_estimate_vendor_id` | `uuid` | Yes | — | Compiled estimate vendor id. |
 | `project_note` | `text` | Yes | — | Project note. |
+| `online_balance_approved_at` | `timestamp with time zone` | Yes | — | Online balance approved at. |
+| `online_balance_approved_by_user_id` | `bigint` | Yes | — | Online balance approved by user id. |
 
 **Constraints**
 
@@ -4231,6 +4289,7 @@ Procurement or immutable commerce record.
 - `orders_buyer_profile_id_foreign` — FOREIGN KEY: `FOREIGN KEY (buyer_profile_id) REFERENCES buyer_profiles(id) ON DELETE RESTRICT`
 - `orders_checkout_group_id_foreign` — FOREIGN KEY: `FOREIGN KEY (checkout_group_id) REFERENCES checkout_groups(id) ON DELETE RESTRICT`
 - `orders_compiled_estimate_vendor_id_foreign` — FOREIGN KEY: `FOREIGN KEY (compiled_estimate_vendor_id) REFERENCES compiled_estimate_vendors(id) ON DELETE RESTRICT`
+- `orders_online_balance_approved_by_user_id_foreign` — FOREIGN KEY: `FOREIGN KEY (online_balance_approved_by_user_id) REFERENCES users(id) ON DELETE RESTRICT`
 - `orders_quotation_version_id_foreign` — FOREIGN KEY: `FOREIGN KEY (quotation_version_id) REFERENCES quotation_versions(id) ON DELETE RESTRICT`
 - `orders_vendor_organization_id_foreign` — FOREIGN KEY: `FOREIGN KEY (vendor_organization_id) REFERENCES vendor_organizations(id) ON DELETE RESTRICT`
 - `orders_work_package_id_foreign` — FOREIGN KEY: `FOREIGN KEY (work_package_id) REFERENCES work_packages(id) ON DELETE RESTRICT`
@@ -4306,9 +4365,14 @@ Payment, refund, or physical-money evidence record with an independent lifecycle
 | `safe_payload` | `jsonb` | Yes | — | Safe payload. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+| `operation` | `character varying` | No | `'CREATE'::character varying` | Operation. |
+| `http_status` | `smallint` | Yes | — | Http status. |
+| `provider_request_id` | `character varying` | Yes | — | Provider request id. |
+| `correlation_id` | `character varying` | Yes | — | Correlation id. |
 
 **Constraints**
 
+- `payment_attempt_operation_check` — CHECK: `CHECK (operation::text = ANY (ARRAY['CREATE'::character varying, 'RETRIEVE'::character varying, 'CANCEL'::character varying, 'ACCOUNT_CHECK'::character varying, 'REFUND'::character varying]::text[]))`
 - `payment_attempts_payment_id_foreign` — FOREIGN KEY: `FOREIGN KEY (payment_id) REFERENCES payments(id) ON DELETE RESTRICT`
 - `payment_attempts_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
 - `payment_attempts_provider_event_id_unique` — UNIQUE: `UNIQUE (provider_event_id)`
@@ -4317,6 +4381,48 @@ Payment, refund, or physical-money evidence record with an independent lifecycle
 
 - `payment_attempts_pkey` — `CREATE UNIQUE INDEX payment_attempts_pkey ON public.payment_attempts USING btree (id)`
 - `payment_attempts_provider_event_id_unique` — `CREATE UNIQUE INDEX payment_attempts_provider_event_id_unique ON public.payment_attempts USING btree (provider_event_id)`
+
+## `payment_channel_fee_versions`
+
+Payment, refund, or physical-money evidence record with an independent lifecycle.
+
+| Column | Database type | Null | Default | Key / meaning |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | No | — | Primary key. Id. |
+| `environment` | `character varying` | No | `'TEST'::character varying` | Environment. |
+| `channel_code` | `character varying` | No | — | Channel code. |
+| `version` | `integer` | No | — | Version. |
+| `display_name` | `character varying` | No | — | Display name. |
+| `channel_kind` | `character varying` | No | — | Channel kind. |
+| `provider_channel_code` | `character varying` | No | — | Provider channel code. |
+| `rate_ppm` | `integer` | No | `0` | Rate ppm. |
+| `fixed_centavos` | `bigint` | No | `'0'::bigint` | Integer Philippine centavos. Fixed centavos. |
+| `fee_vat_basis_points` | `integer` | No | `1200` | Fee vat basis points. |
+| `rate_includes_vat` | `boolean` | No | `false` | Rate includes vat. |
+| `fee_bearer` | `character varying` | No | `'BUYER'::character varying` | Fee bearer. |
+| `refund_supported` | `boolean` | No | — | Refund supported. |
+| `enabled` | `boolean` | No | — | Enabled. |
+| `disabled_reason` | `character varying` | Yes | — | Disabled reason. |
+| `minimum_amount_centavos` | `bigint` | Yes | — | Integer Philippine centavos. Minimum amount centavos. |
+| `maximum_amount_centavos` | `bigint` | Yes | — | Integer Philippine centavos. Maximum amount centavos. |
+| `rounding_basis` | `character varying` | No | `'HALF_UP_PER_COMPONENT'::character varying` | Rounding basis. |
+| `source_type` | `character varying` | No | — | Source type. |
+| `source_reference` | `text` | No | — | Source reference. |
+| `effective_from` | `timestamp with time zone` | No | — | Effective from. |
+| `effective_until` | `timestamp with time zone` | Yes | — | Effective until. |
+| `created_at` | `timestamp with time zone` | No | — | Created at. |
+
+**Constraints**
+
+- `channel_fee_rules_check` — CHECK: `CHECK ((environment::text = ANY (ARRAY['TEST'::character varying, 'DEMO'::character varying, 'LIVE'::character varying]::text[])) AND (channel_kind::text = ANY (ARRAY['CARD'::character varying, 'EWALLET'::character varying, 'QR'::character varying, 'OVER_THE_COUNTER'::character varying, 'DIRECT_DEBIT'::character varying, 'BANK_TRANSFER'::character varying]::text[])) AND rate_ppm < 1000000 AND fixed_centavos >= 0 AND fee_vat_basis_points <= 10000 AND (fee_bearer::text = ANY (ARRAY['BUYER'::character varying, 'PLATFORM'::character varying]::text[])) AND (enabled = false OR refund_supported = true) AND (enabled OR disabled_reason IS NOT NULL) AND (minimum_amount_centavos IS NULL OR minimum_amount_centavos > 0) AND (maximum_amount_centavos IS NULL OR minimum_amount_centavos IS NULL OR maximum_amount_centavos >= minimum_amount_centavos) AND (effective_until IS NULL OR effective_until > effective_from))`
+- `payment_channel_fee_versions_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
+- `payment_channel_fee_versions_environment_channel_code_version_u` — UNIQUE: `UNIQUE (environment, channel_code, version)`
+
+**Indexes**
+
+- `channel_fee_one_open_version` — `CREATE UNIQUE INDEX channel_fee_one_open_version ON public.payment_channel_fee_versions USING btree (environment, channel_code) WHERE (effective_until IS NULL)`
+- `payment_channel_fee_versions_environment_channel_code_version_u` — `CREATE UNIQUE INDEX payment_channel_fee_versions_environment_channel_code_version_u ON public.payment_channel_fee_versions USING btree (environment, channel_code, version)`
+- `payment_channel_fee_versions_pkey` — `CREATE UNIQUE INDEX payment_channel_fee_versions_pkey ON public.payment_channel_fee_versions USING btree (id)`
 
 ## `payment_events`
 
@@ -4331,10 +4437,16 @@ Payment, refund, or physical-money evidence record with an independent lifecycle
 | `safe_payload` | `jsonb` | Yes | — | Safe payload. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+| `webhook_event_id` | `uuid` | Yes | — | Webhook event id. |
+| `source` | `character varying` | No | `'WEBHOOK'::character varying` | Source. |
+| `from_state` | `character varying` | Yes | — | From state. |
+| `correlation_id` | `character varying` | Yes | — | Correlation id. |
 
 **Constraints**
 
+- `payment_event_source_check` — CHECK: `CHECK (source::text = ANY (ARRAY['WEBHOOK'::character varying, 'RECONCILIATION'::character varying, 'SYSTEM'::character varying]::text[]))`
 - `payment_events_payment_id_foreign` — FOREIGN KEY: `FOREIGN KEY (payment_id) REFERENCES payments(id) ON DELETE RESTRICT`
+- `payment_events_webhook_event_id_foreign` — FOREIGN KEY: `FOREIGN KEY (webhook_event_id) REFERENCES webhook_events(id) ON DELETE RESTRICT`
 - `payment_events_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
 - `payment_events_provider_event_id_unique` — UNIQUE: `UNIQUE (provider_event_id)`
 
@@ -4365,22 +4477,71 @@ Payment, refund, or physical-money evidence record with an independent lifecycle
 | `expires_at` | `timestamp with time zone` | Yes | — | Expires at. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+| `vendor_organization_id` | `uuid` | Yes | — | Vendor organization id. |
+| `buyer_profile_id` | `uuid` | Yes | — | Buyer profile id. |
+| `financial_snapshot_id` | `uuid` | Yes | — | Financial snapshot id. |
+| `attempt_number` | `smallint` | No | `'1'::smallint` | Attempt number. |
+| `account_scope` | `character varying` | No | `'VENDOR_SUB_ACCOUNT'::character varying` | Account scope. |
+| `provider_account_id` | `character varying` | Yes | — | Provider account id. |
+| `account_contract_version` | `character varying` | Yes | — | Account contract version. |
+| `provider_api_version` | `character varying` | Yes | — | Provider api version. |
+| `gateway_mode` | `character varying` | No | `'XENDIT_TEST'::character varying` | Gateway mode. |
+| `evidence_origin` | `character varying` | No | `'XENDIT_TEST'::character varying` | Evidence origin. |
+| `channel_code` | `character varying` | Yes | — | Channel code. |
+| `channel_fee_version_id` | `uuid` | Yes | — | Channel fee version id. |
+| `amount_breakdown` | `jsonb` | Yes | — | Amount breakdown. |
+| `provider_session_id` | `character varying` | Yes | — | Provider session id. |
+| `provider_payment_id` | `character varying` | Yes | — | Provider payment id. |
+| `provider_payment_request_id` | `character varying` | Yes | — | Provider payment request id. |
+| `checkout_url_encrypted` | `text` | Yes | — | Checkout url encrypted. |
+| `created_by_user_id` | `bigint` | Yes | — | Created by user id. |
+| `provider_charge_centavos` | `bigint` | Yes | — | Integer Philippine centavos. Provider charge centavos. |
+| `provider_created_at` | `timestamp with time zone` | Yes | — | Provider created at. |
+| `paid_at` | `timestamp with time zone` | Yes | — | Paid at. |
+| `failed_at` | `timestamp with time zone` | Yes | — | Failed at. |
+| `expired_at` | `timestamp with time zone` | Yes | — | Expired at. |
+| `cancelled_at` | `timestamp with time zone` | Yes | — | Cancelled at. |
+| `failure_code` | `character varying` | Yes | — | Failure code. |
+| `late_capture` | `boolean` | No | `false` | Late capture. |
+| `reconciliation_state` | `character varying` | No | `'NOT_REQUIRED'::character varying` | Reconciliation state. |
+| `last_reconciled_at` | `timestamp with time zone` | Yes | — | Last reconciled at. |
+| `lock_version` | `integer` | No | `1` | Lock version. |
 
 **Constraints**
 
 - `payment_amounts_check` — CHECK: `CHECK (principal_centavos >= 0 AND processing_fee_centavos >= 0 AND total_centavos = (principal_centavos + processing_fee_centavos))`
+- `payment_attempt_origin_check` — CHECK: `CHECK (environment::text = 'TEST'::text AND (gateway_mode::text = ANY (ARRAY['XENDIT_TEST'::character varying, 'SIMULATED'::character varying]::text[])) AND (evidence_origin::text = ANY (ARRAY['XENDIT_TEST'::character varying, 'SIMULATED'::character varying]::text[])) AND (gateway_mode::text = 'XENDIT_TEST'::text) = (evidence_origin::text = 'XENDIT_TEST'::text))`
+- `payment_attempt_paid_check` — CHECK: `CHECK (state::text <> 'PAID'::text OR paid_at IS NOT NULL AND provider_session_id IS NOT NULL)`
+- `payment_attempt_positive_check` — CHECK: `CHECK (principal_centavos > 0 AND attempt_number >= 1 AND (provider_charge_centavos IS NULL OR provider_charge_centavos >= 0))`
+- `payment_attempt_reconciliation_check` — CHECK: `CHECK (reconciliation_state::text = ANY (ARRAY['NOT_REQUIRED'::character varying, 'PENDING'::character varying, 'RECONCILED'::character varying, 'EXCEPTION'::character varying]::text[]))`
+- `payment_attempt_scope_check` — CHECK: `CHECK (purpose::text = 'PLATFORM_FEE_PAYMENT'::text AND account_scope::text = 'PLATFORM_ACCOUNT'::text AND fee_statement_id IS NOT NULL AND order_id IS NULL AND processing_fee_centavos = 0 OR purpose::text <> 'PLATFORM_FEE_PAYMENT'::text AND account_scope::text = 'VENDOR_SUB_ACCOUNT'::text AND order_id IS NOT NULL AND fee_statement_id IS NULL AND provider_account_id IS NOT NULL)`
+- `payment_attempt_state_check` — CHECK: `CHECK (state::text = ANY (ARRAY['CREATING'::character varying, 'PENDING'::character varying, 'UNCERTAIN'::character varying, 'PAID'::character varying, 'FAILED'::character varying, 'EXPIRED'::character varying, 'CANCELLED'::character varying]::text[]))`
 - `payments_purpose_check` — CHECK: `CHECK (purpose::text = ANY (ARRAY['FULL_ORDER_PAYMENT'::character varying, 'NRPC_ASSURANCE_PAYMENT'::character varying, 'ORDER_BALANCE_PAYMENT'::character varying, 'PLATFORM_FEE_PAYMENT'::character varying]::text[]))`
+- `payments_buyer_profile_id_foreign` — FOREIGN KEY: `FOREIGN KEY (buyer_profile_id) REFERENCES buyer_profiles(id) ON DELETE RESTRICT`
+- `payments_channel_fee_version_id_foreign` — FOREIGN KEY: `FOREIGN KEY (channel_fee_version_id) REFERENCES payment_channel_fee_versions(id) ON DELETE RESTRICT`
+- `payments_created_by_user_id_foreign` — FOREIGN KEY: `FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE RESTRICT`
 - `payments_fee_statement_id_foreign` — FOREIGN KEY: `FOREIGN KEY (fee_statement_id) REFERENCES fee_statements(id) ON DELETE RESTRICT`
+- `payments_financial_snapshot_id_foreign` — FOREIGN KEY: `FOREIGN KEY (financial_snapshot_id) REFERENCES financial_snapshots(id) ON DELETE RESTRICT`
 - `payments_order_id_foreign` — FOREIGN KEY: `FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE RESTRICT`
+- `payments_vendor_organization_id_foreign` — FOREIGN KEY: `FOREIGN KEY (vendor_organization_id) REFERENCES vendor_organizations(id) ON DELETE RESTRICT`
 - `payments_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
 - `payments_idempotency_key_unique` — UNIQUE: `UNIQUE (idempotency_key)`
+- `payments_provider_payment_id_unique` — UNIQUE: `UNIQUE (provider_payment_id)`
 - `payments_provider_reference_unique` — UNIQUE: `UNIQUE (provider_reference)`
+- `payments_provider_session_id_unique` — UNIQUE: `UNIQUE (provider_session_id)`
 
 **Indexes**
 
 - `payments_idempotency_key_unique` — `CREATE UNIQUE INDEX payments_idempotency_key_unique ON public.payments USING btree (idempotency_key)`
+- `payments_one_open_order_attempt` — `CREATE UNIQUE INDEX payments_one_open_order_attempt ON public.payments USING btree (order_id, purpose) WHERE ((order_id IS NOT NULL) AND ((state)::text = ANY ((ARRAY['CREATING'::character varying, 'PENDING'::character varying, 'UNCERTAIN'::character varying])::text[])))`
+- `payments_one_open_statement_attempt` — `CREATE UNIQUE INDEX payments_one_open_statement_attempt ON public.payments USING btree (fee_statement_id) WHERE ((fee_statement_id IS NOT NULL) AND ((state)::text = ANY ((ARRAY['CREATING'::character varying, 'PENDING'::character varying, 'UNCERTAIN'::character varying])::text[])))`
+- `payments_one_paid_order_purpose` — `CREATE UNIQUE INDEX payments_one_paid_order_purpose ON public.payments USING btree (order_id, purpose) WHERE ((order_id IS NOT NULL) AND ((purpose)::text = ANY ((ARRAY['FULL_ORDER_PAYMENT'::character varying, 'NRPC_ASSURANCE_PAYMENT'::character varying])::text[])) AND ((state)::text = 'PAID'::text) AND (late_capture = false))`
 - `payments_pkey` — `CREATE UNIQUE INDEX payments_pkey ON public.payments USING btree (id)`
+- `payments_provider_payment_id_unique` — `CREATE UNIQUE INDEX payments_provider_payment_id_unique ON public.payments USING btree (provider_payment_id)`
 - `payments_provider_reference_unique` — `CREATE UNIQUE INDEX payments_provider_reference_unique ON public.payments USING btree (provider_reference)`
+- `payments_provider_session_id_unique` — `CREATE UNIQUE INDEX payments_provider_session_id_unique ON public.payments USING btree (provider_session_id)`
+- `payments_state_expires_at_index` — `CREATE INDEX payments_state_expires_at_index ON public.payments USING btree (state, expires_at)`
+- `payments_vendor_organization_id_created_at_index` — `CREATE INDEX payments_vendor_organization_id_created_at_index ON public.payments USING btree (vendor_organization_id, created_at)`
 
 ## `permissions`
 
@@ -4412,7 +4573,7 @@ Payment, refund, or physical-money evidence record with an independent lifecycle
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | No | — | Primary key. Id. |
 | `order_id` | `uuid` | No | — | Order id. |
-| `recorded_by_user_id` | `bigint` | No | — | Recorded by user id. |
+| `recorded_by_user_id` | `bigint` | Yes | — | Recorded by user id. |
 | `record_kind` | `character varying` | No | `'COLLECTION'::character varying` | Record kind. |
 | `method` | `character varying` | No | — | Method. |
 | `obligation_before_centavos` | `bigint` | No | — | Integer Philippine centavos. Obligation before centavos. |
@@ -4427,16 +4588,23 @@ Payment, refund, or physical-money evidence record with an independent lifecycle
 | `buyer_acknowledged_at` | `timestamp with time zone` | Yes | — | Buyer acknowledged at. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+| `online_payment_id` | `uuid` | Yes | — | Online payment id. |
+| `recorded_role` | `character varying` | Yes | — | Recorded role. |
+| `buyer_acknowledged_by_user_id` | `bigint` | Yes | — | Buyer acknowledged by user id. |
+| `note` | `text` | Yes | — | Note. |
 
 **Constraints**
 
 - `physical_payment_amount_check` — CHECK: `CHECK (obligation_before_centavos >= 0 AND amount_centavos >= 0 AND remaining_obligation_centavos >= 0 AND amount_centavos <= obligation_before_centavos AND remaining_obligation_centavos = (obligation_before_centavos - amount_centavos))`
 - `physical_payment_correction_link_check` — CHECK: `CHECK ((record_kind::text = 'CORRECTION'::text) = (original_record_id IS NOT NULL AND correction_reason IS NOT NULL))`
-- `physical_payment_evidence_check` — CHECK: `CHECK (amount_centavos = 0 OR evidence_file_id IS NOT NULL)`
-- `physical_payment_kind_check` — CHECK: `CHECK (record_kind::text = ANY (ARRAY['COLLECTION'::character varying, 'CORRECTION'::character varying, 'CANCELLATION_RELEASE'::character varying]::text[]))`
+- `physical_payment_evidence_check` — CHECK: `CHECK (amount_centavos = 0 OR record_kind::text = 'ONLINE_BALANCE_CREDIT'::text AND online_payment_id IS NOT NULL OR record_kind::text <> 'ONLINE_BALANCE_CREDIT'::text AND evidence_file_id IS NOT NULL AND recorded_by_user_id IS NOT NULL)`
+- `physical_payment_kind_check` — CHECK: `CHECK (record_kind::text = ANY (ARRAY['OBLIGATION_OPENED'::character varying, 'COLLECTION'::character varying, 'ONLINE_BALANCE_CREDIT'::character varying, 'CORRECTION'::character varying, 'CANCELLATION_RELEASE'::character varying]::text[]))`
+- `physical_payment_opening_check` — CHECK: `CHECK (record_kind::text <> 'OBLIGATION_OPENED'::text OR state::text = 'UNPAID'::text AND amount_centavos = 0)`
 - `physical_payment_state_amount_check` — CHECK: `CHECK (state::text = 'UNPAID'::text AND amount_centavos = 0 AND remaining_obligation_centavos = obligation_before_centavos OR state::text = 'PARTIALLY_RECORDED'::text AND amount_centavos > 0 AND remaining_obligation_centavos > 0 OR state::text = 'PHYSICAL_PAYMENT_RECORDED'::text AND amount_centavos > 0 AND remaining_obligation_centavos = 0 OR state::text = 'CANCELLED_UNPAID'::text AND record_kind::text = 'CANCELLATION_RELEASE'::text AND amount_centavos = 0 AND remaining_obligation_centavos = obligation_before_centavos)`
 - `physical_payment_state_check` — CHECK: `CHECK (state::text = ANY (ARRAY['UNPAID'::character varying, 'PARTIALLY_RECORDED'::character varying, 'PHYSICAL_PAYMENT_RECORDED'::character varying, 'CANCELLED_UNPAID'::character varying]::text[]))`
+- `physical_payment_records_buyer_acknowledged_by_user_id_foreign` — FOREIGN KEY: `FOREIGN KEY (buyer_acknowledged_by_user_id) REFERENCES users(id) ON DELETE RESTRICT`
 - `physical_payment_records_evidence_file_id_foreign` — FOREIGN KEY: `FOREIGN KEY (evidence_file_id) REFERENCES files(id) ON DELETE RESTRICT`
+- `physical_payment_records_online_payment_id_foreign` — FOREIGN KEY: `FOREIGN KEY (online_payment_id) REFERENCES payments(id) ON DELETE RESTRICT`
 - `physical_payment_records_order_id_foreign` — FOREIGN KEY: `FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE RESTRICT`
 - `physical_payment_records_original_record_id_foreign` — FOREIGN KEY: `FOREIGN KEY (original_record_id) REFERENCES physical_payment_records(id) ON DELETE RESTRICT`
 - `physical_payment_records_recorded_by_user_id_foreign` — FOREIGN KEY: `FOREIGN KEY (recorded_by_user_id) REFERENCES users(id) ON DELETE RESTRICT`
@@ -4445,7 +4613,10 @@ Payment, refund, or physical-money evidence record with an independent lifecycle
 
 **Indexes**
 
+- `physical_payment_one_online_credit` — `CREATE UNIQUE INDEX physical_payment_one_online_credit ON public.physical_payment_records USING btree (online_payment_id) WHERE (online_payment_id IS NOT NULL)`
+- `physical_payment_one_opening` — `CREATE UNIQUE INDEX physical_payment_one_opening ON public.physical_payment_records USING btree (order_id) WHERE ((record_kind)::text = 'OBLIGATION_OPENED'::text)`
 - `physical_payment_records_idempotency_key_unique` — `CREATE UNIQUE INDEX physical_payment_records_idempotency_key_unique ON public.physical_payment_records USING btree (idempotency_key)`
+- `physical_payment_records_order_id_recorded_at_index` — `CREATE INDEX physical_payment_records_order_id_recorded_at_index ON public.physical_payment_records USING btree (order_id, recorded_at)`
 - `physical_payment_records_pkey` — `CREATE UNIQUE INDEX physical_payment_records_pkey ON public.physical_payment_records USING btree (id)`
 
 ## `physical_reimbursements`
@@ -4712,9 +4883,13 @@ Phase 1 platform foundation record.
 | `policy_version` | `character varying` | No | — | Policy version. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+| `channel_fee_version_id` | `uuid` | Yes | — | Channel fee version id. |
+| `principal_centavos` | `bigint` | No | `'0'::bigint` | Integer Philippine centavos. Principal centavos. |
+| `fee_bearer` | `character varying` | No | `'BUYER'::character varying` | Fee bearer. |
 
 **Constraints**
 
+- `processing_fee_snapshots_channel_fee_version_id_foreign` — FOREIGN KEY: `FOREIGN KEY (channel_fee_version_id) REFERENCES payment_channel_fee_versions(id) ON DELETE RESTRICT`
 - `processing_fee_snapshots_payment_id_foreign` — FOREIGN KEY: `FOREIGN KEY (payment_id) REFERENCES payments(id) ON DELETE RESTRICT`
 - `processing_fee_snapshots_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
 - `processing_fee_snapshots_payment_id_unique` — UNIQUE: `UNIQUE (payment_id)`
@@ -5188,10 +5363,17 @@ Payment, refund, or physical-money evidence record with an independent lifecycle
 | `provider_reference` | `character varying` | Yes | — | Provider reference. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+| `environment` | `character varying` | No | `'TEST'::character varying` | Environment. |
+| `evidence_origin` | `character varying` | Yes | — | Evidence origin. |
+| `reason_code` | `character varying` | Yes | — | Reason code. |
+| `failure_code` | `character varying` | Yes | — | Failure code. |
+| `requested_at` | `timestamp with time zone` | Yes | — | Requested at. |
+| `completed_at` | `timestamp with time zone` | Yes | — | Completed at. |
 
 **Constraints**
 
 - `refund_amount_positive_check` — CHECK: `CHECK (amount_centavos > 0)`
+- `refund_environment_check` — CHECK: `CHECK ((environment::text = ANY (ARRAY['TEST'::character varying, 'DEMO'::character varying, 'LIVE'::character varying]::text[])) AND (evidence_origin IS NULL OR (evidence_origin::text = ANY (ARRAY['XENDIT_TEST'::character varying, 'SIMULATED'::character varying]::text[]))))`
 - `refund_source_allocation_check` — CHECK: `CHECK (source_captured_centavos >= 0 AND prior_allocated_centavos >= 0 AND prior_allocated_centavos <= source_captured_centavos AND amount_centavos <= (source_captured_centavos - prior_allocated_centavos))`
 - `refund_target_trigger_check` — CHECK: `CHECK (target_type::text = 'ORDER'::text AND (trigger::text = ANY (ARRAY['CANCELLATION'::character varying, 'DISPUTE_CONCLUSION'::character varying, 'TECHNICAL_COMPENSATION'::character varying]::text[])) AND order_id IS NOT NULL OR target_type::text = 'PLATFORM_FEE'::text AND trigger::text = 'FEE_CREDIT'::text AND fee_statement_id IS NOT NULL AND fee_adjustment_id IS NOT NULL)`
 - `refunds_fee_adjustment_id_foreign` — FOREIGN KEY: `FOREIGN KEY (fee_adjustment_id) REFERENCES fee_adjustments(id) ON DELETE RESTRICT`
@@ -5205,6 +5387,7 @@ Payment, refund, or physical-money evidence record with an independent lifecycle
 **Indexes**
 
 - `refunds_idempotency_key_unique` — `CREATE UNIQUE INDEX refunds_idempotency_key_unique ON public.refunds USING btree (idempotency_key)`
+- `refunds_one_compensation_per_payment` — `CREATE UNIQUE INDEX refunds_one_compensation_per_payment ON public.refunds USING btree (source_payment_id) WHERE ((trigger)::text = 'TECHNICAL_COMPENSATION'::text)`
 - `refunds_pkey` — `CREATE UNIQUE INDEX refunds_pkey ON public.refunds USING btree (id)`
 - `refunds_provider_reference_unique` — `CREATE UNIQUE INDEX refunds_provider_reference_unique ON public.refunds USING btree (provider_reference)`
 
@@ -5278,6 +5461,22 @@ FIN-01–FIN-12 financial control and evidence record.
 | `calculation` | `jsonb` | No | — | Calculation. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+| `threshold_status_before` | `character varying` | Yes | — | Threshold status before. |
+| `threshold_status_after` | `character varying` | Yes | — | Threshold status after. |
+| `g_effective_before_centavos` | `bigint` | Yes | — | Integer Philippine centavos. G effective before centavos. |
+| `g_effective_after_centavos` | `bigint` | Yes | — | Integer Philippine centavos. G effective after centavos. |
+| `relief_basis_id` | `uuid` | Yes | — | Relief basis id. |
+| `accumulator_id` | `uuid` | Yes | — | Accumulator id. |
+| `payment_id` | `uuid` | Yes | — | Payment id. |
+| `taxable_year` | `smallint` | Yes | — | Taxable year. |
+| `withholding_scenario` | `character varying` | Yes | — | Withholding scenario. |
+| `deduction_actor` | `character varying` | Yes | — | Deduction actor. |
+| `expected_vendor_cash_centavos` | `bigint` | Yes | — | Integer Philippine centavos. Expected vendor cash centavos. |
+| `commission_deducted_centavos` | `bigint` | No | `'0'::bigint` | Integer Philippine centavos. Commission deducted centavos. |
+| `reported_withheld_centavos` | `bigint` | Yes | — | Integer Philippine centavos. Reported withheld centavos. |
+| `evidence_origin` | `character varying` | Yes | — | Evidence origin. |
+| `correlation_id` | `character varying` | Yes | — | Correlation id. |
+| `posted_at` | `timestamp with time zone` | Yes | — | Posted at. |
 
 **Constraints**
 
@@ -5286,15 +5485,20 @@ FIN-01–FIN-12 financial control and evidence record.
 - `remittance_deduction_state_check` — CHECK: `CHECK (deduction_evidence_state::text = ANY (ARRAY['UNCONFIRMED'::character varying, 'SIMULATED_WITHHELD'::character varying, 'PROVIDER_REPORTED'::character varying, 'PLATFORM_EVIDENCED'::character varying]::text[]))`
 - `remittance_environment_check` — CHECK: `CHECK (environment::text = ANY (ARRAY['TEST'::character varying, 'DEMO'::character varying, 'LIVE'::character varying]::text[]))`
 - `remittance_reconciliation_state_check` — CHECK: `CHECK (reconciliation_state::text = ANY (ARRAY['PENDING'::character varying, 'RECONCILED'::character varying, 'RECONCILIATION_EXCEPTION'::character varying]::text[]))`
+- `remittance_threshold_snapshot_check` — CHECK: `CHECK ((threshold_status_before IS NULL OR (threshold_status_before::text = ANY (ARRAY['RELIEF_ACTIVE'::character varying, 'SUBJECT_STANDARD'::character varying, 'SUBJECT_THRESHOLD_BREACHED'::character varying, 'SUBJECT_PRIOR_YEAR'::character varying, 'UNDER_REVIEW'::character varying]::text[]))) AND (threshold_status_after IS NULL OR (threshold_status_after::text = ANY (ARRAY['RELIEF_ACTIVE'::character varying, 'SUBJECT_STANDARD'::character varying, 'SUBJECT_THRESHOLD_BREACHED'::character varying, 'SUBJECT_PRIOR_YEAR'::character varying, 'UNDER_REVIEW'::character varying]::text[]))) AND commission_deducted_centavos = 0 AND (g_effective_after_centavos IS NULL OR g_effective_after_centavos >= g_effective_before_centavos) AND (withholding_scenario IS NULL OR (withholding_scenario::text = ANY (ARRAY['DEMO_PLATFORM_WITHHOLDER'::character varying, 'DEMO_PROVIDER_WITHHOLDER'::character varying]::text[]))))`
+- `remittance_assessments_accumulator_id_foreign` — FOREIGN KEY: `FOREIGN KEY (accumulator_id) REFERENCES vendor_withholding_accumulators(id) ON DELETE RESTRICT`
 - `remittance_assessments_evidence_file_id_foreign` — FOREIGN KEY: `FOREIGN KEY (evidence_file_id) REFERENCES files(id) ON DELETE RESTRICT`
 - `remittance_assessments_financial_snapshot_id_foreign` — FOREIGN KEY: `FOREIGN KEY (financial_snapshot_id) REFERENCES financial_snapshots(id) ON DELETE RESTRICT`
 - `remittance_assessments_order_id_foreign` — FOREIGN KEY: `FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE RESTRICT`
+- `remittance_assessments_payment_id_foreign` — FOREIGN KEY: `FOREIGN KEY (payment_id) REFERENCES payments(id) ON DELETE RESTRICT`
+- `remittance_assessments_relief_basis_id_foreign` — FOREIGN KEY: `FOREIGN KEY (relief_basis_id) REFERENCES tax_evidence(id) ON DELETE RESTRICT`
 - `remittance_assessments_remittance_group_id_foreign` — FOREIGN KEY: `FOREIGN KEY (remittance_group_id) REFERENCES remittance_groups(id) ON DELETE RESTRICT`
 - `remittance_assessments_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
 - `remittance_assessment_scope_unique` — UNIQUE: `UNIQUE (environment, taxpayer_key_hash, remittance_group_id, obligation_type)`
 
 **Indexes**
 
+- `remittance_assessment_one_per_payment` — `CREATE UNIQUE INDEX remittance_assessment_one_per_payment ON public.remittance_assessments USING btree (payment_id, obligation_type) WHERE (payment_id IS NOT NULL)`
 - `remittance_assessment_scope_unique` — `CREATE UNIQUE INDEX remittance_assessment_scope_unique ON public.remittance_assessments USING btree (environment, taxpayer_key_hash, remittance_group_id, obligation_type)`
 - `remittance_assessments_pkey` — `CREATE UNIQUE INDEX remittance_assessments_pkey ON public.remittance_assessments USING btree (id)`
 
@@ -5344,17 +5548,23 @@ FIN-01–FIN-12 financial control and evidence record.
 | `state` | `character varying` | No | `'OPEN'::character varying` | State. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+| `payment_id` | `uuid` | Yes | — | Payment id. |
+| `grouping_rule` | `character varying` | No | `'ONE_PER_COLLECTION'::character varying` | Grouping rule. |
+| `evidence_origin` | `character varying` | Yes | — | Evidence origin. |
 
 **Constraints**
 
 - `remittance_group_environment_check` — CHECK: `CHECK (environment::text = ANY (ARRAY['TEST'::character varying, 'DEMO'::character varying, 'LIVE'::character varying]::text[]))`
+- `remittance_groups_payment_id_foreign` — FOREIGN KEY: `FOREIGN KEY (payment_id) REFERENCES payments(id) ON DELETE RESTRICT`
 - `remittance_groups_vendor_organization_id_foreign` — FOREIGN KEY: `FOREIGN KEY (vendor_organization_id) REFERENCES vendor_organizations(id) ON DELETE RESTRICT`
 - `remittance_groups_withholding_assignment_id_foreign` — FOREIGN KEY: `FOREIGN KEY (withholding_assignment_id) REFERENCES withholding_assignments(id) ON DELETE RESTRICT`
 - `remittance_groups_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
+- `remittance_groups_payment_id_unique` — UNIQUE: `UNIQUE (payment_id)`
 - `remittance_groups_vendor_organization_id_withholding_assignment` — UNIQUE: `UNIQUE (vendor_organization_id, withholding_assignment_id, period_key)`
 
 **Indexes**
 
+- `remittance_groups_payment_id_unique` — `CREATE UNIQUE INDEX remittance_groups_payment_id_unique ON public.remittance_groups USING btree (payment_id)`
 - `remittance_groups_pkey` — `CREATE UNIQUE INDEX remittance_groups_pkey ON public.remittance_groups USING btree (id)`
 - `remittance_groups_vendor_organization_id_withholding_assignment` — `CREATE UNIQUE INDEX remittance_groups_vendor_organization_id_withholding_assignment ON public.remittance_groups USING btree (vendor_organization_id, withholding_assignment_id, period_key)`
 
@@ -5727,19 +5937,23 @@ FIN-01–FIN-12 financial control and evidence record.
 | `after_values` | `jsonb` | No | — | After values. |
 | `reason` | `text` | No | — | Reason. |
 | `state` | `character varying` | No | `'ADJUSTMENT_REQUIRED'::character varying` | State. |
-| `prepared_by_user_id` | `bigint` | No | — | Prepared by user id. |
+| `prepared_by_user_id` | `bigint` | Yes | — | Prepared by user id. |
 | `reviewed_by_user_id` | `bigint` | Yes | — | Reviewed by user id. |
 | `evidence_file_id` | `uuid` | Yes | — | Evidence file id. |
 | `reviewed_at` | `timestamp with time zone` | Yes | — | Reviewed at. |
 | `posted_at` | `timestamp with time zone` | Yes | — | Posted at. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+| `accumulator_id` | `uuid` | Yes | — | Accumulator id. |
+| `opened_by` | `character varying` | No | `'USER'::character varying` | Opened by. |
 
 **Constraints**
 
 - `tax_adjustment_actor_check` — CHECK: `CHECK (reviewed_by_user_id IS NULL OR reviewed_by_user_id <> prepared_by_user_id)`
 - `tax_adjustment_dates_check` — CHECK: `CHECK (period_start <= period_end)`
+- `tax_adjustment_opened_by_check` — CHECK: `CHECK ((opened_by::text = ANY (ARRAY['USER'::character varying, 'SYSTEM'::character varying]::text[])) AND (opened_by::text = 'SYSTEM'::text OR prepared_by_user_id IS NOT NULL))`
 - `tax_adjustment_state_check` — CHECK: `CHECK (state::text = ANY (ARRAY['ADJUSTMENT_REQUIRED'::character varying, 'UNDER_REVIEW'::character varying, 'APPROVED'::character varying, 'POSTED'::character varying, 'REJECTED'::character varying]::text[]))`
+- `tax_adjustments_accumulator_id_foreign` — FOREIGN KEY: `FOREIGN KEY (accumulator_id) REFERENCES vendor_withholding_accumulators(id) ON DELETE RESTRICT`
 - `tax_adjustments_evidence_file_id_foreign` — FOREIGN KEY: `FOREIGN KEY (evidence_file_id) REFERENCES files(id) ON DELETE RESTRICT`
 - `tax_adjustments_order_id_foreign` — FOREIGN KEY: `FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE RESTRICT`
 - `tax_adjustments_prepared_by_user_id_foreign` — FOREIGN KEY: `FOREIGN KEY (prepared_by_user_id) REFERENCES users(id) ON DELETE RESTRICT`
@@ -5750,6 +5964,7 @@ FIN-01–FIN-12 financial control and evidence record.
 
 **Indexes**
 
+- `tax_adjustment_one_system_case` — `CREATE UNIQUE INDEX tax_adjustment_one_system_case ON public.tax_adjustments USING btree (original_record_type, original_record_id, kind) WHERE ((opened_by)::text = 'SYSTEM'::text)`
 - `tax_adjustments_pkey` — `CREATE UNIQUE INDEX tax_adjustments_pkey ON public.tax_adjustments USING btree (id)`
 
 ## `tax_certificates`
@@ -6902,9 +7117,11 @@ Vendor organization, access, onboarding, or storefront record.
 | `provider_associated_at` | `timestamp with time zone` | Yes | — | Provider associated at. |
 | `onboarding_requested_at` | `timestamp with time zone` | Yes | — | Onboarding requested at. |
 | `provider_created_at` | `timestamp with time zone` | Yes | — | Provider created at. |
+| `provider_api_version` | `character varying` | No | `'XENDIT_ACCOUNTS_V2'::character varying` | Provider api version. |
 
 **Constraints**
 
+- `vendor_payment_contract_check` — CHECK: `CHECK (provider_api_version::text = ANY (ARRAY['XENDIT_ACCOUNTS_V2'::character varying, 'XENDIT_ACCOUNTS_V3'::character varying]::text[]))`
 - `vendor_payment_provider_check` — CHECK: `CHECK (provider::text = 'XENDIT'::text AND (environment::text = ANY (ARRAY['TEST'::character varying, 'DEMO'::character varying, 'LIVE'::character varying]::text[])) AND (connection_status::text = ANY (ARRAY['UNVERIFIED'::character varying, 'PENDING'::character varying, 'CONNECTED'::character varying, 'FAILED'::character varying, 'REVOKED'::character varying, 'NOT_CONNECTED'::character varying, 'CONNECTING'::character varying, 'CONNECTED_TEST'::character varying, 'CONNECTION_FAILED'::character varying]::text[])))`
 - `vendor_payment_accounts_vendor_organization_id_foreign` — FOREIGN KEY: `FOREIGN KEY (vendor_organization_id) REFERENCES vendor_organizations(id) ON DELETE RESTRICT`
 - `vendor_payment_accounts_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
@@ -6915,6 +7132,33 @@ Vendor organization, access, onboarding, or storefront record.
 - `vendor_payment_accounts_pkey` — `CREATE UNIQUE INDEX vendor_payment_accounts_pkey ON public.vendor_payment_accounts USING btree (id)`
 - `vendor_payment_accounts_vendor_organization_id_unique` — `CREATE UNIQUE INDEX vendor_payment_accounts_vendor_organization_id_unique ON public.vendor_payment_accounts USING btree (vendor_organization_id)`
 - `vendor_payment_provider_association_unique` — `CREATE UNIQUE INDEX vendor_payment_provider_association_unique ON public.vendor_payment_accounts USING btree (provider, environment, provider_account_id) WHERE (provider_associated_at IS NOT NULL)`
+
+## `vendor_payment_settings`
+
+Vendor organization, access, onboarding, or storefront record.
+
+| Column | Database type | Null | Default | Key / meaning |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | No | — | Primary key. Id. |
+| `vendor_organization_id` | `uuid` | No | — | Vendor organization id. |
+| `cod_enabled` | `boolean` | No | `false` | Cod enabled. |
+| `in_store_enabled` | `boolean` | No | `false` | In store enabled. |
+| `lock_version` | `integer` | No | `1` | Lock version. |
+| `updated_by_user_id` | `bigint` | Yes | — | Updated by user id. |
+| `created_at` | `timestamp with time zone` | Yes | — | Created at. |
+| `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+
+**Constraints**
+
+- `vendor_payment_settings_updated_by_user_id_foreign` — FOREIGN KEY: `FOREIGN KEY (updated_by_user_id) REFERENCES users(id) ON DELETE RESTRICT`
+- `vendor_payment_settings_vendor_organization_id_foreign` — FOREIGN KEY: `FOREIGN KEY (vendor_organization_id) REFERENCES vendor_organizations(id) ON DELETE RESTRICT`
+- `vendor_payment_settings_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
+- `vendor_payment_settings_vendor_organization_id_unique` — UNIQUE: `UNIQUE (vendor_organization_id)`
+
+**Indexes**
+
+- `vendor_payment_settings_pkey` — `CREATE UNIQUE INDEX vendor_payment_settings_pkey ON public.vendor_payment_settings USING btree (id)`
+- `vendor_payment_settings_vendor_organization_id_unique` — `CREATE UNIQUE INDEX vendor_payment_settings_vendor_organization_id_unique ON public.vendor_payment_settings USING btree (vendor_organization_id)`
 
 ## `vendor_pending_documents`
 
@@ -7171,6 +7415,86 @@ Vendor organization, access, onboarding, or storefront record.
 **Indexes**
 
 
+## `vendor_withholding_accumulators`
+
+Vendor organization, access, onboarding, or storefront record.
+
+| Column | Database type | Null | Default | Key / meaning |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | No | — | Primary key. Id. |
+| `environment` | `character varying` | No | — | Environment. |
+| `taxpayer_key` | `character varying` | No | — | Taxpayer key. |
+| `organization_id` | `uuid` | No | — | Organization id. |
+| `taxable_year` | `smallint` | No | — | Taxable year. |
+| `year_start_at` | `timestamp with time zone` | No | — | Year start at. |
+| `year_end_at` | `timestamp with time zone` | No | — | Year end at. |
+| `threshold_centavos` | `bigint` | No | `'50000000'::bigint` | Integer Philippine centavos. Threshold centavos. |
+| `g_accumulated_centavos` | `bigint` | No | `'0'::bigint` | Integer Philippine centavos. G accumulated centavos. |
+| `g_external_declared_centavos` | `bigint` | No | `'0'::bigint` | Integer Philippine centavos. G external declared centavos. |
+| `g_external_overlap_centavos` | `bigint` | No | `'0'::bigint` | Integer Philippine centavos. G external overlap centavos. |
+| `g_effective_centavos` | `bigint` | No | — | Integer Philippine centavos. G effective centavos. |
+| `external_overlap_state` | `character varying` | No | `'NONE'::character varying` | External overlap state. |
+| `withholding_status` | `character varying` | No | — | Withholding status. |
+| `status_reason_code` | `character varying` | No | — | Status reason code. |
+| `crossed_at` | `timestamp with time zone` | Yes | — | Crossed at. |
+| `crossing_assessment_id` | `uuid` | Yes | — | Crossing assessment id. |
+| `effective_declaration_id` | `uuid` | Yes | — | Effective declaration id. |
+| `prior_year_total_centavos` | `bigint` | Yes | — | Integer Philippine centavos. Prior year total centavos. |
+| `advisory_notified_at` | `timestamp with time zone` | Yes | — | Advisory notified at. |
+| `lock_version` | `integer` | No | `1` | Lock version. |
+| `created_at` | `timestamp with time zone` | Yes | — | Created at. |
+| `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+
+**Constraints**
+
+- `withholding_accumulator_amounts_check` — CHECK: `CHECK (threshold_centavos > 0 AND g_accumulated_centavos >= 0 AND g_external_declared_centavos >= 0 AND g_external_overlap_centavos >= 0 AND g_external_overlap_centavos <= g_external_declared_centavos AND (prior_year_total_centavos IS NULL OR prior_year_total_centavos >= 0) AND year_end_at > year_start_at)`
+- `withholding_accumulator_crossing_check` — CHECK: `CHECK ((crossed_at IS NULL OR withholding_status::text ~~ 'SUBJECT%'::text) AND (withholding_status::text <> 'SUBJECT_THRESHOLD_BREACHED'::text OR crossed_at IS NOT NULL))`
+- `withholding_accumulator_environment_check` — CHECK: `CHECK (environment::text = ANY (ARRAY['DEMO'::character varying, 'TEST'::character varying, 'LIVE'::character varying]::text[]))`
+- `withholding_accumulator_status_check` — CHECK: `CHECK ((withholding_status::text = ANY (ARRAY['RELIEF_ACTIVE'::character varying, 'SUBJECT_STANDARD'::character varying, 'SUBJECT_THRESHOLD_BREACHED'::character varying, 'SUBJECT_PRIOR_YEAR'::character varying, 'UNDER_REVIEW'::character varying]::text[])) AND (external_overlap_state::text = ANY (ARRAY['NONE'::character varying, 'UNRESOLVED'::character varying, 'RESOLVED'::character varying]::text[])))`
+- `vendor_withholding_accumulators_crossing_assessment_id_foreign` — FOREIGN KEY: `FOREIGN KEY (crossing_assessment_id) REFERENCES remittance_assessments(id) ON DELETE RESTRICT`
+- `vendor_withholding_accumulators_effective_declaration_id_foreig` — FOREIGN KEY: `FOREIGN KEY (effective_declaration_id) REFERENCES tax_evidence(id) ON DELETE RESTRICT`
+- `vendor_withholding_accumulators_organization_id_foreign` — FOREIGN KEY: `FOREIGN KEY (organization_id) REFERENCES vendor_organizations(id) ON DELETE RESTRICT`
+- `vendor_withholding_accumulators_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
+- `withholding_accumulator_taxpayer_year_unique` — UNIQUE: `UNIQUE (environment, taxpayer_key, taxable_year)`
+
+**Indexes**
+
+- `vendor_withholding_accumulators_pkey` — `CREATE UNIQUE INDEX vendor_withholding_accumulators_pkey ON public.vendor_withholding_accumulators USING btree (id)`
+- `withholding_accumulator_org_year_index` — `CREATE INDEX withholding_accumulator_org_year_index ON public.vendor_withholding_accumulators USING btree (environment, organization_id, taxable_year)`
+- `withholding_accumulator_taxpayer_year_unique` — `CREATE UNIQUE INDEX withholding_accumulator_taxpayer_year_unique ON public.vendor_withholding_accumulators USING btree (environment, taxpayer_key, taxable_year)`
+
+## `vendor_withholding_status_events`
+
+Vendor organization, access, onboarding, or storefront record.
+
+| Column | Database type | Null | Default | Key / meaning |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | No | — | Primary key. Id. |
+| `accumulator_id` | `uuid` | No | — | Accumulator id. |
+| `from_status` | `character varying` | Yes | — | From status. |
+| `to_status` | `character varying` | No | — | To status. |
+| `reason_code` | `character varying` | No | — | Reason code. |
+| `g_before_centavos` | `bigint` | No | — | Integer Philippine centavos. G before centavos. |
+| `g_after_centavos` | `bigint` | No | — | Integer Philippine centavos. G after centavos. |
+| `assessment_id` | `uuid` | Yes | — | Assessment id. |
+| `actor_type` | `character varying` | No | — | Actor type. |
+| `actor_id` | `bigint` | Yes | — | Actor id. |
+| `evidence_id` | `uuid` | Yes | — | Evidence id. |
+| `correlation_id` | `character varying` | No | — | Correlation id. |
+| `occurred_at` | `timestamp with time zone` | No | — | Occurred at. |
+
+**Constraints**
+
+- `withholding_status_event_check` — CHECK: `CHECK ((to_status::text = ANY (ARRAY['RELIEF_ACTIVE'::character varying, 'SUBJECT_STANDARD'::character varying, 'SUBJECT_THRESHOLD_BREACHED'::character varying, 'SUBJECT_PRIOR_YEAR'::character varying, 'UNDER_REVIEW'::character varying]::text[])) AND (from_status IS NULL OR (from_status::text = ANY (ARRAY['RELIEF_ACTIVE'::character varying, 'SUBJECT_STANDARD'::character varying, 'SUBJECT_THRESHOLD_BREACHED'::character varying, 'SUBJECT_PRIOR_YEAR'::character varying, 'UNDER_REVIEW'::character varying]::text[]))) AND (actor_type::text = ANY (ARRAY['SYSTEM'::character varying, 'ADMIN'::character varying, 'VENDOR'::character varying]::text[])) AND g_before_centavos >= 0 AND g_after_centavos >= 0)`
+- `vendor_withholding_status_events_accumulator_id_foreign` — FOREIGN KEY: `FOREIGN KEY (accumulator_id) REFERENCES vendor_withholding_accumulators(id) ON DELETE RESTRICT`
+- `vendor_withholding_status_events_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
+
+**Indexes**
+
+- `vendor_withholding_status_events_accumulator_id_occurred_at_ind` — `CREATE INDEX vendor_withholding_status_events_accumulator_id_occurred_at_ind ON public.vendor_withholding_status_events USING btree (accumulator_id, occurred_at)`
+- `vendor_withholding_status_events_pkey` — `CREATE UNIQUE INDEX vendor_withholding_status_events_pkey ON public.vendor_withholding_status_events USING btree (id)`
+- `withholding_one_crossing_event` — `CREATE UNIQUE INDEX withholding_one_crossing_event ON public.vendor_withholding_status_events USING btree (accumulator_id) WHERE ((to_status)::text = 'SUBJECT_THRESHOLD_BREACHED'::text)`
+
 ## `webhook_events`
 
 Phase 1 platform foundation record.
@@ -7185,9 +7509,17 @@ Phase 1 platform foundation record.
 | `processed_at` | `timestamp with time zone` | Yes | — | Processed at. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+| `event_type` | `character varying` | Yes | — | Event type. |
+| `resource_reference` | `character varying` | Yes | — | Resource reference. |
+| `payload_encrypted` | `text` | Yes | — | Payload encrypted. |
+| `verification` | `character varying` | No | `'TOKEN_VERIFIED'::character varying` | Verification. |
+| `received_at` | `timestamp with time zone` | Yes | — | Received at. |
+| `attempts` | `smallint` | No | `'0'::smallint` | Attempts. |
+| `result_code` | `character varying` | Yes | — | Result code. |
 
 **Constraints**
 
+- `webhook_event_state_check` — CHECK: `CHECK (state::text = ANY (ARRAY['RECEIVED'::character varying, 'PROCESSED'::character varying, 'REJECTED'::character varying, 'IGNORED'::character varying, 'FAILED'::character varying]::text[]))`
 - `webhook_events_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
 - `webhook_events_provider_provider_event_id_unique` — UNIQUE: `UNIQUE (provider, provider_event_id)`
 
@@ -7195,6 +7527,7 @@ Phase 1 platform foundation record.
 
 - `webhook_events_pkey` — `CREATE UNIQUE INDEX webhook_events_pkey ON public.webhook_events USING btree (id)`
 - `webhook_events_provider_provider_event_id_unique` — `CREATE UNIQUE INDEX webhook_events_provider_provider_event_id_unique ON public.webhook_events USING btree (provider, provider_event_id)`
+- `webhook_events_state_received_at_index` — `CREATE INDEX webhook_events_state_received_at_index ON public.webhook_events USING btree (state, received_at)`
 
 ## `withholding_assignments`
 
@@ -7212,6 +7545,7 @@ Phase 1 platform foundation record.
 | `reason` | `character varying` | No | — | Reason. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+| `scenario` | `character varying` | Yes | — | Scenario. |
 
 **Constraints**
 

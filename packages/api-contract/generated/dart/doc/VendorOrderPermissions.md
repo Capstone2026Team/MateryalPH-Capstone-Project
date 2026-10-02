@@ -14,6 +14,8 @@ Name | Type | Description | Notes
 **canConfirmDelivery** | **bool** |  |
 **canDecline** | **bool** |  |
 **canViewInventory** | **bool** |  |
+**canRecordPhysicalPayment** | **bool** |  | [optional]
+**canApproveOnlineBalance** | **bool** |  | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

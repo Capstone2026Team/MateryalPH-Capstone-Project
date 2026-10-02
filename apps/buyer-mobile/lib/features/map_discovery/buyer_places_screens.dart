@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../design_system/components/buyer_app_bar.dart';
 import '../../widgets/auth_content.dart';
 import 'device_location.dart';
 import 'discovery_models.dart';
@@ -114,7 +115,7 @@ class _SavedLocationsScreenState extends State<SavedLocationsScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: Colors.white,
-    appBar: AppBar(title: const Text('Saved Locations')),
+    appBar: buyerAppBar(context, 'Saved Locations'),
     floatingActionButton: FloatingActionButton.extended(
       onPressed: _busy ? null : _add,
       icon: const Icon(LucideIcons.plus),
@@ -234,7 +235,7 @@ class _FavoriteSuppliersScreenState extends State<FavoriteSuppliersScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: Colors.white,
-    appBar: AppBar(title: const Text('Favorite Suppliers')),
+    appBar: buyerAppBar(context, 'Favorite Suppliers'),
     body: SafeArea(
       child: RefreshIndicator(
         onRefresh: _load,

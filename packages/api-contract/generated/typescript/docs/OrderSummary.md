@@ -25,6 +25,7 @@ Name | Type
 `deadline` | [OrderDeadline](OrderDeadline.md)
 `expectedFulfillmentDate` | Date
 `nextAction` | string
+`paymentRetryable` | boolean
 `buyer` | [OrderBuyerRef](OrderBuyerRef.md)
 `primaryAction` | [VendorOrderPrimaryAction](VendorOrderPrimaryAction.md)
 `nrpcIndicator` | boolean
@@ -54,6 +55,7 @@ const example = {
   "deadline": null,
   "expectedFulfillmentDate": null,
   "nextAction": null,
+  "paymentRetryable": null,
   "buyer": null,
   "primaryAction": null,
   "nrpcIndicator": null,

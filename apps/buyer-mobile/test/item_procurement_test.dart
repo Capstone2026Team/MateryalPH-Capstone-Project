@@ -625,7 +625,7 @@ void main() {
           findsOneWidget,
         );
         expect(
-          find.text('Cash on Delivery — not offered by this store'),
+          find.bySemanticsLabel('Cash on Delivery. Not offered by this store'),
           findsOneWidget,
         );
         expect(

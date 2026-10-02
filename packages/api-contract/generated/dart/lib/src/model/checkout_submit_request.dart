@@ -15,6 +15,7 @@ part 'checkout_submit_request.g.dart';
 /// * [cartLockVersion]
 /// * [vendorIds]
 /// * [splitConfirmed] - Required when fewer Vendor groups are submitted than the cart holds.
+/// * [paymentMethods] - Vendor id => chosen method; Online when omitted. COD pairs with Site Delivery, In-Store with Self-Pickup, each only when the Vendor enabled it.
 @BuiltValue()
 abstract class CheckoutSubmitRequest implements Built<CheckoutSubmitRequest, CheckoutSubmitRequestBuilder> {
   @BuiltValueField(wireName: r'cart_lock_version')
@@ -26,6 +27,11 @@ abstract class CheckoutSubmitRequest implements Built<CheckoutSubmitRequest, Che
   /// Required when fewer Vendor groups are submitted than the cart holds.
   @BuiltValueField(wireName: r'split_confirmed')
   bool? get splitConfirmed;
+
+  /// Vendor id => chosen method; Online when omitted. COD pairs with Site Delivery, In-Store with Self-Pickup, each only when the Vendor enabled it.
+  @BuiltValueField(wireName: r'payment_methods')
+  BuiltMap<String, CheckoutSubmitRequestPaymentMethodsEnum>? get paymentMethods;
+  // enum paymentMethodsEnum {  ONLINE,  CASH_ON_DELIVERY,  IN_STORE,  };
 
   CheckoutSubmitRequest._();
 
@@ -65,6 +71,13 @@ class _$CheckoutSubmitRequestSerializer implements PrimitiveSerializer<CheckoutS
       yield serializers.serialize(
         object.splitConfirmed,
         specifiedType: const FullType(bool),
+      );
+    }
+    if (object.paymentMethods != null) {
+      yield r'payment_methods';
+      yield serializers.serialize(
+        object.paymentMethods,
+        specifiedType: const FullType(BuiltMap, [FullType(String), FullType(CheckoutSubmitRequestPaymentMethodsEnum)]),
       );
     }
   }
@@ -112,6 +125,14 @@ class _$CheckoutSubmitRequestSerializer implements PrimitiveSerializer<CheckoutS
           if (valueDes == null) continue;
           result.splitConfirmed = valueDes;
           break;
+        case r'payment_methods':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltMap, [FullType(String), FullType(CheckoutSubmitRequestPaymentMethodsEnum)]),
+          ) as BuiltMap<String, CheckoutSubmitRequestPaymentMethodsEnum>?;
+          if (valueDes == null) continue;
+          result.paymentMethods.replace(valueDes);
+          break;
         default:
           unhandled.add(key);
           unhandled.add(value);
@@ -141,4 +162,21 @@ class _$CheckoutSubmitRequestSerializer implements PrimitiveSerializer<CheckoutS
   }
 }
 
+
+class CheckoutSubmitRequestPaymentMethodsEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'ONLINE')
+  static const CheckoutSubmitRequestPaymentMethodsEnum ONLINE = _$checkoutSubmitRequestPaymentMethodsEnum_ONLINE;
+  @BuiltValueEnumConst(wireName: r'CASH_ON_DELIVERY')
+  static const CheckoutSubmitRequestPaymentMethodsEnum CASH_ON_DELIVERY = _$checkoutSubmitRequestPaymentMethodsEnum_CASH_ON_DELIVERY;
+  @BuiltValueEnumConst(wireName: r'IN_STORE')
+  static const CheckoutSubmitRequestPaymentMethodsEnum IN_STORE = _$checkoutSubmitRequestPaymentMethodsEnum_IN_STORE;
+
+  static Serializer<CheckoutSubmitRequestPaymentMethodsEnum> get serializer => _$checkoutSubmitRequestPaymentMethodsEnumSerializer;
+
+  const CheckoutSubmitRequestPaymentMethodsEnum._(String name): super(name);
+
+  static BuiltSet<CheckoutSubmitRequestPaymentMethodsEnum> get values => _$checkoutSubmitRequestPaymentMethodsEnumValues;
+  static CheckoutSubmitRequestPaymentMethodsEnum valueOf(String name) => _$checkoutSubmitRequestPaymentMethodsEnumValueOf(name);
+}
 

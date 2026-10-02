@@ -7,6 +7,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../design_system/motion.dart';
 import '../../design_system/components/discovery_controls.dart';
+import '../../design_system/components/procurement_components.dart';
 import '../../design_system/theme.dart';
 import '../../widgets/auth_content.dart';
 import 'device_location.dart';
@@ -349,12 +350,13 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
                       radius: 12,
                       child: Row(
                         children: [
-                          IconButton(
+                          RoundIconButton(
+                            icon: LucideIcons.arrowLeft,
                             tooltip: 'Back',
+                            filled: true,
                             onPressed: _saving
                                 ? null
                                 : () => Navigator.of(context).pop(),
-                            icon: const Icon(LucideIcons.arrowLeft),
                           ),
                           Expanded(
                             child: TextField(

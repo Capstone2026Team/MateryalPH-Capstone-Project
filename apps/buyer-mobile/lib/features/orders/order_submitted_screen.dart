@@ -11,7 +11,7 @@ import 'orders_repository.dart';
 import 'orders_screen.dart';
 
 /// Confirmation after submission: the parent checkout reference and one row per Vendor child order
-/// with its own state. An auto-accepted order shows its 45-minute payment countdown; the others show
+/// with its own state. An auto-accepted order shows its 24-hour payment countdown; the others show
 /// the Vendor's 24-hour response deadline. Nothing here claims a payment was made.
 class OrderSubmittedScreen extends StatelessWidget {
   const OrderSubmittedScreen({
@@ -23,13 +23,18 @@ class OrderSubmittedScreen extends StatelessWidget {
   final CheckoutView checkout;
   final OrdersRepository repository;
 
-  void _openOrders(BuildContext context) =>
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(
-          builder: (_) =>
-              OrdersScreen(repository: repository, initialGroup: 'ALL'),
-        ),
-      );
+  /// Clears the checkout trail first so Back from Orders returns to Home, not a stale Cart or
+  /// product page the Buyer already finished with.
+  void _openOrders(BuildContext context) {
+    final navigator = Navigator.of(context)
+      ..popUntil((route) => route.isFirst);
+    navigator.push(
+      MaterialPageRoute<void>(
+        builder: (_) =>
+            OrdersScreen(repository: repository, initialGroup: 'ALL'),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -198,8 +203,8 @@ class _ChildOrderCard extends StatelessWidget {
                 DeadlineCountdown(
                   deadline: order.paymentExpiresAt!,
                   label: order.autoAccepted
-                      ? 'Accepted automatically — pay within'
-                      : 'Pay within',
+                      ? 'Accepted automatically — pay before'
+                      : 'Pay before',
                   endedLabel: 'Payment window ended',
                 )
               else if (order.vendorResponseDueAt != null)

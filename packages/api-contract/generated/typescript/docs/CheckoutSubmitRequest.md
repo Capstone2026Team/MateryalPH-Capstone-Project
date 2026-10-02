@@ -9,6 +9,7 @@ Name | Type
 `cartLockVersion` | number
 `vendorIds` | Set&lt;string&gt;
 `splitConfirmed` | boolean
+`paymentMethods` | { [key: string]: string; }
 
 ## Example
 
@@ -20,6 +21,7 @@ const example = {
   "cartLockVersion": null,
   "vendorIds": null,
   "splitConfirmed": null,
+  "paymentMethods": null,
 } satisfies CheckoutSubmitRequest
 
 console.log(example)

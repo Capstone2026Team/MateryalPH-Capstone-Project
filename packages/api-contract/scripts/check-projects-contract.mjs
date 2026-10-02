@@ -24,7 +24,8 @@ for (const [path, methods] of Object.entries(spec.paths)) {
     expected.add(key)
     const actual = routes.find(route => route.uri.replace(/\{[^}]+\}/g, '{}') === uri && route.method.split('|').includes(method.toUpperCase()))
     assert.ok(actual, `Missing Laravel route ${key}`)
-    assert.ok(actual.middleware.some(value => value.endsWith('Authenticate:api')) && actual.middleware.some(value => value.endsWith('RequireAccountAccess:BUYER')), `${key} must authorize the Buyer`)
+    // route:list may export middleware as aliases or as resolved classes; accept either form.
+    assert.ok(actual.middleware.some(value => value === 'auth:api' || value.endsWith('Authenticate:api')) && actual.middleware.some(value => value === 'account.access:BUYER' || value.endsWith('RequireAccountAccess:BUYER')), `${key} must authorize the Buyer`)
     assert.ok(operation.responses['401'] && operation.responses['403'] && operation.responses['409'], `${key} must document authentication, authorization and concurrency errors`)
   }
 }

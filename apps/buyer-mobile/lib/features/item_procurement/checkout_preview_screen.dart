@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../design_system/components/buyer_app_bar.dart';
 import '../../design_system/components/procurement_components.dart';
 import '../../design_system/theme.dart';
 import '../../widgets/buyer_account_widgets.dart' show BuyerUnavailableScreen;
@@ -39,6 +40,9 @@ class _CheckoutPreviewScreenState extends State<CheckoutPreviewScreen> {
   CartController get _controller => widget.controller;
   bool _submitting = false;
   String? _submitError;
+
+  /// Vendor id => chosen payment method; Online unless the Buyer picks an offered alternative.
+  final Map<String, String> _methods = {};
   String? _submitKey;
 
   @override
@@ -56,29 +60,10 @@ class _CheckoutPreviewScreenState extends State<CheckoutPreviewScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final canPop = ModalRoute.of(context)?.canPop ?? false;
     return ListenableBuilder(
       listenable: _controller,
       builder: (context, _) => Scaffold(
-        appBar: AppBar(
-          automaticallyImplyLeading: false,
-          leadingWidth: 60,
-          leading: canPop
-              ? Center(
-                  child: RoundIconButton(
-                    icon: LucideIcons.arrowLeft,
-                    tooltip: 'Back',
-                    filled: true,
-                    onPressed: () => Navigator.of(context).maybePop(),
-                  ),
-                )
-              : null,
-          centerTitle: true,
-          title: const Text(
-            'Checkout',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-          ),
-        ),
+        appBar: buyerAppBar(context, 'Checkout'),
         bottomNavigationBar: _controller.preview == null
             ? null
             : _submitBar(_controller.preview!),
@@ -155,7 +140,13 @@ class _CheckoutPreviewScreenState extends State<CheckoutPreviewScreen> {
               savedLocations: widget.savedLocations(),
             ),
           for (final group in preview.groups)
-            _GroupPreview(group: group, controller: _controller),
+            _GroupPreview(
+                      group: group,
+                      controller: _controller,
+                      selectedMethod: _methodFor(group),
+                      onMethod: (method) =>
+                          setState(() => _methods[group.vendorId] = method),
+                    ),
           _Card(
             padding: EdgeInsets.zero,
             children: [
@@ -230,6 +221,9 @@ class _CheckoutPreviewScreenState extends State<CheckoutPreviewScreen> {
         vendorIds: [for (final group in ready) group.vendorId],
         splitConfirmed: split,
         idempotencyKey: key,
+        paymentMethods: {
+          for (final group in ready) group.vendorId: _methodFor(group),
+        },
       );
       _submitKey = null;
       unawaited(_controller.load());
@@ -251,6 +245,18 @@ class _CheckoutPreviewScreenState extends State<CheckoutPreviewScreen> {
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
+  }
+
+  String _methodFor(CheckoutGroupView group) {
+    final chosen = _methods[group.vendorId];
+    final available = [
+      for (final method in group.paymentMethods)
+        if (method.available) method.method,
+    ];
+    if (chosen != null && available.contains(chosen)) return chosen;
+    return available.contains('ONLINE') || available.isEmpty
+        ? 'ONLINE'
+        : available.first;
   }
 
   Widget _submitBar(CheckoutPreviewView preview) {
@@ -730,9 +736,16 @@ class _LocationPicker extends StatelessWidget {
 }
 
 class _GroupPreview extends StatelessWidget {
-  const _GroupPreview({required this.group, required this.controller});
+  const _GroupPreview({
+    required this.group,
+    required this.controller,
+    required this.selectedMethod,
+    required this.onMethod,
+  });
 
   final CheckoutGroupView group;
+  final String selectedMethod;
+  final ValueChanged<String> onMethod;
   final CartController controller;
 
   Future<void> _choose(String method) async {
@@ -874,31 +887,23 @@ class _GroupPreview extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         const Text(
-          'Payment methods',
+          'Payment method',
           style: TextStyle(fontWeight: FontWeight.w800),
         ),
         for (final method in group.paymentMethods)
           Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Row(
-              children: [
-                Icon(
-                  method.available
-                      ? LucideIcons.circleCheck
-                      : LucideIcons.circleSlash,
-                  size: 16,
-                  color: method.available
-                      ? BuyerTheme.successStrong
-                      : BuyerTheme.muted,
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    '${method.label} — ${method.available ? 'available' : _reason(method.reason)}',
-                    style: const TextStyle(fontSize: 13),
-                  ),
-                ),
-              ],
+            padding: const EdgeInsets.only(top: 6),
+            child: _PaymentMethodOption(
+              method: method,
+              selected: method.available && selectedMethod == method.method,
+              detail: method.available
+                  ? switch (method.method) {
+                      'ONLINE' => 'Pay after the Vendor confirms. Fee shown before you pay.',
+                      'CASH_ON_DELIVERY' => 'Pay the Vendor in cash on delivery.',
+                      _ => 'Pay the Vendor at the store on pickup.',
+                    }
+                  : _reason(method.reason),
+              onTap: method.available ? () => onMethod(method.method) : null,
             ),
           ),
         const SizedBox(height: 12),
@@ -961,11 +966,11 @@ class _GroupPreview extends StatelessWidget {
   }
 
   String _reason(String? reason) => switch (reason) {
-    'NOT_OFFERED_BY_VENDOR' => 'not offered by this store',
-    'SITE_DELIVERY_ONLY' => 'only for Site Delivery',
-    'SELF_PICKUP_ONLY' => 'only for Self-Pickup',
-    'VENDOR_ONLINE_PAYMENT_NOT_READY' => 'not ready for this store yet',
-    _ => 'unavailable',
+    'NOT_OFFERED_BY_VENDOR' => 'Not offered by this store',
+    'SITE_DELIVERY_ONLY' => 'Only for Site Delivery',
+    'SELF_PICKUP_ONLY' => 'Only for Self-Pickup',
+    'VENDOR_ONLINE_PAYMENT_NOT_READY' => 'Not ready for this store yet',
+    _ => 'Unavailable',
   };
 }
 
@@ -1131,6 +1136,90 @@ class _ModeSelector extends StatelessWidget {
       ),
     );
   }
+}
+
+/// One selectable payment method row (44 px minimum). Unavailable methods stay listed with their reason.
+class _PaymentMethodOption extends StatelessWidget {
+  const _PaymentMethodOption({
+    required this.method,
+    required this.selected,
+    required this.detail,
+    required this.onTap,
+  });
+
+  final PaymentMethodView method;
+  final bool selected;
+  final String detail;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    inMutuallyExclusiveGroup: true,
+    checked: selected,
+    enabled: onTap != null,
+    label: '${method.label}. $detail',
+    excludeSemantics: true,
+    button: true,
+    child: Material(
+      color: selected ? BuyerTheme.brandSoft : Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: BorderSide(
+          color: selected ? BuyerTheme.action : BuyerTheme.border,
+          width: selected ? 1.5 : 1,
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 48),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              children: [
+                Icon(
+                  onTap == null
+                      ? LucideIcons.circleSlash
+                      : selected
+                      ? LucideIcons.circleDot
+                      : LucideIcons.circle,
+                  size: 18,
+                  color: onTap == null
+                      ? BuyerTheme.muted
+                      : selected
+                      ? BuyerTheme.action
+                      : BuyerTheme.ink,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        method.label,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: onTap == null ? BuyerTheme.muted : BuyerTheme.ink,
+                        ),
+                      ),
+                      Text(
+                        detail,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: BuyerTheme.muted,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 /// Advisory delivery estimate versus the Vendor's confirmed offer, always labelled apart.

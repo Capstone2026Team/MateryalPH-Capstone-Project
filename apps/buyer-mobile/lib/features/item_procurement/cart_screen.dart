@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../design_system/components/buyer_app_bar.dart';
 import '../../design_system/components/procurement_components.dart';
 import '../../design_system/theme.dart';
 import '../map_discovery/discovery_models.dart';
@@ -25,28 +26,12 @@ class CartScreen extends StatelessWidget {
     listenable: controller,
     builder: (context, _) {
       final cart = controller.cart;
-      final canPop = ModalRoute.of(context)?.canPop ?? false;
       return Scaffold(
-        appBar: AppBar(
-          automaticallyImplyLeading: false,
-          leadingWidth: 60,
-          leading: canPop
-              ? Center(
-                  child: RoundIconButton(
-                    icon: LucideIcons.arrowLeft,
-                    tooltip: 'Back',
-                    filled: true,
-                    onPressed: () => Navigator.of(context).maybePop(),
-                  ),
-                )
-              : null,
-          centerTitle: true,
-          title: Text(
-            cart == null || cart.lineCount == 0
-                ? 'Cart'
-                : 'Cart (${cart.lineCount})',
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-          ),
+        appBar: buyerAppBar(
+          context,
+          cart == null || cart.lineCount == 0
+              ? 'Cart'
+              : 'Cart (${cart.lineCount})',
         ),
         bottomNavigationBar: cart == null || cart.empty
             ? null

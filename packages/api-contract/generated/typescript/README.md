@@ -1,4 +1,4 @@
-# @materyalph/api-client-ts@1.0.0-phase.10
+# @materyalph/api-client-ts@1.0.0-phase.11
 
 A TypeScript SDK client for the localhost API.
 
@@ -87,6 +87,19 @@ All URIs are relative to */api/v1*
 *AccountsApi* | [**updateAccountProfile**](docs/AccountsApi.md#updateaccountprofile) | **PATCH** /{accountPortal}/account/profile |
 *AccountsApi* | [**updateVendorStaff**](docs/AccountsApi.md#updatevendorstaff) | **PATCH** /vendors/account/memberships/{membershipId} |
 *AccountsApi* | [**uploadAccountPhoto**](docs/AccountsApi.md#uploadaccountphoto) | **POST** /{webAccountPortal}/account/photo |
+*AdminFinanceApi* | [**approveFeeCredit**](docs/AdminFinanceApi.md#approvefeecredit) | **POST** /admin/finance/fee-credits/{proposalId}/approve |
+*AdminFinanceApi* | [**approveFeeStatement**](docs/AdminFinanceApi.md#approvefeestatement) | **POST** /admin/finance/statements/{statementId}/approve |
+*AdminFinanceApi* | [**draftFeeStatements**](docs/AdminFinanceApi.md#draftfeestatements) | **POST** /admin/finance/statements/draft |
+*AdminFinanceApi* | [**getWithholdingAccumulator**](docs/AdminFinanceApi.md#getwithholdingaccumulator) | **GET** /admin/finance/withholding-accumulators/{accumulatorId} |
+*AdminFinanceApi* | [**listAdminPayments**](docs/AdminFinanceApi.md#listadminpayments) | **GET** /admin/finance/payments |
+*AdminFinanceApi* | [**listChannelFees**](docs/AdminFinanceApi.md#listchannelfees) | **GET** /admin/finance/channel-fees |
+*AdminFinanceApi* | [**listFeeStatements**](docs/AdminFinanceApi.md#listfeestatements) | **GET** /admin/finance/statements |
+*AdminFinanceApi* | [**listFinanceReviewItems**](docs/AdminFinanceApi.md#listfinancereviewitems) | **GET** /admin/finance/review-items |
+*AdminFinanceApi* | [**listWithholdingAccumulators**](docs/AdminFinanceApi.md#listwithholdingaccumulators) | **GET** /admin/finance/withholding-accumulators |
+*AdminFinanceApi* | [**proposeFeeCredit**](docs/AdminFinanceApi.md#proposefeecredit) | **POST** /admin/finance/fee-credits |
+*AdminFinanceApi* | [**resolveFinanceReviewItem**](docs/AdminFinanceApi.md#resolvefinancereviewitem) | **POST** /admin/finance/review-items/{itemId}/resolve |
+*AdminFinanceApi* | [**resolveWithholdingOverlap**](docs/AdminFinanceApi.md#resolvewithholdingoverlap) | **POST** /admin/finance/withholding-accumulators/{accumulatorId}/overlap |
+*AdminFinanceApi* | [**runPaymentReconciliation**](docs/AdminFinanceApi.md#runpaymentreconciliation) | **POST** /admin/finance/reconciliation/run |
 *AdminProductComplianceApi* | [**activateComplianceRegister**](docs/AdminProductComplianceApi.md#activatecomplianceregister) | **POST** /admin/product-compliance/registers/{registerId}/activate |
 *AdminProductComplianceApi* | [**createComparableGroup**](docs/AdminProductComplianceApi.md#createcomparablegroup) | **POST** /admin/taxonomy/comparable-groups |
 *AdminProductComplianceApi* | [**decideProductCompliance**](docs/AdminProductComplianceApi.md#decideproductcompliance) | **POST** /admin/product-compliance/{submissionId}/decision |
@@ -177,6 +190,11 @@ All URIs are relative to */api/v1*
 *BuyerOrdersApi* | [**rejectBuyerOrderNrpc**](docs/BuyerOrdersApi.md#rejectbuyerordernrpc) | **POST** /buyers/orders/{orderId}/nrpc/reject |
 *BuyerOrdersApi* | [**rejectBuyerOrderRevision**](docs/BuyerOrdersApi.md#rejectbuyerorderrevision) | **POST** /buyers/orders/{orderId}/revision/reject |
 *BuyerOrdersApi* | [**submitBuyerCheckout**](docs/BuyerOrdersApi.md#submitbuyercheckout) | **POST** /buyers/checkouts |
+*BuyerPaymentsApi* | [**acknowledgePhysicalPayment**](docs/BuyerPaymentsApi.md#acknowledgephysicalpayment) | **POST** /buyers/orders/{orderId}/physical-payments/{recordId}/acknowledge |
+*BuyerPaymentsApi* | [**createBuyerPayment**](docs/BuyerPaymentsApi.md#createbuyerpayment) | **POST** /buyers/orders/{orderId}/payments |
+*BuyerPaymentsApi* | [**getBuyerPayment**](docs/BuyerPaymentsApi.md#getbuyerpayment) | **GET** /buyers/payments/{paymentId} |
+*BuyerPaymentsApi* | [**getBuyerPaymentOptions**](docs/BuyerPaymentsApi.md#getbuyerpaymentoptions) | **GET** /buyers/orders/{orderId}/payment-options |
+*BuyerPaymentsApi* | [**refreshBuyerPayment**](docs/BuyerPaymentsApi.md#refreshbuyerpayment) | **POST** /buyers/payments/{paymentId}/refresh |
 *BuyerProjectsApi* | [**activateWorkPackage**](docs/BuyerProjectsApi.md#activateworkpackage) | **POST** /buyers/work-packages/{packageId}/activate |
 *BuyerProjectsApi* | [**closeWorkPackage**](docs/BuyerProjectsApi.md#closeworkpackage) | **POST** /buyers/work-packages/{packageId}/close |
 *BuyerProjectsApi* | [**compileProjectEstimates**](docs/BuyerProjectsApi.md#compileprojectestimates) | **POST** /buyers/work-packages/{packageId}/estimates |
@@ -215,6 +233,8 @@ All URIs are relative to */api/v1*
 *MessagingApi* | [**sendChatMessage**](docs/MessagingApi.md#sendchatmessage) | **POST** /{messagingPortal}/conversations/{conversationId}/messages |
 *MessagingApi* | [**transferChatHandler**](docs/MessagingApi.md#transferchathandler) | **POST** /{messagingPortal}/conversations/{conversationId}/transfer |
 *MessagingApi* | [**uploadChatAttachment**](docs/MessagingApi.md#uploadchatattachment) | **POST** /{messagingPortal}/conversations/{conversationId}/attachments |
+*PaymentWebhooksApi* | [**receiveXenditPaymentWebhook**](docs/PaymentWebhooksApi.md#receivexenditpaymentwebhook) | **POST** /webhooks/xendit |
+*PaymentWebhooksApi* | [**showPaymentReturnPage**](docs/PaymentWebhooksApi.md#showpaymentreturnpage) | **GET** /payments/return |
 *StoresApi* | [**getPublicStoreProfile**](docs/StoresApi.md#getpublicstoreprofile) | **GET** /stores/{storeId}/profile |
 *StoresApi* | [**listPublicStores**](docs/StoresApi.md#listpublicstores) | **GET** /stores |
 *SystemApi* | [**getApiHealth**](docs/SystemApi.md#getapihealth) | **GET** /health |
@@ -244,6 +264,17 @@ All URIs are relative to */api/v1*
 *VendorCatalogApi* | [**uploadCatalogImport**](docs/VendorCatalogApi.md#uploadcatalogimport) | **POST** /vendor/catalog/imports |
 *VendorCatalogApi* | [**uploadListingComplianceEvidence**](docs/VendorCatalogApi.md#uploadlistingcomplianceevidence) | **POST** /vendor/catalog/listings/{listingId}/compliance/evidence |
 *VendorCatalogApi* | [**uploadVendorListingMedia**](docs/VendorCatalogApi.md#uploadvendorlistingmedia) | **POST** /vendor/catalog/listings/{listingId}/media |
+*VendorFinanceApi* | [**approveVendorOnlineBalance**](docs/VendorFinanceApi.md#approvevendoronlinebalance) | **POST** /vendor/orders/{orderId}/online-balance/approve |
+*VendorFinanceApi* | [**exportVendorTransactions**](docs/VendorFinanceApi.md#exportvendortransactions) | **GET** /vendor/finance/transactions/export |
+*VendorFinanceApi* | [**getVendorEarnings**](docs/VendorFinanceApi.md#getvendorearnings) | **GET** /vendor/finance/earnings |
+*VendorFinanceApi* | [**getVendorFeePayment**](docs/VendorFinanceApi.md#getvendorfeepayment) | **GET** /vendor/finance/payments/{paymentId} |
+*VendorFinanceApi* | [**getVendorFeeStatement**](docs/VendorFinanceApi.md#getvendorfeestatement) | **GET** /vendor/finance/statements/{statementId} |
+*VendorFinanceApi* | [**getVendorFinanceOverview**](docs/VendorFinanceApi.md#getvendorfinanceoverview) | **GET** /vendor/finance |
+*VendorFinanceApi* | [**listVendorTransactions**](docs/VendorFinanceApi.md#listvendortransactions) | **GET** /vendor/finance/transactions |
+*VendorFinanceApi* | [**payVendorFeeStatement**](docs/VendorFinanceApi.md#payvendorfeestatement) | **POST** /vendor/finance/statements/{statementId}/payments |
+*VendorFinanceApi* | [**recordVendorPhysicalPayment**](docs/VendorFinanceApi.md#recordvendorphysicalpayment) | **POST** /vendor/orders/{orderId}/physical-payments |
+*VendorFinanceApi* | [**refreshVendorFeePayment**](docs/VendorFinanceApi.md#refreshvendorfeepayment) | **POST** /vendor/finance/payments/{paymentId}/refresh |
+*VendorFinanceApi* | [**updateVendorPhysicalPayments**](docs/VendorFinanceApi.md#updatevendorphysicalpayments) | **PUT** /vendor/finance/physical-payments |
 *VendorFleetApi* | [**downloadFleetVehicleImage**](docs/VendorFleetApi.md#downloadfleetvehicleimage) | **GET** /fleet-files/{fileId}/content |
 *VendorFleetApi* | [**getFleetVehicleImageUrl**](docs/VendorFleetApi.md#getfleetvehicleimageurl) | **GET** /vendor/fleet/vehicle-images/{fileId} |
 *VendorFleetApi* | [**listVendorFleetVehicles**](docs/VendorFleetApi.md#listvendorfleetvehicles) | **GET** /vendor/fleet/vehicles |
@@ -333,6 +364,7 @@ All URIs are relative to */api/v1*
 - [AdminDashboardEnvelope](docs/AdminDashboardEnvelope.md)
 - [AdminDashboardSummary](docs/AdminDashboardSummary.md)
 - [AdminInvitationRequest](docs/AdminInvitationRequest.md)
+- [AdminPaymentListEnvelope](docs/AdminPaymentListEnvelope.md)
 - [AdminVendorVerificationDecision](docs/AdminVendorVerificationDecision.md)
 - [AdminVendorVerificationDetailEnvelope](docs/AdminVendorVerificationDetailEnvelope.md)
 - [AdminVendorVerificationQueueEnvelope](docs/AdminVendorVerificationQueueEnvelope.md)
@@ -437,6 +469,8 @@ All URIs are relative to */api/v1*
 - [CatalogVariantsSave](docs/CatalogVariantsSave.md)
 - [CatalogVolumeTier](docs/CatalogVolumeTier.md)
 - [CatalogVolumeTierInput](docs/CatalogVolumeTierInput.md)
+- [ChannelFeeVersion](docs/ChannelFeeVersion.md)
+- [ChannelFeeVersionListEnvelope](docs/ChannelFeeVersionListEnvelope.md)
 - [ChatAttachment](docs/ChatAttachment.md)
 - [ChatChannelAuth](docs/ChatChannelAuth.md)
 - [ChatChannelSignature](docs/ChatChannelSignature.md)
@@ -544,6 +578,16 @@ All URIs are relative to */api/v1*
 - [FavoriteSupplierStateEnvelope](docs/FavoriteSupplierStateEnvelope.md)
 - [FeatureAvailability](docs/FeatureAvailability.md)
 - [FeeAssessment](docs/FeeAssessment.md)
+- [FeeCreditProposalRequest](docs/FeeCreditProposalRequest.md)
+- [FeeStatement](docs/FeeStatement.md)
+- [FeeStatementDetail](docs/FeeStatementDetail.md)
+- [FeeStatementDetailEnvelope](docs/FeeStatementDetailEnvelope.md)
+- [FeeStatementEnvelope](docs/FeeStatementEnvelope.md)
+- [FeeStatementListEnvelope](docs/FeeStatementListEnvelope.md)
+- [FinanceActionResultEnvelope](docs/FinanceActionResultEnvelope.md)
+- [FinanceReviewItem](docs/FinanceReviewItem.md)
+- [FinanceReviewItemListEnvelope](docs/FinanceReviewItemListEnvelope.md)
+- [FinanceTransactionListEnvelope](docs/FinanceTransactionListEnvelope.md)
 - [FinancialPreview](docs/FinancialPreview.md)
 - [FinancialPreviewLine](docs/FinancialPreviewLine.md)
 - [FinancialSnapshot](docs/FinancialSnapshot.md)
@@ -671,10 +715,26 @@ All URIs are relative to */api/v1*
 - [OrderTimelineEvent](docs/OrderTimelineEvent.md)
 - [OrderVendorRef](docs/OrderVendorRef.md)
 - [OrderVolumeTier](docs/OrderVolumeTier.md)
+- [OverlapResolveRequest](docs/OverlapResolveRequest.md)
 - [PageMeta](docs/PageMeta.md)
 - [PasswordRecoveryRequest](docs/PasswordRecoveryRequest.md)
 - [PasswordResetRequest](docs/PasswordResetRequest.md)
+- [PaymentAttempt](docs/PaymentAttempt.md)
+- [PaymentAttemptEnvelope](docs/PaymentAttemptEnvelope.md)
+- [PaymentChannelOption](docs/PaymentChannelOption.md)
+- [PaymentCreateRequest](docs/PaymentCreateRequest.md)
 - [PaymentMethodEligibility](docs/PaymentMethodEligibility.md)
+- [PaymentOptions](docs/PaymentOptions.md)
+- [PaymentOptionsEnvelope](docs/PaymentOptionsEnvelope.md)
+- [PaymentWebhookAck](docs/PaymentWebhookAck.md)
+- [PaymentWebhookAckEnvelope](docs/PaymentWebhookAckEnvelope.md)
+- [PaymentWebhookPayload](docs/PaymentWebhookPayload.md)
+- [PhysicalPaymentRecord](docs/PhysicalPaymentRecord.md)
+- [PhysicalPaymentSettings](docs/PhysicalPaymentSettings.md)
+- [PhysicalPaymentSettingsEnvelope](docs/PhysicalPaymentSettingsEnvelope.md)
+- [PhysicalPaymentSettingsUpdate](docs/PhysicalPaymentSettingsUpdate.md)
+- [PhysicalPaymentSummary](docs/PhysicalPaymentSummary.md)
+- [PhysicalPaymentSummaryEnvelope](docs/PhysicalPaymentSummaryEnvelope.md)
 - [PickupConfirmation](docs/PickupConfirmation.md)
 - [PickupPreview](docs/PickupPreview.md)
 - [PriceHistoryEntry](docs/PriceHistoryEntry.md)
@@ -743,11 +803,14 @@ All URIs are relative to */api/v1*
 - [RegistrationEnvelopeAllOfData](docs/RegistrationEnvelopeAllOfData.md)
 - [RegulatedMaterialRule](docs/RegulatedMaterialRule.md)
 - [ResendBotChallengeRequest](docs/ResendBotChallengeRequest.md)
+- [ReviewResolveRequest](docs/ReviewResolveRequest.md)
 - [RouteEstimate](docs/RouteEstimate.md)
 - [RouteEstimateEnvelope](docs/RouteEstimateEnvelope.md)
 - [RouteEstimateRequest](docs/RouteEstimateRequest.md)
 - [ScoreLabel](docs/ScoreLabel.md)
 - [StaleListing](docs/StaleListing.md)
+- [StatementApproveRequest](docs/StatementApproveRequest.md)
+- [StatementPaymentRequest](docs/StatementPaymentRequest.md)
 - [StockConfirmationItem](docs/StockConfirmationItem.md)
 - [StockConfirmationRequest](docs/StockConfirmationRequest.md)
 - [StockConfirmationSchedule](docs/StockConfirmationSchedule.md)
@@ -764,6 +827,7 @@ All URIs are relative to */api/v1*
 - [SupplierServiceability](docs/SupplierServiceability.md)
 - [SupplierTier](docs/SupplierTier.md)
 - [TaxCategory](docs/TaxCategory.md)
+- [ThresholdStatusEvent](docs/ThresholdStatusEvent.md)
 - [UserIdentity](docs/UserIdentity.md)
 - [VendorActivationSnapshot](docs/VendorActivationSnapshot.md)
 - [VendorAddressGeocode](docs/VendorAddressGeocode.md)
@@ -773,8 +837,13 @@ All URIs are relative to */api/v1*
 - [VendorCommissionAcceptance](docs/VendorCommissionAcceptance.md)
 - [VendorDocument](docs/VendorDocument.md)
 - [VendorDocumentEnvelope](docs/VendorDocumentEnvelope.md)
+- [VendorEarnings](docs/VendorEarnings.md)
+- [VendorEarningsEnvelope](docs/VendorEarningsEnvelope.md)
 - [VendorFile](docs/VendorFile.md)
 - [VendorFileEnvelope](docs/VendorFileEnvelope.md)
+- [VendorFinanceNotice](docs/VendorFinanceNotice.md)
+- [VendorFinanceOverview](docs/VendorFinanceOverview.md)
+- [VendorFinanceOverviewEnvelope](docs/VendorFinanceOverviewEnvelope.md)
 - [VendorInvitation](docs/VendorInvitation.md)
 - [VendorInvitationAcceptance](docs/VendorInvitationAcceptance.md)
 - [VendorInvitationEnvelope](docs/VendorInvitationEnvelope.md)
@@ -819,6 +888,11 @@ All URIs are relative to */api/v1*
 - [VerifyBotChallengeRequest](docs/VerifyBotChallengeRequest.md)
 - [VerifyEmailRequest](docs/VerifyEmailRequest.md)
 - [VolumeTier](docs/VolumeTier.md)
+- [WithholdingAccumulatorDetail](docs/WithholdingAccumulatorDetail.md)
+- [WithholdingAccumulatorDetailEnvelope](docs/WithholdingAccumulatorDetailEnvelope.md)
+- [WithholdingAccumulatorListEnvelope](docs/WithholdingAccumulatorListEnvelope.md)
+- [WithholdingAccumulatorView](docs/WithholdingAccumulatorView.md)
+- [WithholdingThresholdPanel](docs/WithholdingThresholdPanel.md)
 - [WorkPackageInput](docs/WorkPackageInput.md)
 - [WorkPackageLineInput](docs/WorkPackageLineInput.md)
 - [WorkPackagePage](docs/WorkPackagePage.md)
@@ -875,8 +949,8 @@ This TypeScript SDK client supports the [Fetch API](https://fetch.spec.whatwg.or
 and is automatically generated by the
 [OpenAPI Generator](https://openapi-generator.tech) project:
 
-- API version: `1.0.0-phase.10`
-- Package version: `1.0.0-phase.10`
+- API version: `1.0.0-phase.11`
+- Package version: `1.0.0-phase.11`
 - Generator version: `7.25.0`
 - Build package: `org.openapitools.codegen.languages.TypeScriptFetchClientCodegen`
 

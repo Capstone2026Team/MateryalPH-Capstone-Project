@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import 'buyer_app_bar.dart';
 import 'procurement_components.dart';
 import '../ranking_weights.dart';
 import '../theme.dart';
@@ -159,7 +160,7 @@ class _RankingPreferencesEditorState extends State<RankingPreferencesEditor> {
     final valid = total == 100;
     final changed = saved != null && !mapEquals(_draft, saved.weights);
     return Scaffold(
-      appBar: AppBar(title: Text(widget.title)),
+      appBar: buyerAppBar(context, widget.title),
       bottomNavigationBar: saved == null
           ? null
           : SafeArea(

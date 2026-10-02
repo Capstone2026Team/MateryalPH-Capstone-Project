@@ -33,7 +33,7 @@ abstract class ChatDraftContent implements Built<ChatDraftContent, ChatDraftCont
 
   @BuiltValueField(wireName: r'payment_method')
   ChatDraftContentPaymentMethodEnum get paymentMethod;
-  // enum paymentMethodEnum {  ONLINE,  };
+  // enum paymentMethodEnum {  ONLINE,  CASH_ON_DELIVERY,  IN_STORE,  };
 
   @BuiltValueField(wireName: r'fulfillment_date')
   String get fulfillmentDate;
@@ -254,6 +254,10 @@ class ChatDraftContentPaymentMethodEnum extends EnumClass {
 
   @BuiltValueEnumConst(wireName: r'ONLINE')
   static const ChatDraftContentPaymentMethodEnum ONLINE = _$chatDraftContentPaymentMethodEnum_ONLINE;
+  @BuiltValueEnumConst(wireName: r'CASH_ON_DELIVERY')
+  static const ChatDraftContentPaymentMethodEnum CASH_ON_DELIVERY = _$chatDraftContentPaymentMethodEnum_CASH_ON_DELIVERY;
+  @BuiltValueEnumConst(wireName: r'IN_STORE')
+  static const ChatDraftContentPaymentMethodEnum IN_STORE = _$chatDraftContentPaymentMethodEnum_IN_STORE;
 
   static Serializer<ChatDraftContentPaymentMethodEnum> get serializer => _$chatDraftContentPaymentMethodEnumSerializer;
 

@@ -12,6 +12,7 @@ abstract interface class OrdersRepository {
     required List<String> vendorIds,
     required bool splitConfirmed,
     required String idempotencyKey,
+    Map<String, String> paymentMethods = const {},
   });
 
   Future<OrderListPage> orders({required String group, int page = 1});
@@ -53,6 +54,29 @@ abstract interface class OrdersRepository {
     required String reason,
     required String idempotencyKey,
   });
+
+  /// Server-computed purpose, principal and per-channel Payment Processing Fee.
+  Future<PaymentOptionsView> paymentOptions(String orderId);
+
+  /// Opens one provider payment for the due purpose. [expectedTotalCentavos] is only compared with the
+  /// server total; a mismatch is a 409 and nothing is charged.
+  Future<PaymentAttemptView> startPayment(
+    String orderId, {
+    required String channelCode,
+    required int expectedTotalCentavos,
+    required String idempotencyKey,
+  });
+
+  Future<PaymentAttemptView> payment(String paymentId);
+
+  /// Asks the provider for the authoritative status. Still pending until verified.
+  Future<PaymentAttemptView> refreshPayment(String paymentId);
+
+  Future<void> acknowledgePhysicalPayment(
+    String orderId, {
+    required String recordId,
+    required String idempotencyKey,
+  });
 }
 
 final class ApiOrdersRepository implements OrdersRepository {
@@ -73,6 +97,7 @@ final class ApiOrdersRepository implements OrdersRepository {
     required List<String> vendorIds,
     required bool splitConfirmed,
     required String idempotencyKey,
+    Map<String, String> paymentMethods = const {},
   }) => _api(() async {
     final response = await _orders.submitBuyerCheckout(
       idempotencyKey: idempotencyKey,
@@ -80,7 +105,18 @@ final class ApiOrdersRepository implements OrdersRepository {
         (b) => b
           ..cartLockVersion = cartLockVersion
           ..vendorIds = SetBuilder<String>(vendorIds)
-          ..splitConfirmed = splitConfirmed,
+          ..splitConfirmed = splitConfirmed
+          ..paymentMethods = paymentMethods.isEmpty
+              ? null
+              : MapBuilder<String, api.CheckoutSubmitRequestPaymentMethodsEnum>(
+                  {
+                    for (final entry in paymentMethods.entries)
+                      entry.key:
+                          api.CheckoutSubmitRequestPaymentMethodsEnum.valueOf(
+                            entry.value,
+                          ),
+                  },
+                ),
       ),
     );
     return _checkout(_api.required(response.data?.data));
@@ -253,6 +289,7 @@ final class ApiOrdersRepository implements OrdersRepository {
             at: order.deadline!.at,
           ),
     nextAction: order.nextAction?.name,
+    paymentRetryable: order.paymentRetryable ?? false,
     autoAccepted: order.confirmationSource?.name == 'AUTO_ACCEPT',
   );
 
@@ -407,6 +444,137 @@ final class ApiOrdersRepository implements OrdersRepository {
       expectedFulfillmentDate: order.expectedFulfillmentDate?.toString(),
       terminalReasonCode: order.terminalReasonCode,
       paymentNotice: order.payment?.notice,
+      payment: order.payment == null ? null : _payment(order.payment!),
+    );
+  }
+
+  api.BuyerPaymentsApi get _payments => _client.getBuyerPaymentsApi();
+
+  @override
+  Future<PaymentOptionsView> paymentOptions(String orderId) => _api(() async {
+    final response = await _payments.getBuyerPaymentOptions(orderId: orderId);
+    final options = _api.required(response.data?.data);
+    return PaymentOptionsView(
+      orderId: options.orderId,
+      orderReference: options.orderReference,
+      paymentDue: options.paymentDue,
+      providerReady: options.providerReady,
+      notice: options.notice,
+      purpose: options.purpose?.name,
+      principalCentavos: options.principalCentavos,
+      payBy: options.payBy,
+      latestAttempt: options.latestAttempt == null
+          ? null
+          : _attempt(options.latestAttempt!),
+      channels: options.channels
+          .map(
+            (channel) => PaymentChannelView(
+              code: channel.code,
+              displayName: channel.displayName,
+              kind: channel.kind.name,
+              available: channel.available,
+              rateLabel: channel.rateLabel,
+              unavailableReason: channel.unavailableReason,
+              feeCentavos: channel.feeCentavos,
+              totalCentavos: channel.totalCentavos,
+            ),
+          )
+          .toList(),
+    );
+  });
+
+  @override
+  Future<PaymentAttemptView> startPayment(
+    String orderId, {
+    required String channelCode,
+    required int expectedTotalCentavos,
+    required String idempotencyKey,
+  }) => _api(() async {
+    final response = await _payments.createBuyerPayment(
+      orderId: orderId,
+      idempotencyKey: idempotencyKey,
+      paymentCreateRequest: api.PaymentCreateRequest(
+        (b) => b
+          ..channelCode = channelCode
+          ..expectedTotalCentavos = expectedTotalCentavos,
+      ),
+    );
+    return _attempt(_api.required(response.data?.data));
+  });
+
+  @override
+  Future<PaymentAttemptView> payment(String paymentId) => _api(() async {
+    final response = await _payments.getBuyerPayment(paymentId: paymentId);
+    return _attempt(_api.required(response.data?.data));
+  });
+
+  @override
+  Future<PaymentAttemptView> refreshPayment(String paymentId) => _api(() async {
+    final response = await _payments.refreshBuyerPayment(paymentId: paymentId);
+    return _attempt(_api.required(response.data?.data));
+  });
+
+  @override
+  Future<void> acknowledgePhysicalPayment(
+    String orderId, {
+    required String recordId,
+    required String idempotencyKey,
+  }) => _api(() async {
+    await _payments.acknowledgePhysicalPayment(
+      orderId: orderId,
+      recordId: recordId,
+      idempotencyKey: idempotencyKey,
+    );
+  });
+
+  static PaymentAttemptView _attempt(api.PaymentAttempt attempt) =>
+      PaymentAttemptView(
+        id: attempt.id,
+        purpose: attempt.purpose.name,
+        status: attempt.status.name,
+        principalCentavos: attempt.principalCentavos,
+        processingFeeCentavos: attempt.processingFeeCentavos,
+        totalCentavos: attempt.totalCentavos,
+        evidenceOrigin: attempt.evidenceOrigin.name,
+        canCheckStatus: attempt.canCheckStatus,
+        message: attempt.message,
+        orderId: attempt.orderId,
+        channelName: attempt.channelName,
+        checkoutUrl: attempt.checkoutUrl,
+        expiresAt: attempt.expiresAt,
+        paidAt: attempt.paidAt,
+      );
+
+  static OrderPaymentView _payment(api.OrderPaymentAvailability payment) {
+    final physical = payment.physical;
+    return OrderPaymentView(
+      available: payment.available,
+      purpose: payment.purpose?.name,
+      principalCentavos: payment.principalCentavos,
+      notice: payment.notice,
+      latestAttempt: payment.latestAttempt == null
+          ? null
+          : _attempt(payment.latestAttempt!),
+      verifiedPayment: payment.verifiedPayment == null
+          ? null
+          : _attempt(payment.verifiedPayment!),
+      physicalApplicable: physical?.applicable ?? false,
+      physicalMethod: physical?.method,
+      physicalRemainingCentavos: physical?.remainingCentavos,
+      onlineBalanceApproved: physical?.onlineBalanceApproved ?? false,
+      physicalRecords: (physical?.records.toList() ?? const [])
+          .map(
+            (record) => PhysicalRecordView(
+              id: record.id,
+              kind: record.kind.name,
+              amountCentavos: record.amountCentavos,
+              remainingCentavos: record.remainingCentavos,
+              recordedAt: record.recordedAt,
+              source: record.source_.name,
+              acknowledgedAt: record.buyerAcknowledgedAt,
+            ),
+          )
+          .toList(),
     );
   }
 }

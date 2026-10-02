@@ -6,6 +6,76 @@ part of 'checkout_submit_request.dart';
 // BuiltValueGenerator
 // **************************************************************************
 
+const CheckoutSubmitRequestPaymentMethodsEnum
+    _$checkoutSubmitRequestPaymentMethodsEnum_ONLINE =
+    const CheckoutSubmitRequestPaymentMethodsEnum._('ONLINE');
+const CheckoutSubmitRequestPaymentMethodsEnum
+    _$checkoutSubmitRequestPaymentMethodsEnum_CASH_ON_DELIVERY =
+    const CheckoutSubmitRequestPaymentMethodsEnum._('CASH_ON_DELIVERY');
+const CheckoutSubmitRequestPaymentMethodsEnum
+    _$checkoutSubmitRequestPaymentMethodsEnum_IN_STORE =
+    const CheckoutSubmitRequestPaymentMethodsEnum._('IN_STORE');
+
+CheckoutSubmitRequestPaymentMethodsEnum
+    _$checkoutSubmitRequestPaymentMethodsEnumValueOf(String name) {
+  switch (name) {
+    case 'ONLINE':
+      return _$checkoutSubmitRequestPaymentMethodsEnum_ONLINE;
+    case 'CASH_ON_DELIVERY':
+      return _$checkoutSubmitRequestPaymentMethodsEnum_CASH_ON_DELIVERY;
+    case 'IN_STORE':
+      return _$checkoutSubmitRequestPaymentMethodsEnum_IN_STORE;
+    default:
+      throw ArgumentError(name);
+  }
+}
+
+final BuiltSet<CheckoutSubmitRequestPaymentMethodsEnum>
+    _$checkoutSubmitRequestPaymentMethodsEnumValues = BuiltSet<
+        CheckoutSubmitRequestPaymentMethodsEnum>(const <CheckoutSubmitRequestPaymentMethodsEnum>[
+  _$checkoutSubmitRequestPaymentMethodsEnum_ONLINE,
+  _$checkoutSubmitRequestPaymentMethodsEnum_CASH_ON_DELIVERY,
+  _$checkoutSubmitRequestPaymentMethodsEnum_IN_STORE,
+]);
+
+Serializer<CheckoutSubmitRequestPaymentMethodsEnum>
+    _$checkoutSubmitRequestPaymentMethodsEnumSerializer =
+    _$CheckoutSubmitRequestPaymentMethodsEnumSerializer();
+
+class _$CheckoutSubmitRequestPaymentMethodsEnumSerializer
+    implements PrimitiveSerializer<CheckoutSubmitRequestPaymentMethodsEnum> {
+  static const Map<String, Object> _toWire = const <String, Object>{
+    'ONLINE': 'ONLINE',
+    'CASH_ON_DELIVERY': 'CASH_ON_DELIVERY',
+    'IN_STORE': 'IN_STORE',
+  };
+  static const Map<Object, String> _fromWire = const <Object, String>{
+    'ONLINE': 'ONLINE',
+    'CASH_ON_DELIVERY': 'CASH_ON_DELIVERY',
+    'IN_STORE': 'IN_STORE',
+  };
+
+  @override
+  final Iterable<Type> types = const <Type>[
+    CheckoutSubmitRequestPaymentMethodsEnum
+  ];
+  @override
+  final String wireName = 'CheckoutSubmitRequestPaymentMethodsEnum';
+
+  @override
+  Object serialize(Serializers serializers,
+          CheckoutSubmitRequestPaymentMethodsEnum object,
+          {FullType specifiedType = FullType.unspecified}) =>
+      _toWire[object.name] ?? object.name;
+
+  @override
+  CheckoutSubmitRequestPaymentMethodsEnum deserialize(
+          Serializers serializers, Object serialized,
+          {FullType specifiedType = FullType.unspecified}) =>
+      CheckoutSubmitRequestPaymentMethodsEnum.valueOf(
+          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+}
+
 class _$CheckoutSubmitRequest extends CheckoutSubmitRequest {
   @override
   final int cartLockVersion;
@@ -13,6 +83,9 @@ class _$CheckoutSubmitRequest extends CheckoutSubmitRequest {
   final BuiltSet<String> vendorIds;
   @override
   final bool? splitConfirmed;
+  @override
+  final BuiltMap<String, CheckoutSubmitRequestPaymentMethodsEnum>?
+      paymentMethods;
 
   factory _$CheckoutSubmitRequest(
           [void Function(CheckoutSubmitRequestBuilder)? updates]) =>
@@ -21,7 +94,8 @@ class _$CheckoutSubmitRequest extends CheckoutSubmitRequest {
   _$CheckoutSubmitRequest._(
       {required this.cartLockVersion,
       required this.vendorIds,
-      this.splitConfirmed})
+      this.splitConfirmed,
+      this.paymentMethods})
       : super._();
   @override
   CheckoutSubmitRequest rebuild(
@@ -38,7 +112,8 @@ class _$CheckoutSubmitRequest extends CheckoutSubmitRequest {
     return other is CheckoutSubmitRequest &&
         cartLockVersion == other.cartLockVersion &&
         vendorIds == other.vendorIds &&
-        splitConfirmed == other.splitConfirmed;
+        splitConfirmed == other.splitConfirmed &&
+        paymentMethods == other.paymentMethods;
   }
 
   @override
@@ -47,6 +122,7 @@ class _$CheckoutSubmitRequest extends CheckoutSubmitRequest {
     _$hash = $jc(_$hash, cartLockVersion.hashCode);
     _$hash = $jc(_$hash, vendorIds.hashCode);
     _$hash = $jc(_$hash, splitConfirmed.hashCode);
+    _$hash = $jc(_$hash, paymentMethods.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -56,7 +132,8 @@ class _$CheckoutSubmitRequest extends CheckoutSubmitRequest {
     return (newBuiltValueToStringHelper(r'CheckoutSubmitRequest')
           ..add('cartLockVersion', cartLockVersion)
           ..add('vendorIds', vendorIds)
-          ..add('splitConfirmed', splitConfirmed))
+          ..add('splitConfirmed', splitConfirmed)
+          ..add('paymentMethods', paymentMethods))
         .toString();
   }
 }
@@ -80,6 +157,15 @@ class CheckoutSubmitRequestBuilder
   set splitConfirmed(bool? splitConfirmed) =>
       _$this._splitConfirmed = splitConfirmed;
 
+  MapBuilder<String, CheckoutSubmitRequestPaymentMethodsEnum>? _paymentMethods;
+  MapBuilder<String, CheckoutSubmitRequestPaymentMethodsEnum>
+      get paymentMethods => _$this._paymentMethods ??=
+          MapBuilder<String, CheckoutSubmitRequestPaymentMethodsEnum>();
+  set paymentMethods(
+          MapBuilder<String, CheckoutSubmitRequestPaymentMethodsEnum>?
+              paymentMethods) =>
+      _$this._paymentMethods = paymentMethods;
+
   CheckoutSubmitRequestBuilder() {
     CheckoutSubmitRequest._defaults(this);
   }
@@ -90,6 +176,7 @@ class CheckoutSubmitRequestBuilder
       _cartLockVersion = $v.cartLockVersion;
       _vendorIds = $v.vendorIds.toBuilder();
       _splitConfirmed = $v.splitConfirmed;
+      _paymentMethods = $v.paymentMethods?.toBuilder();
       _$v = null;
     }
     return this;
@@ -117,12 +204,16 @@ class CheckoutSubmitRequestBuilder
                 cartLockVersion, r'CheckoutSubmitRequest', 'cartLockVersion'),
             vendorIds: vendorIds.build(),
             splitConfirmed: splitConfirmed,
+            paymentMethods: _paymentMethods?.build(),
           );
     } catch (_) {
       late String _$failedField;
       try {
         _$failedField = 'vendorIds';
         vendorIds.build();
+
+        _$failedField = 'paymentMethods';
+        _paymentMethods?.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
             r'CheckoutSubmitRequest', _$failedField, e.toString());

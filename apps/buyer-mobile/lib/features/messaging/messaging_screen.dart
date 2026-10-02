@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import '../../design_system/components/buyer_app_bar.dart';
 import '../../design_system/components/work_package_attachment.dart';
 import '../projects/projects_repository.dart';
 
@@ -474,16 +475,15 @@ class _MessagingScreenState extends State<MessagingScreen>
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: Theme.of(context).colorScheme.surface,
-    appBar: AppBar(
-      toolbarHeight: _detail == null
-          ? 48
+    appBar: buyerAppBar(
+      context,
+      widget.conversationId == null ? 'Messages' : 'Conversation',
+      toolbarHeight: _detail == null || widget.conversationId == null
+          ? null
           : 64 + (MediaQuery.textScalerOf(context).scale(14) - 14) * 2,
-      titleSpacing: widget.conversationId == null ? 20 : 0,
-      title: _detail == null
-          ? Text(
-              widget.conversationId == null ? 'Messages' : 'Conversation',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-            )
+      centerTitle: _detail == null || widget.conversationId == null,
+      titleWidget: _detail == null || widget.conversationId == null
+          ? null
           : ConversationHeader(
               conversation: _detail!.conversation,
               compact: true,

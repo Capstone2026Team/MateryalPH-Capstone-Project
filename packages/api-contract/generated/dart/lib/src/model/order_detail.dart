@@ -151,7 +151,7 @@ abstract class OrderDetail implements Built<OrderDetail, OrderDetailBuilder> {
 
   @BuiltValueField(wireName: r'available_actions')
   BuiltList<OrderDetailAvailableActionsEnum>? get availableActions;
-  // enum availableActionsEnum {  APPROVE_REVISION,  REJECT_REVISION,  ACCEPT_NRPC,  REJECT_NRPC,  FLAG_NRPC,  };
+  // enum availableActionsEnum {  APPROVE_REVISION,  REJECT_REVISION,  ACCEPT_NRPC,  REJECT_NRPC,  FLAG_NRPC,  PAY,  };
 
   @BuiltValueField(wireName: r'payment')
   OrderPaymentAvailability? get payment;
@@ -775,6 +775,8 @@ class OrderDetailAvailableActionsEnum extends EnumClass {
   static const OrderDetailAvailableActionsEnum REJECT_NRPC = _$orderDetailAvailableActionsEnum_REJECT_NRPC;
   @BuiltValueEnumConst(wireName: r'FLAG_NRPC')
   static const OrderDetailAvailableActionsEnum FLAG_NRPC = _$orderDetailAvailableActionsEnum_FLAG_NRPC;
+  @BuiltValueEnumConst(wireName: r'PAY')
+  static const OrderDetailAvailableActionsEnum PAY = _$orderDetailAvailableActionsEnum_PAY;
 
   static Serializer<OrderDetailAvailableActionsEnum> get serializer => _$orderDetailAvailableActionsEnumSerializer;
 

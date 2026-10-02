@@ -114,7 +114,7 @@ final class PhaseEightOrdersTest extends TestCase
 
     // ── Manual confirmation, acceptance snapshot and payment expiry ──────────────────────────────────
 
-    public function test_unchanged_manual_confirmation_reserves_freezes_the_snapshot_and_the_45_minute_window_expires_cleanly(): void
+    public function test_unchanged_manual_confirmation_reserves_freezes_the_snapshot_and_the_24_hour_window_expires_cleanly(): void
     {
         CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-10-05 09:00:00', 'Asia/Manila'));
         Carbon::setTestNow(Carbon::parse('2026-10-05 09:00:00', 'Asia/Manila'));
@@ -127,7 +127,7 @@ final class PhaseEightOrdersTest extends TestCase
         self::assertSame('4.0000', $this->reserved($variant));
         self::assertSame('20.0000', (string) DB::table('inventory_items')->where('listing_variant_id', $variant)->value('quantity_on_hand'), 'Reservation never changes physical stock.');
         $order = DB::table('orders')->where('id', $orderId)->first();
-        self::assertSame('2026-10-05 01:45:00', CarbonImmutable::parse((string) $order->payment_expires_at)->utc()->format('Y-m-d H:i:s'), '45 minutes from entering AWAITING_PAYMENT.');
+        self::assertSame('2026-10-06 01:00:00', CarbonImmutable::parse((string) $order->payment_expires_at)->utc()->format('Y-m-d H:i:s'), '24 hours from entering AWAITING_PAYMENT.');
         $snapshot = DB::table('financial_snapshots')->where('order_id', $orderId)->first();
         self::assertSame([1, 7200, 7200, 0, 7200, 0, 7200], [(int) $snapshot->version, (int) $snapshot->materials_gross_centavos, (int) $snapshot->materials_payable_centavos, (int) $snapshot->materials_vat_centavos,
             (int) $snapshot->materials_exclusive_centavos, (int) $snapshot->delivery_centavos, (int) $snapshot->buyer_total_centavos]);
@@ -138,7 +138,8 @@ final class PhaseEightOrdersTest extends TestCase
         // Buyer sees the countdown target and exact time; the order history is append-only.
         $detail = $this->buyerOrder($buyer, $orderId);
         self::assertSame($detail['deadlines']['payment_expires_at'], CarbonImmutable::parse((string) $order->payment_expires_at)->toIso8601String());
-        self::assertSame(['available' => false, 'reason' => 'ONLINE_PAYMENT_NOT_YET_ENABLED'], array_intersect_key($detail['payment'], array_flip(['available', 'reason'])));
+        // Phase 11 opened online payment: the order is payable, and only a verified provider event confirms it.
+        self::assertSame(['available' => true, 'purpose' => 'FULL_ORDER_PAYMENT', 'reason' => null], array_intersect_key($detail['payment'], array_flip(['available', 'reason', 'purpose'])));
         self::assertSame([7200, 7200, null, 'PENDING_PAYMENT_CHANNEL', 'FULL_ORDER_PAYMENT', 0], [$detail['money']['commercial_total_centavos'], $detail['money']['online_principal_centavos'],
             $detail['money']['amount_due_online_centavos'], $detail['money']['processing_fee']['status'], $detail['money']['payment_purpose'], $detail['money']['physical_balance_centavos']]);
         try {
@@ -154,10 +155,10 @@ final class PhaseEightOrdersTest extends TestCase
             self::assertStringContainsString('append-only', $exception->getMessage());
         }
 
-        // At 44:59 nothing expires; at 45:00 the read resolves the order to EXPIRED and releases the stock.
-        $this->travelTo(CarbonImmutable::parse('2026-10-05 09:44:59', 'Asia/Manila'));
+        // 1 second before 24 hours nothing expires; at 24:00:00 the read resolves the order to EXPIRED and releases the stock.
+        $this->travelTo(CarbonImmutable::parse('2026-10-06 08:59:59', 'Asia/Manila'));
         self::assertSame(0, app(OrderExpiryService::class)->sweep());
-        $this->travelTo(CarbonImmutable::parse('2026-10-05 09:45:00', 'Asia/Manila'));
+        $this->travelTo(CarbonImmutable::parse('2026-10-06 09:00:00', 'Asia/Manila'));
         $expired = $this->buyerOrder($buyer, $orderId);
         self::assertSame(['EXPIRED', 'EXPIRED'], [$expired['states'][0]['state'], $expired['states'][1]['state']]);
         self::assertSame('PAYMENT_WINDOW_EXPIRED', $expired['terminal_reason_code']);
@@ -325,8 +326,9 @@ final class PhaseEightOrdersTest extends TestCase
         $detail = $this->buyerOrder($buyer, $orderId);
         $terms = $detail['nrpc']['terms'];
         self::assertSame(['ACCEPT_NRPC', 'REJECT_NRPC', 'FLAG_NRPC'], $detail['available_actions']);
-        self::assertSame([25000, 'Custom cutting to the Buyer drawings', 1], [$detail['nrpc']['amount_centavos'], $detail['nrpc']['reason'], $terms['version']]);
+        self::assertSame([25000, 'Custom cutting to the Buyer drawings', 2], [$detail['nrpc']['amount_centavos'], $detail['nrpc']['reason'], $terms['version']]);
         self::assertNotNull($terms['content']);
+        self::assertStringContainsString('24-hour Pending Payment window', $terms['content']);
         self::assertSame($line, $detail['nrpc']['affected_lines'][0]['order_line_id']);
 
         // Flagging is separate: it neither accepts nor changes the order.
@@ -375,7 +377,7 @@ final class PhaseEightOrdersTest extends TestCase
         [$buyer, $orderId] = $this->pickupOrder($store, $listing, [['variant' => 0, 'quantity' => '4']]);
 
         $detail = $this->buyerOrder($buyer, $orderId);
-        self::assertSame(CarbonImmutable::now()->addMinutes(45)->timestamp, CarbonImmutable::parse($detail['deadlines']['payment_expires_at'])->timestamp);
+        self::assertSame(CarbonImmutable::now()->addHours(24)->timestamp, CarbonImmutable::parse($detail['deadlines']['payment_expires_at'])->timestamp);
         self::assertSame(['AWAITING_PAYMENT', 'PENDING', 'AUTO_ACCEPT'], [$detail['states'][0]['state'], $detail['states'][1]['state'], $detail['confirmation_source']]);
         self::assertSame(CarbonImmutable::now('Asia/Manila')->addDays(2)->toDateString(), $detail['expected_fulfillment_date']);
         self::assertSame('4.0000', $this->reserved($variant));
@@ -395,7 +397,8 @@ final class PhaseEightOrdersTest extends TestCase
         self::assertSame('4.0000', $this->reserved($variant));
 
         // Payment expiry releases the reservation and restores allotment, but never clears the pause.
-        $this->travel(46)->minutes();
+        $this->travel(24)->hours();
+        $this->travel(1)->minutes();
         self::assertTrue(app(OrderExpiryService::class)->expireIfDue($orderId));
         $policy = DB::table('auto_accept_policies')->where('listing_variant_id', $variant)->first();
         self::assertSame(['4', true], [bcadd((string) $policy->remaining_allotment_quantity, '0', 0), (bool) $policy->paused]);

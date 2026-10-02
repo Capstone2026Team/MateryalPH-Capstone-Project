@@ -18,6 +18,76 @@ Widget _app(Widget home) => MaterialApp(theme: BuyerTheme.light, home: home);
 
 void main() {
   testWidgets(
+    'order list retries only pending orders and refreshes expiry from the server',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(390, 1200));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      OrderListPage page(String state, {OrderDeadlineView? deadline}) =>
+          OrderListPage(
+            items: [
+              orderSummary(
+                state: state,
+                nextAction: state == 'AWAITING_PAYMENT' ? 'PAY' : null,
+                paymentRetryable: true,
+                deadline: deadline,
+              ),
+            ],
+            counts: const {},
+            page: 1,
+            hasMore: false,
+            total: 1,
+          );
+      final repository = FakeOrdersRepository(
+        list: page(
+          'AWAITING_PAYMENT',
+          deadline: OrderDeadlineView(
+            kind: 'PAYMENT',
+            at: DateTime.now().add(const Duration(seconds: 2)),
+          ),
+        ),
+      );
+      await tester.pumpWidget(
+        _app(OrdersScreen(repository: repository, initialGroup: 'ALL')),
+      );
+      await tester.pump();
+      expect(find.text('Re-process payment'), findsOneWidget);
+      expect(find.text('Pay now'), findsNothing);
+      repository.list = page('EXPIRED');
+      // The countdown asks the server to refresh; the response decides the new state.
+      tester
+          .widget<DeadlineCountdown>(find.byType(DeadlineCountdown))
+          .onExpired!();
+      await tester.pump();
+      expect(
+        repository.calls.where((call) => call == 'orders:ALL:1'),
+        hasLength(2),
+      );
+      expect(find.text('Re-process payment'), findsNothing);
+      expect(find.text('Pay now'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'a 24-hour countdown displays hours and the exact Manila deadline',
+    (tester) async {
+      await tester.pumpWidget(
+        _app(
+          Scaffold(
+            body: DeadlineCountdown(
+              deadline: DateTime.utc(2026, 10, 6, 1),
+              now: () => DateTime.utc(2026, 10, 5, 1, 1),
+              label: 'Pay before',
+            ),
+          ),
+        ),
+      );
+      expect(find.text('23 h 59 min'), findsOneWidget);
+      expect(find.textContaining('Oct 6, 2026, 9:00 AM PHT'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
     'order details show five separate state rows and never imply payment from the order state',
     (tester) async {
       final repository = FakeOrdersRepository(
@@ -42,9 +112,14 @@ void main() {
       }
       expect(find.bySemanticsLabel('Payment: Payment due'), findsOneWidget);
       expect(find.bySemanticsLabel('Refund: None'), findsOneWidget);
-      expect(find.text('Order accepted — ready for payment'), findsOneWidget);
       expect(
-        find.textContaining('Online payment opens in the payments release'),
+        find.text('Pending payment — the Vendor confirmed your order'),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining(
+          'order is confirmed only after the payment provider verifies',
+        ),
         findsOneWidget,
       );
     },
@@ -75,7 +150,7 @@ void main() {
           ..onDecision = (_) => orderDetail(
             state: 'AWAITING_PAYMENT',
             payment: 'PENDING',
-            paymentExpiresAt: DateTime.now().add(const Duration(minutes: 45)),
+            paymentExpiresAt: DateTime.now().add(const Duration(hours: 24)),
           );
     await tester.pumpWidget(
       _app(OrderDetailsScreen(orderId: 'order-1', repository: repository)),
@@ -93,7 +168,7 @@ void main() {
       find.text('Approved. Your order moves to the next step.'),
       findsOneWidget,
     );
-    expect(find.text('Pay within'), findsOneWidget);
+    expect(find.text('Pay before'), findsOneWidget);
   });
 
   testWidgets('rejecting a revision asks first and then cancels', (
@@ -274,7 +349,7 @@ void main() {
           Scaffold(
             body: DeadlineCountdown(
               deadline: DateTime.utc(2026, 10, 5, 1, 45),
-              label: 'Pay within',
+              label: 'Pay before',
               endedLabel: 'Payment window ended',
               onExpired: () => expired++,
               now: () => now,
@@ -395,7 +470,7 @@ void main() {
               autoAccepted: true,
               commercialTotalCentavos: 18000,
               deliveryPending: false,
-              paymentExpiresAt: DateTime.now().add(const Duration(minutes: 45)),
+              paymentExpiresAt: DateTime.now().add(const Duration(hours: 24)),
             ),
           ],
         ),
@@ -420,10 +495,11 @@ void main() {
         'cartLockVersion': 3,
         'vendorIds': ['vendor-2'],
         'splitConfirmed': true,
+        'paymentMethods': {'vendor-2': 'ONLINE'},
       });
       expect(find.byType(OrderSubmittedScreen), findsOneWidget);
       expect(find.text('CHK-2026-ZX12CV34'), findsOneWidget);
-      expect(find.text('Accepted automatically — pay within'), findsOneWidget);
+      expect(find.text('Accepted automatically — pay before'), findsOneWidget);
     },
   );
 

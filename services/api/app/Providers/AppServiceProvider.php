@@ -5,6 +5,8 @@ namespace App\Providers;
 use App\Domain\Authorization\AccountAccess;
 use App\Domain\Compliance\ComplianceReferenceProvider;
 use App\Domain\Compliance\ComplianceTextExtractor;
+use App\Domain\Finance\DemoWithholdingEvidenceAdapter;
+use App\Domain\Finance\WithholdingEvidenceAdapter;
 use App\Domain\Geography\PlacesProvider;
 use App\Domain\Geography\RouteProvider;
 use App\Domain\Identity\AccessTokenIssuer;
@@ -12,6 +14,7 @@ use App\Domain\Identity\OtpCodeGenerator;
 use App\Domain\Identity\PassportAccessTokenIssuer;
 use App\Domain\Identity\RecaptchaAssessmentGateway;
 use App\Domain\Identity\SecureOtpCodeGenerator;
+use App\Domain\Payments\PaymentGateway;
 use App\Domain\Vendors\AddressGeocoder;
 use App\Domain\Vendors\PsgcProvider;
 use App\Domain\Vendors\PublicStoreMediaStorage;
@@ -24,6 +27,8 @@ use App\Infrastructure\Geography\GoogleRoutesProvider;
 use App\Infrastructure\Geography\PsgcCloudProvider;
 use App\Infrastructure\Identity\GoogleRecaptchaEnterpriseGateway;
 use App\Infrastructure\Payments\ConfiguredXenditAccountVerificationGateway;
+use App\Infrastructure\Payments\FakePaymentGateway;
+use App\Infrastructure\Payments\XenditPaymentSessionGateway;
 use App\Infrastructure\Storage\CloudinaryPublicStoreMediaStorage;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -49,6 +54,9 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(ComplianceTextExtractor::class, UnavailableComplianceTextExtractor::class);
         $this->app->bind(PlacesProvider::class, GooglePlacesProvider::class);
         $this->app->bind(RouteProvider::class, GoogleRoutesProvider::class);
+        $this->app->singleton(WithholdingEvidenceAdapter::class, DemoWithholdingEvidenceAdapter::class);
+        // One adapter per process: the deterministic simulator keeps its injected failures for the whole request.
+        $this->app->singleton(PaymentGateway::class, fn (): PaymentGateway => config('payments.gateway') === 'fake' ? new FakePaymentGateway : new XenditPaymentSessionGateway);
     }
 
     /**
@@ -89,6 +97,9 @@ class AppServiceProvider extends ServiceProvider
         // Browsing, bootstrap and provider traffic must not exhaust authentication attempts.
         RateLimiter::for('public-store', fn (Request $request): Limit => Limit::perMinute(10)->by($request->ip()));
         RateLimiter::for('auth-csrf', fn (Request $request): Limit => Limit::perMinute(10)->by($request->ip()));
+        // Xendit retries and bursts payment events from a small set of addresses; the inbox only stores and acknowledges.
+        RateLimiter::for('payment-webhook', fn (Request $request): Limit => Limit::perMinute(600)->by($request->ip()));
+        RateLimiter::for('payment-create', fn (Request $request): Limit => Limit::perMinute(12)->by((string) $request->user()?->getAuthIdentifier()));
         RateLimiter::for('provider-webhook', fn (Request $request): Limit => Limit::perMinute(10)->by($request->ip()));
         RateLimiter::for('vendor-address', fn (Request $request): Limit => Limit::perMinute(10)->by((string) $request->user()?->getAuthIdentifier()));
         RateLimiter::for('auth-registration', fn (Request $request): Limit => Limit::perHour(5)->by($request->ip()));

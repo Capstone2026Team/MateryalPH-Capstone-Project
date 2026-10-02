@@ -79,12 +79,22 @@ final BuiltSet<WorkPackageInputFulfillmentMethodEnum>
 const WorkPackageInputPaymentMethodEnum
     _$workPackageInputPaymentMethodEnum_ONLINE =
     const WorkPackageInputPaymentMethodEnum._('ONLINE');
+const WorkPackageInputPaymentMethodEnum
+    _$workPackageInputPaymentMethodEnum_CASH_ON_DELIVERY =
+    const WorkPackageInputPaymentMethodEnum._('CASH_ON_DELIVERY');
+const WorkPackageInputPaymentMethodEnum
+    _$workPackageInputPaymentMethodEnum_IN_STORE =
+    const WorkPackageInputPaymentMethodEnum._('IN_STORE');
 
 WorkPackageInputPaymentMethodEnum _$workPackageInputPaymentMethodEnumValueOf(
     String name) {
   switch (name) {
     case 'ONLINE':
       return _$workPackageInputPaymentMethodEnum_ONLINE;
+    case 'CASH_ON_DELIVERY':
+      return _$workPackageInputPaymentMethodEnum_CASH_ON_DELIVERY;
+    case 'IN_STORE':
+      return _$workPackageInputPaymentMethodEnum_IN_STORE;
     default:
       throw ArgumentError(name);
   }
@@ -94,6 +104,8 @@ final BuiltSet<WorkPackageInputPaymentMethodEnum>
     _$workPackageInputPaymentMethodEnumValues = BuiltSet<
         WorkPackageInputPaymentMethodEnum>(const <WorkPackageInputPaymentMethodEnum>[
   _$workPackageInputPaymentMethodEnum_ONLINE,
+  _$workPackageInputPaymentMethodEnum_CASH_ON_DELIVERY,
+  _$workPackageInputPaymentMethodEnum_IN_STORE,
 ]);
 
 const WorkPackageInputHeavyVehicleRestrictionEnum
@@ -208,9 +220,13 @@ class _$WorkPackageInputPaymentMethodEnumSerializer
     implements PrimitiveSerializer<WorkPackageInputPaymentMethodEnum> {
   static const Map<String, Object> _toWire = const <String, Object>{
     'ONLINE': 'ONLINE',
+    'CASH_ON_DELIVERY': 'CASH_ON_DELIVERY',
+    'IN_STORE': 'IN_STORE',
   };
   static const Map<Object, String> _fromWire = const <Object, String>{
     'ONLINE': 'ONLINE',
+    'CASH_ON_DELIVERY': 'CASH_ON_DELIVERY',
+    'IN_STORE': 'IN_STORE',
   };
 
   @override

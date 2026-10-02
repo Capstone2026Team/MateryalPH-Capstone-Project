@@ -35,12 +35,22 @@ final BuiltSet<ChatDraftContentFulfillmentMethodEnum>
 const ChatDraftContentPaymentMethodEnum
     _$chatDraftContentPaymentMethodEnum_ONLINE =
     const ChatDraftContentPaymentMethodEnum._('ONLINE');
+const ChatDraftContentPaymentMethodEnum
+    _$chatDraftContentPaymentMethodEnum_CASH_ON_DELIVERY =
+    const ChatDraftContentPaymentMethodEnum._('CASH_ON_DELIVERY');
+const ChatDraftContentPaymentMethodEnum
+    _$chatDraftContentPaymentMethodEnum_IN_STORE =
+    const ChatDraftContentPaymentMethodEnum._('IN_STORE');
 
 ChatDraftContentPaymentMethodEnum _$chatDraftContentPaymentMethodEnumValueOf(
     String name) {
   switch (name) {
     case 'ONLINE':
       return _$chatDraftContentPaymentMethodEnum_ONLINE;
+    case 'CASH_ON_DELIVERY':
+      return _$chatDraftContentPaymentMethodEnum_CASH_ON_DELIVERY;
+    case 'IN_STORE':
+      return _$chatDraftContentPaymentMethodEnum_IN_STORE;
     default:
       throw ArgumentError(name);
   }
@@ -50,6 +60,8 @@ final BuiltSet<ChatDraftContentPaymentMethodEnum>
     _$chatDraftContentPaymentMethodEnumValues = BuiltSet<
         ChatDraftContentPaymentMethodEnum>(const <ChatDraftContentPaymentMethodEnum>[
   _$chatDraftContentPaymentMethodEnum_ONLINE,
+  _$chatDraftContentPaymentMethodEnum_CASH_ON_DELIVERY,
+  _$chatDraftContentPaymentMethodEnum_IN_STORE,
 ]);
 
 Serializer<ChatDraftContentFulfillmentMethodEnum>
@@ -95,9 +107,13 @@ class _$ChatDraftContentPaymentMethodEnumSerializer
     implements PrimitiveSerializer<ChatDraftContentPaymentMethodEnum> {
   static const Map<String, Object> _toWire = const <String, Object>{
     'ONLINE': 'ONLINE',
+    'CASH_ON_DELIVERY': 'CASH_ON_DELIVERY',
+    'IN_STORE': 'IN_STORE',
   };
   static const Map<Object, String> _fromWire = const <Object, String>{
     'ONLINE': 'ONLINE',
+    'CASH_ON_DELIVERY': 'CASH_ON_DELIVERY',
+    'IN_STORE': 'IN_STORE',
   };
 
   @override

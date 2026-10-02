@@ -129,6 +129,8 @@ const OrderDetailAvailableActionsEnum
 const OrderDetailAvailableActionsEnum
     _$orderDetailAvailableActionsEnum_FLAG_NRPC =
     const OrderDetailAvailableActionsEnum._('FLAG_NRPC');
+const OrderDetailAvailableActionsEnum _$orderDetailAvailableActionsEnum_PAY =
+    const OrderDetailAvailableActionsEnum._('PAY');
 
 OrderDetailAvailableActionsEnum _$orderDetailAvailableActionsEnumValueOf(
     String name) {
@@ -143,6 +145,8 @@ OrderDetailAvailableActionsEnum _$orderDetailAvailableActionsEnumValueOf(
       return _$orderDetailAvailableActionsEnum_REJECT_NRPC;
     case 'FLAG_NRPC':
       return _$orderDetailAvailableActionsEnum_FLAG_NRPC;
+    case 'PAY':
+      return _$orderDetailAvailableActionsEnum_PAY;
     default:
       throw ArgumentError(name);
   }
@@ -156,6 +160,7 @@ final BuiltSet<OrderDetailAvailableActionsEnum>
   _$orderDetailAvailableActionsEnum_ACCEPT_NRPC,
   _$orderDetailAvailableActionsEnum_REJECT_NRPC,
   _$orderDetailAvailableActionsEnum_FLAG_NRPC,
+  _$orderDetailAvailableActionsEnum_PAY,
 ]);
 
 Serializer<OrderDetailProcurementTypeEnum>
@@ -303,6 +308,7 @@ class _$OrderDetailAvailableActionsEnumSerializer
     'ACCEPT_NRPC': 'ACCEPT_NRPC',
     'REJECT_NRPC': 'REJECT_NRPC',
     'FLAG_NRPC': 'FLAG_NRPC',
+    'PAY': 'PAY',
   };
   static const Map<Object, String> _fromWire = const <Object, String>{
     'APPROVE_REVISION': 'APPROVE_REVISION',
@@ -310,6 +316,7 @@ class _$OrderDetailAvailableActionsEnumSerializer
     'ACCEPT_NRPC': 'ACCEPT_NRPC',
     'REJECT_NRPC': 'REJECT_NRPC',
     'FLAG_NRPC': 'FLAG_NRPC',
+    'PAY': 'PAY',
   };
 
   @override

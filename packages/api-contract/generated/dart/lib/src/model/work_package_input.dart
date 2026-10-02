@@ -53,7 +53,7 @@ abstract class WorkPackageInput implements Built<WorkPackageInput, WorkPackageIn
 
   @BuiltValueField(wireName: r'payment_method')
   WorkPackageInputPaymentMethodEnum get paymentMethod;
-  // enum paymentMethodEnum {  ONLINE,  };
+  // enum paymentMethodEnum {  ONLINE,  CASH_ON_DELIVERY,  IN_STORE,  };
 
   @BuiltValueField(wireName: r'site_contact')
   String? get siteContact;
@@ -363,6 +363,10 @@ class WorkPackageInputPaymentMethodEnum extends EnumClass {
 
   @BuiltValueEnumConst(wireName: r'ONLINE')
   static const WorkPackageInputPaymentMethodEnum ONLINE = _$workPackageInputPaymentMethodEnum_ONLINE;
+  @BuiltValueEnumConst(wireName: r'CASH_ON_DELIVERY')
+  static const WorkPackageInputPaymentMethodEnum CASH_ON_DELIVERY = _$workPackageInputPaymentMethodEnum_CASH_ON_DELIVERY;
+  @BuiltValueEnumConst(wireName: r'IN_STORE')
+  static const WorkPackageInputPaymentMethodEnum IN_STORE = _$workPackageInputPaymentMethodEnum_IN_STORE;
 
   static Serializer<WorkPackageInputPaymentMethodEnum> get serializer => _$workPackageInputPaymentMethodEnumSerializer;
 

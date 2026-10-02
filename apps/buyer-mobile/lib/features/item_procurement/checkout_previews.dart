@@ -1,28 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../design_system/components/buyer_app_bar.dart';
 import '../../design_system/components/procurement_components.dart';
 import '../../design_system/theme.dart';
 
 /// Owner-approved design preview (2026-09-29) of the invoice request, which ships with Order Details'
 /// invoice feature. It is labelled as a preview, never sends or stores anything, and shows no invented IDs.
-PreferredSizeWidget _bar(BuildContext context, String title) => AppBar(
-  automaticallyImplyLeading: false,
-  leadingWidth: 60,
-  leading: Center(
-    child: RoundIconButton(
-      icon: LucideIcons.arrowLeft,
-      tooltip: 'Back',
-      filled: true,
-      onPressed: () => Navigator.of(context).maybePop(),
-    ),
-  ),
-  centerTitle: true,
-  title: Text(
-    title,
-    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-  ),
-);
+PreferredSizeWidget _bar(BuildContext context, String title) =>
+    buyerAppBar(context, title);
 
 class _Section extends StatelessWidget {
   const _Section({required this.children, this.title});

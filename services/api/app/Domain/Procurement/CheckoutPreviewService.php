@@ -7,6 +7,7 @@ namespace App\Domain\Procurement;
 use App\Domain\Finance\FinancialSnapshotService;
 use App\Domain\Geography\BuyerProfiles;
 use App\Domain\Geography\PublicVendorProjection;
+use App\Domain\Payments\PaymentMethodPolicy;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -93,12 +94,8 @@ final class CheckoutPreviewService
             $delivery = $this->delivery->preview($vendorId, $destination, $valid);
             array_push($issues, ...$delivery['issues']);
         }
-        $payment = [
-            ['method' => 'ONLINE', 'available' => $online, 'reason' => $online ? null : 'VENDOR_ONLINE_PAYMENT_NOT_READY'],
-            ['method' => 'CASH_ON_DELIVERY', 'available' => false, 'reason' => $method === 'DELIVERY' ? 'NOT_OFFERED_BY_VENDOR' : 'SITE_DELIVERY_ONLY'],
-            ['method' => 'IN_STORE', 'available' => false, 'reason' => $method === 'PICKUP' ? 'NOT_OFFERED_BY_VENDOR' : 'SELF_PICKUP_ONLY'],
-        ];
-        if (! $online) {
+        $payment = app(PaymentMethodPolicy::class)->options($vendorId, $method, $online);
+        if (array_filter($payment, static fn (array $option): bool => $option['available']) === []) {
             $issues[] = ['code' => 'PAYMENT_METHOD_UNAVAILABLE', 'severity' => CartService::BLOCKING, 'message' => 'This store cannot accept a payment method for this order yet.'];
         }
         $range = match ($delivery['status']) {

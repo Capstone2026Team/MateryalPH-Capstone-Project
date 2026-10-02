@@ -106,13 +106,11 @@ class _MaterialSearchScreenState extends State<MaterialSearchScreen> {
             padding: const EdgeInsets.fromLTRB(4, 8, 16, 8),
             child: Row(
               children: [
-                IconButton(
+                RoundIconButton(
+                  icon: LucideIcons.arrowLeft,
                   tooltip: 'Back',
+                  filled: true,
                   onPressed: () => Navigator.of(context).maybePop(),
-                  icon: const Icon(
-                    LucideIcons.arrowLeft,
-                    color: BuyerTheme.action,
-                  ),
                 ),
                 Expanded(
                   child: PillSearchField(
