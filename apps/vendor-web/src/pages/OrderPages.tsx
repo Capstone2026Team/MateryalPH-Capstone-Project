@@ -15,6 +15,7 @@ import { storeName } from '../lib/catalog-access'
 import { useOnboardingSnapshot } from '../lib/vendor-status'
 import { ErrorState, LoadingState, PageHeader, VendorShell } from './PhaseThreeVendorPages'
 import { OrderPaymentPanel } from './OrderPaymentPanel'
+import { CancellationPanel, FulfillmentWorkspace, RefundsPanel } from './OrderFulfillmentPanels'
 
 const GROUPS: { value: OrderGroup; label: string }[] = [
   { value: 'NEW', label: 'New requests' }, { value: 'WAITING_ON_BUYER', label: 'Waiting on Buyer' }, { value: 'AWAITING_PAYMENT', label: 'Awaiting payment' },
@@ -165,6 +166,8 @@ function OrderDetailWorkspace({ orderId }: { orderId: string }) {
   if (error) return <div className="grid gap-4"><BackLink /><ErrorState message={error} onRetry={load} /></div>
   if (!order) return <div className="grid gap-4"><BackLink /><LoadingState label="Loading order…" /></div>
   const orderState = stateOf(order.states, 'ORDER')
+  const inFulfillment = Boolean(order.acceptedAt) && !['AWAITING_VENDOR_CONFIRMATION', 'AWAITING_BUYER_APPROVAL', 'AWAITING_NRPC_ACCEPTANCE', 'AWAITING_PAYMENT', 'DECLINED', 'EXPIRED'].includes(orderState)
+  const changed = (next: OrderDetail, text: string) => { setOrder(next); setNotice({ tone: 'success', text }) }
   const deadline = orderState === 'AWAITING_VENDOR_CONFIRMATION' ? { at: order.deadlines.vendorResponseDueAt, label: 'Respond within' }
     : orderState === 'AWAITING_BUYER_APPROVAL' || orderState === 'AWAITING_NRPC_ACCEPTANCE' ? { at: order.deadlines.buyerResponseDueAt, label: 'Buyer decides within' }
       : orderState === 'AWAITING_PAYMENT' ? { at: order.deadlines.paymentExpiresAt, label: 'Payment window' } : null
@@ -189,6 +192,7 @@ function OrderDetailWorkspace({ orderId }: { orderId: string }) {
           ? <ConfirmationWorkspace order={order} onDone={(next, text) => { setOrder(next); setNotice({ tone: 'success', text }) }} onReload={load} />
           : <LinesPanel order={order} />}
         {order.primaryAction === 'CONFIRM' && !order.permissions?.canConfirm && <StatusMessage tone="error">Your role can view this request but cannot confirm or decline it.</StatusMessage>}
+        {inFulfillment && <FulfillmentWorkspace order={order} onChanged={changed} onReload={load} />}
         {order.autoAccept && <AutoAcceptPanelView order={order} />}
         <TimelinePanel order={order} />
       </div>
@@ -196,6 +200,8 @@ function OrderDetailWorkspace({ orderId }: { orderId: string }) {
         <section aria-labelledby="status-heading" className="grid gap-2"><h2 id="status-heading" className="text-base font-semibold">Status</h2><OrderStateRows states={order.states} /></section>
         <div className="rounded-surface border border-border-default bg-surface-primary p-4"><MoneyBreakdown money={order.money} title="Buyer payment breakdown" /><p className="mt-3 border-t border-border-default pt-3 text-xs text-text-secondary">The Buyer total never includes your 2% monthly commission or merchant withholding; those are settled separately.</p></div>
         <OrderPaymentPanel order={order} onChanged={load} />
+        <CancellationPanel order={order} onChanged={changed} />
+        <RefundsPanel order={order} onChanged={changed} />
         <DestinationPanel order={order} />
         {order.nrpc && <NrpcSummary order={order} />}
       </aside>
@@ -208,7 +214,13 @@ function primaryDescription(order: OrderDetail): string {
     case 'CONFIRM': return 'Confirm the quantities you can supply and the fulfillment date. Confirming reserves the stock; nothing is charged until the Buyer pays.'
     case 'WAITING_FOR_BUYER': return 'Your confirmed version is with the Buyer. The stock stays reserved until they approve, reject or the window ends.'
     case 'WAITING_FOR_PAYMENT': return 'The Buyer accepted the order. The stock is reserved until payment is verified or the 24-hour payment window ends.'
-    case 'PREPARE_WHEN_AVAILABLE': return 'The order is confirmed. Preparation and fulfillment milestones open in the fulfillment release.'
+    case 'PREPARE_WHEN_AVAILABLE': case 'START_PREPARATION': return 'Payment conditions are met. Start preparing and record each fulfillment milestone with its proof.'
+    case 'MARK_READY': return 'Preparation is under way. Mark the order ready when every line is set aside for pickup.'
+    case 'DISPATCH': return 'Preparation is under way. Dispatch on the accepted vehicle and trip when the load leaves the store.'
+    case 'RECORD_PICKUP': return 'The order is ready for pickup. Record the handover with the receiver when the Buyer collects it.'
+    case 'RECORD_DELIVERY': return 'The order is out for delivery. Record delivery with a photo and the receiver name. There is no live tracking.'
+    case 'AWAIT_RECEIPT': return 'Fulfillment proof is recorded. The Buyer confirms receipt or it is confirmed automatically 48 hours later unless a problem is open.'
+    case 'RESPOND_TO_CANCELLATION': return 'The Buyer asked to cancel during preparation. Finalize the request within 24 hours; milestones are paused.'
     default: return order.terminalReasonCode ? `This order is closed (${order.terminalReasonCode.toLowerCase().replaceAll('_', ' ')}).` : 'This order is closed.'
   }
 }

@@ -47,5 +47,40 @@ void main() {
       // TODO
     });
 
+    // bool canRecordMilestone
+    test('to test the property `canRecordMilestone`', () async {
+      // TODO
+    });
+
+    // bool canAssignFulfillment
+    test('to test the property `canAssignFulfillment`', () async {
+      // TODO
+    });
+
+    // bool canCancel
+    test('to test the property `canCancel`', () async {
+      // TODO
+    });
+
+    // bool canFinalizeCancellation
+    test('to test the property `canFinalizeCancellation`', () async {
+      // TODO
+    });
+
+    // bool canReportVehicleIssue
+    test('to test the property `canReportVehicleIssue`', () async {
+      // TODO
+    });
+
+    // bool canRetryRefund
+    test('to test the property `canRetryRefund`', () async {
+      // TODO
+    });
+
+    // bool canRespondProblem
+    test('to test the property `canRespondProblem`', () async {
+      // TODO
+    });
+
   });
 }

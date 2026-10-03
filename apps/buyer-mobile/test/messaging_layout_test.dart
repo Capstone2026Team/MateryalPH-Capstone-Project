@@ -37,7 +37,8 @@ api.ConversationView layoutConversation(
     ..channel = 'private-test-$id'
     ..updatedAt = '2026-09-30T01:22:00Z'
     ..canTransfer = false
-    ..fulfillmentEntryEnabled = false,
+    ..fulfillmentEntryEnabled = false
+    ..readOnly = false,
 );
 
 api.ChatMessage message(String id, String body, {bool mine = false}) =>
@@ -124,18 +125,41 @@ class LayoutMessagingRepository implements MessagingRepository {
     message('m3', 'Thank you. I need 12 pieces, please.', mine: true),
   ];
 
+  final archivedStores = <api.ConversationView>[];
+  bool failArchive = false;
+  final archiveCalls = <String>[];
+
   @override
-  Future<api.ConversationPage> inbox({int page = 1}) async {
+  Future<api.ConversationPage> inbox({
+    int page = 1,
+    bool archived = false,
+  }) async {
     inboxCalls++;
     if (failInbox) throw StateError('fixture offline');
     final snapshot = api.ConversationPage(
       (b) => b
-        ..items.addAll(stores)
+        ..items.addAll(archived ? archivedStores : stores)
         ..page = page
         ..hasMore = hasMore,
     );
     await inboxGate?.future;
     return snapshot;
+  }
+
+  @override
+  Future<void> archive(String id) async {
+    archiveCalls.add('archive:$id');
+    if (failArchive) throw StateError('fixture offline');
+    final index = stores.indexWhere((c) => c.id == id);
+    if (index >= 0) archivedStores.add(stores.removeAt(index));
+  }
+
+  @override
+  Future<void> restore(String id) async {
+    archiveCalls.add('restore:$id');
+    if (failArchive) throw StateError('fixture offline');
+    final index = archivedStores.indexWhere((c) => c.id == id);
+    if (index >= 0) stores.add(archivedStores.removeAt(index));
   }
 
   @override
@@ -195,15 +219,23 @@ class LayoutMessagingRepository implements MessagingRepository {
     String channel,
     void Function() refresh, {
     void Function(bool, int)? onTyping,
+    void Function(bool)? onLive,
   }) async {
     typingChanged = onTyping;
     conversationChanged = refresh;
+    liveChanged = onLive;
     return () => conversationChanged = null;
   }
 
+  void Function(bool)? liveChanged;
+
   @override
-  Future<void Function()> watchInbox(void Function() refresh) async {
+  Future<void Function()> watchInbox(
+    void Function() refresh, {
+    void Function(bool)? onLive,
+  }) async {
     inboxChanged = refresh;
+    liveChanged = onLive;
     inboxStopped = false;
     return () {
       inboxChanged = null;
@@ -297,6 +329,9 @@ void main() {
       expect(find.text('Fixture cement'), findsOneWidget);
       expect(find.text('Please quote'), findsOneWidget);
       await tester.tap(find.byTooltip('Remove product'));
+      expect(find.text('Attach product'), findsNothing);
+      await tester.tap(find.byTooltip('More actions'));
+      await tester.pump();
       await tester.tap(find.text('Attach product'));
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField), 'sand');
@@ -331,9 +366,9 @@ void main() {
       repository.typingChanged!(true, 2);
       repository.typingChanged!(false, 1);
       await tester.pump();
-      expect(find.text('typing...'), findsOneWidget);
+      expect(find.byType(TypingIndicator), findsOneWidget);
       await tester.pump(const Duration(seconds: 3));
-      expect(find.text('typing...'), findsNothing);
+      expect(find.byType(TypingIndicator), findsNothing);
       expect(repository.messages, hasLength(3));
       await tester.pumpWidget(const SizedBox());
     },
@@ -415,6 +450,139 @@ void main() {
       expect(repository.conversationChanged, isNull);
     },
   );
+  testWidgets(
+    'composer actions hide behind a toggle and history links are gone',
+    (tester) async {
+      final repository = LayoutMessagingRepository();
+      await mount(tester, repository, thread: true);
+      expect(find.text('Attach product'), findsNothing);
+      expect(find.text('Earlier inquiry history'), findsNothing);
+      await tester.tap(find.byTooltip('More actions'));
+      await tester.pump();
+      expect(find.text('Attach product'), findsOneWidget);
+      expect(find.text('Attach file (JPG, PNG, PDF)'), findsOneWidget);
+      await tester.tap(find.byTooltip('Hide actions'));
+      await tester.pump();
+      expect(find.text('Attach product'), findsNothing);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
+  testWidgets(
+    'store typing shows an animated indicator until its message lands',
+    (tester) async {
+      final repository = LayoutMessagingRepository();
+      await mount(tester, repository, thread: true);
+      expect(find.byType(TypingIndicator), findsNothing);
+      repository.typingChanged!(true, 1);
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.byType(TypingIndicator), findsOneWidget);
+      expect(find.bySemanticsLabel(RegExp('is typing')), findsOneWidget);
+
+      repository.messages.add(message('typed', 'Here is the price.'));
+      repository.conversationChanged!();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('Here is the price.'), findsOneWidget);
+      expect(find.byType(TypingIndicator), findsNothing);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
+  testWidgets('thread polls every few seconds until realtime is live', (
+    tester,
+  ) async {
+    final repository = LayoutMessagingRepository();
+    await mount(tester, repository, thread: true);
+    repository.messages.add(message('polled', 'Polled reply'));
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+    expect(find.text('Polled reply'), findsOneWidget);
+
+    repository.liveChanged!(true);
+    await tester.pumpAndSettle();
+    final calls = repository.requestedCursors.length;
+    await tester.pump(const Duration(seconds: 12));
+    expect(repository.requestedCursors.length, calls);
+
+    repository.liveChanged!(false);
+    await tester.pumpAndSettle();
+    expect(repository.requestedCursors.length, greaterThan(calls));
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('thread opens at and follows the newest message', (tester) async {
+    final repository = LayoutMessagingRepository();
+    for (var i = 0; i < 30; i++) {
+      repository.messages.add(
+        message('n${i.toString().padLeft(3, '0')}', 'Filler $i'),
+      );
+    }
+    await mount(tester, repository, thread: true);
+    expect(find.text('Filler 29'), findsOneWidget);
+    expect(
+      find.text('Hello! Is this material available for pickup?'),
+      findsNothing,
+    );
+
+    repository.messages.add(message('o000', 'Newest reply'));
+    repository.conversationChanged!();
+    await tester.pumpAndSettle();
+    expect(find.text('Newest reply'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('swipe left archives, Archived lists it and swipe restores', (
+    tester,
+  ) async {
+    final repository = LayoutMessagingRepository();
+    await mount(tester, repository);
+    await tester.drag(
+      find.text('Sampaloc Lumber Hardware'),
+      const Offset(-400, 0),
+    );
+    await tester.pumpAndSettle();
+    expect(repository.archiveCalls, ['archive:one']);
+    expect(find.text('Sampaloc Lumber Hardware'), findsNothing);
+    expect(find.text('Conversation archived'), findsOneWidget);
+
+    await tester.tap(find.text('Archived'));
+    await tester.pumpAndSettle();
+    expect(find.text('Archived messages'), findsOneWidget);
+    expect(find.text('Sampaloc Lumber Hardware'), findsOneWidget);
+
+    await tester.drag(
+      find.text('Sampaloc Lumber Hardware'),
+      const Offset(-400, 0),
+    );
+    await tester.pumpAndSettle();
+    expect(repository.archiveCalls.last, 'restore:one');
+    expect(find.text('No archived messages'), findsOneWidget);
+
+    await tester.tap(find.text('Back to messages'));
+    await tester.pumpAndSettle();
+    expect(find.text('Sampaloc Lumber Hardware'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('a failed archive keeps the conversation and explains why', (
+    tester,
+  ) async {
+    final repository = LayoutMessagingRepository()..failArchive = true;
+    await mount(tester, repository);
+    await tester.drag(
+      find.text('Sampaloc Lumber Hardware'),
+      const Offset(-400, 0),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Sampaloc Lumber Hardware'), findsOneWidget);
+    expect(
+      find.text('Unable to archive this conversation. Please retry.'),
+      findsOneWidget,
+    );
+    await tester.pumpWidget(const SizedBox());
+  });
+
   testWidgets('search filters stores locally and opens a conversation', (
     tester,
   ) async {

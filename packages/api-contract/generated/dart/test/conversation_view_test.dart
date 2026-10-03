@@ -72,6 +72,21 @@ void main() {
       // TODO
     });
 
+    // bool readOnly
+    test('to test the property `readOnly`', () async {
+      // TODO
+    });
+
+    // String readOnlyReason
+    test('to test the property `readOnlyReason`', () async {
+      // TODO
+    });
+
+    // String orderReference
+    test('to test the property `orderReference`', () async {
+      // TODO
+    });
+
     // ChatIdentity buyer
     test('to test the property `buyer`', () async {
       // TODO

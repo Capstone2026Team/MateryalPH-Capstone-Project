@@ -7,6 +7,7 @@ import 'package:built_collection/built_collection.dart';
 import 'package:materyalph_api_client/src/model/fleet_vehicle_list_meta_delivery.dart';
 import 'package:materyalph_api_client/src/model/fleet_vehicle_list_meta_permissions.dart';
 import 'package:materyalph_api_client/src/model/fleet_vehicle_list_meta_limits.dart';
+import 'package:materyalph_api_client/src/model/fleet_summary.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -16,6 +17,7 @@ part 'fleet_vehicle_list_meta.g.dart';
 ///
 /// Properties:
 /// * [scope]
+/// * [summary] - Organization-wide summary returned to Owners and Store Managers only; omitted for ASSIGNED_ONLY access.
 /// * [delivery]
 /// * [permissions]
 /// * [limits]
@@ -24,6 +26,10 @@ abstract class FleetVehicleListMeta implements Built<FleetVehicleListMeta, Fleet
   @BuiltValueField(wireName: r'scope')
   FleetVehicleListMetaScopeEnum get scope;
   // enum scopeEnum {  ORGANIZATION,  ASSIGNED_ONLY,  };
+
+  /// Organization-wide summary returned to Owners and Store Managers only; omitted for ASSIGNED_ONLY access.
+  @BuiltValueField(wireName: r'summary')
+  FleetSummary? get summary;
 
   @BuiltValueField(wireName: r'delivery')
   FleetVehicleListMetaDelivery? get delivery;
@@ -62,6 +68,13 @@ class _$FleetVehicleListMetaSerializer implements PrimitiveSerializer<FleetVehic
       object.scope,
       specifiedType: const FullType(FleetVehicleListMetaScopeEnum),
     );
+    if (object.summary != null) {
+      yield r'summary';
+      yield serializers.serialize(
+        object.summary,
+        specifiedType: const FullType(FleetSummary),
+      );
+    }
     if (object.delivery != null) {
       yield r'delivery';
       yield serializers.serialize(
@@ -110,6 +123,14 @@ class _$FleetVehicleListMetaSerializer implements PrimitiveSerializer<FleetVehic
             specifiedType: const FullType(FleetVehicleListMetaScopeEnum),
           ) as FleetVehicleListMetaScopeEnum;
           result.scope = valueDes;
+          break;
+        case r'summary':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(FleetSummary),
+          ) as FleetSummary?;
+          if (valueDes == null) continue;
+          result.summary.replace(valueDes);
           break;
         case r'delivery':
           final valueDes = serializers.deserialize(

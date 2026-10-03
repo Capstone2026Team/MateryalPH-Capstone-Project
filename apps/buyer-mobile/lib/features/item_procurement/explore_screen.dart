@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../design_system/components/discovery_controls.dart';
 import '../../design_system/components/procurement_components.dart';
 import '../../design_system/theme.dart';
 import '../map_discovery/discovery_models.dart';
@@ -9,9 +10,8 @@ import 'explore_controller.dart';
 import 'procurement_models.dart';
 import 'procurement_navigation.dart';
 
-/// Explore Materials Catalog: header with notifications and Cart, search, one slim scope line (active
-/// location, radius and the MAT-01 counts from one server snapshot, labelled as Vendor listings),
-/// the not-yet-available Materials Analytics entry, and the category grid.
+/// Catalog header, active location, search, and MAT-01 counts from one server snapshot,
+/// followed by the not-yet-available Materials Analytics entry and category grid.
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({
     super.key,
@@ -80,12 +80,14 @@ class _ExploreScreenState extends State<ExploreScreen> {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             children: [
               _header(),
-              const SizedBox(height: 4),
-              ..._scope(),
+              const SizedBox(height: 12),
+              _location(),
               const SizedBox(height: 12),
               PillSearchField(
                 onTap: () => widget.navigation.openSearch(context),
               ),
+              const SizedBox(height: 12),
+              ..._scope(),
               const SizedBox(height: 16),
               _analytics(),
               const SizedBox(height: 24),
@@ -112,7 +114,11 @@ class _ExploreScreenState extends State<ExploreScreen> {
           header: true,
           child: const Text(
             'Materials Catalog',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+            style: TextStyle(
+              fontSize: 22,
+              height: 30 / 22,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ),
       ),
@@ -136,62 +142,41 @@ class _ExploreScreenState extends State<ExploreScreen> {
     ],
   );
 
-  /// Location, radius and the two MAT-01 counts in one slim line. Loading never shows a false zero;
-  /// a failed refresh keeps the last snapshot and says so.
-  List<Widget> _scope() {
+  Widget _location() {
     final origin = _controller.origin;
+    if (_controller.summaryPhase == LoadPhase.needsOrigin || origin == null) {
+      return StateMessage(
+        kind: StateKind.needsLocation,
+        artwork: 'assets/states/location.png',
+        title: 'Choose a location first',
+        message:
+            'Products and prices depend on where you are buying for. Pick a location on the Map; GPS is optional.',
+        actionLabel: 'Go to Map',
+        onAction: widget.onOpenMap,
+      );
+    }
+    return LocationSelector(
+      label: origin.label,
+      caption: 'Radius · ${_controller.radiusKm} km',
+      showAddress: false,
+      detail: 'Within ${_controller.radiusKm} km',
+      onPressed: widget.onOpenMap,
+    );
+  }
+
+  /// Loading never shows a false zero; a failed refresh keeps and labels the last snapshot.
+  List<Widget> _scope() {
+    if (_controller.origin == null ||
+        _controller.summaryPhase == LoadPhase.needsOrigin) {
+      return [];
+    }
     final summary = _controller.summary;
     final failure = _controller.summaryFailure;
-    if (_controller.summaryPhase == LoadPhase.needsOrigin || origin == null) {
-      return [
-        StateMessage(
-          kind: StateKind.needsLocation,
-          artwork: 'assets/states/location.png',
-          title: 'Choose a location first',
-          message:
-              'Products and prices depend on where you are buying for. Pick a location on the Map; GPS is optional.',
-          actionLabel: 'Go to Map',
-          onAction: widget.onOpenMap,
-        ),
-      ];
-    }
     final loading = _controller.summaryPhase == LoadPhase.loading;
     // While loading, never show the previous scope's numbers as if they were current.
     final shown = loading ? null : summary;
     final muted = const TextStyle(fontSize: 12, color: BuyerTheme.muted);
     return [
-      Semantics(
-        button: true,
-        label:
-            'Buying for ${origin.label} within ${_controller.radiusKm} km. Change location on the Map',
-        excludeSemantics: true,
-        child: InkWell(
-          onTap: widget.onOpenMap,
-          borderRadius: BorderRadius.circular(8),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 32),
-            child: Row(
-              children: [
-                const Icon(
-                  LucideIcons.mapPin,
-                  size: 14,
-                  color: BuyerTheme.action,
-                ),
-                const SizedBox(width: 4),
-                Flexible(
-                  child: Text(
-                    '${origin.label} · ${_controller.radiusKm} km',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 13),
-                  ),
-                ),
-                const Icon(LucideIcons.chevronDown, size: 14),
-              ],
-            ),
-          ),
-        ),
-      ),
       if (_controller.summaryPhase == LoadPhase.failed && summary == null)
         StatusBand(
           tone: BandTone.warning,
@@ -206,8 +191,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
         )
       else
         Wrap(
-          spacing: 6,
-          runSpacing: 4,
+          spacing: 16,
+          runSpacing: 8,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             _Count(
@@ -216,7 +201,6 @@ class _ExploreScreenState extends State<ExploreScreen> {
               unit: 'Verified Vendors',
               announceUnit: false,
             ),
-            Text('·', style: muted),
             _Count(
               label: shown?.listingsLabel ?? 'Available Products',
               value: shown?.vendorListings,

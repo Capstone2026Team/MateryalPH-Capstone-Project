@@ -724,6 +724,22 @@ class CartView {
       groups.any((group) => group.fulfillmentMethod == 'DELIVERY');
 }
 
+/// One advisory vehicle alternative for a load: which configured vehicle, how many, trips and fee.
+@immutable
+class DeliveryOptionView {
+  const DeliveryOptionView({
+    required this.vehicleName,
+    required this.vehicles,
+    required this.trips,
+    required this.feeCentavos,
+  });
+
+  final String vehicleName;
+  final int vehicles;
+  final int trips;
+  final int feeCentavos;
+}
+
 @immutable
 class DeliveryEstimateView {
   const DeliveryEstimateView({
@@ -733,7 +749,10 @@ class DeliveryEstimateView {
     required this.tripsMax,
     required this.vehiclesMin,
     required this.vehiclesMax,
+    this.options = const [],
   });
+
+  final List<DeliveryOptionView> options;
 
   final int feeMinCentavos;
   final int feeMaxCentavos;

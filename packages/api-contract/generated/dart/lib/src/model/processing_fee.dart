@@ -18,7 +18,7 @@ part 'processing_fee.g.dart';
 abstract class ProcessingFee implements Built<ProcessingFee, ProcessingFeeBuilder> {
   @BuiltValueField(wireName: r'status')
   ProcessingFeeStatusEnum get status;
-  // enum statusEnum {  PENDING_PAYMENT_CHANNEL,  QUOTED,  NOT_APPLICABLE,  };
+  // enum statusEnum {  PENDING_PAYMENT_CHANNEL,  QUOTED,  NOT_APPLICABLE,  PAID,  };
 
   @BuiltValueField(wireName: r'amount_centavos')
   int? get amountCentavos;
@@ -132,6 +132,8 @@ class ProcessingFeeStatusEnum extends EnumClass {
   static const ProcessingFeeStatusEnum QUOTED = _$processingFeeStatusEnum_QUOTED;
   @BuiltValueEnumConst(wireName: r'NOT_APPLICABLE')
   static const ProcessingFeeStatusEnum NOT_APPLICABLE = _$processingFeeStatusEnum_NOT_APPLICABLE;
+  @BuiltValueEnumConst(wireName: r'PAID')
+  static const ProcessingFeeStatusEnum PAID = _$processingFeeStatusEnum_PAID;
 
   static Serializer<ProcessingFeeStatusEnum> get serializer => _$processingFeeStatusEnumSerializer;
 

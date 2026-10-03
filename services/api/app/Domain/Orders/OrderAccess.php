@@ -32,6 +32,14 @@ final class OrderAccess
 
     public const VIEW_INVENTORY = 'inventory.view';
 
+    public const CANCEL = 'orders.cancel';
+
+    public const RECORD_FULFILLMENT = 'fulfillment.record';
+
+    public const ASSIGN_FULFILLMENT = 'fulfillment.assign';
+
+    public const RETRY_REFUND = 'refunds.retry';
+
     public function __construct(private readonly AccountAccess $access, private readonly BuyerProfiles $profiles) {}
 
     public function buyerProfileId(Request $request): string
@@ -74,7 +82,8 @@ final class OrderAccess
     {
         $query = DB::table('orders')->where('id', Str::isUuid($orderId) ? $orderId : '00000000-0000-0000-0000-000000000000')->where('vendor_organization_id', $scope['organization_id']);
         $order = ($lock ? $query->lockForUpdate() : $query)->first();
-        if ($order === null || ! self::visibleToRole($scope['role'], (string) $order->order_state)) {
+        if ($order === null || ! self::visibleToRole($scope['role'], (string) $order->order_state)
+            || ($scope['role'] === 'FULFILLMENT' && ! self::assignedTo((string) $order->id, (int) (request()->user()?->getKey() ?? 0)))) {
             throw new AuthenticationException('ORDER_NOT_FOUND', 'This order is unavailable.', 404);
         }
 
@@ -85,6 +94,12 @@ final class OrderAccess
     public static function visibleToRole(string $role, string $orderState): bool
     {
         return $role !== 'FULFILLMENT' || ! in_array($orderState, [...OrderStates::PENDING_ACCEPTANCE, OrderStates::AWAITING_PAYMENT, OrderStates::DECLINED], true);
+    }
+
+    /** Fulfillment Staff reach only orders currently assigned to them; a reassignment removes access immediately. */
+    public static function assignedTo(string $orderId, int $userId): bool
+    {
+        return $userId > 0 && DB::table('order_fulfillment_assignments')->where('order_id', $orderId)->where('user_id', $userId)->whereNull('ended_at')->exists();
     }
 
     /** @param array{permissions: list<string>} $scope */

@@ -37,6 +37,17 @@ final class OrderNotifier
         }
     }
 
+    /** The currently assigned, active Fulfillment Staff of this order, if any; never a former assignee. */
+    public function assignee(object $order, string $title, string $body): void
+    {
+        $recipient = DB::table('order_fulfillment_assignments as a')->join('users as u', 'u.id', '=', 'a.user_id')
+            ->join('vendor_memberships as m', fn ($join) => $join->on('m.user_id', '=', 'a.user_id')->where('m.vendor_organization_id', $order->vendor_organization_id))
+            ->where('a.order_id', $order->id)->whereNull('a.ended_at')->where('m.status', 'ACTIVE')->where('m.role', 'FULFILLMENT')->where('u.account_status', 'ACTIVE')->first(['u.id', 'u.email']);
+        if ($recipient !== null) {
+            $this->deliver((int) $recipient->id, $recipient->email, $order, $title, $body);
+        }
+    }
+
     private function deliver(int $userId, mixed $email, object $order, string $title, string $body): void
     {
         $notificationId = (string) Str::uuid7();

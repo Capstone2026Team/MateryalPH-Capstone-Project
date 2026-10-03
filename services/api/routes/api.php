@@ -91,3 +91,4 @@ Route::prefix('mobile/auth')->middleware('auth.transport:MOBILE')->group(functio
 require __DIR__.'/messaging.php';
 require __DIR__.'/projects.php';
 require __DIR__.'/payments.php';
+require __DIR__.'/fulfillment.php';

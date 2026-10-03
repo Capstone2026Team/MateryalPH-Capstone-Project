@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
 
+import 'fulfillment_models.dart';
 import 'payment_models.dart';
 
+export 'fulfillment_models.dart';
 export 'payment_models.dart';
 
 /// Immutable Buyer order view models. Order, payment, fulfillment, refund and dispute stay separate
@@ -457,6 +459,10 @@ class OrderDetailView {
     this.paymentNotice,
     this.projectContext,
     this.payment,
+    this.lockVersion = 1,
+    this.fulfillment,
+    this.cancellation,
+    this.refundTimeline,
   });
 
   final String id;
@@ -487,6 +493,12 @@ class OrderDetailView {
 
   /// Payment state for this order. Null only for responses that carry no payment block.
   final OrderPaymentView? payment;
+
+  /// Optimistic-concurrency version sent with a cancellation.
+  final int lockVersion;
+  final FulfillmentView? fulfillment;
+  final CancellationView? cancellation;
+  final RefundTimelineView? refundTimeline;
 
   String state(String family) =>
       states.firstWhere((row) => row.family == family).state;

@@ -9,6 +9,7 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart' show CustomSemanticsAction;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../design_system/components/procurement_components.dart';
 import '../../widgets/buyer_account_widgets.dart';
@@ -58,6 +59,64 @@ class MessagingScreen extends StatefulWidget {
   State<MessagingScreen> createState() => _MessagingScreenState();
 }
 
+/// Swipe left to archive (or restore) a conversation. The same action is
+/// exposed to assistive technology because a swipe is not discoverable.
+class _ArchiveSwipe extends StatelessWidget {
+  const _ArchiveSwipe({
+    required this.id,
+    required this.archived,
+    required this.confirm,
+    required this.onDismissed,
+    required this.child,
+  });
+
+  final String id;
+  final bool archived;
+  final Future<bool> Function() confirm;
+  final VoidCallback onDismissed;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = archived ? 'Unarchive' : 'Archive';
+    return Semantics(
+      customSemanticsActions: {
+        CustomSemanticsAction(label: '$label conversation'): () async {
+          if (await confirm()) onDismissed();
+        },
+      },
+      child: Dismissible(
+        key: ValueKey('archive-$id'),
+        direction: DismissDirection.endToStart,
+        confirmDismiss: (_) => confirm(),
+        onDismissed: (_) => onDismissed(),
+        background: Container(
+          alignment: Alignment.centerRight,
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          color: BuyerTheme.action,
+          child: ExcludeSemantics(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  archived ? Icons.unarchive_outlined : Icons.archive_outlined,
+                  color: Colors.white,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  label,
+                  style: const TextStyle(color: Colors.white, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+        ),
+        child: child,
+      ),
+    );
+  }
+}
+
 class _MessagingScreenState extends State<MessagingScreen>
     with WidgetsBindingObserver {
   final _text = TextEditingController();
@@ -98,6 +157,15 @@ class _MessagingScreenState extends State<MessagingScreen>
       <String, ({String body, api.ChatProduct? product, bool failed})>{};
 
   int _page = 1;
+  bool _showArchived = false;
+  bool _actionsOpen = false;
+
+  /// Whether the realtime subscription is established. While it is not (for
+  /// example Reverb is unreachable from this device), REST polling keeps the
+  /// thread current within a few seconds instead of waiting for a manual refresh.
+  bool _live = false;
+  DateTime _lastLoaded = DateTime.now();
+  final _scroll = ScrollController();
 
   Timer? _timer;
 
@@ -111,11 +179,41 @@ class _MessagingScreenState extends State<MessagingScreen>
     unawaited(_load());
     if (widget.conversationId == null) unawaited(_watchInbox());
 
-    _timer = Timer.periodic(const Duration(seconds: 45), (_) {
-      if (mounted &&
-          _foreground &&
-          ModalRoute.of(context)?.isCurrent != false) {
-        unawaited(_load());
+    _timer = Timer.periodic(const Duration(seconds: 2), (_) {
+      if (!mounted ||
+          !_foreground ||
+          ModalRoute.of(context)?.isCurrent == false) {
+        return;
+      }
+      final quiet = DateTime.now().difference(_lastLoaded);
+      if (_live && quiet < const Duration(seconds: 45)) return;
+      unawaited(_load());
+    });
+  }
+
+  void _onLive(bool live) {
+    if (!mounted) return;
+    _live = live;
+    if (!live) unawaited(_load());
+  }
+
+  /// Keeps the newest message in view. [force] is used for the first load and
+  /// the Buyer's own sends; otherwise only a reader already at the bottom follows.
+  void _scrollToEnd({bool force = false, bool animate = true}) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scroll.hasClients) return;
+      final position = _scroll.position;
+      if (!force && position.maxScrollExtent - position.pixels > 160) return;
+      if (animate) {
+        unawaited(
+          _scroll.animateTo(
+            position.maxScrollExtent,
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOut,
+          ),
+        );
+      } else {
+        _scroll.jumpTo(position.maxScrollExtent);
       }
     });
   }
@@ -123,6 +221,7 @@ class _MessagingScreenState extends State<MessagingScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _scroll.dispose();
     _timer?.cancel();
     _stop?.call();
     _typingExpiry?.cancel();
@@ -135,7 +234,10 @@ class _MessagingScreenState extends State<MessagingScreen>
   }
 
   Future<void> _watchInbox() async {
-    final stop = await widget.repository.watchInbox(() => unawaited(_load()));
+    final stop = await widget.repository.watchInbox(
+      () => unawaited(_load()),
+      onLive: _onLive,
+    );
     if (!mounted || !_foreground) {
       stop();
       return;
@@ -150,6 +252,7 @@ class _MessagingScreenState extends State<MessagingScreen>
       _stop?.call();
       _stop = null;
       _channel = null;
+      _live = false;
     } else {
       unawaited(_load());
       if (widget.conversationId == null) unawaited(_watchInbox());
@@ -173,7 +276,10 @@ class _MessagingScreenState extends State<MessagingScreen>
       final id = widget.conversationId;
 
       if (id == null) {
-        final value = await widget.repository.inbox(page: _page);
+        final value = await widget.repository.inbox(
+          page: _page,
+          archived: _showArchived,
+        );
 
         if (mounted) setState(() => _inbox = value);
       } else {
@@ -212,7 +318,21 @@ class _MessagingScreenState extends State<MessagingScreen>
 
         if (!mounted) return;
 
-        setState(() => _detail = value);
+        final newTail = value.messages.items.lastOrNull?.id;
+        final arrived =
+            previous != null &&
+            newTail != previous.items.lastOrNull?.id &&
+            value.messages.items.lastOrNull?.mine == false;
+        setState(() {
+          _detail = value;
+          // The store's message replaces its typing indicator immediately.
+          if (arrived) _typing = false;
+        });
+        if (previous == null) {
+          _scrollToEnd(force: true, animate: false);
+        } else if (newTail != previous.items.lastOrNull?.id) {
+          _scrollToEnd();
+        }
         if (!_draftLoaded) {
           _draftLoaded = true;
           try {
@@ -288,6 +408,7 @@ class _MessagingScreenState extends State<MessagingScreen>
           _channel = value.conversation.channel;
 
           _stop?.call();
+          _live = false;
 
           final stop = await widget.repository.watch(
             _channel!,
@@ -297,10 +418,12 @@ class _MessagingScreenState extends State<MessagingScreen>
               _typingAt = at;
               _typingExpiry?.cancel();
               setState(() => _typing = typing);
+              if (typing) _scrollToEnd();
               _typingExpiry = Timer(const Duration(seconds: 3), () {
                 if (mounted) setState(() => _typing = false);
               });
             },
+            onLive: _onLive,
           );
 
           if (!mounted) {
@@ -327,6 +450,7 @@ class _MessagingScreenState extends State<MessagingScreen>
           }
         }
       }
+      _lastLoaded = DateTime.now();
       if (mounted) setState(() => _error = null);
     } catch (e) {
       if (mounted) {
@@ -417,6 +541,7 @@ class _MessagingScreenState extends State<MessagingScreen>
         _sendKey = newIdempotencyKey();
       }
     });
+    _scrollToEnd(force: true);
     _saveDraft();
     _typingDebounce?.cancel();
     unawaited(
@@ -750,6 +875,67 @@ class _MessagingScreenState extends State<MessagingScreen>
     ),
   ];
 
+  Future<void> _toggleArchived() async {
+    setState(() {
+      _showArchived = !_showArchived;
+      _page = 1;
+      _inbox = null;
+      _loading = true;
+      _search.clear();
+    });
+    await _load();
+  }
+
+  /// Archive hides the conversation from this Buyer's inbox only; nothing is deleted.
+  Future<bool> _setArchived(api.ConversationView c, bool archive) async {
+    try {
+      if (archive) {
+        await widget.repository.archive(c.id);
+      } else {
+        await widget.repository.restore(c.id);
+      }
+      return true;
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              archive
+                  ? 'Unable to archive this conversation. Please retry.'
+                  : 'Unable to restore this conversation. Please retry.',
+            ),
+          ),
+        );
+      }
+      return false;
+    }
+  }
+
+  void _removeFromInbox(api.ConversationView c, bool archived) {
+    if (!mounted) return;
+    setState(
+      () => _inbox = _inbox?.rebuild(
+        (b) => b.items.removeWhere((item) => item.id == c.id),
+      ),
+    );
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            archived ? 'Conversation archived' : 'Conversation moved back',
+          ),
+          action: SnackBarAction(
+            label: 'Undo',
+            onPressed: () async {
+              await _setArchived(c, !archived);
+              if (mounted) unawaited(_load());
+            },
+          ),
+        ),
+      );
+  }
+
   Widget _inboxView() {
     final query = _search.text.trim().toLowerCase();
     final items = (_inbox?.items ?? <api.ConversationView>[])
@@ -789,10 +975,33 @@ class _MessagingScreenState extends State<MessagingScreen>
           const Divider(height: 1),
           const SizedBox(height: 20),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Text(
-              query.isEmpty ? 'All messages' : 'Search results',
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+            padding: const EdgeInsets.only(left: 20, right: 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    query.isNotEmpty
+                        ? 'Search results'
+                        : _showArchived
+                        ? 'Archived messages'
+                        : 'All messages',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: _refreshing ? null : _toggleArchived,
+                  icon: Icon(
+                    _showArchived
+                        ? Icons.chat_bubble_outline
+                        : Icons.archive_outlined,
+                    size: 18,
+                  ),
+                  label: Text(_showArchived ? 'Back to messages' : 'Archived'),
+                ),
+              ],
             ),
           ),
           if (_inbox?.hasMore == true || _page > 1)
@@ -808,32 +1017,42 @@ class _MessagingScreenState extends State<MessagingScreen>
             StateMessage(
               kind: StateKind.empty,
               artwork: 'assets/states/inbox.png',
-              title: query.isEmpty
-                  ? 'No messages yet'
-                  : 'No matching conversations',
-              message: query.isEmpty
-                  ? 'Message a store or a product to ask questions or request a quotation.'
-                  : 'Try a different store or handler name.',
+              title: query.isNotEmpty
+                  ? 'No matching conversations'
+                  : _showArchived
+                  ? 'No archived messages'
+                  : 'No messages yet',
+              message: query.isNotEmpty
+                  ? 'Try a different store or handler name.'
+                  : _showArchived
+                  ? 'Conversations you archive appear here. New activity brings them back to your inbox.'
+                  : 'Message a store or a product to ask questions or request a quotation.',
             ),
           for (final c in items) ...[
-            ConversationInboxTile(
-              conversation: c,
-              onTap: () async {
-                await Navigator.of(context).push<void>(
-                  MaterialPageRoute(
-                    builder: (_) => MessagingScreen(
-                      repository: widget.repository,
-                      orders: widget.orders,
-                      onOpenCart: widget.onOpenCart,
-                      onOpenNotifications: widget.onOpenNotifications,
-                      conversationId: c.id,
-                      onOpenProduct: widget.onOpenProduct,
-                      onSetDelivery: widget.onSetDelivery,
+            _ArchiveSwipe(
+              id: c.id,
+              archived: _showArchived,
+              confirm: () => _setArchived(c, !_showArchived),
+              onDismissed: () => _removeFromInbox(c, !_showArchived),
+              child: ConversationInboxTile(
+                conversation: c,
+                onTap: () async {
+                  await Navigator.of(context).push<void>(
+                    MaterialPageRoute(
+                      builder: (_) => MessagingScreen(
+                        repository: widget.repository,
+                        orders: widget.orders,
+                        onOpenCart: widget.onOpenCart,
+                        onOpenNotifications: widget.onOpenNotifications,
+                        conversationId: c.id,
+                        onOpenProduct: widget.onOpenProduct,
+                        onSetDelivery: widget.onSetDelivery,
+                      ),
                     ),
-                  ),
-                );
-                if (mounted) await _load();
-              },
+                  );
+                  if (mounted) await _load();
+                },
+              ),
             ),
             const Padding(
               padding: EdgeInsets.only(left: 80, right: 20),
@@ -884,6 +1103,7 @@ class _MessagingScreenState extends State<MessagingScreen>
       children: [
         Expanded(
           child: ListView(
+            controller: _scroll,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             children: [
               if (d.conversation.contextType.name == 'PROJECT_BASED')
@@ -1030,25 +1250,66 @@ class _MessagingScreenState extends State<MessagingScreen>
               for (final item in _pending.entries)
                 Align(
                   alignment: Alignment.centerRight,
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
+                  child: FractionallySizedBox(
+                    widthFactor: .86,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        if (item.value.body.isNotEmpty) Text(item.value.body),
-                        if (item.value.product != null)
-                          ChatProductCard(product: item.value.product!),
+                        Container(
+                          margin: const EdgeInsets.only(top: 10),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
+                          decoration: const BoxDecoration(
+                            color: BuyerTheme.brandSoft,
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(16),
+                              topRight: Radius.circular(16),
+                              bottomLeft: Radius.circular(16),
+                              bottomRight: Radius.circular(4),
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (item.value.body.isNotEmpty)
+                                Text(
+                                  item.value.body,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    height: 1.5,
+                                  ),
+                                ),
+                              if (item.value.product != null)
+                                ChatProductCard(product: item.value.product!),
+                            ],
+                          ),
+                        ),
                         if (item.value.failed)
                           TextButton(
                             onPressed: () => _send(item.key),
                             child: const Text('Failed to send · Retry'),
                           )
                         else
-                          const Text('Sending…'),
+                          const Padding(
+                            padding: EdgeInsets.fromLTRB(4, 4, 4, 8),
+                            child: Text(
+                              'Sending…',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: BuyerTheme.muted,
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                   ),
                 ),
+
+              if (_typing)
+                TypingIndicator(name: d.conversation.handler?.displayName),
 
               for (final version in d.quotations.versions)
                 QuotationVersionCard(
@@ -1089,46 +1350,6 @@ class _MessagingScreenState extends State<MessagingScreen>
           ),
         ),
 
-        if (_typing)
-          const Padding(padding: EdgeInsets.all(8), child: Text('typing...')),
-        for (final legacy in d.conversation.legacyConversationIds ?? <String>[])
-          TextButton(
-            onPressed: () => Navigator.of(context).push<void>(
-              MaterialPageRoute(
-                builder: (_) => MessagingScreen(
-                  repository: widget.repository,
-                  conversationId: legacy,
-                  orders: widget.orders,
-                  onOpenProduct: widget.onOpenProduct,
-                  onSetDelivery: widget.onSetDelivery,
-                ),
-              ),
-            ),
-            child: const Text('Earlier inquiry history'),
-          ),
-        if (d.conversation.legacyHasMore == true)
-          TextButton(
-            onPressed: () => _mutate(() async {
-              final next = await widget.repository.conversation(
-                d.conversation.id,
-                legacyPage: (d.conversation.legacyPage ?? 1) + 1,
-              );
-              if (!mounted) return;
-              setState(
-                () => _detail = d.rebuild(
-                  (b) => b.conversation.replace(
-                    next.conversation.rebuild(
-                      (c) => c.legacyConversationIds.replace([
-                        ...?d.conversation.legacyConversationIds,
-                        ...?next.conversation.legacyConversationIds,
-                      ]),
-                    ),
-                  ),
-                ),
-              );
-            }, refresh: false),
-            child: const Text('More inquiry history'),
-          ),
         if (d.conversation.canonicalConversationId != null)
           TextButton(
             onPressed: () => Navigator.of(context).pushReplacement(
@@ -1158,30 +1379,97 @@ class _MessagingScreenState extends State<MessagingScreen>
               ),
             ],
           ),
-        if (d.conversation.purpose.name == 'SALES' &&
-            d.conversation.canonicalConversationId == null)
-          TextButton.icon(
-            onPressed: _pickProduct,
-            icon: const Icon(Icons.inventory_2_outlined),
-            label: const Text('Attach product'),
-          ),
-        if (d.conversation.purpose.name == 'SALES' &&
-            d.conversation.contextType.name == 'ITEM_BASED' &&
+        if (_actionsOpen &&
             d.conversation.canonicalConversationId == null &&
-            widget.onSetDelivery != null)
-          TextButton.icon(
-            onPressed: _busy
-                ? null
-                : () => _mutate(
-                    () => widget.onSetDelivery!(
-                      d.conversation.id,
-                      d.conversation.lockVersion,
+            !d.conversation.readOnly)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Wrap(
+                spacing: 4,
+                children: [
+                  TextButton.icon(
+                    onPressed: _busy
+                        ? null
+                        : () {
+                            setState(() => _actionsOpen = false);
+                            unawaited(_attach());
+                          },
+                    icon: const Icon(Icons.attach_file),
+                    label: Text(
+                      d.conversation.purpose.name == 'FULFILLMENT'
+                          ? 'Attach photo (JPG, PNG)'
+                          : 'Attach file (JPG, PNG, PDF)',
                     ),
                   ),
-            icon: const Icon(Icons.local_shipping_outlined),
-            label: const Text('Delivery details'),
+                  if (d.conversation.purpose.name == 'SALES')
+                    TextButton.icon(
+                      onPressed: () {
+                        setState(() => _actionsOpen = false);
+                        unawaited(_pickProduct());
+                      },
+                      icon: const Icon(Icons.inventory_2_outlined),
+                      label: const Text('Attach product'),
+                    ),
+                  if (d.conversation.purpose.name == 'SALES' &&
+                      d.conversation.contextType.name == 'ITEM_BASED' &&
+                      widget.onSetDelivery != null)
+                    TextButton.icon(
+                      onPressed: _busy
+                          ? null
+                          : () {
+                              setState(() => _actionsOpen = false);
+                              unawaited(
+                                _mutate(
+                                  () => widget.onSetDelivery!(
+                                    d.conversation.id,
+                                    d.conversation.lockVersion,
+                                  ),
+                                ),
+                              );
+                            },
+                      icon: const Icon(Icons.local_shipping_outlined),
+                      label: const Text('Delivery details'),
+                    ),
+                ],
+              ),
+            ),
           ),
-        if (d.conversation.canonicalConversationId == null)
+        if (d.conversation.canonicalConversationId == null &&
+            d.conversation.readOnly)
+          SafeArea(
+            top: false,
+            child: Semantics(
+              container: true,
+              liveRegion: true,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: const BoxDecoration(
+                  color: BuyerTheme.canvas,
+                  border: Border(top: BorderSide(color: BuyerTheme.border)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.lock_outline, color: BuyerTheme.muted),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(switch (d.conversation.readOnlyReason) {
+                        'ORDER_COMPLETED' =>
+                          'This order is completed. The conversation history stays available, but new messages are closed.',
+                        'ORDER_CANCELLED' =>
+                          'This order was cancelled. The conversation history stays available, but new messages are closed.',
+                        _ =>
+                          'New messages are closed for this conversation. The history stays available.',
+                      }, style: const TextStyle(color: BuyerTheme.muted)),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          )
+        else if (d.conversation.canonicalConversationId == null)
           SafeArea(
             top: false,
             child: Container(
@@ -1193,11 +1481,13 @@ class _MessagingScreenState extends State<MessagingScreen>
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   IconButton(
-                    tooltip: d.conversation.purpose.name == 'FULFILLMENT'
-                        ? 'Attach JPG or PNG, up to 10 MB'
-                        : 'Attach JPG, PNG or PDF, up to 10 MB',
-                    onPressed: _busy ? null : () => unawaited(_attach()),
-                    icon: const Icon(Icons.add, color: BuyerTheme.action),
+                    tooltip: _actionsOpen ? 'Hide actions' : 'More actions',
+                    onPressed: () =>
+                        setState(() => _actionsOpen = !_actionsOpen),
+                    icon: Icon(
+                      _actionsOpen ? Icons.close : Icons.add,
+                      color: BuyerTheme.action,
+                    ),
                   ),
                   Expanded(
                     child: TextField(

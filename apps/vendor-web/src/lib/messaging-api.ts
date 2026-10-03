@@ -28,14 +28,18 @@ export async function loadChatAvatar(path: string): Promise<Blob> {
 }
 
 /** Existing Reverb viewer channels; reconnect reauthorizes and synchronizes missed activity. */
-export async function watchConversation(channel: string | null, refresh: () => void, onTyping?: (typing: boolean, at: number) => void): Promise<() => void> {
+export async function watchConversation(channel: string | null, refresh: () => void, onTyping?: (typing: boolean, at: number) => void, changeEvents: readonly string[] = ['conversation.changed', 'inbox.changed'], onLive?: (live: boolean) => void): Promise<() => void> {
   let closed = false
+  let live = false
   let socket: WebSocket | undefined
   let retry: ReturnType<typeof setTimeout> | undefined
   let handshake: ReturnType<typeof setTimeout> | undefined
   let delay = 1000
+  // Callers poll quickly while the subscription is not established, so a blocked Reverb port never needs a manual refresh.
+  function setLive(value: boolean) { if (live === value || closed) return; live = value; onLive?.(value) }
   function reconnect() {
     clearTimeout(handshake)
+    setLive(false)
     if (closed || retry) return
     if (socket) { socket.onclose = null; socket.onerror = null; socket.close() }
     retry = setTimeout(() => { retry = undefined; void connect() }, delay)
@@ -61,8 +65,8 @@ export async function watchConversation(channel: string | null, refresh: () => v
             const signature = await api().authorizeChatChannel({ ...scope, chatChannelAuth: { socketId: data.socket_id, channelName: `private-${target}` } })
             if (!closed && socket === current && current.readyState === WebSocket.OPEN) current.send(JSON.stringify({ event: 'pusher:subscribe', data: { channel: `private-${target}`, auth: signature.auth } }))
           } else if (message.event === 'pusher:ping') current.send(JSON.stringify({ event: 'pusher:pong', data: {} }))
-          else if (message.event === 'pusher_internal:subscription_succeeded') { clearTimeout(handshake); delay = 1000; refresh() }
-          else if (message.event === 'conversation.changed' || message.event === 'inbox.changed') refresh()
+          else if (message.event === 'pusher_internal:subscription_succeeded') { clearTimeout(handshake); delay = 1000; setLive(true); refresh() }
+          else if (message.event && changeEvents.includes(message.event)) refresh()
           else if (message.event === 'conversation.typing' && typeof data.typing === 'boolean' && typeof data.at === 'number') onTyping?.(data.typing, data.at)
           else if (message.event === 'pusher:error') reconnect()
         })().catch(reconnect)

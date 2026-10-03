@@ -19,6 +19,20 @@ class VendorOrderPrimaryAction extends EnumClass {
   static const VendorOrderPrimaryAction WAITING_FOR_PAYMENT = _$WAITING_FOR_PAYMENT;
   @BuiltValueEnumConst(wireName: r'PREPARE_WHEN_AVAILABLE')
   static const VendorOrderPrimaryAction PREPARE_WHEN_AVAILABLE = _$PREPARE_WHEN_AVAILABLE;
+  @BuiltValueEnumConst(wireName: r'START_PREPARATION')
+  static const VendorOrderPrimaryAction START_PREPARATION = _$START_PREPARATION;
+  @BuiltValueEnumConst(wireName: r'MARK_READY')
+  static const VendorOrderPrimaryAction MARK_READY = _$MARK_READY;
+  @BuiltValueEnumConst(wireName: r'DISPATCH')
+  static const VendorOrderPrimaryAction DISPATCH = _$DISPATCH;
+  @BuiltValueEnumConst(wireName: r'RECORD_PICKUP')
+  static const VendorOrderPrimaryAction RECORD_PICKUP = _$RECORD_PICKUP;
+  @BuiltValueEnumConst(wireName: r'RECORD_DELIVERY')
+  static const VendorOrderPrimaryAction RECORD_DELIVERY = _$RECORD_DELIVERY;
+  @BuiltValueEnumConst(wireName: r'AWAIT_RECEIPT')
+  static const VendorOrderPrimaryAction AWAIT_RECEIPT = _$AWAIT_RECEIPT;
+  @BuiltValueEnumConst(wireName: r'RESPOND_TO_CANCELLATION')
+  static const VendorOrderPrimaryAction RESPOND_TO_CANCELLATION = _$RESPOND_TO_CANCELLATION;
   @BuiltValueEnumConst(wireName: r'NONE')
   static const VendorOrderPrimaryAction NONE = _$NONE;
 

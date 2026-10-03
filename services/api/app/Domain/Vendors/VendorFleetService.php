@@ -153,10 +153,40 @@ final class VendorFleetService
             ];
         })->all(), 'meta' => [
             'scope' => 'ORGANIZATION',
+            'summary' => $this->summary($organizationId),
             'delivery' => ['fulfillment_method' => $method, 'delivery_enabled' => $deliveryEnabled, 'service_radius_km' => $area?->maximum_distance_km === null ? null : (int) $area->maximum_distance_km],
             'permissions' => ['can_manage' => true], 'limits' => ['max_vehicles' => self::MAX_VEHICLES],
             'advisory' => ['calculation_version' => DeliveryRecommendationService::CALCULATION_VERSION, 'fee_rounding' => DeliveryRecommendationService::FEE_ROUNDING, 'dimensional_formulas' => DeliveryRecommendationService::DIMENSIONAL_FORMULAS],
         ]];
+    }
+
+    /** Saved fleet units and confirmed delivery assignments; configurations do not identify individual physical vehicles.
+     * @return array<string, int>
+     */
+    private function summary(string $organizationId): array
+    {
+        $fleet = DB::table('vendor_vehicles')->where('vendor_organization_id', $organizationId)->whereNull('removed_at')
+            ->selectRaw('COUNT(*) AS configurations, COALESCE(SUM(number_available), 0) AS total_vehicles')
+            ->selectRaw('COALESCE(SUM(number_available) FILTER (WHERE active), 0) AS active_vehicles')
+            ->selectRaw('COALESCE(SUM(number_available) FILTER (WHERE active AND available), 0) AS available_vehicles')->first();
+        $deliveries = DB::table('orders as orders')
+            ->join('order_delivery_snapshots as delivery', 'delivery.order_id', '=', 'orders.id')
+            ->crossJoin(DB::raw("LATERAL jsonb_array_elements(delivery.snapshot->'vehicles') AS assigned(vehicle)"))
+            ->where('orders.vendor_organization_id', $organizationId)
+            ->where('delivery.vendor_organization_id', $organizationId)
+            ->where('orders.fulfillment_method', 'DELIVERY')
+            ->where('orders.order_state', 'OUT_FOR_DELIVERY')
+            ->selectRaw("COALESCE(SUM((assigned.vehicle->>'number_of_vehicles')::bigint), 0) AS vehicle_assignments, COUNT(DISTINCT orders.id) AS orders_count")
+            ->first();
+
+        return [
+            'configurations' => (int) $fleet->configurations,
+            'total_vehicles' => (int) $fleet->total_vehicles,
+            'active_vehicles' => (int) $fleet->active_vehicles,
+            'available_vehicles' => (int) $fleet->available_vehicles,
+            'out_for_delivery_vehicle_assignments' => (int) $deliveries->vehicle_assignments,
+            'out_for_delivery_orders' => (int) $deliveries->orders_count,
+        ];
     }
 
     /** @return array{url: string, expires_at: string} */

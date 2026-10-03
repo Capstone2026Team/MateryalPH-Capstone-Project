@@ -16,6 +16,13 @@ Name | Type | Description | Notes
 **canViewInventory** | **bool** |  |
 **canRecordPhysicalPayment** | **bool** |  | [optional]
 **canApproveOnlineBalance** | **bool** |  | [optional]
+**canRecordMilestone** | **bool** |  | [optional]
+**canAssignFulfillment** | **bool** |  | [optional]
+**canCancel** | **bool** |  | [optional]
+**canFinalizeCancellation** | **bool** |  | [optional]
+**canReportVehicleIssue** | **bool** |  | [optional]
+**canRetryRefund** | **bool** |  | [optional]
+**canRespondProblem** | **bool** |  | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

@@ -7,6 +7,13 @@ void main() {
   final instance = MateryalphApiClient().getMessagingApi();
 
   group(MessagingApi, () {
+    // Hides one sales or quotation conversation from the Buyer's own inbox. It is idempotent, personal and reversible; messages, quotations and orders are never changed or deleted. Fulfillment threads stay with their order (409 CONVERSATION_NOT_ARCHIVABLE). New activity returns the conversation to the inbox.
+    //
+    //Future<ChatEmptyResponse> archiveChatConversation(String messagingPortal, String conversationId) async
+    test('test archiveChatConversation', () async {
+      // TODO
+    });
+
     // Pusher protocol signature for an authorized per-viewer Reverb channel. Purpose, membership and assignment epoch must match. Broadcasts carry only invalidations; message/file data always requires a fresh authorized REST request. No client events are accepted.
     //
     //Future<ChatChannelSignature> authorizeChatChannel(String messagingPortal, ChatChannelAuth chatChannelAuth) async
@@ -72,7 +79,7 @@ void main() {
 
     // Current purpose, participant, account and fixed-role authority are checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses native bearer transport.
     //
-    //Future<ConversationPageResponse> listConversations(String messagingPortal, { int page }) async
+    //Future<ConversationPageResponse> listConversations(String messagingPortal, { int page, bool archived }) async
     test('test listConversations', () async {
       // TODO
     });
@@ -88,6 +95,13 @@ void main() {
     //
     //Future<ChatEmptyResponse> readChatMessages(String messagingPortal, String conversationId, ChatRead chatRead) async
     test('test readChatMessages', () async {
+      // TODO
+    });
+
+    // Returns an archived conversation to the Buyer's inbox. Idempotent.
+    //
+    //Future<ChatEmptyResponse> restoreChatConversation(String messagingPortal, String conversationId) async
+    test('test restoreChatConversation', () async {
       // TODO
     });
 

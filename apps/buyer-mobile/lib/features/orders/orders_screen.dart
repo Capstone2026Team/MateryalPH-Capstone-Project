@@ -20,11 +20,13 @@ class OrdersScreen extends StatefulWidget {
     required this.repository,
     this.initialGroup = 'AWAITING_ACTION',
     this.paymentLauncher = launchPaymentPage,
+    this.openConversation,
   });
 
   final OrdersRepository repository;
   final String initialGroup;
   final PaymentLauncher paymentLauncher;
+  final OpenOrderConversation? openConversation;
 
   @override
   State<OrdersScreen> createState() => _OrdersScreenState();
@@ -86,6 +88,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
           orderId: order.id,
           repository: widget.repository,
           paymentLauncher: widget.paymentLauncher,
+          openConversation: widget.openConversation,
         ),
       ),
     );

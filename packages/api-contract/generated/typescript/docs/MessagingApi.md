@@ -4,6 +4,7 @@ All URIs are relative to */api/v1*
 
 | Method | HTTP request | Description |
 |------------- | ------------- | -------------|
+| [**archiveChatConversation**](MessagingApi.md#archivechatconversation) | **PUT** /{messagingPortal}/conversations/{conversationId}/archive |  |
 | [**authorizeChatChannel**](MessagingApi.md#authorizechatchannel) | **POST** /{messagingPortal}/messaging/auth |  |
 | [**createConversation**](MessagingApi.md#createconversation) | **POST** /{messagingPortal}/conversations |  |
 | [**decideChatQuotation**](MessagingApi.md#decidechatquotation) | **POST** /{messagingPortal}/conversations/{conversationId}/quotation/{action} |  |
@@ -16,6 +17,7 @@ All URIs are relative to */api/v1*
 | [**listConversations**](MessagingApi.md#listconversations) | **GET** /{messagingPortal}/conversations |  |
 | [**publishChatQuotation**](MessagingApi.md#publishchatquotation) | **POST** /{messagingPortal}/conversations/{conversationId}/quotation/publish |  |
 | [**readChatMessages**](MessagingApi.md#readchatmessages) | **POST** /{messagingPortal}/conversations/{conversationId}/read |  |
+| [**restoreChatConversation**](MessagingApi.md#restorechatconversation) | **DELETE** /{messagingPortal}/conversations/{conversationId}/archive |  |
 | [**saveChatQuotationDraft**](MessagingApi.md#savechatquotationdraft) | **PUT** /{messagingPortal}/conversations/{conversationId}/quotation/draft |  |
 | [**sendChatMessage**](MessagingApi.md#sendchatmessage) | **POST** /{messagingPortal}/conversations/{conversationId}/messages |  |
 | [**sendChatTyping**](MessagingApi.md#sendchattyping) | **POST** /{messagingPortal}/conversations/{conversationId}/typing |  |
@@ -24,6 +26,84 @@ All URIs are relative to */api/v1*
 | [**updateChatDestination**](MessagingApi.md#updatechatdestination) | **PUT** /{messagingPortal}/conversations/{conversationId}/destination |  |
 | [**uploadChatAttachment**](MessagingApi.md#uploadchatattachment) | **POST** /{messagingPortal}/conversations/{conversationId}/attachments |  |
 
+
+
+## archiveChatConversation
+
+> ChatEmptyResponse archiveChatConversation(messagingPortal, conversationId)
+
+
+
+Hides one sales or quotation conversation from the Buyer\&#39;s own inbox. It is idempotent, personal and reversible; messages, quotations and orders are never changed or deleted. Fulfillment threads stay with their order (409 CONVERSATION_NOT_ARCHIVABLE). New activity returns the conversation to the inbox.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  MessagingApi,
+} from '@materyalph/api-client-ts';
+import type { ArchiveChatConversationRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // Configure HTTP bearer authorization: passportBearer
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new MessagingApi(config);
+
+  const body = {
+    // 'buyers'
+    messagingPortal: messagingPortal_example,
+    // string
+    conversationId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+  } satisfies ArchiveChatConversationRequest;
+
+  try {
+    const data = await api.archiveChatConversation(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **messagingPortal** | `buyers` |  | [Defaults to `undefined`] [Enum: buyers] |
+| **conversationId** | `string` |  | [Defaults to `undefined`] |
+
+### Return type
+
+[**ChatEmptyResponse**](ChatEmptyResponse.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Archived |  -  |
+| **401** | Authentication required |  -  |
+| **403** | Current role or channel access denied |  -  |
+| **404** | Conversation unavailable or access revoked |  -  |
+| **409** | Fulfillment threads cannot be archived |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
 ## authorizeChatChannel
@@ -815,7 +895,7 @@ example().catch(console.error);
 
 ## listConversations
 
-> ConversationPageResponse listConversations(messagingPortal, page)
+> ConversationPageResponse listConversations(messagingPortal, page, archived)
 
 
 
@@ -847,6 +927,8 @@ async function example() {
     messagingPortal: messagingPortal_example,
     // number (optional)
     page: 56,
+    // boolean | Buyer only. true lists the Buyer\'s archived sales conversations; omitted or false lists the active inbox. Order fulfillment threads are never listed for a Buyer; they open from Order Details. (optional)
+    archived: true,
   } satisfies ListConversationsRequest;
 
   try {
@@ -868,6 +950,7 @@ example().catch(console.error);
 |------------- | ------------- | ------------- | -------------|
 | **messagingPortal** | `buyers`, `vendor` |  | [Defaults to `undefined`] [Enum: buyers, vendor] |
 | **page** | `number` |  | [Optional] [Defaults to `undefined`] |
+| **archived** | `boolean` | Buyer only. true lists the Buyer\&#39;s archived sales conversations; omitted or false lists the active inbox. Order fulfillment threads are never listed for a Buyer; they open from Order Details. | [Optional] [Defaults to `undefined`] |
 
 ### Return type
 
@@ -1068,6 +1151,84 @@ example().catch(console.error);
 | **409** | Recoverable version, deadline, idempotency or stock conflict; re-read the current version |  -  |
 | **422** | Invalid fields or undisclosed NRPC |  -  |
 | **503** | Provider or scanner unavailable; retry safely |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## restoreChatConversation
+
+> ChatEmptyResponse restoreChatConversation(messagingPortal, conversationId)
+
+
+
+Returns an archived conversation to the Buyer\&#39;s inbox. Idempotent.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  MessagingApi,
+} from '@materyalph/api-client-ts';
+import type { RestoreChatConversationRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // Configure HTTP bearer authorization: passportBearer
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new MessagingApi(config);
+
+  const body = {
+    // 'buyers'
+    messagingPortal: messagingPortal_example,
+    // string
+    conversationId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+  } satisfies RestoreChatConversationRequest;
+
+  try {
+    const data = await api.restoreChatConversation(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **messagingPortal** | `buyers` |  | [Defaults to `undefined`] [Enum: buyers] |
+| **conversationId** | `string` |  | [Defaults to `undefined`] |
+
+### Return type
+
+[**ChatEmptyResponse**](ChatEmptyResponse.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Restored |  -  |
+| **401** | Authentication required |  -  |
+| **403** | Current role or channel access denied |  -  |
+| **404** | Conversation unavailable or access revoked |  -  |
+| **409** | Fulfillment threads cannot be archived |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 

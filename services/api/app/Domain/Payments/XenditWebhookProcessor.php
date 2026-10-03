@@ -28,6 +28,7 @@ final class XenditWebhookProcessor
         private readonly PaymentSettlement $settlement,
         private readonly PaymentReconciliationService $reconciliation,
         private readonly PaymentGateway $gateway,
+        private readonly RefundService $refunds,
     ) {}
 
     public function process(string $webhookEventId): string
@@ -46,7 +47,10 @@ final class XenditWebhookProcessor
         $event = (string) ($payload['event'] ?? '');
         $data = is_array($payload['data'] ?? null) ? $payload['data'] : [];
         if (in_array($event, self::REFUND_EVENTS, true)) {
-            return $this->finish($webhookEventId, $this->refund($event, $data));
+            [$result, $state] = $this->refund($event, $data, $webhookEventId);
+
+            // A failed provider read leaves the event RECEIVED for retry by scheduled reconciliation.
+            return $state === 'RECEIVED' ? $result : $this->finish($webhookEventId, $result, $state);
         }
         if (! in_array($event, [...self::SESSION_EVENTS, ...self::PAYMENT_EVENTS], true)) {
             return $this->finish($webhookEventId, 'UNSUPPORTED_EVENT', 'IGNORED');
@@ -111,21 +115,47 @@ final class XenditWebhookProcessor
         return null;
     }
 
-    /** @param array<string, mixed> $data */
-    private function refund(string $event, array $data): string
+    /**
+     * A refund event is a trigger too: it must name a known instruction and agree with it on provider id, original
+     * payment request, amount, currency and a status consistent with the event before an authoritative read of the
+     * refund is applied. Duplicate and reordered events reach a terminal instruction and change nothing.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array{0: string, 1: string} result code and inbox state
+     */
+    private function refund(string $event, array $data, string $webhookEventId): array
     {
         $refundId = $data['reference_id'] ?? null;
         $refund = is_string($refundId) && Str::isUuid($refundId) ? DB::table('refunds')->where('id', $refundId)->first() : null;
-        if ($refund === null || ProviderAmount::toCentavos($data['amount'] ?? null) !== (int) $refund->amount_centavos || ($data['currency'] ?? 'PHP') !== 'PHP') {
-            return 'UNKNOWN_OR_MISMATCHED_REFUND';
+        if ($refund === null) {
+            return ['UNKNOWN_REFUND', 'IGNORED'];
         }
-        if ($event === 'refund.succeeded') {
-            $this->settlement->refundSucceeded((string) $refund->id, (string) Str::uuid7());
-        } else {
-            DB::table('refunds')->where('id', $refund->id)->where('state', 'REFUND_PENDING')->update(['state' => 'REFUND_FAILED', 'failure_code' => 'PROVIDER_REFUND_FAILED', 'updated_at' => now()]);
+        $status = strtoupper((string) ($data['status'] ?? ''));
+        $providerId = is_string($data['id'] ?? null) && preg_match('/^[A-Za-z0-9_-]{3,128}$/', $data['id']) === 1 ? $data['id'] : null;
+        $claimed = new ProviderRefund((string) $providerId, (string) $refundId, is_string($data['payment_request_id'] ?? null) ? $data['payment_request_id'] : null,
+            $status, ProviderAmount::toCentavos($data['amount'] ?? null), (string) ($data['currency'] ?? ''));
+        $consistent = ($event === 'refund.succeeded' && $claimed->succeeded()) || ($event === 'refund.failed' && $claimed->failed());
+        if ($providerId === null || ! $consistent) {
+            return ['REFUND_EVENT_INCONSISTENT', 'REJECTED'];
         }
+        if (in_array($refund->state, ['REFUNDED', 'REFUND_FAILED'], true) && ($refund->provider_reference === null || $refund->provider_reference === $providerId)) {
+            return ['DUPLICATE', 'PROCESSED'];
+        }
+        $payment = DB::table('payments')->where('id', $refund->source_payment_id)->first();
+        try {
+            $authoritative = $this->gateway->retrieveRefund($providerId, $payment === null ? null : PaymentReconciliationService::forUserId($payment));
+        } catch (PaymentProviderException) {
+            return ['RETRY', 'RECEIVED'];
+        }
+        // The claimed payload must agree with the provider's own record before anything is applied.
+        if ($authoritative->providerRefundId !== $providerId || $authoritative->amountCentavos !== $claimed->amountCentavos || $authoritative->currency !== $claimed->currency) {
+            $this->refunds->apply((string) $refund->id, $claimed, 'WEBHOOK', $webhookEventId, (string) Str::uuid7());
 
-        return 'REFUND_UPDATED';
+            return ['REFUND_EVENT_MISMATCH', 'REJECTED'];
+        }
+        $result = $this->refunds->apply((string) $refund->id, $authoritative, 'WEBHOOK', $webhookEventId, (string) Str::uuid7());
+
+        return [$result, $result === 'MISMATCH' ? 'REJECTED' : 'PROCESSED'];
     }
 
     private function finish(string $webhookEventId, string $result, string $state = 'PROCESSED'): string

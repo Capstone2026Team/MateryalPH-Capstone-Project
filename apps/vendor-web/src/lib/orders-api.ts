@@ -1,5 +1,12 @@
 import {
+  VendorFulfillmentApi,
   VendorOrdersApi,
+  type FulfillmentAssignee,
+  type RecordVendorFulfillmentMilestoneMilestoneEnum,
+  type RecordVendorFulfillmentMilestoneReceiverKindEnum,
+  type VehicleIssueRequestCategoryEnum,
+  type VendorCancellationPreview,
+  type VendorCancelRequestReasonCodeEnum,
   type DeliveryPlan,
   type DeliveryPlanVehicle,
   type DeliveryVehicleSelection,
@@ -16,7 +23,8 @@ import { newIdempotencyKey } from './onboarding-api'
 
 export { apiFailure, type ApiFailure } from './inventory-api'
 export { readableOnboardingError as readableOrderError, onboardingFieldErrors as orderFieldErrors } from './onboarding-api'
-export type { DeliveryPlan, DeliveryPlanVehicle, DeliveryVehicleSelection, OrderDetail, OrderLine, OrderListMeta, OrderSummary, VendorOrderConfirmRequest, VendorOrderDeclineReason }
+export type { DeliveryPlan, DeliveryPlanVehicle, DeliveryVehicleSelection, OrderDetail, OrderLine, OrderListMeta, OrderSummary, VendorOrderConfirmRequest, VendorOrderDeclineReason,
+  FulfillmentAssignee, VendorCancellationPreview, VendorCancelRequestReasonCodeEnum, VehicleIssueRequestCategoryEnum }
 
 const basePath = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'
 const ordersApi = () => new VendorOrdersApi(createWebApiConfiguration(basePath, { refreshSession: true }))
@@ -44,6 +52,68 @@ export async function confirmOrder(orderId: string, request: VendorOrderConfirmR
 export async function declineOrder(orderId: string, lockVersion: number, reasonCode: VendorOrderDeclineReason, reason: string): Promise<OrderDetail> {
   return (await ordersApi().declineVendorOrder({ orderId, idempotencyKey: newIdempotencyKey(), vendorOrderDeclineRequest: { lockVersion, reasonCode, reason } })).data
 }
+
+const fulfillmentApi = () => new VendorFulfillmentApi(createWebApiConfiguration(basePath, { refreshSession: true }))
+
+export type MilestoneInput = {
+  milestone: RecordVendorFulfillmentMilestoneMilestoneEnum
+  lockVersion: number
+  vehicleIndex?: number
+  tripNumber?: number
+  receiverName?: string
+  receiverKind?: RecordVendorFulfillmentMilestoneReceiverKindEnum
+  handoverConfirmed?: boolean
+  note?: string
+  file?: Blob
+  signature?: Blob
+}
+
+/** Records the next milestone with the proof that milestone requires; one key per submitted click. */
+export async function recordMilestone(orderId: string, input: MilestoneInput, idempotencyKey = newIdempotencyKey()): Promise<OrderDetail> {
+  return (await fulfillmentApi().recordVendorFulfillmentMilestone({ orderId, idempotencyKey, ...input })).data
+}
+
+export async function listAssignees(orderId: string): Promise<FulfillmentAssignee[]> {
+  return (await fulfillmentApi().listVendorFulfillmentAssignees({ orderId })).data
+}
+
+export async function assignFulfillment(orderId: string, userId: number, reason: string): Promise<OrderDetail> {
+  return (await fulfillmentApi().assignVendorFulfillmentStaff({ orderId, idempotencyKey: newIdempotencyKey(), fulfillmentAssignmentRequest: { userId, reason } })).data
+}
+
+export async function recordTrip(orderId: string, vehicleIndex: number, tripNumber: number): Promise<OrderDetail> {
+  return (await fulfillmentApi().recordVendorFulfillmentTrip({ orderId, idempotencyKey: newIdempotencyKey(), fulfillmentTripRequest: { vehicleIndex, tripNumber } })).data
+}
+
+export async function reportVehicleIssue(orderId: string, category: VehicleIssueRequestCategoryEnum, description: string): Promise<OrderDetail> {
+  return (await fulfillmentApi().reportVendorVehicleIssue({ orderId, idempotencyKey: newIdempotencyKey(), vehicleIssueRequest: { category, description } })).data
+}
+
+export async function respondToProblem(orderId: string, issueId: string, response: string): Promise<OrderDetail> {
+  return (await fulfillmentApi().respondVendorProblem({ orderId, issueId, idempotencyKey: newIdempotencyKey(), problemResponseRequest: { response } })).data
+}
+
+export async function getCancellationPreview(orderId: string): Promise<VendorCancellationPreview> {
+  return (await fulfillmentApi().getVendorCancellationPreview({ orderId })).data
+}
+
+export async function cancelOrder(orderId: string, lockVersion: number, reasonCode: VendorCancelRequestReasonCodeEnum, reason: string, idempotencyKey = newIdempotencyKey()): Promise<OrderDetail> {
+  return (await fulfillmentApi().cancelVendorOrder({ orderId, idempotencyKey, vendorCancelRequest: { lockVersion, reasonCode, reason } })).data
+}
+
+export async function finalizeCancellationRequest(orderId: string, retainNrpc: boolean, note: string, file?: Blob, idempotencyKey = newIdempotencyKey()): Promise<OrderDetail> {
+  return (await fulfillmentApi().finalizeVendorCancellationRequest({ orderId, idempotencyKey, retainNrpc, ...(note ? { note } : {}), ...(file ? { file } : {}) })).data
+}
+
+export async function retryRefund(orderId: string, refundId: string): Promise<OrderDetail> {
+  return (await fulfillmentApi().retryVendorRefund({ orderId, refundId, idempotencyKey: newIdempotencyKey() })).data
+}
+
+export async function recordReimbursement(orderId: string, reimbursementId: string, file: Blob, note?: string): Promise<OrderDetail> {
+  return (await fulfillmentApi().recordVendorReimbursement({ orderId, reimbursementId, idempotencyKey: newIdempotencyKey(), file, ...(note ? { note } : {}) })).data
+}
+
+export const apiBasePath = basePath
 
 /** Peso text (e.g. "1,250.50") to integer centavos, or null when invalid. */
 export function pesoInputToCentavos(value: string): number | null {

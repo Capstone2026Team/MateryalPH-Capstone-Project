@@ -60,6 +60,8 @@ export function MessagingWorkspace({ role }: { role: string }) {
   const running = useRef(false)
   const currentDetail = useRef<ConversationDetail | null>(null)
   const reloadPending = useRef(false)
+  const threadLive = useRef(false)
+  const threadQuiet = useRef(0)
   const lastRead = useRef('')
   const sendKey = useRef(newIdempotencyKey())
   const actionKey = useRef(newIdempotencyKey())
@@ -82,8 +84,11 @@ export function MessagingWorkspace({ role }: { role: string }) {
     }
     void fetchInbox()
     let stop: (() => void) | undefined
-    void watchConversation(null, () => void fetchInbox()).then(close => { if (active) stop = close; else close() })
-    const timer = window.setInterval(() => { if (document.visibilityState === 'visible') void fetchInbox() }, 45000)
+    let live = false
+    let quiet = 0
+    void watchConversation(null, () => void fetchInbox(), undefined, undefined, value => { live = value }).then(close => { if (active) stop = close; else close() })
+    // Realtime pushes changes; poll every 4 seconds only while the socket is down, otherwise every 45.
+    const timer = window.setInterval(() => { quiet += 1; if (document.visibilityState === 'visible' && (!live || quiet >= 11)) { quiet = 0; void fetchInbox() } }, 4000)
     return () => { active = false; stop?.(); window.clearInterval(timer) }
   }, [page, inboxRefresh])
 
@@ -128,7 +133,7 @@ export function MessagingWorkspace({ role }: { role: string }) {
   useEffect(() => {
     generation.current++; currentDetail.current = null; reloadPending.current = false; running.current = false; lastRead.current = ''; setLoading(true); setDetail(null); setError(null); setText(''); setProduct(null); setPicker(false); setPending([]); setTyping(false); typingAt.current = 0; clearTimeout(typingTimer.current); clearTimeout(typingSendTimer.current); setEditor(false); setHandlers(null); setHistoryOpen(false)
     void load()
-    const timer = window.setInterval(() => { if (document.visibilityState === 'visible') void load() }, 45000)
+    const timer = window.setInterval(() => { threadQuiet.current += 1; if (document.visibilityState === 'visible' && (!threadLive.current || threadQuiet.current >= 11)) { threadQuiet.current = 0; void load() } }, 4000)
     const requests = generation
     return () => { requests.current++; window.clearInterval(timer) }
   }, [load])
@@ -141,8 +146,8 @@ export function MessagingWorkspace({ role }: { role: string }) {
       if (at <= typingAt.current) return
       typingAt.current = at; clearTimeout(typingTimer.current); setTyping(active)
       typingTimer.current = setTimeout(() => setTyping(false), 3000)
-    }).then(stop => { if (active) close = stop; else stop() }).catch(() => undefined)
-    return () => { active = false; close?.(); window.clearTimeout(debounce); clearTimeout(typingTimer.current); clearTimeout(typingSendTimer.current) }
+    }, undefined, value => { threadLive.current = value }).then(stop => { if (active) close = stop; else stop() }).catch(() => undefined)
+    return () => { active = false; threadLive.current = false; close?.(); window.clearTimeout(debounce); clearTimeout(typingTimer.current); clearTimeout(typingSendTimer.current) }
   }, [channel, load])
 
   const newestMessageId = detail?.messages.items.at(-1)?.id
@@ -208,7 +213,7 @@ export function MessagingWorkspace({ role }: { role: string }) {
         {!selected ? <div className="chat-empty-thread"><MessageSquare size={36} aria-hidden="true" /><h2>Your conversations, in one place</h2><p>{role === 'FULFILLMENT' ? 'Choose an assigned order conversation to coordinate fulfillment.' : 'Choose an inquiry from the inbox to reply or prepare a quotation.'}</p></div> : <>
           <div className="chat-toolbar"><Button className="chat-back" aria-label="Back to inbox" variant="quiet" disabled={busy} onClick={() => setParams({})}><ArrowLeft size={16} aria-hidden="true" /><span className="chat-action-label">Back to inbox</span></Button><span className="chat-toolbar-label">{c ? conversationLabel(c) : 'Conversation'}</span>{c && <><Button variant="quiet" aria-label="Quotation history" aria-expanded={historyOpen} aria-controls="chat-quotation-history" onClick={() => setHistoryOpen(value => !value)}><FileText size={16} aria-hidden="true" /><span className="chat-action-label">Quotation history</span></Button>{c.canTransfer && <Button variant="quiet" aria-label="Transfer handler" disabled={busy} onClick={() => void mutate(async () => { const result = await chatApi.handlers(c.id); setHandlers(result.data); setHandlerPage(1); setMoreHandlers(Boolean(result.meta.has_more)) }, false)}><UsersRound size={16} aria-hidden="true" /><span className="chat-action-label">Transfer handler</span></Button>}</>}</div>
           {loading ? <LoadingState label="Loading conversation…" /> : detail && c ? <>
-            <ConversationHeader store={c.store} handler={c.handler} purpose={c.purpose} loadAvatar={loadChatAvatar} />
+            <ConversationHeader store={c.store} buyer={c.buyer} handler={c.handler} purpose={c.purpose} loadAvatar={loadChatAvatar} />
             <div className="chat-thread-body" ref={threadBody}>
         {handlers && <form className="grid gap-3 border-b border-border-default p-5 sm:grid-cols-2" onSubmit={e => { e.preventDefault(); void mutate(async () => { await chatApi.transfer(c.id, Number(target), c.lockVersion, reason); setHandlers(null) }) }}><label className="grid gap-2 text-sm font-semibold">New handler<select className={control} required value={target} onChange={e => setTarget(e.target.value)}><option value="">Choose active staff</option>{handlers.map(h => <option key={h.id} value={h.id}>{h.displayName} · {chatRoleLabel(h.role)}</option>)}</select></label><label className="grid gap-2 text-sm font-semibold">Transfer reason<input className={control} required maxLength={500} value={reason} onChange={e => setReason(e.target.value)} /></label><div>{moreHandlers && <Button variant="secondary" onClick={() => void mutate(async () => { const result = await chatApi.handlers(c.id, handlerPage + 1); setHandlers([...handlers, ...result.data]); setHandlerPage(handlerPage + 1); setMoreHandlers(Boolean(result.meta.has_more)) }, false)}>More handlers</Button>}</div><p className="text-sm text-text-secondary sm:col-span-2">Transfer changes the handler. Their fixed role continues to determine what they may do.</p><Button disabled={busy || !target} type="submit">Confirm transfer</Button><Button variant="secondary" onClick={() => setHandlers(null)}>Cancel</Button></form>}
               {!editor && <WorkPackageAttachment reference={c.lockedReference} proposal={detail.quotations.versions[0] ? ChatQuotationContentToJSON(detail.quotations.versions[0].content) : undefined} />}
@@ -222,11 +227,12 @@ export function MessagingWorkspace({ role }: { role: string }) {
               </div>
             </div>
             {typing && <p role="status" className="px-5 text-sm">typing...</p>}
-            {c.legacyConversationIds?.map(id => <Link key={id} className="min-h-11 px-5 underline" to={`/messages?conversation=${id}`}>Earlier inquiry history</Link>)}
-            {c.legacyHasMore && <Button variant="quiet" onClick={() => void mutate(async () => { const next = await chatApi.get(c.id, undefined, 1, (c.legacyPage ?? 1) + 1); setDetail({ ...detail, conversation: { ...next.conversation, legacyConversationIds: [...(c.legacyConversationIds ?? []), ...(next.conversation.legacyConversationIds ?? [])] } }) }, false)}>More inquiry history</Button>}
             {c.canonicalConversationId && <Link className="min-h-11 px-5 underline" to={`/messages?conversation=${c.canonicalConversationId}`}>Open current conversation</Link>}
             {picker && <section className="p-4" aria-label="Attach product"><form className="flex gap-2" onSubmit={event => { event.preventDefault(); void findProducts() }}><input aria-label="Search store products" className={control} value={productQuery} onChange={event => setProductQuery(event.target.value)} /><Button type="submit" disabled={busy}>Search</Button><Button variant="quiet" onClick={() => setPicker(false)}>Close</Button></form><div className="max-h-60 overflow-y-auto">{products.map(item => <button type="button" className="flex min-h-11 w-full items-center gap-3 p-3 text-left" key={item.productId} onClick={() => { setProduct(item); setPicker(false) }}>{item.imageUrl && <img src={item.imageUrl} alt="" className="size-10 object-cover" />}{item.name} · {formatPesoCentavos(item.priceCentavos)}</button>)}{products.length === 0 && <p>No available products</p>}</div><Button variant="quiet" disabled={busy || productPage === 1} onClick={() => void findProducts(productPage - 1)}>Previous</Button><Button variant="quiet" disabled={busy || !moreProducts} onClick={() => void findProducts(productPage + 1)}>Next</Button></section>}
-            {!c.canonicalConversationId && <form className="chat-composer" onSubmit={event => { event.preventDefault(); void sendMessage() }}>
+            {c.purpose === 'FULFILLMENT' && c.orderId && <Link className="inline-flex min-h-11 items-center px-5 text-sm font-semibold underline" to={`/orders/${c.orderId}`}>Open order {c.orderReference ?? ''}</Link>}
+            {c.readOnly && <p role="status" className="mx-5 mb-4 rounded-control border border-border-default bg-surface-canvas px-4 py-3 text-sm text-text-secondary">
+              {c.readOnlyReason === 'ORDER_COMPLETED' ? 'This order is completed.' : c.readOnlyReason === 'ORDER_CANCELLED' ? 'This order was cancelled.' : 'This order is not in fulfillment.'} Fulfillment messages are read-only and kept for your records.</p>}
+            {!c.canonicalConversationId && !c.readOnly && <form className="chat-composer" onSubmit={event => { event.preventDefault(); void sendMessage() }}>
               {product && <div className="flex items-center justify-between"><p>{product.name} · {formatPesoCentavos(product.priceCentavos)}</p><Button variant="quiet" onClick={() => setProduct(null)}>Remove product</Button></div>}
               {c.purpose === 'SALES' && <Button variant="quiet" onClick={() => void findProducts()}>Attach product</Button>}
               {canStartQuotation && <Button variant="secondary" disabled={busy} onClick={() => void mutate(async () => { await chatApi.startQuotation(c.id, detail.quotations.quotation!.lockVersion, actionKey.current); setEditor(true) })}>New quotation</Button>}

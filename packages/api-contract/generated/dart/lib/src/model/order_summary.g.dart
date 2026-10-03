@@ -120,6 +120,8 @@ const OrderSummaryNextActionEnum _$orderSummaryNextActionEnum_REVIEW_NRPC =
     const OrderSummaryNextActionEnum._('REVIEW_NRPC');
 const OrderSummaryNextActionEnum _$orderSummaryNextActionEnum_PAY =
     const OrderSummaryNextActionEnum._('PAY');
+const OrderSummaryNextActionEnum _$orderSummaryNextActionEnum_CONFIRM_RECEIPT =
+    const OrderSummaryNextActionEnum._('CONFIRM_RECEIPT');
 
 OrderSummaryNextActionEnum _$orderSummaryNextActionEnumValueOf(String name) {
   switch (name) {
@@ -129,6 +131,8 @@ OrderSummaryNextActionEnum _$orderSummaryNextActionEnumValueOf(String name) {
       return _$orderSummaryNextActionEnum_REVIEW_NRPC;
     case 'PAY':
       return _$orderSummaryNextActionEnum_PAY;
+    case 'CONFIRM_RECEIPT':
+      return _$orderSummaryNextActionEnum_CONFIRM_RECEIPT;
     default:
       throw ArgumentError(name);
   }
@@ -139,6 +143,7 @@ final BuiltSet<OrderSummaryNextActionEnum> _$orderSummaryNextActionEnumValues =
   _$orderSummaryNextActionEnum_REVIEW_REVISION,
   _$orderSummaryNextActionEnum_REVIEW_NRPC,
   _$orderSummaryNextActionEnum_PAY,
+  _$orderSummaryNextActionEnum_CONFIRM_RECEIPT,
 ]);
 
 Serializer<OrderSummaryProcurementTypeEnum>
@@ -284,11 +289,13 @@ class _$OrderSummaryNextActionEnumSerializer
     'REVIEW_REVISION': 'REVIEW_REVISION',
     'REVIEW_NRPC': 'REVIEW_NRPC',
     'PAY': 'PAY',
+    'CONFIRM_RECEIPT': 'CONFIRM_RECEIPT',
   };
   static const Map<Object, String> _fromWire = const <Object, String>{
     'REVIEW_REVISION': 'REVIEW_REVISION',
     'REVIEW_NRPC': 'REVIEW_NRPC',
     'PAY': 'PAY',
+    'CONFIRM_RECEIPT': 'CONFIRM_RECEIPT',
   };
 
   @override

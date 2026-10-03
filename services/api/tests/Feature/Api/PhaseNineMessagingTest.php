@@ -21,7 +21,6 @@ use Database\Seeders\SystemFoundationSeeder;
 use Illuminate\Contracts\Broadcasting\Broadcaster;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Broadcast;
@@ -574,7 +573,8 @@ final class PhaseNineMessagingTest extends TestCase
         } catch (AuthenticationException $e) {
             self::assertSame('FULFILLMENT_THREAD_NOT_READY', $e->errorCode);
         }
-        self::assertFalse(FulfillmentThreadService::ENTRY_ENABLED);
+        // Phase 12 enables entry through the READY_FOR_PICKUP / OUT_FOR_DELIVERY milestone transaction.
+        self::assertTrue(FulfillmentThreadService::ENTRY_ENABLED);
         DB::table('orders')->where('id', $order)->update(['order_state' => 'READY_FOR_PICKUP']);
         $assigned = $this->teamMember($store, 'FULFILLMENT');
         DB::table('order_fulfillment_assignments')->insert(['id' => (string) Str::uuid7(), 'order_id' => $order, 'user_id' => $assigned->id, 'assigned_by_user_id' => $owner->id, 'created_at' => now(), 'updated_at' => now()]);
@@ -590,9 +590,7 @@ final class PhaseNineMessagingTest extends TestCase
         $this->post('/api/v1/vendor/conversations/'.$id.'/attachments', ['file' => UploadedFile::fake()->createWithContent('receipt.pdf', '%PDF-1.4 financial receipt'), 'client_message_id' => (string) Str::uuid7()], ['Accept' => 'application/json'])->assertUnprocessable();
         $channel = $this->getJson('/api/v1/vendor/conversations/'.$id)->assertOk()->json('data.conversation.channel');
         $replacement = $this->teamMember($store, 'FULFILLMENT');
-        $request = Request::create('/internal');
-        $request->setUserResolver(fn () => $owner);
-        app(FulfillmentThreadService::class)->assign($request, $order, $replacement->id, 'Shift handover');
+        DB::transaction(fn () => app(FulfillmentThreadService::class)->assign(DB::table('orders')->where('id', $order)->lockForUpdate()->first(), $owner, (int) $replacement->id, 'Shift handover'));
         self::assertFalse(app(ConversationAccess::class)->allows($assigned, $c));
         $this->getJson('/api/v1/vendor/conversations/'.$id)->assertNotFound();
         $this->get('/api/v1/vendor/conversations/'.$id.'/attachments/'.$attachment)->assertNotFound();
@@ -605,12 +603,58 @@ final class PhaseNineMessagingTest extends TestCase
         $this->postJson('/api/v1/buyers/conversations/'.$id.'/quotation/accept', ['version_id' => (string) Str::uuid7()], ['Idempotency-Key' => (string) Str::uuid7()])->assertForbidden();
         [, $otherOrder] = $this->pickupOrder($store, $listing);
         DB::table('orders')->where('id', $otherOrder)->update(['order_state' => 'READY_FOR_PICKUP']);
-        app(FulfillmentThreadService::class)->assign($request, $otherOrder, (int) $assigned->id, 'Separate order assignment');
+        DB::transaction(fn () => app(FulfillmentThreadService::class)->assign(DB::table('orders')->where('id', $otherOrder)->lockForUpdate()->first(), $owner, (int) $assigned->id, 'Separate order assignment'));
         $otherThread = app(FulfillmentThreadService::class)->ensureForMilestone($otherOrder);
         $this->signInStoreMember($replacement);
         $this->getJson('/api/v1/vendor/conversations/'.$otherThread)->assertNotFound();
         $this->signInStoreMember($assigned);
         $this->get('/api/v1/vendor/conversations/'.$otherThread.'/attachments/'.$attachment)->assertNotFound();
+    }
+
+    public function test_buyer_inbox_excludes_fulfillment_threads_and_archiving_is_personal_reversible_and_history_safe(): void
+    {
+        [$store, $owner, $listing] = $this->pickupStore('Archive inbox');
+        [$buyer, $order] = $this->pickupOrder($store, $listing);
+        $this->signInBuyer($buyer);
+        $sales = $this->postJson('/api/v1/buyers/conversations', ['vendor_id' => $store->id], ['Idempotency-Key' => (string) Str::uuid7()])->assertCreated()->json('data.id');
+        $this->postJson('/api/v1/buyers/conversations/'.$sales.'/messages', ['body' => 'Is this in stock?', 'client_message_id' => (string) Str::uuid7()])->assertCreated();
+        DB::table('orders')->where('id', $order)->update(['order_state' => 'READY_FOR_PICKUP']);
+        $assigned = $this->teamMember($store, 'FULFILLMENT');
+        DB::table('order_fulfillment_assignments')->insert(['id' => (string) Str::uuid7(), 'order_id' => $order, 'user_id' => $assigned->id, 'assigned_by_user_id' => $owner->id, 'created_at' => now(), 'updated_at' => now()]);
+        $fulfillment = app(FulfillmentThreadService::class)->ensureForMilestone($order);
+
+        $this->signInBuyer($buyer);
+        $this->getJson('/api/v1/buyers/conversations')->assertOk()->assertJsonCount(1, 'data.items')->assertJsonPath('data.items.0.id', $sales);
+        $this->getJson('/api/v1/buyers/conversations/'.$fulfillment)->assertOk()->assertJsonPath('data.conversation.purpose', 'FULFILLMENT');
+        $this->putJson('/api/v1/buyers/conversations/'.$fulfillment.'/archive')->assertConflict()->assertJsonPath('errors.0.code', 'CONVERSATION_NOT_ARCHIVABLE');
+
+        $this->putJson('/api/v1/buyers/conversations/'.$sales.'/archive')->assertOk();
+        $this->putJson('/api/v1/buyers/conversations/'.$sales.'/archive')->assertOk();
+        self::assertSame(1, DB::table('conversation_archives')->where('conversation_id', $sales)->count());
+        $this->getJson('/api/v1/buyers/conversations')->assertOk()->assertJsonCount(0, 'data.items');
+        $this->getJson('/api/v1/buyers/conversations?archived=true')->assertOk()->assertJsonCount(1, 'data.items')->assertJsonPath('data.items.0.id', $sales);
+        $this->getJson('/api/v1/buyers/conversations/'.$sales)->assertOk()->assertJsonFragment(['body' => 'Is this in stock?']);
+        self::assertSame(1, DB::table('messages')->where('conversation_id', $sales)->count());
+
+        $this->buyer();
+        $this->putJson('/api/v1/buyers/conversations/'.$sales.'/archive')->assertNotFound();
+        $this->deleteJson('/api/v1/buyers/conversations/'.$sales.'/archive')->assertNotFound();
+        self::assertSame(1, DB::table('conversation_archives')->where('conversation_id', $sales)->count());
+
+        $this->signInBuyer($buyer);
+        $this->deleteJson('/api/v1/buyers/conversations/'.$sales.'/archive')->assertOk();
+        $this->getJson('/api/v1/buyers/conversations')->assertOk()->assertJsonCount(1, 'data.items');
+        $this->putJson('/api/v1/buyers/conversations/'.$sales.'/archive')->assertOk();
+
+        $this->signInStoreMember($owner);
+        $this->postJson('/api/v1/vendor/conversations/'.$sales.'/messages', ['body' => 'Yes, available.', 'client_message_id' => (string) Str::uuid7()])->assertCreated();
+        $this->putJson('/api/v1/vendor/conversations/'.$sales.'/archive')->assertNotFound();
+        $this->getJson('/api/v1/vendor/conversations')->assertOk()->assertJsonCount(1, 'data.items')->assertJsonPath('data.items.0.id', $sales);
+        $this->getJson('/api/v1/vendor/conversations/'.$fulfillment)->assertOk();
+        $this->signInStoreMember($assigned);
+        $this->getJson('/api/v1/vendor/conversations')->assertOk()->assertJsonCount(1, 'data.items')->assertJsonPath('data.items.0.id', $fulfillment);
+        self::assertSame(0, DB::table('conversation_archives')->where('conversation_id', $sales)->count());
+        self::assertSame(2, DB::table('messages')->where('conversation_id', $sales)->count());
     }
 
     public function test_nrpc_quotation_acceptance_freezes_terms_and_allocations_once(): void

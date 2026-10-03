@@ -15,7 +15,7 @@ class MessagingAdapter implements HttpClientAdapter {
     requests.add(options);
     return ResponseBody.fromString(
       options.method == 'GET'
-          ? '{"data":{"items":[{"id":"thread","purpose":"SALES","context_type":"ITEM_BASED","lock_version":1,"store":{"id":"store","name":"Fixture store","verified":true,"logo_url":null},"handler":{"display_name":"Public staff","role":"OWNER","avatar_path":null},"buyer":{"display_name":"Buyer","role":"BUYER","avatar_path":null},"unread_count":0,"channel":"channel","locked_reference":{},"updated_at":"2026-10-02T12:00:00+00:00","can_transfer":false,"fulfillment_entry_enabled":false,"last_message_preview":"","legacy_conversation_ids":[]}],"page":1,"has_more":false},"meta":{},"errors":[]}'
+          ? '{"data":{"items":[{"id":"thread","purpose":"SALES","context_type":"ITEM_BASED","lock_version":1,"store":{"id":"store","name":"Fixture store","verified":true,"logo_url":null},"handler":{"display_name":"Public staff","role":"OWNER","avatar_path":null},"buyer":{"display_name":"Buyer","role":"BUYER","avatar_path":null},"unread_count":0,"channel":"channel","locked_reference":{},"updated_at":"2026-10-02T12:00:00+00:00","can_transfer":false,"fulfillment_entry_enabled":false,"read_only":false,"last_message_preview":"","legacy_conversation_ids":[]}],"page":1,"has_more":false},"meta":{},"errors":[]}'
           : '{"data":{"id":"thread"},"meta":{},"errors":[]}',
       200,
       headers: {

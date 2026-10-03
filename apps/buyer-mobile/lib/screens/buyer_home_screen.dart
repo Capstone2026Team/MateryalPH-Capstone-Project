@@ -116,6 +116,8 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
           openStoreProfile: _openStore,
           messaging: _messaging,
           orders: _orders,
+          discovery: _discovery,
+          deviceLocation: widget.deviceLocation,
           onOpenMap: () => _select(0),
         );
   late final MessagingRepository? _messaging =
@@ -241,6 +243,14 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                     vendorId: id,
                     vendorName: name,
                   ),
+            loadProducts: _navigation == null
+                ? null
+                : (sort, cursor) =>
+                      _navigation.storeListings(storeId, sort, cursor),
+            onOpenListing: _navigation == null
+                ? null
+                : (context, listingId) =>
+                      _navigation.openListing(context, listingId),
           ),
         ),
       );
@@ -310,6 +320,24 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
     );
   }
 
+  Future<void> _openConversation(BuildContext context, String id) =>
+      Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (_) => MessagingScreen(
+            repository: _messaging!,
+            conversationId: id,
+            onOpenProduct: _navigation == null
+                ? null
+                : (id) => _navigation.openListing(context, id),
+            orders: _orders,
+            onOpenCart: _navigation == null
+                ? null
+                : () => _navigation.openCart(context),
+            onOpenNotifications: () => _unavailable('Notifications'),
+          ),
+        ),
+      );
+
   Widget _projectsPage() {
     if (_projects != null && _discovery != null) {
       return ProjectsScreen(
@@ -318,26 +346,14 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
         discovery: _discovery,
         deviceLocation: widget.deviceLocation,
         mapBuilder: widget.mapBuilder,
-        openConversation: (context, id) => Navigator.of(context).push<void>(
-          MaterialPageRoute(
-            builder: (_) => MessagingScreen(
-              repository: _messaging!,
-              conversationId: id,
-              onOpenProduct: _navigation == null
-                  ? null
-                  : (id) => _navigation.openListing(context, id),
-              orders: _orders,
-              onOpenCart: _navigation == null
-                  ? null
-                  : () => _navigation.openCart(context),
-              onOpenNotifications: () => _unavailable('Notifications'),
-            ),
-          ),
-        ),
+        openConversation: _openConversation,
         openOrder: (context, id) => Navigator.of(context).push<void>(
           MaterialPageRoute(
-            builder: (_) =>
-                OrderDetailsScreen(orderId: id, repository: _orders!),
+            builder: (_) => OrderDetailsScreen(
+              orderId: id,
+              repository: _orders!,
+              openConversation: _messaging == null ? null : _openConversation,
+            ),
           ),
         ),
         openStore: _openStore,
@@ -377,7 +393,12 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
             ? null
             : () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
-                  builder: (_) => OrdersScreen(repository: _orders),
+                  builder: (_) => OrdersScreen(
+                    repository: _orders,
+                    openConversation: _messaging == null
+                        ? null
+                        : _openConversation,
+                  ),
                 ),
               ),
         onOpenCart: _navigation == null

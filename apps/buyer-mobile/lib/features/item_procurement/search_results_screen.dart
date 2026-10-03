@@ -594,7 +594,11 @@ class ListingCard extends StatelessWidget {
     required this.onOpen,
     this.onFavorite,
     this.onExplain,
+    this.showFavorite = true,
   });
+
+  /// False where the card is already inside one store's page, where a store Favorite adds nothing.
+  final bool showFavorite;
   final ListingCardView card;
   final VoidCallback onOpen;
   final VoidCallback? onFavorite;
@@ -653,19 +657,20 @@ class ListingCard extends StatelessWidget {
                         child: ListingBadge(code: 'BEST_PRICE', solid: true),
                       ),
                     ),
-                  Positioned(
-                    right: 0,
-                    top: 0,
-                    child: RoundIconButton(
-                      icon: card.isFavorite
-                          ? LucideIcons.heartOff
-                          : LucideIcons.heart,
-                      tooltip: card.isFavorite
-                          ? 'Remove Favorite Supplier ${card.vendorName}'
-                          : 'Save ${card.vendorName} as a Favorite Supplier',
-                      onPressed: onFavorite,
+                  if (showFavorite)
+                    Positioned(
+                      right: 0,
+                      top: 0,
+                      child: RoundIconButton(
+                        icon: card.isFavorite
+                            ? LucideIcons.heartOff
+                            : LucideIcons.heart,
+                        tooltip: card.isFavorite
+                            ? 'Remove Favorite Supplier ${card.vendorName}'
+                            : 'Save ${card.vendorName} as a Favorite Supplier',
+                        onPressed: onFavorite,
+                      ),
                     ),
-                  ),
                 ],
               ),
               Expanded(

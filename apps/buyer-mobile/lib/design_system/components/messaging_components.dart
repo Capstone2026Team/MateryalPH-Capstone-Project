@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
@@ -295,6 +296,106 @@ class ConversationMessageBubble extends StatelessWidget {
             ),
             const SizedBox(height: 4),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Three bouncing dots in a received-message bubble, shown while the store is
+/// typing. Motion is replaced by static dots when the system disables animations.
+class TypingIndicator extends StatefulWidget {
+  const TypingIndicator({super.key, this.name});
+  final String? name;
+
+  @override
+  State<TypingIndicator> createState() => _TypingIndicatorState();
+}
+
+class _TypingIndicatorState extends State<TypingIndicator>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1200),
+  );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _controller.stop();
+    } else if (!_controller.isAnimating) {
+      _controller.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final who = widget.name == null || widget.name!.isEmpty
+        ? 'The store'
+        : widget.name!;
+    return Semantics(
+      liveRegion: true,
+      label: '$who is typing',
+      child: ExcludeSemantics(
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: Container(
+            margin: const EdgeInsets.only(top: 6, bottom: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: const BoxDecoration(
+              color: BuyerTheme.canvas,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
+                bottomLeft: Radius.circular(4),
+                bottomRight: Radius.circular(16),
+              ),
+            ),
+            child: AnimatedBuilder(
+              animation: _controller,
+              builder: (context, _) => Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (var i = 0; i < 3; i++)
+                    Padding(
+                      padding: EdgeInsets.only(right: i < 2 ? 5 : 0),
+                      child: Transform.translate(
+                        offset: Offset(
+                          0,
+                          _controller.isAnimating
+                              ? -4 *
+                                    math.max(
+                                      0,
+                                      math.sin(
+                                        (_controller.value - i * .15) *
+                                            2 *
+                                            math.pi,
+                                      ),
+                                    )
+                              : 0,
+                        ),
+                        child: const SizedBox.square(
+                          dimension: 8,
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: BuyerTheme.muted,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );

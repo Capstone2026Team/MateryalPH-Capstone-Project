@@ -624,6 +624,15 @@ final class ApiProcurementRepository implements ProcurementRepository {
                 tripsMax: estimate.tripsMax,
                 vehiclesMin: estimate.vehiclesMin,
                 vehiclesMax: estimate.vehiclesMax,
+                options: [
+                  for (final option in estimate.options)
+                    DeliveryOptionView(
+                      vehicleName: option.vehicleName,
+                      vehicles: option.vehicles,
+                      trips: option.trips,
+                      feeCentavos: option.feeCentavos,
+                    ),
+                ],
               ),
       ),
       paymentMethods: group.paymentMethods

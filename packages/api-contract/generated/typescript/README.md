@@ -1,4 +1,4 @@
-# @materyalph/api-client-ts@1.0.0-phase.11
+# @materyalph/api-client-ts@1.0.0-phase.12
 
 A TypeScript SDK client for the localhost API.
 
@@ -100,6 +100,12 @@ All URIs are relative to */api/v1*
 *AdminFinanceApi* | [**resolveFinanceReviewItem**](docs/AdminFinanceApi.md#resolvefinancereviewitem) | **POST** /admin/finance/review-items/{itemId}/resolve |
 *AdminFinanceApi* | [**resolveWithholdingOverlap**](docs/AdminFinanceApi.md#resolvewithholdingoverlap) | **POST** /admin/finance/withholding-accumulators/{accumulatorId}/overlap |
 *AdminFinanceApi* | [**runPaymentReconciliation**](docs/AdminFinanceApi.md#runpaymentreconciliation) | **POST** /admin/finance/reconciliation/run |
+*AdminOrderOperationsApi* | [**confirmAdminReimbursement**](docs/AdminOrderOperationsApi.md#confirmadminreimbursement) | **POST** /admin/order-operations/reimbursements/{reimbursementId}/confirm |
+*AdminOrderOperationsApi* | [**getAdminOrderOperationsSummary**](docs/AdminOrderOperationsApi.md#getadminorderoperationssummary) | **GET** /admin/order-operations/summary |
+*AdminOrderOperationsApi* | [**listAdminCancellationRequests**](docs/AdminOrderOperationsApi.md#listadmincancellationrequests) | **GET** /admin/order-operations/cancellation-requests |
+*AdminOrderOperationsApi* | [**listAdminRefunds**](docs/AdminOrderOperationsApi.md#listadminrefunds) | **GET** /admin/order-operations/refunds |
+*AdminOrderOperationsApi* | [**listAdminReimbursements**](docs/AdminOrderOperationsApi.md#listadminreimbursements) | **GET** /admin/order-operations/reimbursements |
+*AdminOrderOperationsApi* | [**retryAdminRefund**](docs/AdminOrderOperationsApi.md#retryadminrefund) | **POST** /admin/order-operations/refunds/{refundId}/retry |
 *AdminProductComplianceApi* | [**activateComplianceRegister**](docs/AdminProductComplianceApi.md#activatecomplianceregister) | **POST** /admin/product-compliance/registers/{registerId}/activate |
 *AdminProductComplianceApi* | [**createComparableGroup**](docs/AdminProductComplianceApi.md#createcomparablegroup) | **POST** /admin/taxonomy/comparable-groups |
 *AdminProductComplianceApi* | [**decideProductCompliance**](docs/AdminProductComplianceApi.md#decideproductcompliance) | **POST** /admin/product-compliance/{submissionId}/decision |
@@ -171,6 +177,14 @@ All URIs are relative to */api/v1*
 *BuyerExploreApi* | [**resetBuyerItemRankingPreferences**](docs/BuyerExploreApi.md#resetbuyeritemrankingpreferences) | **DELETE** /buyers/ranking-preferences/item-based |
 *BuyerExploreApi* | [**saveBuyerItemRankingPreferences**](docs/BuyerExploreApi.md#savebuyeritemrankingpreferences) | **PUT** /buyers/ranking-preferences/item-based |
 *BuyerExploreApi* | [**searchBuyerListings**](docs/BuyerExploreApi.md#searchbuyerlistings) | **POST** /buyers/listings/search |
+*BuyerFulfillmentApi* | [**acknowledgeBuyerReimbursement**](docs/BuyerFulfillmentApi.md#acknowledgebuyerreimbursement) | **POST** /buyers/orders/{orderId}/reimbursements/{reimbursementId}/acknowledge |
+*BuyerFulfillmentApi* | [**cancelBuyerOrder**](docs/BuyerFulfillmentApi.md#cancelbuyerorder) | **POST** /buyers/orders/{orderId}/cancel |
+*BuyerFulfillmentApi* | [**confirmBuyerReceipt**](docs/BuyerFulfillmentApi.md#confirmbuyerreceipt) | **POST** /buyers/orders/{orderId}/receipt/confirm |
+*BuyerFulfillmentApi* | [**getBuyerCancellationPreview**](docs/BuyerFulfillmentApi.md#getbuyercancellationpreview) | **GET** /buyers/orders/{orderId}/cancellation-preview |
+*BuyerFulfillmentApi* | [**getBuyerOrderFile**](docs/BuyerFulfillmentApi.md#getbuyerorderfile) | **GET** /buyers/orders/{orderId}/files/{fileId} |
+*BuyerFulfillmentApi* | [**reportBuyerProblem**](docs/BuyerFulfillmentApi.md#reportbuyerproblem) | **POST** /buyers/orders/{orderId}/problems |
+*BuyerFulfillmentApi* | [**resolveBuyerProblem**](docs/BuyerFulfillmentApi.md#resolvebuyerproblem) | **POST** /buyers/orders/{orderId}/problems/{issueId}/resolve |
+*BuyerFulfillmentApi* | [**withdrawBuyerCancellationRequest**](docs/BuyerFulfillmentApi.md#withdrawbuyercancellationrequest) | **POST** /buyers/orders/{orderId}/cancellation-request/withdraw |
 *BuyerLocationsApi* | [**autocompleteBuyerLocation**](docs/BuyerLocationsApi.md#autocompletebuyerlocation) | **POST** /buyers/locations/autocomplete |
 *BuyerLocationsApi* | [**createBuyerLocation**](docs/BuyerLocationsApi.md#createbuyerlocation) | **POST** /buyers/locations |
 *BuyerLocationsApi* | [**getBuyerOnboarding**](docs/BuyerLocationsApi.md#getbuyeronboarding) | **GET** /buyers/onboarding |
@@ -218,6 +232,7 @@ All URIs are relative to */api/v1*
 *BuyerProjectsApi* | [**searchProjectMaterials**](docs/BuyerProjectsApi.md#searchprojectmaterials) | **GET** /buyers/project-materials |
 *BuyerProjectsApi* | [**selectProjectVendor**](docs/BuyerProjectsApi.md#selectprojectvendor) | **POST** /buyers/work-packages/{packageId}/selection |
 *BuyerProjectsApi* | [**updateProject**](docs/BuyerProjectsApi.md#updateproject) | **PATCH** /buyers/projects/{projectId} |
+*MessagingApi* | [**archiveChatConversation**](docs/MessagingApi.md#archivechatconversation) | **PUT** /{messagingPortal}/conversations/{conversationId}/archive |
 *MessagingApi* | [**authorizeChatChannel**](docs/MessagingApi.md#authorizechatchannel) | **POST** /{messagingPortal}/messaging/auth |
 *MessagingApi* | [**createConversation**](docs/MessagingApi.md#createconversation) | **POST** /{messagingPortal}/conversations |
 *MessagingApi* | [**decideChatQuotation**](docs/MessagingApi.md#decidechatquotation) | **POST** /{messagingPortal}/conversations/{conversationId}/quotation/{action} |
@@ -230,6 +245,7 @@ All URIs are relative to */api/v1*
 *MessagingApi* | [**listConversations**](docs/MessagingApi.md#listconversations) | **GET** /{messagingPortal}/conversations |
 *MessagingApi* | [**publishChatQuotation**](docs/MessagingApi.md#publishchatquotation) | **POST** /{messagingPortal}/conversations/{conversationId}/quotation/publish |
 *MessagingApi* | [**readChatMessages**](docs/MessagingApi.md#readchatmessages) | **POST** /{messagingPortal}/conversations/{conversationId}/read |
+*MessagingApi* | [**restoreChatConversation**](docs/MessagingApi.md#restorechatconversation) | **DELETE** /{messagingPortal}/conversations/{conversationId}/archive |
 *MessagingApi* | [**saveChatQuotationDraft**](docs/MessagingApi.md#savechatquotationdraft) | **PUT** /{messagingPortal}/conversations/{conversationId}/quotation/draft |
 *MessagingApi* | [**sendChatMessage**](docs/MessagingApi.md#sendchatmessage) | **POST** /{messagingPortal}/conversations/{conversationId}/messages |
 *MessagingApi* | [**sendChatTyping**](docs/MessagingApi.md#sendchattyping) | **POST** /{messagingPortal}/conversations/{conversationId}/typing |
@@ -284,6 +300,18 @@ All URIs are relative to */api/v1*
 *VendorFleetApi* | [**listVendorFleetVehicles**](docs/VendorFleetApi.md#listvendorfleetvehicles) | **GET** /vendor/fleet/vehicles |
 *VendorFleetApi* | [**saveVendorFleetVehicles**](docs/VendorFleetApi.md#savevendorfleetvehicles) | **PUT** /vendor/fleet/vehicles |
 *VendorFleetApi* | [**uploadFleetVehicleImage**](docs/VendorFleetApi.md#uploadfleetvehicleimage) | **POST** /vendor/fleet/vehicle-images |
+*VendorFulfillmentApi* | [**assignVendorFulfillmentStaff**](docs/VendorFulfillmentApi.md#assignvendorfulfillmentstaff) | **POST** /vendor/orders/{orderId}/fulfillment/assignment |
+*VendorFulfillmentApi* | [**cancelVendorOrder**](docs/VendorFulfillmentApi.md#cancelvendororder) | **POST** /vendor/orders/{orderId}/cancel |
+*VendorFulfillmentApi* | [**finalizeVendorCancellationRequest**](docs/VendorFulfillmentApi.md#finalizevendorcancellationrequest) | **POST** /vendor/orders/{orderId}/cancellation-request/finalize |
+*VendorFulfillmentApi* | [**getVendorCancellationPreview**](docs/VendorFulfillmentApi.md#getvendorcancellationpreview) | **GET** /vendor/orders/{orderId}/cancellation-preview |
+*VendorFulfillmentApi* | [**getVendorOrderFile**](docs/VendorFulfillmentApi.md#getvendororderfile) | **GET** /vendor/orders/{orderId}/files/{fileId} |
+*VendorFulfillmentApi* | [**listVendorFulfillmentAssignees**](docs/VendorFulfillmentApi.md#listvendorfulfillmentassignees) | **GET** /vendor/orders/{orderId}/fulfillment/assignees |
+*VendorFulfillmentApi* | [**recordVendorFulfillmentMilestone**](docs/VendorFulfillmentApi.md#recordvendorfulfillmentmilestone) | **POST** /vendor/orders/{orderId}/fulfillment/milestones |
+*VendorFulfillmentApi* | [**recordVendorFulfillmentTrip**](docs/VendorFulfillmentApi.md#recordvendorfulfillmenttrip) | **POST** /vendor/orders/{orderId}/fulfillment/trips |
+*VendorFulfillmentApi* | [**recordVendorReimbursement**](docs/VendorFulfillmentApi.md#recordvendorreimbursement) | **POST** /vendor/orders/{orderId}/reimbursements/{reimbursementId} |
+*VendorFulfillmentApi* | [**reportVendorVehicleIssue**](docs/VendorFulfillmentApi.md#reportvendorvehicleissue) | **POST** /vendor/orders/{orderId}/fulfillment/vehicle-issues |
+*VendorFulfillmentApi* | [**respondVendorProblem**](docs/VendorFulfillmentApi.md#respondvendorproblem) | **POST** /vendor/orders/{orderId}/problems/{issueId}/respond |
+*VendorFulfillmentApi* | [**retryVendorRefund**](docs/VendorFulfillmentApi.md#retryvendorrefund) | **POST** /vendor/orders/{orderId}/refunds/{refundId}/retry |
 *VendorInventoryApi* | [**confirmVendorStock**](docs/VendorInventoryApi.md#confirmvendorstock) | **POST** /vendor/inventory/confirmations |
 *VendorInventoryApi* | [**getVendorInventorySettings**](docs/VendorInventoryApi.md#getvendorinventorysettings) | **GET** /vendor/inventory/settings |
 *VendorInventoryApi* | [**listVendorInventoryItems**](docs/VendorInventoryApi.md#listvendorinventoryitems) | **GET** /vendor/inventory/items |
@@ -364,11 +392,21 @@ All URIs are relative to */api/v1*
 - [AccountSessionRevocation](docs/AccountSessionRevocation.md)
 - [AccountType](docs/AccountType.md)
 - [AddressComponents](docs/AddressComponents.md)
+- [AdminCancellationRequestListEnvelope](docs/AdminCancellationRequestListEnvelope.md)
+- [AdminCancellationRequestRow](docs/AdminCancellationRequestRow.md)
 - [AdminDashboardAuditEnvelope](docs/AdminDashboardAuditEnvelope.md)
 - [AdminDashboardEnvelope](docs/AdminDashboardEnvelope.md)
 - [AdminDashboardSummary](docs/AdminDashboardSummary.md)
 - [AdminInvitationRequest](docs/AdminInvitationRequest.md)
+- [AdminOrderActionResultEnvelope](docs/AdminOrderActionResultEnvelope.md)
+- [AdminOrderOperationsSummary](docs/AdminOrderOperationsSummary.md)
+- [AdminOrderOperationsSummaryEnvelope](docs/AdminOrderOperationsSummaryEnvelope.md)
 - [AdminPaymentListEnvelope](docs/AdminPaymentListEnvelope.md)
+- [AdminRefundListEnvelope](docs/AdminRefundListEnvelope.md)
+- [AdminRefundRow](docs/AdminRefundRow.md)
+- [AdminReimbursementDecision](docs/AdminReimbursementDecision.md)
+- [AdminReimbursementListEnvelope](docs/AdminReimbursementListEnvelope.md)
+- [AdminReimbursementRow](docs/AdminReimbursementRow.md)
 - [AdminVendorVerificationDecision](docs/AdminVendorVerificationDecision.md)
 - [AdminVendorVerificationDetailEnvelope](docs/AdminVendorVerificationDetailEnvelope.md)
 - [AdminVendorVerificationQueueEnvelope](docs/AdminVendorVerificationQueueEnvelope.md)
@@ -397,6 +435,9 @@ All URIs are relative to */api/v1*
 - [BotStepUpErrorEnvelope](docs/BotStepUpErrorEnvelope.md)
 - [BotStepUpErrorEnvelopeAllOfErrors](docs/BotStepUpErrorEnvelopeAllOfErrors.md)
 - [BotStepUpErrorEnvelopeAllOfErrorsAllOfDetails](docs/BotStepUpErrorEnvelopeAllOfErrorsAllOfDetails.md)
+- [BuyerCancelRequest](docs/BuyerCancelRequest.md)
+- [BuyerCancellationPreview](docs/BuyerCancellationPreview.md)
+- [BuyerCancellationPreviewEnvelope](docs/BuyerCancellationPreviewEnvelope.md)
 - [BuyerIndustryClassification](docs/BuyerIndustryClassification.md)
 - [BuyerLocation](docs/BuyerLocation.md)
 - [BuyerLocationCreate](docs/BuyerLocationCreate.md)
@@ -418,6 +459,10 @@ All URIs are relative to */api/v1*
 - [BuyerOnboardingEnvelope](docs/BuyerOnboardingEnvelope.md)
 - [BuyerOnboardingUpdate](docs/BuyerOnboardingUpdate.md)
 - [BuyerOriginRequest](docs/BuyerOriginRequest.md)
+- [CancellationDecisionView](docs/CancellationDecisionView.md)
+- [CancellationPlan](docs/CancellationPlan.md)
+- [CancellationPlanPayment](docs/CancellationPlanPayment.md)
+- [CancellationRemedy](docs/CancellationRemedy.md)
 - [Cart](docs/Cart.md)
 - [CartDestination](docs/CartDestination.md)
 - [CartDestinationLabels](docs/CartDestinationLabels.md)
@@ -600,6 +645,7 @@ All URIs are relative to */api/v1*
 - [FinancialPreview](docs/FinancialPreview.md)
 - [FinancialPreviewLine](docs/FinancialPreviewLine.md)
 - [FinancialSnapshot](docs/FinancialSnapshot.md)
+- [FleetSummary](docs/FleetSummary.md)
 - [FleetVehicle](docs/FleetVehicle.md)
 - [FleetVehicleEligibility](docs/FleetVehicleEligibility.md)
 - [FleetVehicleImageEnvelope](docs/FleetVehicleImageEnvelope.md)
@@ -611,6 +657,20 @@ All URIs are relative to */api/v1*
 - [FleetVehicleListMetaLimits](docs/FleetVehicleListMetaLimits.md)
 - [FleetVehicleListMetaPermissions](docs/FleetVehicleListMetaPermissions.md)
 - [FleetVehiclesSave](docs/FleetVehiclesSave.md)
+- [FulfillmentArrangement](docs/FulfillmentArrangement.md)
+- [FulfillmentArrangementVehicle](docs/FulfillmentArrangementVehicle.md)
+- [FulfillmentAssignee](docs/FulfillmentAssignee.md)
+- [FulfillmentAssigneeListEnvelope](docs/FulfillmentAssigneeListEnvelope.md)
+- [FulfillmentAssignment](docs/FulfillmentAssignment.md)
+- [FulfillmentAssignmentRequest](docs/FulfillmentAssignmentRequest.md)
+- [FulfillmentIssue](docs/FulfillmentIssue.md)
+- [FulfillmentProof](docs/FulfillmentProof.md)
+- [FulfillmentReceipt](docs/FulfillmentReceipt.md)
+- [FulfillmentStep](docs/FulfillmentStep.md)
+- [FulfillmentThreadRef](docs/FulfillmentThreadRef.md)
+- [FulfillmentTrip](docs/FulfillmentTrip.md)
+- [FulfillmentTripRequest](docs/FulfillmentTripRequest.md)
+- [FulfillmentVehicleIssue](docs/FulfillmentVehicleIssue.md)
 - [GenericDataEnvelope](docs/GenericDataEnvelope.md)
 - [GoogleContentAuthor](docs/GoogleContentAuthor.md)
 - [GoogleMobileExchangeRequest](docs/GoogleMobileExchangeRequest.md)
@@ -694,6 +754,7 @@ All URIs are relative to */api/v1*
 - [OnboardingRequirement](docs/OnboardingRequirement.md)
 - [OnboardingStepCompletion](docs/OnboardingStepCompletion.md)
 - [OrderBuyerRef](docs/OrderBuyerRef.md)
+- [OrderCancellation](docs/OrderCancellation.md)
 - [OrderChange](docs/OrderChange.md)
 - [OrderCheckoutRef](docs/OrderCheckoutRef.md)
 - [OrderCommercialVersion](docs/OrderCommercialVersion.md)
@@ -707,6 +768,7 @@ All URIs are relative to */api/v1*
 - [OrderDetail](docs/OrderDetail.md)
 - [OrderDetailEnvelope](docs/OrderDetailEnvelope.md)
 - [OrderFirstLine](docs/OrderFirstLine.md)
+- [OrderFulfillment](docs/OrderFulfillment.md)
 - [OrderLine](docs/OrderLine.md)
 - [OrderLineInventory](docs/OrderLineInventory.md)
 - [OrderLineQuantity](docs/OrderLineQuantity.md)
@@ -716,6 +778,7 @@ All URIs are relative to */api/v1*
 - [OrderPaymentAvailability](docs/OrderPaymentAvailability.md)
 - [OrderPaymentState](docs/OrderPaymentState.md)
 - [OrderPoint](docs/OrderPoint.md)
+- [OrderRefundTimeline](docs/OrderRefundTimeline.md)
 - [OrderReservation](docs/OrderReservation.md)
 - [OrderRevisionDecision](docs/OrderRevisionDecision.md)
 - [OrderState](docs/OrderState.md)
@@ -748,6 +811,8 @@ All URIs are relative to */api/v1*
 - [PickupPreview](docs/PickupPreview.md)
 - [PriceHistoryEntry](docs/PriceHistoryEntry.md)
 - [PriceHistoryEnvelope](docs/PriceHistoryEnvelope.md)
+- [ProblemResolveRequest](docs/ProblemResolveRequest.md)
+- [ProblemResponseRequest](docs/ProblemResponseRequest.md)
 - [ProcessingFee](docs/ProcessingFee.md)
 - [ProcessingFeeAmount](docs/ProcessingFeeAmount.md)
 - [ProductComplianceCaseEnvelope](docs/ProductComplianceCaseEnvelope.md)
@@ -807,10 +872,12 @@ All URIs are relative to */api/v1*
 - [RankingPreferencesEnvelope](docs/RankingPreferencesEnvelope.md)
 - [RankingPreferencesUpdate](docs/RankingPreferencesUpdate.md)
 - [RankingWeightSet](docs/RankingWeightSet.md)
+- [RefundTimelineItem](docs/RefundTimelineItem.md)
 - [RegisterRequest](docs/RegisterRequest.md)
 - [RegistrationEnvelope](docs/RegistrationEnvelope.md)
 - [RegistrationEnvelopeAllOfData](docs/RegistrationEnvelopeAllOfData.md)
 - [RegulatedMaterialRule](docs/RegulatedMaterialRule.md)
+- [ReimbursementTimelineItem](docs/ReimbursementTimelineItem.md)
 - [ResendBotChallengeRequest](docs/ResendBotChallengeRequest.md)
 - [ReviewResolveRequest](docs/ReviewResolveRequest.md)
 - [RouteEstimate](docs/RouteEstimate.md)
@@ -838,11 +905,16 @@ All URIs are relative to */api/v1*
 - [TaxCategory](docs/TaxCategory.md)
 - [ThresholdStatusEvent](docs/ThresholdStatusEvent.md)
 - [UserIdentity](docs/UserIdentity.md)
+- [VehicleIssueRequest](docs/VehicleIssueRequest.md)
 - [VendorActivationSnapshot](docs/VendorActivationSnapshot.md)
 - [VendorAddressGeocode](docs/VendorAddressGeocode.md)
 - [VendorAddressGeocodeEnvelope](docs/VendorAddressGeocodeEnvelope.md)
 - [VendorAddressSelection](docs/VendorAddressSelection.md)
 - [VendorBotProtectionEvidence](docs/VendorBotProtectionEvidence.md)
+- [VendorCancelRequest](docs/VendorCancelRequest.md)
+- [VendorCancellationPreview](docs/VendorCancellationPreview.md)
+- [VendorCancellationPreviewEnvelope](docs/VendorCancellationPreviewEnvelope.md)
+- [VendorCancellationRequestRef](docs/VendorCancellationRequestRef.md)
 - [VendorCommissionAcceptance](docs/VendorCommissionAcceptance.md)
 - [VendorDocument](docs/VendorDocument.md)
 - [VendorDocumentEnvelope](docs/VendorDocumentEnvelope.md)
@@ -958,8 +1030,8 @@ This TypeScript SDK client supports the [Fetch API](https://fetch.spec.whatwg.or
 and is automatically generated by the
 [OpenAPI Generator](https://openapi-generator.tech) project:
 
-- API version: `1.0.0-phase.11`
-- Package version: `1.0.0-phase.11`
+- API version: `1.0.0-phase.12`
+- Package version: `1.0.0-phase.12`
 - Generator version: `7.25.0`
 - Build package: `org.openapitools.codegen.languages.TypeScriptFetchClientCodegen`
 

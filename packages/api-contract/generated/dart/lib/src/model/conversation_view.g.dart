@@ -149,6 +149,12 @@ class _$ConversationView extends ConversationView {
   @override
   final bool fulfillmentEntryEnabled;
   @override
+  final bool readOnly;
+  @override
+  final String? readOnlyReason;
+  @override
+  final String? orderReference;
+  @override
   final ChatIdentity? buyer;
   @override
   final String? lastMessagePreview;
@@ -181,6 +187,9 @@ class _$ConversationView extends ConversationView {
       required this.updatedAt,
       required this.canTransfer,
       required this.fulfillmentEntryEnabled,
+      required this.readOnly,
+      this.readOnlyReason,
+      this.orderReference,
       this.buyer,
       this.lastMessagePreview,
       this.latestProductId,
@@ -214,6 +223,9 @@ class _$ConversationView extends ConversationView {
         updatedAt == other.updatedAt &&
         canTransfer == other.canTransfer &&
         fulfillmentEntryEnabled == other.fulfillmentEntryEnabled &&
+        readOnly == other.readOnly &&
+        readOnlyReason == other.readOnlyReason &&
+        orderReference == other.orderReference &&
         buyer == other.buyer &&
         lastMessagePreview == other.lastMessagePreview &&
         latestProductId == other.latestProductId &&
@@ -239,6 +251,9 @@ class _$ConversationView extends ConversationView {
     _$hash = $jc(_$hash, updatedAt.hashCode);
     _$hash = $jc(_$hash, canTransfer.hashCode);
     _$hash = $jc(_$hash, fulfillmentEntryEnabled.hashCode);
+    _$hash = $jc(_$hash, readOnly.hashCode);
+    _$hash = $jc(_$hash, readOnlyReason.hashCode);
+    _$hash = $jc(_$hash, orderReference.hashCode);
     _$hash = $jc(_$hash, buyer.hashCode);
     _$hash = $jc(_$hash, lastMessagePreview.hashCode);
     _$hash = $jc(_$hash, latestProductId.hashCode);
@@ -266,6 +281,9 @@ class _$ConversationView extends ConversationView {
           ..add('updatedAt', updatedAt)
           ..add('canTransfer', canTransfer)
           ..add('fulfillmentEntryEnabled', fulfillmentEntryEnabled)
+          ..add('readOnly', readOnly)
+          ..add('readOnlyReason', readOnlyReason)
+          ..add('orderReference', orderReference)
           ..add('buyer', buyer)
           ..add('lastMessagePreview', lastMessagePreview)
           ..add('latestProductId', latestProductId)
@@ -338,6 +356,20 @@ class ConversationViewBuilder
   set fulfillmentEntryEnabled(bool? fulfillmentEntryEnabled) =>
       _$this._fulfillmentEntryEnabled = fulfillmentEntryEnabled;
 
+  bool? _readOnly;
+  bool? get readOnly => _$this._readOnly;
+  set readOnly(bool? readOnly) => _$this._readOnly = readOnly;
+
+  String? _readOnlyReason;
+  String? get readOnlyReason => _$this._readOnlyReason;
+  set readOnlyReason(String? readOnlyReason) =>
+      _$this._readOnlyReason = readOnlyReason;
+
+  String? _orderReference;
+  String? get orderReference => _$this._orderReference;
+  set orderReference(String? orderReference) =>
+      _$this._orderReference = orderReference;
+
   ChatIdentityBuilder? _buyer;
   ChatIdentityBuilder get buyer => _$this._buyer ??= ChatIdentityBuilder();
   set buyer(ChatIdentityBuilder? buyer) => _$this._buyer = buyer;
@@ -392,6 +424,9 @@ class ConversationViewBuilder
       _updatedAt = $v.updatedAt;
       _canTransfer = $v.canTransfer;
       _fulfillmentEntryEnabled = $v.fulfillmentEntryEnabled;
+      _readOnly = $v.readOnly;
+      _readOnlyReason = $v.readOnlyReason;
+      _orderReference = $v.orderReference;
       _buyer = $v.buyer?.toBuilder();
       _lastMessagePreview = $v.lastMessagePreview;
       _latestProductId = $v.latestProductId;
@@ -446,6 +481,10 @@ class ConversationViewBuilder
                 fulfillmentEntryEnabled,
                 r'ConversationView',
                 'fulfillmentEntryEnabled'),
+            readOnly: BuiltValueNullFieldError.checkNotNull(
+                readOnly, r'ConversationView', 'readOnly'),
+            readOnlyReason: readOnlyReason,
+            orderReference: orderReference,
             buyer: _buyer?.build(),
             lastMessagePreview: lastMessagePreview,
             latestProductId: latestProductId,

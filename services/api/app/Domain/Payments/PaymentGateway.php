@@ -24,6 +24,14 @@ interface PaymentGateway
     /** @throws PaymentProviderException */
     public function cancelSession(string $sessionId, ?string $forUserId): void;
 
-    /** @throws PaymentProviderException */
+    /**
+     * Initiates a refund to the original payment. The result proves initiation only; success or failure is taken
+     * from a verified refund event or an authoritative retrieveRefund read.
+     *
+     * @throws PaymentProviderException
+     */
     public function refund(RefundRequest $request): RefundResult;
+
+    /** @throws PaymentProviderException */
+    public function retrieveRefund(string $providerRefundId, ?string $forUserId): ProviderRefund;
 }

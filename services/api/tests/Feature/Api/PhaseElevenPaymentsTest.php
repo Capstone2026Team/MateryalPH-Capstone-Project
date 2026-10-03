@@ -248,7 +248,11 @@ final class PhaseElevenPaymentsTest extends TestCase
         self::assertSame(['PAID', true], [$payment->state, (bool) $payment->late_capture]);
         self::assertSame('EXPIRED', $this->orderState($orderId));
         $refund = DB::table('refunds')->where('source_payment_id', $attempt['id'])->first();
-        self::assertSame(['TECHNICAL_COMPENSATION', (int) $payment->total_centavos, 'REFUNDED'], [$refund->trigger, (int) $refund->amount_centavos, $refund->state]);
+        // Phase 12: the provider request is initiated after commit; REFUNDED waits for a verified refund event.
+        self::assertSame(['TECHNICAL_COMPENSATION', (int) $payment->total_centavos, 'REFUND_PENDING'], [$refund->trigger, (int) $refund->amount_centavos, $refund->state]);
+        self::assertNotNull($refund->provider_reference);
+        $this->deliverWebhook($this->gateway->settleRefund((string) $refund->provider_reference), 'wh-late-refund')->assertOk();
+        self::assertSame('REFUNDED', (string) DB::table('refunds')->where('id', $refund->id)->value('state'));
         self::assertSame('REFUNDED', (string) DB::table('orders')->where('id', $orderId)->value('refund_state'));
         self::assertSame(1, DB::table('finance_review_items')->where('kind', 'LATE_CAPTURE_COMPENSATION')->where('vendor_organization_id', $store->id)->count());
         self::assertSame(0, DB::table('remittance_assessments')->where('payment_id', $attempt['id'])->count(), 'A compensated capture is not a merchant remittance.');

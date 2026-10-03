@@ -49,12 +49,18 @@ final class RemittanceAssessmentService
             return null;
         }
         $components = $this->components($payment);
-
-        return $this->assess([
+        $assessmentId = $this->assess([
             'environment' => 'TEST', 'organization_id' => (string) $payment->vendor_organization_id, 'order_id' => (string) $payment->order_id,
             'financial_snapshot_id' => (string) $payment->financial_snapshot_id, 'payment_id' => $paymentId, 'group_key' => 'COLLECTION:'.$paymentId,
             'instant' => CarbonImmutable::parse((string) $payment->paid_at), 'evidence_origin' => (string) $payment->evidence_origin,
         ] + $components, $correlationId ?? (string) Str::uuid7());
+        // A cancellation finalized before this assessment posted still needs its FIN-07 tax review reference.
+        $refund = DB::table('refunds')->where('source_payment_id', $paymentId)->where('trigger', 'CANCELLATION')->first(['id', 'amount_centavos']);
+        if ($refund !== null && DB::table('remittance_assessments')->where('id', $assessmentId)->where('calculation_state', 'POSTED')->exists()) {
+            $this->openAdjustmentForRefund($assessmentId, (string) $refund->id, (int) $refund->amount_centavos, 'The order was cancelled before this collection was assessed. Review the posted withholding.');
+        }
+
+        return $assessmentId;
     }
 
     /**

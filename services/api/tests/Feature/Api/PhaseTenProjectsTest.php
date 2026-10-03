@@ -366,9 +366,13 @@ final class PhaseTenProjectsTest extends TestCase
         $this->getJson('/api/v1/buyers/work-packages/'.$w['id'])->assertOk()->assertJsonPath('data.budget.pending_centavos', 17300)->assertJsonPath('data.budget.actual_centavos', 0);
         // Synthetic financial facts exercise the Phase 10 read model; Phase 12 owns cancellation actions.
         DB::table('orders')->where('id', $order)->update(['order_state' => 'CANCELLED']);
-        DB::table('cancellation_decisions')->insert(['id' => (string) Str::uuid7(), 'order_id' => $order, 'actor_user_id' => $owner->id, 'state' => 'APPROVED', 'reason' => 'Synthetic approved retention', 'payload' => json_encode(['retained_centavos' => 2000]), 'created_at' => now(), 'updated_at' => now()]);
+        // Phase 12 constraints: a decision records cause and decider, and a CANCELLATION refund links its decision.
+        $decision = (string) Str::uuid7();
+        DB::table('cancellation_decisions')->insert(['id' => $decision, 'order_id' => $order, 'actor_user_id' => $owner->id, 'state' => 'APPROVED', 'reason' => 'Synthetic approved retention', 'payload' => json_encode(['retained_centavos' => 2000]),
+            'cause' => 'BUYER', 'decided_by' => 'VENDOR', 'decision_code' => 'VENDOR_FINALIZED_NRPC_RETAINED', 'created_at' => now(), 'updated_at' => now()]);
         $this->getJson('/api/v1/buyers/work-packages/'.$w['id'])->assertOk()->assertJsonPath('data.budget.pending_centavos', 0)->assertJsonPath('data.budget.actual_centavos', 2000)->assertJsonPath('data.budget.awaiting_recovery_centavos', 15300)->assertJsonPath('data.budget.committed_centavos', 17300)->assertJsonPath('data.budget.remaining_centavos', 982700);
-        DB::table('refunds')->insert(['id' => (string) Str::uuid7(), 'target_type' => 'ORDER', 'order_id' => $order, 'source_payment_id' => $payment, 'trigger' => 'CANCELLATION', 'amount_centavos' => 15300, 'source_captured_centavos' => 17300, 'state' => 'REFUNDED', 'idempotency_key' => (string) Str::uuid7(), 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('refunds')->insert(['id' => (string) Str::uuid7(), 'target_type' => 'ORDER', 'order_id' => $order, 'source_payment_id' => $payment, 'trigger' => 'CANCELLATION', 'amount_centavos' => 15300, 'source_captured_centavos' => 17300, 'state' => 'REFUNDED',
+            'cancellation_decision_id' => $decision, 'idempotency_key' => (string) Str::uuid7(), 'created_at' => now(), 'updated_at' => now()]);
         $this->getJson('/api/v1/buyers/work-packages/'.$w['id'])->assertOk()->assertJsonPath('data.budget.actual_centavos', 2000)->assertJsonPath('data.budget.awaiting_recovery_centavos', 0)->assertJsonPath('data.budget.committed_centavos', 2000)->assertJsonPath('data.budget.remaining_centavos', 998000);
     }
 }

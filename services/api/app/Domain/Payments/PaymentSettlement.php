@@ -35,7 +35,6 @@ final class PaymentSettlement
         private readonly FinancialLedgerService $ledger,
         private readonly WithholdingThresholdService $review,
         private readonly OutboxPublisher $outbox,
-        private readonly PaymentGateway $gateway,
     ) {}
 
     /** @return string APPLIED | DUPLICATE | LATE_CAPTURE_COMPENSATED | CLOSED | PENDING | MISMATCH */
@@ -198,55 +197,8 @@ final class PaymentSettlement
             'A payment was captured after its attempt or order had closed. A technical-compensation refund of the full captured amount was queued; the order was not confirmed.',
             ['order_state' => (string) $order->order_state], ['captured_centavos' => (int) $payment->total_centavos], 'PAYMENT');
         $this->notifier->buyer($order, 'Late payment will be refunded for order '.$order->reference, 'A payment for this order arrived after its payment window closed. MateryalPH queued a full refund to the original payment method (TEST — no real charge). The order was not confirmed by this payment.');
+        // RefundService sends it after commit; success waits for a verified provider event or reconciliation.
         $this->outbox->publish('PAYMENT_REFUND_REQUESTED', 'REFUND', $refundId, ['refund_id' => $refundId, 'correlation_id' => $correlationId]);
-    }
-
-    /** Sends a queued technical-compensation refund to the provider, after commit and outside any lock. */
-    public function sendRefund(string $refundId, string $correlationId): void
-    {
-        $refund = DB::table('refunds')->where('id', $refundId)->first();
-        if ($refund === null || $refund->state !== 'REFUND_PENDING' || $refund->provider_reference !== null) {
-            return;
-        }
-        $payment = DB::table('payments')->where('id', $refund->source_payment_id)->first();
-        if ($payment === null || $payment->provider_payment_request_id === null) {
-            return;
-        }
-        try {
-            $result = $this->gateway->refund(new RefundRequest((string) $refund->id, (string) $payment->provider_payment_request_id, (int) $refund->amount_centavos, 'PHP',
-                $payment->account_scope === 'PLATFORM_ACCOUNT' ? self::platformAccount() : $payment->provider_account_id, 'Technical compensation: capture after the payment attempt closed'));
-        } catch (PaymentProviderException $exception) {
-            if ($exception->kind === PaymentProviderException::REJECTED) {
-                DB::transaction(function () use ($refund, $exception, $correlationId): void {
-                    DB::table('refunds')->where('id', $refund->id)->where('state', 'REFUND_PENDING')->update(['state' => 'REFUND_FAILED', 'failure_code' => $exception->safeCode, 'updated_at' => now()]);
-                    $order = DB::table('orders')->where('id', $refund->order_id)->lockForUpdate()->first();
-                    if ($order !== null && $order->refund_state === 'REFUND_PENDING') {
-                        $this->transitions->apply($order, [OrderStates::REFUND => 'REFUND_FAILED'], OrderActor::system($correlationId), 'PROVIDER_REFUND_REJECTED');
-                    }
-                });
-            }
-
-            return;
-        }
-        DB::table('refunds')->where('id', $refund->id)->whereNull('provider_reference')->update(['provider_reference' => $result->providerRefundId, 'updated_at' => now()]);
-        if (in_array(strtoupper($result->status), ['SUCCEEDED', 'COMPLETED'], true)) {
-            $this->refundSucceeded((string) $refund->id, $correlationId);
-        }
-    }
-
-    public function refundSucceeded(string $refundId, string $correlationId): void
-    {
-        DB::transaction(function () use ($refundId, $correlationId): void {
-            $refund = DB::table('refunds')->where('id', $refundId)->lockForUpdate()->first();
-            if ($refund === null || $refund->state !== 'REFUND_PENDING') {
-                return;
-            }
-            DB::table('refunds')->where('id', $refundId)->update(['state' => 'REFUNDED', 'completed_at' => now(), 'updated_at' => now()]);
-            $order = $refund->order_id === null ? null : DB::table('orders')->where('id', $refund->order_id)->lockForUpdate()->first();
-            if ($order !== null && $order->refund_state === 'REFUND_PENDING') {
-                $this->transitions->apply($order, [OrderStates::REFUND => 'REFUNDED'], OrderActor::system($correlationId), (string) $refund->trigger);
-            }
-        });
     }
 
     private function purposeClosed(object $payment, ?object $order, ?object $statement): bool

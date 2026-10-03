@@ -72,6 +72,12 @@ for (const [schema, field] of [['InventoryPriceChange', 'amount_centavos'], ['Au
   assert.ok([schemas[schema].properties[field].type].flat().includes('integer'), `${schema}.${field} must be integer centavos`)
 }
 assert.equal(schemas.FleetVehicleInput.properties.number_available.minimum, 1)
+assert.equal(schemas.FleetVehicleListMeta.properties.summary.allOf[0].$ref, '#/components/schemas/FleetSummary')
+for (const field of ['configurations', 'total_vehicles', 'active_vehicles', 'available_vehicles', 'out_for_delivery_vehicle_assignments', 'out_for_delivery_orders']) {
+  assert.ok(schemas.FleetSummary.required.includes(field))
+  assert.equal(schemas.FleetSummary.properties[field].type, 'integer')
+  assert.equal(schemas.FleetSummary.properties[field].minimum, 0)
+}
 for (const envelope of ['InventoryLedgerEnvelope', 'InventoryRowEnvelope', 'AutoAcceptPolicyDetailEnvelope', 'FleetVehicleListEnvelope']) {
   assert.deepEqual(schemas[envelope].required, ['data', 'meta', 'errors'], `${envelope} uses the canonical envelope`)
 }

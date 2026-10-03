@@ -23,6 +23,20 @@ class _$VendorOrderPermissions extends VendorOrderPermissions {
   final bool? canRecordPhysicalPayment;
   @override
   final bool? canApproveOnlineBalance;
+  @override
+  final bool? canRecordMilestone;
+  @override
+  final bool? canAssignFulfillment;
+  @override
+  final bool? canCancel;
+  @override
+  final bool? canFinalizeCancellation;
+  @override
+  final bool? canReportVehicleIssue;
+  @override
+  final bool? canRetryRefund;
+  @override
+  final bool? canRespondProblem;
 
   factory _$VendorOrderPermissions(
           [void Function(VendorOrderPermissionsBuilder)? updates]) =>
@@ -36,7 +50,14 @@ class _$VendorOrderPermissions extends VendorOrderPermissions {
       required this.canDecline,
       required this.canViewInventory,
       this.canRecordPhysicalPayment,
-      this.canApproveOnlineBalance})
+      this.canApproveOnlineBalance,
+      this.canRecordMilestone,
+      this.canAssignFulfillment,
+      this.canCancel,
+      this.canFinalizeCancellation,
+      this.canReportVehicleIssue,
+      this.canRetryRefund,
+      this.canRespondProblem})
       : super._();
   @override
   VendorOrderPermissions rebuild(
@@ -58,7 +79,14 @@ class _$VendorOrderPermissions extends VendorOrderPermissions {
         canDecline == other.canDecline &&
         canViewInventory == other.canViewInventory &&
         canRecordPhysicalPayment == other.canRecordPhysicalPayment &&
-        canApproveOnlineBalance == other.canApproveOnlineBalance;
+        canApproveOnlineBalance == other.canApproveOnlineBalance &&
+        canRecordMilestone == other.canRecordMilestone &&
+        canAssignFulfillment == other.canAssignFulfillment &&
+        canCancel == other.canCancel &&
+        canFinalizeCancellation == other.canFinalizeCancellation &&
+        canReportVehicleIssue == other.canReportVehicleIssue &&
+        canRetryRefund == other.canRetryRefund &&
+        canRespondProblem == other.canRespondProblem;
   }
 
   @override
@@ -72,6 +100,13 @@ class _$VendorOrderPermissions extends VendorOrderPermissions {
     _$hash = $jc(_$hash, canViewInventory.hashCode);
     _$hash = $jc(_$hash, canRecordPhysicalPayment.hashCode);
     _$hash = $jc(_$hash, canApproveOnlineBalance.hashCode);
+    _$hash = $jc(_$hash, canRecordMilestone.hashCode);
+    _$hash = $jc(_$hash, canAssignFulfillment.hashCode);
+    _$hash = $jc(_$hash, canCancel.hashCode);
+    _$hash = $jc(_$hash, canFinalizeCancellation.hashCode);
+    _$hash = $jc(_$hash, canReportVehicleIssue.hashCode);
+    _$hash = $jc(_$hash, canRetryRefund.hashCode);
+    _$hash = $jc(_$hash, canRespondProblem.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -86,7 +121,14 @@ class _$VendorOrderPermissions extends VendorOrderPermissions {
           ..add('canDecline', canDecline)
           ..add('canViewInventory', canViewInventory)
           ..add('canRecordPhysicalPayment', canRecordPhysicalPayment)
-          ..add('canApproveOnlineBalance', canApproveOnlineBalance))
+          ..add('canApproveOnlineBalance', canApproveOnlineBalance)
+          ..add('canRecordMilestone', canRecordMilestone)
+          ..add('canAssignFulfillment', canAssignFulfillment)
+          ..add('canCancel', canCancel)
+          ..add('canFinalizeCancellation', canFinalizeCancellation)
+          ..add('canReportVehicleIssue', canReportVehicleIssue)
+          ..add('canRetryRefund', canRetryRefund)
+          ..add('canRespondProblem', canRespondProblem))
         .toString();
   }
 }
@@ -131,6 +173,40 @@ class VendorOrderPermissionsBuilder
   set canApproveOnlineBalance(bool? canApproveOnlineBalance) =>
       _$this._canApproveOnlineBalance = canApproveOnlineBalance;
 
+  bool? _canRecordMilestone;
+  bool? get canRecordMilestone => _$this._canRecordMilestone;
+  set canRecordMilestone(bool? canRecordMilestone) =>
+      _$this._canRecordMilestone = canRecordMilestone;
+
+  bool? _canAssignFulfillment;
+  bool? get canAssignFulfillment => _$this._canAssignFulfillment;
+  set canAssignFulfillment(bool? canAssignFulfillment) =>
+      _$this._canAssignFulfillment = canAssignFulfillment;
+
+  bool? _canCancel;
+  bool? get canCancel => _$this._canCancel;
+  set canCancel(bool? canCancel) => _$this._canCancel = canCancel;
+
+  bool? _canFinalizeCancellation;
+  bool? get canFinalizeCancellation => _$this._canFinalizeCancellation;
+  set canFinalizeCancellation(bool? canFinalizeCancellation) =>
+      _$this._canFinalizeCancellation = canFinalizeCancellation;
+
+  bool? _canReportVehicleIssue;
+  bool? get canReportVehicleIssue => _$this._canReportVehicleIssue;
+  set canReportVehicleIssue(bool? canReportVehicleIssue) =>
+      _$this._canReportVehicleIssue = canReportVehicleIssue;
+
+  bool? _canRetryRefund;
+  bool? get canRetryRefund => _$this._canRetryRefund;
+  set canRetryRefund(bool? canRetryRefund) =>
+      _$this._canRetryRefund = canRetryRefund;
+
+  bool? _canRespondProblem;
+  bool? get canRespondProblem => _$this._canRespondProblem;
+  set canRespondProblem(bool? canRespondProblem) =>
+      _$this._canRespondProblem = canRespondProblem;
+
   VendorOrderPermissionsBuilder() {
     VendorOrderPermissions._defaults(this);
   }
@@ -146,6 +222,13 @@ class VendorOrderPermissionsBuilder
       _canViewInventory = $v.canViewInventory;
       _canRecordPhysicalPayment = $v.canRecordPhysicalPayment;
       _canApproveOnlineBalance = $v.canApproveOnlineBalance;
+      _canRecordMilestone = $v.canRecordMilestone;
+      _canAssignFulfillment = $v.canAssignFulfillment;
+      _canCancel = $v.canCancel;
+      _canFinalizeCancellation = $v.canFinalizeCancellation;
+      _canReportVehicleIssue = $v.canReportVehicleIssue;
+      _canRetryRefund = $v.canRetryRefund;
+      _canRespondProblem = $v.canRespondProblem;
       _$v = null;
     }
     return this;
@@ -183,6 +266,13 @@ class VendorOrderPermissionsBuilder
               canViewInventory, r'VendorOrderPermissions', 'canViewInventory'),
           canRecordPhysicalPayment: canRecordPhysicalPayment,
           canApproveOnlineBalance: canApproveOnlineBalance,
+          canRecordMilestone: canRecordMilestone,
+          canAssignFulfillment: canAssignFulfillment,
+          canCancel: canCancel,
+          canFinalizeCancellation: canFinalizeCancellation,
+          canReportVehicleIssue: canReportVehicleIssue,
+          canRetryRefund: canRetryRefund,
+          canRespondProblem: canRespondProblem,
         );
     replace(_$result);
     return _$result;

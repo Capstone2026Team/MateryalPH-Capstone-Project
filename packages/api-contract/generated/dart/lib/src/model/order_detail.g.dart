@@ -131,6 +131,29 @@ const OrderDetailAvailableActionsEnum
     const OrderDetailAvailableActionsEnum._('FLAG_NRPC');
 const OrderDetailAvailableActionsEnum _$orderDetailAvailableActionsEnum_PAY =
     const OrderDetailAvailableActionsEnum._('PAY');
+const OrderDetailAvailableActionsEnum
+    _$orderDetailAvailableActionsEnum_WITHDRAW =
+    const OrderDetailAvailableActionsEnum._('WITHDRAW');
+const OrderDetailAvailableActionsEnum _$orderDetailAvailableActionsEnum_CANCEL =
+    const OrderDetailAvailableActionsEnum._('CANCEL');
+const OrderDetailAvailableActionsEnum
+    _$orderDetailAvailableActionsEnum_REQUEST_CANCELLATION =
+    const OrderDetailAvailableActionsEnum._('REQUEST_CANCELLATION');
+const OrderDetailAvailableActionsEnum
+    _$orderDetailAvailableActionsEnum_WITHDRAW_CANCELLATION_REQUEST =
+    const OrderDetailAvailableActionsEnum._('WITHDRAW_CANCELLATION_REQUEST');
+const OrderDetailAvailableActionsEnum
+    _$orderDetailAvailableActionsEnum_CONFIRM_RECEIPT =
+    const OrderDetailAvailableActionsEnum._('CONFIRM_RECEIPT');
+const OrderDetailAvailableActionsEnum
+    _$orderDetailAvailableActionsEnum_REPORT_PROBLEM =
+    const OrderDetailAvailableActionsEnum._('REPORT_PROBLEM');
+const OrderDetailAvailableActionsEnum
+    _$orderDetailAvailableActionsEnum_RESOLVE_PROBLEM =
+    const OrderDetailAvailableActionsEnum._('RESOLVE_PROBLEM');
+const OrderDetailAvailableActionsEnum
+    _$orderDetailAvailableActionsEnum_ACKNOWLEDGE_REIMBURSEMENT =
+    const OrderDetailAvailableActionsEnum._('ACKNOWLEDGE_REIMBURSEMENT');
 
 OrderDetailAvailableActionsEnum _$orderDetailAvailableActionsEnumValueOf(
     String name) {
@@ -147,6 +170,22 @@ OrderDetailAvailableActionsEnum _$orderDetailAvailableActionsEnumValueOf(
       return _$orderDetailAvailableActionsEnum_FLAG_NRPC;
     case 'PAY':
       return _$orderDetailAvailableActionsEnum_PAY;
+    case 'WITHDRAW':
+      return _$orderDetailAvailableActionsEnum_WITHDRAW;
+    case 'CANCEL':
+      return _$orderDetailAvailableActionsEnum_CANCEL;
+    case 'REQUEST_CANCELLATION':
+      return _$orderDetailAvailableActionsEnum_REQUEST_CANCELLATION;
+    case 'WITHDRAW_CANCELLATION_REQUEST':
+      return _$orderDetailAvailableActionsEnum_WITHDRAW_CANCELLATION_REQUEST;
+    case 'CONFIRM_RECEIPT':
+      return _$orderDetailAvailableActionsEnum_CONFIRM_RECEIPT;
+    case 'REPORT_PROBLEM':
+      return _$orderDetailAvailableActionsEnum_REPORT_PROBLEM;
+    case 'RESOLVE_PROBLEM':
+      return _$orderDetailAvailableActionsEnum_RESOLVE_PROBLEM;
+    case 'ACKNOWLEDGE_REIMBURSEMENT':
+      return _$orderDetailAvailableActionsEnum_ACKNOWLEDGE_REIMBURSEMENT;
     default:
       throw ArgumentError(name);
   }
@@ -161,6 +200,14 @@ final BuiltSet<OrderDetailAvailableActionsEnum>
   _$orderDetailAvailableActionsEnum_REJECT_NRPC,
   _$orderDetailAvailableActionsEnum_FLAG_NRPC,
   _$orderDetailAvailableActionsEnum_PAY,
+  _$orderDetailAvailableActionsEnum_WITHDRAW,
+  _$orderDetailAvailableActionsEnum_CANCEL,
+  _$orderDetailAvailableActionsEnum_REQUEST_CANCELLATION,
+  _$orderDetailAvailableActionsEnum_WITHDRAW_CANCELLATION_REQUEST,
+  _$orderDetailAvailableActionsEnum_CONFIRM_RECEIPT,
+  _$orderDetailAvailableActionsEnum_REPORT_PROBLEM,
+  _$orderDetailAvailableActionsEnum_RESOLVE_PROBLEM,
+  _$orderDetailAvailableActionsEnum_ACKNOWLEDGE_REIMBURSEMENT,
 ]);
 
 Serializer<OrderDetailProcurementTypeEnum>
@@ -309,6 +356,14 @@ class _$OrderDetailAvailableActionsEnumSerializer
     'REJECT_NRPC': 'REJECT_NRPC',
     'FLAG_NRPC': 'FLAG_NRPC',
     'PAY': 'PAY',
+    'WITHDRAW': 'WITHDRAW',
+    'CANCEL': 'CANCEL',
+    'REQUEST_CANCELLATION': 'REQUEST_CANCELLATION',
+    'WITHDRAW_CANCELLATION_REQUEST': 'WITHDRAW_CANCELLATION_REQUEST',
+    'CONFIRM_RECEIPT': 'CONFIRM_RECEIPT',
+    'REPORT_PROBLEM': 'REPORT_PROBLEM',
+    'RESOLVE_PROBLEM': 'RESOLVE_PROBLEM',
+    'ACKNOWLEDGE_REIMBURSEMENT': 'ACKNOWLEDGE_REIMBURSEMENT',
   };
   static const Map<Object, String> _fromWire = const <Object, String>{
     'APPROVE_REVISION': 'APPROVE_REVISION',
@@ -317,6 +372,14 @@ class _$OrderDetailAvailableActionsEnumSerializer
     'REJECT_NRPC': 'REJECT_NRPC',
     'FLAG_NRPC': 'FLAG_NRPC',
     'PAY': 'PAY',
+    'WITHDRAW': 'WITHDRAW',
+    'CANCEL': 'CANCEL',
+    'REQUEST_CANCELLATION': 'REQUEST_CANCELLATION',
+    'WITHDRAW_CANCELLATION_REQUEST': 'WITHDRAW_CANCELLATION_REQUEST',
+    'CONFIRM_RECEIPT': 'CONFIRM_RECEIPT',
+    'REPORT_PROBLEM': 'REPORT_PROBLEM',
+    'RESOLVE_PROBLEM': 'RESOLVE_PROBLEM',
+    'ACKNOWLEDGE_REIMBURSEMENT': 'ACKNOWLEDGE_REIMBURSEMENT',
   };
 
   @override
@@ -407,6 +470,12 @@ class _$OrderDetail extends OrderDetail {
   final NrpcTermsRef? nrpcTerms;
   @override
   final BuiltList<VendorOrderDeclineReason>? declineReasons;
+  @override
+  final OrderFulfillment? fulfillment;
+  @override
+  final OrderCancellation? cancellation;
+  @override
+  final OrderRefundTimeline? refundTimeline;
 
   factory _$OrderDetail([void Function(OrderDetailBuilder)? updates]) =>
       (OrderDetailBuilder()..update(updates))._build();
@@ -445,7 +514,10 @@ class _$OrderDetail extends OrderDetail {
       this.permissions,
       this.primaryAction,
       this.nrpcTerms,
-      this.declineReasons})
+      this.declineReasons,
+      this.fulfillment,
+      this.cancellation,
+      this.refundTimeline})
       : super._();
   @override
   OrderDetail rebuild(void Function(OrderDetailBuilder) updates) =>
@@ -491,7 +563,10 @@ class _$OrderDetail extends OrderDetail {
         permissions == other.permissions &&
         primaryAction == other.primaryAction &&
         nrpcTerms == other.nrpcTerms &&
-        declineReasons == other.declineReasons;
+        declineReasons == other.declineReasons &&
+        fulfillment == other.fulfillment &&
+        cancellation == other.cancellation &&
+        refundTimeline == other.refundTimeline;
   }
 
   @override
@@ -531,6 +606,9 @@ class _$OrderDetail extends OrderDetail {
     _$hash = $jc(_$hash, primaryAction.hashCode);
     _$hash = $jc(_$hash, nrpcTerms.hashCode);
     _$hash = $jc(_$hash, declineReasons.hashCode);
+    _$hash = $jc(_$hash, fulfillment.hashCode);
+    _$hash = $jc(_$hash, cancellation.hashCode);
+    _$hash = $jc(_$hash, refundTimeline.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -571,7 +649,10 @@ class _$OrderDetail extends OrderDetail {
           ..add('permissions', permissions)
           ..add('primaryAction', primaryAction)
           ..add('nrpcTerms', nrpcTerms)
-          ..add('declineReasons', declineReasons))
+          ..add('declineReasons', declineReasons)
+          ..add('fulfillment', fulfillment)
+          ..add('cancellation', cancellation)
+          ..add('refundTimeline', refundTimeline))
         .toString();
   }
 }
@@ -759,6 +840,24 @@ class OrderDetailBuilder implements Builder<OrderDetail, OrderDetailBuilder> {
   set declineReasons(ListBuilder<VendorOrderDeclineReason>? declineReasons) =>
       _$this._declineReasons = declineReasons;
 
+  OrderFulfillmentBuilder? _fulfillment;
+  OrderFulfillmentBuilder get fulfillment =>
+      _$this._fulfillment ??= OrderFulfillmentBuilder();
+  set fulfillment(OrderFulfillmentBuilder? fulfillment) =>
+      _$this._fulfillment = fulfillment;
+
+  OrderCancellationBuilder? _cancellation;
+  OrderCancellationBuilder get cancellation =>
+      _$this._cancellation ??= OrderCancellationBuilder();
+  set cancellation(OrderCancellationBuilder? cancellation) =>
+      _$this._cancellation = cancellation;
+
+  OrderRefundTimelineBuilder? _refundTimeline;
+  OrderRefundTimelineBuilder get refundTimeline =>
+      _$this._refundTimeline ??= OrderRefundTimelineBuilder();
+  set refundTimeline(OrderRefundTimelineBuilder? refundTimeline) =>
+      _$this._refundTimeline = refundTimeline;
+
   OrderDetailBuilder() {
     OrderDetail._defaults(this);
   }
@@ -800,6 +899,9 @@ class OrderDetailBuilder implements Builder<OrderDetail, OrderDetailBuilder> {
       _primaryAction = $v.primaryAction;
       _nrpcTerms = $v.nrpcTerms?.toBuilder();
       _declineReasons = $v.declineReasons?.toBuilder();
+      _fulfillment = $v.fulfillment?.toBuilder();
+      _cancellation = $v.cancellation?.toBuilder();
+      _refundTimeline = $v.refundTimeline?.toBuilder();
       _$v = null;
     }
     return this;
@@ -862,6 +964,9 @@ class OrderDetailBuilder implements Builder<OrderDetail, OrderDetailBuilder> {
             primaryAction: primaryAction,
             nrpcTerms: _nrpcTerms?.build(),
             declineReasons: _declineReasons?.build(),
+            fulfillment: _fulfillment?.build(),
+            cancellation: _cancellation?.build(),
+            refundTimeline: _refundTimeline?.build(),
           );
     } catch (_) {
       late String _$failedField;
@@ -913,6 +1018,12 @@ class OrderDetailBuilder implements Builder<OrderDetail, OrderDetailBuilder> {
         _nrpcTerms?.build();
         _$failedField = 'declineReasons';
         _declineReasons?.build();
+        _$failedField = 'fulfillment';
+        _fulfillment?.build();
+        _$failedField = 'cancellation';
+        _cancellation?.build();
+        _$failedField = 'refundTimeline';
+        _refundTimeline?.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
             r'OrderDetail', _$failedField, e.toString());

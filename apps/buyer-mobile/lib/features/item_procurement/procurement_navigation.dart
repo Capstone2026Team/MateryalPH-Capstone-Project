@@ -1,7 +1,12 @@
 import '../messaging/chat_delivery_dialog.dart';
 import '../messaging/messaging_repository.dart';
 import '../messaging/messaging_screen.dart';
-import '../map_discovery/discovery_repository.dart' show newIdempotencyKey;
+import '../map_discovery/device_location.dart';
+import '../map_discovery/discovery_models.dart';
+import '../map_discovery/discovery_repository.dart'
+    show DiscoveryRepository, newIdempotencyKey;
+import '../map_discovery/select_location_screen.dart';
+import '../map_discovery/supplier_map.dart' show kMapsClientConfigured;
 import 'package:flutter/material.dart';
 
 import '../orders/orders_repository.dart';
@@ -27,7 +32,13 @@ class ProcurementNavigation {
     this.onOpenMap,
     this.orders,
     this.messaging,
+    this.discovery,
+    this.deviceLocation = const GeolocatorDeviceLocationService(),
   });
+
+  /// Location lookup and saving for the Checkout drop-off; absent where only a preview is shown.
+  final DiscoveryRepository? discovery;
+  final DeviceLocationService deviceLocation;
 
   final ExploreController explore;
   final CartController cart;
@@ -152,6 +163,25 @@ class ProcurementNavigation {
       controller: cart,
       savedLocations: () => explore.savedLocations,
       orders: orders,
+      chooseDropOff: discovery == null ? null : _chooseDropOff,
+    ),
+  );
+
+  /// Opens the location picker for the vehicle drop-off: either straight to the device location
+  /// or to a searchable map pin. The chosen point is saved through the Buyer location API.
+  Future<DiscoveryOrigin?> _chooseDropOff(
+    BuildContext context, {
+    required bool useCurrent,
+  }) => Navigator.of(context).push<DiscoveryOrigin>(
+    MaterialPageRoute(
+      builder: (_) => SelectLocationScreen(
+        repository: discovery!,
+        deviceLocation: deviceLocation,
+        savedLocations: explore.savedLocations,
+        mapsAvailable: kMapsClientConfigured,
+        requireSave: true,
+        autoUseCurrentLocation: useCurrent,
+      ),
     ),
   );
 
@@ -171,6 +201,26 @@ class ProcurementNavigation {
             explore.effectiveSort == ListingSort.favoritesFirst)) {
       await explore.retrySearch();
     }
+  }
+
+  /// One page of a single store's eligible listings for its Store Profile Products tab. The widest
+  /// platform radius is used so the store's own catalog is not cut off by the Map radius; returns
+  /// null while no origin is chosen, because distance and delivery need one.
+  Future<ListingSearchPage?> storeListings(
+    String vendorId,
+    ListingSort sort,
+    String? cursor,
+  ) async {
+    final origin = explore.origin;
+    if (origin == null) return null;
+    return repository.search(
+      origin: origin,
+      radiusKm: kDiscoveryRadiiKm.last,
+      query: '',
+      filters: ListingFilters(vendorId: vendorId),
+      sort: sort,
+      cursor: cursor,
+    );
   }
 
   Future<void> browseStore(

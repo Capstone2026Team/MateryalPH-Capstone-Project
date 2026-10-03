@@ -19,6 +19,13 @@ part 'vendor_order_permissions.g.dart';
 /// * [canViewInventory]
 /// * [canRecordPhysicalPayment]
 /// * [canApproveOnlineBalance]
+/// * [canRecordMilestone]
+/// * [canAssignFulfillment]
+/// * [canCancel]
+/// * [canFinalizeCancellation]
+/// * [canReportVehicleIssue]
+/// * [canRetryRefund]
+/// * [canRespondProblem]
 @BuiltValue()
 abstract class VendorOrderPermissions implements Built<VendorOrderPermissions, VendorOrderPermissionsBuilder> {
   @BuiltValueField(wireName: r'can_confirm')
@@ -44,6 +51,27 @@ abstract class VendorOrderPermissions implements Built<VendorOrderPermissions, V
 
   @BuiltValueField(wireName: r'can_approve_online_balance')
   bool? get canApproveOnlineBalance;
+
+  @BuiltValueField(wireName: r'can_record_milestone')
+  bool? get canRecordMilestone;
+
+  @BuiltValueField(wireName: r'can_assign_fulfillment')
+  bool? get canAssignFulfillment;
+
+  @BuiltValueField(wireName: r'can_cancel')
+  bool? get canCancel;
+
+  @BuiltValueField(wireName: r'can_finalize_cancellation')
+  bool? get canFinalizeCancellation;
+
+  @BuiltValueField(wireName: r'can_report_vehicle_issue')
+  bool? get canReportVehicleIssue;
+
+  @BuiltValueField(wireName: r'can_retry_refund')
+  bool? get canRetryRefund;
+
+  @BuiltValueField(wireName: r'can_respond_problem')
+  bool? get canRespondProblem;
 
   VendorOrderPermissions._();
 
@@ -109,6 +137,55 @@ class _$VendorOrderPermissionsSerializer implements PrimitiveSerializer<VendorOr
       yield r'can_approve_online_balance';
       yield serializers.serialize(
         object.canApproveOnlineBalance,
+        specifiedType: const FullType(bool),
+      );
+    }
+    if (object.canRecordMilestone != null) {
+      yield r'can_record_milestone';
+      yield serializers.serialize(
+        object.canRecordMilestone,
+        specifiedType: const FullType(bool),
+      );
+    }
+    if (object.canAssignFulfillment != null) {
+      yield r'can_assign_fulfillment';
+      yield serializers.serialize(
+        object.canAssignFulfillment,
+        specifiedType: const FullType(bool),
+      );
+    }
+    if (object.canCancel != null) {
+      yield r'can_cancel';
+      yield serializers.serialize(
+        object.canCancel,
+        specifiedType: const FullType(bool),
+      );
+    }
+    if (object.canFinalizeCancellation != null) {
+      yield r'can_finalize_cancellation';
+      yield serializers.serialize(
+        object.canFinalizeCancellation,
+        specifiedType: const FullType(bool),
+      );
+    }
+    if (object.canReportVehicleIssue != null) {
+      yield r'can_report_vehicle_issue';
+      yield serializers.serialize(
+        object.canReportVehicleIssue,
+        specifiedType: const FullType(bool),
+      );
+    }
+    if (object.canRetryRefund != null) {
+      yield r'can_retry_refund';
+      yield serializers.serialize(
+        object.canRetryRefund,
+        specifiedType: const FullType(bool),
+      );
+    }
+    if (object.canRespondProblem != null) {
+      yield r'can_respond_problem';
+      yield serializers.serialize(
+        object.canRespondProblem,
         specifiedType: const FullType(bool),
       );
     }
@@ -192,6 +269,62 @@ class _$VendorOrderPermissionsSerializer implements PrimitiveSerializer<VendorOr
           ) as bool?;
           if (valueDes == null) continue;
           result.canApproveOnlineBalance = valueDes;
+          break;
+        case r'can_record_milestone':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.canRecordMilestone = valueDes;
+          break;
+        case r'can_assign_fulfillment':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.canAssignFulfillment = valueDes;
+          break;
+        case r'can_cancel':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.canCancel = valueDes;
+          break;
+        case r'can_finalize_cancellation':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.canFinalizeCancellation = valueDes;
+          break;
+        case r'can_report_vehicle_issue':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.canReportVehicleIssue = valueDes;
+          break;
+        case r'can_retry_refund':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.canRetryRefund = valueDes;
+          break;
+        case r'can_respond_problem':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.canRespondProblem = valueDes;
           break;
         default:
           unhandled.add(key);

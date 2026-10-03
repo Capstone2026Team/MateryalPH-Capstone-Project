@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Orders;
 
 use App\Domain\Finance\FinancialCalculator;
+use App\Domain\Fulfillment\FulfillmentView;
 use App\Domain\Inventory\InventoryAccess;
 use App\Domain\Inventory\StockAvailability;
 use App\Domain\Payments\PayableAmounts;
@@ -84,6 +85,10 @@ final class OrderQueries
             // The Buyer's own access instructions; shown back to them and to the fulfilling Vendor only.
             $detail['destination']['access_instructions'] = $order->access_instructions_encrypted === null ? null : Crypt::decryptString((string) $order->access_instructions_encrypted);
         }
+        $cancellation = app(CancellationService::class)->buyerAvailability($order);
+        $fulfillment = app(FulfillmentView::class)->present($order, false, '/buyers/orders/'.$order->id.'/files/');
+        $refunds = app(OrderRefundTimeline::class)->present($order, false, '/buyers/orders/'.$order->id.'/files/');
+        $openIssue = ($fulfillment['issue']['state'] ?? null) === 'OPEN';
         $detail['available_actions'] = array_values(array_filter([
             $order->order_state === OrderStates::AWAITING_BUYER_APPROVAL ? 'APPROVE_REVISION' : null,
             $order->order_state === OrderStates::AWAITING_BUYER_APPROVAL ? 'REJECT_REVISION' : null,
@@ -91,8 +96,19 @@ final class OrderQueries
             $order->order_state === OrderStates::AWAITING_NRPC_ACCEPTANCE ? 'REJECT_NRPC' : null,
             $nrpc !== null && $nrpc['flag'] === null && ! OrderStates::isClosed((string) $order->order_state) ? 'FLAG_NRPC' : null,
             app(PayableAmounts::class)->resolve($order) !== null ? 'PAY' : null,
+            $cancellation['mode'] === 'WITHDRAW' ? 'WITHDRAW' : null,
+            in_array($cancellation['mode'], ['CANCEL_BEFORE_PAYMENT', 'CANCEL_NOW'], true) ? 'CANCEL' : null,
+            $cancellation['mode'] === 'REQUEST' ? 'REQUEST_CANCELLATION' : null,
+            $cancellation['can_withdraw_request'] ? 'WITHDRAW_CANCELLATION_REQUEST' : null,
+            in_array($order->order_state, OrderStates::AWAITING_RECEIPT, true) ? 'CONFIRM_RECEIPT' : null,
+            ! $openIssue && in_array($order->order_state, [...OrderStates::HANDOVER_STAGE, ...OrderStates::AWAITING_RECEIPT], true) ? 'REPORT_PROBLEM' : null,
+            $openIssue ? 'RESOLVE_PROBLEM' : null,
+            array_filter($refunds['reimbursements'], static fn (array $row): bool => $row['state'] === 'VENDOR_REIMBURSEMENT_PENDING' && $row['has_evidence']) !== [] ? 'ACKNOWLEDGE_REIMBURSEMENT' : null,
         ]));
         $detail['payment'] = $this->payment($order, true);
+        $detail['fulfillment'] = $fulfillment;
+        $detail['cancellation'] = $cancellation;
+        $detail['refund_timeline'] = $refunds;
 
         return $detail;
     }
@@ -107,7 +123,8 @@ final class OrderQueries
         $this->expiry->expireDueFor('vendor_organization_id', $scope['organization_id']);
         $base = DB::table('orders as o')->where('o.vendor_organization_id', $scope['organization_id']);
         if ($scope['role'] === 'FULFILLMENT') {
-            $base->whereNotIn('o.order_state', [...OrderStates::PENDING_ACCEPTANCE, OrderStates::AWAITING_PAYMENT, OrderStates::DECLINED]);
+            $base->whereNotIn('o.order_state', [...OrderStates::PENDING_ACCEPTANCE, OrderStates::AWAITING_PAYMENT, OrderStates::DECLINED])
+                ->whereIn('o.id', DB::table('order_fulfillment_assignments')->select('order_id')->where('user_id', $request->user()->getKey())->whereNull('ended_at'));
         }
         $query = clone $base;
         $group = $filters['group'] ?? 'ALL';
@@ -165,6 +182,28 @@ final class OrderQueries
         ];
         $detail['permissions']['can_record_physical_payment'] = $order->payment_method !== 'ONLINE' && OrderAccess::allows($scope, PhysicalPaymentService::RECORD_PERMISSION);
         $detail['permissions']['can_approve_online_balance'] = $order->payment_method !== 'ONLINE' && $order->online_balance_approved_at === null && OrderAccess::allows($scope, OrderAccess::REVISE);
+        $cancellations = app(CancellationService::class);
+        $milestoneable = in_array($order->order_state, [OrderStates::CONFIRMED, OrderStates::PROCESSING, ...OrderStates::HANDOVER_STAGE], true);
+        $detail['permissions']['can_record_milestone'] = $milestoneable && OrderAccess::allows($scope, OrderAccess::RECORD_FULFILLMENT);
+        $detail['permissions']['can_assign_fulfillment'] = ! OrderStates::isClosed((string) $order->order_state) && $order->accepted_at !== null
+            && ! in_array($order->order_state, [OrderStates::AWAITING_PAYMENT], true) && OrderAccess::allows($scope, OrderAccess::ASSIGN_FULFILLMENT);
+        $detail['permissions']['can_cancel'] = OrderAccess::allows($scope, OrderAccess::CANCEL) && in_array($order->order_state, [OrderStates::AWAITING_PAYMENT, OrderStates::CONFIRMED,
+            OrderStates::PROCESSING, OrderStates::CANCELLATION_REQUESTED, ...OrderStates::HANDOVER_STAGE], true);
+        $detail['permissions']['can_finalize_cancellation'] = $order->order_state === OrderStates::CANCELLATION_REQUESTED && OrderAccess::allows($scope, OrderAccess::CANCEL);
+        $detail['permissions']['can_report_vehicle_issue'] = $milestoneable && OrderAccess::allows($scope, OrderAccess::RECORD_FULFILLMENT);
+        $detail['permissions']['can_retry_refund'] = OrderAccess::allows($scope, OrderAccess::RETRY_REFUND);
+        $detail['permissions']['can_respond_problem'] = OrderAccess::allows($scope, OrderAccess::RECORD_FULFILLMENT);
+        $detail['fulfillment'] = app(FulfillmentView::class)->present($order, true, '/vendor/orders/'.$order->id.'/files/');
+        $open = DB::table('cancellation_requests')->where('order_id', $order->id)->where('state', 'REQUESTED')->first();
+        $detail['cancellation'] = ['explanation' => $cancellations->vendorExplanation($order), 'reason_codes' => CancellationService::VENDOR_REASONS,
+            'nrpc_retainable_centavos' => $open === null ? 0 : $cancellations->retainableNrpc($order),
+            'open_request' => $open === null ? null : ['reason_code' => (string) $open->reason_code, 'reason' => $open->reason, 'requested_at' => self::iso($open->created_at),
+                'response_due_at' => self::iso($open->response_due_at), 'order_state_at_request' => (string) $open->order_state_at_request]];
+        $timeline = app(OrderRefundTimeline::class)->present($order, true, '/vendor/orders/'.$order->id.'/files/');
+        foreach ($timeline['refunds'] as $index => $refund) {
+            $timeline['refunds'][$index]['can_retry'] = $refund['state'] === 'REFUND_FAILED' && $detail['permissions']['can_retry_refund'];
+        }
+        $detail['refund_timeline'] = $timeline;
         // Order-specific payment status only; store-wide finance stays Owner-only in Finance.
         $detail['payment'] = $this->payment($order, false);
         $detail['primary_action'] = $this->vendorPrimaryAction($order);
@@ -462,6 +501,10 @@ final class OrderQueries
             OrderStates::AWAITING_VENDOR_CONFIRMATION => $order->vendor_response_due_at === null ? null : ['kind' => 'VENDOR_RESPONSE', 'at' => (string) self::iso($order->vendor_response_due_at)],
             OrderStates::AWAITING_BUYER_APPROVAL, OrderStates::AWAITING_NRPC_ACCEPTANCE => $order->buyer_response_due_at === null ? null : ['kind' => 'BUYER_RESPONSE', 'at' => (string) self::iso($order->buyer_response_due_at)],
             OrderStates::AWAITING_PAYMENT => $order->payment_expires_at === null ? null : ['kind' => 'PAYMENT', 'at' => (string) self::iso($order->payment_expires_at)],
+            OrderStates::DELIVERED, OrderStates::PICKED_UP => ($due = DB::table('fulfillments')->where('order_id', $order->id)->value('auto_confirm_due_at')) === null ? null
+                : ['kind' => 'RECEIPT_CONFIRMATION', 'at' => (string) self::iso($due)],
+            OrderStates::CANCELLATION_REQUESTED => ($due = DB::table('cancellation_requests')->where('order_id', $order->id)->where('state', 'REQUESTED')->value('response_due_at')) === null ? null
+                : ['kind' => 'CANCELLATION_RESPONSE', 'at' => (string) self::iso($due)],
             default => null,
         };
     }
@@ -472,6 +515,7 @@ final class OrderQueries
             OrderStates::AWAITING_BUYER_APPROVAL => 'REVIEW_REVISION',
             OrderStates::AWAITING_NRPC_ACCEPTANCE => 'REVIEW_NRPC',
             OrderStates::AWAITING_PAYMENT => 'PAY',
+            OrderStates::DELIVERED, OrderStates::PICKED_UP => 'CONFIRM_RECEIPT',
             default => null,
         };
     }
@@ -482,8 +526,7 @@ final class OrderQueries
             OrderStates::AWAITING_VENDOR_CONFIRMATION => 'CONFIRM',
             OrderStates::AWAITING_BUYER_APPROVAL, OrderStates::AWAITING_NRPC_ACCEPTANCE => 'WAITING_FOR_BUYER',
             OrderStates::AWAITING_PAYMENT => 'WAITING_FOR_PAYMENT',
-            OrderStates::CONFIRMED => 'PREPARE_WHEN_AVAILABLE',
-            default => 'NONE',
+            default => FulfillmentView::vendorNext($order),
         };
     }
 

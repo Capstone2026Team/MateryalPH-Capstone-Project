@@ -9,6 +9,7 @@ use App\Domain\Payments\GatewayDescriptor;
 use App\Domain\Payments\PaymentGateway;
 use App\Domain\Payments\PaymentProviderException;
 use App\Domain\Payments\ProviderAmount;
+use App\Domain\Payments\ProviderRefund;
 use App\Domain\Payments\ProviderSession;
 use App\Domain\Payments\RefundRequest;
 use App\Domain\Payments\RefundResult;
@@ -28,6 +29,9 @@ final class FakePaymentGateway implements PaymentGateway
     public ?string $nextCreate = null;
 
     public bool $retrieveUnavailable = false;
+
+    /** Next refund outcome: REJECT, TIMEOUT or TIMEOUT_AFTER_CREATE. */
+    public ?string $nextRefund = null;
 
     /** @var list<string> Accounts the simulated provider reports as not ready. */
     public array $blockedAccounts = [];
@@ -99,11 +103,80 @@ final class FakePaymentGateway implements PaymentGateway
         }
     }
 
+    /**
+     * Like the provider, a refund is idempotent per key and starts PENDING; settleRefund() completes it and returns
+     * the webhook body. Failure injection: REJECT (definitive, e.g. insufficient balance), TIMEOUT (nothing created)
+     * or TIMEOUT_AFTER_CREATE (created, response lost).
+     */
     public function refund(RefundRequest $request): RefundResult
     {
         $this->refundCalls++;
+        $outcome = $this->nextRefund;
+        $this->nextRefund = null;
+        if ($outcome === 'REJECT') {
+            throw new PaymentProviderException(PaymentProviderException::REJECTED, 'INSUFFICIENT_BALANCE', 400);
+        }
+        if ($outcome === 'TIMEOUT') {
+            throw new PaymentProviderException(PaymentProviderException::UNCERTAIN, 'PROVIDER_TIMEOUT');
+        }
+        $providerId = 'rfd-sim-'.substr(hash('sha256', $request->idempotencyKey), 0, 24);
+        if ($this->loadRefund($providerId) === null) {
+            $this->storeRefund($providerId, ['reference_id' => $request->referenceId, 'payment_request_id' => $request->paymentRequestId, 'amount_centavos' => $request->amountCentavos,
+                'currency' => $request->currency, 'for_user_id' => $request->forUserId, 'status' => 'PENDING', 'failure_code' => null]);
+        }
+        if ($outcome === 'TIMEOUT_AFTER_CREATE') {
+            throw new PaymentProviderException(PaymentProviderException::UNCERTAIN, 'PROVIDER_TIMEOUT');
+        }
 
-        return new RefundResult('rfd-sim-'.substr(hash('sha256', $request->referenceId), 0, 24), 'SUCCEEDED');
+        return new RefundResult($providerId, 'PENDING');
+    }
+
+    public function retrieveRefund(string $providerRefundId, ?string $forUserId): ProviderRefund
+    {
+        $this->retrieveCalls++;
+        if ($this->retrieveUnavailable) {
+            throw new PaymentProviderException(PaymentProviderException::UNAVAILABLE, 'PROVIDER_UNREACHABLE_REFUND_RETRIEVE');
+        }
+        $refund = $this->loadRefund($providerRefundId);
+        if ($refund === null || ($refund['for_user_id'] ?? null) !== $forUserId) {
+            throw new PaymentProviderException(PaymentProviderException::UNAVAILABLE, 'REFUND_NOT_FOUND', 404);
+        }
+
+        return new ProviderRefund($providerRefundId, (string) $refund['reference_id'], (string) $refund['payment_request_id'], (string) $refund['status'],
+            (int) $refund['amount_centavos'], (string) $refund['currency'], $refund['failure_code']);
+    }
+
+    /**
+     * Completes a simulated refund (SUCCEEDED or FAILED) and returns the refund webhook the provider would send.
+     * $amountCentavos overrides the event amount to exercise mismatch handling.
+     *
+     * @return array<string, mixed>
+     */
+    public function settleRefund(string $providerRefundId, string $status = 'SUCCEEDED', ?int $amountCentavos = null): array
+    {
+        $refund = $this->loadRefund($providerRefundId) ?? throw new \LogicException('Unknown simulated refund.');
+        $refund = ['status' => $status, 'failure_code' => $status === 'FAILED' ? 'INSUFFICIENT_BALANCE' : null] + $refund;
+        $this->storeRefund($providerRefundId, $refund);
+
+        return ['event' => $status === 'SUCCEEDED' ? 'refund.succeeded' : 'refund.failed', 'business_id' => $refund['for_user_id'] ?? 'sim-platform-master',
+            'created' => now()->utc()->format('Y-m-d\TH:i:s.v\Z'), 'api_version' => 'SIMULATED', 'data' => [
+                'id' => $providerRefundId, 'reference_id' => $refund['reference_id'], 'payment_request_id' => $refund['payment_request_id'], 'status' => $status,
+                'amount' => ProviderAmount::toProvider($amountCentavos ?? (int) $refund['amount_centavos']), 'currency' => $refund['currency'], 'failure_code' => $refund['failure_code'],
+            ]];
+    }
+
+    /** @return array<string, mixed>|null */
+    private function loadRefund(string $providerRefundId): ?array
+    {
+        $value = Cache::get('simulated-refunds:'.$providerRefundId);
+
+        return is_array($value) ? $value : null;
+    }
+
+    /** @param array<string, mixed> $refund */
+    private function storeRefund(string $providerRefundId, array $refund): void
+    {
+        Cache::forever('simulated-refunds:'.$providerRefundId, $refund);
     }
 
     /**

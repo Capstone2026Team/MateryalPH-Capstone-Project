@@ -36,6 +36,13 @@ describe('conversation and quotation presentation', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Failed to send · Retry' }))
     expect(retry).toHaveBeenCalledOnce()
   })
+  it('shows the Buyer instead of the store when a Buyer is given', () => {
+    render(<ConversationHeader store={{ id: 'store', name: 'RJ Hardware', verified: true }} buyer={{ displayName: 'Maria Santos', role: 'BUYER' }} handler={{ displayName: 'Alex Cruz', role: 'CUSTOMER_SERVICE' }} purpose="SALES" />)
+    expect(screen.getByRole('heading', { name: 'Maria Santos' })).toBeInTheDocument()
+    expect(screen.getByText(/Buyer · Sales & quotations/)).toBeInTheDocument()
+    expect(screen.queryByText('RJ Hardware')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Verified/)).not.toBeInTheDocument()
+  })
   it('shows public identity and fixed role without private contact fields', () => {
     render(<ConversationHeader store={{ id: 'store', name: 'RJ Hardware', verified: true }} handler={{ displayName: 'Alex Cruz', role: 'CUSTOMER_SERVICE' }} purpose="SALES" />)
     expect(screen.getByText('RJ Hardware')).toBeInTheDocument()

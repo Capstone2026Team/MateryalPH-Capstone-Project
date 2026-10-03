@@ -27,9 +27,23 @@ final class ConversationController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $request->validate(['page' => ['sometimes', 'integer', 'between:1,10000']]);
+        $request->validate(['page' => ['sometimes', 'integer', 'between:1,10000'], 'archived' => ['sometimes', 'in:true,false,1,0']]);
 
         return ApiResponse::success($this->conversations->inbox($request));
+    }
+
+    public function archive(Request $request, string $conversationId): JsonResponse
+    {
+        $this->conversations->archive($request, $conversationId, true);
+
+        return ApiResponse::success();
+    }
+
+    public function restore(Request $request, string $conversationId): JsonResponse
+    {
+        $this->conversations->archive($request, $conversationId, false);
+
+        return ApiResponse::success();
     }
 
     public function create(Request $request): JsonResponse

@@ -74,7 +74,7 @@ assert.deepEqual(schemas.MoneyBreakdown.properties.excludes.items.enum, ['VENDOR
 for (const field of ['commission_centavos', 'withholding_centavos', 'fee_assessment', 'earned_centavos']) {
   assert.equal(schemas.MoneyBreakdown.properties[field], undefined, `MoneyBreakdown must not expose ${field}`)
 }
-assert.deepEqual(schemas.ProcessingFee.properties.status.enum, ['PENDING_PAYMENT_CHANNEL', 'QUOTED', 'NOT_APPLICABLE'])
+assert.deepEqual(schemas.ProcessingFee.properties.status.enum, ['PENDING_PAYMENT_CHANNEL', 'QUOTED', 'NOT_APPLICABLE', 'PAID'])
 assert.equal(schemas.NrpcAcceptRequest.properties.acknowledged.const, true, 'NRPC acceptance is explicit')
 assert.ok(schemas.NrpcAcceptRequest.required.includes('terms_version_id'), 'NRPC acceptance names the Terms version shown')
 assert.equal(schemas.NrpcProposal.properties.amount_centavos.maximum, undefined, 'There is no platform-wide NRPC cap')
@@ -94,7 +94,8 @@ assert.match(schemas.OrderLineInventory.description, /Vendor roles only/, 'Line 
 assert.deepEqual(schemas.OrderDestination.properties.vehicle_endpoint.enum, ['INTENDED_LOCATION', 'ALTERNATE_DROP_OFF', null], 'The actual drop-off is named separately from the intended site')
 assert.equal(schemas.OrderDeadlines.properties.timezone.const, 'Asia/Manila')
 assert.equal(schemas.OrderSummary.properties.payment_retryable.type, 'boolean', 'Buyer lists expose the latest attempt retry state without fetching each order')
-assert.deepEqual(schemas.VendorOrderPrimaryAction.enum, ['CONFIRM', 'WAITING_FOR_BUYER', 'WAITING_FOR_PAYMENT', 'PREPARE_WHEN_AVAILABLE', 'NONE'], 'One primary action per state')
+// Phase 12 adds the fulfillment-stage actions; the Phase 8 actions stay.
+assert.deepEqual(schemas.VendorOrderPrimaryAction.enum, ['CONFIRM', 'WAITING_FOR_BUYER', 'WAITING_FOR_PAYMENT', 'PREPARE_WHEN_AVAILABLE', 'START_PREPARATION', 'MARK_READY', 'DISPATCH', 'RECORD_PICKUP', 'RECORD_DELIVERY', 'AWAIT_RECEIPT', 'RESPOND_TO_CANCELLATION', 'NONE'], 'One primary action per state')
 assert.equal(schemas.DeliveryPlan.properties.advisory.const, true, 'A delivery plan is advisory only')
 for (const request of ['CheckoutSubmitRequest', 'OrderRevisionDecision', 'NrpcAcceptRequest', 'NrpcRejectRequest', 'NrpcFlagRequest', 'VendorOrderConfirmRequest', 'VendorOrderDeclineRequest', 'DeliveryPlanRequest', 'NrpcProposal', 'DeliveryConfirmation']) {
   assert.equal(schemas[request].additionalProperties, false, `${request} rejects undocumented fields`)

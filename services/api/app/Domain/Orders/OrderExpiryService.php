@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace App\Domain\Orders;
 
-use App\Domain\Operations\OutboxPublisher;
 use App\Domain\Payments\PaymentReconciliationService;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 /**
  * Expires orders whose response or payment window has passed: the Vendor's 24-hour confirmation window, the
@@ -24,7 +22,6 @@ final class OrderExpiryService
         private readonly OrderTransitionService $transitions,
         private readonly OrderRelease $release,
         private readonly OrderNotifier $notifier,
-        private readonly OutboxPublisher $outbox,
     ) {}
 
     public function sweep(int $limit = 200): int
@@ -74,13 +71,7 @@ final class OrderExpiryService
             $actor = OrderActor::system();
             // Open attempts close with the order; the provider session is cancelled after commit and a capture
             // that still arrives later is compensated, never applied to the expired order.
-            foreach (DB::table('payments')->where('order_id', $orderId)->whereIn('state', ['CREATING', 'PENDING', 'UNCERTAIN'])->lockForUpdate()->get() as $payment) {
-                DB::table('payments')->where('id', $payment->id)->update(['state' => 'EXPIRED', 'expired_at' => now(), 'reconciliation_state' => $payment->provider_session_id === null ? 'PENDING' : 'RECONCILED',
-                    'lock_version' => (int) $payment->lock_version + 1, 'updated_at' => now()]);
-                DB::table('payment_events')->insert(['id' => (string) Str::uuid7(), 'payment_id' => $payment->id, 'state' => 'EXPIRED', 'from_state' => $payment->state, 'source' => 'SYSTEM',
-                    'correlation_id' => $actor->correlationId, 'safe_payload' => json_encode(['reason' => 'ORDER_PAYMENT_WINDOW_EXPIRED'], JSON_THROW_ON_ERROR), 'created_at' => now(), 'updated_at' => now()]);
-                $this->outbox->publish('PAYMENT_SESSION_CANCEL_REQUESTED', 'PAYMENT', (string) $payment->id, ['payment_id' => (string) $payment->id]);
-            }
+            $this->release->closeOpenAttempts($orderId, $actor, 'ORDER_PAYMENT_WINDOW_EXPIRED');
             $this->release->release($order, OrderStates::EXPIRED, $reason, $actor);
             $changes = [OrderStates::ORDER => OrderStates::EXPIRED] + ($order->payment_state === 'PENDING' ? [OrderStates::PAYMENT => 'EXPIRED'] : []);
             $order = $this->transitions->apply($order, $changes, $actor, $reason, null, ['vendor_response_due_at' => null, 'buyer_response_due_at' => null]);

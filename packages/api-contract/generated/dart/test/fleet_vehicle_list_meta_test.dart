@@ -12,6 +12,12 @@ void main() {
       // TODO
     });
 
+    // Organization-wide summary returned to Owners and Store Managers only; omitted for ASSIGNED_ONLY access.
+    // FleetSummary summary
+    test('to test the property `summary`', () async {
+      // TODO
+    });
+
     // FleetVehicleListMetaDelivery delivery
     test('to test the property `delivery`', () async {
       // TODO

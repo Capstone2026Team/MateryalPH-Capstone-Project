@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:materyalph/features/map_discovery/discovery_models.dart';
 import 'package:materyalph/features/orders/order_models.dart';
 import 'package:materyalph/features/orders/orders_repository.dart';
@@ -65,6 +67,10 @@ OrderDetailView orderDetail({
   ConfirmedDeliveryView? confirmedDelivery,
   OrderPaymentView? paymentView,
   String? terminalReasonCode,
+  FulfillmentView? fulfillmentView,
+  CancellationView? cancellation,
+  RefundTimelineView? refundTimeline,
+  int lockVersion = 3,
 }) => OrderDetailView(
   id: 'order-1',
   reference: 'ORD-2026-ABCD1234',
@@ -142,6 +148,10 @@ OrderDetailView orderDetail({
   paymentNotice: state == 'AWAITING_PAYMENT'
       ? 'TEST — no real charge. The order is confirmed only after the payment provider verifies your payment.'
       : null,
+  lockVersion: lockVersion,
+  fulfillment: fulfillmentView,
+  cancellation: cancellation,
+  refundTimeline: refundTimeline,
 );
 
 NrpcView nrpcView({
@@ -332,4 +342,76 @@ class FakeOrdersRepository implements OrdersRepository {
     keys.add(idempotencyKey);
     return _answer('acknowledge:$recordId', null);
   }
+
+  // Phase 12 fulfillment and cancellation: the fake returns scripted server views only.
+  CancellationPreviewView? preview;
+  final Map<String, Uint8List> files = {};
+
+  @override
+  Future<CancellationPreviewView> cancellationPreview(String orderId) =>
+      _answer('cancellationPreview:$orderId', preview!);
+
+  @override
+  Future<OrderDetailView> cancelOrder(
+    String orderId, {
+    required int lockVersion,
+    required String idempotencyKey,
+    String? reasonCode,
+    String? reason,
+  }) => _answer(
+    'cancel:$lockVersion:${reasonCode ?? '-'}:${reason ?? ''}',
+    _decide('cancel', idempotencyKey),
+  );
+
+  @override
+  Future<OrderDetailView> withdrawCancellationRequest(
+    String orderId, {
+    required String idempotencyKey,
+  }) => _answer(
+    'withdrawCancellationRequest',
+    _decide('withdrawCancellationRequest', idempotencyKey),
+  );
+
+  @override
+  Future<OrderDetailView> confirmReceipt(
+    String orderId, {
+    required String idempotencyKey,
+  }) => _answer('confirmReceipt', _decide('confirmReceipt', idempotencyKey));
+
+  @override
+  Future<OrderDetailView> reportProblem(
+    String orderId, {
+    required String category,
+    required String description,
+    required String idempotencyKey,
+    ProblemPhoto? photo,
+  }) => _answer(
+    'reportProblem:$category:${photo?.filename ?? '-'}',
+    _decide('reportProblem', idempotencyKey),
+  );
+
+  @override
+  Future<OrderDetailView> resolveProblem(
+    String orderId, {
+    required String issueId,
+    required String idempotencyKey,
+    String? note,
+  }) => _answer(
+    'resolveProblem:$issueId',
+    _decide('resolveProblem', idempotencyKey),
+  );
+
+  @override
+  Future<OrderDetailView> acknowledgeReimbursement(
+    String orderId, {
+    required String reimbursementId,
+    required String idempotencyKey,
+  }) => _answer(
+    'acknowledgeReimbursement:$reimbursementId',
+    _decide('acknowledgeReimbursement', idempotencyKey),
+  );
+
+  @override
+  Future<Uint8List> orderFile(String orderId, String fileId) =>
+      _answer('orderFile:$fileId', files[fileId] ?? Uint8List(0));
 }

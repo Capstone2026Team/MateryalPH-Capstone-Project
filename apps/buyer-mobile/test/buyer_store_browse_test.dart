@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:materyalph/screens/buyer_store_browse_screen.dart';
+import 'package:materyalph/features/item_procurement/procurement_models.dart';
 import 'package:materyalph_api_client/materyalph_api_client.dart';
+
+import 'item_procurement_fakes.dart';
 
 class _StoreRepository extends BuyerStoreRepository {
   _StoreRepository({this.hoursAvailable = true});
@@ -123,6 +126,14 @@ void main() {
         find.textContaining('This store has paused new procurement'),
         findsOneWidget,
       );
+      expect(find.text('Sample Store'), findsOneWidget);
+      expect(find.text('New Vendor'), findsOneWidget);
+      expect(find.text('Quezon City, Metro Manila'), findsOneWidget);
+      expect(find.text('Shop Front'), findsOneWidget);
+      expect(find.text('Products'), findsOneWidget);
+      await tester.tap(find.text('Store Profile'));
+      await tester.pumpAndSettle();
+      expect(find.text('123 Aurora Boulevard, Quezon City'), findsOneWidget);
       expect(find.text('Store Hours'), findsOneWidget);
       await tester.scrollUntilVisible(
         find.text('Today · Monday, Sep 28'),
@@ -160,6 +171,8 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      await tester.tap(find.text('Store Profile'));
+      await tester.pumpAndSettle();
       await tester.scrollUntilVisible(
         find.text('Hours unavailable'),
         150,
@@ -169,4 +182,62 @@ void main() {
       expect(find.textContaining('8:00'), findsNothing);
     },
   );
+
+  testWidgets('Products tab lists the store listings and sorts on the server', (
+    tester,
+  ) async {
+    final sorts = <ListingSort>[];
+    String? opened;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BuyerPublicStoreProfileScreen(
+          storeId: 'store-1',
+          repository: _StoreRepository(),
+          loadProducts: (sort, cursor) async {
+            sorts.add(sort);
+            return searchPage([
+              listingCard('listing-1', name: 'KD Wood Mouldings', price: 5200),
+              listingCard('listing-2', name: 'SikaGrout 112 PH', price: 65500),
+            ]);
+          },
+          onOpenListing: (context, id) => opened = id,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Products'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('KD Wood Mouldings'), findsOneWidget);
+    expect(find.text('SikaGrout 112 PH'), findsOneWidget);
+    expect(sorts, [ListingSort.bestDeal]);
+
+    await tester.tap(find.text('Price'));
+    await tester.pumpAndSettle();
+    expect(sorts.last, ListingSort.price);
+
+    await tester.ensureVisible(find.text('KD Wood Mouldings'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('KD Wood Mouldings'));
+    expect(opened, 'listing-1');
+  });
+
+  testWidgets('Products tab asks for a location when none is chosen', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BuyerPublicStoreProfileScreen(
+          storeId: 'store-1',
+          repository: _StoreRepository(),
+          loadProducts: (sort, cursor) async => null,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Products'));
+    await tester.pumpAndSettle();
+    expect(find.text('Choose a location first'), findsOneWidget);
+  });
 }
+

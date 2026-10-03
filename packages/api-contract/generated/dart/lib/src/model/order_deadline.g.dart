@@ -12,6 +12,10 @@ const OrderDeadlineKindEnum _$orderDeadlineKindEnum_BUYER_RESPONSE =
     const OrderDeadlineKindEnum._('BUYER_RESPONSE');
 const OrderDeadlineKindEnum _$orderDeadlineKindEnum_PAYMENT =
     const OrderDeadlineKindEnum._('PAYMENT');
+const OrderDeadlineKindEnum _$orderDeadlineKindEnum_RECEIPT_CONFIRMATION =
+    const OrderDeadlineKindEnum._('RECEIPT_CONFIRMATION');
+const OrderDeadlineKindEnum _$orderDeadlineKindEnum_CANCELLATION_RESPONSE =
+    const OrderDeadlineKindEnum._('CANCELLATION_RESPONSE');
 
 OrderDeadlineKindEnum _$orderDeadlineKindEnumValueOf(String name) {
   switch (name) {
@@ -21,6 +25,10 @@ OrderDeadlineKindEnum _$orderDeadlineKindEnumValueOf(String name) {
       return _$orderDeadlineKindEnum_BUYER_RESPONSE;
     case 'PAYMENT':
       return _$orderDeadlineKindEnum_PAYMENT;
+    case 'RECEIPT_CONFIRMATION':
+      return _$orderDeadlineKindEnum_RECEIPT_CONFIRMATION;
+    case 'CANCELLATION_RESPONSE':
+      return _$orderDeadlineKindEnum_CANCELLATION_RESPONSE;
     default:
       throw ArgumentError(name);
   }
@@ -31,6 +39,8 @@ final BuiltSet<OrderDeadlineKindEnum> _$orderDeadlineKindEnumValues =
   _$orderDeadlineKindEnum_VENDOR_RESPONSE,
   _$orderDeadlineKindEnum_BUYER_RESPONSE,
   _$orderDeadlineKindEnum_PAYMENT,
+  _$orderDeadlineKindEnum_RECEIPT_CONFIRMATION,
+  _$orderDeadlineKindEnum_CANCELLATION_RESPONSE,
 ]);
 
 Serializer<OrderDeadlineKindEnum> _$orderDeadlineKindEnumSerializer =
@@ -42,11 +52,15 @@ class _$OrderDeadlineKindEnumSerializer
     'VENDOR_RESPONSE': 'VENDOR_RESPONSE',
     'BUYER_RESPONSE': 'BUYER_RESPONSE',
     'PAYMENT': 'PAYMENT',
+    'RECEIPT_CONFIRMATION': 'RECEIPT_CONFIRMATION',
+    'CANCELLATION_RESPONSE': 'CANCELLATION_RESPONSE',
   };
   static const Map<Object, String> _fromWire = const <Object, String>{
     'VENDOR_RESPONSE': 'VENDOR_RESPONSE',
     'BUYER_RESPONSE': 'BUYER_RESPONSE',
     'PAYMENT': 'PAYMENT',
+    'RECEIPT_CONFIRMATION': 'RECEIPT_CONFIRMATION',
+    'CANCELLATION_RESPONSE': 'CANCELLATION_RESPONSE',
   };
 
   @override

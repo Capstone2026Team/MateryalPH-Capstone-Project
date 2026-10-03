@@ -2,7 +2,9 @@
 
 use App\Domain\Finance\StatementService;
 use App\Domain\Finance\WithholdingThresholdService;
+use App\Domain\Fulfillment\ReceiptService;
 use App\Domain\Messaging\QuotationService;
+use App\Domain\Orders\CancellationService;
 use App\Domain\Payments\PaymentGateway;
 use App\Domain\Payments\PaymentReconciliationService;
 use App\Domain\Payments\XenditWebhookInbox;
@@ -35,6 +37,12 @@ Artisan::command('materyalph:payments-reconcile', function (): void {
     $this->info('Payment reconciliation: '.json_encode($counts));
 })->purpose('Reconcile open payment attempts, stalled webhooks and compensation refunds with the provider');
 Schedule::command('materyalph:payments-reconcile')->everyFiveMinutes()->withoutOverlapping();
+
+Artisan::command('materyalph:fulfillment-sweep', function (): void {
+    $this->info('Cancellation requests finalized after the 24-hour Vendor window: '.app(CancellationService::class)->sweep());
+    $this->info('Receipt: '.json_encode(app(ReceiptService::class)->sweep()));
+})->purpose('48-hour receipt auto-confirmation and reminders, late fulfillment flags and unanswered cancellation requests');
+Schedule::command('materyalph:fulfillment-sweep')->everyFiveMinutes()->withoutOverlapping();
 
 Artisan::command('materyalph:finance-draft-statements', function (): void {
     $this->info('Statements drafted: '.app(StatementService::class)->draftMonthly(CarbonImmutable::now()));

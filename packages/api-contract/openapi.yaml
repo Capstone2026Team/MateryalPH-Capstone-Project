@@ -1,12 +1,15 @@
 openapi: 3.1.0
 info:
   title: MateryalPH API
-  version: 1.0.0-phase.11
+  version: 1.0.0-phase.12
   description: >-
     Versioned Phase 1–4 contract. Vendor onboarding, verification, activation readiness, private evidence, team invitations, the Vendor catalog and product PS/ICC compliance are server-authorized. Browser credentials are isolated by configured frontend origin using _vendor and _admin suffixes on access, refresh, CSRF, MFA and bot-proof cookies. Existing unsuffixed browser sessions require sign-in again; cookie selection never replaces account authorization. Native Buyer transport is unchanged.
 servers:
   - url: /api/v1
 tags:
+  - name: Admin Order Operations
+  - name: Vendor Fulfillment
+  - name: Buyer Fulfillment
   - name: Payment Webhooks
   - name: Admin Finance
   - name: Vendor Finance
@@ -53,6 +56,11 @@ paths:
           schema:
             type: integer
             minimum: 1
+        - name: archived
+          in: query
+          description: Buyer only. true lists the Buyer's archived sales conversations; omitted or false lists the active inbox. Order fulfillment threads are never listed for a Buyer; they open from Order Details.
+          schema:
+            type: boolean
       responses:
         "200":
           description: Authorized result
@@ -3340,6 +3348,1047 @@ paths:
         "404": { $ref: "#/components/responses/ErrorResponse" }
         "409": { $ref: "#/components/responses/ErrorResponse" }
         "422": { $ref: "#/components/responses/ErrorResponse" }
+  # Phase 12 fulfillment and cancellation operations
+  "/buyers/orders/{orderId}/cancellation-preview":
+    "get":
+      "operationId": "getBuyerCancellationPreview"
+      "tags":
+        - "Buyer Fulfillment"
+      "description": "Server-computed availability and FIN-07 refund estimate from the original payments and allocations, with and without an evidenced NRPC retention."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "orderId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/BuyerCancellationPreviewEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/buyers/orders/{orderId}/cancel":
+    "post":
+      "operationId": "cancelBuyerOrder"
+      "tags":
+        - "Buyer Fulfillment"
+      "description": "Withdraw before Vendor confirmation, cancel before paying, cancel with a reason at CONFIRMED (final at once, full refund) or request cancellation with a reason during PROCESSING (CANCELLATION_REQUESTED; the Vendor has 24 hours). Unavailable at READY_FOR_PICKUP and later (409 CANCELLATION_UNAVAILABLE with remedies). A final paid cancellation creates exactly one Cancellation Refund per original payment and submits it immediately after commit."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "orderId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/BuyerCancelRequest"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/OrderDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/buyers/orders/{orderId}/cancellation-request/withdraw":
+    "post":
+      "operationId": "withdrawBuyerCancellationRequest"
+      "tags":
+        - "Buyer Fulfillment"
+      "description": "Withdraw an open request; the order returns to PROCESSING."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "orderId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/OrderDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/buyers/orders/{orderId}/receipt/confirm":
+    "post":
+      "operationId": "confirmBuyerReceipt"
+      "tags":
+        - "Buyer Fulfillment"
+      "description": "Confirm receipt after DELIVERED or PICKED_UP. Completes the order once and earns the commission once."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "orderId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/OrderDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/buyers/orders/{orderId}/problems":
+    "post":
+      "operationId": "reportBuyerProblem"
+      "tags":
+        - "Buyer Fulfillment"
+      "description": "Report a Problem from READY_FOR_PICKUP until receipt. Pauses the 48-hour auto-confirmation; never opens a dispute or a refund."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "orderId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "multipart/form-data":
+            "schema":
+              "$ref": "#/components/schemas/ProblemReportForm"
+      "responses":
+        "200":
+          "description": "Idempotent replay."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/OrderDetailEnvelope"
+        "201":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/OrderDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/buyers/orders/{orderId}/problems/{issueId}/resolve":
+    "post":
+      "operationId": "resolveBuyerProblem"
+      "tags":
+        - "Buyer Fulfillment"
+      "description": "Mark the reported problem resolved; the remaining auto-confirmation time resumes."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "orderId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "issueId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/ProblemResolveRequest"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/OrderDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/buyers/orders/{orderId}/reimbursements/{reimbursementId}/acknowledge":
+    "post":
+      "operationId": "acknowledgeBuyerReimbursement"
+      "tags":
+        - "Buyer Fulfillment"
+      "description": "Confirm receipt of an evidenced Vendor cash reimbursement (REIMBURSEMENT_CONFIRMED). Not a provider refund."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "orderId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "reimbursementId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/OrderDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/buyers/orders/{orderId}/files/{fileId}":
+    "get":
+      "operationId": "getBuyerOrderFile"
+      "tags":
+        - "Buyer Fulfillment"
+      "description": "Proof, problem and reimbursement evidence referenced by this order only."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "orderId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "fileId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "responses":
+        "200":
+          "description": "Private evidence bytes, order-scoped and authorized on every request."
+          "content":
+            "image/png":
+              "schema":
+                "type": "string"
+                "format": "binary"
+            "image/jpeg":
+              "schema":
+                "type": "string"
+                "format": "binary"
+            "application/pdf":
+              "schema":
+                "type": "string"
+                "format": "binary"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "503":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/orders/{orderId}/fulfillment/assignees":
+    "get":
+      "operationId": "listVendorFulfillmentAssignees"
+      "tags":
+        - "Vendor Fulfillment"
+      "description": "Owner or Store Manager: active Fulfillment Staff that can be assigned."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "orderId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/FulfillmentAssigneeListEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/orders/{orderId}/fulfillment/assignment":
+    "post":
+      "operationId": "assignVendorFulfillmentStaff"
+      "tags":
+        - "Vendor Fulfillment"
+      "description": "Owner or Store Manager assign or reassign Fulfillment Staff. The former assignee loses order, thread, file and realtime access immediately; history keeps its attribution."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "orderId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/FulfillmentAssignmentRequest"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/OrderDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/orders/{orderId}/fulfillment/milestones":
+    "post":
+      "operationId": "recordVendorFulfillmentMilestone"
+      "tags":
+        - "Vendor Fulfillment"
+      "description": "Owner, Store Manager or the assigned Fulfillment Staff record the next milestone through the shared state machine. Duplicate → replay or 409 MILESTONE_ALREADY_RECORDED; out of order → 409 ORDER_STATE_CONFLICT; open cancellation request → 409 CANCELLATION_PENDING; missing proof → 422 PROOF_REQUIRED. READY_FOR_PICKUP or OUT_FOR_DELIVERY opens the one fulfillment thread in the same transaction."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "orderId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "multipart/form-data":
+            "schema":
+              "$ref": "#/components/schemas/FulfillmentMilestoneForm"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/OrderDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/orders/{orderId}/fulfillment/trips":
+    "post":
+      "operationId": "recordVendorFulfillmentTrip"
+      "tags":
+        - "Vendor Fulfillment"
+      "description": "Record another accepted trip while out for delivery; never beyond the accepted trip count."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "orderId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/FulfillmentTripRequest"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/OrderDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/orders/{orderId}/fulfillment/vehicle-issues":
+    "post":
+      "operationId": "reportVendorVehicleIssue"
+      "tags":
+        - "Vendor Fulfillment"
+      "description": "Report a vehicle issue. The accepted arrangement and fee are unchanged; a different arrangement needs an authorized revision approved by the Buyer."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "orderId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/VehicleIssueRequest"
+      "responses":
+        "200":
+          "description": "Idempotent replay."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/OrderDetailEnvelope"
+        "201":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/OrderDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/orders/{orderId}/problems/{issueId}/respond":
+    "post":
+      "operationId": "respondVendorProblem"
+      "tags":
+        - "Vendor Fulfillment"
+      "description": "Respond to an open Buyer problem report."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "orderId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "issueId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/ProblemResponseRequest"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/OrderDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/orders/{orderId}/cancellation-preview":
+    "get":
+      "operationId": "getVendorCancellationPreview"
+      "tags":
+        - "Vendor Fulfillment"
+      "description": "Owner, Store Manager or Store Staff: FIN-07 amounts for a Vendor cancellation and for finalizing an open Buyer request."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "orderId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/VendorCancellationPreviewEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/orders/{orderId}/cancel":
+    "post":
+      "operationId": "cancelVendorOrder"
+      "tags":
+        - "Vendor Fulfillment"
+      "description": "Owner, Store Manager or Store Staff cancel with a reason before DELIVERED/PICKED_UP: NRPC forfeited, every Buyer-paid amount refunded to the original method, reservation released, NFR event recorded."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "orderId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/VendorCancelRequest"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/OrderDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/orders/{orderId}/cancellation-request/finalize":
+    "post":
+      "operationId": "finalizeVendorCancellationRequest"
+      "tags":
+        - "Vendor Fulfillment"
+      "description": "Finalize a Buyer request within 24 hours. Retaining the accepted NRPC requires preparation evidence; otherwise everything is refunded. The Vendor cannot refuse a permitted request."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "orderId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "multipart/form-data":
+            "schema":
+              "$ref": "#/components/schemas/CancellationFinalizeForm"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/OrderDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/orders/{orderId}/refunds/{refundId}/retry":
+    "post":
+      "operationId": "retryVendorRefund"
+      "tags":
+        - "Vendor Fulfillment"
+      "description": "Owner only: retry a REFUND_FAILED instruction after funding is resolved. Same instruction and trigger; the next attempt uses a new provider idempotency key."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "orderId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "refundId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/OrderDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/orders/{orderId}/reimbursements/{reimbursementId}":
+    "post":
+      "operationId": "recordVendorReimbursement"
+      "tags":
+        - "Vendor Fulfillment"
+      "description": "Record returning cash collected directly, with private evidence. Confirmed by the Buyer or an authorized Admin decision."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "orderId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "reimbursementId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "multipart/form-data":
+            "schema":
+              "$ref": "#/components/schemas/ReimbursementRecordForm"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/OrderDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/orders/{orderId}/files/{fileId}":
+    "get":
+      "operationId": "getVendorOrderFile"
+      "tags":
+        - "Vendor Fulfillment"
+      "description": "Order evidence for authorized Vendor users of this order; Fulfillment Staff only while assigned."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "orderId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "fileId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "responses":
+        "200":
+          "description": "Private evidence bytes, order-scoped and authorized on every request."
+          "content":
+            "image/png":
+              "schema":
+                "type": "string"
+                "format": "binary"
+            "image/jpeg":
+              "schema":
+                "type": "string"
+                "format": "binary"
+            "application/pdf":
+              "schema":
+                "type": "string"
+                "format": "binary"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "503":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/order-operations/summary":
+    "get":
+      "operationId": "getAdminOrderOperationsSummary"
+      "tags":
+        - "Admin Order Operations"
+      "description": "orders.operations.view. Counts of failed and pending refunds, pending reimbursements, open cancellation requests and recent NFR events."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/AdminOrderOperationsSummaryEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/order-operations/refunds":
+    "get":
+      "operationId": "listAdminRefunds"
+      "tags":
+        - "Admin Order Operations"
+      "description": "orders.operations.view. Refund instructions, failures first. Admins never hold or disburse funds."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "state"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "enum":
+              - "REFUND_PENDING"
+              - "REFUNDED"
+              - "REFUND_FAILED"
+        - "name": "trigger"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "enum":
+              - "CANCELLATION"
+              - "DISPUTE_CONCLUSION"
+              - "TECHNICAL_COMPENSATION"
+              - "FEE_CREDIT"
+        - "name": "page"
+          "in": "query"
+          "schema":
+            "type": "integer"
+            "minimum": 1
+            "maximum": 1000
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/AdminRefundListEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/order-operations/refunds/{refundId}/retry":
+    "post":
+      "operationId": "retryAdminRefund"
+      "tags":
+        - "Admin Order Operations"
+      "description": "refunds.retry. Re-send a failed instruction to the original payment only."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "refundId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/AdminOrderActionResultEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/order-operations/reimbursements":
+    "get":
+      "operationId": "listAdminReimbursements"
+      "tags":
+        - "Admin Order Operations"
+      "description": "orders.operations.view. Vendor cash reimbursements of cancelled orders."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/AdminReimbursementListEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/order-operations/reimbursements/{reimbursementId}/confirm":
+    "post":
+      "operationId": "confirmAdminReimbursement"
+      "tags":
+        - "Admin Order Operations"
+      "description": "reimbursements.decide. Reasoned confirmation of an evidenced reimbursement."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "reimbursementId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/AdminReimbursementDecision"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/AdminOrderActionResultEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/order-operations/cancellation-requests":
+    "get":
+      "operationId": "listAdminCancellationRequests"
+      "tags":
+        - "Admin Order Operations"
+      "description": "orders.operations.view. Open Buyer requests awaiting the Vendor, earliest deadline first."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/AdminCancellationRequestListEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
   # Phase 11 payment and finance operations
   "/webhooks/xendit":
     "post":
@@ -5563,6 +6612,79 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/ChatDestinationUpdate"
+  /{messagingPortal}/conversations/{conversationId}/archive:
+    put:
+      tags:
+        - Messaging
+      operationId: archiveChatConversation
+      description: Hides one sales or quotation conversation from the Buyer's own inbox. It is idempotent, personal and reversible; messages, quotations and orders are never changed or deleted. Fulfillment threads stay with their order (409 CONVERSATION_NOT_ARCHIVABLE). New activity returns the conversation to the inbox.
+      security:
+        - passportBearer: []
+      parameters:
+        - name: messagingPortal
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - buyers
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Archived
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatEmptyResponse"
+        "401":
+          description: Authentication required
+        "403":
+          description: Current role or channel access denied
+        "404":
+          description: Conversation unavailable or access revoked
+        "409":
+          description: Fulfillment threads cannot be archived
+    delete:
+      tags:
+        - Messaging
+      operationId: restoreChatConversation
+      description: Returns an archived conversation to the Buyer's inbox. Idempotent.
+      security:
+        - passportBearer: []
+      parameters:
+        - name: messagingPortal
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - buyers
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Restored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatEmptyResponse"
+        "401":
+          description: Authentication required
+        "403":
+          description: Current role or channel access denied
+        "404":
+          description: Conversation unavailable or access revoked
+        "409":
+          description: Fulfillment threads cannot be archived
 components:
   securitySchemes:
     passportBearer: { type: http, scheme: bearer, bearerFormat: JWT }
@@ -5644,6 +6766,7 @@ components:
         - updated_at
         - can_transfer
         - fulfillment_entry_enabled
+        - read_only
       properties:
         id:
           type: string
@@ -5682,6 +6805,14 @@ components:
           type: boolean
         fulfillment_entry_enabled:
           type: boolean
+        read_only:
+          type: boolean
+        read_only_reason:
+          type: string
+          nullable: true
+        order_reference:
+          type: string
+          nullable: true
         buyer:
           $ref: "#/components/schemas/ChatIdentity"
           nullable: true
@@ -9803,12 +10934,27 @@ components:
         maximum_distance_km: { type: [ integer, 'null' ] }
         eligibility: { $ref: "#/components/schemas/FleetVehicleEligibility" }
         updated_at: { type: [ string, 'null' ] }
+    FleetSummary:
+      type: object
+      description: Saved fleet counts for the current Vendor organization. Unit totals use number_available, not configuration row counts. Delivery assignments use immutable accepted snapshots on orders currently OUT_FOR_DELIVERY, including subsequently disabled or removed configurations; they are not unique physical vehicles or trip counts and do not reduce manually configured availability.
+      required: [ configurations, total_vehicles, active_vehicles, available_vehicles, out_for_delivery_vehicle_assignments, out_for_delivery_orders ]
+      properties:
+        configurations: { type: integer, minimum: 0, description: Saved configurations excluding removed records. }
+        total_vehicles: { type: integer, minimum: 0, description: Vehicle units in saved nonremoved configurations. }
+        active_vehicles: { type: integer, minimum: 0, description: Vehicle units in enabled nonremoved configurations. }
+        available_vehicles: { type: integer, minimum: 0, description: Vehicle units in enabled nonremoved configurations marked available. Does not imply eligibility or absence of delivery assignments. }
+        out_for_delivery_vehicle_assignments: { type: integer, minimum: 0, description: Sum of number_of_vehicles per confirmed snapshot entry on this Vendor's DELIVERY orders with order_state OUT_FOR_DELIVERY. Repeated assignments count separately. }
+        out_for_delivery_orders: { type: integer, minimum: 0, description: Distinct OUT_FOR_DELIVERY orders contributing confirmed vehicle assignments. }
     FleetVehicleListMeta:
       type: object
       additionalProperties: true
       required: [ scope, permissions ]
       properties:
         scope: { type: string, enum: [ ORGANIZATION, ASSIGNED_ONLY ] }
+        summary:
+          description: Organization-wide summary returned to Owners and Store Managers only; omitted for ASSIGNED_ONLY access.
+          allOf:
+            - $ref: "#/components/schemas/FleetSummary"
         delivery:
           oneOf:
             - type: 'null'
@@ -9950,7 +11096,7 @@ components:
       type: object
       required: [ kind, at ]
       properties:
-        kind: { type: string, enum: [ VENDOR_RESPONSE, BUYER_RESPONSE, PAYMENT ] }
+        kind: { type: string, enum: [ VENDOR_RESPONSE, BUYER_RESPONSE, PAYMENT, RECEIPT_CONFIRMATION, CANCELLATION_RESPONSE ] }
         at: { type: string, format: date-time }
     OrderFirstLine:
       type: object
@@ -9985,14 +11131,14 @@ components:
         delivery_pending: { type: boolean }
         deadline: { oneOf: [ { $ref: "#/components/schemas/OrderDeadline" }, { type: 'null' } ] }
         expected_fulfillment_date: { type: [ string, 'null' ], format: date }
-        next_action: { type: [ string, 'null' ], enum: [ REVIEW_REVISION, REVIEW_NRPC, PAY, null ] }
+        next_action: { type: [ string, 'null' ], enum: [ REVIEW_REVISION, REVIEW_NRPC, PAY, CONFIRM_RECEIPT, null ] }
         payment_retryable: { type: boolean, description: Buyer list only. True when the order is Pending Payment and its latest checkout attempt failed or expired. Retry uses the same order and principal. }
         buyer: { $ref: "#/components/schemas/OrderBuyerRef" }
         primary_action: { $ref: "#/components/schemas/VendorOrderPrimaryAction" }
         nrpc_indicator: { type: boolean }
     VendorOrderPrimaryAction:
       type: string
-      enum: [ CONFIRM, WAITING_FOR_BUYER, WAITING_FOR_PAYMENT, PREPARE_WHEN_AVAILABLE, NONE ]
+      enum: [ CONFIRM, WAITING_FOR_BUYER, WAITING_FOR_PAYMENT, PREPARE_WHEN_AVAILABLE, START_PREPARATION, MARK_READY, DISPATCH, RECORD_PICKUP, RECORD_DELIVERY, AWAIT_RECEIPT, RESPOND_TO_CANCELLATION, NONE ]
     OrderListMeta:
       type: object
       additionalProperties: true
@@ -10155,7 +11301,7 @@ components:
       type: object
       required: [ status, amount_centavos ]
       properties:
-        status: { type: string, enum: [ PENDING_PAYMENT_CHANNEL, QUOTED, NOT_APPLICABLE ] }
+        status: { type: string, enum: [ PENDING_PAYMENT_CHANNEL, QUOTED, NOT_APPLICABLE, PAID ] }
         amount_centavos: { type: [ integer, 'null' ], format: int64 }
     MoneyBreakdown:
       type: object
@@ -10320,6 +11466,13 @@ components:
         can_view_inventory: { type: boolean }
         can_record_physical_payment: { type: boolean }
         can_approve_online_balance: { type: boolean }
+        can_record_milestone: { type: boolean }
+        can_assign_fulfillment: { type: boolean }
+        can_cancel: { type: boolean }
+        can_finalize_cancellation: { type: boolean }
+        can_report_vehicle_issue: { type: boolean }
+        can_retry_refund: { type: boolean }
+        can_respond_problem: { type: boolean }
     NrpcTermsRef:
       type: object
       required: [ id, version, title, available ]
@@ -10358,7 +11511,7 @@ components:
         nrpc: { oneOf: [ { $ref: "#/components/schemas/OrderNrpc" }, { type: 'null' } ] }
         timeline: { type: array, items: { $ref: "#/components/schemas/OrderTimelineEvent" } }
         lock_version: { type: integer }
-        available_actions: { type: array, items: { type: string, enum: [ APPROVE_REVISION, REJECT_REVISION, ACCEPT_NRPC, REJECT_NRPC, FLAG_NRPC, PAY ] } }
+        available_actions: { type: array, items: { type: string, enum: [ APPROVE_REVISION, REJECT_REVISION, ACCEPT_NRPC, REJECT_NRPC, FLAG_NRPC, PAY, WITHDRAW, CANCEL, REQUEST_CANCELLATION, WITHDRAW_CANCELLATION_REQUEST, CONFIRM_RECEIPT, REPORT_PROBLEM, RESOLVE_PROBLEM, ACKNOWLEDGE_REIMBURSEMENT ] } }
         payment: { $ref: "#/components/schemas/OrderPaymentAvailability" }
         buyer: { $ref: "#/components/schemas/OrderBuyerRef" }
         auto_accept: { oneOf: [ { $ref: "#/components/schemas/AutoAcceptOutcome" }, { type: 'null' } ] }
@@ -10367,6 +11520,9 @@ components:
         primary_action: { $ref: "#/components/schemas/VendorOrderPrimaryAction" }
         nrpc_terms: { oneOf: [ { $ref: "#/components/schemas/NrpcTermsRef" }, { type: 'null' } ] }
         decline_reasons: { type: array, items: { $ref: "#/components/schemas/VendorOrderDeclineReason" } }
+        fulfillment: { $ref: "#/components/schemas/OrderFulfillment" }
+        cancellation: { $ref: "#/components/schemas/OrderCancellation" }
+        refund_timeline: { $ref: "#/components/schemas/OrderRefundTimeline" }
     OrderDetailEnvelope:
       type: object
       required: [ data, meta, errors ]
@@ -10562,6 +11718,1317 @@ components:
         meta: { type: object, additionalProperties: true }
         errors: { type: array, items: { type: object, additionalProperties: true } }
 
+    # Phase 12 fulfillment and cancellation schemas
+    "FulfillmentProof":
+      "type": "object"
+      "required":
+        - "milestone"
+        - "handover_confirmed"
+      "properties":
+        "milestone":
+          "type": "string"
+          "enum":
+            - "DELIVERED"
+            - "PICKED_UP"
+        "recorded_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "receiver_name":
+          "type": "string"
+          "nullable": true
+        "receiver_kind":
+          "type": "string"
+          "enum":
+            - "BUYER"
+            - "AUTHORIZED_RECEIVER"
+          "nullable": true
+        "handover_confirmed":
+          "type": "boolean"
+        "photo_path":
+          "type": "string"
+          "nullable": true
+        "signature_path":
+          "type": "string"
+          "nullable": true
+        "vehicle":
+          "type": "object"
+          "additionalProperties": true
+          "nullable": true
+      "description": "Proof attached to the Delivered or Picked up milestone. File paths are authorized, order-scoped API paths relative to /api/v1, never public URLs."
+    "FulfillmentStep":
+      "type": "object"
+      "required":
+        - "key"
+        - "label"
+        - "status"
+        - "proof_required"
+        - "proof_requirements"
+      "properties":
+        "key":
+          "type": "string"
+        "label":
+          "type": "string"
+        "status":
+          "type": "string"
+          "enum":
+            - "COMPLETE"
+            - "CURRENT"
+            - "UPCOMING"
+        "at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "actor_role":
+          "type": "string"
+          "nullable": true
+        "proof_required":
+          "type": "boolean"
+        "proof":
+          "oneOf":
+            - "$ref": "#/components/schemas/FulfillmentProof"
+            - "type": "null"
+        "proof_requirements":
+          "type": "array"
+          "items":
+            "type": "string"
+            "enum":
+              - "DELIVERY_PHOTO"
+              - "RECEIVER_NAME"
+              - "SIGNATURE_OPTIONAL"
+              - "HANDOVER_CONFIRMATION"
+              - "RECEIVER_TYPE"
+    "FulfillmentTrip":
+      "type": "object"
+      "required":
+        - "vehicle_index"
+        - "trip_number"
+        - "total_vehicle_trips"
+      "properties":
+        "vehicle_index":
+          "type": "integer"
+        "trip_number":
+          "type": "integer"
+        "name":
+          "type": "string"
+          "nullable": true
+        "total_vehicle_trips":
+          "type": "integer"
+        "dispatched_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+    "FulfillmentArrangementVehicle":
+      "type": "object"
+      "required":
+        - "vehicle_index"
+        - "number_of_vehicles"
+        - "total_vehicle_trips"
+      "properties":
+        "vehicle_index":
+          "type": "integer"
+        "name":
+          "type": "string"
+          "nullable": true
+        "vehicle_type":
+          "type": "string"
+          "nullable": true
+        "number_of_vehicles":
+          "type": "integer"
+        "total_vehicle_trips":
+          "type": "integer"
+    "FulfillmentArrangement":
+      "type": "object"
+      "required":
+        - "vehicles"
+        - "final_fee_centavos"
+        - "notice"
+      "properties":
+        "vehicles":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/FulfillmentArrangementVehicle"
+        "final_fee_centavos":
+          "type": "integer"
+          "minimum": 0
+        "endpoint":
+          "type": "string"
+          "nullable": true
+        "fulfillment_date":
+          "type": "string"
+          "nullable": true
+        "arrangement":
+          "type": "string"
+          "nullable": true
+        "notice":
+          "type": "string"
+      "description": "The accepted delivery commitment from the order snapshot. Later vehicle, rate or store-hour settings never change it."
+    "FulfillmentReceipt":
+      "type": "object"
+      "required":
+        - "paused"
+        - "window_hours"
+      "properties":
+        "due_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "paused":
+          "type": "boolean"
+        "remaining_seconds":
+          "type": "integer"
+          "nullable": true
+        "confirmed_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "confirmation_source":
+          "type": "string"
+          "enum":
+            - "BUYER"
+            - "AUTO_CONFIRMATION"
+          "nullable": true
+        "window_hours":
+          "type": "integer"
+    "FulfillmentIssue":
+      "type": "object"
+      "required":
+        - "id"
+        - "category"
+        - "description"
+        - "state"
+        - "photo_paths"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "category":
+          "type": "string"
+          "enum":
+            - "NOT_RECEIVED"
+            - "INCOMPLETE"
+            - "DAMAGED"
+            - "WRONG_ITEM"
+            - "LATE"
+            - "ACCESS_PROBLEM"
+            - "OTHER"
+        "description":
+          "type": "string"
+        "state":
+          "type": "string"
+          "enum":
+            - "OPEN"
+            - "RESOLVED"
+        "reported_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "vendor_response":
+          "type": "string"
+          "nullable": true
+        "vendor_responded_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "resolution":
+          "type": "string"
+          "enum":
+            - "BUYER_RESOLVED"
+            - "RECEIPT_CONFIRMED"
+            - "ORDER_CANCELLED"
+          "nullable": true
+        "resolved_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "photo_paths":
+          "type": "array"
+          "items":
+            "type": "string"
+    "FulfillmentAssignment":
+      "type": "object"
+      "required":
+        - "display_name"
+        - "role"
+      "properties":
+        "display_name":
+          "type": "string"
+        "role":
+          "type": "string"
+          "enum":
+            - "FULFILLMENT"
+        "assigned_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "user_id":
+          "type": "integer"
+          "nullable": true
+    "FulfillmentVehicleIssue":
+      "type": "object"
+      "required":
+        - "category"
+        - "description"
+      "properties":
+        "category":
+          "type": "string"
+          "enum":
+            - "BREAKDOWN"
+            - "CAPACITY_SHORTFALL"
+            - "ACCESS_BLOCKED"
+            - "DELAY"
+            - "OTHER"
+        "description":
+          "type": "string"
+        "reported_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "actor_role":
+          "type": "string"
+          "nullable": true
+    "FulfillmentThreadRef":
+      "type": "object"
+      "required":
+        - "available"
+        - "read_only"
+      "properties":
+        "available":
+          "type": "boolean"
+        "conversation_id":
+          "type": "string"
+          "format": "uuid"
+          "nullable": true
+        "read_only":
+          "type": "boolean"
+        "read_only_reason":
+          "type": "string"
+          "enum":
+            - "ORDER_COMPLETED"
+            - "ORDER_CANCELLED"
+            - "ORDER_NOT_IN_FULFILLMENT"
+          "nullable": true
+        "notice":
+          "type": "string"
+          "nullable": true
+    "OrderFulfillment":
+      "type": "object"
+      "required":
+        - "method"
+        - "state"
+        - "late"
+        - "steps"
+        - "tracking_notice"
+        - "trips"
+        - "receipt"
+        - "vehicle_issues"
+        - "thread"
+        - "next_action"
+      "properties":
+        "method":
+          "type": "string"
+          "enum":
+            - "DELIVERY"
+            - "PICKUP"
+        "state":
+          "type": "string"
+        "expected_date":
+          "type": "string"
+          "nullable": true
+        "late":
+          "type": "boolean"
+        "steps":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/FulfillmentStep"
+        "proof":
+          "oneOf":
+            - "$ref": "#/components/schemas/FulfillmentProof"
+            - "type": "null"
+        "tracking_notice":
+          "type": "string"
+        "trips":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/FulfillmentTrip"
+        "accepted_arrangement":
+          "oneOf":
+            - "$ref": "#/components/schemas/FulfillmentArrangement"
+            - "type": "null"
+        "receipt":
+          "$ref": "#/components/schemas/FulfillmentReceipt"
+        "issue":
+          "oneOf":
+            - "$ref": "#/components/schemas/FulfillmentIssue"
+            - "type": "null"
+        "assignment":
+          "oneOf":
+            - "$ref": "#/components/schemas/FulfillmentAssignment"
+            - "type": "null"
+        "vehicle_issues":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/FulfillmentVehicleIssue"
+        "thread":
+          "$ref": "#/components/schemas/FulfillmentThreadRef"
+        "next_action":
+          "type": "string"
+          "enum":
+            - "START_PREPARATION"
+            - "MARK_READY"
+            - "DISPATCH"
+            - "RECORD_PICKUP"
+            - "RECORD_DELIVERY"
+            - "AWAIT_RECEIPT"
+            - "RESPOND_TO_CANCELLATION"
+            - "NONE"
+            - "CONFIRM_RECEIPT"
+      "description": "Server-derived milestone stepper. Step completion comes only from recorded milestones; there is no live GPS or vehicle position."
+    "CancellationRemedy":
+      "type": "object"
+      "required":
+        - "code"
+        - "available"
+        - "note"
+      "properties":
+        "code":
+          "type": "string"
+          "enum":
+            - "REPORT_PROBLEM"
+            - "DISPUTE"
+            - "RETURN"
+            - "WARRANTY"
+            - "STATUTORY_REMEDIES"
+        "available":
+          "type": "boolean"
+        "note":
+          "type": "string"
+    "VendorCancellationRequestRef":
+      "type": "object"
+      "required":
+        - "reason_code"
+        - "order_state_at_request"
+      "properties":
+        "reason_code":
+          "type": "string"
+        "reason":
+          "type": "string"
+          "nullable": true
+        "requested_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "response_due_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "order_state_at_request":
+          "type": "string"
+    "OrderCancellation":
+      "type": "object"
+      "required":
+        - "explanation"
+      "properties":
+        "mode":
+          "type": "string"
+          "enum":
+            - "WITHDRAW"
+            - "USE_REJECT"
+            - "CANCEL_BEFORE_PAYMENT"
+            - "CANCEL_NOW"
+            - "REQUEST"
+            - "REQUEST_OPEN"
+            - "UNAVAILABLE"
+            - "CLOSED"
+        "available":
+          "type": "boolean"
+        "explanation":
+          "type": "string"
+        "requires_reason":
+          "type": "boolean"
+        "reason_codes":
+          "type": "array"
+          "items":
+            "type": "string"
+        "nrpc_retainable_centavos":
+          "type": "integer"
+          "minimum": 0
+        "can_withdraw_request":
+          "type": "boolean"
+        "response_due_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "remedies":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/CancellationRemedy"
+        "open_request":
+          "oneOf":
+            - "$ref": "#/components/schemas/VendorCancellationRequestRef"
+            - "type": "null"
+      "description": "Buyer responses carry mode, availability, reason codes and remedies; Vendor responses carry the explanation, Vendor reason codes and any open Buyer request. Unavailability is always explained in text."
+    "RefundTimelineItem":
+      "type": "object"
+      "required":
+        - "id"
+        - "trigger"
+        - "state"
+        - "display_state"
+        - "amount_centavos"
+        - "processing_fee_centavos"
+        - "payment_purpose"
+        - "original_method"
+        - "attempt_number"
+        - "can_retry"
+        - "message"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "trigger":
+          "type": "string"
+          "enum":
+            - "CANCELLATION"
+            - "DISPUTE_CONCLUSION"
+            - "TECHNICAL_COMPENSATION"
+            - "FEE_CREDIT"
+        "state":
+          "type": "string"
+          "enum":
+            - "REFUND_PENDING"
+            - "REFUNDED"
+            - "REFUND_FAILED"
+        "display_state":
+          "type": "string"
+          "enum":
+            - "QUEUED"
+            - "INITIATED"
+            - "PROCESSED"
+            - "FAILED"
+        "amount_centavos":
+          "type": "integer"
+          "minimum": 0
+        "principal_centavos":
+          "type": "integer"
+          "minimum": 0
+          "nullable": true
+        "processing_fee_centavos":
+          "type": "integer"
+          "minimum": 0
+        "payment_purpose":
+          "type": "string"
+        "original_method":
+          "type": "string"
+        "attempt_number":
+          "type": "integer"
+        "requested_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "completed_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "failure_code":
+          "type": "string"
+          "nullable": true
+        "evidence_origin":
+          "type": "string"
+          "nullable": true
+        "can_retry":
+          "type": "boolean"
+        "arrival_note":
+          "type": "string"
+          "nullable": true
+        "message":
+          "type": "string"
+      "description": "One timeline per original online payment. INITIATED is never success; PROCESSED requires a verified provider event or reconciliation."
+    "ReimbursementTimelineItem":
+      "type": "object"
+      "required":
+        - "id"
+        - "state"
+        - "amount_centavos"
+        - "method"
+        - "has_evidence"
+        - "confirmed_by_review"
+        - "message"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "state":
+          "type": "string"
+          "enum":
+            - "VENDOR_REIMBURSEMENT_PENDING"
+            - "REIMBURSEMENT_CONFIRMED"
+        "amount_centavos":
+          "type": "integer"
+          "minimum": 0
+        "method":
+          "type": "string"
+        "reimbursed_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "buyer_acknowledged_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "has_evidence":
+          "type": "boolean"
+        "evidence_path":
+          "type": "string"
+          "nullable": true
+        "confirmed_by_review":
+          "type": "boolean"
+        "message":
+          "type": "string"
+    "CancellationDecisionView":
+      "type": "object"
+      "required":
+        - "cause"
+        - "decided_by"
+        - "decision_code"
+        - "nrpc_retained_centavos"
+        - "refund_total_centavos"
+        - "cash_reimbursement_centavos"
+        - "released_unpaid_centavos"
+        - "order_state_before"
+        - "nrpc_evidence_on_file"
+      "properties":
+        "cause":
+          "type": "string"
+          "enum":
+            - "BUYER"
+            - "VENDOR"
+        "decided_by":
+          "type": "string"
+          "enum":
+            - "BUYER"
+            - "VENDOR"
+            - "SYSTEM"
+        "decision_code":
+          "type": "string"
+        "reason_code":
+          "type": "string"
+          "nullable": true
+        "reason":
+          "type": "string"
+          "nullable": true
+        "nrpc_retained_centavos":
+          "type": "integer"
+          "minimum": 0
+        "refund_total_centavos":
+          "type": "integer"
+          "minimum": 0
+        "cash_reimbursement_centavos":
+          "type": "integer"
+          "minimum": 0
+        "released_unpaid_centavos":
+          "type": "integer"
+          "minimum": 0
+        "order_state_before":
+          "type": "string"
+        "decided_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "nrpc_evidence_on_file":
+          "type": "boolean"
+        "nrpc_evidence_path":
+          "type": "string"
+          "nullable": true
+    "OrderRefundTimeline":
+      "type": "object"
+      "required":
+        - "refunds"
+        - "reimbursements"
+        - "no_longer_due_centavos"
+      "properties":
+        "refunds":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/RefundTimelineItem"
+        "reimbursements":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ReimbursementTimelineItem"
+        "no_longer_due_centavos":
+          "type": "integer"
+          "minimum": 0
+        "decision":
+          "oneOf":
+            - "$ref": "#/components/schemas/CancellationDecisionView"
+            - "type": "null"
+    "CancellationPlanPayment":
+      "type": "object"
+      "required":
+        - "payment_id"
+        - "purpose"
+        - "captured_centavos"
+        - "prior_allocated_centavos"
+        - "retained_centavos"
+        - "refund_centavos"
+        - "principal_centavos"
+        - "processing_fee_centavos"
+        - "capped_by_prior_refunds"
+        - "allocation"
+      "properties":
+        "payment_id":
+          "type": "string"
+          "format": "uuid"
+        "purpose":
+          "type": "string"
+        "channel_code":
+          "type": "string"
+          "nullable": true
+        "channel_name":
+          "type": "string"
+          "nullable": true
+        "captured_centavos":
+          "type": "integer"
+          "minimum": 0
+        "prior_allocated_centavos":
+          "type": "integer"
+          "minimum": 0
+        "retained_centavos":
+          "type": "integer"
+          "minimum": 0
+        "refund_centavos":
+          "type": "integer"
+          "minimum": 0
+        "principal_centavos":
+          "type": "integer"
+          "minimum": 0
+        "processing_fee_centavos":
+          "type": "integer"
+          "minimum": 0
+        "capped_by_prior_refunds":
+          "type": "boolean"
+        "allocation":
+          "type": "object"
+          "additionalProperties": true
+    "CancellationPlan":
+      "type": "object"
+      "required":
+        - "cause"
+        - "nrpc_retained_centavos"
+        - "nrpc_accepted_centavos"
+        - "online"
+        - "online_refund_total_centavos"
+        - "cash_reimbursement_centavos"
+        - "released_unpaid_centavos"
+        - "paid_total_centavos"
+        - "excludes"
+      "properties":
+        "cause":
+          "type": "string"
+          "enum":
+            - "BUYER"
+            - "VENDOR"
+        "nrpc_retained_centavos":
+          "type": "integer"
+          "minimum": 0
+        "nrpc_accepted_centavos":
+          "type": "integer"
+          "minimum": 0
+        "online":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/CancellationPlanPayment"
+        "online_refund_total_centavos":
+          "type": "integer"
+          "minimum": 0
+        "cash_reimbursement_centavos":
+          "type": "integer"
+          "minimum": 0
+        "released_unpaid_centavos":
+          "type": "integer"
+          "minimum": 0
+        "paid_total_centavos":
+          "type": "integer"
+          "minimum": 0
+        "excludes":
+          "type": "array"
+          "items":
+            "type": "string"
+            "enum":
+              - "VENDOR_COMMISSION"
+              - "MERCHANT_WITHHOLDING"
+              - "PROVIDER_SETTLEMENT_DEDUCTIONS"
+      "description": "FIN-07 amounts from the original frozen allocations. Vendor withholding, commission and provider deductions never reduce a Buyer refund."
+    "BuyerCancellationPreview":
+      "type": "object"
+      "required":
+        - "availability"
+        - "full_refund"
+        - "nrpc_retainable_centavos"
+        - "notice"
+      "properties":
+        "availability":
+          "$ref": "#/components/schemas/OrderCancellation"
+        "full_refund":
+          "$ref": "#/components/schemas/CancellationPlan"
+        "with_nrpc_retained":
+          "oneOf":
+            - "$ref": "#/components/schemas/CancellationPlan"
+            - "type": "null"
+        "nrpc_retainable_centavos":
+          "type": "integer"
+          "minimum": 0
+        "notice":
+          "type": "string"
+    "VendorCancellationPreview":
+      "type": "object"
+      "required":
+        - "vendor_cancellation"
+      "properties":
+        "vendor_cancellation":
+          "$ref": "#/components/schemas/CancellationPlan"
+        "full_refund":
+          "$ref": "#/components/schemas/CancellationPlan"
+        "with_nrpc_retained":
+          "oneOf":
+            - "$ref": "#/components/schemas/CancellationPlan"
+            - "type": "null"
+        "nrpc_retainable_centavos":
+          "type": "integer"
+          "minimum": 0
+        "notice":
+          "type": "string"
+    "FulfillmentAssignee":
+      "type": "object"
+      "required":
+        - "user_id"
+        - "display_name"
+        - "assigned"
+      "properties":
+        "user_id":
+          "type": "integer"
+        "display_name":
+          "type": "string"
+        "assigned":
+          "type": "boolean"
+    "BuyerCancelRequest":
+      "type": "object"
+      "required":
+        - "lock_version"
+      "properties":
+        "lock_version":
+          "type": "integer"
+          "minimum": 1
+        "reason_code":
+          "type": "string"
+          "enum":
+            - "CHANGE_OF_REQUIREMENT"
+            - "DUPLICATE_ORDER"
+            - "BUDGET_CHANGE"
+            - "PROJECT_DELAY"
+            - "SCHEDULE_CONFLICT"
+            - "VENDOR_AGREEMENT"
+            - "OTHER"
+          "nullable": true
+        "reason":
+          "type": "string"
+          "maxLength": 1000
+          "nullable": true
+      "description": "Withdrawal and cancel-before-payment need no reason; CONFIRMED and PROCESSING need a reason code, and OTHER needs text."
+    "VendorCancelRequest":
+      "type": "object"
+      "required":
+        - "lock_version"
+        - "reason_code"
+        - "reason"
+      "properties":
+        "lock_version":
+          "type": "integer"
+          "minimum": 1
+        "reason_code":
+          "type": "string"
+          "enum":
+            - "STOCK_FAILURE"
+            - "OPERATIONAL_INABILITY"
+            - "DELIVERY_INABILITY"
+            - "COMPLIANCE_RESTRICTION"
+            - "ACCOUNT_RESTRICTION"
+            - "BUYER_AGREEMENT"
+            - "OTHER"
+        "reason":
+          "type": "string"
+          "minLength": 10
+          "maxLength": 1000
+    "FulfillmentAssignmentRequest":
+      "type": "object"
+      "required":
+        - "user_id"
+        - "reason"
+      "properties":
+        "user_id":
+          "type": "integer"
+          "minimum": 1
+        "reason":
+          "type": "string"
+          "minLength": 5
+          "maxLength": 500
+    "FulfillmentMilestoneForm":
+      "type": "object"
+      "required":
+        - "milestone"
+        - "lock_version"
+      "properties":
+        "milestone":
+          "type": "string"
+          "enum":
+            - "PROCESSING"
+            - "READY_FOR_PICKUP"
+            - "OUT_FOR_DELIVERY"
+            - "DELIVERED"
+            - "PICKED_UP"
+        "lock_version":
+          "type": "integer"
+          "minimum": 1
+        "vehicle_index":
+          "type": "integer"
+          "minimum": 0
+        "trip_number":
+          "type": "integer"
+          "minimum": 1
+        "receiver_name":
+          "type": "string"
+          "maxLength": 120
+        "receiver_kind":
+          "type": "string"
+          "enum":
+            - "BUYER"
+            - "AUTHORIZED_RECEIVER"
+        "handover_confirmed":
+          "type": "boolean"
+        "note":
+          "type": "string"
+          "maxLength": 500
+        "file":
+          "type": "string"
+          "format": "binary"
+          "description": "Delivery photo (required for DELIVERED): JPG or PNG up to 10 MB, scanned fail-closed, stored privately."
+        "signature":
+          "type": "string"
+          "format": "binary"
+          "description": "Optional receiver signature image."
+      "description": "No price, fee, vehicle configuration or commercial term is accepted. OUT_FOR_DELIVERY names a vehicle and trip of the accepted snapshot."
+    "FulfillmentTripRequest":
+      "type": "object"
+      "required":
+        - "vehicle_index"
+        - "trip_number"
+      "properties":
+        "vehicle_index":
+          "type": "integer"
+          "minimum": 0
+        "trip_number":
+          "type": "integer"
+          "minimum": 1
+    "VehicleIssueRequest":
+      "type": "object"
+      "required":
+        - "category"
+        - "description"
+      "properties":
+        "category":
+          "type": "string"
+          "enum":
+            - "BREAKDOWN"
+            - "CAPACITY_SHORTFALL"
+            - "ACCESS_BLOCKED"
+            - "DELAY"
+            - "OTHER"
+        "description":
+          "type": "string"
+          "minLength": 10
+          "maxLength": 1000
+    "ProblemReportForm":
+      "type": "object"
+      "required":
+        - "category"
+        - "description"
+      "properties":
+        "category":
+          "type": "string"
+          "enum":
+            - "NOT_RECEIVED"
+            - "INCOMPLETE"
+            - "DAMAGED"
+            - "WRONG_ITEM"
+            - "LATE"
+            - "ACCESS_PROBLEM"
+            - "OTHER"
+        "description":
+          "type": "string"
+          "minLength": 10
+          "maxLength": 2000
+        "files":
+          "type": "array"
+          "maxItems": 3
+          "items":
+            "type": "string"
+            "format": "binary"
+          "description": "Up to three JPG or PNG photos."
+    "ProblemResolveRequest":
+      "type": "object"
+      "properties":
+        "note":
+          "type": "string"
+          "maxLength": 1000
+          "nullable": true
+    "ProblemResponseRequest":
+      "type": "object"
+      "required":
+        - "response"
+      "properties":
+        "response":
+          "type": "string"
+          "minLength": 5
+          "maxLength": 2000
+    "CancellationFinalizeForm":
+      "type": "object"
+      "required":
+        - "retain_nrpc"
+      "properties":
+        "retain_nrpc":
+          "type": "boolean"
+        "note":
+          "type": "string"
+          "maxLength": 2000
+        "file":
+          "type": "string"
+          "format": "binary"
+          "description": "Required to retain NRPC: evidence of the actual irreversible preparation (JPG, PNG or PDF)."
+    "ReimbursementRecordForm":
+      "type": "object"
+      "required":
+        - "file"
+      "properties":
+        "file":
+          "type": "string"
+          "format": "binary"
+        "reimbursed_at":
+          "type": "string"
+          "format": "date-time"
+        "note":
+          "type": "string"
+          "maxLength": 500
+    "AdminReimbursementDecision":
+      "type": "object"
+      "required":
+        - "reason"
+      "properties":
+        "reason":
+          "type": "string"
+          "minLength": 10
+          "maxLength": 2000
+    "AdminOrderOperationsSummary":
+      "type": "object"
+      "required":
+        - "refunds_failed"
+        - "refunds_pending"
+        - "reimbursements_pending"
+        - "cancellation_requests_open"
+        - "nfr_events_30_days"
+      "properties":
+        "refunds_failed":
+          "type": "integer"
+        "refunds_pending":
+          "type": "integer"
+        "reimbursements_pending":
+          "type": "integer"
+        "cancellation_requests_open":
+          "type": "integer"
+        "nfr_events_30_days":
+          "type": "integer"
+    "AdminRefundRow":
+      "type": "object"
+      "required":
+        - "id"
+        - "target_type"
+        - "trigger"
+        - "state"
+        - "display_state"
+        - "amount_centavos"
+        - "attempt_number"
+        - "can_retry"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "target_type":
+          "type": "string"
+          "enum":
+            - "ORDER"
+            - "PLATFORM_FEE"
+        "trigger":
+          "type": "string"
+          "enum":
+            - "CANCELLATION"
+            - "DISPUTE_CONCLUSION"
+            - "TECHNICAL_COMPENSATION"
+            - "FEE_CREDIT"
+        "state":
+          "type": "string"
+          "enum":
+            - "REFUND_PENDING"
+            - "REFUNDED"
+            - "REFUND_FAILED"
+        "display_state":
+          "type": "string"
+          "enum":
+            - "QUEUED"
+            - "INITIATED"
+            - "PROCESSED"
+            - "FAILED"
+        "amount_centavos":
+          "type": "integer"
+          "minimum": 0
+        "attempt_number":
+          "type": "integer"
+        "failure_code":
+          "type": "string"
+          "nullable": true
+        "evidence_origin":
+          "type": "string"
+          "nullable": true
+        "order_id":
+          "type": "string"
+          "format": "uuid"
+          "nullable": true
+        "order_reference":
+          "type": "string"
+          "nullable": true
+        "statement_reference":
+          "type": "string"
+          "nullable": true
+        "vendor_name":
+          "type": "string"
+          "nullable": true
+        "requested_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "completed_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "can_retry":
+          "type": "boolean"
+    "AdminReimbursementRow":
+      "type": "object"
+      "required":
+        - "id"
+        - "order_reference"
+        - "state"
+        - "amount_centavos"
+        - "method"
+        - "has_evidence"
+        - "confirmed_by_review"
+        - "can_decide"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "order_reference":
+          "type": "string"
+        "vendor_name":
+          "type": "string"
+          "nullable": true
+        "state":
+          "type": "string"
+          "enum":
+            - "VENDOR_REIMBURSEMENT_PENDING"
+            - "REIMBURSEMENT_CONFIRMED"
+        "amount_centavos":
+          "type": "integer"
+          "minimum": 0
+        "method":
+          "type": "string"
+        "has_evidence":
+          "type": "boolean"
+        "reimbursed_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "buyer_acknowledged_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "confirmed_by_review":
+          "type": "boolean"
+        "can_decide":
+          "type": "boolean"
+    "AdminCancellationRequestRow":
+      "type": "object"
+      "required":
+        - "id"
+        - "order_reference"
+        - "reason_code"
+        - "overdue"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "order_reference":
+          "type": "string"
+        "vendor_name":
+          "type": "string"
+          "nullable": true
+        "reason_code":
+          "type": "string"
+        "requested_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "response_due_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "overdue":
+          "type": "boolean"
+    "BuyerCancellationPreviewEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/BuyerCancellationPreview"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "VendorCancellationPreviewEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/VendorCancellationPreview"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "FulfillmentAssigneeListEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/FulfillmentAssignee"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "AdminOrderOperationsSummaryEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/AdminOrderOperationsSummary"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "AdminRefundListEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/AdminRefundRow"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "AdminReimbursementListEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/AdminReimbursementRow"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "AdminCancellationRequestListEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/AdminCancellationRequestRow"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "AdminOrderActionResultEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "type": "object"
+          "additionalProperties": true
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
     # Phase 11 payment and finance schemas
     "PaymentChannelOption":
       "type": "object"

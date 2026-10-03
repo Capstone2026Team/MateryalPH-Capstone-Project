@@ -35,7 +35,11 @@ class SelectLocationScreen extends StatefulWidget {
     this.initialPoint,
     this.requireSave = false,
     this.initialDeviceLocation = false,
+    this.autoUseCurrentLocation = false,
   });
+
+  /// Requests the device location as soon as the page opens ("Use current location" entry).
+  final bool autoUseCurrentLocation;
 
   final DiscoveryRepository repository;
   final DeviceLocationService deviceLocation;
@@ -100,6 +104,10 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
           OriginSource.mapPin,
         ),
       );
+    } else if (widget.autoUseCurrentLocation) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _useDevice();
+      });
     }
   }
 

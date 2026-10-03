@@ -169,7 +169,10 @@ final class ConversationService
     {
         $query = DB::table('conversations as c')->whereNull('canonical_conversation_id');
         if ($request->user()->account_type === 'BUYER') {
-            $query->where('buyer_profile_id', $this->buyers->idFor($request));
+            // Order-specific fulfillment threads live in Order Details, not in the Buyer's message inbox.
+            $query->where('buyer_profile_id', $this->buyers->idFor($request))->where('purpose', 'SALES');
+            $archived = fn ($q) => $q->selectRaw('1')->from('conversation_archives as a')->whereColumn('a.conversation_id', 'c.id')->where('a.user_id', $request->user()->id);
+            $request->boolean('archived') ? $query->whereExists($archived) : $query->whereNotExists($archived);
         } else {
             $scope = app(AccountAccess::class)->resolve($request->user());
             $query->where('vendor_organization_id', $scope['organization_id']);
@@ -181,6 +184,9 @@ final class ConversationService
                 if (! in_array($scope['role'], ConversationAccess::SALES_ROLES, true)) {
                     $query->whereRaw('1 = 0');
                 }
+            } else {
+                // Owner and Store Manager supervise fulfillment threads from the order's Fulfillment Messages link, not the sales inbox.
+                $query->where('purpose', 'SALES');
             }
         }
         $page = $query->orderByDesc('updated_at')->orderByDesc('id')->paginate(25);
@@ -215,7 +221,17 @@ final class ConversationService
                 'verified' => DB::table('vendor_organizations')->where('id', $c->vendor_organization_id)->where('store_verification_status', 'APPROVED')->exists()],
             'handler' => $handlerIdentity, 'unread_count' => $unread, 'channel' => $this->access->channel($request->user(), $c),
             'locked_reference' => (object) json_decode((string) $c->locked_reference, true), 'updated_at' => Carbon::parse($c->updated_at)->toIso8601String(),
-            'can_transfer' => $request->user()->account_type === 'VENDOR' && $c->purpose === 'SALES', 'fulfillment_entry_enabled' => false];
+            'can_transfer' => $request->user()->account_type === 'VENDOR' && $c->purpose === 'SALES',
+            'fulfillment_entry_enabled' => $c->purpose === 'FULFILLMENT',
+            'order_reference' => $c->purpose === 'FULFILLMENT' ? DB::table('orders')->where('id', $c->order_id)->value('reference') : null] + $this->writableFields($c);
+    }
+
+    /** @return array{read_only: bool, read_only_reason: ?string} */
+    private function writableFields(object $c): array
+    {
+        $state = FulfillmentThreadService::writability($c);
+
+        return ['read_only' => $state['read_only'], 'read_only_reason' => $state['reason']];
     }
 
     /** Public allowlist only: login email, private phone, IDs and verification documents never enter the projection.
@@ -264,6 +280,7 @@ final class ConversationService
                 return (string) $old->id;
             }
             $this->requireCurrent($c);
+            FulfillmentThreadService::requireWritable($c);
 
             $product = $productId === null ? null : app(ConversationProducts::class)->snapshot($c, $productId);
 
@@ -286,9 +303,30 @@ final class ConversationService
             'product_id' => $product['product_id'] ?? null, 'product_snapshot' => $product === null ? null : json_encode($product, JSON_THROW_ON_ERROR),
             'client_message_id' => $clientId ?? (string) Str::uuid7(), 'public_sender' => json_encode($kind === 'SYSTEM' ? ['display_name' => 'MateryalPH', 'role' => 'SYSTEM', 'avatar_path' => null] : $this->identity($actor, $c), JSON_THROW_ON_ERROR), 'sent_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
         DB::table('conversations')->where('id', $c->id)->update(['updated_at' => now()]);
+        // New activity brings an archived thread back to the inbox so a reply is never missed.
+        DB::table('conversation_archives')->where('conversation_id', $c->id)->delete();
         $this->changed((string) $c->id);
 
         return $id;
+    }
+
+    /** Idempotent personal archive. History, quotations and orders are never changed or deleted. */
+    public function archive(Request $request, string $id, bool $archived): void
+    {
+        DB::transaction(function () use ($request, $id, $archived): void {
+            $c = $this->access->require($request->user(), $id);
+            if ($c->purpose !== 'SALES') {
+                throw new AuthenticationException('CONVERSATION_NOT_ARCHIVABLE', 'Fulfillment messages stay with their order.', 409);
+            }
+            if ($archived) {
+                DB::table('conversation_archives')->insertOrIgnore(['id' => (string) Str::uuid7(), 'conversation_id' => $id, 'user_id' => $request->user()->id,
+                    'archived_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
+            } else {
+                DB::table('conversation_archives')->where('conversation_id', $id)->where('user_id', $request->user()->id)->delete();
+            }
+            $this->audit->account($request, $archived ? 'CONVERSATION_ARCHIVED' : 'CONVERSATION_RESTORED', 'CONVERSATION', $id);
+            $this->changed($id);
+        });
     }
 
     public function changed(string $id): void

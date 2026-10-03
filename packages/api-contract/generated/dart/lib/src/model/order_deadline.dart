@@ -18,7 +18,7 @@ part 'order_deadline.g.dart';
 abstract class OrderDeadline implements Built<OrderDeadline, OrderDeadlineBuilder> {
   @BuiltValueField(wireName: r'kind')
   OrderDeadlineKindEnum get kind;
-  // enum kindEnum {  VENDOR_RESPONSE,  BUYER_RESPONSE,  PAYMENT,  };
+  // enum kindEnum {  VENDOR_RESPONSE,  BUYER_RESPONSE,  PAYMENT,  RECEIPT_CONFIRMATION,  CANCELLATION_RESPONSE,  };
 
   @BuiltValueField(wireName: r'at')
   DateTime get at;
@@ -131,6 +131,10 @@ class OrderDeadlineKindEnum extends EnumClass {
   static const OrderDeadlineKindEnum BUYER_RESPONSE = _$orderDeadlineKindEnum_BUYER_RESPONSE;
   @BuiltValueEnumConst(wireName: r'PAYMENT')
   static const OrderDeadlineKindEnum PAYMENT = _$orderDeadlineKindEnum_PAYMENT;
+  @BuiltValueEnumConst(wireName: r'RECEIPT_CONFIRMATION')
+  static const OrderDeadlineKindEnum RECEIPT_CONFIRMATION = _$orderDeadlineKindEnum_RECEIPT_CONFIRMATION;
+  @BuiltValueEnumConst(wireName: r'CANCELLATION_RESPONSE')
+  static const OrderDeadlineKindEnum CANCELLATION_RESPONSE = _$orderDeadlineKindEnum_CANCELLATION_RESPONSE;
 
   static Serializer<OrderDeadlineKindEnum> get serializer => _$orderDeadlineKindEnumSerializer;
 

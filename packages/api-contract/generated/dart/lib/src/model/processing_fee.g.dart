@@ -13,6 +13,8 @@ const ProcessingFeeStatusEnum _$processingFeeStatusEnum_QUOTED =
     const ProcessingFeeStatusEnum._('QUOTED');
 const ProcessingFeeStatusEnum _$processingFeeStatusEnum_NOT_APPLICABLE =
     const ProcessingFeeStatusEnum._('NOT_APPLICABLE');
+const ProcessingFeeStatusEnum _$processingFeeStatusEnum_PAID =
+    const ProcessingFeeStatusEnum._('PAID');
 
 ProcessingFeeStatusEnum _$processingFeeStatusEnumValueOf(String name) {
   switch (name) {
@@ -22,6 +24,8 @@ ProcessingFeeStatusEnum _$processingFeeStatusEnumValueOf(String name) {
       return _$processingFeeStatusEnum_QUOTED;
     case 'NOT_APPLICABLE':
       return _$processingFeeStatusEnum_NOT_APPLICABLE;
+    case 'PAID':
+      return _$processingFeeStatusEnum_PAID;
     default:
       throw ArgumentError(name);
   }
@@ -32,6 +36,7 @@ final BuiltSet<ProcessingFeeStatusEnum> _$processingFeeStatusEnumValues =
   _$processingFeeStatusEnum_PENDING_PAYMENT_CHANNEL,
   _$processingFeeStatusEnum_QUOTED,
   _$processingFeeStatusEnum_NOT_APPLICABLE,
+  _$processingFeeStatusEnum_PAID,
 ]);
 
 Serializer<ProcessingFeeStatusEnum> _$processingFeeStatusEnumSerializer =
@@ -43,11 +48,13 @@ class _$ProcessingFeeStatusEnumSerializer
     'PENDING_PAYMENT_CHANNEL': 'PENDING_PAYMENT_CHANNEL',
     'QUOTED': 'QUOTED',
     'NOT_APPLICABLE': 'NOT_APPLICABLE',
+    'PAID': 'PAID',
   };
   static const Map<Object, String> _fromWire = const <Object, String>{
     'PENDING_PAYMENT_CHANNEL': 'PENDING_PAYMENT_CHANNEL',
     'QUOTED': 'QUOTED',
     'NOT_APPLICABLE': 'NOT_APPLICABLE',
+    'PAID': 'PAID',
   };
 
   @override

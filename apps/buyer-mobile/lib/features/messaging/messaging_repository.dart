@@ -16,7 +16,9 @@ abstract interface class MessagingRepository {
     String? alternate,
     String? instructions,
   });
-  Future<api.ConversationPage> inbox({int page = 1});
+  Future<api.ConversationPage> inbox({int page = 1, bool archived = false});
+  Future<void> archive(String id);
+  Future<void> restore(String id);
   Future<api.ConversationDetail> conversation(
     String id, {
     String? before,
@@ -54,12 +56,19 @@ abstract interface class MessagingRepository {
   Future<void> upload(String id, Uint8List bytes, String name, String key);
   Future<Uint8List> attachment(String id, String attachmentId);
   Future<Uint8List> avatar(String id, int userId);
+
+  /// [onLive] reports whether the realtime subscription is currently
+  /// established, so the screen can poll quickly while it is not.
   Future<void Function()> watch(
     String channel,
     void Function() refresh, {
     void Function(bool, int)? onTyping,
+    void Function(bool)? onLive,
   });
-  Future<void Function()> watchInbox(void Function() refresh);
+  Future<void Function()> watchInbox(
+    void Function() refresh, {
+    void Function(bool)? onLive,
+  });
 }
 
 final class ApiMessagingRepository implements MessagingRepository {
@@ -99,14 +108,30 @@ final class ApiMessagingRepository implements MessagingRepository {
   });
 
   @override
-  Future<api.ConversationPage> inbox({int page = 1}) => _guard(
-    () async => _guard.required(
-      (await _api.listConversations(
-        messagingPortal: 'buyers',
-        page: page,
-      )).data?.data,
-    ),
-  );
+  Future<api.ConversationPage> inbox({int page = 1, bool archived = false}) =>
+      _guard(
+        () async => _guard.required(
+          (await _api.listConversations(
+            messagingPortal: 'buyers',
+            page: page,
+            archived: archived ? true : null,
+          )).data?.data,
+        ),
+      );
+  @override
+  Future<void> archive(String id) => _guard(() async {
+    await _api.archiveChatConversation(
+      messagingPortal: 'buyers',
+      conversationId: id,
+    );
+  });
+  @override
+  Future<void> restore(String id) => _guard(() async {
+    await _api.restoreChatConversation(
+      messagingPortal: 'buyers',
+      conversationId: id,
+    );
+  });
   @override
   Future<api.ConversationDetail> conversation(
     String id, {
@@ -262,18 +287,29 @@ final class ApiMessagingRepository implements MessagingRepository {
     String channel,
     void Function() refresh, {
     void Function(bool, int)? onTyping,
-  }) => _watch(channel, refresh, onTyping: onTyping);
+    void Function(bool)? onLive,
+  }) => _watch(channel, refresh, onTyping: onTyping, onLive: onLive);
 
   @override
-  Future<void Function()> watchInbox(void Function() refresh) =>
-      _watch(null, refresh);
+  Future<void Function()> watchInbox(
+    void Function() refresh, {
+    void Function(bool)? onLive,
+  }) => _watch(null, refresh, onLive: onLive);
 
   Future<void Function()> _watch(
     String? channel,
     void Function() refresh, {
     void Function(bool, int)? onTyping,
+    void Function(bool)? onLive,
   }) async {
     var stopped = false;
+    var live = false;
+    void setLive(bool value) {
+      if (live == value || stopped) return;
+      live = value;
+      onLive?.call(value);
+    }
+
     var retrySeconds = 1;
     Timer? retry;
     Timer? handshake;
@@ -293,6 +329,7 @@ final class ApiMessagingRepository implements MessagingRepository {
 
     void reconnect() {
       if (stopped || retry?.isActive == true) return;
+      setLive(false);
       disconnect();
       retry = Timer(
         Duration(seconds: retrySeconds),
@@ -375,6 +412,7 @@ final class ApiMessagingRepository implements MessagingRepository {
                   'pusher_internal:subscription_succeeded') {
                 handshake?.cancel();
                 retrySeconds = 1;
+                setLive(true);
                 refresh(); // Catch changes between the first REST fetch and subscription/reconnection.
               } else if (message['event'] == 'conversation.typing') {
                 final data = message['data'] is String

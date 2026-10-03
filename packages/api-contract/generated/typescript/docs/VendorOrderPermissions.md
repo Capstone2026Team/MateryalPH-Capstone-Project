@@ -15,6 +15,13 @@ Name | Type
 `canViewInventory` | boolean
 `canRecordPhysicalPayment` | boolean
 `canApproveOnlineBalance` | boolean
+`canRecordMilestone` | boolean
+`canAssignFulfillment` | boolean
+`canCancel` | boolean
+`canFinalizeCancellation` | boolean
+`canReportVehicleIssue` | boolean
+`canRetryRefund` | boolean
+`canRespondProblem` | boolean
 
 ## Example
 
@@ -31,6 +38,13 @@ const example = {
   "canViewInventory": null,
   "canRecordPhysicalPayment": null,
   "canApproveOnlineBalance": null,
+  "canRecordMilestone": null,
+  "canAssignFulfillment": null,
+  "canCancel": null,
+  "canFinalizeCancellation": null,
+  "canReportVehicleIssue": null,
+  "canRetryRefund": null,
+  "canRespondProblem": null,
 } satisfies VendorOrderPermissions
 
 console.log(example)

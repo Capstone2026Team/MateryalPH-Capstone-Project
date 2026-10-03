@@ -10,10 +10,11 @@ use App\Domain\Finance\RemittanceAssessmentService;
 use App\Domain\Finance\WithholdingThresholdService;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Messaging\ConversationBroadcast;
+use App\Domain\Vendors\FleetBroadcast;
 use App\Domain\Payments\PaymentGateway;
 use App\Domain\Payments\PaymentProviderException;
 use App\Domain\Payments\PaymentReconciliationService;
-use App\Domain\Payments\PaymentSettlement;
+use App\Domain\Payments\RefundService;
 use App\Domain\Payments\XenditWebhookProcessor;
 use App\Mail\AccountSecurityMail;
 use App\Mail\AdminInvitationMail;
@@ -73,7 +74,7 @@ final class OutboxProcessor
      * (realtime order milestones, push, finance statements); in this release they have no external side effect.
      */
     private const RECORDED_DOMAIN_EVENTS = ['ORDER_STATE_CHANGED', 'ORDER_SUBMITTED', 'ORDER_VENDOR_CONFIRMED', 'ORDER_AUTO_ACCEPT_EVALUATED', 'ORDER_ACCEPTED', 'NRPC_PROPOSED', 'NRPC_DECIDED', 'NRPC_FLAGGED',
-        'FEE_ASSESSMENT_ESTIMATED', 'FEE_ASSESSMENT_EARNED', 'FEE_ASSESSMENT_CANCELLED', 'INVENTORY_RESERVATION_RELEASED',
+        'FEE_ASSESSMENT_ESTIMATED', 'FEE_ASSESSMENT_EARNED', 'FEE_ASSESSMENT_CANCELLED', 'INVENTORY_RESERVATION_RELEASED', 'ORDER_COMPLETED', 'ORDER_CANCELLED',
         'PROJECT_CREATED', 'PROJECT_UPDATED', 'PROJECT_DELETED', 'WORK_PACKAGE_DRAFT_SAVED', 'WORK_PACKAGE_VERSION_CREATED', 'WORK_PACKAGE_ACTIVATED',
         'WORK_PACKAGE_CANCELLED', 'WORK_PACKAGE_DELETED', 'WORK_PACKAGE_MISSING_LINE_RESOLVED', 'PROJECT_ESTIMATE_COMPILED', 'PROJECT_VENDOR_INQUIRY_CREATED',
         'PROJECT_VENDOR_SELECTED', 'PROJECT_BUDGET_OVERRIDE_RECORDED', 'PROJECT_RANKING_PREFERENCES_UPDATED', 'WORK_PACKAGE_DRAFT_DELETED'];
@@ -81,6 +82,11 @@ final class OutboxProcessor
     /** @param array<string, mixed> $payload */
     private function deliver(string $eventType, array $payload): void
     {
+        if ($eventType === 'VENDOR_FLEET_CHANGED' || ($eventType === 'ORDER_STATE_CHANGED' && str_contains((string) ($payload['changes'] ?? ''), 'OUT_FOR_DELIVERY'))) {
+            app(FleetBroadcast::class)->deliver($this->requiredString($payload, 'vendor_organization_id'));
+
+            return;
+        }
         if ($eventType === 'CONVERSATION_CHANGED') {
             app(ConversationBroadcast::class)->deliver($this->requiredString($payload, 'conversation_id'));
 
@@ -168,7 +174,8 @@ final class OutboxProcessor
 
                 return true;
             case 'PAYMENT_REFUND_REQUESTED':
-                app(PaymentSettlement::class)->sendRefund($this->requiredString($payload, 'refund_id'), (string) ($payload['correlation_id'] ?? ''));
+                // Initiation only; REFUNDED waits for a verified provider event or reconciliation.
+                app(RefundService::class)->send($this->requiredString($payload, 'refund_id'), (string) ($payload['correlation_id'] ?? ''));
 
                 return true;
             case 'PAYMENT_SESSION_CANCEL_REQUESTED':

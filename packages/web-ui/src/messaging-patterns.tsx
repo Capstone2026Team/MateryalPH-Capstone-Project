@@ -51,11 +51,15 @@ export function ChatAvatar({ name, path, load }: { name: string; path?: string |
   return <span className="chat-avatar grid size-10 shrink-0 place-items-center overflow-hidden rounded-full bg-brand-orange-100 text-text-strong font-semibold" aria-label={name}>{url ? <img className="size-full object-cover" src={url} alt="" /> : name.trim().split(/\s+/).map(part => part[0]).slice(0, 2).join('').toUpperCase()}</span>
 }
 
-export function ConversationHeader({ store, handler, purpose, loadAvatar }: { store: ChatStore; handler?: ChatIdentity | null | undefined; purpose: string; loadAvatar?: (path: string) => Promise<Blob> }) {
+export function ConversationHeader({ store, buyer, handler, purpose, loadAvatar }: { store: ChatStore; buyer?: ChatIdentity | null | undefined; handler?: ChatIdentity | null | undefined; purpose: string; loadAvatar?: (path: string) => Promise<Blob> }) {
+  const topic = purpose === 'FULFILLMENT' ? 'Fulfillment coordination' : 'Sales & quotations'
   return <header className="flex min-w-0 flex-wrap items-center justify-between gap-4 border-b border-border-default p-4 sm:p-5">
+    {buyer ? <div className="flex min-w-0 items-center gap-3"><ChatAvatar name={buyer.displayName} path={buyer.avatarPath} load={loadAvatar} />
+      <div className="min-w-0"><h2 className="break-words text-lg font-semibold">{buyer.displayName}</h2><p className="text-sm text-text-secondary">Buyer · {topic}</p></div>
+    </div> :
     <div className="flex min-w-0 items-center gap-3">{store.logoUrl ? <img src={store.logoUrl} alt="" className="size-12 rounded-control object-cover" /> : <MessageSquare aria-hidden="true" className="size-10 text-text-secondary" />}
-      <div className="min-w-0"><h2 className="break-words text-lg font-semibold">{store.name}</h2><p className="flex items-center gap-1 text-sm text-text-secondary">{store.verified && <><BadgeCheck size={16} aria-hidden="true" />Verified · </>}{purpose === 'FULFILLMENT' ? 'Fulfillment coordination' : 'Sales & quotations'}</p></div>
-    </div>
+      <div className="min-w-0"><h2 className="break-words text-lg font-semibold">{store.name}</h2><p className="flex items-center gap-1 text-sm text-text-secondary">{store.verified && <><BadgeCheck size={16} aria-hidden="true" />Verified · </>}{topic}</p></div>
+    </div>}
     <div className="flex min-w-0 items-center gap-2">{handler ? <><ChatAvatar name={handler.displayName} path={handler.avatarPath} load={loadAvatar} /><div className="text-sm"><p className="text-text-secondary">Handled by</p><p className="font-semibold">{handler.displayName}</p><p className="text-text-secondary">{chatRoleLabel(handler.role)}</p></div></> : <p className="text-sm text-text-secondary">Awaiting an active handler</p>}</div>
   </header>
 }

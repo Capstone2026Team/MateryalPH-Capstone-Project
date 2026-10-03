@@ -6,6 +6,7 @@ namespace App\Domain\Finance;
 
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Operations\OutboxPublisher;
+use App\Domain\Payments\RefundService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -118,9 +119,14 @@ final class CommissionService
                 FinancialLedgerService::credit($paid ? 'FEE_REFUND_PAYABLE' : 'FEE_RECEIVABLE', $computed['credit_centavos'], ...$source),
             ], $correlationId, $approverUserId, 'FINANCE_REVIEWER');
             if ($paid) {
-                app(WithholdingThresholdService::class)->reviewItem('TEST', (string) $assessment->vendor_organization_id, 'PAID_FEE_CREDIT_PAYABLE', $adjustmentId, 'CREDIT_ON_PAID_STATEMENT',
-                    'A fee credit applies to an already paid statement. Refund it through the original fee payment where supported, otherwise record the audited payable.',
-                    ['credit_centavos' => $computed['credit_centavos']], [], 'FEE_ADJUSTMENT');
+                // FIN-07 PLATFORM_FEE target: refund through the original fee captures only; never another party's funds.
+                $adjustment = DB::table('fee_adjustments')->where('id', $adjustmentId)->first();
+                $covered = app(RefundService::class)->createFeeCreditRefunds($adjustment, $assessment, $correlationId);
+                if ($covered < $computed['credit_centavos']) {
+                    app(WithholdingThresholdService::class)->reviewItem('TEST', (string) $assessment->vendor_organization_id, 'PAID_FEE_CREDIT_PAYABLE', $adjustmentId, 'CREDIT_ON_PAID_STATEMENT',
+                        'A fee credit applies to an already paid statement and no supported original fee capture covers ₱'.WithholdingThresholdService::pesos($computed['credit_centavos'] - $covered).'. Record the audited payable.',
+                        ['credit_centavos' => $computed['credit_centavos'], 'refund_covered_centavos' => $covered], [], 'FEE_ADJUSTMENT');
+                }
             }
             DB::table('finance_review_items')->where('id', $proposalId)->update(['state' => 'RESOLVED', 'resolution' => 'Approved as fee adjustment '.$adjustmentId, 'resolved_by_user_id' => $approverUserId, 'resolved_at' => now(), 'updated_at' => now()]);
             $this->outbox->publish('FEE_CREDIT_APPROVED', 'FEE_ADJUSTMENT', $adjustmentId, ['fee_adjustment_id' => $adjustmentId, 'credit_centavos' => $computed['credit_centavos']]);

@@ -1,4 +1,7 @@
+import 'dart:typed_data';
+
 import 'package:built_collection/built_collection.dart';
+import 'package:dio/dio.dart' show MultipartFile;
 import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 
 import '../../core/api_guard.dart';
@@ -77,6 +80,53 @@ abstract interface class OrdersRepository {
     required String recordId,
     required String idempotencyKey,
   });
+
+  /// Server-computed refund plan for the cancellation the Buyer may make now. Nothing changes.
+  Future<CancellationPreviewView> cancellationPreview(String orderId);
+
+  /// Withdraws, cancels or sends a reasoned request, as decided by the server for the current state.
+  Future<OrderDetailView> cancelOrder(
+    String orderId, {
+    required int lockVersion,
+    required String idempotencyKey,
+    String? reasonCode,
+    String? reason,
+  });
+
+  Future<OrderDetailView> withdrawCancellationRequest(
+    String orderId, {
+    required String idempotencyKey,
+  });
+
+  Future<OrderDetailView> confirmReceipt(
+    String orderId, {
+    required String idempotencyKey,
+  });
+
+  /// Opens a problem report; the receipt window pauses until it is resolved.
+  Future<OrderDetailView> reportProblem(
+    String orderId, {
+    required String category,
+    required String description,
+    required String idempotencyKey,
+    ProblemPhoto? photo,
+  });
+
+  Future<OrderDetailView> resolveProblem(
+    String orderId, {
+    required String issueId,
+    required String idempotencyKey,
+    String? note,
+  });
+
+  Future<OrderDetailView> acknowledgeReimbursement(
+    String orderId, {
+    required String reimbursementId,
+    required String idempotencyKey,
+  });
+
+  /// Reads an order-scoped evidence file (`/buyers/orders/{id}/files/{fileId}`) through the API.
+  Future<Uint8List> orderFile(String orderId, String fileId);
 }
 
 final class ApiOrdersRepository implements OrdersRepository {
@@ -445,8 +495,311 @@ final class ApiOrdersRepository implements OrdersRepository {
       terminalReasonCode: order.terminalReasonCode,
       paymentNotice: order.payment?.notice,
       payment: order.payment == null ? null : _payment(order.payment!),
+      lockVersion: order.lockVersion,
+      fulfillment: order.fulfillment == null
+          ? null
+          : _fulfillment(order.fulfillment!),
+      cancellation: order.cancellation == null
+          ? null
+          : _cancellation(order.cancellation!),
+      refundTimeline: order.refundTimeline == null
+          ? null
+          : _refundTimeline(order.refundTimeline!),
     );
   }
+
+  static FulfillmentProofView? _proof(api.FulfillmentProof? proof) =>
+      proof == null
+      ? null
+      : FulfillmentProofView(
+          milestone: proof.milestone.name,
+          handoverConfirmed: proof.handoverConfirmed,
+          recordedAt: proof.recordedAt,
+          receiverName: proof.receiverName,
+          receiverKind: proof.receiverKind?.name,
+          photoPath: proof.photoPath,
+          signaturePath: proof.signaturePath,
+        );
+
+  static FulfillmentView _fulfillment(api.OrderFulfillment fulfillment) {
+    final receipt = fulfillment.receipt;
+    final issue = fulfillment.issue;
+    final thread = fulfillment.thread;
+    return FulfillmentView(
+      method: fulfillment.method.name,
+      state: fulfillment.state,
+      late: fulfillment.late_,
+      expectedDate: fulfillment.expectedDate,
+      trackingNotice: fulfillment.trackingNotice,
+      nextAction: fulfillment.nextAction.name,
+      proof: _proof(fulfillment.proof),
+      assigneeName: fulfillment.assignment?.displayName,
+      steps: fulfillment.steps
+          .map(
+            (step) => FulfillmentStepView(
+              key: step.key,
+              label: step.label,
+              status: step.status.name,
+              proofRequired: step.proofRequired,
+              at: step.at,
+              actorRole: step.actorRole,
+              proof: _proof(step.proof),
+            ),
+          )
+          .toList(),
+      receipt: FulfillmentReceiptView(
+        paused: receipt.paused,
+        windowHours: receipt.windowHours,
+        dueAt: receipt.dueAt,
+        remainingSeconds: receipt.remainingSeconds,
+        confirmedAt: receipt.confirmedAt,
+        confirmationSource: receipt.confirmationSource?.name,
+      ),
+      issue: issue == null
+          ? null
+          : FulfillmentIssueView(
+              id: issue.id,
+              category: issue.category.name,
+              description: issue.description,
+              state: issue.state.name,
+              reportedAt: issue.reportedAt,
+              vendorResponse: issue.vendorResponse,
+              resolution: issue.resolution?.name,
+            ),
+      thread: FulfillmentThreadView(
+        available: thread.available,
+        readOnly: thread.readOnly,
+        conversationId: thread.conversationId,
+        notice: thread.notice,
+      ),
+    );
+  }
+
+  static CancellationView _cancellation(
+    api.OrderCancellation cancellation,
+  ) => CancellationView(
+    mode: cancellation.mode?.name ?? 'UNAVAILABLE',
+    available: cancellation.available ?? false,
+    explanation: cancellation.explanation,
+    requiresReason: cancellation.requiresReason ?? false,
+    reasonCodes: cancellation.reasonCodes?.toList() ?? const [],
+    nrpcRetainableCentavos: cancellation.nrpcRetainableCentavos ?? 0,
+    canWithdrawRequest: cancellation.canWithdrawRequest ?? false,
+    responseDueAt: cancellation.responseDueAt,
+    openRequestReason: cancellation.openRequest == null
+        ? null
+        : buyerCancellationReasonLabels[cancellation.openRequest!.reasonCode] ??
+              cancellation.openRequest!.reasonCode,
+    remedies: (cancellation.remedies?.toList() ?? const [])
+        .map(
+          (remedy) => CancellationRemedyView(
+            code: remedy.code.name,
+            available: remedy.available,
+            note: remedy.note,
+          ),
+        )
+        .toList(),
+  );
+
+  static RefundTimelineView _refundTimeline(api.OrderRefundTimeline timeline) {
+    final decision = timeline.decision;
+    return RefundTimelineView(
+      noLongerDueCentavos: timeline.noLongerDueCentavos,
+      refunds: timeline.refunds
+          .map(
+            (refund) => RefundItemView(
+              id: refund.id,
+              trigger: refund.trigger.name,
+              state: refund.state.name,
+              displayState: refund.displayState.name,
+              amountCentavos: refund.amountCentavos,
+              principalCentavos: refund.principalCentavos,
+              processingFeeCentavos: refund.processingFeeCentavos,
+              originalMethod: refund.originalMethod,
+              message: refund.message,
+              requestedAt: refund.requestedAt,
+              completedAt: refund.completedAt,
+              arrivalNote: refund.arrivalNote,
+            ),
+          )
+          .toList(),
+      reimbursements: timeline.reimbursements
+          .map(
+            (item) => ReimbursementItemView(
+              id: item.id,
+              state: item.state.name,
+              amountCentavos: item.amountCentavos,
+              method: item.method,
+              message: item.message,
+              confirmedByReview: item.confirmedByReview,
+              hasEvidence: item.hasEvidence,
+              reimbursedAt: item.reimbursedAt,
+              buyerAcknowledgedAt: item.buyerAcknowledgedAt,
+            ),
+          )
+          .toList(),
+      decision: decision == null
+          ? null
+          : CancellationDecisionSummary(
+              cause: decision.cause.name,
+              decidedBy: decision.decidedBy.name,
+              nrpcRetainedCentavos: decision.nrpcRetainedCentavos,
+              refundTotalCentavos: decision.refundTotalCentavos,
+              cashReimbursementCentavos: decision.cashReimbursementCentavos,
+              reason: decision.reason,
+              decidedAt: decision.decidedAt,
+            ),
+    );
+  }
+
+  static CancellationPlanView _plan(api.CancellationPlan plan) =>
+      CancellationPlanView(
+        onlineRefundTotalCentavos: plan.onlineRefundTotalCentavos,
+        cashReimbursementCentavos: plan.cashReimbursementCentavos,
+        releasedUnpaidCentavos: plan.releasedUnpaidCentavos,
+        nrpcRetainedCentavos: plan.nrpcRetainedCentavos,
+        paidTotalCentavos: plan.paidTotalCentavos,
+        payments: plan.online
+            .map(
+              (payment) => CancellationPlanPaymentView(
+                purpose: payment.purpose,
+                refundCentavos: payment.refundCentavos,
+                processingFeeCentavos: payment.processingFeeCentavos,
+                channelName: payment.channelName,
+              ),
+            )
+            .toList(),
+      );
+
+  api.BuyerFulfillmentApi get _fulfillmentApi =>
+      _client.getBuyerFulfillmentApi();
+
+  @override
+  Future<CancellationPreviewView> cancellationPreview(String orderId) =>
+      _api(() async {
+        final response = await _fulfillmentApi.getBuyerCancellationPreview(
+          orderId: orderId,
+        );
+        final preview = _api.required(response.data?.data);
+        return CancellationPreviewView(
+          availability: _cancellation(preview.availability),
+          fullRefund: _plan(preview.fullRefund),
+          withNrpcRetained: preview.withNrpcRetained == null
+              ? null
+              : _plan(preview.withNrpcRetained!),
+          nrpcRetainableCentavos: preview.nrpcRetainableCentavos,
+          notice: preview.notice,
+        );
+      });
+
+  @override
+  Future<OrderDetailView> cancelOrder(
+    String orderId, {
+    required int lockVersion,
+    required String idempotencyKey,
+    String? reasonCode,
+    String? reason,
+  }) => _api(() async {
+    final response = await _fulfillmentApi.cancelBuyerOrder(
+      orderId: orderId,
+      idempotencyKey: idempotencyKey,
+      buyerCancelRequest: api.BuyerCancelRequest(
+        (b) => b
+          ..lockVersion = lockVersion
+          ..reasonCode = reasonCode == null
+              ? null
+              : api.BuyerCancelRequestReasonCodeEnum.valueOf(reasonCode)
+          ..reason = reason,
+      ),
+    );
+    return _detail(_api.required(response.data?.data));
+  });
+
+  @override
+  Future<OrderDetailView> withdrawCancellationRequest(
+    String orderId, {
+    required String idempotencyKey,
+  }) => _api(() async {
+    final response = await _fulfillmentApi.withdrawBuyerCancellationRequest(
+      orderId: orderId,
+      idempotencyKey: idempotencyKey,
+    );
+    return _detail(_api.required(response.data?.data));
+  });
+
+  @override
+  Future<OrderDetailView> confirmReceipt(
+    String orderId, {
+    required String idempotencyKey,
+  }) => _api(() async {
+    final response = await _fulfillmentApi.confirmBuyerReceipt(
+      orderId: orderId,
+      idempotencyKey: idempotencyKey,
+    );
+    return _detail(_api.required(response.data?.data));
+  });
+
+  @override
+  Future<OrderDetailView> reportProblem(
+    String orderId, {
+    required String category,
+    required String description,
+    required String idempotencyKey,
+    ProblemPhoto? photo,
+  }) => _api(() async {
+    // One photo per report: the generated client repeats the `files` key, which the API reads as one part.
+    final response = await _fulfillmentApi.reportBuyerProblem(
+      orderId: orderId,
+      idempotencyKey: idempotencyKey,
+      category: category,
+      description: description,
+      files: photo == null
+          ? null
+          : BuiltList<MultipartFile>([
+              MultipartFile.fromBytes(photo.bytes, filename: photo.filename),
+            ]),
+    );
+    return _detail(_api.required(response.data?.data));
+  });
+
+  @override
+  Future<OrderDetailView> resolveProblem(
+    String orderId, {
+    required String issueId,
+    required String idempotencyKey,
+    String? note,
+  }) => _api(() async {
+    final response = await _fulfillmentApi.resolveBuyerProblem(
+      orderId: orderId,
+      issueId: issueId,
+      idempotencyKey: idempotencyKey,
+      problemResolveRequest: api.ProblemResolveRequest((b) => b..note = note),
+    );
+    return _detail(_api.required(response.data?.data));
+  });
+
+  @override
+  Future<OrderDetailView> acknowledgeReimbursement(
+    String orderId, {
+    required String reimbursementId,
+    required String idempotencyKey,
+  }) => _api(() async {
+    final response = await _fulfillmentApi.acknowledgeBuyerReimbursement(
+      orderId: orderId,
+      reimbursementId: reimbursementId,
+      idempotencyKey: idempotencyKey,
+    );
+    return _detail(_api.required(response.data?.data));
+  });
+
+  @override
+  Future<Uint8List> orderFile(String orderId, String fileId) => _api(() async {
+    final response = await _fulfillmentApi.getBuyerOrderFile(
+      orderId: orderId,
+      fileId: fileId,
+    );
+    return _api.required(response.data);
+  });
 
   api.BuyerPaymentsApi get _payments => _client.getBuyerPaymentsApi();
 

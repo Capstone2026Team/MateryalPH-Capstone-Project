@@ -238,7 +238,8 @@ final class PhaseElevenPendingPaymentWindowTest extends TestCase
         $attempt = $this->startPayment($buyer, $paidId);
         $this->gateway->complete((string) DB::table('payments')->where('id', $attempt['id'])->value('provider_session_id'));
         $this->travelTo($this->deadline($paidId));
-        $this->getJson('/api/v1/buyers/orders/'.$paidId)->assertOk()->assertJsonPath('data.available_actions', []);
+        // Paid and confirmed: nothing is payable; Phase 12 offers only a reasoned cancellation before preparation.
+        $this->getJson('/api/v1/buyers/orders/'.$paidId)->assertOk()->assertJsonPath('data.available_actions', ['CANCEL']);
         self::assertSame('CONFIRMED', $this->orderState($paidId));
     }
 }

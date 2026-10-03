@@ -9,6 +9,7 @@ use App\Domain\Payments\GatewayDescriptor;
 use App\Domain\Payments\PaymentGateway;
 use App\Domain\Payments\PaymentProviderException;
 use App\Domain\Payments\ProviderAmount;
+use App\Domain\Payments\ProviderRefund;
 use App\Domain\Payments\ProviderSession;
 use App\Domain\Payments\RefundRequest;
 use App\Domain\Payments\RefundResult;
@@ -136,10 +137,14 @@ final class XenditPaymentSessionGateway implements PaymentGateway
         }
     }
 
+    /**
+     * `POST /refunds` against the original payment request with the `for-user-id` sub-account. The idempotency key is
+     * per attempt, so a timeout resend returns the refund the provider already created instead of a second refund.
+     */
     public function refund(RefundRequest $request): RefundResult
     {
         try {
-            $response = $this->client($request->forUserId)->withHeaders(['idempotency-key' => $request->referenceId])->post(self::ORIGIN.'/refunds', [
+            $response = $this->client($request->forUserId)->withHeaders(['idempotency-key' => $request->idempotencyKey])->post(self::ORIGIN.'/refunds', [
                 'reference_id' => $request->referenceId, 'payment_request_id' => $request->paymentRequestId,
                 'amount' => ProviderAmount::toProvider($request->amountCentavos), 'currency' => $request->currency, 'reason' => 'OTHERS',
                 'metadata' => ['materyalph_reason' => mb_substr($request->reason, 0, 120)],
@@ -153,6 +158,23 @@ final class XenditPaymentSessionGateway implements PaymentGateway
         }
 
         return new RefundResult($payload['id'], is_string($payload['status'] ?? null) ? $payload['status'] : 'PENDING');
+    }
+
+    /** Authoritative `GET /refunds/{id}` read used by webhook processing and reconciliation. */
+    public function retrieveRefund(string $providerRefundId, ?string $forUserId): ProviderRefund
+    {
+        if (preg_match('/^[A-Za-z0-9_-]{3,128}$/', $providerRefundId) !== 1) {
+            throw new PaymentProviderException(PaymentProviderException::UNAVAILABLE, 'REFUND_REFERENCE_INVALID');
+        }
+        $response = $this->send(fn (PendingRequest $http): Response => $http->get(self::ORIGIN.'/refunds/'.$providerRefundId), 'REFUND_RETRIEVE', $forUserId);
+        $payload = $response->json();
+        if (! $response->successful() || ! is_array($payload) || ($payload['id'] ?? null) !== $providerRefundId || ! is_string($payload['reference_id'] ?? null)) {
+            throw new PaymentProviderException(PaymentProviderException::UNAVAILABLE, $response->status() === 404 ? 'REFUND_NOT_FOUND' : 'REFUND_NOT_VERIFIED', $response->status(), $this->requestId($response));
+        }
+
+        return new ProviderRefund($providerRefundId, $payload['reference_id'], is_string($payload['payment_request_id'] ?? null) ? $payload['payment_request_id'] : null,
+            is_string($payload['status'] ?? null) ? strtoupper($payload['status']) : 'UNKNOWN', ProviderAmount::toCentavos($payload['amount'] ?? null),
+            is_string($payload['currency'] ?? null) ? $payload['currency'] : '', is_string($payload['failure_code'] ?? null) ? mb_substr($payload['failure_code'], 0, 64) : null);
     }
 
     private function send(callable $call, string $operation, ?string $forUserId = null): Response

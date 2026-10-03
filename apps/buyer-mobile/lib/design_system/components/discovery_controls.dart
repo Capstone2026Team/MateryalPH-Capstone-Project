@@ -19,11 +19,7 @@ class MapFloatingSurface extends StatelessWidget {
       borderRadius: BorderRadius.circular(radius),
       border: Border.all(color: BuyerTheme.border),
       boxShadow: const [
-        BoxShadow(
-          color: shadowColor,
-          blurRadius: 8,
-          offset: Offset(0, 2),
-        ),
+        BoxShadow(color: shadowColor, blurRadius: 8, offset: Offset(0, 2)),
       ],
     ),
     child: Material(
@@ -135,17 +131,22 @@ class LocationSelector extends StatelessWidget {
     required this.label,
     required this.onPressed,
     this.detail,
+    this.caption = 'Location',
+    this.showAddress = true,
   });
 
   final String label;
   final String? detail;
+  final String caption;
+  final bool showAddress;
   final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) => Semantics(
     button: true,
-    label:
-        'Location: $label${detail == null ? '' : ', $detail'}. Change location',
+    label: showAddress
+        ? 'Location: $label${detail == null ? '' : ', $detail'}. Change location'
+        : '$caption. Change location on the Map',
     excludeSemantics: true,
     child: InkWell(
       onTap: onPressed,
@@ -157,50 +158,51 @@ class LocationSelector extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Row(
+              Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Flexible(
                     child: Text(
-                      'Location',
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
+                      caption,
+                      style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: BuyerTheme.muted,
                       ),
                     ),
                   ),
-                  Icon(
+                  const Icon(
                     LucideIcons.chevronDown,
                     size: 16,
                     color: BuyerTheme.action,
                   ),
                 ],
               ),
-              Row(
-                children: [
-                  const Icon(
-                    LucideIcons.mapPin,
-                    size: 18,
-                    color: BuyerTheme.action,
-                  ),
-                  const SizedBox(width: 4),
-                  Flexible(
-                    child: Text(
-                      label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: BuyerTheme.ink,
+              if (showAddress)
+                Row(
+                  children: [
+                    const Icon(
+                      LucideIcons.mapPin,
+                      size: 18,
+                      color: BuyerTheme.action,
+                    ),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: BuyerTheme.ink,
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
             ],
           ),
         ),

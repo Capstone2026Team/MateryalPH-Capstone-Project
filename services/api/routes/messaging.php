@@ -21,6 +21,8 @@ foreach (['buyers' => ['auth.transport:MOBILE', 'auth:api', 'account.access:BUYE
             Route::post('/read', [C::class, 'read']);
             if ($prefix === 'buyers') {
                 Route::put('/destination', [C::class, 'destination']);
+                Route::put('/archive', [C::class, 'archive']);
+                Route::delete('/archive', [C::class, 'restore']);
             }
             Route::post('/attachments', [C::class, 'upload'])->middleware('throttle:account-upload');
             Route::get('/attachments/{attachmentId}', [C::class, 'download'])->whereUuid('attachmentId');

@@ -199,6 +199,27 @@ function csrfTokenFrom(payload: unknown): string | null {
 
 // Fetch within the portal so Origin/Referer selects its isolated HttpOnly cookies.
 // Never navigate to the signed endpoint or send credentials to another origin.
+/**
+ * Order evidence (delivery/handover proof, problem photos, reimbursement and NRPC evidence) through the authorized,
+ * order-scoped API path only. The server re-checks the order and role on every read.
+ */
+export async function readOrderEvidenceFile(basePath: string, evidencePath: string): Promise<Blob> {
+  const base = new URL(basePath, window.location.origin)
+  if (!/^\/vendor\/orders\/[0-9a-f-]{36}\/files\/[0-9a-f-]{36}$/i.test(evidencePath)) {
+    throw new Error('The evidence path is invalid. Refresh and try again.')
+  }
+  const url = new URL(`${base.pathname.replace(/\/$/, '')}${evidencePath}`, base)
+  const response = await coordinatedFetch(normalizedBasePath(base.href), true, url, {
+    credentials: 'include', cache: 'no-store', referrerPolicy: 'origin', headers: { Accept: 'application/pdf,image/jpeg,image/png' },
+  })
+  if (!response.ok) throw new ResponseError(response)
+  const blob = await response.blob()
+  if (!['application/pdf', 'image/jpeg', 'image/png'].includes(blob.type.split(';')[0] ?? '')) {
+    throw new Error('This file type cannot be previewed.')
+  }
+  return blob
+}
+
 export async function readWebPrivateFile(basePath: string, signedUrl: string): Promise<Blob> {
   const base = new URL(basePath, window.location.origin)
   const url = new URL(signedUrl, base)

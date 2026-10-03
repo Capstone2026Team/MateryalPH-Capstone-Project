@@ -97,12 +97,20 @@ final class DeliveryPreviewService
         $result = $this->recommendations->evaluate($this->recommendations->eligibleVehicles($organizationId), $load);
         if ($result['status'] !== 'CANDIDATES_AVAILABLE') {
             $reasons = $result['status'] === 'NO_ELIGIBLE_VEHICLE' ? ['NO_ELIGIBLE_VEHICLE'] : [];
+            $excluded = [];
             foreach ($result['groups'] as $group) {
                 array_push($reasons, ...($group['manual_review_reasons'] ?? []));
+                foreach ($group['excluded'] ?? [] as $vehicle) {
+                    array_push($excluded, ...($vehicle['reasons'] ?? []));
+                }
             }
+            $message = match (true) {
+                $result['status'] === 'NO_ELIGIBLE_VEHICLE' && in_array('DIMENSIONS_INSUFFICIENT', $excluded, true) => 'An item in this order is larger than the cargo space of every vehicle this store has configured, so the Vendor must arrange the delivery and fee manually.',
+                $result['status'] === 'NO_ELIGIBLE_VEHICLE' && $excluded === [] => 'This store has no delivery vehicle available right now, so the Vendor must arrange the delivery and fee manually.',
+                default => 'The Vendor must review this load manually. Vehicles, trips and the delivery fee will be shown after the Vendor confirms.',
+            };
 
-            return array_replace($base, ['status' => 'MANUAL_REVIEW', 'manual_review_reasons' => array_values(array_unique($reasons)), 'issues' => [['code' => 'DELIVERY_MANUAL_REVIEW', 'severity' => CartService::INFO,
-                'message' => 'The Vendor must review this load manually. Vehicles, trips and the delivery fee will be shown after the Vendor confirms.']]]);
+            return array_replace($base, ['status' => 'MANUAL_REVIEW', 'manual_review_reasons' => array_values(array_unique($reasons)), 'issues' => [['code' => 'DELIVERY_MANUAL_REVIEW', 'severity' => CartService::INFO, 'message' => $message]]]);
         }
 
         return array_replace($base, ['status' => 'ADVISORY_ESTIMATE', 'estimate' => $this->summarize($result['groups'], $includeRateBasis)]);

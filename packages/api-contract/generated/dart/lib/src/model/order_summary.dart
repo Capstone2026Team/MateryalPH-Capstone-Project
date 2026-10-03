@@ -100,7 +100,7 @@ abstract class OrderSummary implements Built<OrderSummary, OrderSummaryBuilder> 
 
   @BuiltValueField(wireName: r'next_action')
   OrderSummaryNextActionEnum? get nextAction;
-  // enum nextActionEnum {  REVIEW_REVISION,  REVIEW_NRPC,  PAY,  ,  };
+  // enum nextActionEnum {  REVIEW_REVISION,  REVIEW_NRPC,  PAY,  CONFIRM_RECEIPT,  ,  };
 
   /// Buyer list only. True when the order is Pending Payment and its latest checkout attempt failed or expired. Retry uses the same order and principal.
   @BuiltValueField(wireName: r'payment_retryable')
@@ -111,7 +111,7 @@ abstract class OrderSummary implements Built<OrderSummary, OrderSummaryBuilder> 
 
   @BuiltValueField(wireName: r'primary_action')
   VendorOrderPrimaryAction? get primaryAction;
-  // enum primaryActionEnum {  CONFIRM,  WAITING_FOR_BUYER,  WAITING_FOR_PAYMENT,  PREPARE_WHEN_AVAILABLE,  NONE,  };
+  // enum primaryActionEnum {  CONFIRM,  WAITING_FOR_BUYER,  WAITING_FOR_PAYMENT,  PREPARE_WHEN_AVAILABLE,  START_PREPARATION,  MARK_READY,  DISPATCH,  RECORD_PICKUP,  RECORD_DELIVERY,  AWAIT_RECEIPT,  RESPOND_TO_CANCELLATION,  NONE,  };
 
   @BuiltValueField(wireName: r'nrpc_indicator')
   bool? get nrpcIndicator;
@@ -546,6 +546,8 @@ class OrderSummaryNextActionEnum extends EnumClass {
   static const OrderSummaryNextActionEnum REVIEW_NRPC = _$orderSummaryNextActionEnum_REVIEW_NRPC;
   @BuiltValueEnumConst(wireName: r'PAY')
   static const OrderSummaryNextActionEnum PAY = _$orderSummaryNextActionEnum_PAY;
+  @BuiltValueEnumConst(wireName: r'CONFIRM_RECEIPT')
+  static const OrderSummaryNextActionEnum CONFIRM_RECEIPT = _$orderSummaryNextActionEnum_CONFIRM_RECEIPT;
 
   static Serializer<OrderSummaryNextActionEnum> get serializer => _$orderSummaryNextActionEnumSerializer;
 

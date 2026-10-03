@@ -24,10 +24,19 @@ class CheckoutPreviewScreen extends StatefulWidget {
     required this.controller,
     required this.savedLocations,
     this.orders,
+    this.chooseDropOff,
   });
 
   final CartController controller;
   final List<SavedLocationView> Function() savedLocations;
+
+  /// Opens the location picker for the alternative vehicle drop-off (current location or a
+  /// searched/pinned point). When absent the drop-off falls back to the saved-location list.
+  final Future<DiscoveryOrigin?> Function(
+    BuildContext context, {
+    required bool useCurrent,
+  })?
+  chooseDropOff;
 
   /// Order submission; without it the submit action stays unavailable.
   final OrdersRepository? orders;
@@ -138,15 +147,16 @@ class _CheckoutPreviewScreenState extends State<CheckoutPreviewScreen> {
               controller: _controller,
               destination: preview.destination,
               savedLocations: widget.savedLocations(),
+              chooseDropOff: widget.chooseDropOff,
             ),
           for (final group in preview.groups)
             _GroupPreview(
-                      group: group,
-                      controller: _controller,
-                      selectedMethod: _methodFor(group),
-                      onMethod: (method) =>
-                          setState(() => _methods[group.vendorId] = method),
-                    ),
+              group: group,
+              controller: _controller,
+              selectedMethod: _methodFor(group),
+              onMethod: (method) =>
+                  setState(() => _methods[group.vendorId] = method),
+            ),
           _Card(
             padding: EdgeInsets.zero,
             children: [
@@ -185,14 +195,18 @@ class _CheckoutPreviewScreenState extends State<CheckoutPreviewScreen> {
   Future<void> _submit(CheckoutPreviewView preview) async {
     final orders = widget.orders;
     if (orders == null || _submitting) return;
-    final ready = preview.groups.where((group) => group.status == 'READY').toList();
+    final ready = preview.groups
+        .where((group) => group.status == 'READY')
+        .toList();
     if (ready.isEmpty) return;
     final split = ready.length < preview.groups.length;
     if (split) {
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: Text('Submit ${ready.length} of ${preview.groups.length} stores?'),
+          title: Text(
+            'Submit ${ready.length} of ${preview.groups.length} stores?',
+          ),
           content: const Text(
             'Only the ready stores are submitted as separate order requests. The others stay in your cart so you can fix them later.',
           ),
@@ -260,7 +274,9 @@ class _CheckoutPreviewScreenState extends State<CheckoutPreviewScreen> {
   }
 
   Widget _submitBar(CheckoutPreviewView preview) {
-    final ready = preview.groups.where((group) => group.status == 'READY').length;
+    final ready = preview.groups
+        .where((group) => group.status == 'READY')
+        .length;
     final available = widget.orders != null && ready > 0 && !_submitting;
     return SafeArea(
       top: false,
@@ -385,11 +401,17 @@ class _DestinationSection extends StatefulWidget {
     required this.controller,
     required this.destination,
     required this.savedLocations,
+    this.chooseDropOff,
   });
 
   final CartController controller;
   final CartDestinationView destination;
   final List<SavedLocationView> savedLocations;
+  final Future<DiscoveryOrigin?> Function(
+    BuildContext context, {
+    required bool useCurrent,
+  })?
+  chooseDropOff;
 
   @override
   State<_DestinationSection> createState() => _DestinationSectionState();
@@ -399,9 +421,33 @@ class _DestinationSectionState extends State<_DestinationSection> {
   late String? _intended = widget.destination.intended?.locationId;
   late String _restriction = widget.destination.heavyVehicleRestriction;
   late String? _alternate = widget.destination.alternateDropOff?.locationId;
+  late String? _alternateLabel = widget.destination.alternateDropOff?.title;
   late final TextEditingController _instructions = TextEditingController(
     text: widget.destination.accessInstructions ?? '',
   );
+
+  late String? _intendedLabel = widget.destination.intended?.title;
+
+  Future<void> _pickIntended({required bool useCurrent}) async {
+    final origin = await widget.chooseDropOff!(context, useCurrent: useCurrent);
+    if (!mounted || origin?.locationId == null) return;
+    setState(() {
+      _intended = origin!.locationId;
+      _intendedLabel = origin.label;
+      _errors = {..._errors}..remove('intended_location_id');
+    });
+  }
+
+  Future<void> _pickDropOff({required bool useCurrent}) async {
+    final origin = await widget.chooseDropOff!(context, useCurrent: useCurrent);
+    if (!mounted || origin?.locationId == null) return;
+    setState(() {
+      _alternate = origin!.locationId;
+      _alternateLabel = origin.label;
+      _errors = {..._errors}..remove('alternate_drop_off_location_id');
+    });
+  }
+
   Map<String, Object?> _errors = const {};
   bool _editing = false;
 
@@ -473,7 +519,7 @@ class _DestinationSectionState extends State<_DestinationSection> {
           expanded: _editing || incomplete,
           onTap: incomplete ? null : () => setState(() => _editing = !_editing),
         ),
-        if (locations.isEmpty)
+        if (locations.isEmpty && widget.chooseDropOff == null)
           const Padding(
             padding: EdgeInsets.only(top: 10),
             child: StatusBand(
@@ -485,13 +531,23 @@ class _DestinationSectionState extends State<_DestinationSection> {
           )
         else if (_editing || incomplete) ...[
           const Divider(height: 24),
-          _LocationPicker(
-            label: destination.intendedLabel,
-            locations: locations,
-            selected: _intended,
-            error: _error('intended_location_id'),
-            onChanged: (value) => setState(() => _intended = value),
-          ),
+          if (widget.chooseDropOff == null)
+            _LocationPicker(
+              label: destination.intendedLabel,
+              locations: locations,
+              selected: _intended,
+              error: _error('intended_location_id'),
+              onChanged: (value) => setState(() => _intended = value),
+            )
+          else
+            _DropOffChooser(
+              label: destination.intendedLabel,
+              chosen: _intended == null ? null : _intendedLabel,
+              error: _error('intended_location_id'),
+              busy: widget.controller.busy,
+              onCurrent: () => _pickIntended(useCurrent: true),
+              onPick: () => _pickIntended(useCurrent: false),
+            ),
           if (destination.intended != null && !destination.intended!.active)
             const Padding(
               padding: EdgeInsets.only(top: 8),
@@ -538,13 +594,23 @@ class _DestinationSectionState extends State<_DestinationSection> {
               style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
           if (_restriction == 'YES') ...[
-            _LocationPicker(
-              label: '${destination.endpointLabel} (alternative drop-off)',
-              locations: locations,
-              selected: _alternate,
-              error: _error('alternate_drop_off_location_id'),
-              onChanged: (value) => setState(() => _alternate = value),
-            ),
+            if (widget.chooseDropOff == null)
+              _LocationPicker(
+                label: '${destination.endpointLabel} (alternative drop-off)',
+                locations: locations,
+                selected: _alternate,
+                error: _error('alternate_drop_off_location_id'),
+                onChanged: (value) => setState(() => _alternate = value),
+              )
+            else
+              _DropOffChooser(
+                label: '${destination.endpointLabel} (alternative drop-off)',
+                chosen: _alternate == null ? null : _alternateLabel,
+                error: _error('alternate_drop_off_location_id'),
+                busy: widget.controller.busy,
+                onCurrent: () => _pickDropOff(useCurrent: true),
+                onPick: () => _pickDropOff(useCurrent: false),
+              ),
             const SizedBox(height: 12),
             TextField(
               controller: _instructions,
@@ -695,6 +761,75 @@ class _AddressSummary extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Alternative drop-off entry: use the device location or search/pin a point on the map, instead
+/// of choosing from saved locations.
+class _DropOffChooser extends StatelessWidget {
+  const _DropOffChooser({
+    required this.label,
+    required this.chosen,
+    required this.busy,
+    required this.onCurrent,
+    required this.onPick,
+    this.error,
+  });
+
+  final String label;
+  final String? chosen;
+  final bool busy;
+  final VoidCallback onCurrent;
+  final VoidCallback onPick;
+  final String? error;
+
+  @override
+  Widget build(BuildContext context) {
+    final errorColor = Theme.of(context).colorScheme.error;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(label, style: Theme.of(context).textTheme.titleSmall),
+        const SizedBox(height: 8),
+        if (chosen != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(
+                  LucideIcons.mapPin,
+                  size: 18,
+                  color: BuyerTheme.action,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    chosen!,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        OutlinedButton.icon(
+          onPressed: busy ? null : onCurrent,
+          icon: const Icon(LucideIcons.locateFixed, size: 18),
+          label: const Text('Use current location'),
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          onPressed: busy ? null : onPick,
+          icon: const Icon(LucideIcons.map, size: 18),
+          label: Text(chosen == null ? 'Pick on map' : 'Pick a different spot'),
+        ),
+        if (error != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(error!, style: TextStyle(color: errorColor)),
+          ),
+      ],
     );
   }
 }
@@ -898,8 +1033,10 @@ class _GroupPreview extends StatelessWidget {
               selected: method.available && selectedMethod == method.method,
               detail: method.available
                   ? switch (method.method) {
-                      'ONLINE' => 'Pay after the Vendor confirms. Fee shown before you pay.',
-                      'CASH_ON_DELIVERY' => 'Pay the Vendor in cash on delivery.',
+                      'ONLINE' =>
+                        'Pay after the Vendor confirms. Fee shown before you pay.',
+                      'CASH_ON_DELIVERY' =>
+                        'Pay the Vendor in cash on delivery.',
                       _ => 'Pay the Vendor at the store on pickup.',
                     }
                   : _reason(method.reason),
@@ -1200,7 +1337,9 @@ class _PaymentMethodOption extends StatelessWidget {
                         method.label,
                         style: TextStyle(
                           fontWeight: FontWeight.w700,
-                          color: onTap == null ? BuyerTheme.muted : BuyerTheme.ink,
+                          color: onTap == null
+                              ? BuyerTheme.muted
+                              : BuyerTheme.ink,
                         ),
                       ),
                       Text(
@@ -1265,6 +1404,33 @@ class DeliveryPreviewPanel extends StatelessWidget {
                   : delivery.issues.first.message,
             ),
           },
+          if (delivery.status == 'ADVISORY_ESTIMATE' &&
+              estimate != null &&
+              estimate.options.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Recommended vehicle',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                  ),
+                  for (final option in estimate.options)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        '${option.vehicleName} · ${option.vehicles} vehicle${option.vehicles == 1 ? '' : 's'} · ${option.trips} trip${option.trips == 1 ? '' : 's'} · ${formatPeso(option.feeCentavos)}',
+                        style: const TextStyle(fontSize: 13),
+                      ),
+                    ),
+                  const Text(
+                    'Advisory only — the Vendor confirms the vehicle, number of trips and final fee.',
+                    style: TextStyle(fontSize: 12, color: BuyerTheme.muted),
+                  ),
+                ],
+              ),
+            ),
           if (delivery.routeDistanceMeters != null)
             Padding(
               padding: const EdgeInsets.only(top: 6),

@@ -128,6 +128,47 @@ final class InventoryLedgerWriter
         return $released;
     }
 
+    /**
+     * Delivery or pickup: every active hard reservation of the order becomes a FULFILLED movement that lowers both
+     * quantity_on_hand and hard_reserved_quantity by the reserved quantity, so available_to_sell is unchanged and a
+     * reservation is never recorded as physical consumption twice. Rows lock in ascending id order. Idempotent: a
+     * second call finds no active hold.
+     *
+     * @return array<string, string> fulfilled quantity per listing variant
+     */
+    public function fulfillOrder(string $orderId, ?int $actorId): array
+    {
+        $this->assertTransaction();
+        $holds = DB::table('inventory_holds')->where('source_type', 'ORDER')->where('source_id', $orderId)->where('hold_type', 'HARD')->where('state', 'ACTIVE')->orderBy('inventory_item_id')->get();
+        if ($holds->isEmpty()) {
+            return [];
+        }
+        $items = DB::table('inventory_items')->whereIn('id', $holds->pluck('inventory_item_id')->all())->orderBy('id')->lockForUpdate()->get()->keyBy('id');
+        $fulfilled = [];
+        foreach ($holds as $hold) {
+            $item = $items->get($hold->inventory_item_id);
+            $quantity = StockAvailability::quantity($hold->quantity);
+            $onHand = StockAvailability::quantity($item->quantity_on_hand);
+            $reserved = StockAvailability::quantity($item->hard_reserved_quantity);
+            $onHandAfter = bcsub($onHand, $quantity, 4);
+            $reservedAfter = bcsub($reserved, $quantity, 4);
+            if (bccomp($onHandAfter, '0', 4) < 0 || bccomp($reservedAfter, '0', 4) < 0) {
+                throw new \LogicException('Fulfillment cannot make physical or reserved stock negative.');
+            }
+            DB::table('inventory_items')->where('id', $item->id)->update(['quantity_on_hand' => $onHandAfter, 'hard_reserved_quantity' => $reservedAfter, 'lock_version' => DB::raw('lock_version + 1'), 'updated_at' => now()]);
+            DB::table('inventory_movements')->insert([
+                'id' => (string) Str::uuid7(), 'inventory_item_id' => $item->id, 'movement_type' => 'FULFILLED', 'quantity' => bcmul($quantity, '-1', 4),
+                'quantity_on_hand_before' => $onHand, 'quantity_on_hand_after' => $onHandAfter, 'hard_reserved_before' => $reserved, 'hard_reserved_after' => $reservedAfter,
+                'soft_held_before' => StockAvailability::quantity($item->soft_held_quantity), 'soft_held_after' => StockAvailability::quantity($item->soft_held_quantity),
+                'reason_code' => 'ORDER_FULFILLED', 'note' => null, 'actor_user_id' => $actorId, 'source_type' => 'ORDER', 'source_id' => $orderId, 'created_at' => now(), 'updated_at' => now(),
+            ]);
+            DB::table('inventory_holds')->where('id', $hold->id)->update(['state' => 'FULFILLED', 'released_at' => now(), 'updated_at' => now()]);
+            $fulfilled[(string) $item->listing_variant_id] = $quantity;
+        }
+
+        return $fulfilled;
+    }
+
     public function setReorderLevel(int $actorId, object $item, ?string $reorderLevel): void
     {
         $this->assertTransaction();

@@ -9,6 +9,7 @@ All URIs are relative to */api/v1*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
+[**archiveChatConversation**](MessagingApi.md#archivechatconversation) | **PUT** /{messagingPortal}/conversations/{conversationId}/archive |
 [**authorizeChatChannel**](MessagingApi.md#authorizechatchannel) | **POST** /{messagingPortal}/messaging/auth |
 [**createConversation**](MessagingApi.md#createconversation) | **POST** /{messagingPortal}/conversations |
 [**decideChatQuotation**](MessagingApi.md#decidechatquotation) | **POST** /{messagingPortal}/conversations/{conversationId}/quotation/{action} |
@@ -21,6 +22,7 @@ Method | HTTP request | Description
 [**listConversations**](MessagingApi.md#listconversations) | **GET** /{messagingPortal}/conversations |
 [**publishChatQuotation**](MessagingApi.md#publishchatquotation) | **POST** /{messagingPortal}/conversations/{conversationId}/quotation/publish |
 [**readChatMessages**](MessagingApi.md#readchatmessages) | **POST** /{messagingPortal}/conversations/{conversationId}/read |
+[**restoreChatConversation**](MessagingApi.md#restorechatconversation) | **DELETE** /{messagingPortal}/conversations/{conversationId}/archive |
 [**saveChatQuotationDraft**](MessagingApi.md#savechatquotationdraft) | **PUT** /{messagingPortal}/conversations/{conversationId}/quotation/draft |
 [**sendChatMessage**](MessagingApi.md#sendchatmessage) | **POST** /{messagingPortal}/conversations/{conversationId}/messages |
 [**sendChatTyping**](MessagingApi.md#sendchattyping) | **POST** /{messagingPortal}/conversations/{conversationId}/typing |
@@ -29,6 +31,51 @@ Method | HTTP request | Description
 [**updateChatDestination**](MessagingApi.md#updatechatdestination) | **PUT** /{messagingPortal}/conversations/{conversationId}/destination |
 [**uploadChatAttachment**](MessagingApi.md#uploadchatattachment) | **POST** /{messagingPortal}/conversations/{conversationId}/attachments |
 
+
+# **archiveChatConversation**
+> ChatEmptyResponse archiveChatConversation(messagingPortal, conversationId)
+
+
+
+Hides one sales or quotation conversation from the Buyer's own inbox. It is idempotent, personal and reversible; messages, quotations and orders are never changed or deleted. Fulfillment threads stay with their order (409 CONVERSATION_NOT_ARCHIVABLE). New activity returns the conversation to the inbox.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+
+final api = MateryalphApiClient().getMessagingApi();
+final String messagingPortal = messagingPortal_example; // String |
+final String conversationId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+
+try {
+    final response = api.archiveChatConversation(messagingPortal, conversationId);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling MessagingApi->archiveChatConversation: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **messagingPortal** | **String**|  |
+ **conversationId** | **String**|  |
+
+### Return type
+
+[**ChatEmptyResponse**](ChatEmptyResponse.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **authorizeChatChannel**
 > ChatChannelSignature authorizeChatChannel(messagingPortal, chatChannelAuth)
@@ -524,7 +571,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **listConversations**
-> ConversationPageResponse listConversations(messagingPortal, page)
+> ConversationPageResponse listConversations(messagingPortal, page, archived)
 
 
 
@@ -545,9 +592,10 @@ import 'package:materyalph_api_client/api.dart';
 final api = MateryalphApiClient().getMessagingApi();
 final String messagingPortal = messagingPortal_example; // String |
 final int page = 56; // int |
+final bool archived = true; // bool | Buyer only. true lists the Buyer's archived sales conversations; omitted or false lists the active inbox. Order fulfillment threads are never listed for a Buyer; they open from Order Details.
 
 try {
-    final response = api.listConversations(messagingPortal, page);
+    final response = api.listConversations(messagingPortal, page, archived);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling MessagingApi->listConversations: $e\n');
@@ -560,6 +608,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **messagingPortal** | **String**|  |
  **page** | **int**|  | [optional]
+ **archived** | **bool**| Buyer only. true lists the Buyer's archived sales conversations; omitted or false lists the active inbox. Order fulfillment threads are never listed for a Buyer; they open from Order Details. | [optional]
 
 ### Return type
 
@@ -684,6 +733,51 @@ Name | Type | Description  | Notes
 ### HTTP request headers
 
  - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **restoreChatConversation**
+> ChatEmptyResponse restoreChatConversation(messagingPortal, conversationId)
+
+
+
+Returns an archived conversation to the Buyer's inbox. Idempotent.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+
+final api = MateryalphApiClient().getMessagingApi();
+final String messagingPortal = messagingPortal_example; // String |
+final String conversationId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+
+try {
+    final response = api.restoreChatConversation(messagingPortal, conversationId);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling MessagingApi->restoreChatConversation: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **messagingPortal** | **String**|  |
+ **conversationId** | **String**|  |
+
+### Return type
+
+[**ChatEmptyResponse**](ChatEmptyResponse.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)

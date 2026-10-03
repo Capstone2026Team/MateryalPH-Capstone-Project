@@ -127,7 +127,10 @@ final class FinancialCalculatorTest extends TestCase
         self::assertFalse(OrderStates::allows(OrderStates::ORDER, 'AWAITING_PAYMENT', 'AWAITING_NRPC_ACCEPTANCE'), 'NRPC can never follow acceptance.');
         self::assertFalse(OrderStates::allows(OrderStates::ORDER, 'AWAITING_VENDOR_CONFIRMATION', 'PROCESSING'), 'No preparation before acceptance and payment conditions.');
         self::assertFalse(OrderStates::allows(OrderStates::ORDER, 'EXPIRED', 'AWAITING_PAYMENT'), 'A closed order never reopens.');
-        self::assertFalse(OrderStates::allows(OrderStates::ORDER, 'READY_FOR_PICKUP', 'CANCELLED'), 'No Buyer cancellation at READY_FOR_PICKUP.');
+        // Phase 12: only a Vendor cancellation may close an order at the handover stage; CancellationService blocks the Buyer.
+        self::assertTrue(OrderStates::allows(OrderStates::ORDER, 'READY_FOR_PICKUP', 'CANCELLED'));
+        self::assertFalse(OrderStates::allows(OrderStates::ORDER, 'DELIVERED', 'CANCELLED'), 'No cancellation after delivery or pickup is recorded.');
+        self::assertFalse(OrderStates::allows(OrderStates::ORDER, 'CANCELLATION_REQUESTED', 'READY_FOR_PICKUP'), 'No milestone while a cancellation request is open.');
         self::assertTrue(OrderStates::allows(OrderStates::PAYMENT, 'NOT_REQUIRED', 'PENDING'));
         self::assertFalse(OrderStates::allows(OrderStates::PAYMENT, 'NOT_REQUIRED', 'PAID'), 'Payment is never PAID without a pending attempt.');
         self::assertFalse(OrderStates::allows(OrderStates::REFUND, 'NOT_REQUESTED', 'REFUNDED'));

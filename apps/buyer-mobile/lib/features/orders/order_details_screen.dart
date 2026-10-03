@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../../design_system/components/work_package_attachment.dart';
 import '../projects/projects_repository.dart';
 import '../projects/projects_screen.dart' show ProjectBudgetCard;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../design_system/components/fulfillment_components.dart';
 import '../../design_system/components/order_components.dart';
 import '../../design_system/components/procurement_components.dart';
 import '../../design_system/theme.dart';
@@ -12,14 +15,20 @@ import '../item_procurement/procurement_models.dart'
 import '../map_discovery/discovery_models.dart';
 import '../map_discovery/discovery_repository.dart' show newIdempotencyKey;
 import 'nrpc_disclosure_screen.dart';
+import 'order_fulfillment_sections.dart';
 import 'order_models.dart';
 import 'order_payment_screen.dart';
 import 'orders_repository.dart';
 import '../../design_system/components/buyer_app_bar.dart';
 
+typedef OpenOrderConversation =
+    Future<void> Function(BuildContext context, String conversationId);
+
 /// Order Details. Server-calculated actions only: approve or reject the Vendor's exact version,
 /// review an NRPC on its own disclosure page, or flag it. The confirmed drop-off, vehicles, trips and
 /// fee are shown before any approval; the intended destination and the actual drop-off stay separate.
+/// After confirmation it tracks milestones without live GPS, confirms receipt, reports problems, and
+/// cancels or requests cancellation exactly as the server allows.
 class OrderDetailsScreen extends StatefulWidget {
   const OrderDetailsScreen({
     super.key,
@@ -27,12 +36,18 @@ class OrderDetailsScreen extends StatefulWidget {
     required this.repository,
     this.now,
     this.paymentLauncher = launchPaymentPage,
+    this.openConversation,
+    this.problemPhotoPicker = pickProblemPhoto,
   });
 
   final String orderId;
   final OrdersRepository repository;
   final DateTime Function()? now;
   final PaymentLauncher paymentLauncher;
+
+  /// Opens the order's Fulfillment Messages thread. Null hides the entry's action.
+  final OpenOrderConversation? openConversation;
+  final ProblemPhotoPicker problemPhotoPicker;
 
   @override
   State<OrderDetailsScreen> createState() => _OrderDetailsScreenState();
@@ -44,10 +59,13 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
   String? _notice;
   bool _busy = false;
   String? _decisionKey;
+  String? _decisionScope;
   final _budgetReason = TextEditingController();
+  final _scroll = ScrollController();
   @override
   void dispose() {
     _budgetReason.dispose();
+    _scroll.dispose();
     super.dispose();
   }
 
@@ -69,9 +87,14 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
 
   Future<void> _decide(
     Future<OrderDetailView> Function(String key) action,
-    String success,
-  ) async {
+    String success, {
+    String scope = 'decision',
+    String Function(OrderDetailView order)? describe,
+  }) async {
     if (_busy) return;
+    // An offline retry reuses the key of the same action only; another action gets a fresh key.
+    if (_decisionScope != scope) _decisionKey = null;
+    _decisionScope = scope;
     final key = _decisionKey ??= newIdempotencyKey();
     setState(() {
       _busy = true;
@@ -83,8 +106,18 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
       if (mounted) {
         setState(() {
           _order = order;
-          _notice = success;
+          _notice = describe?.call(order) ?? success;
         });
+        // The result notice is at the top; bring it into view after acting lower on the page.
+        if (_scroll.hasClients) {
+          unawaited(
+            _scroll.animateTo(
+              0,
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeOut,
+            ),
+          );
+        }
       }
     } on DiscoveryFailure catch (error) {
       if (error.kind != DiscoveryFailureKind.offline) _decisionKey = null;
@@ -260,6 +293,31 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
         ],
       );
     }
+    final canReport = order.actions.contains('REPORT_PROBLEM');
+    if (order.actions.contains('CONFIRM_RECEIPT') || canReport) {
+      return _Bar(
+        children: [
+          if (canReport)
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _busy ? null : () => _reportProblem(order),
+                icon: const Icon(LucideIcons.triangleAlert, size: 18),
+                label: const Text('Report a problem'),
+              ),
+            ),
+          if (canReport && order.actions.contains('CONFIRM_RECEIPT'))
+            const SizedBox(width: 10),
+          if (order.actions.contains('CONFIRM_RECEIPT'))
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: _busy ? null : () => _confirmReceipt(order),
+                icon: const Icon(LucideIcons.packageCheck, size: 18),
+                label: Text(_busy ? 'Saving…' : 'Confirm receipt'),
+              ),
+            ),
+        ],
+      );
+    }
     return null;
   }
 
@@ -300,6 +358,170 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
         return widget.repository.order(order.id);
       }, 'Thanks — you confirmed the Vendor’s payment record.');
 
+  Future<bool> _confirm({
+    required String title,
+    required String message,
+    required String confirmLabel,
+    String keepLabel = 'Not now',
+  }) async =>
+      await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(title),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(keepLabel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(confirmLabel),
+            ),
+          ],
+        ),
+      ) ??
+      false;
+
+  Future<void> _confirmReceipt(OrderDetailView order) async {
+    final pickup = order.fulfillment?.method == 'PICKUP';
+    if (!await _confirm(
+      title: 'Confirm you received this order?',
+      message:
+          'Confirm only after checking the ${pickup ? 'items you picked up' : 'delivered items'}. This completes the order. For a later concern, use the return, warranty or dispute process.',
+      confirmLabel: 'Confirm receipt',
+    )) {
+      return;
+    }
+    await _decide(
+      (key) => widget.repository.confirmReceipt(order.id, idempotencyKey: key),
+      'Receipt confirmed. Your order is completed.',
+      scope: 'confirmReceipt',
+    );
+  }
+
+  Future<void> _reportProblem(OrderDetailView order) async {
+    final input = await showProblemSheet(
+      context,
+      picker: widget.problemPhotoPicker,
+    );
+    if (input == null || !mounted) return;
+    await _decide(
+      (key) => widget.repository.reportProblem(
+        order.id,
+        category: input.category,
+        description: input.description,
+        photo: input.photo,
+        idempotencyKey: key,
+      ),
+      'Problem reported. The Vendor was notified and automatic confirmation is paused.',
+      scope: 'reportProblem',
+    );
+  }
+
+  Future<void> _resolveProblem(
+    OrderDetailView order,
+    FulfillmentIssueView issue,
+  ) async {
+    if (!await _confirm(
+      title: 'Mark this problem as resolved?',
+      message:
+          'The automatic confirmation window resumes with the time that remained. You can still confirm receipt yourself.',
+      confirmLabel: 'Mark as resolved',
+    )) {
+      return;
+    }
+    await _decide(
+      (key) => widget.repository.resolveProblem(
+        order.id,
+        issueId: issue.id,
+        idempotencyKey: key,
+      ),
+      'Problem marked as resolved.',
+      scope: 'resolveProblem',
+    );
+  }
+
+  Future<void> _cancel(OrderDetailView order) async {
+    final input = await showCancellationSheet(
+      context,
+      order: order,
+      repository: widget.repository,
+    );
+    if (input == null || !mounted) return;
+    await _decide(
+      (key) => widget.repository.cancelOrder(
+        order.id,
+        lockVersion: order.lockVersion,
+        reasonCode: input.reasonCode,
+        reason: input.reason,
+        idempotencyKey: key,
+      ),
+      'Your order was cancelled.',
+      scope: 'cancel',
+      describe: (updated) {
+        if (updated.cancellation?.mode == 'REQUEST_OPEN') {
+          return 'Cancellation request sent. The Vendor responds within 24 hours; your order continues until then.';
+        }
+        final timeline = updated.refundTimeline;
+        if (timeline != null && timeline.refunds.isNotEmpty) {
+          return 'Order cancelled. Your refund was initiated to your original payment method — it is not received yet. We will show when it is processed.';
+        }
+        return 'Order cancelled. Any reserved stock was released and you were not charged.';
+      },
+    );
+  }
+
+  Future<void> _withdrawRequest(OrderDetailView order) async {
+    if (!await _confirm(
+      title: 'Keep your order?',
+      message:
+          'Your cancellation request is withdrawn and the Vendor continues preparing your order.',
+      confirmLabel: 'Withdraw request',
+      keepLabel: 'Keep request',
+    )) {
+      return;
+    }
+    await _decide(
+      (key) => widget.repository.withdrawCancellationRequest(
+        order.id,
+        idempotencyKey: key,
+      ),
+      'Cancellation request withdrawn. Your order continues.',
+      scope: 'withdrawCancellationRequest',
+    );
+  }
+
+  Future<void> _acknowledgeReimbursement(
+    OrderDetailView order,
+    ReimbursementItemView item,
+  ) async {
+    if (!await _confirm(
+      title: 'Did you receive ${formatPeso(item.amountCentavos)}?',
+      message:
+          'Confirm only after the Vendor’s cash reimbursement reached you.',
+      confirmLabel: 'I received it',
+    )) {
+      return;
+    }
+    await _decide(
+      (key) => widget.repository.acknowledgeReimbursement(
+        order.id,
+        reimbursementId: item.id,
+        idempotencyKey: key,
+      ),
+      'Thanks — you confirmed the cash reimbursement.',
+      scope: 'acknowledgeReimbursement:${item.id}',
+    );
+  }
+
+  Future<void> _openThread(String conversationId) async {
+    final open = widget.openConversation;
+    if (open == null) return;
+    await open(context, conversationId);
+    if (mounted) await _load();
+  }
+
   Widget _content(OrderDetailView order) {
     final state = order.state('ORDER');
     final (DateTime? deadline, String label) = switch (state) {
@@ -315,6 +537,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
       _ => (null, ''),
     };
     return ListView(
+      controller: _scroll,
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
       children: [
         if (order.projectContext != null) ...[
@@ -362,6 +585,37 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
         ],
         _StateBand(order: order),
         const SizedBox(height: 12),
+        if (order.fulfillment != null &&
+            _trackedStates.contains(state) &&
+            order.fulfillment!.steps.isNotEmpty) ...[
+          _Heading(
+            order.fulfillment!.method == 'PICKUP'
+                ? 'Pickup progress'
+                : 'Delivery progress',
+          ),
+          OrderFulfillmentPanel(
+            order: order,
+            fulfillment: order.fulfillment!,
+            repository: widget.repository,
+            busy: _busy,
+            onResolveProblem: (issue) => _resolveProblem(order, issue),
+            onReload: _load,
+            onOpenThread: widget.openConversation == null ? null : _openThread,
+            now: widget.now,
+          ),
+          const SizedBox(height: 16),
+        ],
+        if (order.refundTimeline != null && !order.refundTimeline!.isEmpty) ...[
+          const _Heading('Refunds and reimbursements'),
+          RefundTimelineCard(
+            timeline: order.refundTimeline!,
+            busy: _busy,
+            onAcknowledge: order.actions.contains('ACKNOWLEDGE_REIMBURSEMENT')
+                ? (item) => _acknowledgeReimbursement(order, item)
+                : null,
+          ),
+          const SizedBox(height: 16),
+        ],
         const _Heading('Status'),
         OrderStateRows(states: order.states),
         if (order.changes.isNotEmpty) ...[
@@ -401,6 +655,19 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
             onOpen: () => _openNrpc(order),
           ),
         ],
+        if (order.cancellation != null &&
+            order.cancellation!.mode != 'CLOSED') ...[
+          const SizedBox(height: 16),
+          const _Heading('Cancellation'),
+          CancellationPanel(
+            order: order,
+            cancellation: order.cancellation!,
+            busy: _busy,
+            onCancel: () => _cancel(order),
+            onWithdrawRequest: () => _withdrawRequest(order),
+            now: widget.now,
+          ),
+        ],
         const SizedBox(height: 16),
         const _Heading('History'),
         for (final event in order.timeline) _EventTile(event: event),
@@ -408,6 +675,17 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     );
   }
 }
+
+const _trackedStates = {
+  'CONFIRMED',
+  'PROCESSING',
+  'READY_FOR_PICKUP',
+  'OUT_FOR_DELIVERY',
+  'DELIVERED',
+  'PICKED_UP',
+  'COMPLETED',
+  'DISPUTED',
+};
 
 bool _hasPaymentDetail(OrderPaymentView payment) =>
     payment.latestAttempt != null ||
@@ -731,6 +1009,37 @@ class _StateBand extends StatelessWidget {
       title: 'Order confirmed',
       message: 'The Vendor prepares your order for the confirmed date.',
     ),
+    'PROCESSING' => const StatusBand(
+      tone: BandTone.info,
+      title: 'The Vendor is preparing your order',
+      message:
+          'You are notified when it is ready for pickup or out for delivery.',
+    ),
+    'READY_FOR_PICKUP' => const StatusBand(
+      tone: BandTone.info,
+      title: 'Ready for pickup',
+      message:
+          'Collect it at the store and show your order reference. Fulfillment Messages are open for pickup details.',
+    ),
+    'OUT_FOR_DELIVERY' => const StatusBand(
+      tone: BandTone.info,
+      title: 'Out for delivery',
+      message:
+          'Updates come from the Vendor’s recorded milestones; there is no live GPS tracking.',
+    ),
+    'DELIVERED' || 'PICKED_UP' => StatusBand(
+      tone: BandTone.warning,
+      title: order.state('ORDER') == 'DELIVERED'
+          ? 'Delivered — check your order'
+          : 'Picked up — check your order',
+      message:
+          'Confirm receipt when everything is correct, or report a problem before the window ends.',
+    ),
+    'COMPLETED' => const StatusBand(
+      tone: BandTone.success,
+      title: 'Order completed',
+      message: 'Thank you. The order history and proof stay available here.',
+    ),
     'DECLINED' => const StatusBand(
       tone: BandTone.danger,
       title: 'The Vendor declined this request',
@@ -745,10 +1054,15 @@ class _StateBand extends StatelessWidget {
           ? 'Payment was not completed within 24 hours, so the order was cancelled automatically and the reserved stock was released. You were not charged.'
           : 'A response window ended, so the request expired. You were not charged.',
     ),
-    'CANCELLED' => const StatusBand(
+    'CANCELLED' => StatusBand(
       tone: BandTone.danger,
       title: 'This order was cancelled',
-      message: 'Any reserved stock was released. You were not charged.',
+      message:
+          order.refundTimeline == null ||
+              (order.refundTimeline!.refunds.isEmpty &&
+                  order.refundTimeline!.reimbursements.isEmpty)
+          ? 'Any reserved stock was released. You were not charged.'
+          : 'Any reserved stock was released. See Refunds and reimbursements below for what happens to your payment.',
     ),
     _ => const SizedBox.shrink(),
   };

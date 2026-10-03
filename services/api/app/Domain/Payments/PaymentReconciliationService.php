@@ -96,14 +96,10 @@ final class PaymentReconciliationService
                 report($exception);
             }
         }
-        foreach (DB::table('refunds')->where('trigger', 'TECHNICAL_COMPENSATION')->where('state', 'REFUND_PENDING')->whereNull('provider_reference')->limit($limit)->pluck('id') as $refundId) {
-            try {
-                $this->settlement->sendRefund((string) $refundId, (string) Str::uuid7());
-                $counts['refunds']++;
-            } catch (Throwable $exception) {
-                report($exception);
-            }
-        }
+        // Every pending refund instruction (cancellation, technical compensation, fee credit): resend an unsent or
+        // timed-out request with its same idempotency key, or read the provider's authoritative refund state.
+        $refunds = app(RefundService::class)->sweep($limit);
+        $counts['refunds'] = $refunds['sent'] + $refunds['reconciled'];
 
         return $counts;
     }

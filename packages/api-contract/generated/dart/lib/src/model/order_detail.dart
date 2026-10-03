@@ -3,28 +3,31 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:materyalph_api_client/src/model/order_refund_timeline.dart';
 import 'package:materyalph_api_client/src/model/order_payment_availability.dart';
 import 'package:materyalph_api_client/src/model/order_checkout_ref.dart';
-import 'package:materyalph_api_client/src/model/order_timeline_event.dart';
 import 'package:materyalph_api_client/src/model/order_vendor_ref.dart';
-import 'package:materyalph_api_client/src/model/order_reservation.dart';
-import 'package:materyalph_api_client/src/model/auto_accept_outcome.dart';
-import 'package:materyalph_api_client/src/model/order_destination.dart';
 import 'package:materyalph_api_client/src/model/order_state_row.dart';
 import 'package:materyalph_api_client/src/model/vendor_order_permissions.dart';
 import 'package:materyalph_api_client/src/model/vendor_order_decline_reason.dart';
 import 'package:materyalph_api_client/src/model/nrpc_terms_ref.dart';
 import 'package:materyalph_api_client/src/model/date.dart';
+import 'package:materyalph_api_client/src/model/order_deadlines.dart';
+import 'package:materyalph_api_client/src/model/order_buyer_ref.dart';
+import 'package:materyalph_api_client/src/model/order_delivery.dart';
+import 'package:materyalph_api_client/src/model/order_change.dart';
+import 'package:materyalph_api_client/src/model/order_timeline_event.dart';
+import 'package:materyalph_api_client/src/model/order_reservation.dart';
+import 'package:materyalph_api_client/src/model/auto_accept_outcome.dart';
+import 'package:materyalph_api_client/src/model/order_destination.dart';
+import 'package:materyalph_api_client/src/model/order_fulfillment.dart';
+import 'package:materyalph_api_client/src/model/order_cancellation.dart';
 import 'package:built_collection/built_collection.dart';
 import 'package:materyalph_api_client/src/model/order_nrpc.dart';
 import 'package:materyalph_api_client/src/model/vendor_order_primary_action.dart';
 import 'package:materyalph_api_client/src/model/money_breakdown.dart';
-import 'package:materyalph_api_client/src/model/order_deadlines.dart';
-import 'package:materyalph_api_client/src/model/order_buyer_ref.dart';
-import 'package:materyalph_api_client/src/model/order_delivery.dart';
 import 'package:materyalph_api_client/src/model/order_line.dart';
 import 'package:materyalph_api_client/src/model/order_commercial_version.dart';
-import 'package:materyalph_api_client/src/model/order_change.dart';
 import 'package:built_value/json_object.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
@@ -68,6 +71,9 @@ part 'order_detail.g.dart';
 /// * [primaryAction]
 /// * [nrpcTerms]
 /// * [declineReasons]
+/// * [fulfillment]
+/// * [cancellation]
+/// * [refundTimeline]
 @BuiltValue()
 abstract class OrderDetail implements Built<OrderDetail, OrderDetailBuilder> {
   @BuiltValueField(wireName: r'project_context')
@@ -151,7 +157,7 @@ abstract class OrderDetail implements Built<OrderDetail, OrderDetailBuilder> {
 
   @BuiltValueField(wireName: r'available_actions')
   BuiltList<OrderDetailAvailableActionsEnum>? get availableActions;
-  // enum availableActionsEnum {  APPROVE_REVISION,  REJECT_REVISION,  ACCEPT_NRPC,  REJECT_NRPC,  FLAG_NRPC,  PAY,  };
+  // enum availableActionsEnum {  APPROVE_REVISION,  REJECT_REVISION,  ACCEPT_NRPC,  REJECT_NRPC,  FLAG_NRPC,  PAY,  WITHDRAW,  CANCEL,  REQUEST_CANCELLATION,  WITHDRAW_CANCELLATION_REQUEST,  CONFIRM_RECEIPT,  REPORT_PROBLEM,  RESOLVE_PROBLEM,  ACKNOWLEDGE_REIMBURSEMENT,  };
 
   @BuiltValueField(wireName: r'payment')
   OrderPaymentAvailability? get payment;
@@ -170,13 +176,22 @@ abstract class OrderDetail implements Built<OrderDetail, OrderDetailBuilder> {
 
   @BuiltValueField(wireName: r'primary_action')
   VendorOrderPrimaryAction? get primaryAction;
-  // enum primaryActionEnum {  CONFIRM,  WAITING_FOR_BUYER,  WAITING_FOR_PAYMENT,  PREPARE_WHEN_AVAILABLE,  NONE,  };
+  // enum primaryActionEnum {  CONFIRM,  WAITING_FOR_BUYER,  WAITING_FOR_PAYMENT,  PREPARE_WHEN_AVAILABLE,  START_PREPARATION,  MARK_READY,  DISPATCH,  RECORD_PICKUP,  RECORD_DELIVERY,  AWAIT_RECEIPT,  RESPOND_TO_CANCELLATION,  NONE,  };
 
   @BuiltValueField(wireName: r'nrpc_terms')
   NrpcTermsRef? get nrpcTerms;
 
   @BuiltValueField(wireName: r'decline_reasons')
   BuiltList<VendorOrderDeclineReason>? get declineReasons;
+
+  @BuiltValueField(wireName: r'fulfillment')
+  OrderFulfillment? get fulfillment;
+
+  @BuiltValueField(wireName: r'cancellation')
+  OrderCancellation? get cancellation;
+
+  @BuiltValueField(wireName: r'refund_timeline')
+  OrderRefundTimeline? get refundTimeline;
 
   OrderDetail._();
 
@@ -389,6 +404,27 @@ class _$OrderDetailSerializer implements PrimitiveSerializer<OrderDetail> {
       yield serializers.serialize(
         object.declineReasons,
         specifiedType: const FullType(BuiltList, [FullType(VendorOrderDeclineReason)]),
+      );
+    }
+    if (object.fulfillment != null) {
+      yield r'fulfillment';
+      yield serializers.serialize(
+        object.fulfillment,
+        specifiedType: const FullType(OrderFulfillment),
+      );
+    }
+    if (object.cancellation != null) {
+      yield r'cancellation';
+      yield serializers.serialize(
+        object.cancellation,
+        specifiedType: const FullType(OrderCancellation),
+      );
+    }
+    if (object.refundTimeline != null) {
+      yield r'refund_timeline';
+      yield serializers.serialize(
+        object.refundTimeline,
+        specifiedType: const FullType(OrderRefundTimeline),
       );
     }
   }
@@ -671,6 +707,30 @@ class _$OrderDetailSerializer implements PrimitiveSerializer<OrderDetail> {
           if (valueDes == null) continue;
           result.declineReasons.replace(valueDes);
           break;
+        case r'fulfillment':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(OrderFulfillment),
+          ) as OrderFulfillment?;
+          if (valueDes == null) continue;
+          result.fulfillment.replace(valueDes);
+          break;
+        case r'cancellation':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(OrderCancellation),
+          ) as OrderCancellation?;
+          if (valueDes == null) continue;
+          result.cancellation.replace(valueDes);
+          break;
+        case r'refund_timeline':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(OrderRefundTimeline),
+          ) as OrderRefundTimeline?;
+          if (valueDes == null) continue;
+          result.refundTimeline.replace(valueDes);
+          break;
         default:
           unhandled.add(key);
           unhandled.add(value);
@@ -777,6 +837,22 @@ class OrderDetailAvailableActionsEnum extends EnumClass {
   static const OrderDetailAvailableActionsEnum FLAG_NRPC = _$orderDetailAvailableActionsEnum_FLAG_NRPC;
   @BuiltValueEnumConst(wireName: r'PAY')
   static const OrderDetailAvailableActionsEnum PAY = _$orderDetailAvailableActionsEnum_PAY;
+  @BuiltValueEnumConst(wireName: r'WITHDRAW')
+  static const OrderDetailAvailableActionsEnum WITHDRAW = _$orderDetailAvailableActionsEnum_WITHDRAW;
+  @BuiltValueEnumConst(wireName: r'CANCEL')
+  static const OrderDetailAvailableActionsEnum CANCEL = _$orderDetailAvailableActionsEnum_CANCEL;
+  @BuiltValueEnumConst(wireName: r'REQUEST_CANCELLATION')
+  static const OrderDetailAvailableActionsEnum REQUEST_CANCELLATION = _$orderDetailAvailableActionsEnum_REQUEST_CANCELLATION;
+  @BuiltValueEnumConst(wireName: r'WITHDRAW_CANCELLATION_REQUEST')
+  static const OrderDetailAvailableActionsEnum WITHDRAW_CANCELLATION_REQUEST = _$orderDetailAvailableActionsEnum_WITHDRAW_CANCELLATION_REQUEST;
+  @BuiltValueEnumConst(wireName: r'CONFIRM_RECEIPT')
+  static const OrderDetailAvailableActionsEnum CONFIRM_RECEIPT = _$orderDetailAvailableActionsEnum_CONFIRM_RECEIPT;
+  @BuiltValueEnumConst(wireName: r'REPORT_PROBLEM')
+  static const OrderDetailAvailableActionsEnum REPORT_PROBLEM = _$orderDetailAvailableActionsEnum_REPORT_PROBLEM;
+  @BuiltValueEnumConst(wireName: r'RESOLVE_PROBLEM')
+  static const OrderDetailAvailableActionsEnum RESOLVE_PROBLEM = _$orderDetailAvailableActionsEnum_RESOLVE_PROBLEM;
+  @BuiltValueEnumConst(wireName: r'ACKNOWLEDGE_REIMBURSEMENT')
+  static const OrderDetailAvailableActionsEnum ACKNOWLEDGE_REIMBURSEMENT = _$orderDetailAvailableActionsEnum_ACKNOWLEDGE_REIMBURSEMENT;
 
   static Serializer<OrderDetailAvailableActionsEnum> get serializer => _$orderDetailAvailableActionsEnumSerializer;
 

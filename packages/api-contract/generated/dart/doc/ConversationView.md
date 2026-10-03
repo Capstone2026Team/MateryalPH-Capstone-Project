@@ -21,6 +21,9 @@ Name | Type | Description | Notes
 **updatedAt** | **String** |  |
 **canTransfer** | **bool** |  |
 **fulfillmentEntryEnabled** | **bool** |  |
+**readOnly** | **bool** |  |
+**readOnlyReason** | **String** |  | [optional]
+**orderReference** | **String** |  | [optional]
 **buyer** | [**ChatIdentity**](ChatIdentity.md) |  | [optional]
 **lastMessagePreview** | **String** |  | [optional]
 **latestProductId** | **String** |  | [optional]

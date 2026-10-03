@@ -22,6 +22,7 @@ final class ConversationFiles
     {
         $c = $this->access->require($request->user(), $id);
         app(ConversationService::class)->requireCurrent($c);
+        FulfillmentThreadService::requireWritable($c);
         if ($c->purpose === 'FULFILLMENT' && $file->getMimeType() === 'application/pdf') {
             throw new AuthenticationException('ATTACHMENT_NOT_PERMITTED', 'Fulfillment threads accept coordination photos only.', 422);
         }

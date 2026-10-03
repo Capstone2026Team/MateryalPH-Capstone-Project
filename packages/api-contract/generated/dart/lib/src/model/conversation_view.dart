@@ -28,6 +28,9 @@ part 'conversation_view.g.dart';
 /// * [updatedAt]
 /// * [canTransfer]
 /// * [fulfillmentEntryEnabled]
+/// * [readOnly]
+/// * [readOnlyReason]
+/// * [orderReference]
 /// * [buyer]
 /// * [lastMessagePreview]
 /// * [latestProductId]
@@ -77,6 +80,15 @@ abstract class ConversationView implements Built<ConversationView, ConversationV
 
   @BuiltValueField(wireName: r'fulfillment_entry_enabled')
   bool get fulfillmentEntryEnabled;
+
+  @BuiltValueField(wireName: r'read_only')
+  bool get readOnly;
+
+  @BuiltValueField(wireName: r'read_only_reason')
+  String? get readOnlyReason;
+
+  @BuiltValueField(wireName: r'order_reference')
+  String? get orderReference;
 
   @BuiltValueField(wireName: r'buyer')
   ChatIdentity? get buyer;
@@ -191,6 +203,25 @@ class _$ConversationViewSerializer implements PrimitiveSerializer<ConversationVi
       object.fulfillmentEntryEnabled,
       specifiedType: const FullType(bool),
     );
+    yield r'read_only';
+    yield serializers.serialize(
+      object.readOnly,
+      specifiedType: const FullType(bool),
+    );
+    if (object.readOnlyReason != null) {
+      yield r'read_only_reason';
+      yield serializers.serialize(
+        object.readOnlyReason,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.orderReference != null) {
+      yield r'order_reference';
+      yield serializers.serialize(
+        object.orderReference,
+        specifiedType: const FullType(String),
+      );
+    }
     if (object.buyer != null) {
       yield r'buyer';
       yield serializers.serialize(
@@ -355,6 +386,29 @@ class _$ConversationViewSerializer implements PrimitiveSerializer<ConversationVi
             specifiedType: const FullType(bool),
           ) as bool;
           result.fulfillmentEntryEnabled = valueDes;
+          break;
+        case r'read_only':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(bool),
+          ) as bool;
+          result.readOnly = valueDes;
+          break;
+        case r'read_only_reason':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.readOnlyReason = valueDes;
+          break;
+        case r'order_reference':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.orderReference = valueDes;
           break;
         case r'buyer':
           final valueDes = serializers.deserialize(

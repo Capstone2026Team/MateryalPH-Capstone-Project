@@ -177,5 +177,20 @@ void main() {
       // TODO
     });
 
+    // OrderFulfillment fulfillment
+    test('to test the property `fulfillment`', () async {
+      // TODO
+    });
+
+    // OrderCancellation cancellation
+    test('to test the property `cancellation`', () async {
+      // TODO
+    });
+
+    // OrderRefundTimeline refundTimeline
+    test('to test the property `refundTimeline`', () async {
+      // TODO
+    });
+
   });
 }

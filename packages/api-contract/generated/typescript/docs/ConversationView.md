@@ -19,6 +19,9 @@ Name | Type
 `updatedAt` | string
 `canTransfer` | boolean
 `fulfillmentEntryEnabled` | boolean
+`readOnly` | boolean
+`readOnlyReason` | string
+`orderReference` | string
 `buyer` | [ChatIdentity](ChatIdentity.md)
 `lastMessagePreview` | string
 `latestProductId` | string
@@ -47,6 +50,9 @@ const example = {
   "updatedAt": null,
   "canTransfer": null,
   "fulfillmentEntryEnabled": null,
+  "readOnly": null,
+  "readOnlyReason": null,
+  "orderReference": null,
   "buyer": null,
   "lastMessagePreview": null,
   "latestProductId": null,

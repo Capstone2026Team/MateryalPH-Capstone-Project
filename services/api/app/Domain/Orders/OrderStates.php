@@ -39,6 +39,24 @@ final class OrderStates
 
     public const COMPLETED = 'COMPLETED';
 
+    public const PROCESSING = 'PROCESSING';
+
+    public const READY_FOR_PICKUP = 'READY_FOR_PICKUP';
+
+    public const OUT_FOR_DELIVERY = 'OUT_FOR_DELIVERY';
+
+    public const DELIVERED = 'DELIVERED';
+
+    public const PICKED_UP = 'PICKED_UP';
+
+    public const CANCELLATION_REQUESTED = 'CANCELLATION_REQUESTED';
+
+    /** Buyer cancellation is unavailable here; Report a Problem, dispute and statutory remedies remain. */
+    public const HANDOVER_STAGE = [self::READY_FOR_PICKUP, self::OUT_FOR_DELIVERY];
+
+    /** Fulfillment proof recorded; Buyer receipt confirmation or the 48-hour auto-confirmation is pending. */
+    public const AWAITING_RECEIPT = [self::DELIVERED, self::PICKED_UP];
+
     /** Orders whose commercial terms are not yet accepted by both parties. */
     public const PENDING_ACCEPTANCE = [self::AWAITING_VENDOR_CONFIRMATION, self::AWAITING_BUYER_APPROVAL, self::AWAITING_NRPC_ACCEPTANCE];
 
@@ -58,10 +76,12 @@ final class OrderStates
             self::AWAITING_PAYMENT => [self::CONFIRMED, self::EXPIRED, self::CANCELLED],
             self::CONFIRMED => ['PROCESSING', 'CANCELLATION_REQUESTED', self::CANCELLED, 'DISPUTED'],
             'PROCESSING' => ['READY_FOR_PICKUP', 'OUT_FOR_DELIVERY', 'CANCELLATION_REQUESTED', self::CANCELLED, 'DISPUTED'],
-            'READY_FOR_PICKUP' => ['PICKED_UP', 'DISPUTED'],
-            'OUT_FOR_DELIVERY' => ['DELIVERED', 'DISPUTED'],
+            // Only a Vendor cancellation may close an order at the handover stage; the Buyer path is blocked in the service.
+            'READY_FOR_PICKUP' => ['PICKED_UP', self::CANCELLED, 'DISPUTED'],
+            'OUT_FOR_DELIVERY' => ['DELIVERED', self::CANCELLED, 'DISPUTED'],
             'PICKED_UP' => [self::COMPLETED, 'DISPUTED'],
             'DELIVERED' => [self::COMPLETED, 'DISPUTED'],
+            // No milestone advances while a cancellation request is open; withdrawal returns to the prior state.
             'CANCELLATION_REQUESTED' => [self::CANCELLED, self::CONFIRMED, 'PROCESSING'],
             'DISPUTED' => [self::COMPLETED, self::CANCELLED],
         ],
@@ -77,6 +97,7 @@ final class OrderStates
             'READY_FOR_PICKUP' => ['PICKED_UP'],
             'OUT_FOR_DELIVERY' => ['DELIVERED'],
         ],
+        // The aggregate of every refund instruction of the order; only verified provider evidence leaves PENDING.
         self::REFUND => [
             'NOT_REQUESTED' => ['REFUND_PENDING'],
             'REFUND_PENDING' => ['PARTIALLY_REFUNDED', 'REFUNDED', 'REFUND_FAILED'],

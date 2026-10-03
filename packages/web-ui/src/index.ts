@@ -31,7 +31,7 @@ export { ChecklistPanel, verificationChecklist, checklistStatus, checklistProgre
 
 export { PrivateEvidenceButton } from './private-evidence-button'
 export { PrivateEvidenceGallery, type PrivateEvidenceItem } from './private-evidence-gallery'
-export { readWebPrivateFile } from './web-api-session'
+export { readWebPrivateFile, readOrderEvidenceFile } from './web-api-session'
 
 export { VersionedAgreementPanel } from './versioned-agreement-panel'
 export { PublishedAgreementReader } from './published-agreement-reader'
@@ -48,3 +48,4 @@ export { OrderStateRows, DeadlineCountdown, MoneyBreakdown, formatPesoCentavos, 
 
 export { ConversationHeader, ConversationInbox, ChatMessageBubble, ChatAvatar, QuotationVersionCard, ChatAttachmentButton, chatRoleLabel, conversationLabel } from './messaging-patterns'
 export { DemoLabel, WithholdingStatusBadge, ThresholdPanel, PaymentAttemptBadge, PaymentChannelList, FinanceSection, type ThresholdPanelData, type PaymentChannelRow } from './finance-patterns'
+export { MilestoneStepper, RefundTimeline, RefundStatusBadge, CancellationAvailability, roleLabel } from './fulfillment-patterns'

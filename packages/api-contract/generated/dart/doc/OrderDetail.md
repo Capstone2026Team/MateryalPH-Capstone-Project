@@ -42,6 +42,9 @@ Name | Type | Description | Notes
 **primaryAction** | [**VendorOrderPrimaryAction**](VendorOrderPrimaryAction.md) |  | [optional]
 **nrpcTerms** | [**NrpcTermsRef**](NrpcTermsRef.md) |  | [optional]
 **declineReasons** | [**BuiltList&lt;VendorOrderDeclineReason&gt;**](VendorOrderDeclineReason.md) |  | [optional]
+**fulfillment** | [**OrderFulfillment**](OrderFulfillment.md) |  | [optional]
+**cancellation** | [**OrderCancellation**](OrderCancellation.md) |  | [optional]
+**refundTimeline** | [**OrderRefundTimeline**](OrderRefundTimeline.md) |  | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

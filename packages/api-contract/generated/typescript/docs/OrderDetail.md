@@ -41,6 +41,9 @@ Name | Type
 `primaryAction` | [VendorOrderPrimaryAction](VendorOrderPrimaryAction.md)
 `nrpcTerms` | [NrpcTermsRef](NrpcTermsRef.md)
 `declineReasons` | [Array&lt;VendorOrderDeclineReason&gt;](VendorOrderDeclineReason.md)
+`fulfillment` | [OrderFulfillment](OrderFulfillment.md)
+`cancellation` | [OrderCancellation](OrderCancellation.md)
+`refundTimeline` | [OrderRefundTimeline](OrderRefundTimeline.md)
 
 ## Example
 
@@ -83,6 +86,9 @@ const example = {
   "primaryAction": null,
   "nrpcTerms": null,
   "declineReasons": null,
+  "fulfillment": null,
+  "cancellation": null,
+  "refundTimeline": null,
 } satisfies OrderDetail
 
 console.log(example)
