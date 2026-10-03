@@ -8,6 +8,7 @@ use App\Domain\Agreements\AccountAgreements;
 use App\Domain\Authorization\AccountAccess;
 use App\Domain\Catalog\MarketplaceDiscoverability;
 use App\Domain\Catalog\RentalServicePolicy;
+use App\Domain\Finance\WithholdingThresholdService;
 use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Identity\EmailOtpService;
@@ -779,7 +780,11 @@ final class VendorOnboardingService
             DB::table('vendor_documents')->where('id', $documentId)->update(['review_submitted' => true, 'superseded_at' => null, 'document_type' => $documentType, 'current_version_id' => $versionId, 'status' => 'SUBMITTED', 'lock_version' => DB::raw('lock_version + 1'), 'updated_at' => now()]);
             if ($requirementKey === 'tax_relief_evidence') {
                 $safeMetadata = $this->safeMetadata($metadata);
-                DB::table('tax_evidence')->insert(['id' => (string) Str::uuid7(), 'vendor_tax_profile_version_id' => $taxVersionId, 'file_id' => $fileId, 'evidence_type' => 'TAX_RELIEF_DECLARATION', 'origin' => 'VENDOR_UPLOAD', 'document_hash' => $checksum, 'valid_from' => $this->metadataDate($safeMetadata['valid_from'] ?? null), 'valid_until' => $this->metadataDate($safeMetadata['valid_until'] ?? null), 'review_state' => 'PENDING', 'created_at' => now(), 'updated_at' => now()]);
+                $evidenceId = (string) Str::uuid7();
+                $actorId = (int) $request->user()->getKey();
+                // FIN-04A: a declaration stored after this year's crossing is acknowledged once and changes nothing.
+                DB::afterCommit(static fn () => app(WithholdingThresholdService::class)->declarationRecorded($organizationId, $evidenceId, 'VENDOR', $actorId, (string) Str::uuid7()));
+                DB::table('tax_evidence')->insert(['id' => $evidenceId, 'vendor_tax_profile_version_id' => $taxVersionId, 'file_id' => $fileId, 'evidence_type' => 'TAX_RELIEF_DECLARATION', 'origin' => 'VENDOR_UPLOAD', 'document_hash' => $checksum, 'valid_from' => $this->metadataDate($safeMetadata['valid_from'] ?? null), 'valid_until' => $this->metadataDate($safeMetadata['valid_until'] ?? null), 'review_state' => 'PENDING', 'created_at' => now(), 'updated_at' => now()]);
             }
             $this->setStep($organizationId, 'STORE_VERIFICATION', $requirementKey, 'PENDING_VERIFICATION');
             $this->audit->account($request, 'VENDOR_EVIDENCE_SUBMITTED', 'BUSINESS_DOCUMENT_VERSION', $versionId, after: ['requirement_key' => $requirementKey, 'version' => $version]);

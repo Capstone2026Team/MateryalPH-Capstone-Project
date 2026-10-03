@@ -1,0 +1,7 @@
+  0s built_value_generator:built_value on 1049 inputs; lib/materyalph_api_client.dart
+  0s built_value_generator:built_value on 1049 inputs: 1 skipped; lib/src/api.dart
+  2s built_value_generator:built_value on 1049 inputs: 528 skipped, 1 output, 1 same; test/account_admin_change_test.dart
+  2s built_value_generator:built_value on 1049 inputs: 1046 skipped, 1 not triggered, 1 output, 1 same
+  0s source_gen:combining_builder on 1049 inputs; lib/materyalph_api_client.dart
+  0s source_gen:combining_builder on 1049 inputs: 1047 skipped, 1 output, 1 same
+  Built with build_runner/aot in 75s; wrote 4 outputs.

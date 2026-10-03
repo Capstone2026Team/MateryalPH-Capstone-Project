@@ -5,6 +5,31 @@ import '../../features/map_discovery/discovery_models.dart';
 import '../generated/color_tokens.dart';
 import '../theme.dart';
 
+/// Shared floating map surface for search, location details and map controls.
+class MapFloatingSurface extends StatelessWidget {
+  static const shadowColor = Color(0x240F172A);
+  const MapFloatingSurface({super.key, required this.child, this.radius = 16});
+  final Widget child;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(radius),
+      border: Border.all(color: BuyerTheme.border),
+      boxShadow: const [
+        BoxShadow(color: shadowColor, blurRadius: 8, offset: Offset(0, 2)),
+      ],
+    ),
+    child: Material(
+      type: MaterialType.transparency,
+      borderRadius: BorderRadius.circular(radius),
+      child: child,
+    ),
+  );
+}
+
 /// Fixed 5/10/20/30/40/50 km chips with a visible selected state (fill, check icon and bold
 /// text, not color alone). Selecting a chip is an explicit Buyer choice; automatic expansion
 /// goes through [confirmRadiusExpansion] first.
@@ -106,17 +131,22 @@ class LocationSelector extends StatelessWidget {
     required this.label,
     required this.onPressed,
     this.detail,
+    this.caption = 'Location',
+    this.showAddress = true,
   });
 
   final String label;
   final String? detail;
+  final String caption;
+  final bool showAddress;
   final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) => Semantics(
     button: true,
-    label:
-        'Location: $label${detail == null ? '' : ', $detail'}. Change location',
+    label: showAddress
+        ? 'Location: $label${detail == null ? '' : ', $detail'}. Change location'
+        : '$caption. Change location on the Map',
     excludeSemantics: true,
     child: InkWell(
       onTap: onPressed,
@@ -128,50 +158,51 @@ class LocationSelector extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Row(
+              Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Flexible(
                     child: Text(
-                      'Location',
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
+                      caption,
+                      style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: BuyerTheme.muted,
                       ),
                     ),
                   ),
-                  Icon(
+                  const Icon(
                     LucideIcons.chevronDown,
                     size: 16,
                     color: BuyerTheme.action,
                   ),
                 ],
               ),
-              Row(
-                children: [
-                  const Icon(
-                    LucideIcons.mapPin,
-                    size: 18,
-                    color: BuyerTheme.action,
-                  ),
-                  const SizedBox(width: 4),
-                  Flexible(
-                    child: Text(
-                      label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: BuyerTheme.ink,
+              if (showAddress)
+                Row(
+                  children: [
+                    const Icon(
+                      LucideIcons.mapPin,
+                      size: 18,
+                      color: BuyerTheme.action,
+                    ),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: BuyerTheme.ink,
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
             ],
           ),
         ),

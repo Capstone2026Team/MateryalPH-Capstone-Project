@@ -1,5 +1,6 @@
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter/material.dart';
+import '../design_system/components/buyer_app_bar.dart';
 
 import '../widgets/auth_content.dart';
 
@@ -79,13 +80,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        leading: IconButton(
-          onPressed: widget.onBack,
-          tooltip: 'Back',
-          icon: const Icon(LucideIcons.arrowLeft, color: BuyerTheme.action),
-        ),
-      ),
+      appBar: buyerAppBar(context, '', onBack: widget.onBack),
       body: SafeArea(
         top: false,
         child: AuthContent(
@@ -202,7 +197,12 @@ class _LoginScreenState extends State<LoginScreen> {
                         children: [
                           Icon(Icons.g_mobiledata, size: 32),
                           SizedBox(width: 8),
-                          Text('Continue with Google'),
+                          Flexible(
+                            child: Text(
+                              'Continue with Google',
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
                         ],
                       ),
                     ),

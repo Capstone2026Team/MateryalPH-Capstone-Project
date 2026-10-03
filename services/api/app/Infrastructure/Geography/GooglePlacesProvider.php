@@ -21,7 +21,7 @@ final class GooglePlacesProvider implements PlacesProvider
 {
     public const SEARCH_FIELD_MASK = 'places.id,places.displayName,places.location,places.formattedAddress,places.primaryType,places.businessStatus';
 
-    public const DETAILS_FIELD_MASK = 'id,displayName,formattedAddress,location,nationalPhoneNumber,websiteUri,googleMapsUri,regularOpeningHours.weekdayDescriptions,rating,userRatingCount,businessStatus';
+    public const DETAILS_FIELD_MASK = 'id,displayName,formattedAddress,location,primaryType,nationalPhoneNumber,websiteUri,googleMapsUri,regularOpeningHours.weekdayDescriptions,currentOpeningHours.openNow,currentOpeningHours.nextCloseTime,rating,userRatingCount,businessStatus,photos,reviews,attributions,delivery,curbsidePickup,accessibilityOptions,paymentOptions';
 
     private const SEARCH_URL = 'https://places.googleapis.com/v1/places:searchNearby';
 
@@ -34,6 +34,61 @@ final class GooglePlacesProvider implements PlacesProvider
         return (bool) config('services.google_maps.places.enabled', true) && is_string($key) && trim($key) !== '';
     }
 
+    public function autocomplete(string $query, string $sessionToken): array
+    {
+        $this->assertConfigured();
+        $this->budget->consume('places');
+        try {
+            $response = $this->client('suggestions.placePrediction.placeId,suggestions.placePrediction.structuredFormat')->post('https://places.googleapis.com/v1/places:autocomplete', [
+                'input' => $query, 'sessionToken' => $sessionToken, 'includedRegionCodes' => ['ph'], 'languageCode' => 'en',
+            ]);
+        } catch (ConnectionException) {
+            throw new GeographyProviderUnavailable('TIMEOUT');
+        }
+        $items = [];
+        foreach (array_slice($this->checked($response)->json('suggestions') ?? [], 0, 5) as $suggestion) {
+            $place = $suggestion['placePrediction'] ?? [];
+            $id = $place['placeId'] ?? null;
+            $title = $this->text($place['structuredFormat']['mainText']['text'] ?? null, 200);
+            if (is_string($id) && preg_match('/^[A-Za-z0-9_-]{10,300}$/D', $id) === 1 && $title !== null) {
+                $items[] = ['place_id' => $id, 'title' => $title, 'subtitle' => $this->text($place['structuredFormat']['secondaryText']['text'] ?? null, 300)];
+            }
+        }
+
+        return $items;
+    }
+
+    public function locate(string $placeId, string $sessionToken): ?array
+    {
+        $this->assertConfigured();
+        if (preg_match('/^[A-Za-z0-9_-]{10,300}$/D', $placeId) !== 1) {
+            return null;
+        }
+        $this->budget->consume('places');
+        try {
+            $response = $this->client('location,formattedAddress')->get('https://places.googleapis.com/v1/places/'.$placeId, ['sessionToken' => $sessionToken, 'languageCode' => 'en']);
+        } catch (ConnectionException) {
+            throw new GeographyProviderUnavailable('TIMEOUT');
+        }
+        if ($response->status() === 404) {
+            return null;
+        }
+        $place = $this->checked($response)->json();
+        $address = $this->text($place['formattedAddress'] ?? null, 300);
+        $lat = $place['location']['latitude'] ?? null;
+        $lng = $place['location']['longitude'] ?? null;
+
+        return $address !== null && is_numeric($lat) && is_numeric($lng)
+            ? ['latitude' => (float) $lat, 'longitude' => (float) $lng, 'formatted_address' => $address] : null;
+    }
+
+    private function assertConfigured(): void
+    {
+        if (! $this->configured()) {
+            throw new GeographyProviderUnavailable('NOT_CONFIGURED');
+        }
+    }
+
     public function nearby(array $cells): array
     {
         if (! $this->configured()) {
@@ -44,22 +99,24 @@ final class GooglePlacesProvider implements PlacesProvider
         }
         $this->budget->consume('places', count($cells));
         $types = array_values(array_filter((array) config('services.google_maps.places.included_types', []), static fn (mixed $type): bool => is_string($type) && preg_match('/^[a-z_]{3,64}$/D', $type) === 1));
-        $responses = Http::pool(fn (Pool $pool): array => array_map(fn (array $cell): mixed => $this->request($pool)->post(self::SEARCH_URL, [
-            'includedTypes' => $types,
-            'maxResultCount' => 20,
-            // Prominence spreads each cell's 20 results across the cell instead of the 20 nearest its centre.
-            // Buyer-facing order is still straight-line distance, applied by SupplierDiscoveryService.
-            'rankPreference' => 'POPULARITY',
-            'regionCode' => 'PH',
-            'languageCode' => 'en',
-            'locationRestriction' => ['circle' => ['center' => ['latitude' => $cell['latitude'], 'longitude' => $cell['longitude']], 'radius' => (float) min(50000, $cell['radius_meters'])]],
-        ]), $cells));
         $places = [];
-        foreach ($responses as $response) {
-            foreach ($this->checked($response)->json('places') ?? [] as $place) {
-                $parsed = is_array($place) ? $this->summary($place) : null;
-                if ($parsed !== null) {
-                    $places[$parsed['place_id']] = $parsed;
+        // Bound concurrency independently of the geographic cell count.
+        foreach (array_chunk($cells, 16) as $batch) {
+            $responses = Http::pool(fn (Pool $pool): array => array_map(fn (array $cell): mixed => $this->request($pool)->post(self::SEARCH_URL, [
+                'includedTypes' => $types,
+                'maxResultCount' => 20,
+                // Ranking is upstream and capped; neither ranking mode guarantees complete coverage.
+                'rankPreference' => 'POPULARITY',
+                'regionCode' => 'PH',
+                'languageCode' => 'en',
+                'locationRestriction' => ['circle' => ['center' => ['latitude' => $cell['latitude'], 'longitude' => $cell['longitude']], 'radius' => (float) min(50000, $cell['radius_meters'])]],
+            ]), $batch));
+            foreach ($responses as $response) {
+                foreach ($this->checked($response)->json('places') ?? [] as $place) {
+                    $parsed = is_array($place) ? $this->summary($place) : null;
+                    if ($parsed !== null) {
+                        $places[$parsed['place_id']] = $parsed;
+                    }
                 }
             }
         }
@@ -101,7 +158,140 @@ final class GooglePlacesProvider implements PlacesProvider
             'rating' => is_numeric($place['rating'] ?? null) && $place['rating'] >= 1 && $place['rating'] <= 5 ? round((float) $place['rating'], 1) : null,
             'user_rating_count' => is_int($place['userRatingCount'] ?? null) && $place['userRatingCount'] >= 0 ? $place['userRatingCount'] : null,
             'business_status' => $summary['business_status'],
+            'open_now' => is_bool($place['currentOpeningHours']['openNow'] ?? null) ? $place['currentOpeningHours']['openNow'] : null,
+            'next_close_time' => $this->text($place['currentOpeningHours']['nextCloseTime'] ?? null, 40),
+            'photos' => $this->photos($place['photos'] ?? [], $placeId),
+            'reviews' => $this->reviews($place['reviews'] ?? []),
+            'attributes' => $this->attributes($place),
+            'provider_attributions' => $this->providerAttributions($place['attributions'] ?? []),
         ];
+    }
+
+    public function thumbnail(string $placeId): array
+    {
+        $this->assertConfigured();
+        $empty = ['photos' => [], 'provider_attributions' => []];
+        if (preg_match('/^[A-Za-z0-9_-]{10,300}$/D', $placeId) !== 1) {
+            return $empty;
+        }
+        $this->budget->consume('places');
+        try {
+            $response = $this->client('photos,attributions')->get('https://places.googleapis.com/v1/places/'.$placeId, ['languageCode' => 'en', 'regionCode' => 'PH']);
+        } catch (ConnectionException) {
+            throw new GeographyProviderUnavailable('TIMEOUT');
+        }
+        if ($response->status() === 404) {
+            return $empty;
+        }
+        $place = $this->checked($response)->json();
+
+        return [
+            'photos' => $this->photos($place['photos'] ?? [], $placeId, 1, 160),
+            'provider_attributions' => $this->providerAttributions($place['attributions'] ?? []),
+        ];
+    }
+
+    /**
+     * Photos are resolved only for visible content. Never persist names or media URLs.
+     *
+     * @param  array<array-key, mixed>  $photos
+     * @return list<array{uri: string, authors: list<array{name: string, uri: ?string, photo_uri: ?string}>, google_maps_uri: ?string}>
+     */
+    private function photos(array $photos, string $placeId, int $limit = 4, int $width = 800): array
+    {
+        $items = [];
+        foreach (array_slice($photos, 0, $limit) as $photo) {
+            $name = $photo['name'] ?? '';
+            if (! is_string($name) || ! preg_match('~^places/'.preg_quote($placeId, '~').'/photos/[A-Za-z0-9_-]+$~D', $name)) {
+                continue;
+            }
+            try {
+                $this->budget->consume('places');
+                $response = $this->client('')->get('https://places.googleapis.com/v1/'.$name.'/media', ['maxWidthPx' => $width, 'skipHttpRedirect' => 'true']);
+                $uri = $this->uri($this->checked($response)->json('photoUri'));
+                if ($uri !== null && ! str_contains(strtolower($uri), 'key=')) {
+                    $items[] = ['uri' => $uri, 'authors' => $this->authors($photo['authorAttributions'] ?? []), 'google_maps_uri' => $this->uri($photo['googleMapsUri'] ?? null)];
+                }
+            } catch (ConnectionException|GeographyProviderUnavailable) {
+                // A photo outage must not hide address, phone or other available details.
+            }
+        }
+
+        return $items;
+    }
+
+    /**
+     * @param  array<array-key, mixed>  $authors
+     * @return list<array{name: string, uri: ?string, photo_uri: ?string}>
+     */
+    private function authors(array $authors): array
+    {
+        $items = [];
+        foreach ($authors as $author) {
+            $name = $this->text($author['displayName'] ?? null, 200);
+            if ($name !== null) {
+                $items[] = ['name' => $name, 'uri' => $this->uri($author['uri'] ?? null), 'photo_uri' => $this->uri($author['photoUri'] ?? null)];
+            }
+        }
+
+        return $items;
+    }
+
+    /**
+     * @param  array<array-key, mixed>  $reviews
+     * @return list<array{author: array{name: string, uri: ?string, photo_uri: ?string}, rating: float, text: ?string, relative_time: ?string, google_maps_uri: ?string}>
+     */
+    private function reviews(array $reviews): array
+    {
+        $items = [];
+        foreach (array_slice($reviews, 0, 5) as $review) {
+            $author = $this->authors([$review['authorAttribution'] ?? []])[0] ?? null;
+            $rating = $review['rating'] ?? null;
+            if ($author !== null && is_numeric($rating) && $rating >= 1 && $rating <= 5) {
+                $items[] = ['author' => $author, 'rating' => (float) $rating, 'text' => $this->text($review['text']['text'] ?? null, 5000),
+                    'relative_time' => $this->text($review['relativePublishTimeDescription'] ?? null, 100), 'google_maps_uri' => $this->uri($review['googleMapsUri'] ?? null)];
+            }
+        }
+
+        return $items;
+    }
+
+    /**
+     * @param  array<string, mixed>  $place
+     * @return list<array{label: string, available: bool}>
+     */
+    private function attributes(array $place): array
+    {
+        $fields = ['delivery' => 'Delivery', 'curbsidePickup' => 'Curbside pickup',
+            'accessibilityOptions.wheelchairAccessibleParking' => 'Wheelchair accessible parking', 'accessibilityOptions.wheelchairAccessibleEntrance' => 'Wheelchair accessible entrance',
+            'accessibilityOptions.wheelchairAccessibleRestroom' => 'Wheelchair accessible restroom', 'accessibilityOptions.wheelchairAccessibleSeating' => 'Wheelchair accessible seating',
+            'paymentOptions.acceptsCreditCards' => 'Credit cards', 'paymentOptions.acceptsDebitCards' => 'Debit cards', 'paymentOptions.acceptsCashOnly' => 'Cash only', 'paymentOptions.acceptsNfc' => 'NFC payments'];
+        $items = [];
+        foreach ($fields as $path => $label) {
+            $value = data_get($place, $path);
+            if (is_bool($value)) {
+                $items[] = ['label' => $label, 'available' => $value];
+            }
+        }
+
+        return $items;
+    }
+
+    /**
+     * @param  array<array-key, mixed>  $attributions
+     * @return list<array{name: string, uri: ?string, photo_uri: ?string}>
+     */
+    private function providerAttributions(array $attributions): array
+    {
+        $items = [];
+        foreach ($attributions as $attribution) {
+            $name = $this->text($attribution['provider'] ?? null, 200);
+            if ($name !== null) {
+                $items[] = ['name' => $name, 'uri' => $this->uri($attribution['providerUri'] ?? null), 'photo_uri' => null];
+            }
+        }
+
+        return $items;
     }
 
     private function request(Pool $pool): mixed
@@ -118,7 +308,7 @@ final class GooglePlacesProvider implements PlacesProvider
     /** @return array<string, string> */
     private function headers(string $fieldMask): array
     {
-        return ['X-Goog-Api-Key' => (string) config('services.google_maps.server_api_key'), 'X-Goog-FieldMask' => $fieldMask];
+        return array_filter(['X-Goog-Api-Key' => (string) config('services.google_maps.server_api_key'), 'X-Goog-FieldMask' => $fieldMask], static fn (string $value): bool => $value !== '');
     }
 
     private function checked(mixed $response): Response

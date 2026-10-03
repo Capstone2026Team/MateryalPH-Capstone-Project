@@ -243,7 +243,7 @@ final class InventoryLedgerService
     }
 
     /**
-     * @param  array{lock_version: int, reminder_local_time: string, email_reminders: bool}  $input
+     * @param  array{lock_version: int, reminder_local_time: string, email_reminders: bool, auto_accept_ready_lead_days?: int|null}  $input
      * @return array<string, mixed>
      */
     public function saveSettings(Request $request, array $input): array
@@ -256,12 +256,17 @@ final class InventoryLedgerService
                 throw new AuthenticationException('STALE_VERSION', 'These settings changed since you opened them. Review them and save again.', 409, ['current' => $this->presentSettings($organizationId, [])]);
             }
             $values = ['reminder_local_time' => $input['reminder_local_time'], 'email_reminders' => (bool) $input['email_reminders'], 'updated_by_user_id' => $request->user()->getKey(), 'updated_at' => now()];
+            if (array_key_exists('auto_accept_ready_lead_days', $input)) {
+                // Ready-for-pickup date recorded by an auto-accepted Self-Pickup order (approved by the project owner on 2026-09-29).
+                $values['auto_accept_ready_lead_days'] = $input['auto_accept_ready_lead_days'] === null ? null : (int) $input['auto_accept_ready_lead_days'];
+            }
             if ($current === null) {
                 DB::table('vendor_inventory_settings')->insert($values + ['id' => (string) Str::uuid7(), 'vendor_organization_id' => $organizationId, 'lock_version' => 1, 'created_at' => now()]);
             } else {
                 DB::table('vendor_inventory_settings')->where('id', $current->id)->update($values + ['lock_version' => (int) $current->lock_version + 1]);
             }
-            $this->audit->account($request, 'INVENTORY_REMINDER_SETTINGS_UPDATED', 'VENDOR_ORGANIZATION', $organizationId, after: ['reminder_local_time' => $input['reminder_local_time'], 'email_reminders' => (bool) $input['email_reminders']]);
+            $this->audit->account($request, 'INVENTORY_REMINDER_SETTINGS_UPDATED', 'VENDOR_ORGANIZATION', $organizationId, after: ['reminder_local_time' => $input['reminder_local_time'], 'email_reminders' => (bool) $input['email_reminders'],
+                'auto_accept_ready_lead_days' => $values['auto_accept_ready_lead_days'] ?? ($current?->auto_accept_ready_lead_days)]);
         });
 
         return $this->presentSettings($organizationId, $this->access->scope($request)['permissions']);
@@ -283,7 +288,7 @@ final class InventoryLedgerService
             ->leftJoin('listing_price_versions as pv', fn ($join) => $join->on('pv.listing_variant_id', '=', 'v.id')->where('pv.price_kind', 'ORDINARY')->whereNull('pv.retired_at'))
             ->whereIn('v.id', $variantIds)
             ->get(['v.id', 'v.sku', 'v.label', 'u.code as unit_code', 'l.id as listing_id', 'l.display_name', 'l.status as listing_status',
-                'i.id as item_id', 'i.quantity_on_hand', 'i.hard_reserved_quantity', 'i.soft_held_quantity', 'i.reorder_level', 'i.confirmed_at', 'i.lock_version', 'i.updated_at',
+                'i.id as item_id', 'i.quantity_on_hand', 'i.hard_reserved_quantity', DB::raw("(SELECT COALESCE(SUM(h.quantity), 0) FROM inventory_holds h WHERE h.inventory_item_id = i.id AND h.hold_type = 'SOFT' AND h.state = 'ACTIVE' AND (h.expires_at IS NULL OR h.expires_at > CURRENT_TIMESTAMP)) as soft_held_quantity"), 'i.reorder_level', 'i.confirmed_at', 'i.lock_version', 'i.updated_at',
                 'pv.id as price_id', 'pv.version as price_version', 'pv.amount_centavos', 'pv.tax_category', 'pv.effective_at'])->keyBy('id');
         $policies = DB::table('auto_accept_policies')->whereIn('listing_variant_id', $variantIds)->get()->keyBy('listing_variant_id');
         $comparable = DB::table('listing_comparable_assignments')->whereIn('listing_variant_id', $variantIds)->whereNull('effective_until')->where('mapping_state', 'APPROVED')->pluck('material_comparable_group_version_id', 'listing_variant_id');
@@ -384,6 +389,7 @@ final class InventoryLedgerService
             'email_reminders' => $settings === null ? true : (bool) $settings->email_reminders,
             'in_app_reminders' => true, 'timezone' => StockConfirmationPolicy::TIMEZONE,
             'reminder_days' => [StockConfirmationPolicy::FIRST_REMINDER_DAYS, StockConfirmationPolicy::FINAL_REMINDER_DAYS], 'hide_after_days' => StockConfirmationPolicy::HIDE_AFTER_DAYS,
+            'auto_accept_ready_lead_days' => $settings?->auto_accept_ready_lead_days === null ? null : (int) $settings->auto_accept_ready_lead_days,
             'lock_version' => $settings === null ? 0 : (int) $settings->lock_version,
             'can_edit' => in_array(InventoryAccess::SETTINGS, $permissions, true),
         ];

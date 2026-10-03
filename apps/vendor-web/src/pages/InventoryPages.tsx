@@ -189,30 +189,35 @@ function ReminderSettings() {
   const [settings, setSettings] = useState<InventorySettings | null>(null)
   const [time, setTime] = useState('08:00')
   const [email, setEmail] = useState(true)
+  const [leadDays, setLeadDays] = useState('')
+  const [leadError, setLeadError] = useState<string | undefined>(undefined)
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState<{ tone: 'success' | 'error'; text: string } | null>(null)
   useEffect(() => {
     let active = true
-    getInventorySettings().then(loaded => { if (active) { setSettings(loaded); setTime(loaded.reminderLocalTime); setEmail(loaded.emailReminders) } }).catch(() => undefined)
+    getInventorySettings().then(loaded => { if (active) { setSettings(loaded); setTime(loaded.reminderLocalTime); setEmail(loaded.emailReminders); setLeadDays(loaded.autoAcceptReadyLeadDays === null || loaded.autoAcceptReadyLeadDays === undefined ? '' : String(loaded.autoAcceptReadyLeadDays)) } }).catch(() => undefined)
     return () => { active = false }
   }, [])
   if (!settings) return null
   async function save(event: FormEvent) {
     event.preventDefault()
     if (!settings) return
-    setBusy(true); setNotice(null)
-    try { const saved = await saveInventorySettings(settings.lockVersion, time, email); setSettings(saved); setNotice({ tone: 'success', text: 'Reminder settings saved.' }) }
+    const lead = leadDays.trim() === '' ? null : Number(leadDays)
+    if (lead !== null && (!Number.isInteger(lead) || lead < 0 || lead > 30)) { setLeadError('Enter a whole number of days from 0 to 30, or leave it empty.'); return }
+    setBusy(true); setNotice(null); setLeadError(undefined)
+    try { const saved = await saveInventorySettings(settings.lockVersion, time, email, lead); setSettings(saved); setNotice({ tone: 'success', text: 'Settings saved.' }) }
     catch (cause) { setNotice({ tone: 'error', text: await readableInventoryError(cause) }) }
     finally { setBusy(false) }
   }
   return <details className="rounded-surface border border-border-default bg-surface-primary p-4">
-    <summary className="min-h-11 cursor-pointer py-2 font-semibold">Stock confirmation reminders</summary>
+    <summary className="min-h-11 cursor-pointer py-2 font-semibold">Reminders and auto-accept pickup date</summary>
     <form className="mt-3 grid min-w-0 gap-4 sm:grid-cols-[minmax(0,12rem)_minmax(0,1fr)_auto] sm:items-end" onSubmit={event => void save(event)}>
       <Field label="Reminder time (Asia/Manila)" name="reminder_local_time" type="time" value={time} disabled={!settings.canEdit || busy} onChange={event => setTime(event.target.value)} />
       <label className="flex min-h-12 items-center gap-3 text-sm"><input type="checkbox" className="h-5 w-5 accent-action-primary" checked={email} disabled={!settings.canEdit || busy} onChange={event => setEmail(event.target.checked)} />Also email Day {settings.reminderDays.join(' and Day ')} reminders (in-app reminders are always on; no SMS)</label>
-      {settings.canEdit && <Button type="submit" disabled={busy}>{busy ? 'Saving…' : 'Save reminders'}</Button>}
+      <div className="sm:col-span-2"><Field label="Auto-accept ready-for-pickup lead time (days)" name="auto_accept_ready_lead_days" type="number" min={0} max={30} inputMode="numeric" value={leadDays} disabled={!settings.canEdit || busy} error={leadError} onChange={event => setLeadDays(event.target.value)} hint="An auto-accepted Self-Pickup order is ready this many days after acceptance (Philippine date). Leave empty to send every Self-Pickup order to manual review. Site Delivery is never auto-accepted." /></div>
+      {settings.canEdit && <Button type="submit" disabled={busy}>{busy ? 'Saving…' : 'Save settings'}</Button>}
     </form>
-    {!settings.canEdit && <p className="mt-2 text-sm text-text-secondary">The Owner or Store Manager sets the reminder time.</p>}
+    {!settings.canEdit && <p className="mt-2 text-sm text-text-secondary">The Owner or Store Manager sets these values.</p>}
     {notice && <div className="mt-3"><StatusMessage tone={notice.tone}>{notice.text}</StatusMessage></div>}
   </details>
 }

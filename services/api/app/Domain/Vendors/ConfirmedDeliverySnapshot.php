@@ -41,6 +41,33 @@ final class ConfirmedDeliverySnapshot
         if ($order === null) {
             throw new AuthenticationException('RESOURCE_NOT_FOUND', 'The order is unavailable.', 404);
         }
+        $snapshot = $this->prepare($actor, $load, $selection, $finalChargeCentavos, $arrangement, $fulfillmentDate, $manualReviewNote);
+        $id = (string) Str::uuid7();
+        DB::table('order_delivery_snapshots')->insert([
+            'id' => $id, 'order_id' => $orderId, 'vendor_organization_id' => $organizationId, 'confirmed_by_user_id' => $actor->getKey(),
+            'snapshot' => json_encode($snapshot, JSON_THROW_ON_ERROR),
+            'final_charge_centavos' => $finalChargeCentavos, 'fulfillment_date' => $fulfillmentDate,
+            'calculation_version' => DeliveryRecommendationService::CALCULATION_VERSION, 'basis' => $snapshot['basis'], 'created_at' => now(),
+        ]);
+
+        return $id;
+    }
+
+    /** Shared validated delivery terms for an order or an immutable quotation version.
+     * @param  array<string, mixed>  $load
+     * @param  list<array{vehicle_id: string, number_of_vehicles: int, total_vehicle_trips: int, group_key?: string}>  $selection
+     * @return array<string, mixed>
+     */
+    public function prepare(User $actor, array $load, array $selection, int $finalChargeCentavos, string $arrangement, string $fulfillmentDate, ?string $manualReviewNote = null): array
+    {
+        $scope = $this->access->resolve($actor);
+        if ($actor->account_type !== 'VENDOR' || ! in_array('vehicles.manage', $scope['permissions'], true)) {
+            throw new AuthenticationException('PERMISSION_DENIED', 'Only the Owner or Store Manager can confirm delivery.', 403);
+        }
+        if (DB::transactionLevel() < 1) {
+            throw new \LogicException('Delivery confirmation requires a transaction.');
+        }
+        $organizationId = (string) $scope['organization_id'];
         $today = CarbonImmutable::now('Asia/Manila')->toDateString();
         Validator::make(['selection' => $selection, 'charge' => $finalChargeCentavos, 'arrangement' => $arrangement, 'fulfillment_date' => $fulfillmentDate, 'manual_review_note' => $manualReviewNote], [
             'selection' => ['required', 'array', 'min:1', 'max:20'], 'selection.*.vehicle_id' => ['required', 'uuid'],
@@ -117,22 +144,15 @@ final class ConfirmedDeliverySnapshot
             throw new AuthenticationException('DELIVERY_FEE_CHANGED', 'The delivery fee must equal the disclosed formula for the confirmed vehicles and trips. Review the current fee and confirm again.', 409, ['computed_charge_centavos' => $computed]);
         }
         $basis = $manual ? 'MANUAL_REVIEW' : 'ADVISORY_CONFIRMED';
-        $id = (string) Str::uuid7();
-        DB::table('order_delivery_snapshots')->insert([
-            'id' => $id, 'order_id' => $orderId, 'vendor_organization_id' => $organizationId, 'confirmed_by_user_id' => $actor->getKey(),
-            'snapshot' => json_encode([
-                'vehicles' => $chosen, 'groups' => array_map(static fn (array $group): array => array_diff_key($group, ['candidates' => true, 'excluded' => true]), array_values($groups)),
-                'intended_location' => $evaluation['intended_location'], 'alternative_drop_off' => $evaluation['alternative_drop_off'], 'drop_off' => $evaluation['drop_off'],
-                'endpoint' => $evaluation['endpoint'], 'heavy_vehicle_restriction' => $evaluation['heavy_vehicle_restriction'],
-                'distance_meters' => $distance, 'route_source' => $evaluation['route_source'], 'fulfillment_date' => $fulfillmentDate, 'arrangement' => $arrangement,
-                'basis' => $basis, 'manual_review_note' => $manual ? trim((string) $manualReviewNote) : null,
-                'calculation_version' => DeliveryRecommendationService::CALCULATION_VERSION, 'fee_rounding' => DeliveryRecommendationService::FEE_ROUNDING,
-                'final_charge_centavos' => $finalChargeCentavos, 'confirmed_by' => ['user_id' => $actor->getKey(), 'role' => $scope['role']], 'confirmed_at' => now()->toIso8601String(),
-            ], JSON_THROW_ON_ERROR),
-            'final_charge_centavos' => $finalChargeCentavos, 'fulfillment_date' => $fulfillmentDate,
-            'calculation_version' => DeliveryRecommendationService::CALCULATION_VERSION, 'basis' => $basis, 'created_at' => now(),
-        ]);
 
-        return $id;
+        return [
+            'vehicles' => $chosen, 'groups' => array_map(static fn (array $group): array => array_diff_key($group, ['candidates' => true, 'excluded' => true]), array_values($groups)),
+            'intended_location' => $evaluation['intended_location'], 'alternative_drop_off' => $evaluation['alternative_drop_off'], 'drop_off' => $evaluation['drop_off'],
+            'endpoint' => $evaluation['endpoint'], 'heavy_vehicle_restriction' => $evaluation['heavy_vehicle_restriction'],
+            'distance_meters' => $distance, 'route_source' => $evaluation['route_source'], 'fulfillment_date' => $fulfillmentDate, 'arrangement' => $arrangement,
+            'basis' => $basis, 'manual_review_note' => $manual ? trim((string) $manualReviewNote) : null,
+            'calculation_version' => DeliveryRecommendationService::CALCULATION_VERSION, 'fee_rounding' => DeliveryRecommendationService::FEE_ROUNDING,
+            'final_charge_centavos' => $finalChargeCentavos, 'confirmed_by' => ['user_id' => $actor->getKey(), 'role' => $scope['role']], 'confirmed_at' => now()->toIso8601String(),
+        ];
     }
 }

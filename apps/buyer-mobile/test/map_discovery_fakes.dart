@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:materyalph/features/map_discovery/device_location.dart';
 import 'package:materyalph/features/map_discovery/discovery_models.dart';
 import 'package:materyalph/features/map_discovery/discovery_repository.dart';
+import 'package:materyalph/features/map_discovery/discovery_result_cache.dart';
 import 'package:materyalph/features/map_discovery/map_geometry.dart';
 import 'package:materyalph/features/map_discovery/supplier_map.dart';
 
@@ -11,6 +12,7 @@ SupplierResultView verifiedSupplier(
   String id, {
   int rank = 1,
   String name = 'Sampaloc Lumber Hardware',
+  String? logoUrl,
   int distance = 1900,
   bool favorite = false,
   double latitude = 14.61,
@@ -27,6 +29,7 @@ SupplierResultView verifiedSupplier(
   scoreKind: scoreKind,
   scoreText: scoreText,
   isFavorite: favorite,
+  logoUrl: logoUrl,
   supplierType: 'RETAIL_HARDWARE_STORE',
   niches: const ['Plywood', 'Cement', 'Steelbar'],
   fulfillmentMethod: 'BOTH',
@@ -65,6 +68,8 @@ DiscoveryResultPage resultPage(
   String originVersion = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
   int? suggested,
   String directoryStatus = 'AVAILABLE',
+  bool hasMore = false,
+  int? total,
 }) => DiscoveryResultPage(
   items: items,
   originVersion: originVersion,
@@ -79,8 +84,8 @@ DiscoveryResultPage resultPage(
   directoryStatus: directoryStatus,
   directoryAttribution:
       'Source: Google Maps. Directory information may be outdated.',
-  total: items.length,
-  hasMore: false,
+  total: total ?? items.length,
+  hasMore: hasMore,
 );
 
 const primaryLocation = SavedLocationView(
@@ -99,8 +104,27 @@ const primaryLocation = SavedLocationView(
   lockVersion: 1,
 );
 
+/// In-memory stand-in for the on-disk result store, so tests never touch the file system.
+class MemoryDiscoveryResultStore implements DiscoveryResultStore {
+  final entries = <String, CachedDiscovery>{};
+  @override
+  Future<CachedDiscovery?> read(String key) async => entries[key];
+  @override
+  Future<void> write(String key, CachedDiscovery value) async =>
+      entries[key] = value;
+  @override
+  Future<void> clear() async => entries.clear();
+}
+
 class SearchCall {
-  SearchCall(this.origin, this.radiusKm, this.filters, this.completer);
+  SearchCall(
+    this.origin,
+    this.radiusKm,
+    this.filters,
+    this.completer,
+    this.page,
+  );
+  final int page;
   final DiscoveryOrigin origin;
   final int radiusKm;
   final DiscoveryFilters filters;
@@ -159,10 +183,31 @@ class FakeDiscoveryRepository implements DiscoveryRepository {
     trafficAware: true,
   );
 
+  List<LocationSuggestionView> suggestions = const [];
+  Completer<List<LocationSuggestionView>>? pendingSuggestions;
+  int saveCalls = 0;
+  Completer<SavedLocationView>? pendingSave;
+  final savedKeys = <String>[];
+
+  @override
+  Future<List<LocationSuggestionView>> autocomplete(
+    String query,
+    String sessionToken,
+  ) async => pendingSuggestions == null
+      ? suggestions
+      : await pendingSuggestions!.future;
+
+  @override
+  Future<LocationPreviewView> resolvePlace(
+    String placeId,
+    String sessionToken,
+  ) =>
+      resolveAddress(addressLine: 'Selected place', cityMunicipality: 'Manila');
+
   @override
   Future<BuyerOnboardingView> onboarding() async => BuyerOnboardingView(
     status: onboardingStatus,
-    radiusKm: 5,
+    radiusKm: savedRadii.isEmpty ? 5 : savedRadii.last,
     hasPrimaryLocation: locationsList.any((location) => location.isPrimary),
     lockVersion: 1,
     categories: const [
@@ -237,7 +282,12 @@ class FakeDiscoveryRepository implements DiscoveryRepository {
     required String idempotencyKey,
     bool makePrimary = false,
     String? addressLine,
-  }) async => primaryLocation;
+  }) async {
+    saveCalls++;
+    savedKeys.add(idempotencyKey);
+    locationsList = [primaryLocation];
+    return pendingSave == null ? primaryLocation : await pendingSave!.future;
+  }
 
   @override
   Future<SavedLocationView> makePrimary(SavedLocationView location) async =>
@@ -254,7 +304,7 @@ class FakeDiscoveryRepository implements DiscoveryRepository {
     int page = 1,
   }) {
     final completer = Completer<DiscoveryResultPage>();
-    searches.add(SearchCall(origin, radiusKm, filters, completer));
+    searches.add(SearchCall(origin, radiusKm, filters, completer, page));
     if (!manual) {
       final failure = searchFailure;
       failure == null
@@ -280,6 +330,16 @@ class FakeDiscoveryRepository implements DiscoveryRepository {
           : completer.completeError(failure);
     }
     return completer.future;
+  }
+
+  int photoCalls = 0;
+  DirectoryPhotoView photo = const DirectoryPhotoView(null, []);
+
+  @override
+  Future<DirectoryPhotoView> directoryPhoto(String resultId) async {
+    photoCalls++;
+    if (detailsFailure != null) throw detailsFailure!;
+    return photo;
   }
 
   @override

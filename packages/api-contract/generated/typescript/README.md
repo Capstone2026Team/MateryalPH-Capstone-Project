@@ -1,4 +1,4 @@
-# @materyalph/api-client-ts@1.0.0-phase.6
+# @materyalph/api-client-ts@1.0.0-phase.12
 
 A TypeScript SDK client for the localhost API.
 
@@ -87,6 +87,25 @@ All URIs are relative to */api/v1*
 *AccountsApi* | [**updateAccountProfile**](docs/AccountsApi.md#updateaccountprofile) | **PATCH** /{accountPortal}/account/profile |
 *AccountsApi* | [**updateVendorStaff**](docs/AccountsApi.md#updatevendorstaff) | **PATCH** /vendors/account/memberships/{membershipId} |
 *AccountsApi* | [**uploadAccountPhoto**](docs/AccountsApi.md#uploadaccountphoto) | **POST** /{webAccountPortal}/account/photo |
+*AdminFinanceApi* | [**approveFeeCredit**](docs/AdminFinanceApi.md#approvefeecredit) | **POST** /admin/finance/fee-credits/{proposalId}/approve |
+*AdminFinanceApi* | [**approveFeeStatement**](docs/AdminFinanceApi.md#approvefeestatement) | **POST** /admin/finance/statements/{statementId}/approve |
+*AdminFinanceApi* | [**draftFeeStatements**](docs/AdminFinanceApi.md#draftfeestatements) | **POST** /admin/finance/statements/draft |
+*AdminFinanceApi* | [**getWithholdingAccumulator**](docs/AdminFinanceApi.md#getwithholdingaccumulator) | **GET** /admin/finance/withholding-accumulators/{accumulatorId} |
+*AdminFinanceApi* | [**listAdminPayments**](docs/AdminFinanceApi.md#listadminpayments) | **GET** /admin/finance/payments |
+*AdminFinanceApi* | [**listChannelFees**](docs/AdminFinanceApi.md#listchannelfees) | **GET** /admin/finance/channel-fees |
+*AdminFinanceApi* | [**listFeeStatements**](docs/AdminFinanceApi.md#listfeestatements) | **GET** /admin/finance/statements |
+*AdminFinanceApi* | [**listFinanceReviewItems**](docs/AdminFinanceApi.md#listfinancereviewitems) | **GET** /admin/finance/review-items |
+*AdminFinanceApi* | [**listWithholdingAccumulators**](docs/AdminFinanceApi.md#listwithholdingaccumulators) | **GET** /admin/finance/withholding-accumulators |
+*AdminFinanceApi* | [**proposeFeeCredit**](docs/AdminFinanceApi.md#proposefeecredit) | **POST** /admin/finance/fee-credits |
+*AdminFinanceApi* | [**resolveFinanceReviewItem**](docs/AdminFinanceApi.md#resolvefinancereviewitem) | **POST** /admin/finance/review-items/{itemId}/resolve |
+*AdminFinanceApi* | [**resolveWithholdingOverlap**](docs/AdminFinanceApi.md#resolvewithholdingoverlap) | **POST** /admin/finance/withholding-accumulators/{accumulatorId}/overlap |
+*AdminFinanceApi* | [**runPaymentReconciliation**](docs/AdminFinanceApi.md#runpaymentreconciliation) | **POST** /admin/finance/reconciliation/run |
+*AdminOrderOperationsApi* | [**confirmAdminReimbursement**](docs/AdminOrderOperationsApi.md#confirmadminreimbursement) | **POST** /admin/order-operations/reimbursements/{reimbursementId}/confirm |
+*AdminOrderOperationsApi* | [**getAdminOrderOperationsSummary**](docs/AdminOrderOperationsApi.md#getadminorderoperationssummary) | **GET** /admin/order-operations/summary |
+*AdminOrderOperationsApi* | [**listAdminCancellationRequests**](docs/AdminOrderOperationsApi.md#listadmincancellationrequests) | **GET** /admin/order-operations/cancellation-requests |
+*AdminOrderOperationsApi* | [**listAdminRefunds**](docs/AdminOrderOperationsApi.md#listadminrefunds) | **GET** /admin/order-operations/refunds |
+*AdminOrderOperationsApi* | [**listAdminReimbursements**](docs/AdminOrderOperationsApi.md#listadminreimbursements) | **GET** /admin/order-operations/reimbursements |
+*AdminOrderOperationsApi* | [**retryAdminRefund**](docs/AdminOrderOperationsApi.md#retryadminrefund) | **POST** /admin/order-operations/refunds/{refundId}/retry |
 *AdminProductComplianceApi* | [**activateComplianceRegister**](docs/AdminProductComplianceApi.md#activatecomplianceregister) | **POST** /admin/product-compliance/registers/{registerId}/activate |
 *AdminProductComplianceApi* | [**createComparableGroup**](docs/AdminProductComplianceApi.md#createcomparablegroup) | **POST** /admin/taxonomy/comparable-groups |
 *AdminProductComplianceApi* | [**decideProductCompliance**](docs/AdminProductComplianceApi.md#decideproductcompliance) | **POST** /admin/product-compliance/{submissionId}/decision |
@@ -137,13 +156,36 @@ All URIs are relative to */api/v1*
 *AuthenticationApi* | [**verifyBuyerMobileBotChallenge**](docs/AuthenticationApi.md#verifybuyermobilebotchallenge) | **POST** /mobile/auth/bot-challenges/{challenge_id}/verify |
 *AuthenticationApi* | [**verifyBuyerMobileEmail**](docs/AuthenticationApi.md#verifybuyermobileemail) | **POST** /mobile/auth/verify-email |
 *AuthenticationApi* | [**verifyEmail**](docs/AuthenticationApi.md#verifyemailoperation) | **POST** /auth/verify-email |
+*BuyerCartApi* | [**addBuyerCartItem**](docs/BuyerCartApi.md#addbuyercartitem) | **POST** /buyers/cart/items |
+*BuyerCartApi* | [**getBuyerCart**](docs/BuyerCartApi.md#getbuyercart) | **GET** /buyers/cart |
+*BuyerCartApi* | [**previewBuyerCheckout**](docs/BuyerCartApi.md#previewbuyercheckout) | **POST** /buyers/cart/checkout-preview |
+*BuyerCartApi* | [**removeBuyerCartItem**](docs/BuyerCartApi.md#removebuyercartitem) | **DELETE** /buyers/cart/items/{itemId} |
+*BuyerCartApi* | [**setBuyerCartDestination**](docs/BuyerCartApi.md#setbuyercartdestination) | **PUT** /buyers/cart/destination |
+*BuyerCartApi* | [**setBuyerCartFulfillment**](docs/BuyerCartApi.md#setbuyercartfulfillment) | **PUT** /buyers/cart/vendor-groups/{vendorId}/fulfillment |
+*BuyerCartApi* | [**updateBuyerCartItem**](docs/BuyerCartApi.md#updatebuyercartitem) | **PATCH** /buyers/cart/items/{itemId} |
 *BuyerDiscoveryApi* | [**addFavoriteSupplier**](docs/BuyerDiscoveryApi.md#addfavoritesupplier) | **PUT** /buyers/favorite-suppliers/{vendorId} |
 *BuyerDiscoveryApi* | [**estimateBuyerRoute**](docs/BuyerDiscoveryApi.md#estimatebuyerroute) | **POST** /buyers/discovery/routes |
 *BuyerDiscoveryApi* | [**getDirectorySupplierDetails**](docs/BuyerDiscoveryApi.md#getdirectorysupplierdetails) | **GET** /buyers/discovery/directory-suppliers/{supplierId} |
+*BuyerDiscoveryApi* | [**getDirectorySupplierPhoto**](docs/BuyerDiscoveryApi.md#getdirectorysupplierphoto) | **GET** /buyers/discovery/directory-suppliers/{supplierId}/photo |
 *BuyerDiscoveryApi* | [**listFavoriteSuppliers**](docs/BuyerDiscoveryApi.md#listfavoritesuppliers) | **GET** /buyers/favorite-suppliers |
 *BuyerDiscoveryApi* | [**removeFavoriteSupplier**](docs/BuyerDiscoveryApi.md#removefavoritesupplier) | **DELETE** /buyers/favorite-suppliers/{vendorId} |
 *BuyerDiscoveryApi* | [**saveBuyerDiscoveryRadius**](docs/BuyerDiscoveryApi.md#savebuyerdiscoveryradius) | **PUT** /buyers/discovery/preferences |
 *BuyerDiscoveryApi* | [**searchBuyerSuppliers**](docs/BuyerDiscoveryApi.md#searchbuyersuppliers) | **POST** /buyers/discovery/search |
+*BuyerExploreApi* | [**getBuyerExploreSummary**](docs/BuyerExploreApi.md#getbuyerexploresummary) | **POST** /buyers/explore/summary |
+*BuyerExploreApi* | [**getBuyerItemRankingPreferences**](docs/BuyerExploreApi.md#getbuyeritemrankingpreferences) | **GET** /buyers/ranking-preferences/item-based |
+*BuyerExploreApi* | [**getBuyerListingDetails**](docs/BuyerExploreApi.md#getbuyerlistingdetails) | **POST** /buyers/listings/{listingId}/details |
+*BuyerExploreApi* | [**resetBuyerItemRankingPreferences**](docs/BuyerExploreApi.md#resetbuyeritemrankingpreferences) | **DELETE** /buyers/ranking-preferences/item-based |
+*BuyerExploreApi* | [**saveBuyerItemRankingPreferences**](docs/BuyerExploreApi.md#savebuyeritemrankingpreferences) | **PUT** /buyers/ranking-preferences/item-based |
+*BuyerExploreApi* | [**searchBuyerListings**](docs/BuyerExploreApi.md#searchbuyerlistings) | **POST** /buyers/listings/search |
+*BuyerFulfillmentApi* | [**acknowledgeBuyerReimbursement**](docs/BuyerFulfillmentApi.md#acknowledgebuyerreimbursement) | **POST** /buyers/orders/{orderId}/reimbursements/{reimbursementId}/acknowledge |
+*BuyerFulfillmentApi* | [**cancelBuyerOrder**](docs/BuyerFulfillmentApi.md#cancelbuyerorder) | **POST** /buyers/orders/{orderId}/cancel |
+*BuyerFulfillmentApi* | [**confirmBuyerReceipt**](docs/BuyerFulfillmentApi.md#confirmbuyerreceipt) | **POST** /buyers/orders/{orderId}/receipt/confirm |
+*BuyerFulfillmentApi* | [**getBuyerCancellationPreview**](docs/BuyerFulfillmentApi.md#getbuyercancellationpreview) | **GET** /buyers/orders/{orderId}/cancellation-preview |
+*BuyerFulfillmentApi* | [**getBuyerOrderFile**](docs/BuyerFulfillmentApi.md#getbuyerorderfile) | **GET** /buyers/orders/{orderId}/files/{fileId} |
+*BuyerFulfillmentApi* | [**reportBuyerProblem**](docs/BuyerFulfillmentApi.md#reportbuyerproblem) | **POST** /buyers/orders/{orderId}/problems |
+*BuyerFulfillmentApi* | [**resolveBuyerProblem**](docs/BuyerFulfillmentApi.md#resolvebuyerproblem) | **POST** /buyers/orders/{orderId}/problems/{issueId}/resolve |
+*BuyerFulfillmentApi* | [**withdrawBuyerCancellationRequest**](docs/BuyerFulfillmentApi.md#withdrawbuyercancellationrequest) | **POST** /buyers/orders/{orderId}/cancellation-request/withdraw |
+*BuyerLocationsApi* | [**autocompleteBuyerLocation**](docs/BuyerLocationsApi.md#autocompletebuyerlocation) | **POST** /buyers/locations/autocomplete |
 *BuyerLocationsApi* | [**createBuyerLocation**](docs/BuyerLocationsApi.md#createbuyerlocation) | **POST** /buyers/locations |
 *BuyerLocationsApi* | [**getBuyerOnboarding**](docs/BuyerLocationsApi.md#getbuyeronboarding) | **GET** /buyers/onboarding |
 *BuyerLocationsApi* | [**listBuyerLocations**](docs/BuyerLocationsApi.md#listbuyerlocations) | **GET** /buyers/locations |
@@ -153,6 +195,66 @@ All URIs are relative to */api/v1*
 *BuyerLocationsApi* | [**resolveBuyerLocation**](docs/BuyerLocationsApi.md#resolvebuyerlocation) | **POST** /buyers/locations/resolve |
 *BuyerLocationsApi* | [**saveBuyerOnboarding**](docs/BuyerLocationsApi.md#savebuyeronboarding) | **PUT** /buyers/onboarding |
 *BuyerLocationsApi* | [**updateBuyerLocation**](docs/BuyerLocationsApi.md#updatebuyerlocation) | **PATCH** /buyers/locations/{locationId} |
+*BuyerOrdersApi* | [**acceptBuyerOrderNrpc**](docs/BuyerOrdersApi.md#acceptbuyerordernrpc) | **POST** /buyers/orders/{orderId}/nrpc/accept |
+*BuyerOrdersApi* | [**approveBuyerOrderRevision**](docs/BuyerOrdersApi.md#approvebuyerorderrevision) | **POST** /buyers/orders/{orderId}/revision/approve |
+*BuyerOrdersApi* | [**flagBuyerOrderNrpc**](docs/BuyerOrdersApi.md#flagbuyerordernrpc) | **POST** /buyers/orders/{orderId}/nrpc/flag |
+*BuyerOrdersApi* | [**getBuyerCheckout**](docs/BuyerOrdersApi.md#getbuyercheckout) | **GET** /buyers/checkouts/{checkoutId} |
+*BuyerOrdersApi* | [**getBuyerOrder**](docs/BuyerOrdersApi.md#getbuyerorder) | **GET** /buyers/orders/{orderId} |
+*BuyerOrdersApi* | [**listBuyerOrders**](docs/BuyerOrdersApi.md#listbuyerorders) | **GET** /buyers/orders |
+*BuyerOrdersApi* | [**rejectBuyerOrderNrpc**](docs/BuyerOrdersApi.md#rejectbuyerordernrpc) | **POST** /buyers/orders/{orderId}/nrpc/reject |
+*BuyerOrdersApi* | [**rejectBuyerOrderRevision**](docs/BuyerOrdersApi.md#rejectbuyerorderrevision) | **POST** /buyers/orders/{orderId}/revision/reject |
+*BuyerOrdersApi* | [**submitBuyerCheckout**](docs/BuyerOrdersApi.md#submitbuyercheckout) | **POST** /buyers/checkouts |
+*BuyerPaymentsApi* | [**acknowledgePhysicalPayment**](docs/BuyerPaymentsApi.md#acknowledgephysicalpayment) | **POST** /buyers/orders/{orderId}/physical-payments/{recordId}/acknowledge |
+*BuyerPaymentsApi* | [**createBuyerPayment**](docs/BuyerPaymentsApi.md#createbuyerpayment) | **POST** /buyers/orders/{orderId}/payments |
+*BuyerPaymentsApi* | [**getBuyerPayment**](docs/BuyerPaymentsApi.md#getbuyerpayment) | **GET** /buyers/payments/{paymentId} |
+*BuyerPaymentsApi* | [**getBuyerPaymentOptions**](docs/BuyerPaymentsApi.md#getbuyerpaymentoptions) | **GET** /buyers/orders/{orderId}/payment-options |
+*BuyerPaymentsApi* | [**refreshBuyerPayment**](docs/BuyerPaymentsApi.md#refreshbuyerpayment) | **POST** /buyers/payments/{paymentId}/refresh |
+*BuyerProjectsApi* | [**activateWorkPackage**](docs/BuyerProjectsApi.md#activateworkpackage) | **POST** /buyers/work-packages/{packageId}/activate |
+*BuyerProjectsApi* | [**closeWorkPackage**](docs/BuyerProjectsApi.md#closeworkpackage) | **POST** /buyers/work-packages/{packageId}/close |
+*BuyerProjectsApi* | [**compileProjectEstimates**](docs/BuyerProjectsApi.md#compileprojectestimates) | **POST** /buyers/work-packages/{packageId}/estimates |
+*BuyerProjectsApi* | [**createProject**](docs/BuyerProjectsApi.md#createproject) | **POST** /buyers/projects |
+*BuyerProjectsApi* | [**createWorkPackage**](docs/BuyerProjectsApi.md#createworkpackage) | **POST** /buyers/projects/{projectId}/work-packages |
+*BuyerProjectsApi* | [**createWorkPackageVersion**](docs/BuyerProjectsApi.md#createworkpackageversion) | **POST** /buyers/work-packages/{packageId}/versions |
+*BuyerProjectsApi* | [**deleteProject**](docs/BuyerProjectsApi.md#deleteproject) | **DELETE** /buyers/projects/{projectId} |
+*BuyerProjectsApi* | [**deleteWorkPackage**](docs/BuyerProjectsApi.md#deleteworkpackage) | **DELETE** /buyers/work-packages/{packageId} |
+*BuyerProjectsApi* | [**editWorkPackage**](docs/BuyerProjectsApi.md#editworkpackage) | **PUT** /buyers/work-packages/{packageId} |
+*BuyerProjectsApi* | [**getProject**](docs/BuyerProjectsApi.md#getproject) | **GET** /buyers/projects/{projectId} |
+*BuyerProjectsApi* | [**getProjectCandidateRoute**](docs/BuyerProjectsApi.md#getprojectcandidateroute) | **POST** /buyers/work-packages/{packageId}/candidates/{candidateId}/route |
+*BuyerProjectsApi* | [**getProjectEstimates**](docs/BuyerProjectsApi.md#getprojectestimates) | **GET** /buyers/work-packages/{packageId}/estimates |
+*BuyerProjectsApi* | [**getProjectRankingPreferences**](docs/BuyerProjectsApi.md#getprojectrankingpreferences) | **GET** /buyers/project-ranking-preferences |
+*BuyerProjectsApi* | [**getWorkPackage**](docs/BuyerProjectsApi.md#getworkpackage) | **GET** /buyers/work-packages/{packageId} |
+*BuyerProjectsApi* | [**inquireProjectVendor**](docs/BuyerProjectsApi.md#inquireprojectvendor) | **POST** /buyers/work-packages/{packageId}/inquiries |
+*BuyerProjectsApi* | [**listProjects**](docs/BuyerProjectsApi.md#listprojects) | **GET** /buyers/projects |
+*BuyerProjectsApi* | [**previewWorkPackageCsv**](docs/BuyerProjectsApi.md#previewworkpackagecsv) | **POST** /buyers/work-packages/import-preview |
+*BuyerProjectsApi* | [**resetProjectRankingPreferences**](docs/BuyerProjectsApi.md#resetprojectrankingpreferences) | **POST** /buyers/project-ranking-preferences/reset |
+*BuyerProjectsApi* | [**resolveProjectMissingLine**](docs/BuyerProjectsApi.md#resolveprojectmissingline) | **PUT** /buyers/work-packages/{packageId}/missing-lines/{lineId} |
+*BuyerProjectsApi* | [**saveProjectRankingPreferences**](docs/BuyerProjectsApi.md#saveprojectrankingpreferences) | **PUT** /buyers/project-ranking-preferences |
+*BuyerProjectsApi* | [**searchProjectMaterials**](docs/BuyerProjectsApi.md#searchprojectmaterials) | **GET** /buyers/project-materials |
+*BuyerProjectsApi* | [**selectProjectVendor**](docs/BuyerProjectsApi.md#selectprojectvendor) | **POST** /buyers/work-packages/{packageId}/selection |
+*BuyerProjectsApi* | [**updateProject**](docs/BuyerProjectsApi.md#updateproject) | **PATCH** /buyers/projects/{projectId} |
+*MessagingApi* | [**archiveChatConversation**](docs/MessagingApi.md#archivechatconversation) | **PUT** /{messagingPortal}/conversations/{conversationId}/archive |
+*MessagingApi* | [**authorizeChatChannel**](docs/MessagingApi.md#authorizechatchannel) | **POST** /{messagingPortal}/messaging/auth |
+*MessagingApi* | [**createConversation**](docs/MessagingApi.md#createconversation) | **POST** /{messagingPortal}/conversations |
+*MessagingApi* | [**decideChatQuotation**](docs/MessagingApi.md#decidechatquotation) | **POST** /{messagingPortal}/conversations/{conversationId}/quotation/{action} |
+*MessagingApi* | [**downloadChatAttachment**](docs/MessagingApi.md#downloadchatattachment) | **GET** /{messagingPortal}/conversations/{conversationId}/attachments/{attachmentId} |
+*MessagingApi* | [**getChatAvatar**](docs/MessagingApi.md#getchatavatar) | **GET** /{messagingPortal}/conversations/{conversationId}/avatars/{userId} |
+*MessagingApi* | [**getChatRealtime**](docs/MessagingApi.md#getchatrealtime) | **GET** /{messagingPortal}/messaging/realtime |
+*MessagingApi* | [**getConversation**](docs/MessagingApi.md#getconversation) | **GET** /{messagingPortal}/conversations/{conversationId} |
+*MessagingApi* | [**listChatHandlers**](docs/MessagingApi.md#listchathandlers) | **GET** /{messagingPortal}/conversations/{conversationId}/handlers |
+*MessagingApi* | [**listChatProducts**](docs/MessagingApi.md#listchatproducts) | **GET** /{messagingPortal}/conversations/{conversationId}/products |
+*MessagingApi* | [**listConversations**](docs/MessagingApi.md#listconversations) | **GET** /{messagingPortal}/conversations |
+*MessagingApi* | [**publishChatQuotation**](docs/MessagingApi.md#publishchatquotation) | **POST** /{messagingPortal}/conversations/{conversationId}/quotation/publish |
+*MessagingApi* | [**readChatMessages**](docs/MessagingApi.md#readchatmessages) | **POST** /{messagingPortal}/conversations/{conversationId}/read |
+*MessagingApi* | [**restoreChatConversation**](docs/MessagingApi.md#restorechatconversation) | **DELETE** /{messagingPortal}/conversations/{conversationId}/archive |
+*MessagingApi* | [**saveChatQuotationDraft**](docs/MessagingApi.md#savechatquotationdraft) | **PUT** /{messagingPortal}/conversations/{conversationId}/quotation/draft |
+*MessagingApi* | [**sendChatMessage**](docs/MessagingApi.md#sendchatmessage) | **POST** /{messagingPortal}/conversations/{conversationId}/messages |
+*MessagingApi* | [**sendChatTyping**](docs/MessagingApi.md#sendchattyping) | **POST** /{messagingPortal}/conversations/{conversationId}/typing |
+*MessagingApi* | [**startNextChatQuotation**](docs/MessagingApi.md#startnextchatquotation) | **POST** /{messagingPortal}/conversations/{conversationId}/quotation/start |
+*MessagingApi* | [**transferChatHandler**](docs/MessagingApi.md#transferchathandler) | **POST** /{messagingPortal}/conversations/{conversationId}/transfer |
+*MessagingApi* | [**updateChatDestination**](docs/MessagingApi.md#updatechatdestination) | **PUT** /{messagingPortal}/conversations/{conversationId}/destination |
+*MessagingApi* | [**uploadChatAttachment**](docs/MessagingApi.md#uploadchatattachment) | **POST** /{messagingPortal}/conversations/{conversationId}/attachments |
+*PaymentWebhooksApi* | [**receiveXenditPaymentWebhook**](docs/PaymentWebhooksApi.md#receivexenditpaymentwebhook) | **POST** /webhooks/xendit |
+*PaymentWebhooksApi* | [**showPaymentReturnPage**](docs/PaymentWebhooksApi.md#showpaymentreturnpage) | **GET** /payments/return |
 *StoresApi* | [**getPublicStoreProfile**](docs/StoresApi.md#getpublicstoreprofile) | **GET** /stores/{storeId}/profile |
 *StoresApi* | [**listPublicStores**](docs/StoresApi.md#listpublicstores) | **GET** /stores |
 *SystemApi* | [**getApiHealth**](docs/SystemApi.md#getapihealth) | **GET** /health |
@@ -182,11 +284,34 @@ All URIs are relative to */api/v1*
 *VendorCatalogApi* | [**uploadCatalogImport**](docs/VendorCatalogApi.md#uploadcatalogimport) | **POST** /vendor/catalog/imports |
 *VendorCatalogApi* | [**uploadListingComplianceEvidence**](docs/VendorCatalogApi.md#uploadlistingcomplianceevidence) | **POST** /vendor/catalog/listings/{listingId}/compliance/evidence |
 *VendorCatalogApi* | [**uploadVendorListingMedia**](docs/VendorCatalogApi.md#uploadvendorlistingmedia) | **POST** /vendor/catalog/listings/{listingId}/media |
+*VendorFinanceApi* | [**approveVendorOnlineBalance**](docs/VendorFinanceApi.md#approvevendoronlinebalance) | **POST** /vendor/orders/{orderId}/online-balance/approve |
+*VendorFinanceApi* | [**exportVendorTransactions**](docs/VendorFinanceApi.md#exportvendortransactions) | **GET** /vendor/finance/transactions/export |
+*VendorFinanceApi* | [**getVendorEarnings**](docs/VendorFinanceApi.md#getvendorearnings) | **GET** /vendor/finance/earnings |
+*VendorFinanceApi* | [**getVendorFeePayment**](docs/VendorFinanceApi.md#getvendorfeepayment) | **GET** /vendor/finance/payments/{paymentId} |
+*VendorFinanceApi* | [**getVendorFeeStatement**](docs/VendorFinanceApi.md#getvendorfeestatement) | **GET** /vendor/finance/statements/{statementId} |
+*VendorFinanceApi* | [**getVendorFinanceOverview**](docs/VendorFinanceApi.md#getvendorfinanceoverview) | **GET** /vendor/finance |
+*VendorFinanceApi* | [**listVendorTransactions**](docs/VendorFinanceApi.md#listvendortransactions) | **GET** /vendor/finance/transactions |
+*VendorFinanceApi* | [**payVendorFeeStatement**](docs/VendorFinanceApi.md#payvendorfeestatement) | **POST** /vendor/finance/statements/{statementId}/payments |
+*VendorFinanceApi* | [**recordVendorPhysicalPayment**](docs/VendorFinanceApi.md#recordvendorphysicalpayment) | **POST** /vendor/orders/{orderId}/physical-payments |
+*VendorFinanceApi* | [**refreshVendorFeePayment**](docs/VendorFinanceApi.md#refreshvendorfeepayment) | **POST** /vendor/finance/payments/{paymentId}/refresh |
+*VendorFinanceApi* | [**updateVendorPhysicalPayments**](docs/VendorFinanceApi.md#updatevendorphysicalpayments) | **PUT** /vendor/finance/physical-payments |
 *VendorFleetApi* | [**downloadFleetVehicleImage**](docs/VendorFleetApi.md#downloadfleetvehicleimage) | **GET** /fleet-files/{fileId}/content |
 *VendorFleetApi* | [**getFleetVehicleImageUrl**](docs/VendorFleetApi.md#getfleetvehicleimageurl) | **GET** /vendor/fleet/vehicle-images/{fileId} |
 *VendorFleetApi* | [**listVendorFleetVehicles**](docs/VendorFleetApi.md#listvendorfleetvehicles) | **GET** /vendor/fleet/vehicles |
 *VendorFleetApi* | [**saveVendorFleetVehicles**](docs/VendorFleetApi.md#savevendorfleetvehicles) | **PUT** /vendor/fleet/vehicles |
 *VendorFleetApi* | [**uploadFleetVehicleImage**](docs/VendorFleetApi.md#uploadfleetvehicleimage) | **POST** /vendor/fleet/vehicle-images |
+*VendorFulfillmentApi* | [**assignVendorFulfillmentStaff**](docs/VendorFulfillmentApi.md#assignvendorfulfillmentstaff) | **POST** /vendor/orders/{orderId}/fulfillment/assignment |
+*VendorFulfillmentApi* | [**cancelVendorOrder**](docs/VendorFulfillmentApi.md#cancelvendororder) | **POST** /vendor/orders/{orderId}/cancel |
+*VendorFulfillmentApi* | [**finalizeVendorCancellationRequest**](docs/VendorFulfillmentApi.md#finalizevendorcancellationrequest) | **POST** /vendor/orders/{orderId}/cancellation-request/finalize |
+*VendorFulfillmentApi* | [**getVendorCancellationPreview**](docs/VendorFulfillmentApi.md#getvendorcancellationpreview) | **GET** /vendor/orders/{orderId}/cancellation-preview |
+*VendorFulfillmentApi* | [**getVendorOrderFile**](docs/VendorFulfillmentApi.md#getvendororderfile) | **GET** /vendor/orders/{orderId}/files/{fileId} |
+*VendorFulfillmentApi* | [**listVendorFulfillmentAssignees**](docs/VendorFulfillmentApi.md#listvendorfulfillmentassignees) | **GET** /vendor/orders/{orderId}/fulfillment/assignees |
+*VendorFulfillmentApi* | [**recordVendorFulfillmentMilestone**](docs/VendorFulfillmentApi.md#recordvendorfulfillmentmilestone) | **POST** /vendor/orders/{orderId}/fulfillment/milestones |
+*VendorFulfillmentApi* | [**recordVendorFulfillmentTrip**](docs/VendorFulfillmentApi.md#recordvendorfulfillmenttrip) | **POST** /vendor/orders/{orderId}/fulfillment/trips |
+*VendorFulfillmentApi* | [**recordVendorReimbursement**](docs/VendorFulfillmentApi.md#recordvendorreimbursement) | **POST** /vendor/orders/{orderId}/reimbursements/{reimbursementId} |
+*VendorFulfillmentApi* | [**reportVendorVehicleIssue**](docs/VendorFulfillmentApi.md#reportvendorvehicleissue) | **POST** /vendor/orders/{orderId}/fulfillment/vehicle-issues |
+*VendorFulfillmentApi* | [**respondVendorProblem**](docs/VendorFulfillmentApi.md#respondvendorproblem) | **POST** /vendor/orders/{orderId}/problems/{issueId}/respond |
+*VendorFulfillmentApi* | [**retryVendorRefund**](docs/VendorFulfillmentApi.md#retryvendorrefund) | **POST** /vendor/orders/{orderId}/refunds/{refundId}/retry |
 *VendorInventoryApi* | [**confirmVendorStock**](docs/VendorInventoryApi.md#confirmvendorstock) | **POST** /vendor/inventory/confirmations |
 *VendorInventoryApi* | [**getVendorInventorySettings**](docs/VendorInventoryApi.md#getvendorinventorysettings) | **GET** /vendor/inventory/settings |
 *VendorInventoryApi* | [**listVendorInventoryItems**](docs/VendorInventoryApi.md#listvendorinventoryitems) | **GET** /vendor/inventory/items |
@@ -223,6 +348,11 @@ All URIs are relative to */api/v1*
 *VendorOnboardingApi* | [**submitVendorVerification**](docs/VendorOnboardingApi.md#submitvendorverification) | **POST** /vendors/onboarding/verification/submit |
 *VendorOnboardingApi* | [**uploadVendorStoreMedia**](docs/VendorOnboardingApi.md#uploadvendorstoremedia) | **POST** /vendors/onboarding/media |
 *VendorOnboardingApi* | [**uploadVendorVerificationDocument**](docs/VendorOnboardingApi.md#uploadvendorverificationdocument) | **POST** /vendors/onboarding/documents |
+*VendorOrdersApi* | [**confirmVendorOrder**](docs/VendorOrdersApi.md#confirmvendororder) | **POST** /vendor/orders/{orderId}/confirm |
+*VendorOrdersApi* | [**declineVendorOrder**](docs/VendorOrdersApi.md#declinevendororder) | **POST** /vendor/orders/{orderId}/decline |
+*VendorOrdersApi* | [**getVendorOrder**](docs/VendorOrdersApi.md#getvendororder) | **GET** /vendor/orders/{orderId} |
+*VendorOrdersApi* | [**getVendorOrderDeliveryPlan**](docs/VendorOrdersApi.md#getvendororderdeliveryplan) | **POST** /vendor/orders/{orderId}/delivery-recommendations |
+*VendorOrdersApi* | [**listVendorOrders**](docs/VendorOrdersApi.md#listvendororders) | **GET** /vendor/orders |
 
 
 ### Models
@@ -262,10 +392,21 @@ All URIs are relative to */api/v1*
 - [AccountSessionRevocation](docs/AccountSessionRevocation.md)
 - [AccountType](docs/AccountType.md)
 - [AddressComponents](docs/AddressComponents.md)
+- [AdminCancellationRequestListEnvelope](docs/AdminCancellationRequestListEnvelope.md)
+- [AdminCancellationRequestRow](docs/AdminCancellationRequestRow.md)
 - [AdminDashboardAuditEnvelope](docs/AdminDashboardAuditEnvelope.md)
 - [AdminDashboardEnvelope](docs/AdminDashboardEnvelope.md)
 - [AdminDashboardSummary](docs/AdminDashboardSummary.md)
 - [AdminInvitationRequest](docs/AdminInvitationRequest.md)
+- [AdminOrderActionResultEnvelope](docs/AdminOrderActionResultEnvelope.md)
+- [AdminOrderOperationsSummary](docs/AdminOrderOperationsSummary.md)
+- [AdminOrderOperationsSummaryEnvelope](docs/AdminOrderOperationsSummaryEnvelope.md)
+- [AdminPaymentListEnvelope](docs/AdminPaymentListEnvelope.md)
+- [AdminRefundListEnvelope](docs/AdminRefundListEnvelope.md)
+- [AdminRefundRow](docs/AdminRefundRow.md)
+- [AdminReimbursementDecision](docs/AdminReimbursementDecision.md)
+- [AdminReimbursementListEnvelope](docs/AdminReimbursementListEnvelope.md)
+- [AdminReimbursementRow](docs/AdminReimbursementRow.md)
 - [AdminVendorVerificationDecision](docs/AdminVendorVerificationDecision.md)
 - [AdminVendorVerificationDetailEnvelope](docs/AdminVendorVerificationDetailEnvelope.md)
 - [AdminVendorVerificationQueueEnvelope](docs/AdminVendorVerificationQueueEnvelope.md)
@@ -276,6 +417,7 @@ All URIs are relative to */api/v1*
 - [AuthEnvelope](docs/AuthEnvelope.md)
 - [AuthEnvelopeAllOfData](docs/AuthEnvelopeAllOfData.md)
 - [AutoAcceptAllotmentUpdate](docs/AutoAcceptAllotmentUpdate.md)
+- [AutoAcceptOutcome](docs/AutoAcceptOutcome.md)
 - [AutoAcceptPause](docs/AutoAcceptPause.md)
 - [AutoAcceptPolicy](docs/AutoAcceptPolicy.md)
 - [AutoAcceptPolicyConfigure](docs/AutoAcceptPolicyConfigure.md)
@@ -285,6 +427,7 @@ All URIs are relative to */api/v1*
 - [AutoAcceptPolicyDetailScope](docs/AutoAcceptPolicyDetailScope.md)
 - [AutoAcceptPolicyDetailStock](docs/AutoAcceptPolicyDetailStock.md)
 - [AutoAcceptPolicyVersion](docs/AutoAcceptPolicyVersion.md)
+- [AutoAcceptReason](docs/AutoAcceptReason.md)
 - [AutoAcceptResume](docs/AutoAcceptResume.md)
 - [AutoAcceptStatus](docs/AutoAcceptStatus.md)
 - [BotProofEnvelope](docs/BotProofEnvelope.md)
@@ -292,6 +435,9 @@ All URIs are relative to */api/v1*
 - [BotStepUpErrorEnvelope](docs/BotStepUpErrorEnvelope.md)
 - [BotStepUpErrorEnvelopeAllOfErrors](docs/BotStepUpErrorEnvelopeAllOfErrors.md)
 - [BotStepUpErrorEnvelopeAllOfErrorsAllOfDetails](docs/BotStepUpErrorEnvelopeAllOfErrorsAllOfDetails.md)
+- [BuyerCancelRequest](docs/BuyerCancelRequest.md)
+- [BuyerCancellationPreview](docs/BuyerCancellationPreview.md)
+- [BuyerCancellationPreviewEnvelope](docs/BuyerCancellationPreviewEnvelope.md)
 - [BuyerIndustryClassification](docs/BuyerIndustryClassification.md)
 - [BuyerLocation](docs/BuyerLocation.md)
 - [BuyerLocationCreate](docs/BuyerLocationCreate.md)
@@ -312,6 +458,27 @@ All URIs are relative to */api/v1*
 - [BuyerOnboarding](docs/BuyerOnboarding.md)
 - [BuyerOnboardingEnvelope](docs/BuyerOnboardingEnvelope.md)
 - [BuyerOnboardingUpdate](docs/BuyerOnboardingUpdate.md)
+- [BuyerOriginRequest](docs/BuyerOriginRequest.md)
+- [CancellationDecisionView](docs/CancellationDecisionView.md)
+- [CancellationPlan](docs/CancellationPlan.md)
+- [CancellationPlanPayment](docs/CancellationPlanPayment.md)
+- [CancellationRemedy](docs/CancellationRemedy.md)
+- [Cart](docs/Cart.md)
+- [CartDestination](docs/CartDestination.md)
+- [CartDestinationLabels](docs/CartDestinationLabels.md)
+- [CartDestinationUpdate](docs/CartDestinationUpdate.md)
+- [CartEnvelope](docs/CartEnvelope.md)
+- [CartFulfillmentUpdate](docs/CartFulfillmentUpdate.md)
+- [CartIssue](docs/CartIssue.md)
+- [CartItemCreate](docs/CartItemCreate.md)
+- [CartItemUpdate](docs/CartItemUpdate.md)
+- [CartLine](docs/CartLine.md)
+- [CartLineCurrent](docs/CartLineCurrent.md)
+- [CartLineSnapshot](docs/CartLineSnapshot.md)
+- [CartLocationRef](docs/CartLocationRef.md)
+- [CartSummary](docs/CartSummary.md)
+- [CartVendorGroup](docs/CartVendorGroup.md)
+- [CartVendorRef](docs/CartVendorRef.md)
 - [CatalogAttributeDefinition](docs/CatalogAttributeDefinition.md)
 - [CatalogBlocker](docs/CatalogBlocker.md)
 - [CatalogCompletion](docs/CatalogCompletion.md)
@@ -351,9 +518,60 @@ All URIs are relative to */api/v1*
 - [CatalogVariantsSave](docs/CatalogVariantsSave.md)
 - [CatalogVolumeTier](docs/CatalogVolumeTier.md)
 - [CatalogVolumeTierInput](docs/CatalogVolumeTierInput.md)
+- [ChannelFeeVersion](docs/ChannelFeeVersion.md)
+- [ChannelFeeVersionListEnvelope](docs/ChannelFeeVersionListEnvelope.md)
+- [ChatAttachment](docs/ChatAttachment.md)
+- [ChatChannelAuth](docs/ChatChannelAuth.md)
+- [ChatChannelSignature](docs/ChatChannelSignature.md)
+- [ChatCreate](docs/ChatCreate.md)
+- [ChatDecision](docs/ChatDecision.md)
+- [ChatDecisionResult](docs/ChatDecisionResult.md)
+- [ChatDecisionResultResponse](docs/ChatDecisionResultResponse.md)
+- [ChatDestinationUpdate](docs/ChatDestinationUpdate.md)
+- [ChatDraftContent](docs/ChatDraftContent.md)
+- [ChatDraftLine](docs/ChatDraftLine.md)
+- [ChatDraftSave](docs/ChatDraftSave.md)
+- [ChatEmptyResponse](docs/ChatEmptyResponse.md)
+- [ChatHandler](docs/ChatHandler.md)
+- [ChatHandlersResponse](docs/ChatHandlersResponse.md)
+- [ChatId](docs/ChatId.md)
+- [ChatIdResponse](docs/ChatIdResponse.md)
+- [ChatIdentity](docs/ChatIdentity.md)
+- [ChatMessage](docs/ChatMessage.md)
+- [ChatMessagePage](docs/ChatMessagePage.md)
+- [ChatProduct](docs/ChatProduct.md)
+- [ChatProductPage](docs/ChatProductPage.md)
+- [ChatProductPageResponse](docs/ChatProductPageResponse.md)
+- [ChatPublish](docs/ChatPublish.md)
+- [ChatQuotation](docs/ChatQuotation.md)
+- [ChatQuotationChange](docs/ChatQuotationChange.md)
+- [ChatQuotationContent](docs/ChatQuotationContent.md)
+- [ChatQuotationLine](docs/ChatQuotationLine.md)
+- [ChatQuotationMoney](docs/ChatQuotationMoney.md)
+- [ChatQuotationPage](docs/ChatQuotationPage.md)
+- [ChatQuotationPageResponse](docs/ChatQuotationPageResponse.md)
+- [ChatQuotationVersion](docs/ChatQuotationVersion.md)
+- [ChatRead](docs/ChatRead.md)
+- [ChatRealtime](docs/ChatRealtime.md)
+- [ChatRealtimeResponse](docs/ChatRealtimeResponse.md)
+- [ChatSend](docs/ChatSend.md)
+- [ChatStore](docs/ChatStore.md)
+- [ChatTransfer](docs/ChatTransfer.md)
+- [ChatTyping](docs/ChatTyping.md)
+- [CheckoutChildOrder](docs/CheckoutChildOrder.md)
+- [CheckoutGroupPreview](docs/CheckoutGroupPreview.md)
+- [CheckoutPreview](docs/CheckoutPreview.md)
+- [CheckoutPreviewEnvelope](docs/CheckoutPreviewEnvelope.md)
+- [CheckoutPreviewRequest](docs/CheckoutPreviewRequest.md)
+- [CheckoutPreviewSummary](docs/CheckoutPreviewSummary.md)
+- [CheckoutSubmission](docs/CheckoutSubmission.md)
+- [CheckoutSubmissionEnvelope](docs/CheckoutSubmissionEnvelope.md)
+- [CheckoutSubmitRequest](docs/CheckoutSubmitRequest.md)
+- [CheckoutVendorRef](docs/CheckoutVendorRef.md)
 - [ComparableGroupCreate](docs/ComparableGroupCreate.md)
 - [ComparableGroupEnvelope](docs/ComparableGroupEnvelope.md)
 - [ComparableGroupEnvelopeData](docs/ComparableGroupEnvelopeData.md)
+- [ComparableStatus](docs/ComparableStatus.md)
 - [ComplianceEvidence](docs/ComplianceEvidence.md)
 - [ComplianceEvidenceEnvelope](docs/ComplianceEvidenceEnvelope.md)
 - [ComplianceExtraction](docs/ComplianceExtraction.md)
@@ -365,11 +583,34 @@ All URIs are relative to */api/v1*
 - [ComplianceReviewSummary](docs/ComplianceReviewSummary.md)
 - [ComplianceSubmission](docs/ComplianceSubmission.md)
 - [ComplianceSubmissionSummary](docs/ComplianceSubmissionSummary.md)
+- [ConversationDetail](docs/ConversationDetail.md)
+- [ConversationDetailResponse](docs/ConversationDetailResponse.md)
+- [ConversationPage](docs/ConversationPage.md)
+- [ConversationPageResponse](docs/ConversationPageResponse.md)
+- [ConversationView](docs/ConversationView.md)
 - [CsrfEnvelope](docs/CsrfEnvelope.md)
 - [CsrfEnvelopeAllOfData](docs/CsrfEnvelopeAllOfData.md)
+- [DatasetLabel](docs/DatasetLabel.md)
+- [DeliveryAmount](docs/DeliveryAmount.md)
+- [DeliveryConfirmation](docs/DeliveryConfirmation.md)
+- [DeliveryEstimate](docs/DeliveryEstimate.md)
+- [DeliveryEstimateOption](docs/DeliveryEstimateOption.md)
+- [DeliveryPlan](docs/DeliveryPlan.md)
+- [DeliveryPlanEndpoint](docs/DeliveryPlanEndpoint.md)
+- [DeliveryPlanEnvelope](docs/DeliveryPlanEnvelope.md)
+- [DeliveryPlanFormula](docs/DeliveryPlanFormula.md)
+- [DeliveryPlanGroup](docs/DeliveryPlanGroup.md)
+- [DeliveryPlanRequest](docs/DeliveryPlanRequest.md)
+- [DeliveryPlanRoute](docs/DeliveryPlanRoute.md)
+- [DeliveryPlanVehicle](docs/DeliveryPlanVehicle.md)
+- [DeliveryPreview](docs/DeliveryPreview.md)
+- [DeliveryRoute](docs/DeliveryRoute.md)
+- [DeliveryVehicleSelection](docs/DeliveryVehicleSelection.md)
 - [DirectoryAvailability](docs/DirectoryAvailability.md)
 - [DirectorySupplierDetail](docs/DirectorySupplierDetail.md)
 - [DirectorySupplierDetailEnvelope](docs/DirectorySupplierDetailEnvelope.md)
+- [DirectorySupplierPhoto](docs/DirectorySupplierPhoto.md)
+- [DirectorySupplierPhotoEnvelope](docs/DirectorySupplierPhotoEnvelope.md)
 - [DirectorySupplierSummary](docs/DirectorySupplierSummary.md)
 - [DiscoveryCounts](docs/DiscoveryCounts.md)
 - [DiscoveryPreferences](docs/DiscoveryPreferences.md)
@@ -380,12 +621,31 @@ All URIs are relative to */api/v1*
 - [DiscoverySearchRequest](docs/DiscoverySearchRequest.md)
 - [EmailRequest](docs/EmailRequest.md)
 - [ErrorEnvelope](docs/ErrorEnvelope.md)
+- [ExploreCategoryCount](docs/ExploreCategoryCount.md)
+- [ExploreCounts](docs/ExploreCounts.md)
+- [ExploreLabels](docs/ExploreLabels.md)
+- [ExploreSummary](docs/ExploreSummary.md)
+- [ExploreSummaryEnvelope](docs/ExploreSummaryEnvelope.md)
 - [FavoriteSupplier](docs/FavoriteSupplier.md)
 - [FavoriteSupplierListEnvelope](docs/FavoriteSupplierListEnvelope.md)
 - [FavoriteSupplierState](docs/FavoriteSupplierState.md)
 - [FavoriteSupplierStateEnvelope](docs/FavoriteSupplierStateEnvelope.md)
+- [FeatureAvailability](docs/FeatureAvailability.md)
 - [FeeAssessment](docs/FeeAssessment.md)
+- [FeeCreditProposalRequest](docs/FeeCreditProposalRequest.md)
+- [FeeStatement](docs/FeeStatement.md)
+- [FeeStatementDetail](docs/FeeStatementDetail.md)
+- [FeeStatementDetailEnvelope](docs/FeeStatementDetailEnvelope.md)
+- [FeeStatementEnvelope](docs/FeeStatementEnvelope.md)
+- [FeeStatementListEnvelope](docs/FeeStatementListEnvelope.md)
+- [FinanceActionResultEnvelope](docs/FinanceActionResultEnvelope.md)
+- [FinanceReviewItem](docs/FinanceReviewItem.md)
+- [FinanceReviewItemListEnvelope](docs/FinanceReviewItemListEnvelope.md)
+- [FinanceTransactionListEnvelope](docs/FinanceTransactionListEnvelope.md)
+- [FinancialPreview](docs/FinancialPreview.md)
+- [FinancialPreviewLine](docs/FinancialPreviewLine.md)
 - [FinancialSnapshot](docs/FinancialSnapshot.md)
+- [FleetSummary](docs/FleetSummary.md)
 - [FleetVehicle](docs/FleetVehicle.md)
 - [FleetVehicleEligibility](docs/FleetVehicleEligibility.md)
 - [FleetVehicleImageEnvelope](docs/FleetVehicleImageEnvelope.md)
@@ -397,9 +657,27 @@ All URIs are relative to */api/v1*
 - [FleetVehicleListMetaLimits](docs/FleetVehicleListMetaLimits.md)
 - [FleetVehicleListMetaPermissions](docs/FleetVehicleListMetaPermissions.md)
 - [FleetVehiclesSave](docs/FleetVehiclesSave.md)
+- [FulfillmentArrangement](docs/FulfillmentArrangement.md)
+- [FulfillmentArrangementVehicle](docs/FulfillmentArrangementVehicle.md)
+- [FulfillmentAssignee](docs/FulfillmentAssignee.md)
+- [FulfillmentAssigneeListEnvelope](docs/FulfillmentAssigneeListEnvelope.md)
+- [FulfillmentAssignment](docs/FulfillmentAssignment.md)
+- [FulfillmentAssignmentRequest](docs/FulfillmentAssignmentRequest.md)
+- [FulfillmentIssue](docs/FulfillmentIssue.md)
+- [FulfillmentProof](docs/FulfillmentProof.md)
+- [FulfillmentReceipt](docs/FulfillmentReceipt.md)
+- [FulfillmentStep](docs/FulfillmentStep.md)
+- [FulfillmentThreadRef](docs/FulfillmentThreadRef.md)
+- [FulfillmentTrip](docs/FulfillmentTrip.md)
+- [FulfillmentTripRequest](docs/FulfillmentTripRequest.md)
+- [FulfillmentVehicleIssue](docs/FulfillmentVehicleIssue.md)
 - [GenericDataEnvelope](docs/GenericDataEnvelope.md)
+- [GoogleContentAuthor](docs/GoogleContentAuthor.md)
 - [GoogleMobileExchangeRequest](docs/GoogleMobileExchangeRequest.md)
 - [GoogleOidcStartRequest](docs/GoogleOidcStartRequest.md)
+- [GooglePlaceAttribute](docs/GooglePlaceAttribute.md)
+- [GooglePlacePhoto](docs/GooglePlacePhoto.md)
+- [GooglePlaceReview](docs/GooglePlaceReview.md)
 - [GoogleRating](docs/GoogleRating.md)
 - [HealthEnvelope](docs/HealthEnvelope.md)
 - [HealthEnvelopeAllOfData](docs/HealthEnvelopeAllOfData.md)
@@ -421,9 +699,32 @@ All URIs are relative to */api/v1*
 - [InventorySettings](docs/InventorySettings.md)
 - [InventorySettingsEnvelope](docs/InventorySettingsEnvelope.md)
 - [InventorySettingsUpdate](docs/InventorySettingsUpdate.md)
+- [ListingCategoryRef](docs/ListingCategoryRef.md)
+- [ListingCompliance](docs/ListingCompliance.md)
 - [ListingComplianceStatus](docs/ListingComplianceStatus.md)
+- [ListingDetailFulfillment](docs/ListingDetailFulfillment.md)
+- [ListingDetailVendor](docs/ListingDetailVendor.md)
+- [ListingDetails](docs/ListingDetails.md)
+- [ListingDetailsEnvelope](docs/ListingDetailsEnvelope.md)
+- [ListingFulfillmentSummary](docs/ListingFulfillmentSummary.md)
+- [ListingImage](docs/ListingImage.md)
+- [ListingPrice](docs/ListingPrice.md)
+- [ListingSearchEnvelope](docs/ListingSearchEnvelope.md)
+- [ListingSearchExpansion](docs/ListingSearchExpansion.md)
+- [ListingSearchMeta](docs/ListingSearchMeta.md)
+- [ListingSearchQuery](docs/ListingSearchQuery.md)
+- [ListingSearchRanking](docs/ListingSearchRanking.md)
+- [ListingSearchRequest](docs/ListingSearchRequest.md)
+- [ListingSearchResult](docs/ListingSearchResult.md)
+- [ListingSearchSort](docs/ListingSearchSort.md)
 - [ListingStatus](docs/ListingStatus.md)
 - [ListingStatusChange](docs/ListingStatusChange.md)
+- [ListingVariantOffer](docs/ListingVariantOffer.md)
+- [ListingVariantPrice](docs/ListingVariantPrice.md)
+- [ListingVendorCard](docs/ListingVendorCard.md)
+- [LocationAutocompleteRequest](docs/LocationAutocompleteRequest.md)
+- [LocationSuggestion](docs/LocationSuggestion.md)
+- [LocationSuggestionEnvelope](docs/LocationSuggestionEnvelope.md)
 - [LockVersionRequest](docs/LockVersionRequest.md)
 - [LoginRequest](docs/LoginRequest.md)
 - [MapPoint](docs/MapPoint.md)
@@ -436,19 +737,118 @@ All URIs are relative to */api/v1*
 - [MfaRecoveryRequest](docs/MfaRecoveryRequest.md)
 - [MfaStatusEnvelope](docs/MfaStatusEnvelope.md)
 - [MfaStatusEnvelopeAllOfData](docs/MfaStatusEnvelopeAllOfData.md)
+- [MoneyBreakdown](docs/MoneyBreakdown.md)
+- [MoneyDelivery](docs/MoneyDelivery.md)
+- [MoneyNrpc](docs/MoneyNrpc.md)
+- [MoneyRange](docs/MoneyRange.md)
+- [NrpcAcceptRequest](docs/NrpcAcceptRequest.md)
+- [NrpcAffectedLine](docs/NrpcAffectedLine.md)
+- [NrpcFlag](docs/NrpcFlag.md)
+- [NrpcFlagRequest](docs/NrpcFlagRequest.md)
+- [NrpcLineAllocation](docs/NrpcLineAllocation.md)
+- [NrpcProposal](docs/NrpcProposal.md)
+- [NrpcRejectRequest](docs/NrpcRejectRequest.md)
+- [NrpcTermsRef](docs/NrpcTermsRef.md)
+- [NrpcTermsVersion](docs/NrpcTermsVersion.md)
 - [OnboardingDraftVersion](docs/OnboardingDraftVersion.md)
 - [OnboardingRequirement](docs/OnboardingRequirement.md)
 - [OnboardingStepCompletion](docs/OnboardingStepCompletion.md)
+- [OrderBuyerRef](docs/OrderBuyerRef.md)
+- [OrderCancellation](docs/OrderCancellation.md)
+- [OrderChange](docs/OrderChange.md)
+- [OrderCheckoutRef](docs/OrderCheckoutRef.md)
+- [OrderCommercialVersion](docs/OrderCommercialVersion.md)
+- [OrderConfirmedDelivery](docs/OrderConfirmedDelivery.md)
+- [OrderDeadline](docs/OrderDeadline.md)
+- [OrderDeadlines](docs/OrderDeadlines.md)
+- [OrderDelivery](docs/OrderDelivery.md)
+- [OrderDeliveryEstimate](docs/OrderDeliveryEstimate.md)
+- [OrderDeliveryVehicle](docs/OrderDeliveryVehicle.md)
+- [OrderDestination](docs/OrderDestination.md)
+- [OrderDetail](docs/OrderDetail.md)
+- [OrderDetailEnvelope](docs/OrderDetailEnvelope.md)
+- [OrderFirstLine](docs/OrderFirstLine.md)
+- [OrderFulfillment](docs/OrderFulfillment.md)
+- [OrderLine](docs/OrderLine.md)
+- [OrderLineInventory](docs/OrderLineInventory.md)
+- [OrderLineQuantity](docs/OrderLineQuantity.md)
+- [OrderListEnvelope](docs/OrderListEnvelope.md)
+- [OrderListMeta](docs/OrderListMeta.md)
+- [OrderNrpc](docs/OrderNrpc.md)
+- [OrderPaymentAvailability](docs/OrderPaymentAvailability.md)
+- [OrderPaymentState](docs/OrderPaymentState.md)
+- [OrderPoint](docs/OrderPoint.md)
+- [OrderRefundTimeline](docs/OrderRefundTimeline.md)
+- [OrderReservation](docs/OrderReservation.md)
+- [OrderRevisionDecision](docs/OrderRevisionDecision.md)
+- [OrderState](docs/OrderState.md)
+- [OrderStateRow](docs/OrderStateRow.md)
+- [OrderSummary](docs/OrderSummary.md)
+- [OrderTimelineEvent](docs/OrderTimelineEvent.md)
+- [OrderVendorRef](docs/OrderVendorRef.md)
+- [OrderVolumeTier](docs/OrderVolumeTier.md)
+- [OverlapResolveRequest](docs/OverlapResolveRequest.md)
 - [PageMeta](docs/PageMeta.md)
 - [PasswordRecoveryRequest](docs/PasswordRecoveryRequest.md)
 - [PasswordResetRequest](docs/PasswordResetRequest.md)
+- [PaymentAttempt](docs/PaymentAttempt.md)
+- [PaymentAttemptEnvelope](docs/PaymentAttemptEnvelope.md)
+- [PaymentChannelOption](docs/PaymentChannelOption.md)
+- [PaymentCreateRequest](docs/PaymentCreateRequest.md)
+- [PaymentMethodEligibility](docs/PaymentMethodEligibility.md)
+- [PaymentOptions](docs/PaymentOptions.md)
+- [PaymentOptionsEnvelope](docs/PaymentOptionsEnvelope.md)
+- [PaymentWebhookAck](docs/PaymentWebhookAck.md)
+- [PaymentWebhookAckEnvelope](docs/PaymentWebhookAckEnvelope.md)
+- [PaymentWebhookPayload](docs/PaymentWebhookPayload.md)
+- [PhysicalPaymentRecord](docs/PhysicalPaymentRecord.md)
+- [PhysicalPaymentSettings](docs/PhysicalPaymentSettings.md)
+- [PhysicalPaymentSettingsEnvelope](docs/PhysicalPaymentSettingsEnvelope.md)
+- [PhysicalPaymentSettingsUpdate](docs/PhysicalPaymentSettingsUpdate.md)
+- [PhysicalPaymentSummary](docs/PhysicalPaymentSummary.md)
+- [PhysicalPaymentSummaryEnvelope](docs/PhysicalPaymentSummaryEnvelope.md)
+- [PickupConfirmation](docs/PickupConfirmation.md)
+- [PickupPreview](docs/PickupPreview.md)
 - [PriceHistoryEntry](docs/PriceHistoryEntry.md)
 - [PriceHistoryEnvelope](docs/PriceHistoryEnvelope.md)
+- [ProblemResolveRequest](docs/ProblemResolveRequest.md)
+- [ProblemResponseRequest](docs/ProblemResponseRequest.md)
+- [ProcessingFee](docs/ProcessingFee.md)
+- [ProcessingFeeAmount](docs/ProcessingFeeAmount.md)
 - [ProductComplianceCaseEnvelope](docs/ProductComplianceCaseEnvelope.md)
 - [ProductComplianceCaseEnvelopeData](docs/ProductComplianceCaseEnvelopeData.md)
 - [ProductComplianceDecision](docs/ProductComplianceDecision.md)
 - [ProductComplianceQueueEnvelope](docs/ProductComplianceQueueEnvelope.md)
 - [ProductComplianceQueueItem](docs/ProductComplianceQueueItem.md)
+- [ProductRatingSummary](docs/ProductRatingSummary.md)
+- [ProjectBudget](docs/ProjectBudget.md)
+- [ProjectCandidate](docs/ProjectCandidate.md)
+- [ProjectCandidateRequest](docs/ProjectCandidateRequest.md)
+- [ProjectCompile](docs/ProjectCompile.md)
+- [ProjectCompiledEstimate](docs/ProjectCompiledEstimate.md)
+- [ProjectCreate](docs/ProjectCreate.md)
+- [ProjectEstimatePage](docs/ProjectEstimatePage.md)
+- [ProjectEstimatePageResponse](docs/ProjectEstimatePageResponse.md)
+- [ProjectImportPreview](docs/ProjectImportPreview.md)
+- [ProjectImportPreviewResponse](docs/ProjectImportPreviewResponse.md)
+- [ProjectImportRequest](docs/ProjectImportRequest.md)
+- [ProjectMaterialPage](docs/ProjectMaterialPage.md)
+- [ProjectMaterialPageResponse](docs/ProjectMaterialPageResponse.md)
+- [ProjectMissingResolve](docs/ProjectMissingResolve.md)
+- [ProjectPage](docs/ProjectPage.md)
+- [ProjectPageResponse](docs/ProjectPageResponse.md)
+- [ProjectPreferenceReset](docs/ProjectPreferenceReset.md)
+- [ProjectPreferenceSave](docs/ProjectPreferenceSave.md)
+- [ProjectPreferences](docs/ProjectPreferences.md)
+- [ProjectPreferencesResponse](docs/ProjectPreferencesResponse.md)
+- [ProjectRoute](docs/ProjectRoute.md)
+- [ProjectRouteResponse](docs/ProjectRouteResponse.md)
+- [ProjectSite](docs/ProjectSite.md)
+- [ProjectSummary](docs/ProjectSummary.md)
+- [ProjectUpdate](docs/ProjectUpdate.md)
+- [ProjectVersionRequest](docs/ProjectVersionRequest.md)
+- [ProjectView](docs/ProjectView.md)
+- [ProjectViewResponse](docs/ProjectViewResponse.md)
 - [ProviderAttribution](docs/ProviderAttribution.md)
 - [PsgcArea](docs/PsgcArea.md)
 - [PsgcAreaListEnvelope](docs/PsgcAreaListEnvelope.md)
@@ -466,22 +866,36 @@ All URIs are relative to */api/v1*
 - [PublicStoreSummary](docs/PublicStoreSummary.md)
 - [RadiusExpansion](docs/RadiusExpansion.md)
 - [RadiusKm](docs/RadiusKm.md)
+- [RankingComponent](docs/RankingComponent.md)
+- [RankingExplanation](docs/RankingExplanation.md)
+- [RankingPreferences](docs/RankingPreferences.md)
+- [RankingPreferencesEnvelope](docs/RankingPreferencesEnvelope.md)
+- [RankingPreferencesUpdate](docs/RankingPreferencesUpdate.md)
+- [RankingWeightSet](docs/RankingWeightSet.md)
+- [RefundTimelineItem](docs/RefundTimelineItem.md)
 - [RegisterRequest](docs/RegisterRequest.md)
 - [RegistrationEnvelope](docs/RegistrationEnvelope.md)
 - [RegistrationEnvelopeAllOfData](docs/RegistrationEnvelopeAllOfData.md)
 - [RegulatedMaterialRule](docs/RegulatedMaterialRule.md)
+- [ReimbursementTimelineItem](docs/ReimbursementTimelineItem.md)
 - [ResendBotChallengeRequest](docs/ResendBotChallengeRequest.md)
+- [ReviewResolveRequest](docs/ReviewResolveRequest.md)
 - [RouteEstimate](docs/RouteEstimate.md)
 - [RouteEstimateEnvelope](docs/RouteEstimateEnvelope.md)
 - [RouteEstimateRequest](docs/RouteEstimateRequest.md)
 - [ScoreLabel](docs/ScoreLabel.md)
 - [StaleListing](docs/StaleListing.md)
+- [StatementApproveRequest](docs/StatementApproveRequest.md)
+- [StatementPaymentRequest](docs/StatementPaymentRequest.md)
 - [StockConfirmationItem](docs/StockConfirmationItem.md)
 - [StockConfirmationRequest](docs/StockConfirmationRequest.md)
 - [StockConfirmationSchedule](docs/StockConfirmationSchedule.md)
 - [StockLabel](docs/StockLabel.md)
 - [StoreActivationBlocker](docs/StoreActivationBlocker.md)
 - [StoreActivationReadiness](docs/StoreActivationReadiness.md)
+- [StoreHoursDay](docs/StoreHoursDay.md)
+- [StoreNextOpening](docs/StoreNextOpening.md)
+- [StoreOpenNow](docs/StoreOpenNow.md)
 - [StoreOperatingDay](docs/StoreOperatingDay.md)
 - [SuccessEnvelope](docs/SuccessEnvelope.md)
 - [SupplierOpenStatus](docs/SupplierOpenStatus.md)
@@ -489,17 +903,28 @@ All URIs are relative to */api/v1*
 - [SupplierServiceability](docs/SupplierServiceability.md)
 - [SupplierTier](docs/SupplierTier.md)
 - [TaxCategory](docs/TaxCategory.md)
+- [ThresholdStatusEvent](docs/ThresholdStatusEvent.md)
 - [UserIdentity](docs/UserIdentity.md)
+- [VehicleIssueRequest](docs/VehicleIssueRequest.md)
 - [VendorActivationSnapshot](docs/VendorActivationSnapshot.md)
 - [VendorAddressGeocode](docs/VendorAddressGeocode.md)
 - [VendorAddressGeocodeEnvelope](docs/VendorAddressGeocodeEnvelope.md)
 - [VendorAddressSelection](docs/VendorAddressSelection.md)
 - [VendorBotProtectionEvidence](docs/VendorBotProtectionEvidence.md)
+- [VendorCancelRequest](docs/VendorCancelRequest.md)
+- [VendorCancellationPreview](docs/VendorCancellationPreview.md)
+- [VendorCancellationPreviewEnvelope](docs/VendorCancellationPreviewEnvelope.md)
+- [VendorCancellationRequestRef](docs/VendorCancellationRequestRef.md)
 - [VendorCommissionAcceptance](docs/VendorCommissionAcceptance.md)
 - [VendorDocument](docs/VendorDocument.md)
 - [VendorDocumentEnvelope](docs/VendorDocumentEnvelope.md)
+- [VendorEarnings](docs/VendorEarnings.md)
+- [VendorEarningsEnvelope](docs/VendorEarningsEnvelope.md)
 - [VendorFile](docs/VendorFile.md)
 - [VendorFileEnvelope](docs/VendorFileEnvelope.md)
+- [VendorFinanceNotice](docs/VendorFinanceNotice.md)
+- [VendorFinanceOverview](docs/VendorFinanceOverview.md)
+- [VendorFinanceOverviewEnvelope](docs/VendorFinanceOverviewEnvelope.md)
 - [VendorInvitation](docs/VendorInvitation.md)
 - [VendorInvitationAcceptance](docs/VendorInvitationAcceptance.md)
 - [VendorInvitationEnvelope](docs/VendorInvitationEnvelope.md)
@@ -510,6 +935,11 @@ All URIs are relative to */api/v1*
 - [VendorOnboardingSnapshot](docs/VendorOnboardingSnapshot.md)
 - [VendorOnboardingSnapshotSetup](docs/VendorOnboardingSnapshotSetup.md)
 - [VendorOnboardingStep](docs/VendorOnboardingStep.md)
+- [VendorOrderConfirmRequest](docs/VendorOrderConfirmRequest.md)
+- [VendorOrderDeclineReason](docs/VendorOrderDeclineReason.md)
+- [VendorOrderDeclineRequest](docs/VendorOrderDeclineRequest.md)
+- [VendorOrderPermissions](docs/VendorOrderPermissions.md)
+- [VendorOrderPrimaryAction](docs/VendorOrderPrimaryAction.md)
 - [VendorPaymentOnboarding](docs/VendorPaymentOnboarding.md)
 - [VendorPaymentOnboardingEnvelope](docs/VendorPaymentOnboardingEnvelope.md)
 - [VendorPaymentReconciliationEnvelope](docs/VendorPaymentReconciliationEnvelope.md)
@@ -538,6 +968,20 @@ All URIs are relative to */api/v1*
 - [VerifiedVendorSummary](docs/VerifiedVendorSummary.md)
 - [VerifyBotChallengeRequest](docs/VerifyBotChallengeRequest.md)
 - [VerifyEmailRequest](docs/VerifyEmailRequest.md)
+- [VolumeTier](docs/VolumeTier.md)
+- [WithholdingAccumulatorDetail](docs/WithholdingAccumulatorDetail.md)
+- [WithholdingAccumulatorDetailEnvelope](docs/WithholdingAccumulatorDetailEnvelope.md)
+- [WithholdingAccumulatorListEnvelope](docs/WithholdingAccumulatorListEnvelope.md)
+- [WithholdingAccumulatorView](docs/WithholdingAccumulatorView.md)
+- [WithholdingThresholdPanel](docs/WithholdingThresholdPanel.md)
+- [WorkPackageInput](docs/WorkPackageInput.md)
+- [WorkPackageLineInput](docs/WorkPackageLineInput.md)
+- [WorkPackagePage](docs/WorkPackagePage.md)
+- [WorkPackageSummary](docs/WorkPackageSummary.md)
+- [WorkPackageVersion](docs/WorkPackageVersion.md)
+- [WorkPackageVersionPage](docs/WorkPackageVersionPage.md)
+- [WorkPackageView](docs/WorkPackageView.md)
+- [WorkPackageViewResponse](docs/WorkPackageViewResponse.md)
 - [XenditAccountVerificationWebhook](docs/XenditAccountVerificationWebhook.md)
 - [XenditAccountVerificationWebhookData](docs/XenditAccountVerificationWebhookData.md)
 - [XenditAccountVerificationWebhookDataAccountInfo](docs/XenditAccountVerificationWebhookDataAccountInfo.md)
@@ -586,8 +1030,8 @@ This TypeScript SDK client supports the [Fetch API](https://fetch.spec.whatwg.or
 and is automatically generated by the
 [OpenAPI Generator](https://openapi-generator.tech) project:
 
-- API version: `1.0.0-phase.6`
-- Package version: `1.0.0-phase.6`
+- API version: `1.0.0-phase.12`
+- Package version: `1.0.0-phase.12`
 - Generator version: `7.25.0`
 - Build package: `org.openapitools.codegen.languages.TypeScriptFetchClientCodegen`
 

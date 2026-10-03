@@ -9,6 +9,7 @@ vi.mock('@materyalph/api-client-ts', () => ({
 }))
 
 it('keeps direct routes, disabled items and active names accessible when collapsed', async () => {
+  vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() })))
   const navigate = vi.fn()
   render(<PortalShell portalLabel="ADMIN PORTAL" pageTitle="Dashboard" accountLabel="Loading account" apiBasePath="http://localhost/api/v1" activeHref="/dashboard" onNavigate={navigate} sections={[
     { label: 'Overview', items: [{ label: 'Dashboard', href: '/dashboard', icon: <Home /> }, { label: 'Restricted team', href: '/restricted', disabled: true, icon: <Users /> }] },
@@ -24,6 +25,8 @@ it('keeps direct routes, disabled items and active names accessible when collaps
   expect(within(sidebar).getByRole('link', { name: 'Dashboard' })).toHaveAttribute('aria-current', 'page')
   const audit = within(sidebar).getByRole('link', { name: 'Audit Log' })
   fireEvent.focus(audit)
+  expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+  fireEvent.mouseEnter(audit)
   expect(screen.getByRole('tooltip')).toHaveTextContent('Audit Log')
   fireEvent.keyDown(audit, { key: 'Escape' })
   expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()

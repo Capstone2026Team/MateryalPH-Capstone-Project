@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../design_system/components/buyer_app_bar.dart';
 
 import '../widgets/auth_content.dart';
 import 'package:flutter/services.dart';
@@ -127,13 +128,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          onPressed: widget.onBack,
-          tooltip: 'Back',
-          icon: const Icon(Icons.arrow_back),
-        ),
-      ),
+      appBar: buyerAppBar(context, '', onBack: widget.onBack),
       body: SafeArea(
         top: false,
         child: AuthContent(

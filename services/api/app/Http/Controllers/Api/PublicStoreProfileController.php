@@ -5,12 +5,11 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api;
 
 use App\Domain\Geography\PublicVendorProjection;
-use App\Domain\Vendors\StoreOperatingSchedule;
+use App\Domain\Vendors\PublicStoreHours;
 use App\Http\ApiResponse;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 final class PublicStoreProfileController extends Controller
@@ -33,7 +32,7 @@ final class PublicStoreProfileController extends Controller
      * match map markers, list rows and the preview sheet. Saved hours are descriptive: an unusable schedule
      * shows Hours Unavailable instead of hiding the store or fabricating hours.
      */
-    public function __invoke(string $storeId, StoreOperatingSchedule $schedule, PublicVendorProjection $projection): JsonResponse
+    public function __invoke(string $storeId, PublicStoreHours $hours, PublicVendorProjection $projection): JsonResponse
     {
         $store = DB::table('vendor_organizations as o')
             ->join('store_profiles as p', 'p.vendor_organization_id', '=', 'o.id')
@@ -46,14 +45,10 @@ final class PublicStoreProfileController extends Controller
             return ApiResponse::error('STORE_NOT_FOUND', 'Store Profile is unavailable.', 404);
         }
 
-        $weekly = $schedule->weekly((string) $store->profile_id);
-        $valid = $schedule->valid($weekly);
-        $localNow = Carbon::now('Asia/Manila');
-        $today = $localNow->toDateString();
-        $override = $valid ? DB::table('store_operation_date_overrides')->where('store_profile_id', $store->profile_id)->where('specific_date', $today)->first() : null;
-        $effective = ! $valid ? null : ($override === null
-            ? collect($weekly)->firstWhere('day_of_week', $localNow->isoWeekday())
-            : ['day_of_week' => $localNow->isoWeekday(), 'status' => $override->is_closed ? 'CLOSED' : 'OPEN', 'opens_at' => $override->is_closed ? null : substr((string) $override->opens_at, 0, 5), 'closes_at' => $override->is_closed ? null : substr((string) $override->closes_at, 0, 5)]);
+        $schedule = $hours->describe((string) $store->profile_id);
+        $valid = $schedule['status'] === 'AVAILABLE';
+        $today = $schedule['today'];
+        $effective = $today === null ? null : ['day_of_week' => $today['day_of_week'], 'status' => $today['status'], 'opens_at' => $today['opens_at'], 'closes_at' => $today['closes_at']];
 
         return ApiResponse::success([
             'id' => $summary['id'],
@@ -69,12 +64,18 @@ final class PublicStoreProfileController extends Controller
             'niches' => $summary['niches'],
             'fulfillment_method' => $summary['fulfillment_method'],
             'score_label' => $summary['score_label'],
-            'hours_status' => $valid ? 'AVAILABLE' : 'UNAVAILABLE',
-            'operating_schedule' => $valid ? $weekly : [],
+            'hours_status' => $schedule['status'],
+            'operating_schedule' => $schedule['weekly'],
             'effective_today' => $effective,
-            'effective_date' => $today,
-            'effective_source' => $override === null ? 'WEEKLY' : 'DATE_OVERRIDE',
-            'time_zone' => 'Asia/Manila',
-        ]);
+            'effective_date' => substr((string) $schedule['as_of'], 0, 10),
+            'effective_source' => ($today['source'] ?? 'WEEKLY') === 'DATE_OVERRIDE' ? 'DATE_OVERRIDE' : 'WEEKLY',
+            'time_zone' => PublicStoreHours::TIME_ZONE,
+            // Today plus the next six dates with any dated override already applied; explicit Closed days kept.
+            'week' => $schedule['week'],
+            'open_now' => $schedule['open_now'],
+            'all_closed' => $schedule['all_closed'],
+            'hours_as_of' => $schedule['as_of'],
+            'hours_notice' => 'Hours are informational only. They do not guarantee staff availability, stock or response time, and they do not change order deadlines.',
+        ] + ($valid ? [] : ['hours_unavailable_reason' => 'SCHEDULE_NOT_AVAILABLE']));
     }
 }

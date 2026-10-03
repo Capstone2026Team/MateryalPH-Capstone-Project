@@ -853,7 +853,7 @@ Buyers search comparable active listings, understand Best Price and ranking, per
 
 ## UI/UX and layout architecture
 
-Explore leads with two accessible summary cards built from **one** server snapshot with a shared `current_as_of`; neither shows a false zero while loading. Category entries follow. Ranking explanation is a disclosure panel showing component scores in text, not a chart. The preferences screen enforces a 100% total with live remaining-weight feedback, a visible "personalization active" indicator and Reset to Default. The cart renders one group per Vendor with its own delivery or pickup choice and its own validation band; a stale price, stock, serviceability or Vendor-status result appears inline on the affected group without discarding the rest of the cart. Filters and scroll position survive navigation, and stale async responses are rejected.
+Explore leads with two accessible summary cards built from **one** server snapshot with a shared `current_as_of`; neither shows a false zero while loading. Category entries follow. Ranking explanation is a disclosure panel showing component scores in text, not a chart. The preferences screen automatically redistributes the other Item-Based weights proportionally when one factor changes, uses deterministic rounding to keep the visible total at 100%, and provides a visible "personalization active" indicator and Reset to Default. The cart renders one group per Vendor with its own delivery or pickup choice and its own validation band; a stale price, stock, serviceability or Vendor-status result appears inline on the affected group without discarding the rest of the cart. Filters and scroll position survive navigation, and stale async responses are rejected.
 
 ## Acceptance gate
 
@@ -909,11 +909,11 @@ An advisory suggestion is not confirmation. Unknown cargo/access data, missing m
 - Manual-only NRPC reason, amount, affected lines, Terms version and Buyer acceptance or flag.
 - Atomic hard reservation with deterministic row locks and all-or-nothing multi-line behavior.
 - Item-Based auto-accept transaction, policy snapshot, allotment decrement, pause and manual fallback.
-- 45-minute displayed payment expiry and reservation release.
+- 24-hour displayed order payment expiry and reservation release.
 
 ## UI/UX and layout architecture
 
-The Buyer order timeline shows order, payment, fulfillment, refund and dispute as **separate** state rows so no single status bar implies all five. `MoneyBreakdown` itemizes materials, delivery, processing fee, NRPC allocation and total, with refund effects added later. NRPC disclosure is a dedicated acceptance surface with the amount, reason, affected lines and Terms version visible before any acceptance control activates; a Buyer objection flag is separate and never silently accepts. The Vendor order workspace is a status-filtered list plus a job-order detail with one dominant action per state. The 45-minute expiry shows a countdown plus the exact Asia/Manila time and, on expiry, a cleanly resolved state rather than a stuck spinner.
+The Buyer order timeline shows order, payment, fulfillment, refund and dispute as **separate** state rows so no single status bar implies all five. `MoneyBreakdown` itemizes materials, delivery, processing fee, NRPC allocation and total, with refund effects added later. NRPC disclosure is a dedicated acceptance surface with the amount, reason, affected lines and Terms version visible before any acceptance control activates; a Buyer objection flag is separate and never silently accepts. The Vendor order workspace is a status-filtered list plus a job-order detail with one dominant action per state. The 24-hour order expiry shows a countdown plus the exact Asia/Manila time and, on expiry, a cleanly resolved state rather than a stuck spinner.
 
 ## Acceptance gate
 
@@ -926,7 +926,7 @@ Largest-remainder discounts and partial principal VAT allocation sum exactly. NR
 ```text
 Apply §0 Standing Contract from docs/plans/MateryalPH_Implementation_Phases_and_Codex_Prompts.md and AGENTS.md. Do not restate them back to me.
 
-Implement MateryalPH Phase 8 end to end: Item-Based order submission, parent checkout and per-Vendor child orders, Vendor confirmation, revision and decline, Buyer approval, manual NRPC, atomic hard reservations, auto-accept and 45-minute payment expiry preparation. Surfaces are apps/buyer-mobile, apps/vendor-web, services/api and packages/api-contract.
+Implement MateryalPH Phase 8 end to end: Item-Based order submission, parent checkout and per-Vendor child orders, Vendor confirmation, revision and decline, Buyer approval, manual NRPC, atomic hard reservations, auto-accept and 24-hour order payment expiry preparation. Surfaces are apps/buyer-mobile, apps/vendor-web, services/api and packages/api-contract.
 
 Integrate the synchronized Vendor onboarding contract into this phase as follows.
 
@@ -1104,7 +1104,7 @@ Vendor Earnings, protected storewide Transaction History, withholding/commission
 - Payment methods from actual configuration; refund-incompatible channels disabled for the MVP.
 - Server-side payable amount and processing-fee snapshot.
 - Full-order, NRPC-assurance, order-balance and separate platform-fee payment purposes with account and ledger validation.
-- 45-minute expiry, and callback/return pages that stay Pending until webhook confirmation.
+- 45-minute checkout-session expiry capped at the 24-hour order deadline, and callback/return pages that stay Pending until webhook confirmation.
 - Authenticated idempotent Xendit webhook inbox and asynchronous processor.
 - Scheduled reconciliation, an exception queue and a technical compensation trigger when capture occurred after an application failure.
 

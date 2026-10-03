@@ -125,6 +125,8 @@ class _$InventorySettings extends InventorySettings {
   @override
   final int hideAfterDays;
   @override
+  final int? autoAcceptReadyLeadDays;
+  @override
   final int lockVersion;
   @override
   final bool canEdit;
@@ -140,6 +142,7 @@ class _$InventorySettings extends InventorySettings {
       required this.timezone,
       required this.reminderDays,
       required this.hideAfterDays,
+      this.autoAcceptReadyLeadDays,
       required this.lockVersion,
       required this.canEdit})
       : super._();
@@ -161,6 +164,7 @@ class _$InventorySettings extends InventorySettings {
         timezone == other.timezone &&
         reminderDays == other.reminderDays &&
         hideAfterDays == other.hideAfterDays &&
+        autoAcceptReadyLeadDays == other.autoAcceptReadyLeadDays &&
         lockVersion == other.lockVersion &&
         canEdit == other.canEdit;
   }
@@ -174,6 +178,7 @@ class _$InventorySettings extends InventorySettings {
     _$hash = $jc(_$hash, timezone.hashCode);
     _$hash = $jc(_$hash, reminderDays.hashCode);
     _$hash = $jc(_$hash, hideAfterDays.hashCode);
+    _$hash = $jc(_$hash, autoAcceptReadyLeadDays.hashCode);
     _$hash = $jc(_$hash, lockVersion.hashCode);
     _$hash = $jc(_$hash, canEdit.hashCode);
     _$hash = $jf(_$hash);
@@ -189,6 +194,7 @@ class _$InventorySettings extends InventorySettings {
           ..add('timezone', timezone)
           ..add('reminderDays', reminderDays)
           ..add('hideAfterDays', hideAfterDays)
+          ..add('autoAcceptReadyLeadDays', autoAcceptReadyLeadDays)
           ..add('lockVersion', lockVersion)
           ..add('canEdit', canEdit))
         .toString();
@@ -231,6 +237,11 @@ class InventorySettingsBuilder
   set hideAfterDays(int? hideAfterDays) =>
       _$this._hideAfterDays = hideAfterDays;
 
+  int? _autoAcceptReadyLeadDays;
+  int? get autoAcceptReadyLeadDays => _$this._autoAcceptReadyLeadDays;
+  set autoAcceptReadyLeadDays(int? autoAcceptReadyLeadDays) =>
+      _$this._autoAcceptReadyLeadDays = autoAcceptReadyLeadDays;
+
   int? _lockVersion;
   int? get lockVersion => _$this._lockVersion;
   set lockVersion(int? lockVersion) => _$this._lockVersion = lockVersion;
@@ -252,6 +263,7 @@ class InventorySettingsBuilder
       _timezone = $v.timezone;
       _reminderDays = $v.reminderDays.toBuilder();
       _hideAfterDays = $v.hideAfterDays;
+      _autoAcceptReadyLeadDays = $v.autoAcceptReadyLeadDays;
       _lockVersion = $v.lockVersion;
       _canEdit = $v.canEdit;
       _$v = null;
@@ -288,6 +300,7 @@ class InventorySettingsBuilder
             reminderDays: reminderDays.build(),
             hideAfterDays: BuiltValueNullFieldError.checkNotNull(
                 hideAfterDays, r'InventorySettings', 'hideAfterDays'),
+            autoAcceptReadyLeadDays: autoAcceptReadyLeadDays,
             lockVersion: BuiltValueNullFieldError.checkNotNull(
                 lockVersion, r'InventorySettings', 'lockVersion'),
             canEdit: BuiltValueNullFieldError.checkNotNull(

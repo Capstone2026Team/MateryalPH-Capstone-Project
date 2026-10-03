@@ -9,8 +9,9 @@ import 'discovery_repository.dart';
 import 'select_location_screen.dart';
 
 /// First-entry location page, shown full screen before Map Home has an origin. The current device
-/// location is optional: "Select it manually" opens the saved location, address search and pin
-/// alternatives, and a denied permission never blocks them. Pops with the chosen
+/// location is optional: "Select it manually" opens unified search and pin selection with saved
+/// locations available. Both paths confirm and save the choice; denied permission never blocks them.
+/// Pops with the chosen
 /// [DiscoveryOrigin], or null when the Buyer leaves without choosing.
 class LocationWelcomeScreen extends StatefulWidget {
   const LocationWelcomeScreen({
@@ -49,25 +50,21 @@ class _LocationWelcomeScreenState extends State<LocationWelcomeScreen> {
       });
       return;
     }
-    Navigator.of(context).pop(
-      DiscoveryOrigin.point(
-        point: point,
-        source: OriginSource.device,
-        label: await _addressFor(point),
+    final origin = await Navigator.of(context).push<DiscoveryOrigin>(
+      MaterialPageRoute(
+        builder: (_) => SelectLocationScreen(
+          repository: widget.repository,
+          deviceLocation: widget.deviceLocation,
+          savedLocations: widget.savedLocations,
+          mapsAvailable: widget.mapsAvailable,
+          initialPoint: point,
+          initialDeviceLocation: true,
+        ),
       ),
     );
-  }
-
-  /// The street address of the device point for the header. The point alone still drives
-  /// discovery, so a failed lookup falls back to a generic label instead of blocking.
-  Future<String> _addressFor(GeoPoint point) async {
-    try {
-      final preview = await widget.repository.resolvePoint(point, device: true);
-      final address = preview.formattedAddress;
-      return address == null ? 'Current location' : displayAddress(address);
-    } on DiscoveryFailure {
-      return 'Current location';
-    }
+    if (!mounted) return;
+    setState(() => _locating = false);
+    if (origin != null) Navigator.of(context).pop(origin);
   }
 
   Future<void> _selectManually() async {

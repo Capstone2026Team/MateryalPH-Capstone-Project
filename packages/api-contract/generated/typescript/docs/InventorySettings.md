@@ -12,6 +12,7 @@ Name | Type
 `timezone` | string
 `reminderDays` | Array&lt;number&gt;
 `hideAfterDays` | number
+`autoAcceptReadyLeadDays` | number
 `lockVersion` | number
 `canEdit` | boolean
 
@@ -28,6 +29,7 @@ const example = {
   "timezone": null,
   "reminderDays": null,
   "hideAfterDays": null,
+  "autoAcceptReadyLeadDays": null,
   "lockVersion": null,
   "canEdit": null,
 } satisfies InventorySettings

@@ -17,6 +17,8 @@ import 'package:materyalph_api_client/src/model/buyer_location_resolve_request.d
 import 'package:materyalph_api_client/src/model/buyer_location_update.dart';
 import 'package:materyalph_api_client/src/model/buyer_onboarding_envelope.dart';
 import 'package:materyalph_api_client/src/model/buyer_onboarding_update.dart';
+import 'package:materyalph_api_client/src/model/location_autocomplete_request.dart';
+import 'package:materyalph_api_client/src/model/location_suggestion_envelope.dart';
 import 'package:materyalph_api_client/src/model/lock_version_request.dart';
 import 'package:materyalph_api_client/src/model/psgc_area_list_envelope.dart';
 
@@ -27,6 +29,107 @@ class BuyerLocationsApi {
   final Serializers _serializers;
 
   const BuyerLocationsApi(this._dio, this._serializers);
+
+  /// autocompleteBuyerLocation
+  /// Up to five Google Places suggestions restricted to the Philippines. Query travels in the body; no content is persisted. Reuse the session token when resolving the selected Place ID.
+  ///
+  /// Parameters:
+  /// * [locationAutocompleteRequest]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [LocationSuggestionEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<LocationSuggestionEnvelope>> autocompleteBuyerLocation({
+    required LocationAutocompleteRequest locationAutocompleteRequest,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/buyers/locations/autocomplete';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'passportBearer',
+          },
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(LocationAutocompleteRequest);
+      _bodyData = _serializers.serialize(locationAutocompleteRequest, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    LocationSuggestionEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(LocationSuggestionEnvelope),
+      ) as LocationSuggestionEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<LocationSuggestionEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
 
   /// createBuyerLocation
   /// Saves a location from a resolution_token issued to this Buyer within 30 minutes. The first location becomes primary. When the address provider was unavailable, address_line is required (ADDRESS_DESCRIPTION_REQUIRED). Retrying with the same Idempotency-Key returns the same location.

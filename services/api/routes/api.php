@@ -32,6 +32,7 @@ require __DIR__.'/vendor-private-files.php';
 require __DIR__.'/catalog.php';
 require __DIR__.'/inventory.php';
 require __DIR__.'/buyer.php';
+require __DIR__.'/orders.php';
 
 Route::post('/webhooks/xendit/account-verification', XenditAccountVerificationWebhookController::class)->middleware('throttle:provider-webhook');
 
@@ -86,3 +87,8 @@ Route::prefix('mobile/auth')->middleware('auth.transport:MOBILE')->group(functio
         Route::post('/logout', LogoutController::class);
     });
 });
+
+require __DIR__.'/messaging.php';
+require __DIR__.'/projects.php';
+require __DIR__.'/payments.php';
+require __DIR__.'/fulfillment.php';

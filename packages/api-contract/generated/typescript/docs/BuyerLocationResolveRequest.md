@@ -7,6 +7,8 @@
 Name | Type
 ------------ | -------------
 `mode` | string
+`placeId` | string
+`sessionToken` | string
 `latitude` | number
 `longitude` | number
 `addressLine` | string
@@ -25,6 +27,8 @@ import type { BuyerLocationResolveRequest } from '@materyalph/api-client-ts'
 // TODO: Update the object below with actual values
 const example = {
   "mode": null,
+  "placeId": null,
+  "sessionToken": null,
   "latitude": null,
   "longitude": null,
   "addressLine": null,

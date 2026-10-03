@@ -12,6 +12,18 @@ void main() {
       // TODO
     });
 
+    // Required only for PLACE mode.
+    // String placeId
+    test('to test the property `placeId`', () async {
+      // TODO
+    });
+
+    // Required only for PLACE mode; same token as autocomplete.
+    // String sessionToken
+    test('to test the property `sessionToken`', () async {
+      // TODO
+    });
+
     // double latitude
     test('to test the property `latitude`', () async {
       // TODO

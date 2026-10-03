@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../design_system/components/buyer_app_bar.dart';
 
 import '../widgets/auth_content.dart';
 import 'package:flutter/services.dart';
@@ -102,7 +103,7 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
   Widget build(BuildContext context) {
     if (_resetComplete) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Password updated')),
+        appBar: buyerAppBar(context, 'Password updated'),
         body: SafeArea(
           child: AuthContent(
             child: Column(
@@ -131,14 +132,7 @@ class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
       );
     }
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          onPressed: widget.onBack,
-          tooltip: 'Back',
-          icon: const Icon(Icons.arrow_back),
-        ),
-        title: const Text('Reset password'),
-      ),
+      appBar: buyerAppBar(context, 'Reset password', onBack: widget.onBack),
       body: SafeArea(
         top: false,
         child: AuthContent(

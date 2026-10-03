@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Vendors;
 
 use App\Domain\Identity\AuthenticationException;
+use App\Domain\Operations\OutboxPublisher;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -149,7 +150,7 @@ final class VehicleConfigurationWriter
                     continue;
                 }
                 if (! is_numeric($value) || ! is_finite((float) $value) || (float) $value <= 0 || (float) $value > 1000) {
-                    throw new AuthenticationException('VEHICLE_CONFIGURATION_INVALID', 'Vehicle dimensions must be positive values within the supported range.', 422);
+                    throw ValidationException::withMessages(["vehicles.$index.$dimension" => 'Enter a cargo dimension greater than 0 and up to 1,000 meters.']);
                 }
                 $dimensions[$dimension] = (float) $value;
             }
@@ -176,6 +177,10 @@ final class VehicleConfigurationWriter
                 $this->saveRate($id, $vehicle, $deliveryDistance, $actorId);
             }
             $saved[] = $id;
+        }
+
+        if ($saved !== []) {
+            app(OutboxPublisher::class)->publish('VENDOR_FLEET_CHANGED', 'VENDOR_ORGANIZATION', $organizationId, ['vendor_organization_id' => $organizationId]);
         }
 
         return $saved;

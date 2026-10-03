@@ -4,6 +4,7 @@ import 'package:built_collection/built_collection.dart';
 import 'package:dio/dio.dart';
 import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 
+import '../../core/api_guard.dart';
 import 'discovery_models.dart';
 import 'map_geometry.dart';
 
@@ -25,6 +26,13 @@ abstract interface class DiscoveryRepository {
   Future<int> saveRadius(int radiusKm);
 
   Future<List<SavedLocationView>> locations();
+
+  Future<List<LocationSuggestionView>> autocomplete(
+    String query,
+    String sessionToken,
+  );
+
+  Future<LocationPreviewView> resolvePlace(String placeId, String sessionToken);
 
   Future<LocationPreviewView> resolvePoint(
     GeoPoint point, {
@@ -68,6 +76,8 @@ abstract interface class DiscoveryRepository {
 
   Future<DirectoryDetailsView> directoryDetails(String resultId);
 
+  Future<DirectoryPhotoView> directoryPhoto(String resultId);
+
   Future<void> setFavorite(String vendorId, {required bool favorite});
 
   Future<List<FavoriteSupplierView>> favorites();
@@ -78,13 +88,53 @@ final class ApiDiscoveryRepository implements DiscoveryRepository {
     required api.MateryalphApiClient client,
     required Future<void> Function() onSessionExpired,
   }) : _client = client,
-       _onSessionExpired = onSessionExpired;
+       _api = ApiGuard(onSessionExpired) {
+    if (!_client.dio.interceptors.any((item) => item is _DiscoveryTimeouts)) {
+      _client.dio.interceptors.add(_DiscoveryTimeouts());
+    }
+  }
 
   final api.MateryalphApiClient _client;
-  final Future<void> Function() _onSessionExpired;
+  final ApiGuard _api;
 
   api.BuyerDiscoveryApi get _discovery => _client.getBuyerDiscoveryApi();
   api.BuyerLocationsApi get _locations => _client.getBuyerLocationsApi();
+
+  @override
+  Future<List<LocationSuggestionView>> autocomplete(
+    String query,
+    String sessionToken,
+  ) => _guard(() async {
+    final response = await _locations.autocompleteBuyerLocation(
+      locationAutocompleteRequest: api.LocationAutocompleteRequest(
+        (b) => b
+          ..query = query
+          ..sessionToken = sessionToken,
+      ),
+    );
+    return _required(response.data).data
+        .map(
+          (item) =>
+              LocationSuggestionView(item.placeId, item.title, item.subtitle),
+        )
+        .toList();
+  });
+
+  @override
+  Future<LocationPreviewView> resolvePlace(
+    String placeId,
+    String sessionToken,
+  ) => _guard(() async {
+    final response = await _locations.resolveBuyerLocation(
+      buyerLocationResolveRequest: api.BuyerLocationResolveRequest(
+        (b) => b
+          ..mode = api.BuyerLocationResolveRequestModeEnum.PLACE
+          ..placeId = placeId
+          ..sessionToken = sessionToken,
+      ),
+    );
+    return _preview(_required(response.data?.data));
+  });
 
   @override
   Future<BuyerOnboardingView> onboarding() => _guard(() async {
@@ -316,27 +366,87 @@ final class ApiDiscoveryRepository implements DiscoveryRepository {
   });
 
   @override
-  Future<DirectoryDetailsView> directoryDetails(String resultId) =>
+  Future<DirectoryPhotoView> directoryPhoto(String resultId) =>
       _guard(() async {
-        final response = await _discovery.getDirectorySupplierDetails(
+        final response = await _discovery.getDirectorySupplierPhoto(
           supplierId: resultId,
         );
-        final detail = _required(response.data?.data);
-        return DirectoryDetailsView(
-          resultId: detail.resultId,
-          name: detail.name,
-          attribution: detail.attribution.text,
-          fetchedAt: detail.fetchedAt,
-          actions: detail.actions.map((action) => action.name).toList(),
-          formattedAddress: detail.formattedAddress,
-          publicPhone: detail.publicPhone,
-          websiteUri: detail.websiteUri,
-          googleMapsUri: detail.googleMapsUri,
-          openingHours: detail.openingHours.toList(),
-          googleRatingValue: detail.googleRating?.value,
-          googleRatingCount: detail.googleRating?.count,
+        final data = _required(response.data?.data);
+        final photo = data.photos.firstOrNull;
+        return DirectoryPhotoView(
+          photo == null
+              ? null
+              : PlacePhotoView(
+                  photo.uri,
+                  photo.authors.map(_author).toList(),
+                  photo.googleMapsUri,
+                ),
+          data.providerAttributions.map(_author).toList(),
         );
       });
+
+  @override
+  Future<DirectoryDetailsView> directoryDetails(String resultId) => _guard(
+    () async {
+      final response = await _discovery.getDirectorySupplierDetails(
+        supplierId: resultId,
+      );
+      final detail = _required(response.data?.data);
+      return DirectoryDetailsView(
+        resultId: detail.resultId,
+        name: detail.name,
+        attribution: detail.attribution.text,
+        fetchedAt: detail.fetchedAt,
+        actions: detail.actions.map((action) => action.name).toList(),
+        formattedAddress: detail.formattedAddress,
+        publicPhone: detail.publicPhone,
+        websiteUri: detail.websiteUri,
+        googleMapsUri: detail.googleMapsUri,
+        openingHours: detail.openingHours.toList(),
+        googleRatingValue: detail.googleRating?.value,
+        googleRatingCount: detail.googleRating?.count,
+        openNow: detail.openNow,
+        nextCloseTime: detail.nextCloseTime,
+        photos:
+            detail.photos
+                ?.map(
+                  (photo) => PlacePhotoView(
+                    photo.uri,
+                    photo.authors.map(_author).toList(),
+                    photo.googleMapsUri,
+                  ),
+                )
+                .toList() ??
+            const [],
+        reviews:
+            detail.reviews
+                ?.map(
+                  (review) => PlaceReviewView(
+                    _author(review.author),
+                    review.rating,
+                    review.text,
+                    review.relativeTime,
+                    review.googleMapsUri,
+                  ),
+                )
+                .toList() ??
+            const [],
+        attributes:
+            detail.attributes
+                ?.map(
+                  (attribute) =>
+                      PlaceAttributeView(attribute.label, attribute.available),
+                )
+                .toList() ??
+            const [],
+        providerAttributions:
+            detail.providerAttributions?.map(_author).toList() ?? const [],
+      );
+    },
+  );
+
+  PlaceAuthorView _author(api.GoogleContentAuthor author) =>
+      PlaceAuthorView(author.name, author.uri, author.photoUri);
 
   @override
   Future<void> setFavorite(String vendorId, {required bool favorite}) =>
@@ -451,82 +561,9 @@ final class ApiDiscoveryRepository implements DiscoveryRepository {
         preferredCategoryIds: onboarding.preferredCategoryIds.toList(),
       );
 
-  Future<T> _guard<T>(Future<T> Function() operation) async {
-    try {
-      return await operation();
-    } on DioException catch (error) {
-      throw await _failure(error);
-    } on DiscoveryFailure {
-      rethrow;
-    } catch (_) {
-      // Malformed or unexpected payloads never surface raw errors or provider details.
-      throw const DiscoveryFailure(
-        DiscoveryFailureKind.unknown,
-        'The server returned an unexpected response. Please retry.',
-      );
-    }
-  }
+  Future<T> _guard<T>(Future<T> Function() operation) => _api(operation);
 
-  Future<DiscoveryFailure> _failure(DioException error) async {
-    final status = error.response?.statusCode;
-    final body = error.response?.data;
-    String? code;
-    String? message;
-    var details = const <String, Object?>{};
-    if (body is Map &&
-        body['errors'] is List &&
-        (body['errors'] as List).isNotEmpty) {
-      final first = (body['errors'] as List).first;
-      if (first is Map) {
-        code = first['code'] as String?;
-        message = first['message'] as String?;
-        if (first['details'] is Map) {
-          details = Map<String, Object?>.from(first['details'] as Map);
-        }
-      }
-    }
-    if (status == null) {
-      return const DiscoveryFailure(
-        DiscoveryFailureKind.offline,
-        'You appear to be offline. Check your connection and retry.',
-      );
-    }
-    if (status == 401) {
-      await _onSessionExpired();
-      return const DiscoveryFailure(
-        DiscoveryFailureKind.sessionExpired,
-        'Your session has ended. Sign in again.',
-      );
-    }
-    final kind = switch (status) {
-      403 => DiscoveryFailureKind.forbidden,
-      404 => DiscoveryFailureKind.notFound,
-      409 => DiscoveryFailureKind.conflict,
-      422 => DiscoveryFailureKind.validation,
-      429 => DiscoveryFailureKind.rateLimited,
-      >= 500 => DiscoveryFailureKind.provider,
-      _ => DiscoveryFailureKind.unknown,
-    };
-    return DiscoveryFailure(
-      kind,
-      message ??
-          (kind == DiscoveryFailureKind.rateLimited
-              ? 'Too many requests. Wait a moment and retry.'
-              : 'Something went wrong. Please retry.'),
-      code: code,
-      details: details,
-    );
-  }
-
-  T _required<T>(T? value) {
-    if (value == null) {
-      throw const DiscoveryFailure(
-        DiscoveryFailureKind.unknown,
-        'The server returned an incomplete response. Please retry.',
-      );
-    }
-    return value;
-  }
+  T _required<T>(T? value) => _api.required(value);
 
   int _radius(api.RadiusKm radius) =>
       int.tryParse(radius.name.replaceFirst('number', '')) ?? kDefaultRadiusKm;
@@ -542,6 +579,24 @@ final class ApiDiscoveryRepository implements DiscoveryRepository {
 }
 
 final Random _secureRandom = Random.secure();
+
+/// A cold grid search or photo lookup may exceed the generated client's three-second default.
+/// Scope longer timeouts to these existing provider-backed operations, preserving auth behavior.
+class _DiscoveryTimeouts extends Interceptor {
+  @override
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    if (options.path == '/buyers/discovery/search') {
+      options.receiveTimeout = const Duration(seconds: 60);
+    } else if (options.path.startsWith(
+      '/buyers/discovery/directory-suppliers/',
+    )) {
+      options.receiveTimeout = const Duration(seconds: 35);
+    } else if (options.path == '/buyers/locations/resolve') {
+      options.receiveTimeout = const Duration(seconds: 15);
+    }
+    handler.next(options);
+  }
+}
 
 /// A random UUIDv4 for Idempotency-Key. Callers reuse one key for every retry of the same save.
 String newIdempotencyKey() {

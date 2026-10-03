@@ -141,7 +141,10 @@ final class OnboardingRequirementResolver
         $encryptedDraft = DB::table('vendor_onboarding_drafts')->where('vendor_organization_id', $organizationId)->where('workstream', 'STORE_SETUP')->value('payload_encrypted');
         $draft = is_string($encryptedDraft) ? json_decode(Crypt::decryptString($encryptedDraft), true, flags: JSON_THROW_ON_ERROR) : [];
         $formState = json_decode($draft['form_state'] ?? '{}', true, flags: JSON_THROW_ON_ERROR);
-        $pendingVehicles = is_array($formState) && ($formState['vehicles'] ?? []) !== [];
+        $activated = DB::table('vendor_organizations')->where('id', $organizationId)->where('store_activation_status', 'ACTIVE')->exists();
+        // Vehicles typed into the Store Setup wizard but never saved only block setup before activation; an
+        // active store manages its fleet from Vehicles, so a stale wizard draft must not hide the store.
+        $pendingVehicles = ! $activated && is_array($formState) && ($formState['vehicles'] ?? []) !== [];
         $deliveryReady = in_array($method, ['VENDOR_DELIVERY', 'BOTH'], true) && $delivery !== null && (int) $delivery->maximum_distance_km >= 1
             && ! $pendingVehicles && app(DeliveryRecommendationService::class)->eligibleVehicles($organizationId) !== [];
         $payment = DB::table('vendor_payment_accounts')->where('vendor_organization_id', $organizationId)->first();
@@ -172,6 +175,10 @@ final class OnboardingRequirementResolver
         if (DB::table('vendor_organizations')->where('id', $organizationId)->where('store_setup_status', 'COMPLETED')->exists()
             && collect($statuses)->contains(fn (string $status): bool => ! in_array($status, ['COMPLETED', 'NOT_APPLICABLE'], true))) {
             DB::table('vendor_organizations')->where('id', $organizationId)->update(['store_setup_status' => 'IN_PROGRESS', 'updated_at' => now()]);
+        } elseif ($activated && $profile !== null && ! collect($statuses)->contains(fn (string $status): bool => ! in_array($status, ['COMPLETED', 'NOT_APPLICABLE'], true))) {
+            // An activated store whose requirements are all met again returns to COMPLETED so it is discoverable.
+            DB::table('vendor_organizations')->where('id', $organizationId)->where('store_setup_status', '!=', 'COMPLETED')->update(['store_setup_status' => 'COMPLETED', 'updated_at' => now()]);
+            DB::table('store_profiles')->where('id', $profile->id)->where('status', '!=', 'COMPLETED')->update(['status' => 'COMPLETED', 'updated_at' => now()]);
         }
     }
 }

@@ -18,6 +18,7 @@ part 'inventory_settings.g.dart';
 /// * [timezone]
 /// * [reminderDays]
 /// * [hideAfterDays]
+/// * [autoAcceptReadyLeadDays] - Days after acceptance an auto-accepted Self-Pickup order is ready (Asia/Manila). Null routes Self-Pickup auto-accept to manual review.
 /// * [lockVersion]
 /// * [canEdit]
 @BuiltValue()
@@ -41,6 +42,10 @@ abstract class InventorySettings implements Built<InventorySettings, InventorySe
 
   @BuiltValueField(wireName: r'hide_after_days')
   int get hideAfterDays;
+
+  /// Days after acceptance an auto-accepted Self-Pickup order is ready (Asia/Manila). Null routes Self-Pickup auto-accept to manual review.
+  @BuiltValueField(wireName: r'auto_accept_ready_lead_days')
+  int? get autoAcceptReadyLeadDays;
 
   @BuiltValueField(wireName: r'lock_version')
   int get lockVersion;
@@ -100,6 +105,11 @@ class _$InventorySettingsSerializer implements PrimitiveSerializer<InventorySett
     yield serializers.serialize(
       object.hideAfterDays,
       specifiedType: const FullType(int),
+    );
+    yield r'auto_accept_ready_lead_days';
+    yield object.autoAcceptReadyLeadDays == null ? null : serializers.serialize(
+      object.autoAcceptReadyLeadDays,
+      specifiedType: const FullType.nullable(int),
     );
     yield r'lock_version';
     yield serializers.serialize(
@@ -175,6 +185,14 @@ class _$InventorySettingsSerializer implements PrimitiveSerializer<InventorySett
             specifiedType: const FullType(int),
           ) as int;
           result.hideAfterDays = valueDes;
+          break;
+        case r'auto_accept_ready_lead_days':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.autoAcceptReadyLeadDays = valueDes;
           break;
         case r'lock_version':
           final valueDes = serializers.deserialize(

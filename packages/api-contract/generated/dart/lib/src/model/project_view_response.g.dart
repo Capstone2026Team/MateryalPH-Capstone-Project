@@ -1,0 +1,137 @@
+// GENERATED CODE - DO NOT MODIFY BY HAND
+
+part of 'project_view_response.dart';
+
+// **************************************************************************
+// BuiltValueGenerator
+// **************************************************************************
+
+class _$ProjectViewResponse extends ProjectViewResponse {
+  @override
+  final ProjectView data;
+  @override
+  final BuiltMap<String, JsonObject?> meta;
+  @override
+  final BuiltList<ApiError> errors;
+
+  factory _$ProjectViewResponse(
+          [void Function(ProjectViewResponseBuilder)? updates]) =>
+      (ProjectViewResponseBuilder()..update(updates))._build();
+
+  _$ProjectViewResponse._(
+      {required this.data, required this.meta, required this.errors})
+      : super._();
+  @override
+  ProjectViewResponse rebuild(
+          void Function(ProjectViewResponseBuilder) updates) =>
+      (toBuilder()..update(updates)).build();
+
+  @override
+  ProjectViewResponseBuilder toBuilder() =>
+      ProjectViewResponseBuilder()..replace(this);
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(other, this)) return true;
+    return other is ProjectViewResponse &&
+        data == other.data &&
+        meta == other.meta &&
+        errors == other.errors;
+  }
+
+  @override
+  int get hashCode {
+    var _$hash = 0;
+    _$hash = $jc(_$hash, data.hashCode);
+    _$hash = $jc(_$hash, meta.hashCode);
+    _$hash = $jc(_$hash, errors.hashCode);
+    _$hash = $jf(_$hash);
+    return _$hash;
+  }
+
+  @override
+  String toString() {
+    return (newBuiltValueToStringHelper(r'ProjectViewResponse')
+          ..add('data', data)
+          ..add('meta', meta)
+          ..add('errors', errors))
+        .toString();
+  }
+}
+
+class ProjectViewResponseBuilder
+    implements Builder<ProjectViewResponse, ProjectViewResponseBuilder> {
+  _$ProjectViewResponse? _$v;
+
+  ProjectViewBuilder? _data;
+  ProjectViewBuilder get data => _$this._data ??= ProjectViewBuilder();
+  set data(ProjectViewBuilder? data) => _$this._data = data;
+
+  MapBuilder<String, JsonObject?>? _meta;
+  MapBuilder<String, JsonObject?> get meta =>
+      _$this._meta ??= MapBuilder<String, JsonObject?>();
+  set meta(MapBuilder<String, JsonObject?>? meta) => _$this._meta = meta;
+
+  ListBuilder<ApiError>? _errors;
+  ListBuilder<ApiError> get errors =>
+      _$this._errors ??= ListBuilder<ApiError>();
+  set errors(ListBuilder<ApiError>? errors) => _$this._errors = errors;
+
+  ProjectViewResponseBuilder() {
+    ProjectViewResponse._defaults(this);
+  }
+
+  ProjectViewResponseBuilder get _$this {
+    final $v = _$v;
+    if ($v != null) {
+      _data = $v.data.toBuilder();
+      _meta = $v.meta.toBuilder();
+      _errors = $v.errors.toBuilder();
+      _$v = null;
+    }
+    return this;
+  }
+
+  @override
+  void replace(ProjectViewResponse other) {
+    _$v = other as _$ProjectViewResponse;
+  }
+
+  @override
+  void update(void Function(ProjectViewResponseBuilder)? updates) {
+    if (updates != null) updates(this);
+  }
+
+  @override
+  ProjectViewResponse build() => _build();
+
+  _$ProjectViewResponse _build() {
+    _$ProjectViewResponse _$result;
+    try {
+      _$result = _$v ??
+          _$ProjectViewResponse._(
+            data: data.build(),
+            meta: meta.build(),
+            errors: errors.build(),
+          );
+    } catch (_) {
+      late String _$failedField;
+      try {
+        _$failedField = 'data';
+        data.build();
+        _$failedField = 'meta';
+        meta.build();
+        _$failedField = 'errors';
+        errors.build();
+      } catch (e) {
+        throw BuiltValueNestedFieldError(
+            r'ProjectViewResponse', _$failedField, e.toString());
+      }
+      rethrow;
+    }
+    replace(_$result);
+    return _$result;
+  }
+}
+
+// ignore_for_file: deprecated_member_use_from_same_package,type=lint

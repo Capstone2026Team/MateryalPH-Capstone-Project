@@ -54,6 +54,57 @@ final class PhaseSixBuyerDiscoveryTest extends TestCase
         $this->app->instance(AddressGeocoder::class, $this->geocoder);
     }
 
+    public function test_directory_thumbnail_is_lazy_attributed_and_rejects_expired_or_claimed_suppliers(): void
+    {
+        $this->getJson('/api/v1/buyers/discovery/directory-suppliers/'.Str::uuid().'/photo')->assertUnauthorized();
+        [$store] = $this->activeStore('Registered Store');
+        $this->places->places = [['place_id' => 'ChIJthumbnailPlace01', 'name' => 'Directory Hardware', 'latitude' => 14.62, 'longitude' => 121.0,
+            'formatted_address' => 'Manila', 'primary_type' => 'hardware_store', 'business_status' => 'OPERATIONAL']];
+        $photo = ['uri' => 'https://lh3.googleusercontent.com/business-photo', 'authors' => [['name' => 'Store Owner', 'uri' => 'https://maps.google.com/contributor/1', 'photo_uri' => null]], 'google_maps_uri' => 'https://maps.google.com/photo/1'];
+        $this->places->details['ChIJthumbnailPlace01'] = ['photos' => [$photo, $photo], 'provider_attributions' => []];
+        $this->buyer();
+        $id = collect($this->search()->assertOk()->json('data'))->firstWhere('tier', 'DIRECTORY_SUPPLIER')['result_id'];
+        $url = '/api/v1/buyers/discovery/directory-suppliers/'.$id.'/photo';
+        $this->getJson($url)->assertOk()->assertHeader('Cache-Control', 'no-store, private')
+            ->assertJsonCount(1, 'data.photos')->assertJsonPath('data.photos.0.authors.0.name', 'Store Owner')
+            ->assertJsonPath('data.photos.0.google_maps_uri', $photo['google_maps_uri'])->assertJsonMissingPath('data.actions');
+        self::assertSame(0, $this->places->detailCalls, 'Thumbnails do not load full details.');
+        self::assertSame(0, DB::table('place_cache_entries')->where('kind', 'PLACE_DETAILS')->count());
+        self::assertStringNotContainsString('business-photo', (string) json_encode(DB::table('directory_suppliers')->where('id', $id)->first()));
+        $this->places->details = [];
+        $this->getJson($url)->assertOk()->assertJsonCount(0, 'data.photos');
+        $this->places->failure = 'TIMEOUT';
+        $this->getJson($url)->assertStatus(503)->assertJsonPath('errors.0.code', 'PLACES_UNAVAILABLE');
+        $this->places->failure = null;
+        DB::table('directory_suppliers')->where('id', $id)->update(['expires_at' => now()->subMinute()]);
+        $this->getJson($url)->assertNotFound();
+        DB::table('directory_suppliers')->where('id', $id)->update(['expires_at' => now()->addHour(), 'claimed_vendor_organization_id' => $store->id]);
+        $this->getJson($url)->assertNotFound();
+        $this->getJson('/api/v1/buyers/discovery/directory-suppliers/'.$store->id.'/photo')->assertNotFound();
+    }
+
+    public function test_location_suggestions_resolve_into_the_existing_owned_saved_location_flow(): void
+    {
+        $this->buyer();
+        $session = (string) Str::uuid();
+        $this->places->suggestions = [['place_id' => 'ChIJlocation000001', 'title' => 'Quiapo', 'subtitle' => 'Manila']];
+        $this->places->located = ['latitude' => 14.6, 'longitude' => 121.0, 'formatted_address' => 'Quiapo, Manila'];
+        $this->postJson('/api/v1/buyers/locations/autocomplete', ['query' => 'Qui', 'session_token' => $session])->assertOk()->assertHeader('Cache-Control', 'no-store, private')->assertJsonPath('data.0.title', 'Quiapo');
+        $preview = $this->postJson('/api/v1/buyers/locations/resolve', ['mode' => 'PLACE', 'place_id' => 'ChIJlocation000001', 'session_token' => $session])->assertOk()->assertJsonPath('data.source', 'ADDRESS_SEARCH')->assertJsonPath('data.formatted_address', 'Quiapo, Manila')->json('data');
+        self::assertSame(0, DB::table('buyer_locations')->count());
+        $key = (string) Str::uuid();
+        $input = ['resolution_token' => $preview['resolution_token'], 'label' => 'Quiapo', 'make_primary' => true];
+        $saved = $this->postJson('/api/v1/buyers/locations', $input, ['Idempotency-Key' => $key])->assertCreated()->assertJsonPath('data.is_primary', true)->json('data');
+        $this->postJson('/api/v1/buyers/locations', $input, ['Idempotency-Key' => $key])->assertCreated()->assertJsonPath('data.id', $saved['id']);
+        $this->getJson('/api/v1/buyers/locations')->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.formatted_address', 'Quiapo, Manila');
+        $this->postJson('/api/v1/buyers/locations/resolve', ['mode' => 'PLACE', 'place_id' => '../../invalid', 'session_token' => $session])->assertUnprocessable();
+        $this->places->located = ['latitude' => 1.3, 'longitude' => 103.8, 'formatted_address' => 'Outside Philippines'];
+        $this->postJson('/api/v1/buyers/locations/resolve', ['mode' => 'PLACE', 'place_id' => 'ChIJlocation000001', 'session_token' => $session])->assertUnprocessable()->assertJsonPath('errors.0.code', 'LOCATION_OUTSIDE_PHILIPPINES');
+        $this->places->failure = 'TIMEOUT';
+        $this->postJson('/api/v1/buyers/locations/autocomplete', ['query' => 'Qui', 'session_token' => $session])->assertStatus(503)->assertJsonPath('errors.0.code', 'PLACES_UNAVAILABLE');
+        self::assertSame(0, DB::table('place_cache_entries')->count());
+    }
+
     public function test_radius_membership_uses_geodesic_st_dwithin_with_an_inclusive_boundary_and_rejects_unsupported_radii(): void
     {
         [$store] = $this->activeStore('Boundary Hardware');
@@ -260,7 +311,8 @@ final class PhaseSixBuyerDiscoveryTest extends TestCase
         }
         self::assertStringNotContainsString('VPS', (string) json_encode($details));
         $this->getJson('/api/v1/buyers/discovery/directory-suppliers/'.$directory['result_id']);
-        self::assertSame(1, $this->places->detailCalls, 'Place Details are lazy-loaded once and cached within the bound.');
+        self::assertSame(2, $this->places->detailCalls, 'Place Details media is fetched on demand, never cached.');
+        self::assertSame(0, DB::table('place_cache_entries')->where('kind', 'PLACE_DETAILS')->count());
 
         $this->putJson('/api/v1/buyers/favorite-suppliers/'.$directory['result_id'])->assertStatus(422)->assertJsonPath('errors.0.code', 'FAVORITE_REQUIRES_VERIFIED_VENDOR');
         $this->getJson('/api/v1/stores/'.$directory['result_id'].'/profile')->assertNotFound();

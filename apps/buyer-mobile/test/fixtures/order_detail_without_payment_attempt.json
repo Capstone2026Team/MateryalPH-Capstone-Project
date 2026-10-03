@@ -1,0 +1,211 @@
+{
+    "id": "01a0fb55-e5f2-7081-a9ee-314ee8596f6f",
+    "reference": "ORD-2026-SY5SGTGN",
+    "checkout": {
+        "id": "01a0fb55-e5eb-7011-b2b4-c32eb7bd1054",
+        "reference": "CHK-2026-JFIY5LCG"
+    },
+    "vendor": {
+        "id": "01a0ab02-3966-702d-b7a9-57f7052f63a5",
+        "name": "Example Construction Supply"
+    },
+    "procurement_type": "ITEM_BASED",
+    "fulfillment_method": "PICKUP",
+    "payment_method": "ONLINE",
+    "project_context": null,
+    "submitted_at": "2026-10-02T06:38:25+00:00",
+    "accepted_at": "2026-10-02T06:39:05+00:00",
+    "closed_at": "2026-10-02T07:25:01+00:00",
+    "terminal_reason_code": "PAYMENT_WINDOW_EXPIRED",
+    "confirmation_source": "MANUAL",
+    "states": [
+        {
+            "family": "ORDER",
+            "state": "EXPIRED"
+        },
+        {
+            "family": "PAYMENT",
+            "state": "EXPIRED"
+        },
+        {
+            "family": "FULFILLMENT",
+            "state": "NOT_STARTED"
+        },
+        {
+            "family": "REFUND",
+            "state": "NOT_REQUESTED"
+        },
+        {
+            "family": "DISPUTE",
+            "state": "NONE"
+        }
+    ],
+    "deadlines": {
+        "vendor_response_due_at": null,
+        "buyer_response_due_at": null,
+        "payment_expires_at": "2026-10-02T07:24:05+00:00",
+        "server_time": "2026-10-02T08:00:41+00:00",
+        "timezone": "Asia\/Manila"
+    },
+    "commercial_version": {
+        "current": 2,
+        "accepted": 2,
+        "kind": "VENDOR_CONFIRMED",
+        "content_hash": "b59608d3cee1c2137bc194d0fea71c92b80cf50f0beefecc9403da66f416adad",
+        "recorded_at": "2026-10-02T06:39:05+00:00"
+    },
+    "changes": [],
+    "expected_fulfillment_date": "2026-10-02",
+    "lines": [
+        {
+            "id": "01a0fb55-e5f4-715e-8163-90191acfc7fe",
+            "line_number": 1,
+            "listing_id": "01a0e422-2dce-7151-8273-0dfcba1a9d3c",
+            "listing_variant_id": "01a0e43f-2d5d-718d-a823-b8da250f4d20",
+            "display_name": "Rerolled steel bar",
+            "variant_label": null,
+            "brand": "TEST",
+            "category": "Steel and Reinforcement",
+            "image": {
+                "url": "https://media.example.test/steel-bar.jpg",
+                "alt_text": "Rerolled steel bar"
+            },
+            "unit_code": "PC",
+            "unit_name": "Piece",
+            "unit_precision": 0,
+            "quantity_step": "1",
+            "requested_quantity": "1.0000",
+            "confirmed_quantity": "1.0000",
+            "unit_price_centavos": 28550,
+            "ordinary_unit_price_centavos": 28550,
+            "volume_tier_applied": false,
+            "volume_tiers": [],
+            "gross_centavos": 28550,
+            "discount_centavos": 0,
+            "line_total_centavos": 28550,
+            "included_vat_centavos": 3059,
+            "tax_category": "VAT_12",
+            "vat_label": "VAT inclusive",
+            "change": null,
+            "price_version_id": "01a0e43f-2d62-70f5-b6f1-1917474b3918"
+        }
+    ],
+    "destination": {
+        "type": "PICKUP",
+        "store_address": "1 Example Street, Quezon City"
+    },
+    "delivery": {
+        "status": "NOT_APPLICABLE",
+        "estimate": null,
+        "confirmed": null
+    },
+    "money": {
+        "currency": "PHP",
+        "calculation_version": "fin02.order.v1",
+        "status": "ACCEPTED",
+        "materials_gross_centavos": 28550,
+        "vendor_discount_centavos": 0,
+        "materials_subtotal_centavos": 28550,
+        "included_vat_centavos": 3059,
+        "vat_exclusive_centavos": 25491,
+        "vat_treatment": "PRICES_INCLUDE_VAT",
+        "delivery": {
+            "status": "NOT_APPLICABLE",
+            "amount_centavos": 0,
+            "estimate": null
+        },
+        "nrpc": {
+            "amount_centavos": 0,
+            "within_order_value": true,
+            "status": null
+        },
+        "processing_fee": {
+            "status": "PENDING_PAYMENT_CHANNEL",
+            "amount_centavos": null
+        },
+        "commercial_total_centavos": 28550,
+        "amount_due_online_centavos": null,
+        "online_principal_centavos": 28550,
+        "physical_balance_centavos": 0,
+        "payment_purpose": "FULL_ORDER_PAYMENT",
+        "excludes": [
+            "VENDOR_COMMISSION",
+            "MERCHANT_WITHHOLDING"
+        ]
+    },
+    "nrpc": null,
+    "timeline": [
+        {
+            "family": "ORDER",
+            "from_state": null,
+            "to_state": "AWAITING_VENDOR_CONFIRMATION",
+            "source": "BUYER",
+            "actor_role": "BUYER",
+            "reason_code": "ORDER_SUBMITTED",
+            "snapshot_version": 1,
+            "at": "2026-10-02T06:38:25+00:00"
+        },
+        {
+            "family": "ORDER",
+            "from_state": "AWAITING_VENDOR_CONFIRMATION",
+            "to_state": "AWAITING_PAYMENT",
+            "source": "VENDOR",
+            "actor_role": "OWNER",
+            "reason_code": "VENDOR_CONFIRMED",
+            "snapshot_version": 2,
+            "at": "2026-10-02T06:39:05+00:00"
+        },
+        {
+            "family": "PAYMENT",
+            "from_state": "NOT_REQUIRED",
+            "to_state": "PENDING",
+            "source": "VENDOR",
+            "actor_role": "OWNER",
+            "reason_code": "VENDOR_CONFIRMED",
+            "snapshot_version": 2,
+            "at": "2026-10-02T06:39:05+00:00"
+        },
+        {
+            "family": "ORDER",
+            "from_state": "AWAITING_PAYMENT",
+            "to_state": "EXPIRED",
+            "source": "SYSTEM",
+            "actor_role": "SYSTEM",
+            "reason_code": "PAYMENT_WINDOW_EXPIRED",
+            "snapshot_version": null,
+            "at": "2026-10-02T07:25:01+00:00"
+        },
+        {
+            "family": "PAYMENT",
+            "from_state": "PENDING",
+            "to_state": "EXPIRED",
+            "source": "SYSTEM",
+            "actor_role": "SYSTEM",
+            "reason_code": "PAYMENT_WINDOW_EXPIRED",
+            "snapshot_version": null,
+            "at": "2026-10-02T07:25:01+00:00"
+        }
+    ],
+    "lock_version": 3,
+    "available_actions": [],
+    "payment": {
+        "available": false,
+        "purpose": null,
+        "principal_centavos": null,
+        "reason": null,
+        "latest_attempt": null,
+        "verified_payment": null,
+        "attempts": [],
+        "physical": {
+            "applicable": false,
+            "method": "ONLINE",
+            "state": "NOT_OPEN",
+            "remaining_centavos": null,
+            "online_balance_approved": false,
+            "records": [],
+            "notice": "Cash on Delivery and In-Store Payment are paid directly to the Vendor. A Vendor record is not an online payment confirmation."
+        },
+        "environment": "TEST",
+        "notice": null
+    }
+}

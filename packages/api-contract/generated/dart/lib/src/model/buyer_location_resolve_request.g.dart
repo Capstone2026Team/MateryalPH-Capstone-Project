@@ -15,6 +15,9 @@ const BuyerLocationResolveRequestModeEnum
 const BuyerLocationResolveRequestModeEnum
     _$buyerLocationResolveRequestModeEnum_ADDRESS =
     const BuyerLocationResolveRequestModeEnum._('ADDRESS');
+const BuyerLocationResolveRequestModeEnum
+    _$buyerLocationResolveRequestModeEnum_PLACE =
+    const BuyerLocationResolveRequestModeEnum._('PLACE');
 
 BuyerLocationResolveRequestModeEnum
     _$buyerLocationResolveRequestModeEnumValueOf(String name) {
@@ -25,6 +28,8 @@ BuyerLocationResolveRequestModeEnum
       return _$buyerLocationResolveRequestModeEnum_DEVICE;
     case 'ADDRESS':
       return _$buyerLocationResolveRequestModeEnum_ADDRESS;
+    case 'PLACE':
+      return _$buyerLocationResolveRequestModeEnum_PLACE;
     default:
       throw ArgumentError(name);
   }
@@ -36,6 +41,7 @@ final BuiltSet<BuyerLocationResolveRequestModeEnum>
   _$buyerLocationResolveRequestModeEnum_PIN,
   _$buyerLocationResolveRequestModeEnum_DEVICE,
   _$buyerLocationResolveRequestModeEnum_ADDRESS,
+  _$buyerLocationResolveRequestModeEnum_PLACE,
 ]);
 
 Serializer<BuyerLocationResolveRequestModeEnum>
@@ -48,11 +54,13 @@ class _$BuyerLocationResolveRequestModeEnumSerializer
     'PIN': 'PIN',
     'DEVICE': 'DEVICE',
     'ADDRESS': 'ADDRESS',
+    'PLACE': 'PLACE',
   };
   static const Map<Object, String> _fromWire = const <Object, String>{
     'PIN': 'PIN',
     'DEVICE': 'DEVICE',
     'ADDRESS': 'ADDRESS',
+    'PLACE': 'PLACE',
   };
 
   @override
@@ -80,6 +88,10 @@ class _$BuyerLocationResolveRequest extends BuyerLocationResolveRequest {
   @override
   final BuyerLocationResolveRequestModeEnum mode;
   @override
+  final String? placeId;
+  @override
+  final String? sessionToken;
+  @override
   final double? latitude;
   @override
   final double? longitude;
@@ -104,6 +116,8 @@ class _$BuyerLocationResolveRequest extends BuyerLocationResolveRequest {
 
   _$BuyerLocationResolveRequest._(
       {required this.mode,
+      this.placeId,
+      this.sessionToken,
       this.latitude,
       this.longitude,
       this.addressLine,
@@ -128,6 +142,8 @@ class _$BuyerLocationResolveRequest extends BuyerLocationResolveRequest {
     if (identical(other, this)) return true;
     return other is BuyerLocationResolveRequest &&
         mode == other.mode &&
+        placeId == other.placeId &&
+        sessionToken == other.sessionToken &&
         latitude == other.latitude &&
         longitude == other.longitude &&
         addressLine == other.addressLine &&
@@ -143,6 +159,8 @@ class _$BuyerLocationResolveRequest extends BuyerLocationResolveRequest {
   int get hashCode {
     var _$hash = 0;
     _$hash = $jc(_$hash, mode.hashCode);
+    _$hash = $jc(_$hash, placeId.hashCode);
+    _$hash = $jc(_$hash, sessionToken.hashCode);
     _$hash = $jc(_$hash, latitude.hashCode);
     _$hash = $jc(_$hash, longitude.hashCode);
     _$hash = $jc(_$hash, addressLine.hashCode);
@@ -160,6 +178,8 @@ class _$BuyerLocationResolveRequest extends BuyerLocationResolveRequest {
   String toString() {
     return (newBuiltValueToStringHelper(r'BuyerLocationResolveRequest')
           ..add('mode', mode)
+          ..add('placeId', placeId)
+          ..add('sessionToken', sessionToken)
           ..add('latitude', latitude)
           ..add('longitude', longitude)
           ..add('addressLine', addressLine)
@@ -182,6 +202,14 @@ class BuyerLocationResolveRequestBuilder
   BuyerLocationResolveRequestModeEnum? _mode;
   BuyerLocationResolveRequestModeEnum? get mode => _$this._mode;
   set mode(BuyerLocationResolveRequestModeEnum? mode) => _$this._mode = mode;
+
+  String? _placeId;
+  String? get placeId => _$this._placeId;
+  set placeId(String? placeId) => _$this._placeId = placeId;
+
+  String? _sessionToken;
+  String? get sessionToken => _$this._sessionToken;
+  set sessionToken(String? sessionToken) => _$this._sessionToken = sessionToken;
 
   double? _latitude;
   double? get latitude => _$this._latitude;
@@ -228,6 +256,8 @@ class BuyerLocationResolveRequestBuilder
     final $v = _$v;
     if ($v != null) {
       _mode = $v.mode;
+      _placeId = $v.placeId;
+      _sessionToken = $v.sessionToken;
       _latitude = $v.latitude;
       _longitude = $v.longitude;
       _addressLine = $v.addressLine;
@@ -260,6 +290,8 @@ class BuyerLocationResolveRequestBuilder
         _$BuyerLocationResolveRequest._(
           mode: BuiltValueNullFieldError.checkNotNull(
               mode, r'BuyerLocationResolveRequest', 'mode'),
+          placeId: placeId,
+          sessionToken: sessionToken,
           latitude: latitude,
           longitude: longitude,
           addressLine: addressLine,

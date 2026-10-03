@@ -102,6 +102,55 @@ for (const args of generations) {
     const originalContents = readFileSync(generatedPath, "utf8");
     let contents = originalContents;
     if (relativePath.endsWith(".dart") && relativePath.startsWith("lib/")) {
+      if (relativePath === "lib/src/serializers.dart") {
+        // dart-dio represents boolean const schemas as singleton EnumClass
+        // values, but built_value's default enum serializer uses string wires.
+        // Keep the generated public types and strict const validation while
+        // registering serializers that read/write actual JSON booleans.
+        const booleanConstants = [];
+        for (const modelPath of currentFiles) {
+          if (!/^lib\/src\/model\/.*\.dart$/u.test(modelPath)) continue;
+          const model = readFileSync(resolve(output, modelPath), "utf8");
+          const pattern = /class (\w+) extends EnumClass \{\s+@BuiltValueEnumConst\(wireName: r'(true|false)'\)\s+static const \1 (true_|false_) = [^;]+;\s+static Serializer<\1>/gu;
+          for (const [, type, wire, member] of model.matchAll(pattern)) {
+            booleanConstants.push(`      ..add(_BooleanConstSerializer<${type}>(${type}.${member}, ${wire}))`);
+          }
+        }
+        if (booleanConstants.length > 0) {
+          contents = contents.replace('      ..add(const DateSerializer())', `${booleanConstants.join("\n")}\n      ..add(const DateSerializer())`);
+          contents += `
+// Generated normalization for OpenAPI boolean const schemas.
+class _BooleanConstSerializer<T> implements PrimitiveSerializer<T> {
+  const _BooleanConstSerializer(this.value, this.wireValue);
+
+  final T value;
+  final bool wireValue;
+
+  @override
+  Iterable<Type> get types => [T];
+
+  @override
+  String get wireName => T.toString();
+
+  @override
+  Object serialize(Serializers serializers, T object,
+      {FullType specifiedType = FullType.unspecified}) {
+    if (object != value) throw ArgumentError('Invalid boolean constant');
+    return wireValue;
+  }
+
+  @override
+  T deserialize(Serializers serializers, Object serialized,
+      {FullType specifiedType = FullType.unspecified}) {
+    if (serialized is! bool || serialized != wireValue) {
+      throw ArgumentError('Invalid boolean constant');
+    }
+    return value;
+  }
+}
+`;
+        }
+      }
       // Nullable inline objects use nested built_value builders. dart-dio
       // currently assigns the deserialized value to the builder field directly.
       const nestedFields = {
@@ -113,6 +162,7 @@ for (const args of generations) {
         "lib/src/model/inventory_ledger_envelope.dart": ["meta"],
         "lib/src/model/inventory_movement_list_envelope.dart": ["meta"],
         "lib/src/model/fleet_vehicle_list_envelope.dart": ["meta"],
+        "lib/src/model/order_list_envelope.dart": ["meta"],
       }[relativePath] ?? [];
       for (const field of nestedFields) {
         contents = contents.replace(`result.${field} = valueDes;`, `result.${field} = valueDes.toBuilder();`);

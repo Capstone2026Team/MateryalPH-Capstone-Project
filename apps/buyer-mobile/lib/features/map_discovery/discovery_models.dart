@@ -10,6 +10,14 @@ class GeoPoint {
   final double latitude;
   final double longitude;
 
+  bool get usable =>
+      latitude.isFinite &&
+      longitude.isFinite &&
+      latitude >= 4 &&
+      latitude <= 21.5 &&
+      longitude >= 116 &&
+      longitude <= 127;
+
   @override
   bool operator ==(Object other) =>
       other is GeoPoint &&
@@ -283,6 +291,12 @@ class DirectoryDetailsView {
     this.openingHours = const [],
     this.googleRatingValue,
     this.googleRatingCount,
+    this.openNow,
+    this.nextCloseTime,
+    this.photos = const [],
+    this.reviews = const [],
+    this.attributes = const [],
+    this.providerAttributions = const [],
   });
 
   final String resultId;
@@ -299,6 +313,54 @@ class DirectoryDetailsView {
   final List<String> openingHours;
   final String? googleRatingValue;
   final int? googleRatingCount;
+  final bool? openNow;
+  final DateTime? nextCloseTime;
+  final List<PlacePhotoView> photos;
+  final List<PlaceReviewView> reviews;
+  final List<PlaceAttributeView> attributes;
+  final List<PlaceAuthorView> providerAttributions;
+}
+
+class LocationSuggestionView {
+  const LocationSuggestionView(this.placeId, this.title, this.subtitle);
+  final String placeId;
+  final String title;
+  final String? subtitle;
+}
+
+class PlaceAuthorView {
+  const PlaceAuthorView(this.name, this.uri, this.photoUri);
+  final String name;
+  final String? uri;
+  final String? photoUri;
+}
+
+class PlacePhotoView {
+  const PlacePhotoView(this.uri, this.authors, this.googleMapsUri);
+  final String uri;
+  final List<PlaceAuthorView> authors;
+  final String? googleMapsUri;
+}
+
+class PlaceReviewView {
+  const PlaceReviewView(
+    this.author,
+    this.rating,
+    this.text,
+    this.relativeTime,
+    this.googleMapsUri,
+  );
+  final PlaceAuthorView author;
+  final double rating;
+  final String? text;
+  final String? relativeTime;
+  final String? googleMapsUri;
+}
+
+class PlaceAttributeView {
+  const PlaceAttributeView(this.label, this.available);
+  final String label;
+  final bool available;
 }
 
 @immutable
@@ -455,4 +517,11 @@ class DiscoveryFailure implements Exception {
 
   @override
   String toString() => 'DiscoveryFailure($kind, $code)';
+}
+
+/// Ephemeral media for a visible directory row. Never persisted with discovery.
+class DirectoryPhotoView {
+  const DirectoryPhotoView(this.photo, this.providerAttributions);
+  final PlacePhotoView? photo;
+  final List<PlaceAuthorView> providerAttributions;
 }

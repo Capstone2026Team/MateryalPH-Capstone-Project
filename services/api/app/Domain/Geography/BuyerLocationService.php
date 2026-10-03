@@ -36,7 +36,19 @@ final class BuyerLocationService
         private readonly PsgcResolver $psgc,
         private readonly CatalogAccess $idempotency,
         private readonly AuditRecorder $audit,
+        private readonly PlacesProvider $places,
     ) {}
+
+    /** @return list<array{place_id: string, title: string, subtitle: ?string}> */
+    public function autocomplete(Request $request, string $query, string $sessionToken): array
+    {
+        $this->profiles->idFor($request);
+        try {
+            return $this->places->autocomplete($query, $sessionToken);
+        } catch (GeographyProviderUnavailable) {
+            throw new AuthenticationException('PLACES_UNAVAILABLE', 'Location suggestions are unavailable. Move the map pin or try again.', 503);
+        }
+    }
 
     /**
      * Resolves a pin, device point or typed address into a reviewable preview and a short-lived token that
@@ -49,6 +61,19 @@ final class BuyerLocationService
     {
         $buyerId = $this->profiles->idFor($request);
         $mode = (string) $input['mode'];
+        $place = null;
+        if ($mode === 'PLACE') {
+            try {
+                $place = $this->places->locate((string) $input['place_id'], (string) $input['session_token']);
+            } catch (GeographyProviderUnavailable) {
+                throw new AuthenticationException('PLACES_UNAVAILABLE', 'This location could not be resolved. Move the map pin or try again.', 503);
+            }
+            if ($place === null) {
+                throw new AuthenticationException('ADDRESS_NOT_LOCATED', 'Choose another suggestion or move the map pin.', 422);
+            }
+            $input['latitude'] = $place['latitude'];
+            $input['longitude'] = $place['longitude'];
+        }
         if ($mode === 'ADDRESS') {
             $components = ['street' => $this->clean($input['address_line'] ?? null, 200), 'barangay' => $this->clean($input['barangay'] ?? null, 120),
                 'city_municipality' => $this->clean($input['city_municipality'] ?? null, 120), 'province' => $this->clean($input['province'] ?? null, 120), 'postal_code' => $this->clean($input['postal_code'] ?? null, 10)];
@@ -85,6 +110,12 @@ final class BuyerLocationService
                 'psgc' => $reverse === null ? $this->psgc->resolveNames([]) : $this->psgc->resolveNames(['city_municipality' => $components['city_municipality'], 'province' => $components['province'], 'barangay' => $components['barangay']])];
         }
         $resolved['latitude'] = round((float) $resolved['latitude'], 7);
+        if ($place !== null) {
+            $resolved['formatted_address'] = $place['formatted_address'];
+            $resolved['source'] = 'ADDRESS_SEARCH';
+            $resolved['provider'] = 'GOOGLE_MAPS';
+            $resolved['provider_status'] = 'AVAILABLE';
+        }
         $resolved['longitude'] = round((float) $resolved['longitude'], 7);
         $expires = now()->addMinutes(self::RESOLUTION_MINUTES);
         $token = Crypt::encryptString(json_encode(['buyer_profile_id' => $buyerId, 'expires_at' => $expires->timestamp, 'resolution' => $resolved], JSON_THROW_ON_ERROR));

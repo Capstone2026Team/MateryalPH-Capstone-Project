@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Vendors;
 
+use App\Domain\Finance\WithholdingThresholdService;
 use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Operations\OutboxPublisher;
@@ -192,6 +193,12 @@ final class AdminVendorVerificationService
                     DB::table('business_document_reviews')->insert(['id' => (string) Str::uuid7(), 'business_document_version_id' => $version->id, 'reviewer_user_id' => $request->user()->getKey(), 'decision' => $decision, 'reason' => $reason, 'verified_document_number' => $input['verified_document_number'] ?? null, 'verified_issue_date' => $issueDate, 'expiration_kind' => $expirationKind, 'verified_expiration_date' => $expirationDate, 'evidence_source' => $input['evidence_source'] ?? null, 'remarks' => $input['remarks'] ?? null, 'reviewed_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
                     if ($requirementKey === 'tax_relief_evidence') {
                         DB::table('tax_evidence')->where('file_id', $version->file_id)->update(['review_state' => $decision, 'reviewed_by_user_id' => $request->user()->getKey(), 'reviewed_at' => now(), 'updated_at' => now()]);
+                        $evidenceId = DB::table('tax_evidence')->where('file_id', $version->file_id)->value('id');
+                        $reviewerId = (int) $request->user()->getKey();
+                        if ($decision === 'APPROVED' && is_string($evidenceId)) {
+                            // FIN-04A: a reviewed relief basis may move SUBJECT_STANDARD/SUBJECT_PRIOR_YEAR only before a crossing.
+                            DB::afterCommit(static fn () => app(WithholdingThresholdService::class)->reliefBasisApproved($organizationId, $evidenceId, $reviewerId, (string) Str::uuid7()));
+                        }
                     }
                     DB::table('vendor_documents')->where('id', $document->id)->update(['status' => $decision, 'lock_version' => (int) $document->lock_version + 1, 'updated_at' => now()]);
                 }

@@ -4,7 +4,8 @@ export { VendorTeamInvitations } from './vendor-team-invitations'
 export { VendorTeamActivity } from './vendor-team-activity'
 export { DateFilter, ALL_DATES, type DateFilterRange } from './date-filter'
 export { SectionWorkspace, PreviewMetrics } from './section-workspace'
-export { DashboardHeader, MetricCard } from './dashboard-patterns'
+export { DashboardHeader, MetricCard, DashboardPanel, DashboardEmptyState, DashboardPreviewSection } from './dashboard-patterns'
+export { useAutomaticRefresh } from './use-automatic-refresh'
 export { Field, FormErrors, type FieldProps } from './field'
 export { StatusMessage } from './status-message'
 export { PhoneField, type PhoneFieldProps } from './phone-field'
@@ -30,7 +31,7 @@ export { ChecklistPanel, verificationChecklist, checklistStatus, checklistProgre
 
 export { PrivateEvidenceButton } from './private-evidence-button'
 export { PrivateEvidenceGallery, type PrivateEvidenceItem } from './private-evidence-gallery'
-export { readWebPrivateFile } from './web-api-session'
+export { readWebPrivateFile, readOrderEvidenceFile } from './web-api-session'
 
 export { VersionedAgreementPanel } from './versioned-agreement-panel'
 export { PublishedAgreementReader } from './published-agreement-reader'
@@ -43,3 +44,8 @@ export { XenditConnection, type XenditConnectionProps } from './xendit-connectio
 export { StoreOperationSchedule, StoreHours, emptyStoreSchedule, storeScheduleErrors, type StoreOperatingDay } from './store-operation-schedule'
 
 export { ProfileDetails, ProfileSplitPanel } from './profile-details'
+export { OrderStateRows, DeadlineCountdown, MoneyBreakdown, formatPesoCentavos, orderStateLabel, orderStateTone } from './order-patterns'
+
+export { ConversationHeader, ConversationInbox, ChatMessageBubble, ChatAvatar, QuotationVersionCard, ChatAttachmentButton, chatRoleLabel, conversationLabel } from './messaging-patterns'
+export { DemoLabel, WithholdingStatusBadge, ThresholdPanel, PaymentAttemptBadge, PaymentChannelList, FinanceSection, type ThresholdPanelData, type PaymentChannelRow } from './finance-patterns'
+export { MilestoneStepper, RefundTimeline, RefundStatusBadge, CancellationAvailability, roleLabel } from './fulfillment-patterns'

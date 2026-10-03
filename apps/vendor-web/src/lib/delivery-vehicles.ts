@@ -80,7 +80,9 @@ export function vehicleErrors(vehicle: DeliveryVehicleDraft, operational = false
   if (vehicle.type === 'CUSTOM' && !vehicle.customType.trim()) errors.customType = 'Enter a custom vehicle type.'
   for (const field of ['weight', 'count', ...(vehicle.type === 'CONCRETE_MIXER' ? ['mixer'] : ['length', 'width', 'height'])] as const) {
     const value = Number(vehicle[field as keyof DeliveryVehicleDraft])
+    const dimension = field === 'length' || field === 'width' || field === 'height'
     if (!Number.isFinite(value) || value <= 0 || (field === 'count' && !Number.isInteger(value))) errors[field] = field === 'count' ? 'Enter a positive whole number.' : 'Enter a positive capacity or dimension.'
+    else if (dimension && value > 1000) errors[field] = 'Enter meters, up to 1,000 (for example 2.5).'
   }
   for (const field of ['baseFee', 'perKm'] as const) if (pesosToCentavos(vehicle[field]) === null) errors[field] = 'Enter pesos with up to two decimal places.'
   return errors

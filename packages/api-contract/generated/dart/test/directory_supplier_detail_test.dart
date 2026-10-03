@@ -52,6 +52,36 @@ void main() {
       // TODO
     });
 
+    // bool openNow
+    test('to test the property `openNow`', () async {
+      // TODO
+    });
+
+    // DateTime nextCloseTime
+    test('to test the property `nextCloseTime`', () async {
+      // TODO
+    });
+
+    // BuiltList<GooglePlacePhoto> photos
+    test('to test the property `photos`', () async {
+      // TODO
+    });
+
+    // BuiltList<GooglePlaceReview> reviews
+    test('to test the property `reviews`', () async {
+      // TODO
+    });
+
+    // BuiltList<GooglePlaceAttribute> attributes
+    test('to test the property `attributes`', () async {
+      // TODO
+    });
+
+    // BuiltList<GoogleContentAuthor> providerAttributions
+    test('to test the property `providerAttributions`', () async {
+      // TODO
+    });
+
     // BuiltList<String> openingHours
     test('to test the property `openingHours`', () async {
       // TODO

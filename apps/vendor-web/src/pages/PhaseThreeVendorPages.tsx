@@ -1,5 +1,5 @@
 import { useParams } from 'react-router-dom'
-import { ProfileDetails, DashboardHeader, SectionWorkspace, PreviewMetrics, CustomLabelInput, OnboardingReview, ChecklistPanel, verificationChecklist, checklistProgress, PrivateEvidenceButton, readWebPrivateFile, XenditConnection, StoreOperationSchedule, StoreHours, emptyStoreSchedule, storeScheduleErrors, type StoreOperatingDay } from '@materyalph/web-ui'
+import { ProfileDetails, useAutomaticRefresh, DashboardHeader, DashboardPanel, DashboardPreviewSection, MetricCard, SectionWorkspace, CustomLabelInput, OnboardingReview, ChecklistPanel, verificationChecklist, checklistProgress, PrivateEvidenceButton, readWebPrivateFile, XenditConnection, StoreOperationSchedule, StoreHours, emptyStoreSchedule, storeScheduleErrors, type StoreOperatingDay } from '@materyalph/web-ui'
 import {
   Activity,
   Bell,
@@ -76,11 +76,11 @@ import {
 type JsonRecord = Record<string, ReactNode>
 type OnboardingSectionKey = 'STORE_VERIFICATION' | 'STORE_SETUP'
 
-const vendorModules: Record<string, string> = { orders: 'Orders', fulfillment: 'Fulfillment', messages: 'Messages', invoices: 'E-Invoices', notifications: 'Notifications', disputes: 'Disputes & Appeals', products: 'My Products', vehicles: 'Vehicles', wallet: 'Wallet', tracking: 'Team Tracking', performance: 'Store Performance', earnings: 'Earnings' }
+const vendorModules: Record<string, string> = { orders: 'Orders', fulfillment: 'Fulfillment', messages: 'Messages', invoices: 'E-Invoices', notifications: 'Notifications', disputes: 'Disputes & Appeals', products: 'My Products', vehicles: 'Vehicles', wallet: 'Transaction History', tracking: 'Team Tracking', performance: 'Store Performance', earnings: 'Earnings' }
 const vendorModuleIcons = { orders: FileText, fulfillment: Truck, messages: MessageSquare, invoices: ReceiptText, notifications: Bell, disputes: Scale, products: Package, vehicles: Truck, wallet: Wallet, performance: ChartNoAxesCombined, earnings: CreditCard }
 const vendorNavigation: PortalNavSection[] = [
   { label: 'Overview', items: [{ label: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard size={16} aria-hidden="true" /> }] },
-  ...[['Store Operations', ['orders', 'fulfillment', 'messages', 'invoices', 'notifications', 'disputes']], ['Store Management', ['products', 'vehicles', 'wallet']], ['Analytics', ['performance', 'earnings']]].map(([label, keys]) => ({ label: label as string, items: (keys as string[]).map(key => ({ label: vendorModules[key] ?? key, href: key === 'products' ? '/products' : key === 'vehicles' ? '/vehicles' : `/preview/${key}`, icon: (() => { const Icon = vendorModuleIcons[key as keyof typeof vendorModuleIcons]; return <Icon size={18} aria-hidden="true" /> })() })) })),
+  ...[['Store Operations', ['orders', 'fulfillment', 'messages', 'invoices', 'notifications', 'disputes']], ['Store Management', ['products', 'vehicles', 'wallet']], ['Analytics', ['performance', 'earnings']]].map(([label, keys]) => ({ label: label as string, items: (keys as string[]).map(key => ({ label: vendorModules[key] ?? key, href: key === 'products' ? '/products' : key === 'vehicles' ? '/vehicles' : key === 'orders' ? '/orders' : key === 'messages' ? '/messages' : key === 'wallet' ? '/finance' : key === 'earnings' ? '/finance/earnings' : `/preview/${key}`, icon: (() => { const Icon = vendorModuleIcons[key as keyof typeof vendorModuleIcons]; return <Icon size={18} aria-hidden="true" /> })() })) })),
   { label: 'Vendor Team Accounts', items: [{ label: 'Team Accounts', href: '/team', icon: <Users size={16} aria-hidden="true" /> }, { label: 'Team Tracking', href: '/preview/tracking', icon: <Activity size={16} aria-hidden="true" /> }] },
   { label: 'Store Profile', items: [{ label: 'Store Profile', href: '/store-profile', icon: <Store size={16} aria-hidden="true" /> }] },
 ]
@@ -184,10 +184,12 @@ export function VendorShell({ activeHref, accountLabel, accountStatus, children,
       if (item.href === '/team') return navigationSnapshot.permissions.includes('staff.manage')
       if (item.href === '/products') return navigationSnapshot.permissions.includes('portal.products')
       if (item.href === '/vehicles') return navigationSnapshot.permissions.includes('portal.vehicles')
+      if (item.href === '/finance') return navigationSnapshot.permissions.includes('portal.wallet')
+      if (item.href === '/finance/earnings') return navigationSnapshot.permissions.includes('portal.earnings')
       if (item.href.startsWith('/preview/')) return navigationSnapshot.permissions.includes(`portal.${item.href.split('/').at(-1)}`)
       return true
     }).map(item => ({
-      ...item, disabled: item.disabled || ((item.href.startsWith('/preview/') || item.href === '/products' || item.href === '/vehicles') && item.href !== '/preview/tracking' && record(navigationSnapshot?.activation).status !== 'ACTIVE'),
+      ...item, disabled: item.disabled || ((item.href.startsWith('/preview/') || item.href.startsWith('/finance') || item.href === '/products' || item.href === '/vehicles') && item.href !== '/preview/tracking' && record(navigationSnapshot?.activation).status !== 'ACTIVE'),
     })),
   })).filter(section => section.items.length > 0)
   const [logoutError, setLogoutError] = useState<string | null>(null)
@@ -232,6 +234,7 @@ export function VendorDashboardPage() {
   const { snapshot, loading, error, refresh, setSnapshot } = useOnboardingSnapshot()
   const [actionMessage, setActionMessage] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  useAutomaticRefresh(refresh, { enabled: !loading && !busy, intervalMs: error ? 120_000 : 30_000 })
 
   async function activate() {
     setBusy(true); setActionMessage(null)
@@ -253,20 +256,36 @@ export function VendorDashboardPage() {
   const activationBlockers = arrayValue(readiness.blockers)
   const accountLabel = stringValue(org.storeName, stringValue(org.legalName, 'Vendor Owner'))
   if (!snapshot.permissions.includes('vendor.onboarding.submit')) return <VendorShell refreshError={error} navigationData={snapshot} activeHref="/dashboard" accountLabel={accountLabel} accountStatus={activation.status === 'ACTIVE' ? 'Store Active' : 'Limited access'}><div className="space-y-6"><DashboardHeader eyebrow={accountLabel} title="Your team dashboard" description={activation.status === 'ACTIVE' ? 'Use the sections available for your assigned role. Organization and assignment restrictions apply to every action.' : 'This store is not yet active for marketplace participation. Required onboarding and verification must be completed before marketplace features become available.'} /><p className="text-sm text-text-secondary">Your individual account is connected to this store. The Vendor Owner manages onboarding and protected store settings.</p><Link to="/settings" className="inline-flex min-h-11 items-center text-action-primary underline">My Account Profile</Link></div></VendorShell>
-  if (activation.status === 'ACTIVE') return <VendorShell refreshError={error} navigationData={snapshot} activeHref="/dashboard" accountLabel={accountLabel} accountStatus="Store Active"><div className="space-y-6"><DashboardHeader eyebrow={accountLabel} title="Dashboard" description="Your store is active. Operational metrics below are design previews, not live results." status={<StatusBadge label="Active" tone="success" />} /><SectionWorkspace dateFilter sections={[
-    { label: 'Overview', content: <PreviewMetrics labels={['Response time', 'Pending fulfillment', 'Sales & revenue', 'Store visitors', 'Quality summary', 'Important tasks']} /> },
-    { label: 'Performance', content: <PreviewMetrics labels={['Response rate / time', 'Order processing time', 'Cancellation rate', 'Return rate']} /> },
-    { label: 'Action Items & Alerts', content: <PreviewMetrics labels={['Pending fulfillment', 'To-do checklist', 'System notifications']} /> },
-    { label: 'Sales & Revenue', content: <PreviewMetrics labels={['Earnings', 'Sales', 'Average order value', 'Revenue trend']} /> },
-    { label: 'Traffic & Volume', content: <PreviewMetrics labels={['Store visitors', 'Listing views', 'Engagement', 'Traffic trend']} /> },
-    { label: 'Disputes & Quality', content: <PreviewMetrics labels={['Open disputes', 'Refund-related cases', 'Returns', 'Complaints', 'Product issues', 'Fulfillment issues']} /> },
-  ]} /><p className="text-sm text-text-secondary">Marketplace discoverability: {statusLabel(stringValue(activation.marketplaceDiscoverabilityStatus, 'NO_ACTIVE_LISTINGS'))}. Eligible published listings remain required.</p></div></VendorShell>
+  if (activation.status === 'ACTIVE') return <VendorShell refreshError={error} navigationData={snapshot} activeHref="/dashboard" accountLabel={accountLabel} accountStatus="Store Active"><div className="space-y-5"><DashboardHeader eyebrow={accountLabel} title="Dashboard" description="Your store at a glance. Switch sections to focus on the work that matters today." status={<StatusBadge label="Active" tone="success" />} /><SectionWorkspace dashboard sections={[
+    { label: 'Overview', content: <>
+      <p className="text-xs text-text-secondary">Store status is current. Operational dashboard reporting is not yet available.</p>
+      <dl className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{[
+        { label: 'Pending fulfillment', icon: Truck }, { label: 'Sales & revenue', icon: Wallet },
+        { label: 'Response time', icon: MessageSquare }, { label: 'Store visitors', icon: Users },
+      ].map(({ label, icon: Icon }, index) => <MetricCard key={label} label={label} value="—" description="Reporting not yet available" icon={<Icon size={16} aria-hidden="true" />} accent={index === 0} />)}</dl>
+      <div className="grid items-start gap-5 xl:grid-cols-3">
+        <div className="xl:col-span-2"><DashboardPanel title="Store workspace" description="Keep your store details and requirements up to date.">
+          <div className="divide-y divide-border-default">{[
+            { title: 'Store profile', description: 'Manage your public information and store configuration.', href: '/store-profile', icon: Store },
+            { title: 'Store Verification', description: `Review status: ${statusLabel(verificationStatus)}`, href: '/onboarding/verification', icon: FileCheck2 },
+            { title: 'Store Setup', description: `Setup status: ${statusLabel(setupStatus)}`, href: '/onboarding/setup', icon: Package },
+          ].map(({ title, description, href, icon: Icon }) => <Link key={href} to={href} className="group flex min-h-11 items-center gap-3 rounded-control py-4 first:pt-0 last:pb-0"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-control bg-surface-canvas text-action-primary"><Icon size={18} aria-hidden="true" /></span><span className="min-w-0 flex-1"><span className="text-sm font-semibold group-hover:text-action-primary">{title}</span><span className="mt-1 block text-xs leading-5 text-text-secondary">{description}</span></span><ArrowRight size={16} className="shrink-0 text-text-secondary" aria-hidden="true" /></Link>)}</div>
+        </DashboardPanel></div>
+        <DashboardPanel title="Marketplace readiness" description="Activation and discoverability are separate."><dl className="space-y-5"><div><dt className="text-xs text-text-secondary">Store activation</dt><dd className="mt-2"><StatusBadge label="Active" tone="success" /></dd></div><div className="border-t border-border-default pt-4"><dt className="text-xs text-text-secondary">Marketplace discoverability</dt><dd className="mt-2 text-sm font-semibold">{statusLabel(stringValue(activation.marketplaceDiscoverabilityStatus, 'NO_ACTIVE_LISTINGS'))}</dd></div></dl><p className="mt-4 text-xs leading-5 text-text-secondary">Eligible published listings remain required for marketplace discovery.</p></DashboardPanel>
+      </div>
+    </> },
+    { label: 'Performance', content: <DashboardPreviewSection title="Store performance" description="Response, processing and service quality." labels={['Response rate / time', 'Order processing time', 'Cancellation rate', 'Return rate']} /> },
+    { label: 'Action Items & Alerts', content: <DashboardPreviewSection title="Priority actions" description="Fulfillment, outstanding tasks and store notifications." labels={['Pending fulfillment', 'To-do checklist', 'System notifications']} /> },
+    { label: 'Sales & Revenue', content: <DashboardPreviewSection title="Revenue overview" description="Sales and earnings reporting for your store." labels={['Earnings', 'Sales', 'Average order value', 'Revenue trend']} /> },
+    { label: 'Traffic & Volume', content: <DashboardPreviewSection title="Store engagement" description="Store visits and product discovery." labels={['Store visitors', 'Listing views', 'Engagement', 'Traffic trend']} /> },
+    { label: 'Disputes & Quality', content: <DashboardPreviewSection title="Quality overview" description="Cases and issues requiring attention." labels={['Open disputes', 'Refund-related cases', 'Returns', 'Complaints', 'Product issues', 'Fulfillment issues']} /> },
+  ]} /></div></VendorShell>
 
   return <VendorShell refreshError={error} navigationData={snapshot} activeHref="/dashboard" accountLabel={accountLabel} accountStatus={`${statusLabel(stringValue(activation.status, 'NOT_READY'))} activation`}>
     <div className="phase3-page space-y-6">
       <DashboardHeader eyebrow="Limited-Access Vendor Dashboard" title={`Welcome back, ${accountLabel}.`} description={booleanValue(readiness.ready) ? 'Your store meets the activation requirements. Request Store Activation to unlock the marketplace features allowed for your role.' : 'Your store is not active yet. Review the activation requirements below; checklist progress alone does not grant marketplace access.'} status={<StatusBadge label={statusLabel(stringValue(activation.status, 'NOT_READY'))} tone="warning" />} />
       {actionMessage && <StatusMessage tone={actionMessage.includes('recorded') ? 'success' : 'error'}>{actionMessage}</StatusMessage>}
-      {!booleanValue(readiness.ready) && <section aria-label="Store activation requirements" className="rounded-surface border border-border-default bg-surface-primary p-5 sm:p-6"><h2 className="text-lg font-semibold">Store activation requirements</h2>{activationBlockers.length ? <><p className="mt-2 text-sm text-text-secondary">The server reports these items before your store can be activated:</p><ul className="mt-4 list-disc space-y-2 pl-5 text-sm text-text-strong">{activationBlockers.map((blocker, index) => <li key={`${stringValue(blocker.key)}-${index}`}>{stringValue(blocker.reason, 'An activation requirement needs attention.')}</li>)}</ul></> : <p className="mt-2 text-sm text-text-secondary">Activation readiness is unavailable. Refresh the dashboard to check the current requirements.</p>}<Button className="mt-4" variant="secondary" disabled={loading} onClick={() => void refresh()}><RefreshCw size={16} aria-hidden="true" /> Refresh status</Button></section>}
+      {!booleanValue(readiness.ready) && <section aria-label="Store activation requirements" className="rounded-surface border border-border-default bg-surface-primary p-5 sm:p-6"><h2 className="text-lg font-semibold">Store activation requirements</h2>{activationBlockers.length ? <><p className="mt-2 text-sm text-text-secondary">The server reports these items before your store can be activated:</p><ul className="mt-4 list-disc space-y-2 pl-5 text-sm text-text-strong">{activationBlockers.map((blocker, index) => <li key={`${stringValue(blocker.key)}-${index}`}>{stringValue(blocker.reason, 'An activation requirement needs attention.')}</li>)}</ul></> : <p className="mt-2 text-sm text-text-secondary">Activation readiness is unavailable. The dashboard will check again automatically.</p>}</section>}
       {booleanValue(readiness.ready) && <Button className="w-fit" disabled={busy} onClick={() => void activate()}>{busy ? 'Recording…' : 'Request Store Activation'} <ArrowRight size={16} aria-hidden="true" /></Button>}
       <div className="grid gap-5 lg:grid-cols-2">
         <div className="space-y-3"><Checklist title="Store Verification" section={verificationSection} /><p className="text-sm text-text-secondary">Review status: <strong className="text-text-strong">{statusLabel(verificationStatus)}</strong></p><Link className="inline-flex min-h-11 items-center font-semibold text-action-primary" to="/onboarding/verification">{verificationStatus === 'APPROVED' ? 'Review Store Verification' : 'Continue Store Verification / Review requirements'}</Link></div>

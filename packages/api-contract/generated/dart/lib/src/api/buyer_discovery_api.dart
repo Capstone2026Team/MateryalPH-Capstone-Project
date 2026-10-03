@@ -9,6 +9,7 @@ import 'package:dio/dio.dart';
 
 import 'package:materyalph_api_client/src/api_util.dart';
 import 'package:materyalph_api_client/src/model/directory_supplier_detail_envelope.dart';
+import 'package:materyalph_api_client/src/model/directory_supplier_photo_envelope.dart';
 import 'package:materyalph_api_client/src/model/discovery_preferences.dart';
 import 'package:materyalph_api_client/src/model/discovery_preferences_envelope.dart';
 import 'package:materyalph_api_client/src/model/discovery_search_envelope.dart';
@@ -209,7 +210,7 @@ class BuyerDiscoveryApi {
   }
 
   /// getDirectorySupplierDetails
-  /// Lazy-loaded, attributed Google Place Details for one unexpired Directory Supplier. Informational only; never exposes VPS, verification, messaging, ordering, reviews, payments or a storefront. A Google rating is labeled Google rating.
+  /// Lazy-loaded, attributed Google Place Details for one unexpired Directory Supplier. Informational only; never exposes VPS, verification, messaging, ordering, MateryalPH reviews, payments or a storefront. Google media and review excerpts are fetched on demand without storage. A Google rating is labeled Google rating.
   ///
   /// Parameters:
   /// * [supplierId]
@@ -278,6 +279,87 @@ class BuyerDiscoveryApi {
     }
 
     return Response<DirectorySupplierDetailEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// getDirectorySupplierPhoto
+  /// On-demand thumbnail for one visible, unexpired Directory Supplier. Uses only Google photos and attributions; no photo names or media URLs are persisted. Response is no-store. Does not load reviews or full details.
+  ///
+  /// Parameters:
+  /// * [supplierId]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [DirectorySupplierPhotoEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<DirectorySupplierPhotoEnvelope>> getDirectorySupplierPhoto({
+    required String supplierId,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/buyers/discovery/directory-suppliers/{supplierId}/photo'.replaceAll('{' r'supplierId' '}', encodeQueryParameter(_serializers, supplierId, const FullType(String)).toString());
+    final _options = Options(
+      method: r'GET',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'passportBearer',
+          },
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    DirectorySupplierPhotoEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(DirectorySupplierPhotoEnvelope),
+      ) as DirectorySupplierPhotoEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<DirectorySupplierPhotoEnvelope>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

@@ -9,6 +9,7 @@ Name | Type
 `lockVersion` | number
 `reminderLocalTime` | string
 `emailReminders` | boolean
+`autoAcceptReadyLeadDays` | number
 
 ## Example
 
@@ -20,6 +21,7 @@ const example = {
   "lockVersion": null,
   "reminderLocalTime": null,
   "emailReminders": null,
+  "autoAcceptReadyLeadDays": null,
 } satisfies InventorySettingsUpdate
 
 console.log(example)

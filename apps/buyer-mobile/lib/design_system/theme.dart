@@ -20,6 +20,10 @@ abstract final class BuyerTheme {
   static const brandSoft = Color(MateryalColorTokens.brandOrange100);
   static const success = Color(MateryalColorTokens.statusSuccess);
 
+  /// status.success mixed with text.strong so small white or on-white text keeps 4.5:1 contrast
+  /// (status.success alone is about 3.3:1 on white).
+  static final successStrong = Color.lerp(success, ink, 0.35)!;
+
   static ThemeData get light {
     final scheme =
         ColorScheme.fromSeed(

@@ -79,6 +79,8 @@ adb -s 110013341G000422 reverse --list
 
 ## Validation
 
+Phase 9 implementation, acceptance results, and local Reverb setup are documented in [the messaging test plan](docs/test-plans/phase-nine-messaging.md).
+
 Run the checks relevant to a change from the owning directory:
 
 ```powershell

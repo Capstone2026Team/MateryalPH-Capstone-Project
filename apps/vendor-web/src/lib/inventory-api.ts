@@ -58,8 +58,8 @@ export async function getInventorySettings(): Promise<InventorySettings> {
   return (await inventoryApi().getVendorInventorySettings()).data
 }
 
-export async function saveInventorySettings(lockVersion: number, reminderLocalTime: string, emailReminders: boolean): Promise<InventorySettings> {
-  return (await inventoryApi().saveVendorInventorySettings({ inventorySettingsUpdate: { lockVersion, reminderLocalTime, emailReminders } })).data
+export async function saveInventorySettings(lockVersion: number, reminderLocalTime: string, emailReminders: boolean, autoAcceptReadyLeadDays?: number | null): Promise<InventorySettings> {
+  return (await inventoryApi().saveVendorInventorySettings({ inventorySettingsUpdate: { lockVersion, reminderLocalTime, emailReminders, ...(autoAcceptReadyLeadDays === undefined ? {} : { autoAcceptReadyLeadDays }) } })).data
 }
 
 export async function getAutoAccept(variantId: string): Promise<AutoAcceptPolicyDetail> {

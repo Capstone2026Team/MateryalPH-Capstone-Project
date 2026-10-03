@@ -70,6 +70,8 @@ class _$FleetVehicleListMeta extends FleetVehicleListMeta {
   @override
   final FleetVehicleListMetaScopeEnum scope;
   @override
+  final FleetSummary? summary;
+  @override
   final FleetVehicleListMetaDelivery? delivery;
   @override
   final FleetVehicleListMetaPermissions permissions;
@@ -82,6 +84,7 @@ class _$FleetVehicleListMeta extends FleetVehicleListMeta {
 
   _$FleetVehicleListMeta._(
       {required this.scope,
+      this.summary,
       this.delivery,
       required this.permissions,
       this.limits})
@@ -100,6 +103,7 @@ class _$FleetVehicleListMeta extends FleetVehicleListMeta {
     if (identical(other, this)) return true;
     return other is FleetVehicleListMeta &&
         scope == other.scope &&
+        summary == other.summary &&
         delivery == other.delivery &&
         permissions == other.permissions &&
         limits == other.limits;
@@ -109,6 +113,7 @@ class _$FleetVehicleListMeta extends FleetVehicleListMeta {
   int get hashCode {
     var _$hash = 0;
     _$hash = $jc(_$hash, scope.hashCode);
+    _$hash = $jc(_$hash, summary.hashCode);
     _$hash = $jc(_$hash, delivery.hashCode);
     _$hash = $jc(_$hash, permissions.hashCode);
     _$hash = $jc(_$hash, limits.hashCode);
@@ -120,6 +125,7 @@ class _$FleetVehicleListMeta extends FleetVehicleListMeta {
   String toString() {
     return (newBuiltValueToStringHelper(r'FleetVehicleListMeta')
           ..add('scope', scope)
+          ..add('summary', summary)
           ..add('delivery', delivery)
           ..add('permissions', permissions)
           ..add('limits', limits))
@@ -134,6 +140,10 @@ class FleetVehicleListMetaBuilder
   FleetVehicleListMetaScopeEnum? _scope;
   FleetVehicleListMetaScopeEnum? get scope => _$this._scope;
   set scope(FleetVehicleListMetaScopeEnum? scope) => _$this._scope = scope;
+
+  FleetSummaryBuilder? _summary;
+  FleetSummaryBuilder get summary => _$this._summary ??= FleetSummaryBuilder();
+  set summary(FleetSummaryBuilder? summary) => _$this._summary = summary;
 
   FleetVehicleListMetaDeliveryBuilder? _delivery;
   FleetVehicleListMetaDeliveryBuilder get delivery =>
@@ -161,6 +171,7 @@ class FleetVehicleListMetaBuilder
     final $v = _$v;
     if ($v != null) {
       _scope = $v.scope;
+      _summary = $v.summary?.toBuilder();
       _delivery = $v.delivery?.toBuilder();
       _permissions = $v.permissions.toBuilder();
       _limits = $v.limits?.toBuilder();
@@ -189,6 +200,7 @@ class FleetVehicleListMetaBuilder
           _$FleetVehicleListMeta._(
             scope: BuiltValueNullFieldError.checkNotNull(
                 scope, r'FleetVehicleListMeta', 'scope'),
+            summary: _summary?.build(),
             delivery: _delivery?.build(),
             permissions: permissions.build(),
             limits: _limits?.build(),
@@ -196,6 +208,8 @@ class FleetVehicleListMetaBuilder
     } catch (_) {
       late String _$failedField;
       try {
+        _$failedField = 'summary';
+        _summary?.build();
         _$failedField = 'delivery';
         _delivery?.build();
         _$failedField = 'permissions';

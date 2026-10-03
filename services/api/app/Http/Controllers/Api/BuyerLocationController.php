@@ -65,9 +65,11 @@ final class BuyerLocationController extends Controller
     public function resolve(Request $request): JsonResponse
     {
         $input = $request->validate([
-            'mode' => ['required', Rule::in(['PIN', 'DEVICE', 'ADDRESS'])],
-            'latitude' => ['required_unless:mode,ADDRESS', 'prohibited_if:mode,ADDRESS', 'numeric', 'between:-90,90'],
-            'longitude' => ['required_unless:mode,ADDRESS', 'prohibited_if:mode,ADDRESS', 'numeric', 'between:-180,180'],
+            'mode' => ['required', Rule::in(['PIN', 'DEVICE', 'ADDRESS', 'PLACE'])],
+            'latitude' => ['required_if:mode,PIN,DEVICE', 'prohibited_if:mode,ADDRESS,PLACE', 'numeric', 'between:-90,90'],
+            'longitude' => ['required_if:mode,PIN,DEVICE', 'prohibited_if:mode,ADDRESS,PLACE', 'numeric', 'between:-180,180'],
+            'place_id' => ['required_if:mode,PLACE', 'prohibited_unless:mode,PLACE', 'string', 'regex:/^[A-Za-z0-9_-]{10,300}$/D'],
+            'session_token' => ['required_if:mode,PLACE', 'prohibited_unless:mode,PLACE', 'uuid'],
             'address_line' => ['required_if:mode,ADDRESS', 'nullable', 'string', 'max:200'],
             'barangay' => ['sometimes', 'nullable', 'string', 'max:120'],
             'city_municipality' => ['required_if:mode,ADDRESS', 'nullable', 'string', 'max:120'],
@@ -78,6 +80,13 @@ final class BuyerLocationController extends Controller
         ]);
 
         return ApiResponse::success($this->locations->resolve($request, $input));
+    }
+
+    public function autocomplete(Request $request): JsonResponse
+    {
+        $input = $request->validate(['query' => ['required', 'string', 'min:2', 'max:200'], 'session_token' => ['required', 'uuid']]);
+
+        return ApiResponse::success($this->locations->autocomplete($request, $input['query'], $input['session_token']))->header('Cache-Control', 'no-store');
     }
 
     public function store(Request $request): JsonResponse

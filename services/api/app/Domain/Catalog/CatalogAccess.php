@@ -94,7 +94,8 @@ final class CatalogAccess
 
     private function hash(Request $request, string $endpoint, string $scopeId): string
     {
-        $body = $request->isJson() ? $request->getContent() : json_encode($request->except(['file']), JSON_THROW_ON_ERROR);
+        // Uploaded files are excluded from the replay hash (multipart bodies can carry several named files).
+        $body = $request->isJson() ? $request->getContent() : json_encode($request->except(['file', ...array_keys($request->allFiles())]), JSON_THROW_ON_ERROR);
 
         return hash_hmac('sha256', $endpoint.'|'.$scopeId.'|'.$body, (string) config('app.key'));
     }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../design_system/components/buyer_app_bar.dart';
 import '../../widgets/auth_content.dart';
 import 'device_location.dart';
 import 'discovery_models.dart';
@@ -114,7 +115,7 @@ class _SavedLocationsScreenState extends State<SavedLocationsScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: Colors.white,
-    appBar: AppBar(title: const Text('Saved Locations')),
+    appBar: buyerAppBar(context, 'Saved Locations'),
     floatingActionButton: FloatingActionButton.extended(
       onPressed: _busy ? null : _add,
       icon: const Icon(LucideIcons.plus),
@@ -180,8 +181,13 @@ class _SavedLocationsScreenState extends State<SavedLocationsScreen> {
 
 /// Profile > Favorite Suppliers: the Buyer's personal list of Verified Vendors.
 class FavoriteSuppliersScreen extends StatefulWidget {
-  const FavoriteSuppliersScreen({super.key, required this.repository});
+  const FavoriteSuppliersScreen({
+    super.key,
+    required this.repository,
+    this.onRemove,
+  });
   final DiscoveryRepository repository;
+  final Future<void> Function(String vendorId)? onRemove;
 
   @override
   State<FavoriteSuppliersScreen> createState() =>
@@ -191,6 +197,7 @@ class FavoriteSuppliersScreen extends StatefulWidget {
 class _FavoriteSuppliersScreenState extends State<FavoriteSuppliersScreen> {
   List<FavoriteSupplierView>? _favorites;
   String? _error;
+  final Set<String> _removing = {};
 
   @override
   void initState() {
@@ -209,18 +216,26 @@ class _FavoriteSuppliersScreenState extends State<FavoriteSuppliersScreen> {
   }
 
   Future<void> _remove(FavoriteSupplierView favorite) async {
+    if (_removing.contains(favorite.vendorId)) return;
+    setState(() => _removing.add(favorite.vendorId));
     try {
-      await widget.repository.setFavorite(favorite.vendorId, favorite: false);
-      await _load();
+      if (widget.onRemove != null) {
+        await widget.onRemove!(favorite.vendorId);
+      } else {
+        await widget.repository.setFavorite(favorite.vendorId, favorite: false);
+      }
+      if (mounted) await _load();
     } on DiscoveryFailure catch (error) {
       if (mounted) setState(() => _error = error.message);
+    } finally {
+      if (mounted) setState(() => _removing.remove(favorite.vendorId));
     }
   }
 
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: Colors.white,
-    appBar: AppBar(title: const Text('Favorite Suppliers')),
+    appBar: buyerAppBar(context, 'Favorite Suppliers'),
     body: SafeArea(
       child: RefreshIndicator(
         onRefresh: _load,
@@ -250,7 +265,9 @@ class _FavoriteSuppliersScreenState extends State<FavoriteSuppliersScreen> {
                 ),
                 trailing: IconButton(
                   tooltip: 'Remove ${favorite.name} from favorites',
-                  onPressed: () => _remove(favorite),
+                  onPressed: _removing.contains(favorite.vendorId)
+                      ? null
+                      : () => _remove(favorite),
                   icon: const Icon(LucideIcons.x),
                 ),
               ),

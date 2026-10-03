@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -5,11 +6,14 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../design_system/motion.dart';
+import '../../design_system/components/discovery_controls.dart';
+import '../../design_system/components/procurement_components.dart';
 import '../../design_system/theme.dart';
 import '../../widgets/auth_content.dart';
 import 'device_location.dart';
 import 'discovery_models.dart';
 import 'discovery_repository.dart';
+import 'philippine_map_view.dart';
 
 const Map<String, String> kLocationKinds = {
   'DELIVERY': 'Delivery address',
@@ -19,11 +23,8 @@ const Map<String, String> kLocationKinds = {
   'OTHER': 'Other',
 };
 
-/// Select Location with three complete alternatives: saved locations, a typed address and a
-/// dropped pin. Current device location is optional and asked only when the Buyer chooses it.
-/// Returns the chosen [DiscoveryOrigin]; nothing is saved unless the Buyer turns on "Save this
-/// location". Coordinates are never shown or typed; the pin map owns its drag gestures so tabs
-/// and scrolling never steal them.
+/// One selected point shared by Places search, map panning and optional device location.
+/// Choose Location persists through the existing Buyer location API before returning.
 class SelectLocationScreen extends StatefulWidget {
   const SelectLocationScreen({
     super.key,
@@ -33,7 +34,12 @@ class SelectLocationScreen extends StatefulWidget {
     required this.mapsAvailable,
     this.initialPoint,
     this.requireSave = false,
+    this.initialDeviceLocation = false,
+    this.autoUseCurrentLocation = false,
   });
+
+  /// Requests the device location as soon as the page opens ("Use current location" entry).
+  final bool autoUseCurrentLocation;
 
   final DiscoveryRepository repository;
   final DeviceLocationService deviceLocation;
@@ -41,45 +47,171 @@ class SelectLocationScreen extends StatefulWidget {
   final bool mapsAvailable;
   final GeoPoint? initialPoint;
   final bool requireSave;
+  final bool initialDeviceLocation;
 
   @override
   State<SelectLocationScreen> createState() => _SelectLocationScreenState();
 }
 
 class _SelectLocationScreenState extends State<SelectLocationScreen> {
-  final _address = TextEditingController();
-  final _barangay = TextEditingController();
-  final _city = TextEditingController();
-  final _province = TextEditingController();
-  final _postal = TextEditingController();
   final _label = TextEditingController();
   final _description = TextEditingController();
-  final _addressForm = GlobalKey<FormState>();
   final _confirmForm = GlobalKey<FormState>();
 
   LocationPreviewView? _preview;
-  OriginSource _previewSource = OriginSource.mapPin;
   String? _idempotencyKey;
   bool _busy = false;
   String? _error;
-  late bool _save = widget.requireSave;
-  bool _makePrimary = false;
+  late bool _makePrimary = !widget.requireSave;
   String _kind = 'DELIVERY';
   late GeoPoint _pin = widget.initialPoint ?? const GeoPoint(14.5995, 120.9842);
   bool _pinMoving = false;
   int _resolveSequence = 0;
+  int _searchSequence = 0;
+  Timer? _searchDebounce;
+  String _sessionToken = newIdempotencyKey();
+  List<LocationSuggestionView> _suggestions = const [];
+  bool _searching = false;
+  bool _saving = false;
+  bool _programmaticMove = false;
+  GeoPoint? _cameraTarget;
+  GoogleMapController? _map;
+  final _search = TextEditingController();
+  final _searchFocus = FocusNode();
+  final _detailsKey = GlobalKey();
+  double _cardHeight = 220;
+
+  void _measureDetails() {
+    final box = _detailsKey.currentContext?.findRenderObject();
+    if (mounted &&
+        box is RenderBox &&
+        box.hasSize &&
+        (box.size.height - _cardHeight).abs() > 1) {
+      setState(() => _cardHeight = box.size.height);
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialPoint != null) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _resolve(
+          () => widget.repository.resolvePoint(
+            _pin,
+            device: widget.initialDeviceLocation,
+          ),
+          OriginSource.mapPin,
+        ),
+      );
+    } else if (widget.autoUseCurrentLocation) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _useDevice();
+      });
+    }
+  }
+
+  void _searchChanged(String query) {
+    _searchDebounce?.cancel();
+    final sequence = ++_searchSequence;
+    setState(() {
+      _suggestions = const [];
+      _searching = query.trim().length >= 2;
+      _error = null;
+    });
+    if (!_searching) return;
+    _searchDebounce = Timer(const Duration(milliseconds: 400), () async {
+      try {
+        final items = await widget.repository.autocomplete(
+          query.trim(),
+          _sessionToken,
+        );
+        if (!mounted || sequence != _searchSequence) return;
+        setState(() => _suggestions = items);
+      } on DiscoveryFailure catch (error) {
+        if (mounted && sequence == _searchSequence) {
+          setState(() => _error = error.message);
+        }
+      } finally {
+        if (mounted && sequence == _searchSequence) {
+          setState(() => _searching = false);
+        }
+      }
+    });
+  }
+
+  Future<void> _selectSuggestion(LocationSuggestionView suggestion) async {
+    _searchDebounce?.cancel();
+    _searchSequence++;
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _suggestions = const [];
+      _searching = false;
+      _search.text = suggestion.title;
+    });
+    final token = _sessionToken;
+    await _resolve(
+      () => widget.repository.resolvePlace(suggestion.placeId, token),
+      OriginSource.search,
+    );
+    _sessionToken = newIdempotencyKey();
+  }
+
+  Future<void> _moveCamera(GeoPoint point) async {
+    final map = _map;
+    if (map == null) return;
+    _programmaticMove = true;
+    _cameraTarget = point;
+    final update = CameraUpdate.newLatLng(
+      LatLng(point.latitude, point.longitude),
+    );
+    try {
+      if (BuyerMotion.reduced(context)) {
+        await map.moveCamera(update);
+      } else {
+        await map.animateCamera(update);
+      }
+    } catch (_) {
+      _programmaticMove = false;
+    }
+  }
+
+  Future<void> _useSaved(SavedLocationView location) async {
+    if (_saving) return;
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+      final saved = location.isPrimary || widget.requireSave
+          ? location
+          : await widget.repository.makePrimary(location);
+      if (mounted) {
+        Navigator.of(context).pop(
+          DiscoveryOrigin.saved(
+            locationId: saved.id,
+            label: displayAddress(saved.formattedAddress),
+            point: saved.point,
+          ),
+        );
+      }
+    } on DiscoveryFailure catch (error) {
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _error = error.message;
+        });
+      }
+    }
+  }
 
   @override
   void dispose() {
-    for (final controller in [
-      _address,
-      _barangay,
-      _city,
-      _province,
-      _postal,
-      _label,
-      _description,
-    ]) {
+    _searchDebounce?.cancel();
+    _search.dispose();
+    _searchFocus.dispose();
+    _map?.dispose();
+    for (final controller in [_label, _description]) {
       controller.dispose();
     }
     super.dispose();
@@ -89,6 +221,7 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
     Future<LocationPreviewView> Function() request,
     OriginSource source,
   ) async {
+    if (_saving) return;
     final sequence = ++_resolveSequence;
     setState(() {
       _busy = true;
@@ -100,10 +233,11 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
       if (!mounted || sequence != _resolveSequence) return;
       setState(() {
         _preview = preview;
-        _previewSource = source;
+        _pin = preview.point;
         _idempotencyKey = newIdempotencyKey();
         _description.clear();
       });
+      if (source != OriginSource.mapPin) await _moveCamera(preview.point);
     } on DiscoveryFailure catch (error) {
       if (!mounted || sequence != _resolveSequence) return;
       setState(() => _error = error.message);
@@ -115,10 +249,16 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
   }
 
   Future<void> _useDevice() async {
-    setState(() => _error = null);
+    if (_busy || _saving) return;
+    final sequence = ++_resolveSequence;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
     final result = await widget.deviceLocation.requestCurrent();
-    if (!mounted) return;
+    if (!mounted || sequence != _resolveSequence) return;
     if (result.status != DeviceLocationStatus.granted || result.point == null) {
+      setState(() => _busy = false);
       setState(
         () => _error = result.status == DeviceLocationStatus.serviceDisabled
             ? 'Location services are off. Search an address or drop a pin instead.'
@@ -133,31 +273,38 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
   }
 
   Future<void> _confirm() async {
+    if (_busy || _saving || _pinMoving) return;
     final preview = _preview;
-    if (preview == null || !(_confirmForm.currentState?.validate() ?? false)) {
+    if (preview == null ||
+        !preview.point.usable ||
+        !(_confirmForm.currentState?.validate() ?? false)) {
       return;
     }
     final description = _description.text.trim();
-    if (!_save) {
-      Navigator.of(context).pop(
-        DiscoveryOrigin.point(
-          point: preview.point,
-          source: _previewSource,
-          label: preview.formattedAddress != null
-              ? displayAddress(preview.formattedAddress!)
-              : (description.isEmpty ? 'Pinned location' : description),
-        ),
-      );
+    final matching = widget.savedLocations.where(
+      (location) =>
+          (location.point.latitude - preview.point.latitude).abs() < 0.000001 &&
+          (location.point.longitude - preview.point.longitude).abs() < 0.000001,
+    );
+    if (!widget.requireSave && matching.isNotEmpty) {
+      await _useSaved(matching.first);
       return;
     }
     setState(() {
-      _busy = true;
+      _saving = true;
       _error = null;
     });
     try {
       final saved = await widget.repository.saveLocation(
         resolutionToken: preview.resolutionToken,
-        label: _label.text.trim(),
+        label: _label.text.trim().isNotEmpty
+            ? _label.text.trim()
+            : displayAddress(preview.formattedAddress ?? description).substring(
+                0,
+                displayAddress(
+                  preview.formattedAddress ?? description,
+                ).length.clamp(0, 60),
+              ),
         kind: _kind,
         makePrimary: _makePrimary,
         addressLine: preview.needsManualDescription ? description : null,
@@ -167,14 +314,14 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
       Navigator.of(context).pop(
         DiscoveryOrigin.saved(
           locationId: saved.id,
-          label: saved.label,
+          label: displayAddress(saved.formattedAddress),
           point: saved.point,
         ),
       );
     } on DiscoveryFailure catch (error) {
       if (!mounted) return;
       setState(() {
-        _busy = false;
+        _saving = false;
         _error = error.message;
         if (error.code == 'LOCATION_RESOLUTION_EXPIRED') _preview = null;
       });
@@ -182,208 +329,265 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => DefaultTabController(
-    length: 3,
-    initialIndex: widget.savedLocations.isEmpty || widget.requireSave ? 1 : 0,
-    child: Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: Text(
-          widget.requireSave ? 'Add saved location' : 'Select location',
-        ),
-        bottom: const TabBar(
-          isScrollable: true,
-          tabAlignment: TabAlignment.start,
-          tabs: [
-            Tab(text: 'Saved locations'),
-            Tab(text: 'Search address'),
-            Tab(text: 'Drop pin'),
-          ],
-        ),
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: OutlinedButton.icon(
-                onPressed: _busy ? null : _useDevice,
-                icon: const Icon(LucideIcons.locateFixed, size: 18),
-                label: const Text('Use current location (optional)'),
+  Widget build(BuildContext context) => Scaffold(
+    body: SafeArea(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final keyboard =
+              MediaQuery.viewInsetsOf(context).bottom > 0 &&
+              _searchFocus.hasFocus;
+          final maxCardHeight = constraints.maxHeight * 0.48;
+          final bottom = keyboard
+              ? 0.0
+              : _cardHeight.clamp(0.0, maxCardHeight).toDouble() + 12;
+          WidgetsBinding.instance.addPostFrameCallback(
+            (_) => _measureDetails(),
+          );
+          return Stack(
+            children: [
+              Positioned.fill(
+                child: IgnorePointer(ignoring: _saving, child: _pinMap(bottom)),
               ),
-            ),
-            if (_error != null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: AuthNotice(message: _error!, isError: true),
-              ),
-            if (_busy)
-              const Padding(
-                padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: LinearProgressIndicator(),
-              ),
-            Expanded(
-              child: _preview != null
-                  ? _confirmation(_preview!)
-                  : TabBarView(
-                      // Tabs change by tapping only, so a sideways drag on the pin map pans the
-                      // map instead of switching tabs.
-                      physics: const NeverScrollableScrollPhysics(),
-                      children: [_saved(), _addressTab(), _pinTab()],
+              Positioned(
+                top: 12,
+                left: 16,
+                right: 16,
+                child: Column(
+                  children: [
+                    MapFloatingSurface(
+                      radius: 12,
+                      child: Row(
+                        children: [
+                          RoundIconButton(
+                            icon: LucideIcons.arrowLeft,
+                            tooltip: 'Back',
+                            filled: true,
+                            onPressed: _saving
+                                ? null
+                                : () => Navigator.of(context).pop(),
+                          ),
+                          Expanded(
+                            child: TextField(
+                              controller: _search,
+                              focusNode: _searchFocus,
+                              enabled: !_saving,
+                              maxLength: 200,
+                              decoration: const InputDecoration(
+                                hintText: 'Search location',
+                                border: InputBorder.none,
+                                enabledBorder: InputBorder.none,
+                                focusedBorder: UnderlineInputBorder(
+                                  borderSide: BorderSide(
+                                    color: BuyerTheme.action,
+                                  ),
+                                ),
+                                filled: false,
+                                counterText: '',
+                              ),
+                              onChanged: _searchChanged,
+                            ),
+                          ),
+                          if (_search.text.isNotEmpty)
+                            IconButton(
+                              tooltip: 'Clear search',
+                              onPressed: _saving
+                                  ? null
+                                  : () {
+                                      _search.clear();
+                                      _searchChanged('');
+                                    },
+                              icon: const Icon(LucideIcons.x),
+                            ),
+                        ],
+                      ),
                     ),
-            ),
-          ],
-        ),
+                    if (_searching) const LinearProgressIndicator(),
+                    if (_suggestions.isNotEmpty)
+                      ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxHeight: constraints.maxHeight * 0.46,
+                        ),
+                        child: MapFloatingSurface(
+                          radius: 12,
+                          child: ListView(
+                            shrinkWrap: true,
+                            padding: EdgeInsets.zero,
+                            children: [
+                              for (final suggestion in _suggestions)
+                                ListTile(
+                                  leading: const Icon(LucideIcons.mapPin),
+                                  title: Text(suggestion.title),
+                                  subtitle: suggestion.subtitle == null
+                                      ? null
+                                      : Text(suggestion.subtitle!),
+                                  onTap: () => _selectSuggestion(suggestion),
+                                ),
+                              const Padding(
+                                padding: EdgeInsets.all(8),
+                                child: Text(
+                                  'Google Maps',
+                                  style: TextStyle(fontWeight: FontWeight.w500),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    if (_error != null)
+                      MapFloatingSurface(
+                        radius: 8,
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: AuthNotice(message: _error!, isError: true),
+                        ),
+                      ),
+                    if (_suggestions.isEmpty && !_searching)
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Wrap(
+                          spacing: 8,
+                          children: [
+                            if (widget.savedLocations.isNotEmpty)
+                              ActionChip(
+                                label: const Text('Saved locations'),
+                                onPressed: _saving ? null : _showSaved,
+                              ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              if (!keyboard)
+                Positioned(
+                  right: 16,
+                  bottom: bottom + 12,
+                  child: MapFloatingSurface(
+                    radius: 999,
+                    child: IconButton(
+                      tooltip: 'Use current location',
+                      onPressed: _busy || _saving ? null : _useDevice,
+                      icon: const Icon(LucideIcons.locateFixed),
+                    ),
+                  ),
+                ),
+              if (!keyboard)
+                Positioned(
+                  left: 16,
+                  right: 16,
+                  bottom: 12,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxHeight: maxCardHeight),
+                    child: MapFloatingSurface(
+                      key: _detailsKey,
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(16),
+                        child: _details(),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          );
+        },
       ),
     ),
   );
 
-  Widget _saved() => widget.savedLocations.isEmpty
-      ? const Padding(
-          padding: EdgeInsets.all(24),
-          child: Text(
-            'You have no saved locations yet. Search an address or drop a pin to add one.',
-          ),
-        )
-      : ListView.separated(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          itemCount: widget.savedLocations.length,
-          separatorBuilder: (_, _) => const Divider(height: 1),
-          itemBuilder: (context, index) {
-            final location = widget.savedLocations[index];
-            return ListTile(
-              minTileHeight: 64,
-              leading: Icon(
-                location.isPrimary ? LucideIcons.house : LucideIcons.mapPin,
-              ),
-              title: Text(
-                '${location.label}${location.isPrimary ? ' (primary)' : ''}',
-              ),
-              subtitle: Text(
-                '${location.formattedAddress}\n${location.psgc.description}',
-              ),
-              isThreeLine: true,
-              onTap: widget.requireSave
-                  ? null
-                  : () => Navigator.of(context).pop(
-                      DiscoveryOrigin.saved(
-                        locationId: location.id,
-                        label: location.label,
-                        point: location.point,
-                      ),
-                    ),
-            );
-          },
-        );
-
-  Widget _addressTab() => AuthContent(
-    child: Form(
-      key: _addressForm,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          TextFormField(
-            controller: _address,
-            textInputAction: TextInputAction.next,
-            decoration: const InputDecoration(
-              labelText: 'Street, building or landmark',
+  Future<void> _showSaved() => showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    builder: (sheetContext) => ListView(
+      shrinkWrap: true,
+      children: [
+        for (final location in widget.savedLocations.where(
+          (item) => item.point.usable,
+        ))
+          ListTile(
+            leading: Icon(
+              location.isPrimary ? LucideIcons.house : LucideIcons.mapPin,
             ),
-            validator: _required,
+            title: Text(location.label),
+            subtitle: Text(location.formattedAddress),
+            onTap: () {
+              Navigator.of(sheetContext).pop();
+              _useSaved(location);
+            },
           ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _barangay,
-            textInputAction: TextInputAction.next,
-            decoration: const InputDecoration(labelText: 'Barangay (optional)'),
-          ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _city,
-            textInputAction: TextInputAction.next,
-            decoration: const InputDecoration(
-              labelText: 'City or municipality',
-            ),
-            validator: _required,
-          ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _province,
-            textInputAction: TextInputAction.next,
-            decoration: const InputDecoration(labelText: 'Province (optional)'),
-          ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _postal,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(labelText: 'ZIP code (optional)'),
-            validator: (value) =>
-                value == null ||
-                    value.trim().isEmpty ||
-                    RegExp(r'^\d{4}$').hasMatch(value.trim())
-                ? null
-                : 'Enter a 4-digit ZIP code.',
-          ),
-          const SizedBox(height: 16),
-          FilledButton(
-            onPressed: _busy
-                ? null
-                : () {
-                    if (!(_addressForm.currentState?.validate() ?? false)) {
-                      return;
-                    }
-                    _resolve(
-                      () => widget.repository.resolveAddress(
-                        addressLine: _address.text.trim(),
-                        cityMunicipality: _city.text.trim(),
-                        barangay: _barangay.text,
-                        province: _province.text,
-                        postalCode: _postal.text,
-                      ),
-                      OriginSource.search,
-                    );
-                  },
-            child: const Text('Find address'),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'If the address cannot be found, drop a pin instead.',
-            style: TextStyle(color: BuyerTheme.muted),
-          ),
-        ],
-      ),
+      ],
     ),
   );
 
-  /// Full-height pin map. The fixed centre pin marks the chosen point; the Buyer drags the map
-  /// underneath it. An eager recognizer gives the map every drag, pinch and fling first.
-  Widget _pinTab() {
+  Widget _pinMap(double bottom) {
     if (!widget.mapsAvailable) {
-      return const AuthContent(
-        child: AuthNotice(
-          message:
-              'The map is not available in this build. Use Search address to choose a location.',
+      return const ColoredBox(
+        color: BuyerTheme.canvas,
+        child: Center(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Text(
+              'The map is unavailable. Use Search location to choose an address.',
+              textAlign: TextAlign.center,
+            ),
+          ),
         ),
       );
     }
-    final reduce = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
     return Stack(
       children: [
         Positioned.fill(
           child: GoogleMap(
+            cameraTargetBounds: PhilippineMapView.cameraBounds,
+            minMaxZoomPreference: PhilippineMapView.zoomRange,
             initialCameraPosition: CameraPosition(
               target: LatLng(_pin.latitude, _pin.longitude),
               zoom: 16,
             ),
+            onMapCreated: (controller) => _map = controller,
             gestureRecognizers: {
               Factory<OneSequenceGestureRecognizer>(EagerGestureRecognizer.new),
             },
-            onCameraMoveStarted: () => setState(() => _pinMoving = true),
+            padding: EdgeInsets.only(top: 100, bottom: bottom + 16),
+            onCameraMoveStarted: () {
+              if (_programmaticMove || _saving) return;
+              _resolveSequence++;
+              setState(() {
+                _pinMoving = true;
+                _preview = null;
+                _busy = false;
+              });
+            },
             onCameraMove: (position) => _pin = GeoPoint(
               position.target.latitude,
               position.target.longitude,
             ),
             onCameraIdle: () {
-              if (_pinMoving) setState(() => _pinMoving = false);
+              if (_programmaticMove) {
+                _programmaticMove = false;
+                final target = _cameraTarget;
+                if (target != null &&
+                    (target.latitude - _pin.latitude).abs() < 0.00001 &&
+                    (target.longitude - _pin.longitude).abs() < 0.00001) {
+                  return;
+                }
+                // A gesture interrupted the camera move: resolve its actual resting point.
+                _pinMoving = true;
+              }
+              if (!_pinMoving || _saving) return;
+              setState(() => _pinMoving = false);
+              _resolve(
+                () => widget.repository.resolvePoint(_pin, device: false),
+                OriginSource.mapPin,
+              );
+            },
+            onTap: (point) async {
+              if (_saving) return;
+              final selected = GeoPoint(point.latitude, point.longitude);
+              await _moveCamera(selected);
+              await _resolve(
+                () => widget.repository.resolvePoint(selected, device: false),
+                OriginSource.mapPin,
+              );
             },
             myLocationButtonEnabled: false,
             zoomControlsEnabled: false,
@@ -392,164 +596,113 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
             tiltGesturesEnabled: false,
           ),
         ),
-        IgnorePointer(
-          child: Center(
-            child: AnimatedPadding(
-              duration: reduce ? Duration.zero : MateryalMotionTokens.fast,
-              curve: BuyerMotion.enter,
-              // The pin's tip sits on the map centre; it lifts slightly while the map moves.
-              padding: EdgeInsets.only(bottom: _pinMoving ? 60 : 48),
-              child: const Icon(
-                Icons.location_pin,
-                size: 48,
-                color: BuyerTheme.action,
-                semanticLabel: 'Pin at the map centre',
-              ),
-            ),
-          ),
-        ),
-        const Positioned(
-          top: 12,
-          left: 16,
-          right: 16,
-          child: IgnorePointer(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.all(Radius.circular(12)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Color(0x240F172A),
-                    blurRadius: 8,
-                    offset: Offset(0, 2),
-                  ),
-                ],
-              ),
+        Positioned.fill(
+          top: 100,
+          bottom: bottom + 16,
+          child: const IgnorePointer(
+            child: Center(
               child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                child: Row(
-                  children: [
-                    Icon(LucideIcons.move, size: 18, color: BuyerTheme.muted),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Drag the map to place the pin on the exact spot.',
-                      ),
-                    ),
-                  ],
+                padding: EdgeInsets.only(bottom: 48),
+                child: Icon(
+                  Icons.location_pin,
+                  size: 48,
+                  color: BuyerTheme.action,
+                  semanticLabel: 'Selected location pin',
                 ),
               ),
             ),
-          ),
-        ),
-        Positioned(
-          left: 16,
-          right: 16,
-          bottom: 16,
-          child: FilledButton.icon(
-            onPressed: _busy || _pinMoving
-                ? null
-                : () => _resolve(
-                    () => widget.repository.resolvePoint(_pin, device: false),
-                    OriginSource.mapPin,
-                  ),
-            icon: const Icon(LucideIcons.mapPin, size: 20),
-            label: const Text('Use this pin'),
           ),
         ),
       ],
     );
   }
 
-  Widget _confirmation(LocationPreviewView preview) => AuthContent(
-    child: Form(
-      key: _confirmForm,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Semantics(
-            header: true,
-            child: Text(
-              'Location details',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-          ),
-          const SizedBox(height: 8),
-          if (preview.formattedAddress != null)
-            Text(
-              preview.formattedAddress!,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            )
-          else ...[
-            AuthNotice(
-              message: preview.providerStatus == 'UNAVAILABLE'
-                  ? 'Address lookup is unavailable, but your pin is kept. Describe the place so you recognize it later.'
-                  : 'No street address was found for this pin. Describe the place so you recognize it later.',
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _description,
-              decoration: const InputDecoration(
-                labelText: 'Address or landmark description',
+  Widget _details() => Form(
+    key: _confirmForm,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          'Location Details',
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 8),
+        if (_busy) const LinearProgressIndicator(),
+        if (_preview?.formattedAddress != null)
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(
+                LucideIcons.mapPin,
+                color: BuyerTheme.action,
+                size: 20,
               ),
-              validator: (value) => _save ? _required(value) : null,
+              const SizedBox(width: 8),
+              Expanded(child: Text(_preview!.formattedAddress!)),
+            ],
+          )
+        else if (_preview != null) ...[
+          const Text(
+            'Address lookup is unavailable. Describe this pinned location.',
+          ),
+          TextFormField(
+            controller: _description,
+            maxLength: 300,
+            decoration: const InputDecoration(
+              labelText: 'Address or landmark description',
             ),
-          ],
-          const SizedBox(height: 8),
+            validator: _required,
+          ),
+        ] else
           Text(
-            preview.psgc.description,
-            style: const TextStyle(color: BuyerTheme.muted),
+            _pinMoving
+                ? 'Move the map to position the pin.'
+                : _busy
+                ? 'Resolving selected location…'
+                : 'Search a location or move the map to choose a pin.',
           ),
-          const Divider(height: 32),
-          if (!widget.requireSave)
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Save this location'),
-              subtitle: const Text(
-                'Saved locations can be reused for browsing, projects and orders.',
-              ),
-              value: _save,
-              onChanged: (value) => setState(() => _save = value),
+        if (widget.requireSave && _preview != null) ...[
+          TextFormField(
+            controller: _label,
+            maxLength: 60,
+            decoration: const InputDecoration(
+              labelText: 'Location label (optional)',
             ),
-          if (_save) ...[
-            TextFormField(
-              controller: _label,
-              maxLength: 60,
-              decoration: const InputDecoration(
-                labelText: 'Label, e.g. Home or Taguig site',
-              ),
-              validator: _required,
-            ),
-            DropdownButtonFormField<String>(
-              initialValue: _kind,
-              isExpanded: true,
-              decoration: const InputDecoration(labelText: 'Location type'),
-              items: [
-                for (final entry in kLocationKinds.entries)
-                  DropdownMenuItem(value: entry.key, child: Text(entry.value)),
-              ],
-              onChanged: (value) => setState(() => _kind = value ?? 'DELIVERY'),
-            ),
-            CheckboxListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Make this my primary location'),
-              value: _makePrimary,
-              onChanged: (value) =>
-                  setState(() => _makePrimary = value ?? false),
-            ),
-          ],
-          const SizedBox(height: 16),
-          FilledButton(
-            onPressed: _busy ? null : _confirm,
-            child: Text(_save ? 'Save and use location' : 'Use this location'),
           ),
-          const SizedBox(height: 8),
-          TextButton(
-            onPressed: _busy ? null : () => setState(() => _preview = null),
-            child: const Text('Choose a different location'),
+          DropdownButtonFormField<String>(
+            initialValue: _kind,
+            isExpanded: true,
+            decoration: const InputDecoration(labelText: 'Location type'),
+            items: [
+              for (final entry in kLocationKinds.entries)
+                DropdownMenuItem(value: entry.key, child: Text(entry.value)),
+            ],
+            onChanged: (value) => setState(() => _kind = value ?? 'DELIVERY'),
+          ),
+          CheckboxListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Make this my primary location'),
+            value: _makePrimary,
+            onChanged: (value) => setState(() => _makePrimary = value ?? false),
           ),
         ],
-      ),
+        const SizedBox(height: 12),
+        FilledButton(
+          onPressed: _busy || _saving || _pinMoving || _preview == null
+              ? null
+              : _confirm,
+          child: Text(_saving ? 'Saving…' : 'Choose Location'),
+        ),
+        if (!widget.requireSave)
+          const Text(
+            'Your choice will be saved for your next visit.',
+            style: TextStyle(fontSize: 12, color: BuyerTheme.muted),
+            textAlign: TextAlign.center,
+          ),
+      ],
     ),
   );
 

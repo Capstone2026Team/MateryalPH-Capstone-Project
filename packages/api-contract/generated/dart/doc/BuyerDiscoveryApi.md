@@ -12,6 +12,7 @@ Method | HTTP request | Description
 [**addFavoriteSupplier**](BuyerDiscoveryApi.md#addfavoritesupplier) | **PUT** /buyers/favorite-suppliers/{vendorId} |
 [**estimateBuyerRoute**](BuyerDiscoveryApi.md#estimatebuyerroute) | **POST** /buyers/discovery/routes |
 [**getDirectorySupplierDetails**](BuyerDiscoveryApi.md#getdirectorysupplierdetails) | **GET** /buyers/discovery/directory-suppliers/{supplierId} |
+[**getDirectorySupplierPhoto**](BuyerDiscoveryApi.md#getdirectorysupplierphoto) | **GET** /buyers/discovery/directory-suppliers/{supplierId}/photo |
 [**listFavoriteSuppliers**](BuyerDiscoveryApi.md#listfavoritesuppliers) | **GET** /buyers/favorite-suppliers |
 [**removeFavoriteSupplier**](BuyerDiscoveryApi.md#removefavoritesupplier) | **DELETE** /buyers/favorite-suppliers/{vendorId} |
 [**saveBuyerDiscoveryRadius**](BuyerDiscoveryApi.md#savebuyerdiscoveryradius) | **PUT** /buyers/discovery/preferences |
@@ -109,7 +110,7 @@ Name | Type | Description  | Notes
 
 
 
-Lazy-loaded, attributed Google Place Details for one unexpired Directory Supplier. Informational only; never exposes VPS, verification, messaging, ordering, reviews, payments or a storefront. A Google rating is labeled Google rating.
+Lazy-loaded, attributed Google Place Details for one unexpired Directory Supplier. Informational only; never exposes VPS, verification, messaging, ordering, MateryalPH reviews, payments or a storefront. Google media and review excerpts are fetched on demand without storage. A Google rating is labeled Google rating.
 
 ### Example
 ```dart
@@ -135,6 +136,49 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**DirectorySupplierDetailEnvelope**](DirectorySupplierDetailEnvelope.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **getDirectorySupplierPhoto**
+> DirectorySupplierPhotoEnvelope getDirectorySupplierPhoto(supplierId)
+
+
+
+On-demand thumbnail for one visible, unexpired Directory Supplier. Uses only Google photos and attributions; no photo names or media URLs are persisted. Response is no-store. Does not load reviews or full details.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+
+final api = MateryalphApiClient().getBuyerDiscoveryApi();
+final String supplierId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+
+try {
+    final response = api.getDirectorySupplierPhoto(supplierId);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling BuyerDiscoveryApi->getDirectorySupplierPhoto: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **supplierId** | **String**|  |
+
+### Return type
+
+[**DirectorySupplierPhotoEnvelope**](DirectorySupplierPhotoEnvelope.md)
 
 ### Authorization
 

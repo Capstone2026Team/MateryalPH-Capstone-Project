@@ -65,7 +65,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                                 TextSpan(
                                   text: 'PH',
                                   style: TextStyle(
-                                    color: Theme.of(context).colorScheme.primary,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
                                   ),
                                 ),
                               ],
@@ -105,10 +107,13 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                             children: [
                               const Icon(Icons.g_mobiledata, size: 32),
                               const SizedBox(width: 8),
-                              Text(
-                                _openingGoogle
-                                    ? 'Opening Google…'
-                                    : 'Continue with Google',
+                              Flexible(
+                                child: Text(
+                                  _openingGoogle
+                                      ? 'Opening Google…'
+                                      : 'Continue with Google',
+                                  textAlign: TextAlign.center,
+                                ),
                               ),
                             ],
                           ),

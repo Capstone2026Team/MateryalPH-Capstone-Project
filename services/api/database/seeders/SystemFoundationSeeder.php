@@ -28,6 +28,8 @@ final class SystemFoundationSeeder extends Seeder
             ['PRIVACY_NOTICE', 'ALL', 'MateryalPH Capstone Privacy Notice', '/legal/privacy-notice', 2, true],
             ['VENDOR_CODE_OF_CONDUCT', 'VENDOR', 'Vendor Code of Conduct — Capstone/Test', '/legal/vendor-code-of-conduct', 2, true],
             ['VENDOR_COMMISSION_TEST', 'VENDOR', 'Vendor Commission Terms — TEST/DEMO', '/legal/vendor-commission-test', 1, true],
+            // Accepted per order through the NRPC disclosure, never as an account-level agreement.
+            ['NRPC_TERMS', 'ORDER_NRPC', 'Non-Recoverable Preparation Cost Terms — CAPSTONE/TEST', '/legal/nrpc-terms', 2, false],
         ] as [$code, $audience, $title, $uri, $version, $requiresReacceptance]) {
             $path = resource_path('agreements/'.$code.'/'.$version.'.md');
             $content = is_file($path) ? file_get_contents($path) : false;

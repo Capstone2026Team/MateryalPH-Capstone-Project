@@ -10,6 +10,9 @@ use App\Domain\Identity\TokenSessionService;
 use App\Domain\Inventory\AutoAcceptGate;
 use App\Domain\Inventory\AutoAcceptPolicyService;
 use App\Domain\Inventory\InventoryLocks;
+use App\Domain\Messaging\BuyerInboxChannel;
+use App\Domain\Operations\OutboxProcessor;
+use App\Domain\Operations\OutboxPublisher;
 use App\Domain\Vendors\ConfirmedDeliverySnapshot;
 use App\Domain\Vendors\DeliveryRecommendationService;
 use App\Domain\Vendors\StoreOperatingSchedule;
@@ -24,6 +27,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -293,7 +297,7 @@ final class PhaseFiveInventoryDeliveryTest extends TestCase
         foreach (['PROJECT_BASED' => 0, 'ITEM_BASED' => 5000] as $type => $nrpc) {
             $orderId = $this->order($organization, $type);
             if ($nrpc > 0) {
-                DB::table('nrpc_records')->insert(['id' => (string) Str::uuid7(), 'order_id' => $orderId, 'amount_centavos' => $nrpc, 'created_at' => now(), 'updated_at' => now()]);
+                DB::table('nrpc_records')->insert(['id' => (string) Str::uuid7(), 'order_id' => $orderId, 'amount_centavos' => $nrpc, 'state' => 'PROPOSED', 'reason' => 'Custom cutting for this order', 'created_at' => now(), 'updated_at' => now()]);
             }
             try {
                 DB::transaction(fn () => DB::table('vendor_confirmations')->insert(['id' => (string) Str::uuid7(), 'order_id' => $orderId, 'source' => 'AUTO_ACCEPT', 'auto_accept_policy_version_id' => $versionId, 'created_at' => now(), 'updated_at' => now()]));
@@ -305,7 +309,7 @@ final class PhaseFiveInventoryDeliveryTest extends TestCase
         $itemOrder = $this->order($organization, 'ITEM_BASED');
         DB::table('vendor_confirmations')->insert(['id' => (string) Str::uuid7(), 'order_id' => $itemOrder, 'source' => 'AUTO_ACCEPT', 'auto_accept_policy_version_id' => $versionId, 'created_at' => now(), 'updated_at' => now()]);
         $this->expectException(QueryException::class);
-        DB::transaction(fn () => DB::table('nrpc_records')->insert(['id' => (string) Str::uuid7(), 'order_id' => $itemOrder, 'amount_centavos' => 100, 'created_at' => now(), 'updated_at' => now()]));
+        DB::transaction(fn () => DB::table('nrpc_records')->insert(['id' => (string) Str::uuid7(), 'order_id' => $itemOrder, 'amount_centavos' => 100, 'state' => 'PROPOSED', 'reason' => 'Custom cutting for this order', 'created_at' => now(), 'updated_at' => now()]));
     }
 
     public function test_day_7_and_12_reminders_day_15_hide_and_confirmation_restores_the_listing(): void
@@ -418,6 +422,67 @@ final class PhaseFiveInventoryDeliveryTest extends TestCase
         }
         $this->signInVendor($owner);
         $this->getJson('/api/v1/vendor/fleet/vehicles')->assertOk()->assertJsonPath('meta.delivery.delivery_enabled', true)->assertJsonPath('meta.delivery.service_radius_km', 50);
+    }
+
+    public function test_fleet_and_delivery_changes_broadcast_private_empty_invalidations_only_to_current_managers(): void
+    {
+        [$organization, $owner] = $this->activeStore(delivery: true);
+        $manager = $this->member($organization, 'STORE_MANAGER');
+        $this->member($organization, 'STORE_STAFF');
+        $this->activeStore('Foreign fleet', delivery: true);
+        $this->signInVendor($owner);
+        $this->putJson('/api/v1/vendor/fleet/vehicles', ['vehicles' => [$this->vehicle($this->vehicleImage())]])->assertOk();
+        $event = DB::table('outbox_events')->where('event_type', 'VENDOR_FLEET_CHANGED')->where('aggregate_id', $organization->id)->first();
+        self::assertNotNull($event);
+        self::assertNull($event->processed_at);
+        config()->set('broadcasting.default', 'reverb');
+        $broadcast = \Mockery::mock(\Illuminate\Contracts\Broadcasting\Broadcaster::class);
+        Broadcast::shouldReceive('connection')->with('reverb')->andReturn($broadcast);
+        $ownerChannel = 'private-'.app(BuyerInboxChannel::class)->name($owner);
+        $managerChannel = 'private-'.app(BuyerInboxChannel::class)->name($manager);
+        $broadcast->shouldReceive('broadcast')->once()->with([$managerChannel], 'fleet.changed', []);
+        $broadcast->shouldReceive('broadcast')->times(3)->with([$ownerChannel], 'fleet.changed', []);
+        app(OutboxProcessor::class)->process($event->id);
+        // A role change excludes an already connected viewer from subsequent events.
+        DB::table('vendor_memberships')->where('user_id', $manager->id)->update(['role' => 'STORE_STAFF']);
+        foreach (['ORDER:PROCESSING>OUT_FOR_DELIVERY', 'ORDER:OUT_FOR_DELIVERY>DELIVERED', 'ORDER:CONFIRMED>PROCESSING'] as $changes) {
+            $id = app(OutboxPublisher::class)->publish('ORDER_STATE_CHANGED', 'ORDER', (string) Str::uuid7(), ['vendor_organization_id' => $organization->id, 'changes' => $changes]);
+            app(OutboxProcessor::class)->process($id);
+        }
+    }
+
+    public function test_fleet_summary_counts_saved_units_and_only_own_out_for_delivery_assignments(): void
+    {
+        [$organization, $owner] = $this->activeStore(delivery: true);
+        [$foreignOrganization, $foreignOwner] = $this->activeStore('Other fleet', delivery: true);
+        $this->signInVendor($owner);
+        $this->getJson('/api/v1/vendor/fleet/vehicles')->assertOk()->assertJsonPath('meta.summary.total_vehicles', 0)
+            ->assertJsonPath('meta.summary.out_for_delivery_vehicle_assignments', 0);
+        $image = $this->vehicleImage();
+        $saved = $this->putJson('/api/v1/vendor/fleet/vehicles', ['vehicles' => [
+            $this->vehicle($image, ['number_available' => 3]),
+            $this->vehicle($image, ['name' => 'Unavailable', 'number_available' => 2, 'available' => false]),
+            $this->vehicle($image, ['name' => 'Disabled', 'number_available' => 4, 'active' => false]),
+        ]])->assertOk()->assertJsonPath('meta.summary.configurations', 3)->assertJsonPath('meta.summary.total_vehicles', 9)
+            ->assertJsonPath('meta.summary.active_vehicles', 5)->assertJsonPath('meta.summary.available_vehicles', 3);
+        $vehicle = $saved->json('data.0');
+        foreach ([[$organization, $owner, 'OUT_FOR_DELIVERY', 2], [$organization, $owner, 'OUT_FOR_DELIVERY', 1], [$organization, $owner, 'CONFIRMED', 7], [$organization, $owner, 'DELIVERED', 8], [$organization, $owner, 'CANCELLED', 9], [$foreignOrganization, $foreignOwner, 'OUT_FOR_DELIVERY', 10]] as [$store, $actor, $state, $count]) {
+            $orderId = $this->order($store, 'ITEM_BASED');
+            DB::table('orders')->where('id', $orderId)->update(['order_state' => $state]);
+            DB::table('order_delivery_snapshots')->insert([
+                'id' => (string) Str::uuid7(), 'order_id' => $orderId, 'vendor_organization_id' => $store->id,
+                'confirmed_by_user_id' => $actor->id, 'final_charge_centavos' => 0, 'created_at' => now(),
+                'snapshot' => json_encode(['vehicles' => [['vehicle_id' => $vehicle['id'], 'number_of_vehicles' => $count, 'total_vehicle_trips' => $count * 5]]], JSON_THROW_ON_ERROR),
+            ]);
+        }
+        $this->getJson('/api/v1/vendor/fleet/vehicles')->assertOk()
+            ->assertJsonPath('meta.summary.out_for_delivery_vehicle_assignments', 3)->assertJsonPath('meta.summary.out_for_delivery_orders', 2);
+        // Removal changes fleet totals, but cannot erase vehicles already confirmed for deliveries.
+        $this->putJson('/api/v1/vendor/fleet/vehicles', ['vehicles' => [['id' => $vehicle['id'], 'lock_version' => $vehicle['lock_version'], 'removed' => true]]])->assertOk()
+            ->assertJsonPath('meta.summary.total_vehicles', 6)->assertJsonPath('meta.summary.active_vehicles', 2)
+            ->assertJsonPath('meta.summary.available_vehicles', 0)->assertJsonPath('meta.summary.out_for_delivery_vehicle_assignments', 3);
+        $this->signInVendor($this->member($organization, 'FULFILLMENT'));
+        $this->getJson('/api/v1/vendor/fleet/vehicles')->assertOk()->assertJsonMissingPath('meta.summary');
     }
 
     public function test_confirmed_delivery_snapshot_freezes_rates_vehicles_and_addresses_and_supports_manual_review(): void
@@ -558,7 +623,7 @@ final class PhaseFiveInventoryDeliveryTest extends TestCase
         $buyerId = (string) Str::uuid7();
         DB::table('buyer_profiles')->insert(['id' => $buyerId, 'user_id' => $buyer->id, 'buyer_type' => 'INDIVIDUAL', 'created_at' => now(), 'updated_at' => now()]);
         $orderId = (string) Str::uuid7();
-        DB::table('orders')->insert(['id' => $orderId, 'reference' => 'P5-'.Str::upper(Str::random(8)), 'buyer_profile_id' => $buyerId, 'vendor_organization_id' => $organization->id, 'procurement_type' => $type, 'order_state' => 'CONFIRMED', 'fulfillment_method' => 'VENDOR_DELIVERY', 'payment_method' => 'COD', 'commercial_total_centavos' => 100000, 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('orders')->insert(['id' => $orderId, 'reference' => 'P5-'.Str::upper(Str::random(8)), 'buyer_profile_id' => $buyerId, 'vendor_organization_id' => $organization->id, 'procurement_type' => $type, 'order_state' => 'CONFIRMED', 'fulfillment_method' => 'DELIVERY', 'payment_method' => 'CASH_ON_DELIVERY', 'materials_centavos' => 100000, 'commercial_total_centavos' => 100000, 'created_at' => now(), 'updated_at' => now()]);
 
         return $orderId;
     }

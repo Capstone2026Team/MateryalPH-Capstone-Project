@@ -105,5 +105,37 @@ void main() {
       // TODO
     });
 
+    // Today and the next six Asia/Manila dates, a unique dated override applied before the weekly rule; explicit Closed days kept. Empty when hours are unavailable.
+    // BuiltList<StoreHoursDay> week
+    test('to test the property `week`', () async {
+      // TODO
+    });
+
+    // StoreOpenNow openNow
+    test('to test the property `openNow`', () async {
+      // TODO
+    });
+
+    // True when every weekly day is explicitly Closed, which is a valid saved schedule.
+    // bool allClosed
+    test('to test the property `allClosed`', () async {
+      // TODO
+    });
+
+    // DateTime hoursAsOf
+    test('to test the property `hoursAsOf`', () async {
+      // TODO
+    });
+
+    // String hoursNotice
+    test('to test the property `hoursNotice`', () async {
+      // TODO
+    });
+
+    // String hoursUnavailableReason
+    test('to test the property `hoursUnavailableReason`', () async {
+      // TODO
+    });
+
   });
 }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:share_plus/share_plus.dart';
@@ -15,6 +17,7 @@ import 'discovery_repository.dart';
 import 'location_welcome_screen.dart';
 import 'select_location_screen.dart';
 import 'supplier_map.dart';
+import 'supplier_preview_sheet.dart';
 import 'supplier_panels.dart';
 
 typedef StoreProfileOpener =
@@ -33,6 +36,10 @@ class MapHomeScreen extends StatefulWidget {
     this.onUnavailable,
     this.openLink,
     this.share,
+    this.controller,
+    this.onOpenSearch,
+    this.onOpenCart,
+    this.onMessageStore,
   });
 
   final DiscoveryRepository repository;
@@ -43,19 +50,28 @@ class MapHomeScreen extends StatefulWidget {
   final Future<void> Function(Uri uri)? openLink;
   final void Function(String text)? share;
 
+  /// Shared with Explore so both use the same origin and radius; owned by the caller when given.
+  final DiscoveryController? controller;
+  final VoidCallback? onOpenSearch;
+  final VoidCallback? onOpenCart;
+
+  /// A conversation is about a product, so Message on a store opens that store's products.
+  final void Function(BuildContext context, SupplierResultView supplier)?
+  onMessageStore;
+
   @override
   State<MapHomeScreen> createState() => _MapHomeScreenState();
 }
 
 class _MapHomeScreenState extends State<MapHomeScreen> {
-  late final DiscoveryController _controller = DiscoveryController(
-    repository: widget.repository,
-  );
+  late final DiscoveryController _controller =
+      widget.controller ?? DiscoveryController(repository: widget.repository);
   final DraggableScrollableController _sheet = DraggableScrollableController();
   SupplierListView _view = SupplierListView.all;
   bool? _listMode;
   int _recenter = 0;
-  double _sheetExtent = 0.34;
+  double _sheetExtent = 0.25;
+  Timer? _settleTimer;
   String? _lastSelected;
   bool _onboardingDismissed = false;
   bool _welcomeOpen = false;
@@ -70,13 +86,16 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
   void initState() {
     super.initState();
     _controller.addListener(_onChanged);
-    _controller.initialize();
+    _controller.initialize().then((_) {
+      if (mounted) _onChanged();
+    });
   }
 
   @override
   void dispose() {
+    _settleTimer?.cancel();
     _controller.removeListener(_onChanged);
-    _controller.dispose();
+    if (widget.controller == null) _controller.dispose();
     _sheet.dispose();
     super.dispose();
   }
@@ -142,17 +161,18 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
   }
 
   Future<void> _chooseLocation() async {
-    final origin = await Navigator.of(context).push<DiscoveryOrigin>(
-      MaterialPageRoute(
-        builder: (_) => SelectLocationScreen(
-          repository: widget.repository,
-          deviceLocation: widget.deviceLocation,
-          savedLocations: _controller.savedLocations,
-          mapsAvailable: kMapsClientConfigured,
-          initialPoint: _controller.origin?.point,
-        ),
-      ),
-    );
+    final origin = await Navigator.of(context, rootNavigator: true)
+        .push<DiscoveryOrigin>(
+          MaterialPageRoute(
+            builder: (_) => SelectLocationScreen(
+              repository: widget.repository,
+              deviceLocation: widget.deviceLocation,
+              savedLocations: _controller.savedLocations,
+              mapsAvailable: kMapsClientConfigured,
+              initialPoint: _controller.origin?.point,
+            ),
+          ),
+        );
     if (origin == null || !mounted) return;
     await _controller.reloadLocations();
     await _controller.setOrigin(origin);
@@ -277,19 +297,26 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
                   onPressed: _chooseLocation,
                 ),
               ),
+
               IconButton(
                 tooltip: 'Search',
-                onPressed: () => widget.onUnavailable?.call('Search'),
+                onPressed:
+                    widget.onOpenSearch ??
+                    () => widget.onUnavailable?.call('Search'),
                 icon: const Icon(LucideIcons.search),
               ),
+
               IconButton(
                 tooltip: 'Notifications',
                 onPressed: () => widget.onUnavailable?.call('Notifications'),
                 icon: const Icon(LucideIcons.bell),
               ),
+
               IconButton(
                 tooltip: 'Cart',
-                onPressed: () => widget.onUnavailable?.call('Cart'),
+                onPressed:
+                    widget.onOpenCart ??
+                    () => widget.onUnavailable?.call('Cart'),
                 icon: const Icon(LucideIcons.shoppingCart),
               ),
             ],
@@ -411,19 +438,8 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
   );
 
   Widget _floating(IconData icon, String label, VoidCallback onPressed) =>
-      DecoratedBox(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          border: Border.all(color: BuyerTheme.border),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x240F172A),
-              blurRadius: 8,
-              offset: Offset(0, 2),
-            ),
-          ],
-        ),
+      MapFloatingSurface(
+        radius: 999,
         child: IconButton(
           tooltip: label,
           onPressed: onPressed,
@@ -448,7 +464,9 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
               key: ValueKey(_controller.selectedId),
               controller: _controller,
               onViewStore: (supplier) => widget.onOpenStore(context, supplier),
-              onMessage: (_) => widget.onUnavailable?.call('Messages'),
+              onMessage: (supplier) => widget.onMessageStore != null
+                  ? widget.onMessageStore!(context, supplier)
+                  : widget.onUnavailable?.call('Messages'),
               onClose: _controller.clearSelection,
               onOpenLink: _openLink,
               onShare: _share,
@@ -456,62 +474,42 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
           ],
         );
 
-  Widget _stacked(
-    BoxConstraints constraints,
-  ) => NotificationListener<DraggableScrollableNotification>(
-    onNotification: (notification) {
-      setState(() => _sheetExtent = notification.extent);
-      return false;
-    },
-    child: Stack(
-      children: [
-        Positioned.fill(child: _mapStack(constraints.maxHeight * _sheetExtent)),
-        DraggableScrollableSheet(
-          controller: _sheet,
-          initialChildSize: 0.34,
-          minChildSize: _peek,
-          maxChildSize: _expanded,
-          snap: true,
-          snapSizes: const [_peek, _half, _expanded],
-          builder: (context, scroll) => DecoratedBox(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-              boxShadow: [
-                BoxShadow(
-                  color: Color(0x240F172A),
-                  blurRadius: 24,
-                  offset: Offset(0, -8),
-                ),
-              ],
+  Widget _stacked(BoxConstraints constraints) =>
+      NotificationListener<DraggableScrollableNotification>(
+        onNotification: (notification) {
+          // Rebuilding the whole screen (and re-padding the Google map) on every drag frame is what
+          // made the sheet lag. Wait until the finger stops, then apply the final size once.
+          _settleTimer?.cancel();
+          final extent = notification.extent;
+          _settleTimer = Timer(const Duration(milliseconds: 120), () {
+            if (mounted && (extent - _sheetExtent).abs() > 0.002) {
+              setState(() => _sheetExtent = extent);
+            }
+          });
+          return false;
+        },
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: _mapStack(constraints.maxHeight * _sheetExtent),
             ),
-            child: Column(
-              children: [
-                Semantics(
-                  label: 'Supplier sheet handle. Swipe up for more details.',
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(vertical: 8),
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: BuyerTheme.border,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
+            SupplierPreviewSheet(
+              cornerRadius: 16,
+              controller: _sheet,
+              initialSize: .25,
+              minSize: _peek,
+              maxSize: _expanded,
+              snapSizes: const [_peek, _half, _expanded],
+              builder: (context, scroll) => RepaintBoundary(
+                child: RefreshIndicator(
+                  onRefresh: _controller.refresh,
+                  child: _panel(scroll),
                 ),
-                Expanded(
-                  child: RefreshIndicator(
-                    onRefresh: _controller.refresh,
-                    child: _panel(scroll),
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
-      ],
-    ),
-  );
+      );
 
   Widget _split(BoxConstraints constraints) => Row(
     children: [

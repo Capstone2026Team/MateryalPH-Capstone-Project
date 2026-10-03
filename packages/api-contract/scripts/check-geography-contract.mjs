@@ -51,7 +51,7 @@ assert.ok(operation('/buyers/locations', 'post').parameters.some(parameter => pa
 for (const [path, method] of [['/buyers/locations/{locationId}', 'patch'], ['/buyers/locations/{locationId}', 'delete'], ['/buyers/locations/{locationId}/primary', 'post'], ['/buyers/onboarding', 'put']]) {
   assert.ok(operation(path, method).responses['409'], `${path} ${method} must document the stale-version conflict`)
 }
-for (const [path, method] of [['/buyers/discovery/routes', 'post'], ['/buyers/discovery/directory-suppliers/{supplierId}', 'get'], ['/buyers/locations/resolve', 'post']]) {
+for (const [path, method] of [['/buyers/discovery/routes', 'post'], ['/buyers/discovery/directory-suppliers/{supplierId}', 'get'], ['/buyers/discovery/directory-suppliers/{supplierId}/photo', 'get'], ['/buyers/locations/resolve', 'post']]) {
   assert.ok(operation(path, method).responses['503'], `${path} ${method} must document provider unavailability`)
 }
 assert.equal(spec.paths['/buyers/discovery/search'].get, undefined, 'Discovery origins travel in a request body, never a URL')
@@ -61,10 +61,15 @@ assert.deepEqual(schemas.RadiusKm.enum, [5, 10, 20, 30, 40, 50], 'Radius allowli
 assert.deepEqual(schemas.ScoreLabel.properties.kind.enum, ['VPS', 'NEW_VENDOR', 'DIRECTORY'], 'Marker labels are VPS, New Vendor or Directory only')
 assert.deepEqual(schemas.SupplierTier.enum, ['VERIFIED_VENDOR', 'DIRECTORY_SUPPLIER'])
 assert.equal(schemas.DirectorySupplierDetail.additionalProperties, false, 'Tier 1 details are a closed allowlist')
-for (const forbidden of ['vps', 'score_label', 'vendor', 'listings', 'message', 'order', 'review', 'reviews', 'payment', 'storefront', 'verified', 'is_favorite']) {
+for (const forbidden of ['vps', 'score_label', 'vendor', 'listings', 'message', 'order', 'review', 'payment', 'storefront', 'verified', 'is_favorite']) {
   assert.equal(schemas.DirectorySupplierDetail.properties[forbidden], undefined, `Tier 1 details must not expose ${forbidden}`)
 }
 assert.deepEqual(schemas.DirectorySupplierDetail.properties.actions.items.enum, ['CALL', 'OPEN_IN_MAPS', 'WEBSITE', 'SHARE'], 'Tier 1 actions are informational only')
+assert.equal(schemas.DirectorySupplierDetail.properties.reviews.items.$ref, '#/components/schemas/GooglePlaceReview', 'Directory reviews are attributed Google data only')
+assert.ok(schemas.GooglePlaceReview.required.includes('author'))
+assert.ok(schemas.GooglePlacePhoto.required.includes('authors'))
+assert.equal(schemas.DirectorySupplierPhoto.properties.photos.maxItems, 1)
+assert.equal(schemas.DirectorySupplierPhoto.additionalProperties, false)
 assert.deepEqual(schemas.GoogleRating.properties.source.enum, ['GOOGLE'], 'A Google rating is always attributed to Google')
 for (const scopeField of ['latitude', 'longitude', 'origin_latitude', 'origin_longitude']) {
   assert.equal(schemas.DiscoveryScope.properties[scopeField], undefined, `Discovery scope must not echo ${scopeField}`)
@@ -85,7 +90,7 @@ for (const publicSchema of ['PublicStoreProfile', 'PublicStoreSummary', 'Supplie
 }
 assert.deepEqual(schemas.PsgcResolution.properties.resolution.enum, ['RESOLVED', 'PARTIAL', 'UNRESOLVED'])
 assert.deepEqual(schemas.BuyerIndustryClassification.enum, ['GENERAL_CONTRACTOR', 'SUBCONTRACTOR_TRADE', 'INDEPENDENT_BUILDER', 'DIY_HOMEOWNER', 'OTHER'])
-for (const envelope of ['DiscoverySearchEnvelope', 'DirectorySupplierDetailEnvelope', 'RouteEstimateEnvelope', 'BuyerLocationEnvelope', 'BuyerLocationListEnvelope', 'BuyerOnboardingEnvelope', 'FavoriteSupplierListEnvelope', 'PsgcAreaListEnvelope']) {
+for (const envelope of ['DiscoverySearchEnvelope', 'DirectorySupplierPhotoEnvelope', 'DirectorySupplierDetailEnvelope', 'RouteEstimateEnvelope', 'BuyerLocationEnvelope', 'BuyerLocationListEnvelope', 'BuyerOnboardingEnvelope', 'FavoriteSupplierListEnvelope', 'PsgcAreaListEnvelope']) {
   assert.deepEqual(schemas[envelope].required, ['data', 'meta', 'errors'], `${envelope} uses the canonical envelope`)
 }
 

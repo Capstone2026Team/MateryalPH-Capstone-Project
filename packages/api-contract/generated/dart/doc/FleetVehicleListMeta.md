@@ -9,6 +9,7 @@ import 'package:materyalph_api_client/api.dart';
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **scope** | **String** |  |
+**summary** | [**FleetSummary**](FleetSummary.md) | Organization-wide summary returned to Owners and Store Managers only; omitted for ASSIGNED_ONLY access. | [optional]
 **delivery** | [**FleetVehicleListMetaDelivery**](FleetVehicleListMetaDelivery.md) |  | [optional]
 **permissions** | [**FleetVehicleListMetaPermissions**](FleetVehicleListMetaPermissions.md) |  |
 **limits** | [**FleetVehicleListMetaLimits**](FleetVehicleListMetaLimits.md) |  | [optional]

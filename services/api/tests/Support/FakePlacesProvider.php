@@ -22,6 +22,28 @@ final class FakePlacesProvider implements PlacesProvider
 
     public int $detailCalls = 0;
 
+    public array $suggestions = [];
+
+    public ?array $located = null;
+
+    public function autocomplete(string $query, string $sessionToken): array
+    {
+        if ($this->failure !== null) {
+            throw new GeographyProviderUnavailable($this->failure);
+        }
+
+        return $this->suggestions;
+    }
+
+    public function locate(string $placeId, string $sessionToken): ?array
+    {
+        if ($this->failure !== null) {
+            throw new GeographyProviderUnavailable($this->failure);
+        }
+
+        return $this->located;
+    }
+
     public function configured(): bool
     {
         return $this->failure !== 'NOT_CONFIGURED';
@@ -45,5 +67,15 @@ final class FakePlacesProvider implements PlacesProvider
         }
 
         return $this->details[$placeId] ?? null;
+    }
+
+    public function thumbnail(string $placeId): array
+    {
+        if ($this->failure !== null) {
+            throw new GeographyProviderUnavailable($this->failure);
+        }
+
+        return ['photos' => array_slice($this->details[$placeId]['photos'] ?? [], 0, 1),
+            'provider_attributions' => $this->details[$placeId]['provider_attributions'] ?? []];
     }
 }

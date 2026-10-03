@@ -38,7 +38,12 @@ final class BuyerDiscoveryController extends Controller
 
     public function directorySupplier(string $supplierId, DirectorySupplierService $directory): JsonResponse
     {
-        return ApiResponse::success($directory->details($supplierId));
+        return ApiResponse::success($directory->details($supplierId))->header('Cache-Control', 'no-store');
+    }
+
+    public function directorySupplierPhoto(string $supplierId, DirectorySupplierService $directory): JsonResponse
+    {
+        return ApiResponse::success($directory->thumbnail($supplierId))->header('Cache-Control', 'no-store');
     }
 
     public function route(Request $request, RouteEstimateService $routes): JsonResponse

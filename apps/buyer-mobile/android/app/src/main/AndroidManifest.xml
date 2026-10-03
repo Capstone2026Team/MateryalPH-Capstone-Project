@@ -48,6 +48,17 @@
                     android:path="/callback" />
             </intent-filter>
 
+            <!-- Payment return page: only brings the app forward; the Pending screen re-checks the
+                 server on resume and the link itself never confirms a payment. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="materyalph"
+                    android:host="payments" />
+            </intent-filter>
+
         </activity>
 
         <!-- Restricted Android Maps SDK client key injected from untracked local.properties or CI. -->
