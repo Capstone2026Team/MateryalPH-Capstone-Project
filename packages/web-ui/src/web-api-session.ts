@@ -220,6 +220,32 @@ export async function readOrderEvidenceFile(basePath: string, evidencePath: stri
   return blob
 }
 
+const SIGNED_CASE_CONTENT = [
+  /\/(vendor|admin)\/disputes\/[0-9a-f-]{36}\/files\/[0-9a-f-]{36}\/content$/i,
+  /\/(vendor|admin)\/invoice-records\/[0-9a-f-]{36}\/content$/i,
+]
+
+/**
+ * Reads case evidence or an invoice copy through its five-minute signed link. Only same-origin API paths of those two
+ * kinds are accepted, the session cookie travels with the request and the server re-authorizes the caller.
+ */
+export async function readSignedCaseFile(basePath: string, signedUrl: string): Promise<Blob> {
+  const base = new URL(basePath, window.location.origin)
+  const url = new URL(signedUrl, base)
+  if (url.origin !== base.origin || !url.pathname.startsWith(base.pathname.replace(/\/$/, '')) || !SIGNED_CASE_CONTENT.some(pattern => pattern.test(url.pathname))) {
+    throw new Error('The file link is invalid. Refresh and try again.')
+  }
+  const response = await coordinatedFetch(normalizedBasePath(base.href), true, url, {
+    credentials: 'include', cache: 'no-store', referrerPolicy: 'origin', headers: { Accept: 'application/pdf,image/jpeg,image/png' },
+  })
+  if (!response.ok) throw new ResponseError(response)
+  const blob = await response.blob()
+  if (!['application/pdf', 'image/jpeg', 'image/png'].includes(blob.type.split(';')[0] ?? '')) {
+    throw new Error('This file type cannot be previewed.')
+  }
+  return blob
+}
+
 export async function readWebPrivateFile(basePath: string, signedUrl: string): Promise<Blob> {
   const base = new URL(basePath, window.location.origin)
   const url = new URL(signedUrl, base)

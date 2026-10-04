@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Payments;
 
+use App\Domain\Disputes\DisputeRemedyService;
 use App\Domain\Finance\FinanceNotifier;
 use App\Domain\Finance\FinancialLedgerService;
 use App\Domain\Finance\WithholdingThresholdService;
@@ -18,8 +19,8 @@ use Illuminate\Support\Str;
 use Throwable;
 
 /**
- * Provider refunds for every target and trigger (FIN-07): ORDER refunds triggered by CANCELLATION or
- * TECHNICAL_COMPENSATION (DISPUTE_CONCLUSION arrives in Phase 13) and PLATFORM_FEE refunds triggered by FEE_CREDIT.
+ * Provider refunds for every target and trigger (FIN-07): ORDER refunds triggered by CANCELLATION, DISPUTE_CONCLUSION
+ * or TECHNICAL_COMPENSATION and PLATFORM_FEE refunds triggered by FEE_CREDIT.
  *
  *   initiation  the instruction is committed REFUND_PENDING with its outbox event; the provider call runs after
  *               commit, outside every lock, to the original payment request and sub-account only
@@ -198,6 +199,7 @@ final class RefundService
             }
             if ($order !== null) {
                 $order = $this->syncOrder($order, OrderActor::system($correlationId), (string) $refund->trigger);
+                $order = $this->disputeRemedy($order, $refundId, $correlationId);
                 $this->notifier->buyer($order, 'Refund processed for order '.$order->reference, 'The payment provider processed your refund of ₱'.WithholdingThresholdService::pesos((int) $refund->amount_centavos)
                     .' to your original payment method (TEST — no real money moved). '.self::arrivalNote($refund));
                 $this->notifier->vendor($order, 'Refund processed for order '.$order->reference, 'The payment provider processed the Buyer refund of ₱'.WithholdingThresholdService::pesos((int) $refund->amount_centavos).'.', ['OWNER', 'STORE_MANAGER']);
@@ -233,6 +235,7 @@ final class RefundService
             }
             if ($order !== null) {
                 $order = $this->syncOrder($order, OrderActor::system($correlationId), 'REFUND_FAILED');
+                $order = $this->disputeRemedy($order, $refundId, $correlationId);
                 $this->notifier->buyer($order, 'Refund delayed for order '.$order->reference, 'Your refund of ₱'.WithholdingThresholdService::pesos((int) $refund->amount_centavos)
                     .' could not be completed yet. It stays open and will be retried to your original payment method. You do not need to pay again.');
             }
@@ -267,10 +270,22 @@ final class RefundService
             DB::table('finance_review_items')->where('kind', 'REFUND_EXCEPTION')->where('source_id', $refundId)->where('state', 'OPEN')
                 ->update(['state' => 'RESOLVED', 'resolution' => 'Retried as attempt '.$next.' by '.($actor->role ?? 'SYSTEM').'.', 'resolved_by_user_id' => $actor->userId, 'resolved_at' => now(), 'updated_at' => now()]);
             if ($order !== null) {
-                $this->syncOrder($order, $actor, 'REFUND_RETRIED');
+                $order = $this->syncOrder($order, $actor, 'REFUND_RETRIED');
+                $this->disputeRemedy($order, $refundId, $actor->correlationId);
             }
             $this->queue($refundId, $actor->correlationId);
         });
+    }
+
+    /** A DISPUTE_CONCLUSION refund's progress updates its case remedy in the same transaction (order lock held). */
+    private function disputeRemedy(object $order, string $refundId, string $correlationId): object
+    {
+        $refund = DB::table('refunds')->where('id', $refundId)->first();
+        if ($refund === null || $refund->trigger !== 'DISPUTE_CONCLUSION') {
+            return $order;
+        }
+
+        return app(DisputeRemedyService::class)->refundChanged($order, $refund, OrderActor::system($correlationId));
     }
 
     /**
@@ -377,6 +392,7 @@ final class RefundService
     {
         return match ($trigger) {
             'CANCELLATION' => 'Cancellation refund for a cancelled order',
+            'DISPUTE_CONCLUSION' => 'Dispute-Conclusion Refund awarded by a concluded case',
             'TECHNICAL_COMPENSATION' => 'Technical compensation: capture after the payment attempt closed',
             'FEE_CREDIT' => 'Approved platform fee credit',
             default => 'Refund',

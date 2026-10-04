@@ -66,5 +66,5 @@ assert.ok(s.OrderDetail.properties.fulfillment && s.OrderDetail.properties.cance
 assert.ok(s.OrderDetail.properties.available_actions.items.enum.includes('REPORT_PROBLEM') && s.OrderDetail.properties.available_actions.items.enum.includes('CONFIRM_RECEIPT'))
 assert.ok(s.VendorOrderPermissions.properties.can_record_milestone && s.VendorOrderPermissions.properties.can_retry_refund)
 assert.ok(s.ConversationView.properties.read_only && s.ConversationView.required.includes('read_only'))
-assert.match(spec.info.version, /phase\.12$/)
+assert.match(spec.info.version, /phase\.(1[2-9]|20)$/)
 console.log(`Fulfillment contract passed: ${expected.size} operations, transports, idempotency and FIN-07 enums`)

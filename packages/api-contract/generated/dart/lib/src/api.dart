@@ -10,7 +10,9 @@ import 'package:materyalph_api_client/src/auth/basic_auth.dart';
 import 'package:materyalph_api_client/src/auth/bearer_auth.dart';
 import 'package:materyalph_api_client/src/auth/oauth.dart';
 import 'package:materyalph_api_client/src/api/accounts_api.dart';
+import 'package:materyalph_api_client/src/api/admin_disputes_api.dart';
 import 'package:materyalph_api_client/src/api/admin_finance_api.dart';
+import 'package:materyalph_api_client/src/api/admin_invoices_api.dart';
 import 'package:materyalph_api_client/src/api/admin_order_operations_api.dart';
 import 'package:materyalph_api_client/src/api/admin_product_compliance_api.dart';
 import 'package:materyalph_api_client/src/api/admin_vendor_verification_api.dart';
@@ -18,8 +20,10 @@ import 'package:materyalph_api_client/src/api/agreements_api.dart';
 import 'package:materyalph_api_client/src/api/authentication_api.dart';
 import 'package:materyalph_api_client/src/api/buyer_cart_api.dart';
 import 'package:materyalph_api_client/src/api/buyer_discovery_api.dart';
+import 'package:materyalph_api_client/src/api/buyer_disputes_api.dart';
 import 'package:materyalph_api_client/src/api/buyer_explore_api.dart';
 import 'package:materyalph_api_client/src/api/buyer_fulfillment_api.dart';
+import 'package:materyalph_api_client/src/api/buyer_invoices_api.dart';
 import 'package:materyalph_api_client/src/api/buyer_locations_api.dart';
 import 'package:materyalph_api_client/src/api/buyer_orders_api.dart';
 import 'package:materyalph_api_client/src/api/buyer_payments_api.dart';
@@ -30,10 +34,12 @@ import 'package:materyalph_api_client/src/api/stores_api.dart';
 import 'package:materyalph_api_client/src/api/system_api.dart';
 import 'package:materyalph_api_client/src/api/vendor_auto_accept_api.dart';
 import 'package:materyalph_api_client/src/api/vendor_catalog_api.dart';
+import 'package:materyalph_api_client/src/api/vendor_disputes_api.dart';
 import 'package:materyalph_api_client/src/api/vendor_finance_api.dart';
 import 'package:materyalph_api_client/src/api/vendor_fleet_api.dart';
 import 'package:materyalph_api_client/src/api/vendor_fulfillment_api.dart';
 import 'package:materyalph_api_client/src/api/vendor_inventory_api.dart';
+import 'package:materyalph_api_client/src/api/vendor_invoices_api.dart';
 import 'package:materyalph_api_client/src/api/vendor_onboarding_api.dart';
 import 'package:materyalph_api_client/src/api/vendor_orders_api.dart';
 
@@ -137,10 +143,22 @@ class MateryalphApiClient {
     return AccountsApi(dio, serializers);
   }
 
+  /// Get AdminDisputesApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  AdminDisputesApi getAdminDisputesApi() {
+    return AdminDisputesApi(dio, serializers);
+  }
+
   /// Get AdminFinanceApi instance, base route and serializer can be overridden by a given but be careful,
   /// by doing that all interceptors will not be executed
   AdminFinanceApi getAdminFinanceApi() {
     return AdminFinanceApi(dio, serializers);
+  }
+
+  /// Get AdminInvoicesApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  AdminInvoicesApi getAdminInvoicesApi() {
+    return AdminInvoicesApi(dio, serializers);
   }
 
   /// Get AdminOrderOperationsApi instance, base route and serializer can be overridden by a given but be careful,
@@ -185,6 +203,12 @@ class MateryalphApiClient {
     return BuyerDiscoveryApi(dio, serializers);
   }
 
+  /// Get BuyerDisputesApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  BuyerDisputesApi getBuyerDisputesApi() {
+    return BuyerDisputesApi(dio, serializers);
+  }
+
   /// Get BuyerExploreApi instance, base route and serializer can be overridden by a given but be careful,
   /// by doing that all interceptors will not be executed
   BuyerExploreApi getBuyerExploreApi() {
@@ -195,6 +219,12 @@ class MateryalphApiClient {
   /// by doing that all interceptors will not be executed
   BuyerFulfillmentApi getBuyerFulfillmentApi() {
     return BuyerFulfillmentApi(dio, serializers);
+  }
+
+  /// Get BuyerInvoicesApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  BuyerInvoicesApi getBuyerInvoicesApi() {
+    return BuyerInvoicesApi(dio, serializers);
   }
 
   /// Get BuyerLocationsApi instance, base route and serializer can be overridden by a given but be careful,
@@ -257,6 +287,12 @@ class MateryalphApiClient {
     return VendorCatalogApi(dio, serializers);
   }
 
+  /// Get VendorDisputesApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  VendorDisputesApi getVendorDisputesApi() {
+    return VendorDisputesApi(dio, serializers);
+  }
+
   /// Get VendorFinanceApi instance, base route and serializer can be overridden by a given but be careful,
   /// by doing that all interceptors will not be executed
   VendorFinanceApi getVendorFinanceApi() {
@@ -279,6 +315,12 @@ class MateryalphApiClient {
   /// by doing that all interceptors will not be executed
   VendorInventoryApi getVendorInventoryApi() {
     return VendorInventoryApi(dio, serializers);
+  }
+
+  /// Get VendorInvoicesApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  VendorInvoicesApi getVendorInvoicesApi() {
+    return VendorInvoicesApi(dio, serializers);
   }
 
   /// Get VendorOnboardingApi instance, base route and serializer can be overridden by a given but be careful,

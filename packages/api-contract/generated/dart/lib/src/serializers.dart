@@ -53,6 +53,9 @@ import 'package:materyalph_api_client/src/model/admin_cancellation_request_row.d
 import 'package:materyalph_api_client/src/model/admin_dashboard_audit_envelope.dart';
 import 'package:materyalph_api_client/src/model/admin_dashboard_envelope.dart';
 import 'package:materyalph_api_client/src/model/admin_dashboard_summary.dart';
+import 'package:materyalph_api_client/src/model/admin_dispute_appeal_decision_request.dart';
+import 'package:materyalph_api_client/src/model/admin_dispute_clarification_request.dart';
+import 'package:materyalph_api_client/src/model/admin_dispute_decision_request.dart';
 import 'package:materyalph_api_client/src/model/admin_invitation_request.dart';
 import 'package:materyalph_api_client/src/model/admin_order_action_result_envelope.dart';
 import 'package:materyalph_api_client/src/model/admin_order_operations_summary.dart';
@@ -95,6 +98,7 @@ import 'package:materyalph_api_client/src/model/buyer_cancel_request.dart';
 import 'package:materyalph_api_client/src/model/buyer_cancellation_preview.dart';
 import 'package:materyalph_api_client/src/model/buyer_cancellation_preview_envelope.dart';
 import 'package:materyalph_api_client/src/model/buyer_industry_classification.dart';
+import 'package:materyalph_api_client/src/model/buyer_invoice_billing_details.dart';
 import 'package:materyalph_api_client/src/model/buyer_location.dart';
 import 'package:materyalph_api_client/src/model/buyer_location_create.dart';
 import 'package:materyalph_api_client/src/model/buyer_location_envelope.dart';
@@ -114,6 +118,8 @@ import 'package:materyalph_api_client/src/model/buyer_mobile_register_request.da
 import 'package:materyalph_api_client/src/model/buyer_onboarding.dart';
 import 'package:materyalph_api_client/src/model/buyer_onboarding_envelope.dart';
 import 'package:materyalph_api_client/src/model/buyer_onboarding_update.dart';
+import 'package:materyalph_api_client/src/model/buyer_order_invoices.dart';
+import 'package:materyalph_api_client/src/model/buyer_order_invoices_envelope.dart';
 import 'package:materyalph_api_client/src/model/buyer_origin_request.dart';
 import 'package:materyalph_api_client/src/model/cancellation_decision_view.dart';
 import 'package:materyalph_api_client/src/model/cancellation_plan.dart';
@@ -275,6 +281,46 @@ import 'package:materyalph_api_client/src/model/discovery_scope.dart';
 import 'package:materyalph_api_client/src/model/discovery_search_envelope.dart';
 import 'package:materyalph_api_client/src/model/discovery_search_meta.dart';
 import 'package:materyalph_api_client/src/model/discovery_search_request.dart';
+import 'package:materyalph_api_client/src/model/dispute_admin_context.dart';
+import 'package:materyalph_api_client/src/model/dispute_admin_party.dart';
+import 'package:materyalph_api_client/src/model/dispute_affected_line.dart';
+import 'package:materyalph_api_client/src/model/dispute_appeal.dart';
+import 'package:materyalph_api_client/src/model/dispute_channel_auth_request.dart';
+import 'package:materyalph_api_client/src/model/dispute_clarification.dart';
+import 'package:materyalph_api_client/src/model/dispute_deadline.dart';
+import 'package:materyalph_api_client/src/model/dispute_decision.dart';
+import 'package:materyalph_api_client/src/model/dispute_detail.dart';
+import 'package:materyalph_api_client/src/model/dispute_detail_envelope.dart';
+import 'package:materyalph_api_client/src/model/dispute_eligibility.dart';
+import 'package:materyalph_api_client/src/model/dispute_eligibility_envelope.dart';
+import 'package:materyalph_api_client/src/model/dispute_eligibility_method.dart';
+import 'package:materyalph_api_client/src/model/dispute_escalate_request.dart';
+import 'package:materyalph_api_client/src/model/dispute_evidence.dart';
+import 'package:materyalph_api_client/src/model/dispute_export.dart';
+import 'package:materyalph_api_client/src/model/dispute_export_envelope.dart';
+import 'package:materyalph_api_client/src/model/dispute_export_list_envelope.dart';
+import 'package:materyalph_api_client/src/model/dispute_export_request.dart';
+import 'package:materyalph_api_client/src/model/dispute_file_link.dart';
+import 'package:materyalph_api_client/src/model/dispute_handler.dart';
+import 'package:materyalph_api_client/src/model/dispute_handler_ref.dart';
+import 'package:materyalph_api_client/src/model/dispute_list_envelope.dart';
+import 'package:materyalph_api_client/src/model/dispute_list_meta.dart';
+import 'package:materyalph_api_client/src/model/dispute_message_request.dart';
+import 'package:materyalph_api_client/src/model/dispute_order_ref.dart';
+import 'package:materyalph_api_client/src/model/dispute_original_payment_method.dart';
+import 'package:materyalph_api_client/src/model/dispute_proposal.dart';
+import 'package:materyalph_api_client/src/model/dispute_proposal_answer.dart';
+import 'package:materyalph_api_client/src/model/dispute_proposal_request.dart';
+import 'package:materyalph_api_client/src/model/dispute_realtime.dart';
+import 'package:materyalph_api_client/src/model/dispute_realtime_envelope.dart';
+import 'package:materyalph_api_client/src/model/dispute_refundable.dart';
+import 'package:materyalph_api_client/src/model/dispute_remedy.dart';
+import 'package:materyalph_api_client/src/model/dispute_remedy_confirm_request.dart';
+import 'package:materyalph_api_client/src/model/dispute_sanction_input.dart';
+import 'package:materyalph_api_client/src/model/dispute_summary.dart';
+import 'package:materyalph_api_client/src/model/dispute_timeline_actor.dart';
+import 'package:materyalph_api_client/src/model/dispute_timeline_entry.dart';
+import 'package:materyalph_api_client/src/model/dispute_vendor_permissions.dart';
 import 'package:materyalph_api_client/src/model/email_request.dart';
 import 'package:materyalph_api_client/src/model/error_envelope.dart';
 import 'package:materyalph_api_client/src/model/explore_category_count.dart';
@@ -355,6 +401,16 @@ import 'package:materyalph_api_client/src/model/inventory_row_update.dart';
 import 'package:materyalph_api_client/src/model/inventory_settings.dart';
 import 'package:materyalph_api_client/src/model/inventory_settings_envelope.dart';
 import 'package:materyalph_api_client/src/model/inventory_settings_update.dart';
+import 'package:materyalph_api_client/src/model/invoice_billing_details_request.dart';
+import 'package:materyalph_api_client/src/model/invoice_explanation_request.dart';
+import 'package:materyalph_api_client/src/model/invoice_list_meta.dart';
+import 'package:materyalph_api_client/src/model/invoice_log_envelope.dart';
+import 'package:materyalph_api_client/src/model/invoice_log_row.dart';
+import 'package:materyalph_api_client/src/model/invoice_order_line.dart';
+import 'package:materyalph_api_client/src/model/invoice_record_view.dart';
+import 'package:materyalph_api_client/src/model/invoice_request_answer.dart';
+import 'package:materyalph_api_client/src/model/invoice_request_create.dart';
+import 'package:materyalph_api_client/src/model/invoice_request_view.dart';
 import 'package:materyalph_api_client/src/model/listing_category_ref.dart';
 import 'package:materyalph_api_client/src/model/listing_compliance.dart';
 import 'package:materyalph_api_client/src/model/listing_compliance_status.dart';
@@ -423,8 +479,10 @@ import 'package:materyalph_api_client/src/model/order_delivery_vehicle.dart';
 import 'package:materyalph_api_client/src/model/order_destination.dart';
 import 'package:materyalph_api_client/src/model/order_detail.dart';
 import 'package:materyalph_api_client/src/model/order_detail_envelope.dart';
+import 'package:materyalph_api_client/src/model/order_dispute_ref.dart';
 import 'package:materyalph_api_client/src/model/order_first_line.dart';
 import 'package:materyalph_api_client/src/model/order_fulfillment.dart';
+import 'package:materyalph_api_client/src/model/order_invoice_ref.dart';
 import 'package:materyalph_api_client/src/model/order_line.dart';
 import 'package:materyalph_api_client/src/model/order_line_inventory.dart';
 import 'package:materyalph_api_client/src/model/order_line_quantity.dart';
@@ -465,6 +523,7 @@ import 'package:materyalph_api_client/src/model/physical_payment_summary.dart';
 import 'package:materyalph_api_client/src/model/physical_payment_summary_envelope.dart';
 import 'package:materyalph_api_client/src/model/pickup_confirmation.dart';
 import 'package:materyalph_api_client/src/model/pickup_preview.dart';
+import 'package:materyalph_api_client/src/model/platform_document_ref.dart';
 import 'package:materyalph_api_client/src/model/price_history_entry.dart';
 import 'package:materyalph_api_client/src/model/price_history_envelope.dart';
 import 'package:materyalph_api_client/src/model/problem_resolve_request.dart';
@@ -585,6 +644,7 @@ import 'package:materyalph_api_client/src/model/vendor_invitation.dart';
 import 'package:materyalph_api_client/src/model/vendor_invitation_acceptance.dart';
 import 'package:materyalph_api_client/src/model/vendor_invitation_envelope.dart';
 import 'package:materyalph_api_client/src/model/vendor_invitation_request.dart';
+import 'package:materyalph_api_client/src/model/vendor_invoice_billing_details.dart';
 import 'package:materyalph_api_client/src/model/vendor_media_envelope.dart';
 import 'package:materyalph_api_client/src/model/vendor_onboarding_envelope.dart';
 import 'package:materyalph_api_client/src/model/vendor_onboarding_section.dart';
@@ -594,6 +654,8 @@ import 'package:materyalph_api_client/src/model/vendor_onboarding_step.dart';
 import 'package:materyalph_api_client/src/model/vendor_order_confirm_request.dart';
 import 'package:materyalph_api_client/src/model/vendor_order_decline_reason.dart';
 import 'package:materyalph_api_client/src/model/vendor_order_decline_request.dart';
+import 'package:materyalph_api_client/src/model/vendor_order_invoices.dart';
+import 'package:materyalph_api_client/src/model/vendor_order_invoices_envelope.dart';
 import 'package:materyalph_api_client/src/model/vendor_order_permissions.dart';
 import 'package:materyalph_api_client/src/model/vendor_order_primary_action.dart';
 import 'package:materyalph_api_client/src/model/vendor_payment_onboarding.dart';
@@ -685,6 +747,9 @@ part 'serializers.g.dart';
   AdminDashboardAuditEnvelope,
   AdminDashboardEnvelope,
   AdminDashboardSummary,
+  AdminDisputeAppealDecisionRequest,
+  AdminDisputeClarificationRequest,
+  AdminDisputeDecisionRequest,
   AdminInvitationRequest,
   AdminOrderActionResultEnvelope,
   AdminOrderOperationsSummary,
@@ -727,6 +792,7 @@ part 'serializers.g.dart';
   BuyerCancellationPreview,
   BuyerCancellationPreviewEnvelope,
   BuyerIndustryClassification,
+  BuyerInvoiceBillingDetails,
   BuyerLocation,
   BuyerLocationCreate,
   BuyerLocationEnvelope,
@@ -746,6 +812,8 @@ part 'serializers.g.dart';
   BuyerOnboarding,
   BuyerOnboardingEnvelope,
   BuyerOnboardingUpdate,
+  BuyerOrderInvoices,
+  BuyerOrderInvoicesEnvelope,
   BuyerOriginRequest,
   CancellationDecisionView,
   CancellationPlan,
@@ -907,6 +975,46 @@ part 'serializers.g.dart';
   DiscoverySearchEnvelope,
   DiscoverySearchMeta,
   DiscoverySearchRequest,
+  DisputeAdminContext,
+  DisputeAdminParty,
+  DisputeAffectedLine,
+  DisputeAppeal,
+  DisputeChannelAuthRequest,
+  DisputeClarification,
+  DisputeDeadline,
+  DisputeDecision,
+  DisputeDetail,
+  DisputeDetailEnvelope,
+  DisputeEligibility,
+  DisputeEligibilityEnvelope,
+  DisputeEligibilityMethod,
+  DisputeEscalateRequest,
+  DisputeEvidence,
+  DisputeExport,
+  DisputeExportEnvelope,
+  DisputeExportListEnvelope,
+  DisputeExportRequest,
+  DisputeFileLink,
+  DisputeHandler,
+  DisputeHandlerRef,
+  DisputeListEnvelope,
+  DisputeListMeta,
+  DisputeMessageRequest,
+  DisputeOrderRef,
+  DisputeOriginalPaymentMethod,
+  DisputeProposal,
+  DisputeProposalAnswer,
+  DisputeProposalRequest,
+  DisputeRealtime,
+  DisputeRealtimeEnvelope,
+  DisputeRefundable,
+  DisputeRemedy,
+  DisputeRemedyConfirmRequest,
+  DisputeSanctionInput,
+  DisputeSummary,
+  DisputeTimelineActor,
+  DisputeTimelineEntry,
+  DisputeVendorPermissions,
   EmailRequest,
   ErrorEnvelope,
   ExploreCategoryCount,
@@ -987,6 +1095,16 @@ part 'serializers.g.dart';
   InventorySettings,
   InventorySettingsEnvelope,
   InventorySettingsUpdate,
+  InvoiceBillingDetailsRequest,
+  InvoiceExplanationRequest,
+  InvoiceListMeta,
+  InvoiceLogEnvelope,
+  InvoiceLogRow,
+  InvoiceOrderLine,
+  InvoiceRecordView,
+  InvoiceRequestAnswer,
+  InvoiceRequestCreate,
+  InvoiceRequestView,
   ListingCategoryRef,
   ListingCompliance,
   ListingComplianceStatus,
@@ -1055,8 +1173,10 @@ part 'serializers.g.dart';
   OrderDestination,
   OrderDetail,
   OrderDetailEnvelope,
+  OrderDisputeRef,
   OrderFirstLine,
   OrderFulfillment,
+  OrderInvoiceRef,
   OrderLine,
   OrderLineInventory,
   OrderLineQuantity,
@@ -1097,6 +1217,7 @@ part 'serializers.g.dart';
   PhysicalPaymentSummaryEnvelope,
   PickupConfirmation,
   PickupPreview,
+  PlatformDocumentRef,
   PriceHistoryEntry,
   PriceHistoryEnvelope,
   ProblemResolveRequest,
@@ -1217,6 +1338,7 @@ part 'serializers.g.dart';
   VendorInvitationAcceptance,
   VendorInvitationEnvelope,
   VendorInvitationRequest,
+  VendorInvoiceBillingDetails,
   VendorMediaEnvelope,
   VendorOnboardingEnvelope,
   VendorOnboardingSection,
@@ -1226,6 +1348,8 @@ part 'serializers.g.dart';
   VendorOrderConfirmRequest,
   VendorOrderDeclineReason,
   VendorOrderDeclineRequest,
+  VendorOrderInvoices,
+  VendorOrderInvoicesEnvelope,
   VendorOrderPermissions,
   VendorOrderPrimaryAction,
   VendorPaymentOnboarding,
@@ -1276,8 +1400,24 @@ part 'serializers.g.dart';
 ])
 Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(DisputeClarification)]),
+        () => ListBuilder<DisputeClarification>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(DisputeTimelineEntry)]),
+        () => ListBuilder<DisputeTimelineEntry>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(AdminCancellationRequestRow)]),
         () => ListBuilder<AdminCancellationRequestRow>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(DisputeProposal)]),
+        () => ListBuilder<DisputeProposal>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(DisputeDecision)]),
+        () => ListBuilder<DisputeDecision>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(PaymentAttempt)]),
@@ -1296,8 +1436,16 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<ReimbursementTimelineItem>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(PlatformDocumentRef)]),
+        () => ListBuilder<PlatformDocumentRef>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(BuiltMap, [FullType(String), FullType(JsonObject)])]),
         () => ListBuilder<BuiltMap<String, JsonObject>>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(InvoiceLogRow)]),
+        () => ListBuilder<InvoiceLogRow>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(PhysicalPaymentRecord)]),
@@ -1340,8 +1488,16 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<VendorTeamActivity>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(DisputeExport)]),
+        () => ListBuilder<DisputeExport>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(ExploreCategoryCount)]),
         () => ListBuilder<ExploreCategoryCount>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(InvoiceOrderLine)]),
+        () => ListBuilder<InvoiceOrderLine>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(OrderSummary)]),
@@ -1386,6 +1542,10 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(InventoryMovement)]),
         () => ListBuilder<InventoryMovement>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(DisputeDeadline)]),
+        () => ListBuilder<DisputeDeadline>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(OrderStateRow)]),
@@ -1488,6 +1648,14 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<NrpcLineAllocation>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(DisputeEvidence)]),
+        () => ListBuilder<DisputeEvidence>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(InvoiceRequestView)]),
+        () => ListBuilder<InvoiceRequestView>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(AdminReimbursementRow)]),
         () => ListBuilder<AdminReimbursementRow>(),
       )
@@ -1524,6 +1692,10 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<VolumeTier>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(DisputeSummary)]),
+        () => ListBuilder<DisputeSummary>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(StoreHoursDay)]),
         () => ListBuilder<StoreHoursDay>(),
       )
@@ -1556,6 +1728,10 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<ChatAttachment>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(DisputeSanctionInput)]),
+        () => ListBuilder<DisputeSanctionInput>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(DeliveryEstimateOption)]),
         () => ListBuilder<DeliveryEstimateOption>(),
       )
@@ -1586,6 +1762,10 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(CatalogImportRowError)]),
         () => ListBuilder<CatalogImportRowError>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(InvoiceRecordView)]),
+        () => ListBuilder<InvoiceRecordView>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(AdminRefundRow)]),
@@ -1634,6 +1814,10 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(VendorOrderDeclineReason)]),
         () => ListBuilder<VendorOrderDeclineReason>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltMap, [FullType(String), FullType(JsonObject)]),
+        () => MapBuilder<String, JsonObject>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(ListingSearchResult)]),
@@ -1748,6 +1932,10 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<AutoAcceptReason>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(DisputeRemedy)]),
+        () => ListBuilder<DisputeRemedy>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(OnboardingDraftVersion)]),
         () => ListBuilder<OnboardingDraftVersion>(),
       )
@@ -1774,6 +1962,10 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(OnboardingStepCompletion)]),
         () => ListBuilder<OnboardingStepCompletion>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(DisputeAffectedLine)]),
+        () => ListBuilder<DisputeAffectedLine>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(ChatHandler)]),

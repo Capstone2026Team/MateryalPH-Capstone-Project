@@ -16,6 +16,8 @@ import { useOnboardingSnapshot } from '../lib/vendor-status'
 import { ErrorState, LoadingState, PageHeader, VendorShell } from './PhaseThreeVendorPages'
 import { OrderPaymentPanel } from './OrderPaymentPanel'
 import { CancellationPanel, FulfillmentWorkspace, RefundsPanel } from './OrderFulfillmentPanels'
+import { OrderInvoicePanel } from './InvoicePages'
+import { DisputeStatusBadge } from '@materyalph/web-ui'
 
 const GROUPS: { value: OrderGroup; label: string }[] = [
   { value: 'NEW', label: 'New requests' }, { value: 'WAITING_ON_BUYER', label: 'Waiting on Buyer' }, { value: 'AWAITING_PAYMENT', label: 'Awaiting payment' },
@@ -193,6 +195,7 @@ function OrderDetailWorkspace({ orderId }: { orderId: string }) {
           : <LinesPanel order={order} />}
         {order.primaryAction === 'CONFIRM' && !order.permissions?.canConfirm && <StatusMessage tone="error">Your role can view this request but cannot confirm or decline it.</StatusMessage>}
         {inFulfillment && <FulfillmentWorkspace order={order} onChanged={changed} onReload={load} />}
+        {order.invoice && <OrderInvoicePanel orderId={order.id} />}
         {order.autoAccept && <AutoAcceptPanelView order={order} />}
         <TimelinePanel order={order} />
       </div>
@@ -200,6 +203,7 @@ function OrderDetailWorkspace({ orderId }: { orderId: string }) {
         <section aria-labelledby="status-heading" className="grid gap-2"><h2 id="status-heading" className="text-base font-semibold">Status</h2><OrderStateRows states={order.states} /></section>
         <div className="rounded-surface border border-border-default bg-surface-primary p-4"><MoneyBreakdown money={order.money} title="Buyer payment breakdown" /><p className="mt-3 border-t border-border-default pt-3 text-xs text-text-secondary">The Buyer total never includes your 2% monthly commission or merchant withholding; those are settled separately.</p></div>
         <OrderPaymentPanel order={order} onChanged={load} />
+        <CasePanel order={order} />
         <CancellationPanel order={order} onChanged={changed} />
         <RefundsPanel order={order} onChanged={changed} />
         <DestinationPanel order={order} />
@@ -223,6 +227,16 @@ function primaryDescription(order: OrderDetail): string {
     case 'RESPOND_TO_CANCELLATION': return 'The Buyer asked to cancel during preparation. Finalize the request within 24 hours; milestones are paused.'
     default: return order.terminalReasonCode ? `This order is closed (${order.terminalReasonCode.toLowerCase().replaceAll('_', ' ')}).` : 'This order is closed.'
   }
+}
+
+/** Link to this order's case, or filing for a Buyer issue when the role and order state allow it. */
+function CasePanel({ order }: { order: OrderDetail }) {
+  if (!order.dispute && !order.permissions?.canFileDispute) return null
+  return <section aria-labelledby="case-heading" className="grid gap-3 rounded-surface border border-border-default bg-surface-primary p-4">
+    <h2 id="case-heading" className="flex items-center gap-2 text-base font-semibold"><ShieldAlert size={16} aria-hidden="true" />Dispute</h2>
+    {order.dispute ? <div className="grid gap-2"><DisputeStatusBadge status={order.dispute.status} /><Link to={`/disputes/${order.dispute.caseId}`} className="font-semibold text-action-primary underline-offset-4 hover:underline">Open case {order.dispute.reference}</Link></div>
+      : <><p className="text-sm text-text-secondary">Report a Buyer issue such as an unpaid cash balance, a pickup no-show or abusive communication. Filing never creates a refund.</p><Link to={`/disputes/new?order=${order.id}`} className="inline-flex min-h-11 w-fit items-center rounded-control border border-border-default px-4 text-sm font-semibold hover:bg-surface-canvas">File a case</Link></>}
+  </section>
 }
 
 function BackLink() {

@@ -154,6 +154,15 @@ const OrderDetailAvailableActionsEnum
 const OrderDetailAvailableActionsEnum
     _$orderDetailAvailableActionsEnum_ACKNOWLEDGE_REIMBURSEMENT =
     const OrderDetailAvailableActionsEnum._('ACKNOWLEDGE_REIMBURSEMENT');
+const OrderDetailAvailableActionsEnum
+    _$orderDetailAvailableActionsEnum_FILE_DISPUTE =
+    const OrderDetailAvailableActionsEnum._('FILE_DISPUTE');
+const OrderDetailAvailableActionsEnum
+    _$orderDetailAvailableActionsEnum_VIEW_DISPUTE =
+    const OrderDetailAvailableActionsEnum._('VIEW_DISPUTE');
+const OrderDetailAvailableActionsEnum
+    _$orderDetailAvailableActionsEnum_REQUEST_INVOICE =
+    const OrderDetailAvailableActionsEnum._('REQUEST_INVOICE');
 
 OrderDetailAvailableActionsEnum _$orderDetailAvailableActionsEnumValueOf(
     String name) {
@@ -186,6 +195,12 @@ OrderDetailAvailableActionsEnum _$orderDetailAvailableActionsEnumValueOf(
       return _$orderDetailAvailableActionsEnum_RESOLVE_PROBLEM;
     case 'ACKNOWLEDGE_REIMBURSEMENT':
       return _$orderDetailAvailableActionsEnum_ACKNOWLEDGE_REIMBURSEMENT;
+    case 'FILE_DISPUTE':
+      return _$orderDetailAvailableActionsEnum_FILE_DISPUTE;
+    case 'VIEW_DISPUTE':
+      return _$orderDetailAvailableActionsEnum_VIEW_DISPUTE;
+    case 'REQUEST_INVOICE':
+      return _$orderDetailAvailableActionsEnum_REQUEST_INVOICE;
     default:
       throw ArgumentError(name);
   }
@@ -208,6 +223,9 @@ final BuiltSet<OrderDetailAvailableActionsEnum>
   _$orderDetailAvailableActionsEnum_REPORT_PROBLEM,
   _$orderDetailAvailableActionsEnum_RESOLVE_PROBLEM,
   _$orderDetailAvailableActionsEnum_ACKNOWLEDGE_REIMBURSEMENT,
+  _$orderDetailAvailableActionsEnum_FILE_DISPUTE,
+  _$orderDetailAvailableActionsEnum_VIEW_DISPUTE,
+  _$orderDetailAvailableActionsEnum_REQUEST_INVOICE,
 ]);
 
 Serializer<OrderDetailProcurementTypeEnum>
@@ -364,6 +382,9 @@ class _$OrderDetailAvailableActionsEnumSerializer
     'REPORT_PROBLEM': 'REPORT_PROBLEM',
     'RESOLVE_PROBLEM': 'RESOLVE_PROBLEM',
     'ACKNOWLEDGE_REIMBURSEMENT': 'ACKNOWLEDGE_REIMBURSEMENT',
+    'FILE_DISPUTE': 'FILE_DISPUTE',
+    'VIEW_DISPUTE': 'VIEW_DISPUTE',
+    'REQUEST_INVOICE': 'REQUEST_INVOICE',
   };
   static const Map<Object, String> _fromWire = const <Object, String>{
     'APPROVE_REVISION': 'APPROVE_REVISION',
@@ -380,6 +401,9 @@ class _$OrderDetailAvailableActionsEnumSerializer
     'REPORT_PROBLEM': 'REPORT_PROBLEM',
     'RESOLVE_PROBLEM': 'RESOLVE_PROBLEM',
     'ACKNOWLEDGE_REIMBURSEMENT': 'ACKNOWLEDGE_REIMBURSEMENT',
+    'FILE_DISPUTE': 'FILE_DISPUTE',
+    'VIEW_DISPUTE': 'VIEW_DISPUTE',
+    'REQUEST_INVOICE': 'REQUEST_INVOICE',
   };
 
   @override
@@ -476,6 +500,10 @@ class _$OrderDetail extends OrderDetail {
   final OrderCancellation? cancellation;
   @override
   final OrderRefundTimeline? refundTimeline;
+  @override
+  final OrderDisputeRef? dispute;
+  @override
+  final OrderInvoiceRef? invoice;
 
   factory _$OrderDetail([void Function(OrderDetailBuilder)? updates]) =>
       (OrderDetailBuilder()..update(updates))._build();
@@ -517,7 +545,9 @@ class _$OrderDetail extends OrderDetail {
       this.declineReasons,
       this.fulfillment,
       this.cancellation,
-      this.refundTimeline})
+      this.refundTimeline,
+      this.dispute,
+      this.invoice})
       : super._();
   @override
   OrderDetail rebuild(void Function(OrderDetailBuilder) updates) =>
@@ -566,7 +596,9 @@ class _$OrderDetail extends OrderDetail {
         declineReasons == other.declineReasons &&
         fulfillment == other.fulfillment &&
         cancellation == other.cancellation &&
-        refundTimeline == other.refundTimeline;
+        refundTimeline == other.refundTimeline &&
+        dispute == other.dispute &&
+        invoice == other.invoice;
   }
 
   @override
@@ -609,6 +641,8 @@ class _$OrderDetail extends OrderDetail {
     _$hash = $jc(_$hash, fulfillment.hashCode);
     _$hash = $jc(_$hash, cancellation.hashCode);
     _$hash = $jc(_$hash, refundTimeline.hashCode);
+    _$hash = $jc(_$hash, dispute.hashCode);
+    _$hash = $jc(_$hash, invoice.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -652,7 +686,9 @@ class _$OrderDetail extends OrderDetail {
           ..add('declineReasons', declineReasons)
           ..add('fulfillment', fulfillment)
           ..add('cancellation', cancellation)
-          ..add('refundTimeline', refundTimeline))
+          ..add('refundTimeline', refundTimeline)
+          ..add('dispute', dispute)
+          ..add('invoice', invoice))
         .toString();
   }
 }
@@ -858,6 +894,16 @@ class OrderDetailBuilder implements Builder<OrderDetail, OrderDetailBuilder> {
   set refundTimeline(OrderRefundTimelineBuilder? refundTimeline) =>
       _$this._refundTimeline = refundTimeline;
 
+  OrderDisputeRefBuilder? _dispute;
+  OrderDisputeRefBuilder get dispute =>
+      _$this._dispute ??= OrderDisputeRefBuilder();
+  set dispute(OrderDisputeRefBuilder? dispute) => _$this._dispute = dispute;
+
+  OrderInvoiceRefBuilder? _invoice;
+  OrderInvoiceRefBuilder get invoice =>
+      _$this._invoice ??= OrderInvoiceRefBuilder();
+  set invoice(OrderInvoiceRefBuilder? invoice) => _$this._invoice = invoice;
+
   OrderDetailBuilder() {
     OrderDetail._defaults(this);
   }
@@ -902,6 +948,8 @@ class OrderDetailBuilder implements Builder<OrderDetail, OrderDetailBuilder> {
       _fulfillment = $v.fulfillment?.toBuilder();
       _cancellation = $v.cancellation?.toBuilder();
       _refundTimeline = $v.refundTimeline?.toBuilder();
+      _dispute = $v.dispute?.toBuilder();
+      _invoice = $v.invoice?.toBuilder();
       _$v = null;
     }
     return this;
@@ -967,6 +1015,8 @@ class OrderDetailBuilder implements Builder<OrderDetail, OrderDetailBuilder> {
             fulfillment: _fulfillment?.build(),
             cancellation: _cancellation?.build(),
             refundTimeline: _refundTimeline?.build(),
+            dispute: _dispute?.build(),
+            invoice: _invoice?.build(),
           );
     } catch (_) {
       late String _$failedField;
@@ -1024,6 +1074,10 @@ class OrderDetailBuilder implements Builder<OrderDetail, OrderDetailBuilder> {
         _cancellation?.build();
         _$failedField = 'refundTimeline';
         _refundTimeline?.build();
+        _$failedField = 'dispute';
+        _dispute?.build();
+        _$failedField = 'invoice';
+        _invoice?.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
             r'OrderDetail', _$failedField, e.toString());

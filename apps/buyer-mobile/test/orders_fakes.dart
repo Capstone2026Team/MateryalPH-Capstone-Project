@@ -4,6 +4,8 @@ import 'package:materyalph/features/map_discovery/discovery_models.dart';
 import 'package:materyalph/features/orders/order_models.dart';
 import 'package:materyalph/features/orders/orders_repository.dart';
 
+import 'disputes_fakes.dart';
+
 /// Synthetic order fixtures for widget and golden tests. Not live marketplace, payment or provider data.
 List<OrderStateRowView> orderStates(
   String order, {
@@ -71,6 +73,8 @@ OrderDetailView orderDetail({
   CancellationView? cancellation,
   RefundTimelineView? refundTimeline,
   int lockVersion = 3,
+  OrderDisputeRefView? dispute,
+  OrderInvoiceRefView? invoice,
 }) => OrderDetailView(
   id: 'order-1',
   reference: 'ORD-2026-ABCD1234',
@@ -152,6 +156,8 @@ OrderDetailView orderDetail({
   fulfillment: fulfillmentView,
   cancellation: cancellation,
   refundTimeline: refundTimeline,
+  dispute: dispute,
+  invoice: invoice,
 );
 
 NrpcView nrpcView({
@@ -414,4 +420,8 @@ class FakeOrdersRepository implements OrdersRepository {
   @override
   Future<Uint8List> orderFile(String orderId, String fileId) =>
       _answer('orderFile:$fileId', files[fileId] ?? Uint8List(0));
+
+  // Phase 13 disputes and invoices: a separate scripted fake reached through the orders repository.
+  @override
+  final FakeDisputesRepository disputes = FakeDisputesRepository();
 }

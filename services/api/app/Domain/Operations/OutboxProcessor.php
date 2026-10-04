@@ -6,16 +6,19 @@ namespace App\Domain\Operations;
 
 use App\Domain\Catalog\EligibilityInvalidation;
 use App\Domain\Catalog\EligibleOfferQuery;
+use App\Domain\Disputes\DisputeAccess;
+use App\Domain\Disputes\DisputeChannel;
+use App\Domain\Disputes\DisputeExportService;
 use App\Domain\Finance\RemittanceAssessmentService;
 use App\Domain\Finance\WithholdingThresholdService;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Messaging\ConversationBroadcast;
-use App\Domain\Vendors\FleetBroadcast;
 use App\Domain\Payments\PaymentGateway;
 use App\Domain\Payments\PaymentProviderException;
 use App\Domain\Payments\PaymentReconciliationService;
 use App\Domain\Payments\RefundService;
 use App\Domain\Payments\XenditWebhookProcessor;
+use App\Domain\Vendors\FleetBroadcast;
 use App\Mail\AccountSecurityMail;
 use App\Mail\AdminInvitationMail;
 use App\Mail\EmailOtpMail;
@@ -25,6 +28,7 @@ use App\Mail\ProductComplianceNoticeMail;
 use App\Mail\VendorInventoryNoticeMail;
 use App\Mail\VendorInvitationMail;
 use App\Mail\VendorOnboardingNoticeMail;
+use App\Models\User;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
@@ -90,6 +94,9 @@ final class OutboxProcessor
         if ($eventType === 'CONVERSATION_CHANGED') {
             app(ConversationBroadcast::class)->deliver($this->requiredString($payload, 'conversation_id'));
 
+            return;
+        }
+        if ($this->deliverDisputeEvent($eventType, $payload)) {
             return;
         }
         if ($eventType === EligibilityInvalidation::EVENT) {
@@ -190,6 +197,37 @@ final class OutboxProcessor
 
                 return true;
             case 'PAYMENT_ATTEMPT_CREATED': case 'WITHHOLDING_ACCUMULATOR_POSTED': case 'FEE_STATEMENT_DRAFTED': case 'FEE_STATEMENT_ISSUED': case 'FEE_CREDIT_APPROVED':
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    /**
+     * Phase 13 post-commit work. A dispute notice is re-authorized at delivery: staff who lost case access after it
+     * was queued (for example when the Owner switched staff dispute handling off) never receive it.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    private function deliverDisputeEvent(string $eventType, array $payload): bool
+    {
+        switch ($eventType) {
+            case 'DISPUTE_CASE_CHANGED':
+                app(DisputeChannel::class)->deliver($this->requiredString($payload, 'dispute_case_id'));
+
+                return true;
+            case 'DISPUTE_NOTICE':
+                $user = User::query()->find($payload['user_id'] ?? null);
+                $case = DB::table('dispute_cases')->where('id', $this->requiredString($payload, 'dispute_case_id'))->first();
+                if ($user instanceof User && $case !== null && $user->account_status === 'ACTIVE' && $user->email !== ''
+                    && app(DisputeAccess::class)->userCanAccessCase($user, $case)) {
+                    Mail::to($user->email)->send(new OrderNoticeMail($this->requiredString($payload, 'subject'), $this->requiredString($payload, 'message')));
+                }
+
+                return true;
+            case 'DISPUTE_EXPORT_REQUESTED':
+                app(DisputeExportService::class)->process($this->requiredString($payload, 'export_id'));
+
                 return true;
             default:
                 return false;

@@ -52,6 +52,15 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(AdminDashboardAuditEnvelope.serializer)
       ..add(AdminDashboardEnvelope.serializer)
       ..add(AdminDashboardSummary.serializer)
+      ..add(AdminDisputeAppealDecisionRequest.serializer)
+      ..add(AdminDisputeAppealDecisionRequestMetricEventEnum.serializer)
+      ..add(AdminDisputeAppealDecisionRequestOutcomeEnum.serializer)
+      ..add(AdminDisputeAppealDecisionRequestResultEnum.serializer)
+      ..add(AdminDisputeClarificationRequest.serializer)
+      ..add(AdminDisputeClarificationRequestPartiesEnum.serializer)
+      ..add(AdminDisputeDecisionRequest.serializer)
+      ..add(AdminDisputeDecisionRequestMetricEventEnum.serializer)
+      ..add(AdminDisputeDecisionRequestOutcomeEnum.serializer)
       ..add(AdminInvitationRequest.serializer)
       ..add(AdminInvitationRequestPrivacyAcceptedEnum.serializer)
       ..add(AdminInvitationRequestTermsAcceptedEnum.serializer)
@@ -114,6 +123,7 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(BuyerCancellationPreview.serializer)
       ..add(BuyerCancellationPreviewEnvelope.serializer)
       ..add(BuyerIndustryClassification.serializer)
+      ..add(BuyerInvoiceBillingDetails.serializer)
       ..add(BuyerLocation.serializer)
       ..add(BuyerLocationCreate.serializer)
       ..add(BuyerLocationEnvelope.serializer)
@@ -141,6 +151,9 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(BuyerOnboardingStatusEnum.serializer)
       ..add(BuyerOnboardingUpdate.serializer)
       ..add(BuyerOnboardingUpdateActionEnum.serializer)
+      ..add(BuyerOrderInvoices.serializer)
+      ..add(BuyerOrderInvoicesEnvelope.serializer)
+      ..add(BuyerOrderInvoicesStatusEnum.serializer)
       ..add(BuyerOriginRequest.serializer)
       ..add(BuyerOriginRequestOriginSourceEnum.serializer)
       ..add(CancellationDecisionView.serializer)
@@ -385,6 +398,92 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(DiscoverySearchMeta.serializer)
       ..add(DiscoverySearchRequest.serializer)
       ..add(DiscoverySearchRequestOriginSourceEnum.serializer)
+      ..add(DisputeAdminContext.serializer)
+      ..add(DisputeAdminContextMetricEventsEnum.serializer)
+      ..add(DisputeAdminContextOutcomesEnum.serializer)
+      ..add(DisputeAdminContextSanctionsEnum.serializer)
+      ..add(DisputeAdminParty.serializer)
+      ..add(DisputeAffectedLine.serializer)
+      ..add(DisputeAppeal.serializer)
+      ..add(DisputeAppealAppellantPartyEnum.serializer)
+      ..add(DisputeAppealGroundsEnum.serializer)
+      ..add(DisputeAppealStateEnum.serializer)
+      ..add(DisputeChannelAuthRequest.serializer)
+      ..add(DisputeClarification.serializer)
+      ..add(DisputeClarificationRequestedPartyEnum.serializer)
+      ..add(DisputeClarificationStateEnum.serializer)
+      ..add(DisputeDeadline.serializer)
+      ..add(DisputeDeadlineKindEnum.serializer)
+      ..add(DisputeDeadlineResponsiblePartyEnum.serializer)
+      ..add(DisputeDecision.serializer)
+      ..add(DisputeDecisionAppealResultEnum.serializer)
+      ..add(DisputeDecisionKindEnum.serializer)
+      ..add(DisputeDecisionOutcomeEnum.serializer)
+      ..add(DisputeDetail.serializer)
+      ..add(DisputeDetailAvailableActionsEnum.serializer)
+      ..add(DisputeDetailCaseKindEnum.serializer)
+      ..add(DisputeDetailEnvelope.serializer)
+      ..add(DisputeDetailFiledByPartyEnum.serializer)
+      ..add(DisputeDetailIssueTypeEnum.serializer)
+      ..add(DisputeDetailPreferredContactChannelEnum.serializer)
+      ..add(DisputeDetailRemedyStateEnum.serializer)
+      ..add(DisputeDetailRequestedRemedyEnum.serializer)
+      ..add(DisputeDetailResponsiblePartyEnum.serializer)
+      ..add(DisputeDetailStatusEnum.serializer)
+      ..add(DisputeEligibility.serializer)
+      ..add(DisputeEligibilityCaseKindEnum.serializer)
+      ..add(DisputeEligibilityEnvelope.serializer)
+      ..add(DisputeEligibilityIssueTypesEnum.serializer)
+      ..add(DisputeEligibilityMethod.serializer)
+      ..add(DisputeEligibilityRequestedRemediesEnum.serializer)
+      ..add(DisputeEscalateRequest.serializer)
+      ..add(DisputeEvidence.serializer)
+      ..add(DisputeEvidenceLabelEnum.serializer)
+      ..add(DisputeExport.serializer)
+      ..add(DisputeExportEnvelope.serializer)
+      ..add(DisputeExportListEnvelope.serializer)
+      ..add(DisputeExportRequest.serializer)
+      ..add(DisputeExportRequestGroupEnum.serializer)
+      ..add(DisputeExportStateEnum.serializer)
+      ..add(DisputeFileLink.serializer)
+      ..add(DisputeHandler.serializer)
+      ..add(DisputeHandlerRef.serializer)
+      ..add(DisputeListEnvelope.serializer)
+      ..add(DisputeListMeta.serializer)
+      ..add(DisputeMessageRequest.serializer)
+      ..add(DisputeOrderRef.serializer)
+      ..add(DisputeOriginalPaymentMethod.serializer)
+      ..add(DisputeProposal.serializer)
+      ..add(DisputeProposalAnswer.serializer)
+      ..add(DisputeProposalAnswerDecisionEnum.serializer)
+      ..add(DisputeProposalProposedByPartyEnum.serializer)
+      ..add(DisputeProposalRemedyEnum.serializer)
+      ..add(DisputeProposalRequest.serializer)
+      ..add(DisputeProposalRequestRemedyEnum.serializer)
+      ..add(DisputeProposalStateEnum.serializer)
+      ..add(DisputeRealtime.serializer)
+      ..add(DisputeRealtimeEnvelope.serializer)
+      ..add(DisputeRefundable.serializer)
+      ..add(DisputeRemedy.serializer)
+      ..add(DisputeRemedyConfirmRequest.serializer)
+      ..add(DisputeRemedyKindEnum.serializer)
+      ..add(DisputeRemedyStateEnum.serializer)
+      ..add(DisputeSanctionInput.serializer)
+      ..add(DisputeSanctionInputActionEnum.serializer)
+      ..add(DisputeSanctionInputSubjectEnum.serializer)
+      ..add(DisputeSummary.serializer)
+      ..add(DisputeSummaryCaseKindEnum.serializer)
+      ..add(DisputeSummaryFiledByPartyEnum.serializer)
+      ..add(DisputeSummaryIssueTypeEnum.serializer)
+      ..add(DisputeSummaryRemedyStateEnum.serializer)
+      ..add(DisputeSummaryRequestedRemedyEnum.serializer)
+      ..add(DisputeSummaryResponsiblePartyEnum.serializer)
+      ..add(DisputeSummaryStatusEnum.serializer)
+      ..add(DisputeTimelineActor.serializer)
+      ..add(DisputeTimelineActorPartyEnum.serializer)
+      ..add(DisputeTimelineEntry.serializer)
+      ..add(DisputeTimelineEntryTypeEnum.serializer)
+      ..add(DisputeVendorPermissions.serializer)
       ..add(EmailRequest.serializer)
       ..add(ErrorEnvelope.serializer)
       ..add(ExploreCategoryCount.serializer)
@@ -505,6 +604,25 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(InventorySettingsInAppRemindersEnum.serializer)
       ..add(InventorySettingsTimezoneEnum.serializer)
       ..add(InventorySettingsUpdate.serializer)
+      ..add(InvoiceBillingDetailsRequest.serializer)
+      ..add(InvoiceExplanationRequest.serializer)
+      ..add(InvoiceListMeta.serializer)
+      ..add(InvoiceLogEnvelope.serializer)
+      ..add(InvoiceLogRow.serializer)
+      ..add(InvoiceOrderLine.serializer)
+      ..add(InvoiceRecordView.serializer)
+      ..add(InvoiceRecordViewDocumentOriginEnum.serializer)
+      ..add(InvoiceRecordViewEInvoicingCoverageEnum.serializer)
+      ..add(InvoiceRecordViewInvoiceTypeEnum.serializer)
+      ..add(InvoiceRecordViewReconciliationStateEnum.serializer)
+      ..add(InvoiceRecordViewVerificationStateEnum.serializer)
+      ..add(InvoiceRequestAnswer.serializer)
+      ..add(InvoiceRequestAnswerActionEnum.serializer)
+      ..add(InvoiceRequestCreate.serializer)
+      ..add(InvoiceRequestCreateKindEnum.serializer)
+      ..add(InvoiceRequestView.serializer)
+      ..add(InvoiceRequestViewKindEnum.serializer)
+      ..add(InvoiceRequestViewStateEnum.serializer)
       ..add(ListingCategoryRef.serializer)
       ..add(ListingCompliance.serializer)
       ..add(ListingComplianceBadgeEnum.serializer)
@@ -625,10 +743,15 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(OrderDetailFulfillmentMethodEnum.serializer)
       ..add(OrderDetailPaymentMethodEnum.serializer)
       ..add(OrderDetailProcurementTypeEnum.serializer)
+      ..add(OrderDisputeRef.serializer)
+      ..add(OrderDisputeRefFiledByPartyEnum.serializer)
+      ..add(OrderDisputeRefStatusEnum.serializer)
       ..add(OrderFirstLine.serializer)
       ..add(OrderFulfillment.serializer)
       ..add(OrderFulfillmentMethodEnum.serializer)
       ..add(OrderFulfillmentNextActionEnum.serializer)
+      ..add(OrderInvoiceRef.serializer)
+      ..add(OrderInvoiceRefStatusEnum.serializer)
       ..add(OrderLine.serializer)
       ..add(OrderLineChangeEnum.serializer)
       ..add(OrderLineInventory.serializer)
@@ -698,6 +821,9 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(PhysicalPaymentSummaryEnvelope.serializer)
       ..add(PickupConfirmation.serializer)
       ..add(PickupPreview.serializer)
+      ..add(PlatformDocumentRef.serializer)
+      ..add(PlatformDocumentRefKindEnum.serializer)
+      ..add(PlatformDocumentRefLabelEnum.serializer)
       ..add(PriceHistoryEntry.serializer)
       ..add(PriceHistoryEntryPriceKindEnum.serializer)
       ..add(PriceHistoryEnvelope.serializer)
@@ -865,6 +991,7 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(VendorInvitationEnvelope.serializer)
       ..add(VendorInvitationRequest.serializer)
       ..add(VendorInvitationRequestRoleEnum.serializer)
+      ..add(VendorInvoiceBillingDetails.serializer)
       ..add(VendorMediaEnvelope.serializer)
       ..add(VendorOnboardingEnvelope.serializer)
       ..add(VendorOnboardingSection.serializer)
@@ -876,6 +1003,12 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(VendorOrderConfirmRequest.serializer)
       ..add(VendorOrderDeclineReason.serializer)
       ..add(VendorOrderDeclineRequest.serializer)
+      ..add(VendorOrderInvoices.serializer)
+      ..add(VendorOrderInvoicesEnvelope.serializer)
+      ..add(VendorOrderInvoicesInvoiceTypesEnum.serializer)
+      ..add(VendorOrderInvoicesInvoicingMethodsEnum.serializer)
+      ..add(VendorOrderInvoicesSourceSystemsEnum.serializer)
+      ..add(VendorOrderInvoicesStatusEnum.serializer)
       ..add(VendorOrderPermissions.serializer)
       ..add(VendorOrderPrimaryAction.serializer)
       ..add(VendorPaymentOnboarding.serializer)
@@ -1050,6 +1183,11 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(ApiError)]),
           () => ListBuilder<ApiError>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [
+            const FullType(AdminDisputeClarificationRequestPartiesEnum)
+          ]),
+          () => ListBuilder<AdminDisputeClarificationRequestPartiesEnum>())
       ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(AdminRefundRow)]),
           () => ListBuilder<AdminRefundRow>())
@@ -1490,6 +1628,99 @@ Serializers _$serializers = (Serializers().toBuilder()
               BuiltList, const [const FullType(DeliveryVehicleSelection)]),
           () => ListBuilder<DeliveryVehicleSelection>())
       ..addBuilderFactory(
+          const FullType(BuiltList,
+              const [const FullType(DisputeAdminContextOutcomesEnum)]),
+          () => ListBuilder<DisputeAdminContextOutcomesEnum>())
+      ..addBuilderFactory(
+          const FullType(BuiltList,
+              const [const FullType(DisputeAdminContextSanctionsEnum)]),
+          () => ListBuilder<DisputeAdminContextSanctionsEnum>())
+      ..addBuilderFactory(
+          const FullType(BuiltList,
+              const [const FullType(DisputeAdminContextMetricEventsEnum)]),
+          () => ListBuilder<DisputeAdminContextMetricEventsEnum>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [
+            const FullType(BuiltMap, const [
+              const FullType(String),
+              const FullType.nullable(JsonObject)
+            ])
+          ]),
+          () => ListBuilder<BuiltMap<String, JsonObject?>>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [
+            const FullType(BuiltMap, const [
+              const FullType(String),
+              const FullType.nullable(JsonObject)
+            ])
+          ]),
+          () => ListBuilder<BuiltMap<String, JsonObject?>>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(DisputeDecision)]),
+          () => ListBuilder<DisputeDecision>())
+      ..addBuilderFactory(
+          const FullType(
+              BuiltList, const [const FullType(DisputeAffectedLine)]),
+          () => ListBuilder<DisputeAffectedLine>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(DisputeDeadline)]),
+          () => ListBuilder<DisputeDeadline>())
+      ..addBuilderFactory(
+          const FullType(
+              BuiltList, const [const FullType(DisputeTimelineEntry)]),
+          () => ListBuilder<DisputeTimelineEntry>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(DisputeProposal)]),
+          () => ListBuilder<DisputeProposal>())
+      ..addBuilderFactory(
+          const FullType(
+              BuiltList, const [const FullType(DisputeClarification)]),
+          () => ListBuilder<DisputeClarification>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(DisputeRemedy)]),
+          () => ListBuilder<DisputeRemedy>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(RefundTimelineItem)]),
+          () => ListBuilder<RefundTimelineItem>())
+      ..addBuilderFactory(
+          const FullType(
+              BuiltList, const [const FullType(ReimbursementTimelineItem)]),
+          () => ListBuilder<ReimbursementTimelineItem>())
+      ..addBuilderFactory(
+          const FullType(BuiltList,
+              const [const FullType(DisputeDetailAvailableActionsEnum)]),
+          () => ListBuilder<DisputeDetailAvailableActionsEnum>())
+      ..addBuilderFactory(
+          const FullType(BuiltList,
+              const [const FullType(DisputeEligibilityIssueTypesEnum)]),
+          () => ListBuilder<DisputeEligibilityIssueTypesEnum>())
+      ..addBuilderFactory(
+          const FullType(BuiltList,
+              const [const FullType(DisputeEligibilityRequestedRemediesEnum)]),
+          () => ListBuilder<DisputeEligibilityRequestedRemediesEnum>())
+      ..addBuilderFactory(
+          const FullType(
+              BuiltList, const [const FullType(DisputeAffectedLine)]),
+          () => ListBuilder<DisputeAffectedLine>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(DisputeExport)]),
+          () => ListBuilder<DisputeExport>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ApiError)]),
+          () => ListBuilder<ApiError>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(DisputeSummary)]),
+          () => ListBuilder<DisputeSummary>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ApiError)]),
+          () => ListBuilder<ApiError>())
+      ..addBuilderFactory(
           const FullType(
               BuiltList, const [const FullType(ExploreCategoryCount)]),
           () => ListBuilder<ExploreCategoryCount>())
@@ -1650,6 +1881,47 @@ Serializers _$serializers = (Serializers().toBuilder()
             ])
           ]),
           () => ListBuilder<BuiltMap<String, JsonObject?>>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(InvoiceLogRow)]),
+          () => ListBuilder<InvoiceLogRow>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ApiError)]),
+          () => ListBuilder<ApiError>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(InvoiceRecordView)]),
+          () => ListBuilder<InvoiceRecordView>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(InvoiceRequestView)]),
+          () => ListBuilder<InvoiceRequestView>())
+      ..addBuilderFactory(
+          const FullType(
+              BuiltList, const [const FullType(PlatformDocumentRef)]),
+          () => ListBuilder<PlatformDocumentRef>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(InvoiceRecordView)]),
+          () => ListBuilder<InvoiceRecordView>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(InvoiceRequestView)]),
+          () => ListBuilder<InvoiceRequestView>())
+      ..addBuilderFactory(
+          const FullType(
+              BuiltList, const [const FullType(PlatformDocumentRef)]),
+          () => ListBuilder<PlatformDocumentRef>())
+      ..addBuilderFactory(
+          const FullType(BuiltList,
+              const [const FullType(VendorOrderInvoicesInvoiceTypesEnum)]),
+          () => ListBuilder<VendorOrderInvoicesInvoiceTypesEnum>())
+      ..addBuilderFactory(
+          const FullType(BuiltList,
+              const [const FullType(VendorOrderInvoicesSourceSystemsEnum)]),
+          () => ListBuilder<VendorOrderInvoicesSourceSystemsEnum>())
+      ..addBuilderFactory(
+          const FullType(BuiltList,
+              const [const FullType(VendorOrderInvoicesInvoicingMethodsEnum)]),
+          () => ListBuilder<VendorOrderInvoicesInvoicingMethodsEnum>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(InvoiceOrderLine)]),
+          () => ListBuilder<InvoiceOrderLine>())
       ..addBuilderFactory(
           const FullType(
               BuiltList, const [const FullType(ListingSearchResult)]),
@@ -1926,6 +2198,20 @@ Serializers _$serializers = (Serializers().toBuilder()
           () => ListBuilder<String>())
       ..addBuilderFactory(
           const FullType(
+              BuiltList, const [const FullType(DisputeSanctionInput)]),
+          () => ListBuilder<DisputeSanctionInput>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(String)]),
+          () => ListBuilder<String>())
+      ..addBuilderFactory(
+          const FullType(
+              BuiltList, const [const FullType(DisputeSanctionInput)]),
+          () => ListBuilder<DisputeSanctionInput>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(String)]),
+          () => ListBuilder<String>())
+      ..addBuilderFactory(
+          const FullType(
               BuiltList, const [const FullType(MaterialCategoryOption)]),
           () => ListBuilder<MaterialCategoryOption>())
       ..addBuilderFactory(
@@ -2103,11 +2389,13 @@ Serializers _$serializers = (Serializers().toBuilder()
               BuiltMap, const [const FullType(String), const FullType(int)]),
           () => MapBuilder<String, int>())
       ..addBuilderFactory(
-          const FullType(BuiltMap, const [
-            const FullType(String),
-            const FullType.nullable(JsonObject)
-          ]),
-          () => MapBuilder<String, JsonObject?>())
+          const FullType(
+              BuiltMap, const [const FullType(String), const FullType(int)]),
+          () => MapBuilder<String, int>())
+      ..addBuilderFactory(
+          const FullType(
+              BuiltMap, const [const FullType(String), const FullType(int)]),
+          () => MapBuilder<String, int>())
       ..addBuilderFactory(
           const FullType(BuiltMap, const [
             const FullType(String),
@@ -2174,6 +2462,72 @@ Serializers _$serializers = (Serializers().toBuilder()
             const FullType.nullable(JsonObject)
           ]),
           () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ApiError)]),
+          () => ListBuilder<ApiError>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ApiError)]),
+          () => ListBuilder<ApiError>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ApiError)]),
+          () => ListBuilder<ApiError>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ApiError)]),
+          () => ListBuilder<ApiError>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ApiError)]),
+          () => ListBuilder<ApiError>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ApiError)]),
+          () => ListBuilder<ApiError>())
       ..addBuilderFactory(
           const FullType(BuiltMap, const [
             const FullType(String),
@@ -3132,6 +3486,15 @@ Serializers _$serializers = (Serializers().toBuilder()
             const FullType.nullable(JsonObject)
           ]),
           () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(DisputeEvidence)]),
+          () => ListBuilder<DisputeEvidence>())
       ..addBuilderFactory(
           const FullType(BuiltMap, const [
             const FullType(String),

@@ -1,4 +1,4 @@
-# @materyalph/api-client-ts@1.0.0-phase.12
+# @materyalph/api-client-ts@1.0.0-phase.13
 
 A TypeScript SDK client for the localhost API.
 
@@ -87,6 +87,17 @@ All URIs are relative to */api/v1*
 *AccountsApi* | [**updateAccountProfile**](docs/AccountsApi.md#updateaccountprofile) | **PATCH** /{accountPortal}/account/profile |
 *AccountsApi* | [**updateVendorStaff**](docs/AccountsApi.md#updatevendorstaff) | **PATCH** /vendors/account/memberships/{membershipId} |
 *AccountsApi* | [**uploadAccountPhoto**](docs/AccountsApi.md#uploadaccountphoto) | **POST** /{webAccountPortal}/account/photo |
+*AdminDisputesApi* | [**assignAdminDispute**](docs/AdminDisputesApi.md#assignadmindispute) | **POST** /admin/disputes/{caseId}/assign |
+*AdminDisputesApi* | [**authorizeAdminDisputeChannel**](docs/AdminDisputesApi.md#authorizeadmindisputechannel) | **POST** /admin/disputes/realtime/auth |
+*AdminDisputesApi* | [**confirmAdminDisputeRemedy**](docs/AdminDisputesApi.md#confirmadmindisputeremedy) | **POST** /admin/disputes/{caseId}/remedies/{remedyId}/confirm |
+*AdminDisputesApi* | [**decideAdminDispute**](docs/AdminDisputesApi.md#decideadmindispute) | **POST** /admin/disputes/{caseId}/decision |
+*AdminDisputesApi* | [**decideAdminDisputeAppeal**](docs/AdminDisputesApi.md#decideadmindisputeappeal) | **POST** /admin/disputes/{caseId}/appeal-decision |
+*AdminDisputesApi* | [**escalateAdminDispute**](docs/AdminDisputesApi.md#escalateadmindispute) | **POST** /admin/disputes/{caseId}/escalate |
+*AdminDisputesApi* | [**getAdminDispute**](docs/AdminDisputesApi.md#getadmindispute) | **GET** /admin/disputes/{caseId} |
+*AdminDisputesApi* | [**getAdminDisputeEvidenceFile**](docs/AdminDisputesApi.md#getadmindisputeevidencefile) | **GET** /admin/disputes/{caseId}/files/{fileId}/content |
+*AdminDisputesApi* | [**getAdminDisputeRealtime**](docs/AdminDisputesApi.md#getadmindisputerealtime) | **GET** /admin/disputes/realtime |
+*AdminDisputesApi* | [**listAdminDisputes**](docs/AdminDisputesApi.md#listadmindisputes) | **GET** /admin/disputes |
+*AdminDisputesApi* | [**requestAdminDisputeClarification**](docs/AdminDisputesApi.md#requestadmindisputeclarification) | **POST** /admin/disputes/{caseId}/clarifications |
 *AdminFinanceApi* | [**approveFeeCredit**](docs/AdminFinanceApi.md#approvefeecredit) | **POST** /admin/finance/fee-credits/{proposalId}/approve |
 *AdminFinanceApi* | [**approveFeeStatement**](docs/AdminFinanceApi.md#approvefeestatement) | **POST** /admin/finance/statements/{statementId}/approve |
 *AdminFinanceApi* | [**draftFeeStatements**](docs/AdminFinanceApi.md#draftfeestatements) | **POST** /admin/finance/statements/draft |
@@ -100,6 +111,8 @@ All URIs are relative to */api/v1*
 *AdminFinanceApi* | [**resolveFinanceReviewItem**](docs/AdminFinanceApi.md#resolvefinancereviewitem) | **POST** /admin/finance/review-items/{itemId}/resolve |
 *AdminFinanceApi* | [**resolveWithholdingOverlap**](docs/AdminFinanceApi.md#resolvewithholdingoverlap) | **POST** /admin/finance/withholding-accumulators/{accumulatorId}/overlap |
 *AdminFinanceApi* | [**runPaymentReconciliation**](docs/AdminFinanceApi.md#runpaymentreconciliation) | **POST** /admin/finance/reconciliation/run |
+*AdminInvoicesApi* | [**getAdminInvoiceFile**](docs/AdminInvoicesApi.md#getadmininvoicefile) | **GET** /admin/invoice-records/{recordId}/content |
+*AdminInvoicesApi* | [**listAdminInvoiceLog**](docs/AdminInvoicesApi.md#listadmininvoicelog) | **GET** /admin/invoices |
 *AdminOrderOperationsApi* | [**confirmAdminReimbursement**](docs/AdminOrderOperationsApi.md#confirmadminreimbursement) | **POST** /admin/order-operations/reimbursements/{reimbursementId}/confirm |
 *AdminOrderOperationsApi* | [**getAdminOrderOperationsSummary**](docs/AdminOrderOperationsApi.md#getadminorderoperationssummary) | **GET** /admin/order-operations/summary |
 *AdminOrderOperationsApi* | [**listAdminCancellationRequests**](docs/AdminOrderOperationsApi.md#listadmincancellationrequests) | **GET** /admin/order-operations/cancellation-requests |
@@ -171,6 +184,22 @@ All URIs are relative to */api/v1*
 *BuyerDiscoveryApi* | [**removeFavoriteSupplier**](docs/BuyerDiscoveryApi.md#removefavoritesupplier) | **DELETE** /buyers/favorite-suppliers/{vendorId} |
 *BuyerDiscoveryApi* | [**saveBuyerDiscoveryRadius**](docs/BuyerDiscoveryApi.md#savebuyerdiscoveryradius) | **PUT** /buyers/discovery/preferences |
 *BuyerDiscoveryApi* | [**searchBuyerSuppliers**](docs/BuyerDiscoveryApi.md#searchbuyersuppliers) | **POST** /buyers/discovery/search |
+*BuyerDisputesApi* | [**addBuyerDisputeEvidence**](docs/BuyerDisputesApi.md#addbuyerdisputeevidence) | **POST** /buyers/disputes/{caseId}/evidence |
+*BuyerDisputesApi* | [**answerBuyerDisputeClarification**](docs/BuyerDisputesApi.md#answerbuyerdisputeclarification) | **POST** /buyers/disputes/{caseId}/clarifications/{clarificationId}/answer |
+*BuyerDisputesApi* | [**answerBuyerDisputeProposal**](docs/BuyerDisputesApi.md#answerbuyerdisputeproposal) | **POST** /buyers/disputes/{caseId}/proposals/{proposalId}/answer |
+*BuyerDisputesApi* | [**appealBuyerDispute**](docs/BuyerDisputesApi.md#appealbuyerdispute) | **POST** /buyers/disputes/{caseId}/appeal |
+*BuyerDisputesApi* | [**authorizeBuyerDisputeChannel**](docs/BuyerDisputesApi.md#authorizebuyerdisputechannel) | **POST** /buyers/disputes/realtime/auth |
+*BuyerDisputesApi* | [**confirmBuyerDisputeReplacement**](docs/BuyerDisputesApi.md#confirmbuyerdisputereplacement) | **POST** /buyers/disputes/{caseId}/remedies/{remedyId}/confirm |
+*BuyerDisputesApi* | [**escalateBuyerDispute**](docs/BuyerDisputesApi.md#escalatebuyerdispute) | **POST** /buyers/disputes/{caseId}/escalate |
+*BuyerDisputesApi* | [**fileBuyerDispute**](docs/BuyerDisputesApi.md#filebuyerdispute) | **POST** /buyers/disputes |
+*BuyerDisputesApi* | [**getBuyerDispute**](docs/BuyerDisputesApi.md#getbuyerdispute) | **GET** /buyers/disputes/{caseId} |
+*BuyerDisputesApi* | [**getBuyerDisputeEligibility**](docs/BuyerDisputesApi.md#getbuyerdisputeeligibility) | **GET** /buyers/orders/{orderId}/dispute-eligibility |
+*BuyerDisputesApi* | [**getBuyerDisputeEvidenceFile**](docs/BuyerDisputesApi.md#getbuyerdisputeevidencefile) | **GET** /buyers/disputes/{caseId}/files/{fileId}/content |
+*BuyerDisputesApi* | [**getBuyerDisputeRealtime**](docs/BuyerDisputesApi.md#getbuyerdisputerealtime) | **GET** /buyers/disputes/realtime |
+*BuyerDisputesApi* | [**listBuyerDisputes**](docs/BuyerDisputesApi.md#listbuyerdisputes) | **GET** /buyers/disputes |
+*BuyerDisputesApi* | [**proposeBuyerDisputeResolution**](docs/BuyerDisputesApi.md#proposebuyerdisputeresolution) | **POST** /buyers/disputes/{caseId}/proposals |
+*BuyerDisputesApi* | [**respondBuyerDispute**](docs/BuyerDisputesApi.md#respondbuyerdispute) | **POST** /buyers/disputes/{caseId}/respond |
+*BuyerDisputesApi* | [**sendBuyerDisputeMessage**](docs/BuyerDisputesApi.md#sendbuyerdisputemessage) | **POST** /buyers/disputes/{caseId}/messages |
 *BuyerExploreApi* | [**getBuyerExploreSummary**](docs/BuyerExploreApi.md#getbuyerexploresummary) | **POST** /buyers/explore/summary |
 *BuyerExploreApi* | [**getBuyerItemRankingPreferences**](docs/BuyerExploreApi.md#getbuyeritemrankingpreferences) | **GET** /buyers/ranking-preferences/item-based |
 *BuyerExploreApi* | [**getBuyerListingDetails**](docs/BuyerExploreApi.md#getbuyerlistingdetails) | **POST** /buyers/listings/{listingId}/details |
@@ -185,6 +214,11 @@ All URIs are relative to */api/v1*
 *BuyerFulfillmentApi* | [**reportBuyerProblem**](docs/BuyerFulfillmentApi.md#reportbuyerproblem) | **POST** /buyers/orders/{orderId}/problems |
 *BuyerFulfillmentApi* | [**resolveBuyerProblem**](docs/BuyerFulfillmentApi.md#resolvebuyerproblem) | **POST** /buyers/orders/{orderId}/problems/{issueId}/resolve |
 *BuyerFulfillmentApi* | [**withdrawBuyerCancellationRequest**](docs/BuyerFulfillmentApi.md#withdrawbuyercancellationrequest) | **POST** /buyers/orders/{orderId}/cancellation-request/withdraw |
+*BuyerInvoicesApi* | [**answerBuyerInvoiceRequest**](docs/BuyerInvoicesApi.md#answerbuyerinvoicerequest) | **POST** /buyers/orders/{orderId}/invoices/requests/{requestId}/answer |
+*BuyerInvoicesApi* | [**getBuyerInvoiceFile**](docs/BuyerInvoicesApi.md#getbuyerinvoicefile) | **GET** /buyers/invoice-records/{recordId}/content |
+*BuyerInvoicesApi* | [**getBuyerOrderInvoices**](docs/BuyerInvoicesApi.md#getbuyerorderinvoices) | **GET** /buyers/orders/{orderId}/invoices |
+*BuyerInvoicesApi* | [**requestBuyerInvoice**](docs/BuyerInvoicesApi.md#requestbuyerinvoice) | **POST** /buyers/orders/{orderId}/invoices/requests |
+*BuyerInvoicesApi* | [**saveBuyerInvoiceDetails**](docs/BuyerInvoicesApi.md#savebuyerinvoicedetails) | **PUT** /buyers/orders/{orderId}/invoices/details |
 *BuyerLocationsApi* | [**autocompleteBuyerLocation**](docs/BuyerLocationsApi.md#autocompletebuyerlocation) | **POST** /buyers/locations/autocomplete |
 *BuyerLocationsApi* | [**createBuyerLocation**](docs/BuyerLocationsApi.md#createbuyerlocation) | **POST** /buyers/locations |
 *BuyerLocationsApi* | [**getBuyerOnboarding**](docs/BuyerLocationsApi.md#getbuyeronboarding) | **GET** /buyers/onboarding |
@@ -284,6 +318,25 @@ All URIs are relative to */api/v1*
 *VendorCatalogApi* | [**uploadCatalogImport**](docs/VendorCatalogApi.md#uploadcatalogimport) | **POST** /vendor/catalog/imports |
 *VendorCatalogApi* | [**uploadListingComplianceEvidence**](docs/VendorCatalogApi.md#uploadlistingcomplianceevidence) | **POST** /vendor/catalog/listings/{listingId}/compliance/evidence |
 *VendorCatalogApi* | [**uploadVendorListingMedia**](docs/VendorCatalogApi.md#uploadvendorlistingmedia) | **POST** /vendor/catalog/listings/{listingId}/media |
+*VendorDisputesApi* | [**addVendorDisputeEvidence**](docs/VendorDisputesApi.md#addvendordisputeevidence) | **POST** /vendor/disputes/{caseId}/evidence |
+*VendorDisputesApi* | [**answerVendorDisputeClarification**](docs/VendorDisputesApi.md#answervendordisputeclarification) | **POST** /vendor/disputes/{caseId}/clarifications/{clarificationId}/answer |
+*VendorDisputesApi* | [**answerVendorDisputeProposal**](docs/VendorDisputesApi.md#answervendordisputeproposal) | **POST** /vendor/disputes/{caseId}/proposals/{proposalId}/answer |
+*VendorDisputesApi* | [**appealVendorDispute**](docs/VendorDisputesApi.md#appealvendordispute) | **POST** /vendor/disputes/{caseId}/appeal |
+*VendorDisputesApi* | [**authorizeVendorDisputeChannel**](docs/VendorDisputesApi.md#authorizevendordisputechannel) | **POST** /vendor/disputes/realtime/auth |
+*VendorDisputesApi* | [**downloadVendorDisputeExport**](docs/VendorDisputesApi.md#downloadvendordisputeexport) | **GET** /vendor/disputes/exports/{exportId}/download |
+*VendorDisputesApi* | [**escalateVendorDispute**](docs/VendorDisputesApi.md#escalatevendordispute) | **POST** /vendor/disputes/{caseId}/escalate |
+*VendorDisputesApi* | [**fileVendorDispute**](docs/VendorDisputesApi.md#filevendordispute) | **POST** /vendor/disputes |
+*VendorDisputesApi* | [**getVendorDispute**](docs/VendorDisputesApi.md#getvendordispute) | **GET** /vendor/disputes/{caseId} |
+*VendorDisputesApi* | [**getVendorDisputeEligibility**](docs/VendorDisputesApi.md#getvendordisputeeligibility) | **GET** /vendor/orders/{orderId}/dispute-eligibility |
+*VendorDisputesApi* | [**getVendorDisputeEvidenceFile**](docs/VendorDisputesApi.md#getvendordisputeevidencefile) | **GET** /vendor/disputes/{caseId}/files/{fileId}/content |
+*VendorDisputesApi* | [**getVendorDisputeRealtime**](docs/VendorDisputesApi.md#getvendordisputerealtime) | **GET** /vendor/disputes/realtime |
+*VendorDisputesApi* | [**listVendorDisputeExports**](docs/VendorDisputesApi.md#listvendordisputeexports) | **GET** /vendor/disputes/exports |
+*VendorDisputesApi* | [**listVendorDisputes**](docs/VendorDisputesApi.md#listvendordisputes) | **GET** /vendor/disputes |
+*VendorDisputesApi* | [**proposeVendorDisputeResolution**](docs/VendorDisputesApi.md#proposevendordisputeresolution) | **POST** /vendor/disputes/{caseId}/proposals |
+*VendorDisputesApi* | [**recordVendorDisputeReplacement**](docs/VendorDisputesApi.md#recordvendordisputereplacement) | **POST** /vendor/disputes/{caseId}/remedies/{remedyId}/record |
+*VendorDisputesApi* | [**requestVendorDisputeExport**](docs/VendorDisputesApi.md#requestvendordisputeexport) | **POST** /vendor/disputes/exports |
+*VendorDisputesApi* | [**respondVendorDispute**](docs/VendorDisputesApi.md#respondvendordispute) | **POST** /vendor/disputes/{caseId}/respond |
+*VendorDisputesApi* | [**sendVendorDisputeMessage**](docs/VendorDisputesApi.md#sendvendordisputemessage) | **POST** /vendor/disputes/{caseId}/messages |
 *VendorFinanceApi* | [**approveVendorOnlineBalance**](docs/VendorFinanceApi.md#approvevendoronlinebalance) | **POST** /vendor/orders/{orderId}/online-balance/approve |
 *VendorFinanceApi* | [**exportVendorTransactions**](docs/VendorFinanceApi.md#exportvendortransactions) | **GET** /vendor/finance/transactions/export |
 *VendorFinanceApi* | [**getVendorEarnings**](docs/VendorFinanceApi.md#getvendorearnings) | **GET** /vendor/finance/earnings |
@@ -319,6 +372,11 @@ All URIs are relative to */api/v1*
 *VendorInventoryApi* | [**listVendorPriceHistory**](docs/VendorInventoryApi.md#listvendorpricehistory) | **GET** /vendor/inventory/items/{variantId}/prices |
 *VendorInventoryApi* | [**saveVendorInventorySettings**](docs/VendorInventoryApi.md#savevendorinventorysettings) | **PUT** /vendor/inventory/settings |
 *VendorInventoryApi* | [**updateVendorInventoryItem**](docs/VendorInventoryApi.md#updatevendorinventoryitem) | **PATCH** /vendor/inventory/items/{variantId} |
+*VendorInvoicesApi* | [**explainVendorInvoiceDifference**](docs/VendorInvoicesApi.md#explainvendorinvoicedifference) | **POST** /vendor/orders/{orderId}/invoices/{recordId}/explanation |
+*VendorInvoicesApi* | [**getVendorInvoiceFile**](docs/VendorInvoicesApi.md#getvendorinvoicefile) | **GET** /vendor/invoice-records/{recordId}/content |
+*VendorInvoicesApi* | [**getVendorOrderInvoices**](docs/VendorInvoicesApi.md#getvendororderinvoices) | **GET** /vendor/orders/{orderId}/invoices |
+*VendorInvoicesApi* | [**listVendorInvoices**](docs/VendorInvoicesApi.md#listvendorinvoices) | **GET** /vendor/invoices |
+*VendorInvoicesApi* | [**uploadVendorInvoice**](docs/VendorInvoicesApi.md#uploadvendorinvoice) | **POST** /vendor/orders/{orderId}/invoices |
 *VendorOnboardingApi* | [**acceptVendorCommission**](docs/VendorOnboardingApi.md#acceptvendorcommission) | **POST** /vendors/onboarding/verification/commission |
 *VendorOnboardingApi* | [**activateVendorStore**](docs/VendorOnboardingApi.md#activatevendorstore) | **POST** /vendors/onboarding/activation |
 *VendorOnboardingApi* | [**changeVendorStaffDisputes**](docs/VendorOnboardingApi.md#changevendorstaffdisputes) | **PATCH** /vendors/account/staff-disputes |
@@ -397,6 +455,9 @@ All URIs are relative to */api/v1*
 - [AdminDashboardAuditEnvelope](docs/AdminDashboardAuditEnvelope.md)
 - [AdminDashboardEnvelope](docs/AdminDashboardEnvelope.md)
 - [AdminDashboardSummary](docs/AdminDashboardSummary.md)
+- [AdminDisputeAppealDecisionRequest](docs/AdminDisputeAppealDecisionRequest.md)
+- [AdminDisputeClarificationRequest](docs/AdminDisputeClarificationRequest.md)
+- [AdminDisputeDecisionRequest](docs/AdminDisputeDecisionRequest.md)
 - [AdminInvitationRequest](docs/AdminInvitationRequest.md)
 - [AdminOrderActionResultEnvelope](docs/AdminOrderActionResultEnvelope.md)
 - [AdminOrderOperationsSummary](docs/AdminOrderOperationsSummary.md)
@@ -439,6 +500,7 @@ All URIs are relative to */api/v1*
 - [BuyerCancellationPreview](docs/BuyerCancellationPreview.md)
 - [BuyerCancellationPreviewEnvelope](docs/BuyerCancellationPreviewEnvelope.md)
 - [BuyerIndustryClassification](docs/BuyerIndustryClassification.md)
+- [BuyerInvoiceBillingDetails](docs/BuyerInvoiceBillingDetails.md)
 - [BuyerLocation](docs/BuyerLocation.md)
 - [BuyerLocationCreate](docs/BuyerLocationCreate.md)
 - [BuyerLocationEnvelope](docs/BuyerLocationEnvelope.md)
@@ -458,6 +520,8 @@ All URIs are relative to */api/v1*
 - [BuyerOnboarding](docs/BuyerOnboarding.md)
 - [BuyerOnboardingEnvelope](docs/BuyerOnboardingEnvelope.md)
 - [BuyerOnboardingUpdate](docs/BuyerOnboardingUpdate.md)
+- [BuyerOrderInvoices](docs/BuyerOrderInvoices.md)
+- [BuyerOrderInvoicesEnvelope](docs/BuyerOrderInvoicesEnvelope.md)
 - [BuyerOriginRequest](docs/BuyerOriginRequest.md)
 - [CancellationDecisionView](docs/CancellationDecisionView.md)
 - [CancellationPlan](docs/CancellationPlan.md)
@@ -619,6 +683,46 @@ All URIs are relative to */api/v1*
 - [DiscoverySearchEnvelope](docs/DiscoverySearchEnvelope.md)
 - [DiscoverySearchMeta](docs/DiscoverySearchMeta.md)
 - [DiscoverySearchRequest](docs/DiscoverySearchRequest.md)
+- [DisputeAdminContext](docs/DisputeAdminContext.md)
+- [DisputeAdminParty](docs/DisputeAdminParty.md)
+- [DisputeAffectedLine](docs/DisputeAffectedLine.md)
+- [DisputeAppeal](docs/DisputeAppeal.md)
+- [DisputeChannelAuthRequest](docs/DisputeChannelAuthRequest.md)
+- [DisputeClarification](docs/DisputeClarification.md)
+- [DisputeDeadline](docs/DisputeDeadline.md)
+- [DisputeDecision](docs/DisputeDecision.md)
+- [DisputeDetail](docs/DisputeDetail.md)
+- [DisputeDetailEnvelope](docs/DisputeDetailEnvelope.md)
+- [DisputeEligibility](docs/DisputeEligibility.md)
+- [DisputeEligibilityEnvelope](docs/DisputeEligibilityEnvelope.md)
+- [DisputeEligibilityMethod](docs/DisputeEligibilityMethod.md)
+- [DisputeEscalateRequest](docs/DisputeEscalateRequest.md)
+- [DisputeEvidence](docs/DisputeEvidence.md)
+- [DisputeExport](docs/DisputeExport.md)
+- [DisputeExportEnvelope](docs/DisputeExportEnvelope.md)
+- [DisputeExportListEnvelope](docs/DisputeExportListEnvelope.md)
+- [DisputeExportRequest](docs/DisputeExportRequest.md)
+- [DisputeFileLink](docs/DisputeFileLink.md)
+- [DisputeHandler](docs/DisputeHandler.md)
+- [DisputeHandlerRef](docs/DisputeHandlerRef.md)
+- [DisputeListEnvelope](docs/DisputeListEnvelope.md)
+- [DisputeListMeta](docs/DisputeListMeta.md)
+- [DisputeMessageRequest](docs/DisputeMessageRequest.md)
+- [DisputeOrderRef](docs/DisputeOrderRef.md)
+- [DisputeOriginalPaymentMethod](docs/DisputeOriginalPaymentMethod.md)
+- [DisputeProposal](docs/DisputeProposal.md)
+- [DisputeProposalAnswer](docs/DisputeProposalAnswer.md)
+- [DisputeProposalRequest](docs/DisputeProposalRequest.md)
+- [DisputeRealtime](docs/DisputeRealtime.md)
+- [DisputeRealtimeEnvelope](docs/DisputeRealtimeEnvelope.md)
+- [DisputeRefundable](docs/DisputeRefundable.md)
+- [DisputeRemedy](docs/DisputeRemedy.md)
+- [DisputeRemedyConfirmRequest](docs/DisputeRemedyConfirmRequest.md)
+- [DisputeSanctionInput](docs/DisputeSanctionInput.md)
+- [DisputeSummary](docs/DisputeSummary.md)
+- [DisputeTimelineActor](docs/DisputeTimelineActor.md)
+- [DisputeTimelineEntry](docs/DisputeTimelineEntry.md)
+- [DisputeVendorPermissions](docs/DisputeVendorPermissions.md)
 - [EmailRequest](docs/EmailRequest.md)
 - [ErrorEnvelope](docs/ErrorEnvelope.md)
 - [ExploreCategoryCount](docs/ExploreCategoryCount.md)
@@ -699,6 +803,16 @@ All URIs are relative to */api/v1*
 - [InventorySettings](docs/InventorySettings.md)
 - [InventorySettingsEnvelope](docs/InventorySettingsEnvelope.md)
 - [InventorySettingsUpdate](docs/InventorySettingsUpdate.md)
+- [InvoiceBillingDetailsRequest](docs/InvoiceBillingDetailsRequest.md)
+- [InvoiceExplanationRequest](docs/InvoiceExplanationRequest.md)
+- [InvoiceListMeta](docs/InvoiceListMeta.md)
+- [InvoiceLogEnvelope](docs/InvoiceLogEnvelope.md)
+- [InvoiceLogRow](docs/InvoiceLogRow.md)
+- [InvoiceOrderLine](docs/InvoiceOrderLine.md)
+- [InvoiceRecordView](docs/InvoiceRecordView.md)
+- [InvoiceRequestAnswer](docs/InvoiceRequestAnswer.md)
+- [InvoiceRequestCreate](docs/InvoiceRequestCreate.md)
+- [InvoiceRequestView](docs/InvoiceRequestView.md)
 - [ListingCategoryRef](docs/ListingCategoryRef.md)
 - [ListingCompliance](docs/ListingCompliance.md)
 - [ListingComplianceStatus](docs/ListingComplianceStatus.md)
@@ -767,8 +881,10 @@ All URIs are relative to */api/v1*
 - [OrderDestination](docs/OrderDestination.md)
 - [OrderDetail](docs/OrderDetail.md)
 - [OrderDetailEnvelope](docs/OrderDetailEnvelope.md)
+- [OrderDisputeRef](docs/OrderDisputeRef.md)
 - [OrderFirstLine](docs/OrderFirstLine.md)
 - [OrderFulfillment](docs/OrderFulfillment.md)
+- [OrderInvoiceRef](docs/OrderInvoiceRef.md)
 - [OrderLine](docs/OrderLine.md)
 - [OrderLineInventory](docs/OrderLineInventory.md)
 - [OrderLineQuantity](docs/OrderLineQuantity.md)
@@ -809,6 +925,7 @@ All URIs are relative to */api/v1*
 - [PhysicalPaymentSummaryEnvelope](docs/PhysicalPaymentSummaryEnvelope.md)
 - [PickupConfirmation](docs/PickupConfirmation.md)
 - [PickupPreview](docs/PickupPreview.md)
+- [PlatformDocumentRef](docs/PlatformDocumentRef.md)
 - [PriceHistoryEntry](docs/PriceHistoryEntry.md)
 - [PriceHistoryEnvelope](docs/PriceHistoryEnvelope.md)
 - [ProblemResolveRequest](docs/ProblemResolveRequest.md)
@@ -929,6 +1046,7 @@ All URIs are relative to */api/v1*
 - [VendorInvitationAcceptance](docs/VendorInvitationAcceptance.md)
 - [VendorInvitationEnvelope](docs/VendorInvitationEnvelope.md)
 - [VendorInvitationRequest](docs/VendorInvitationRequest.md)
+- [VendorInvoiceBillingDetails](docs/VendorInvoiceBillingDetails.md)
 - [VendorMediaEnvelope](docs/VendorMediaEnvelope.md)
 - [VendorOnboardingEnvelope](docs/VendorOnboardingEnvelope.md)
 - [VendorOnboardingSection](docs/VendorOnboardingSection.md)
@@ -938,6 +1056,8 @@ All URIs are relative to */api/v1*
 - [VendorOrderConfirmRequest](docs/VendorOrderConfirmRequest.md)
 - [VendorOrderDeclineReason](docs/VendorOrderDeclineReason.md)
 - [VendorOrderDeclineRequest](docs/VendorOrderDeclineRequest.md)
+- [VendorOrderInvoices](docs/VendorOrderInvoices.md)
+- [VendorOrderInvoicesEnvelope](docs/VendorOrderInvoicesEnvelope.md)
 - [VendorOrderPermissions](docs/VendorOrderPermissions.md)
 - [VendorOrderPrimaryAction](docs/VendorOrderPrimaryAction.md)
 - [VendorPaymentOnboarding](docs/VendorPaymentOnboarding.md)
@@ -1030,8 +1150,8 @@ This TypeScript SDK client supports the [Fetch API](https://fetch.spec.whatwg.or
 and is automatically generated by the
 [OpenAPI Generator](https://openapi-generator.tech) project:
 
-- API version: `1.0.0-phase.12`
-- Package version: `1.0.0-phase.12`
+- API version: `1.0.0-phase.13`
+- Package version: `1.0.0-phase.13`
 - Generator version: `7.25.0`
 - Build package: `org.openapitools.codegen.languages.TypeScriptFetchClientCodegen`
 

@@ -5,6 +5,7 @@ import 'package:dio/dio.dart' show MultipartFile;
 import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 
 import '../../core/api_guard.dart';
+import '../disputes/disputes_repository.dart';
 import 'order_models.dart';
 
 /// Buyer order submission and decisions through `/api/v1` only. Every mutation carries an
@@ -127,6 +128,9 @@ abstract interface class OrdersRepository {
 
   /// Reads an order-scoped evidence file (`/buyers/orders/{id}/files/{fileId}`) through the API.
   Future<Uint8List> orderFile(String orderId, String fileId);
+
+  /// Transaction disputes and Vendor invoice copies for this Buyer's orders.
+  DisputesRepository get disputes;
 }
 
 final class ApiOrdersRepository implements OrdersRepository {
@@ -140,6 +144,12 @@ final class ApiOrdersRepository implements OrdersRepository {
   final ApiGuard _api;
 
   api.BuyerOrdersApi get _orders => _client.getBuyerOrdersApi();
+
+  @override
+  late final DisputesRepository disputes = ApiDisputesRepository(
+    client: _client,
+    guard: _api,
+  );
 
   @override
   Future<CheckoutView> submitCheckout({
@@ -505,6 +515,23 @@ final class ApiOrdersRepository implements OrdersRepository {
       refundTimeline: order.refundTimeline == null
           ? null
           : _refundTimeline(order.refundTimeline!),
+      dispute: order.dispute == null
+          ? null
+          : OrderDisputeRefView(
+              caseId: order.dispute!.caseId,
+              reference: order.dispute!.reference,
+              status: order.dispute!.status.name,
+              filedByParty: order.dispute!.filedByParty.name,
+              filingAvailable: order.dispute!.filingAvailable ?? false,
+              filingNote: order.dispute!.filingNote,
+            ),
+      invoice: order.invoice == null
+          ? null
+          : OrderInvoiceRefView(
+              status: order.invoice!.status.name,
+              records: order.invoice!.records,
+              openRequests: order.invoice!.openRequests,
+            ),
     );
   }
 
@@ -603,41 +630,14 @@ final class ApiOrdersRepository implements OrdersRepository {
 
   static RefundTimelineView _refundTimeline(api.OrderRefundTimeline timeline) {
     final decision = timeline.decision;
+    final items = refundTimelineFromApi(
+      refunds: timeline.refunds,
+      reimbursements: timeline.reimbursements,
+    );
     return RefundTimelineView(
       noLongerDueCentavos: timeline.noLongerDueCentavos,
-      refunds: timeline.refunds
-          .map(
-            (refund) => RefundItemView(
-              id: refund.id,
-              trigger: refund.trigger.name,
-              state: refund.state.name,
-              displayState: refund.displayState.name,
-              amountCentavos: refund.amountCentavos,
-              principalCentavos: refund.principalCentavos,
-              processingFeeCentavos: refund.processingFeeCentavos,
-              originalMethod: refund.originalMethod,
-              message: refund.message,
-              requestedAt: refund.requestedAt,
-              completedAt: refund.completedAt,
-              arrivalNote: refund.arrivalNote,
-            ),
-          )
-          .toList(),
-      reimbursements: timeline.reimbursements
-          .map(
-            (item) => ReimbursementItemView(
-              id: item.id,
-              state: item.state.name,
-              amountCentavos: item.amountCentavos,
-              method: item.method,
-              message: item.message,
-              confirmedByReview: item.confirmedByReview,
-              hasEvidence: item.hasEvidence,
-              reimbursedAt: item.reimbursedAt,
-              buyerAcknowledgedAt: item.buyerAcknowledgedAt,
-            ),
-          )
-          .toList(),
+      refunds: items.refunds,
+      reimbursements: items.reimbursements,
       decision: decision == null
           ? null
           : CancellationDecisionSummary(
@@ -931,3 +931,45 @@ final class ApiOrdersRepository implements OrdersRepository {
     );
   }
 }
+
+/// Refund and reimbursement rows shared by the order timeline and the Dispute-Conclusion Refunds of a
+/// case: the same generated items, mapped once.
+({List<RefundItemView> refunds, List<ReimbursementItemView> reimbursements})
+refundTimelineFromApi({
+  required Iterable<api.RefundTimelineItem> refunds,
+  required Iterable<api.ReimbursementTimelineItem> reimbursements,
+}) => (
+  refunds: refunds
+      .map(
+        (refund) => RefundItemView(
+          id: refund.id,
+          trigger: refund.trigger.name,
+          state: refund.state.name,
+          displayState: refund.displayState.name,
+          amountCentavos: refund.amountCentavos,
+          principalCentavos: refund.principalCentavos,
+          processingFeeCentavos: refund.processingFeeCentavos,
+          originalMethod: refund.originalMethod,
+          message: refund.message,
+          requestedAt: refund.requestedAt,
+          completedAt: refund.completedAt,
+          arrivalNote: refund.arrivalNote,
+        ),
+      )
+      .toList(),
+  reimbursements: reimbursements
+      .map(
+        (item) => ReimbursementItemView(
+          id: item.id,
+          state: item.state.name,
+          amountCentavos: item.amountCentavos,
+          method: item.method,
+          message: item.message,
+          confirmedByReview: item.confirmedByReview,
+          hasEvidence: item.hasEvidence,
+          reimbursedAt: item.reimbursedAt,
+          buyerAcknowledgedAt: item.buyerAcknowledgedAt,
+        ),
+      )
+      .toList(),
+);

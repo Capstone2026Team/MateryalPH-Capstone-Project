@@ -6,7 +6,10 @@ import '../projects/projects_repository.dart';
 import '../projects/projects_screen.dart' show ProjectBudgetCard;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../design_system/components/dispute_components.dart';
 import '../../design_system/components/fulfillment_components.dart';
+import '../disputes/dispute_models.dart' show DisputeDetailView;
+import '../disputes/dispute_screens.dart';
 import '../../design_system/components/order_components.dart';
 import '../../design_system/components/procurement_components.dart';
 import '../../design_system/theme.dart';
@@ -515,6 +518,53 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     );
   }
 
+  Future<void> _fileDispute(OrderDetailView order) async {
+    final created = await Navigator.of(context).push<DisputeDetailView>(
+      MaterialPageRoute(
+        builder: (_) => FileDisputeScreen(
+          orderId: order.id,
+          repository: widget.repository.disputes,
+        ),
+      ),
+    );
+    if (!mounted) return;
+    if (created != null) {
+      setState(
+        () => _notice =
+            'Case ${created.reference} filed. The store has 48 hours to respond. Filing does not refund automatically.',
+      );
+      await _openCase(created.id);
+    } else {
+      await _load();
+    }
+  }
+
+  Future<void> _openCase(String caseId) async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => DisputeDetailScreen(
+          caseId: caseId,
+          repository: widget.repository.disputes,
+          now: widget.now,
+        ),
+      ),
+    );
+    if (mounted) await _load();
+  }
+
+  Future<void> _openInvoices(OrderDetailView order) async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => OrderInvoicesScreen(
+          orderId: order.id,
+          repository: widget.repository.disputes,
+          now: widget.now,
+        ),
+      ),
+    );
+    if (mounted) await _load();
+  }
+
   Future<void> _openThread(String conversationId) async {
     final open = widget.openConversation;
     if (open == null) return;
@@ -668,6 +718,20 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
             now: widget.now,
           ),
         ],
+        if (order.dispute != null ||
+            order.actions.contains('FILE_DISPUTE') ||
+            order.invoice != null ||
+            order.actions.contains('REQUEST_INVOICE')) ...[
+          const SizedBox(height: 16),
+          const _Heading('Disputes and invoices'),
+          _CaseAndInvoiceEntry(
+            order: order,
+            busy: _busy,
+            onFileDispute: () => _fileDispute(order),
+            onOpenCase: _openCase,
+            onOpenInvoices: () => _openInvoices(order),
+          ),
+        ],
         const SizedBox(height: 16),
         const _Heading('History'),
         for (final event in order.timeline) _EventTile(event: event),
@@ -686,6 +750,88 @@ const _trackedStates = {
   'COMPLETED',
   'DISPUTED',
 };
+
+/// The order's case (or the server's filing availability) and its Vendor invoice status.
+class _CaseAndInvoiceEntry extends StatelessWidget {
+  const _CaseAndInvoiceEntry({
+    required this.order,
+    required this.busy,
+    required this.onFileDispute,
+    required this.onOpenCase,
+    required this.onOpenInvoices,
+  });
+
+  final OrderDetailView order;
+  final bool busy;
+  final VoidCallback onFileDispute;
+  final ValueChanged<String> onOpenCase;
+  final VoidCallback onOpenInvoices;
+
+  @override
+  Widget build(BuildContext context) {
+    final dispute = order.dispute;
+    final invoice = order.invoice;
+    final canFile = order.actions.contains('FILE_DISPUTE');
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (dispute != null)
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(LucideIcons.scale),
+            title: Text(dispute.reference),
+            subtitle: Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: DisputeStatusChip(status: dispute.status),
+              ),
+            ),
+            trailing: TextButton(
+              onPressed: busy ? null : () => onOpenCase(dispute.caseId),
+              child: const Text('View case'),
+            ),
+          ),
+        if (canFile) ...[
+          if (dispute?.filingNote != null)
+            Text(
+              dispute!.filingNote!,
+              style: const TextStyle(fontSize: 13, color: BuyerTheme.muted),
+            ),
+          const SizedBox(height: 6),
+          OutlinedButton.icon(
+            onPressed: busy ? null : onFileDispute,
+            icon: const Icon(LucideIcons.messageSquareWarning, size: 18),
+            label: const Text('File a dispute'),
+          ),
+          const Padding(
+            padding: EdgeInsets.only(top: 4),
+            child: Text(
+              'Filing opens a case. It does not refund automatically.',
+              style: TextStyle(fontSize: 12, color: BuyerTheme.muted),
+            ),
+          ),
+        ],
+        if (invoice != null || order.actions.contains('REQUEST_INVOICE'))
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(LucideIcons.receiptText),
+            title: const Text('Store invoice'),
+            subtitle: Text(switch (invoice?.status) {
+              'ISSUED' =>
+                'Copy uploaded${invoice!.openRequests > 0 ? ' · ${invoice.openRequests} open request' : ''}',
+              'NOT_YET_UPLOADED' => 'No copy uploaded yet',
+              _ => 'Not due yet',
+            }),
+            trailing: TextButton(
+              onPressed: busy ? null : onOpenInvoices,
+              child: const Text('Invoices'),
+            ),
+          ),
+      ],
+    );
+  }
+}
 
 bool _hasPaymentDetail(OrderPaymentView payment) =>
     payment.latestAttempt != null ||

@@ -22,6 +22,8 @@ Name | Type
 `canReportVehicleIssue` | boolean
 `canRetryRefund` | boolean
 `canRespondProblem` | boolean
+`canFileDispute` | boolean
+`canUploadInvoice` | boolean
 
 ## Example
 
@@ -45,6 +47,8 @@ const example = {
   "canReportVehicleIssue": null,
   "canRetryRefund": null,
   "canRespondProblem": null,
+  "canFileDispute": null,
+  "canUploadInvoice": null,
 } satisfies VendorOrderPermissions
 
 console.log(example)

@@ -49,3 +49,8 @@ export { OrderStateRows, DeadlineCountdown, MoneyBreakdown, formatPesoCentavos, 
 export { ConversationHeader, ConversationInbox, ChatMessageBubble, ChatAvatar, QuotationVersionCard, ChatAttachmentButton, chatRoleLabel, conversationLabel } from './messaging-patterns'
 export { DemoLabel, WithholdingStatusBadge, ThresholdPanel, PaymentAttemptBadge, PaymentChannelList, FinanceSection, type ThresholdPanelData, type PaymentChannelRow } from './finance-patterns'
 export { MilestoneStepper, RefundTimeline, RefundStatusBadge, CancellationAvailability, roleLabel } from './fulfillment-patterns'
+export { readSignedCaseFile } from './web-api-session'
+export {
+  DisputeStatusBadge, DisputeDeadlines, DisputeTimeline, SignedFileButton, OriginalPaymentMethodNotice, InvoiceRecordList, PlatformDocumentNotice,
+  disputeIssueLabel, disputeRemedyLabel, disputeStateLabel, disputeEventLabel, disputeRoleLabel,
+} from './dispute-patterns'

@@ -463,6 +463,8 @@ class OrderDetailView {
     this.fulfillment,
     this.cancellation,
     this.refundTimeline,
+    this.dispute,
+    this.invoice,
   });
 
   final String id;
@@ -499,6 +501,12 @@ class OrderDetailView {
   final FulfillmentView? fulfillment;
   final CancellationView? cancellation;
   final RefundTimelineView? refundTimeline;
+
+  /// The order's active or latest case, with whether a new one may be filed now.
+  final OrderDisputeRefView? dispute;
+
+  /// Vendor invoice copy status; MateryalPH documents are never the Vendor's tax invoice.
+  final OrderInvoiceRefView? invoice;
 
   String state(String family) =>
       states.firstWhere((row) => row.family == family).state;
@@ -546,4 +554,35 @@ class CheckoutView {
   final DateTime submittedAt;
   final List<CheckoutChildView> orders;
   final String notice;
+}
+
+class OrderDisputeRefView {
+  const OrderDisputeRefView({
+    required this.caseId,
+    required this.reference,
+    required this.status,
+    required this.filedByParty,
+    this.filingAvailable = false,
+    this.filingNote,
+  });
+
+  final String caseId;
+  final String reference;
+  final String status;
+  final String filedByParty;
+  final bool filingAvailable;
+  final String? filingNote;
+}
+
+class OrderInvoiceRefView {
+  const OrderInvoiceRefView({
+    required this.status,
+    required this.records,
+    required this.openRequests,
+  });
+
+  /// ISSUED, NOT_YET_UPLOADED or NOT_DUE.
+  final String status;
+  final int records;
+  final int openRequests;
 }

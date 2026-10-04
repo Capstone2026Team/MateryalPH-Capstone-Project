@@ -130,17 +130,18 @@ final class RemittanceAssessmentService
 
     /**
      * FIN-07: a refund after a posted assessment never lowers the counter or restores relief. It opens one
-     * system tax-adjustment case linked to the assessment and, for a crossed year, a finance work item.
+     * system tax-adjustment case per kind (cancellation or dispute refund) linked to the assessment and, for a crossed
+     * year, a finance work item.
      */
-    public function openAdjustmentForRefund(string $assessmentId, ?string $refundId, int $refundedCentavos, string $reason): string
+    public function openAdjustmentForRefund(string $assessmentId, ?string $refundId, int $refundedCentavos, string $reason, string $kind = 'REFUND_AFTER_ASSESSMENT'): string
     {
-        return DB::transaction(function () use ($assessmentId, $refundId, $refundedCentavos, $reason): string {
+        return DB::transaction(function () use ($assessmentId, $refundId, $refundedCentavos, $reason, $kind): string {
             $assessment = DB::table('remittance_assessments')->where('id', $assessmentId)->first();
             if ($assessment === null) {
                 throw new AuthenticationException('ASSESSMENT_NOT_FOUND', 'This remittance assessment is unavailable.', 404);
             }
             $existing = DB::table('tax_adjustments')->where('opened_by', 'SYSTEM')->where('original_record_type', 'REMITTANCE_ASSESSMENT')
-                ->where('original_record_id', $assessmentId)->where('kind', 'REFUND_AFTER_ASSESSMENT')->value('id');
+                ->where('original_record_id', $assessmentId)->where('kind', $kind)->value('id');
             if ($existing !== null) {
                 return (string) $existing;
             }
@@ -150,7 +151,7 @@ final class RemittanceAssessmentService
             DB::table('tax_adjustments')->insert([
                 'id' => $id, 'order_id' => $assessment->order_id, 'refund_id' => $refundId, 'remittance_assessment_id' => $assessmentId, 'environment' => $assessment->environment,
                 'original_record_type' => 'REMITTANCE_ASSESSMENT', 'original_record_id' => $assessmentId, 'period_start' => $local->startOfMonth()->toDateString(), 'period_end' => $local->endOfMonth()->toDateString(),
-                'kind' => 'REFUND_AFTER_ASSESSMENT', 'amount_centavos' => $refundedCentavos,
+                'kind' => $kind, 'amount_centavos' => $refundedCentavos,
                 'before_values' => json_encode(['gross_basis_centavos' => (int) $assessment->gross_basis_centavos, 'withheld_centavos' => (int) $assessment->withheld_centavos, 'threshold_status' => $assessment->threshold_status_after], JSON_THROW_ON_ERROR),
                 'after_values' => json_encode(['proposed' => null, 'note' => 'Determined by the responsible reviewer; posted tax is never rewritten.'], JSON_THROW_ON_ERROR),
                 'reason' => mb_substr($reason, 0, 2000), 'state' => 'ADJUSTMENT_REQUIRED', 'prepared_by_user_id' => null, 'opened_by' => 'SYSTEM', 'accumulator_id' => $assessment->accumulator_id,

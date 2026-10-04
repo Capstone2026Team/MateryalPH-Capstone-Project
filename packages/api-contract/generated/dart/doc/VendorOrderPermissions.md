@@ -23,6 +23,8 @@ Name | Type | Description | Notes
 **canReportVehicleIssue** | **bool** |  | [optional]
 **canRetryRefund** | **bool** |  | [optional]
 **canRespondProblem** | **bool** |  | [optional]
+**canFileDispute** | **bool** |  | [optional]
+**canUploadInvoice** | **bool** |  | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

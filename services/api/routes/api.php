@@ -92,3 +92,4 @@ require __DIR__.'/messaging.php';
 require __DIR__.'/projects.php';
 require __DIR__.'/payments.php';
 require __DIR__.'/fulfillment.php';
+require __DIR__.'/disputes.php';

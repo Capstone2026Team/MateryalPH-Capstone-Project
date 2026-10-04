@@ -6,6 +6,7 @@ import '../../design_system/components/order_components.dart';
 import '../../design_system/components/procurement_components.dart';
 import '../../design_system/theme.dart';
 import '../item_procurement/procurement_models.dart' show formatPeso;
+import '../disputes/dispute_screens.dart';
 import '../map_discovery/discovery_models.dart';
 import 'order_details_screen.dart';
 import 'order_models.dart';
@@ -113,7 +114,23 @@ class _OrdersScreenState extends State<OrdersScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: Colors.white,
-    appBar: buyerAppBar(context, 'My orders'),
+    appBar: buyerAppBar(
+      context,
+      'My orders',
+      actions: [
+        IconButton(
+          tooltip: 'Disputes',
+          icon: const Icon(LucideIcons.scale),
+          onPressed: () => Navigator.of(context).push<void>(
+            MaterialPageRoute(
+              builder: (_) =>
+                  DisputesScreen(repository: widget.repository.disputes),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+      ],
+    ),
     body: SafeArea(
       child: Column(
         children: [

@@ -26,6 +26,8 @@ part 'vendor_order_permissions.g.dart';
 /// * [canReportVehicleIssue]
 /// * [canRetryRefund]
 /// * [canRespondProblem]
+/// * [canFileDispute]
+/// * [canUploadInvoice]
 @BuiltValue()
 abstract class VendorOrderPermissions implements Built<VendorOrderPermissions, VendorOrderPermissionsBuilder> {
   @BuiltValueField(wireName: r'can_confirm')
@@ -72,6 +74,12 @@ abstract class VendorOrderPermissions implements Built<VendorOrderPermissions, V
 
   @BuiltValueField(wireName: r'can_respond_problem')
   bool? get canRespondProblem;
+
+  @BuiltValueField(wireName: r'can_file_dispute')
+  bool? get canFileDispute;
+
+  @BuiltValueField(wireName: r'can_upload_invoice')
+  bool? get canUploadInvoice;
 
   VendorOrderPermissions._();
 
@@ -186,6 +194,20 @@ class _$VendorOrderPermissionsSerializer implements PrimitiveSerializer<VendorOr
       yield r'can_respond_problem';
       yield serializers.serialize(
         object.canRespondProblem,
+        specifiedType: const FullType(bool),
+      );
+    }
+    if (object.canFileDispute != null) {
+      yield r'can_file_dispute';
+      yield serializers.serialize(
+        object.canFileDispute,
+        specifiedType: const FullType(bool),
+      );
+    }
+    if (object.canUploadInvoice != null) {
+      yield r'can_upload_invoice';
+      yield serializers.serialize(
+        object.canUploadInvoice,
         specifiedType: const FullType(bool),
       );
     }
@@ -325,6 +347,22 @@ class _$VendorOrderPermissionsSerializer implements PrimitiveSerializer<VendorOr
           ) as bool?;
           if (valueDes == null) continue;
           result.canRespondProblem = valueDes;
+          break;
+        case r'can_file_dispute':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.canFileDispute = valueDes;
+          break;
+        case r'can_upload_invoice':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.canUploadInvoice = valueDes;
           break;
         default:
           unhandled.add(key);

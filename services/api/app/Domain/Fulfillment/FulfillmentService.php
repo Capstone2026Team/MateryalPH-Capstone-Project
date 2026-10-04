@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Fulfillment;
 
 use App\Domain\Catalog\CatalogAccess;
+use App\Domain\Disputes\DisputeOrderSync;
 use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Inventory\InventoryLedgerWriter;
@@ -168,6 +169,10 @@ final class FulfillmentService
             $columns['auto_confirm_due_at'] = now()->addHours(FulfillmentRecords::RECEIPT_WINDOW_HOURS);
         }
         $this->records->update($fulfillment, $columns);
+        if (in_array($milestone, OrderStates::AWAITING_RECEIPT, true)) {
+            // An active case pauses receipt: the order waits in DISPUTED until the case concludes.
+            $order = app(DisputeOrderSync::class)->afterHandover($order, $actor);
+        }
         if (in_array($milestone, OrderStates::HANDOVER_STAGE, true)) {
             // First valid handover-stage milestone enables the one fulfillment thread in this same transaction.
             $this->threads->ensureForMilestone((string) $order->id, $actor->userId);

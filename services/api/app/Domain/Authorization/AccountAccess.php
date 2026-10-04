@@ -12,6 +12,11 @@ final class AccountAccess
 {
     public const VENDOR_ROLES = ['OWNER', 'STORE_MANAGER', 'STORE_STAFF', 'CUSTOMER_SERVICE', 'INVENTORY', 'FULFILLMENT'];
 
+    /** Roles whose dispute handling follows the Owner's "Allow staff to handle disputes and appeals" flag. */
+    public const FLAG_CONTROLLED_DISPUTE_ROLES = ['STORE_STAFF', 'CUSTOMER_SERVICE'];
+
+    public const FLAG_CONTROLLED_DISPUTE_PERMISSIONS = ['portal.disputes', 'disputes.respond', 'disputes.export'];
+
     /** @return array{role: string, organization_id: ?string, membership_id: ?string, can_manage_staff: bool, permissions: list<string>} */
     public function resolve(User $user): array
     {
@@ -35,8 +40,9 @@ final class AccountAccess
             $membershipId = $member->id;
             $delegated = $role === 'STORE_MANAGER' && (bool) $member->can_manage_staff;
             $permissions = $this->vendorPermissions($role, $delegated);
-            if (! $member->staff_disputes_enabled && in_array($role, ['STORE_STAFF', 'CUSTOMER_SERVICE'], true)) {
-                $permissions = array_values(array_diff($permissions, ['portal.disputes']));
+            if (! $member->staff_disputes_enabled && in_array($role, self::FLAG_CONTROLLED_DISPUTE_ROLES, true)) {
+                // The Owner's flag removes every case power at once: navigation, API, files, exports and realtime.
+                $permissions = array_values(array_diff($permissions, self::FLAG_CONTROLLED_DISPUTE_PERMISSIONS));
             }
         } elseif ($user->account_type === 'ADMIN') {
             $member = DB::table('admin_memberships as m')->join('platform_roles as r', 'r.id', '=', 'm.platform_role_id')
@@ -65,16 +71,21 @@ final class AccountAccess
     public function vendorPermissions(string $role, bool $delegated = false): array
     {
         $permissions = match ($role) {
-            'OWNER', 'STORE_MANAGER' => ['quotations.publish', 'orders.set_nrpc', 'orders.confirm', 'orders.revise', 'orders.cancel', 'catalog.manage', 'inventory.view', 'inventory.manage', 'inventory.settings', 'compliance.submit', 'auto_accept.configure', 'fulfillment.record', 'fulfillment.assign', 'vehicles.manage', 'materials_analytics.view_competitors', 'payments.record_physical'],
+            'OWNER', 'STORE_MANAGER' => ['quotations.publish', 'orders.set_nrpc', 'orders.confirm', 'orders.revise', 'orders.cancel', 'catalog.manage', 'inventory.view', 'inventory.manage', 'inventory.settings', 'compliance.submit', 'auto_accept.configure', 'fulfillment.record', 'fulfillment.assign', 'vehicles.manage', 'materials_analytics.view_competitors', 'payments.record_physical',
+                'disputes.respond', 'disputes.export', 'invoices.view', 'invoices.upload'],
             // Vendor cancellation by Store Staff was approved by the project owner on 2026-10-02.
-            'STORE_STAFF' => ['quotations.publish', 'orders.set_nrpc', 'orders.confirm', 'orders.revise', 'orders.cancel', 'catalog.manage', 'inventory.view', 'inventory.manage', 'compliance.submit', 'auto_accept.view_outcomes', 'payments.record_physical'],
-            'CUSTOMER_SERVICE' => ['orders.confirm', 'inventory.view', 'auto_accept.view_outcomes'],
+            'STORE_STAFF' => ['quotations.publish', 'orders.set_nrpc', 'orders.confirm', 'orders.revise', 'orders.cancel', 'catalog.manage', 'inventory.view', 'inventory.manage', 'compliance.submit', 'auto_accept.view_outcomes', 'payments.record_physical',
+                'disputes.respond', 'disputes.export', 'invoices.view', 'invoices.upload'],
+            // Customer Service views invoice status and talks to the Buyer; the official file upload stays with Owner/Manager/Store Staff.
+            'CUSTOMER_SERVICE' => ['orders.confirm', 'inventory.view', 'auto_accept.view_outcomes', 'disputes.respond', 'disputes.export', 'invoices.view'],
             'INVENTORY' => ['catalog.manage', 'inventory.view', 'inventory.manage', 'compliance.submit', 'auto_accept.manage_allotment'],
-            'FULFILLMENT' => ['fulfillment.record', 'vehicles.view_assigned'],
+            // Fulfillment Staff contribute fulfillment evidence to a case of an assigned order; they never manage a case.
+            'FULFILLMENT' => ['fulfillment.record', 'vehicles.view_assigned', 'disputes.fulfillment_evidence', 'invoices.view'],
             default => [],
         };
         if ($role === 'OWNER') {
-            $permissions = [...$permissions, 'staff.manage', 'managers.manage', 'staff.delegate', 'organization.legal', 'organization.delete', 'payments.configure', 'finance.attest', 'finance.pay', 'finance.view', 'finance.draft_corrections', 'vendor.onboarding.manage', 'vendor.onboarding.private_documents', 'vendor.onboarding.submit', 'vendor.payment.configure', 'vendor.activation', 'refunds.retry'];
+            // Only the Owner offers or accepts a voluntary financial refund in a case.
+            $permissions = [...$permissions, 'staff.manage', 'managers.manage', 'staff.delegate', 'organization.legal', 'organization.delete', 'payments.configure', 'finance.attest', 'finance.pay', 'finance.view', 'finance.draft_corrections', 'vendor.onboarding.manage', 'vendor.onboarding.private_documents', 'vendor.onboarding.submit', 'vendor.payment.configure', 'vendor.activation', 'refunds.retry', 'disputes.refund_offer'];
         } elseif ($role === 'STORE_MANAGER' && $delegated) {
             $permissions[] = 'staff.manage';
         }

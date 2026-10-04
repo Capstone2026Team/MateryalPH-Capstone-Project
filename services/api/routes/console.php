@@ -1,8 +1,10 @@
 <?php
 
+use App\Domain\Disputes\DisputeAdminService;
 use App\Domain\Finance\StatementService;
 use App\Domain\Finance\WithholdingThresholdService;
 use App\Domain\Fulfillment\ReceiptService;
+use App\Domain\Invoices\InvoiceService;
 use App\Domain\Messaging\QuotationService;
 use App\Domain\Orders\CancellationService;
 use App\Domain\Payments\PaymentGateway;
@@ -43,6 +45,12 @@ Artisan::command('materyalph:fulfillment-sweep', function (): void {
     $this->info('Receipt: '.json_encode(app(ReceiptService::class)->sweep()));
 })->purpose('48-hour receipt auto-confirmation and reminders, late fulfillment flags and unanswered cancellation requests');
 Schedule::command('materyalph:fulfillment-sweep')->everyFiveMinutes()->withoutOverlapping();
+
+Artisan::command('materyalph:disputes-sweep', function (): void {
+    $this->info('Disputes: '.json_encode(app(DisputeAdminService::class)->sweep()));
+    $this->info('Invoice requests: '.json_encode(app(InvoiceService::class)->sweep()));
+})->purpose('Dispute response, mutual-resolution, clarification and appeal timers; invoice-request reminders and overdue notices');
+Schedule::command('materyalph:disputes-sweep')->everyMinute()->withoutOverlapping();
 
 Artisan::command('materyalph:finance-draft-statements', function (): void {
     $this->info('Statements drafted: '.app(StatementService::class)->draftMonthly(CarbonImmutable::now()));

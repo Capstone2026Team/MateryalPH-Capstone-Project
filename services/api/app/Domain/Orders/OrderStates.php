@@ -104,14 +104,18 @@ final class OrderStates
             'PARTIALLY_REFUNDED' => ['REFUND_PENDING'],
             'REFUND_FAILED' => ['REFUND_PENDING'],
         ],
+        // The order's DISPUTE family mirrors its current case. Unanswered or unagreed cases escalate; an inconclusive
+        // decision closes after its appeal window; a later, separate case may follow a concluded one.
         self::DISPUTE => [
             'NONE' => ['OPEN_AWAITING_RESPONSE'],
             'OPEN_AWAITING_RESPONSE' => ['MUTUAL_RESOLUTION', 'ESCALATED_ADMIN_REVIEW'],
-            'MUTUAL_RESOLUTION' => ['RESOLVED'],
+            'MUTUAL_RESOLUTION' => ['RESOLVED', 'ESCALATED_ADMIN_REVIEW'],
             'ESCALATED_ADMIN_REVIEW' => ['AWAITING_CLARIFICATION', 'DECIDED', 'CLOSED_INCONCLUSIVE'],
             'AWAITING_CLARIFICATION' => ['ESCALATED_ADMIN_REVIEW', 'DECIDED', 'CLOSED_INCONCLUSIVE'],
-            'DECIDED' => ['APPEAL_OPEN', 'RESOLVED'],
+            'DECIDED' => ['APPEAL_OPEN', 'RESOLVED', 'CLOSED_INCONCLUSIVE'],
             'APPEAL_OPEN' => ['DECIDED', 'RESOLVED'],
+            'RESOLVED' => ['OPEN_AWAITING_RESPONSE'],
+            'CLOSED_INCONCLUSIVE' => ['OPEN_AWAITING_RESPONSE'],
         ],
     ];
 

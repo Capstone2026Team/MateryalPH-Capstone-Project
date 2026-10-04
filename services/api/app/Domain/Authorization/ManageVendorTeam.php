@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Domain\Authorization;
 
 use App\Domain\Agreements\AccountAgreements;
+use App\Domain\Disputes\DisputeStaffAccess;
 use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Identity\ManageAccount;
 use App\Domain\Identity\TokenSessionService;
+use App\Domain\Orders\OrderActor;
 use App\Domain\Vendors\IssueVendorInvitation;
 use App\Models\AuthSession;
 use App\Models\VendorMembership;
@@ -17,7 +19,7 @@ use Illuminate\Support\Facades\DB;
 
 final class ManageVendorTeam
 {
-    public function __construct(private readonly MembershipPolicy $policy, private readonly RecentAuthentication $recent, private readonly AuditRecorder $audit, private readonly TokenSessionService $sessions, private readonly ManageAccount $accounts, private readonly AccountAgreements $agreements, private readonly CurrentVendorTeamAuthority $authority) {}
+    public function __construct(private readonly MembershipPolicy $policy, private readonly RecentAuthentication $recent, private readonly AuditRecorder $audit, private readonly TokenSessionService $sessions, private readonly ManageAccount $accounts, private readonly AccountAgreements $agreements, private readonly CurrentVendorTeamAuthority $authority, private readonly DisputeStaffAccess $staffDisputes) {}
 
     /** @param array<string, mixed> $input */
     public function update(Request $request, string $id, array $input): void
@@ -71,7 +73,10 @@ final class ManageVendorTeam
                 throw new AuthenticationException('RESOURCE_VERSION_CONFLICT', 'Store settings changed. Refresh before trying again.', 409);
             }
             DB::table('vendor_organizations')->where('id', $org->id)->update(['staff_disputes_enabled' => $enabled, 'lock_version' => $version + 1, 'updated_at' => now()]);
-            $this->audit->account($request, 'VENDOR_STAFF_DISPUTES_CHANGED', 'VENDOR_ORGANIZATION', $org->id, ['enabled' => (bool) $org->staff_disputes_enabled], ['enabled' => $enabled]);
+            // Switching it off routes open staff-handled cases to the Owner and revokes staff case exports at once.
+            $effects = (bool) $org->staff_disputes_enabled === $enabled ? ['reassigned' => 0, 'exports_revoked' => 0]
+                : $this->staffDisputes->flagChanged((string) $org->id, $enabled, OrderActor::vendor($request, 'OWNER'));
+            $this->audit->account($request, 'VENDOR_STAFF_DISPUTES_CHANGED', 'VENDOR_ORGANIZATION', $org->id, ['enabled' => (bool) $org->staff_disputes_enabled], ['enabled' => $enabled] + $effects);
         });
     }
 }

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Orders;
 
+use App\Domain\Disputes\DisputeFilingService;
+use App\Domain\Disputes\DisputeRules;
 use App\Domain\Finance\FinancialCalculator;
 use App\Domain\Fulfillment\FulfillmentView;
 use App\Domain\Inventory\InventoryAccess;
@@ -105,10 +107,22 @@ final class OrderQueries
             $openIssue ? 'RESOLVE_PROBLEM' : null,
             array_filter($refunds['reimbursements'], static fn (array $row): bool => $row['state'] === 'VENDOR_REIMBURSEMENT_PENDING' && $row['has_evidence']) !== [] ? 'ACKNOWLEDGE_REIMBURSEMENT' : null,
         ]));
+        $dispute = self::disputeSummary($order);
+        $eligibility = app(DisputeFilingService::class)->eligibility($order, 'BUYER');
+        if ($dispute !== null && in_array($dispute['status'], DisputeRules::ACTIVE, true)) {
+            $detail['available_actions'][] = 'VIEW_DISPUTE';
+        } elseif ($eligibility['available']) {
+            $detail['available_actions'][] = 'FILE_DISPUTE';
+        }
+        if (! in_array($order->order_state, [...OrderStates::PENDING_ACCEPTANCE, OrderStates::AWAITING_PAYMENT, OrderStates::DECLINED, OrderStates::EXPIRED], true)) {
+            $detail['available_actions'][] = 'REQUEST_INVOICE';
+        }
         $detail['payment'] = $this->payment($order, true);
         $detail['fulfillment'] = $fulfillment;
         $detail['cancellation'] = $cancellation;
         $detail['refund_timeline'] = $refunds;
+        $detail['dispute'] = $dispute === null ? null : $dispute + ['filing_available' => $eligibility['available'], 'filing_note' => $eligibility['reason']];
+        $detail['invoice'] = self::invoiceSummary($order);
 
         return $detail;
     }
@@ -209,8 +223,32 @@ final class OrderQueries
         $detail['primary_action'] = $this->vendorPrimaryAction($order);
         $detail['nrpc_terms'] = $terms === null ? null : ['id' => $terms['id'], 'version' => $terms['version'], 'title' => $terms['title'], 'available' => $terms['content'] !== null];
         $detail['decline_reasons'] = OrderConfirmationService::DECLINE_REASONS;
+        // Case and invoice links follow their own narrow permissions; neither exposes store-wide finance.
+        $dispute = self::disputeSummary($order);
+        $detail['dispute'] = $dispute === null ? null : (OrderAccess::allows($scope, 'portal.disputes') || OrderAccess::allows($scope, 'disputes.fulfillment_evidence') ? $dispute : null);
+        $detail['invoice'] = OrderAccess::allows($scope, 'invoices.view') ? self::invoiceSummary($order) : null;
+        $detail['permissions']['can_file_dispute'] = OrderAccess::allows($scope, 'disputes.respond') && app(DisputeFilingService::class)->eligibility($order, 'VENDOR')['available'];
+        $detail['permissions']['can_upload_invoice'] = OrderAccess::allows($scope, 'invoices.upload');
 
         return $detail;
+    }
+
+    /** @return array{case_id: string, reference: string, status: string, filed_by_party: string}|null */
+    private static function disputeSummary(object $order): ?array
+    {
+        $case = DB::table('dispute_cases')->where('order_id', $order->id)->orderByDesc('created_at')->first(['id', 'reference', 'status', 'filed_by_party']);
+
+        return $case === null ? null : ['case_id' => (string) $case->id, 'reference' => (string) $case->reference, 'status' => (string) $case->status, 'filed_by_party' => (string) $case->filed_by_party];
+    }
+
+    /** @return array{status: string, records: int, open_requests: int} */
+    private static function invoiceSummary(object $order): array
+    {
+        $goods = DB::table('invoice_records')->where('order_id', $order->id)->where('invoice_type', 'VENDOR_GOODS_INVOICE')->exists();
+        $sale = ! in_array($order->order_state, [...OrderStates::PENDING_ACCEPTANCE, OrderStates::AWAITING_PAYMENT, OrderStates::DECLINED, OrderStates::EXPIRED], true);
+
+        return ['status' => $goods ? 'ISSUED' : ($sale ? 'NOT_YET_UPLOADED' : 'NOT_DUE'), 'records' => DB::table('invoice_records')->where('order_id', $order->id)->count(),
+            'open_requests' => DB::table('invoice_requests')->where('order_id', $order->id)->where('state', '<>', 'CLOSED')->count()];
     }
 
     /** @return array<string, mixed> */

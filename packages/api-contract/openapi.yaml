@@ -1,12 +1,18 @@
 openapi: 3.1.0
 info:
   title: MateryalPH API
-  version: 1.0.0-phase.12
+  version: 1.0.0-phase.13
   description: >-
     Versioned Phase 1–4 contract. Vendor onboarding, verification, activation readiness, private evidence, team invitations, the Vendor catalog and product PS/ICC compliance are server-authorized. Browser credentials are isolated by configured frontend origin using _vendor and _admin suffixes on access, refresh, CSRF, MFA and bot-proof cookies. Existing unsuffixed browser sessions require sign-in again; cookie selection never replaces account authorization. Native Buyer transport is unchanged.
 servers:
   - url: /api/v1
 tags:
+  - name: Admin Invoices
+  - name: Vendor Invoices
+  - name: Buyer Invoices
+  - name: Admin Disputes
+  - name: Vendor Disputes
+  - name: Buyer Disputes
   - name: Admin Order Operations
   - name: Vendor Fulfillment
   - name: Buyer Fulfillment
@@ -3348,6 +3354,2419 @@ paths:
         "404": { $ref: "#/components/responses/ErrorResponse" }
         "409": { $ref: "#/components/responses/ErrorResponse" }
         "422": { $ref: "#/components/responses/ErrorResponse" }
+  # Phase 13 disputes and invoices operations
+  "/buyers/disputes":
+    "get":
+      "operationId": "listBuyerDisputes"
+      "tags":
+        - "Buyer Disputes"
+      "description": "The Buyer's own cases. Paginated, active first."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "group"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "enum":
+              - "ALL"
+              - "ACTIVE"
+              - "NEEDS_RESPONSE"
+              - "ADMIN_REVIEW"
+              - "DECIDED"
+              - "CONCLUDED"
+        - "name": "q"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "maxLength": 120
+        - "name": "page"
+          "in": "query"
+          "schema":
+            "type": "integer"
+            "minimum": 1
+            "maximum": 1000
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/DisputeListEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+    "post":
+      "operationId": "fileBuyerDispute"
+      "tags":
+        - "Buyer Disputes"
+      "description": "File a structured case. Creates a Case ID and the dispute state only — never a refund or REFUND_PENDING. A transaction case opens from PROCESSING; a post-completion return within seven days after COMPLETED. An active case on the order returns 409 DISPUTE_ALREADY_OPEN with its id."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "multipart/form-data":
+            "schema":
+              "$ref": "#/components/schemas/DisputeFileForm"
+      "responses":
+        "200":
+          "description": "Idempotent replay."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/DisputeDetailEnvelope"
+        "201":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/DisputeDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/buyers/disputes/realtime":
+    "get":
+      "operationId": "getBuyerDisputeRealtime"
+      "tags":
+        - "Buyer Disputes"
+      "description": "The caller's private dispute channel. Its name changes whenever the caller's access changes; only \"case changed\" signals travel over it."
+      "security":
+        - "passportBearer": []
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/DisputeRealtimeEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/buyers/disputes/realtime/auth":
+    "post":
+      "operationId": "authorizeBuyerDisputeChannel"
+      "tags":
+        - "Buyer Disputes"
+      "description": "Authorize the current dispute channel; a stale or revoked channel is refused."
+      "security":
+        - "passportBearer": []
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/DisputeChannelAuthRequest"
+      "responses":
+        "200":
+          "description": "Reverb private-channel authorization."
+          "content":
+            "application/json":
+              "schema":
+                "type": "object"
+                "additionalProperties": true
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+        "503":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/buyers/orders/{orderId}/dispute-eligibility":
+    "get":
+      "operationId": "getBuyerDisputeEligibility"
+      "tags":
+        - "Buyer Disputes"
+      "description": "Whether a case can be filed, the read-only masked original payment method and the affected-line amounts. Never a refund destination."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "orderId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/DisputeEligibilityEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/buyers/disputes/{caseId}":
+    "get":
+      "operationId": "getBuyerDispute"
+      "tags":
+        - "Buyer Disputes"
+      "description": "The case with its single chronological timeline, signed evidence links, deadlines and server-computed actions."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "caseId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/DisputeDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/buyers/disputes/{caseId}/respond":
+    "post":
+      "operationId": "respondBuyerDispute"
+      "tags":
+        - "Buyer Disputes"
+      "description": "The responding party answers within 48 hours. A response opens 72 hours of mutual resolution; REQUEST_ADMIN_REVIEW escalates. A late response returns 409 RESPONSE_WINDOW_CLOSED."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "caseId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "multipart/form-data":
+            "schema":
+              "$ref": "#/components/schemas/DisputeRespondForm"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/DisputeDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/buyers/disputes/{caseId}/proposals":
+    "post":
+      "operationId": "proposeBuyerDisputeResolution"
+      "tags":
+        - "Buyer Disputes"
+      "description": "Propose a remedy during mutual resolution; it supersedes your earlier open proposal. Vendor refund proposals are Owner-only."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "caseId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/DisputeProposalRequest"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/DisputeDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/buyers/disputes/{caseId}/proposals/{proposalId}/answer":
+    "post":
+      "operationId": "answerBuyerDisputeProposal"
+      "tags":
+        - "Buyer Disputes"
+      "description": "The other party accepts or rejects. Acceptance records the agreement as a final decision; a money agreement creates one DISPUTE_CONCLUSION refund per original payment and the case resolves only when it completes."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "caseId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "proposalId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/DisputeProposalAnswer"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/DisputeDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/buyers/disputes/{caseId}/escalate":
+    "post":
+      "operationId": "escalateBuyerDispute"
+      "tags":
+        - "Buyer Disputes"
+      "description": "Ask for Admin review during mutual resolution (or as the responding party)."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "caseId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/DisputeEscalateRequest"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/DisputeDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/buyers/disputes/{caseId}/evidence":
+    "post":
+      "operationId": "addBuyerDisputeEvidence"
+      "tags":
+        - "Buyer Disputes"
+      "description": "Labeled supplemental evidence; the original complaint is never edited."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "caseId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "multipart/form-data":
+            "schema":
+              "$ref": "#/components/schemas/DisputeEvidenceForm"
+      "responses":
+        "200":
+          "description": "Idempotent replay."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/DisputeDetailEnvelope"
+        "201":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/DisputeDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/buyers/disputes/{caseId}/messages":
+    "post":
+      "operationId": "sendBuyerDisputeMessage"
+      "tags":
+        - "Buyer Disputes"
+      "description": "A case message, appended to the timeline."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "caseId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/DisputeMessageRequest"
+      "responses":
+        "200":
+          "description": "Idempotent replay."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/DisputeDetailEnvelope"
+        "201":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/DisputeDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/buyers/disputes/{caseId}/clarifications/{clarificationId}/answer":
+    "post":
+      "operationId": "answerBuyerDisputeClarification"
+      "tags":
+        - "Buyer Disputes"
+      "description": "Answer an Admin clarification within 24 hours."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "caseId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "clarificationId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "multipart/form-data":
+            "schema":
+              "$ref": "#/components/schemas/DisputeClarificationAnswerForm"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/DisputeDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/buyers/disputes/{caseId}/appeal":
+    "post":
+      "operationId": "appealBuyerDispute"
+      "tags":
+        - "Buyer Disputes"
+      "description": "The case's one appeal, within five business days of an Admin decision, with new evidence or a material process error."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "caseId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "multipart/form-data":
+            "schema":
+              "$ref": "#/components/schemas/DisputeAppealForm"
+      "responses":
+        "200":
+          "description": "Idempotent replay."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/DisputeDetailEnvelope"
+        "201":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/DisputeDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/buyers/disputes/{caseId}/remedies/{remedyId}/confirm":
+    "post":
+      "operationId": "confirmBuyerDisputeReplacement"
+      "tags":
+        - "Buyer Disputes"
+      "description": "Confirm receiving a replacement the Vendor recorded."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "caseId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "remedyId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/DisputeDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/buyers/disputes/{caseId}/files/{fileId}/content":
+    "get":
+      "operationId": "getBuyerDisputeEvidenceFile"
+      "tags":
+        - "Buyer Disputes"
+      "description": "Evidence bytes behind a five-minute signed link; the caller is re-authorized against the case."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "caseId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "fileId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "expires"
+          "in": "query"
+          "required": true
+          "schema":
+            "type": "integer"
+        - "name": "signature"
+          "in": "query"
+          "required": true
+          "schema":
+            "type": "string"
+      "responses":
+        "200":
+          "description": "Private evidence bytes for a signed, unexpired link and an authorized caller."
+          "content":
+            "image/png":
+              "schema":
+                "type": "string"
+                "format": "binary"
+            "image/jpeg":
+              "schema":
+                "type": "string"
+                "format": "binary"
+            "application/pdf":
+              "schema":
+                "type": "string"
+                "format": "binary"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "503":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/disputes":
+    "get":
+      "operationId": "listVendorDisputes"
+      "tags":
+        - "Vendor Disputes"
+      "description": "Owner and Store Manager; Store Staff and Customer Service while the Owner's staff dispute flag is on (403 otherwise); assigned Fulfillment Staff see a limited case and add fulfillment evidence only; Inventory Staff are denied. Paginated, active first."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "group"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "enum":
+              - "ALL"
+              - "ACTIVE"
+              - "NEEDS_RESPONSE"
+              - "ADMIN_REVIEW"
+              - "DECIDED"
+              - "CONCLUDED"
+        - "name": "q"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "maxLength": 120
+        - "name": "page"
+          "in": "query"
+          "schema":
+            "type": "integer"
+            "minimum": 1
+            "maximum": 1000
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/DisputeListEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+    "post":
+      "operationId": "fileVendorDispute"
+      "tags":
+        - "Vendor Disputes"
+      "description": "File a structured case. Creates a Case ID and the dispute state only — never a refund or REFUND_PENDING. A transaction case opens from PROCESSING; a post-completion return within seven days after COMPLETED. An active case on the order returns 409 DISPUTE_ALREADY_OPEN with its id."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "multipart/form-data":
+            "schema":
+              "$ref": "#/components/schemas/DisputeFileForm"
+      "responses":
+        "200":
+          "description": "Idempotent replay."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/DisputeDetailEnvelope"
+        "201":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/DisputeDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/disputes/realtime":
+    "get":
+      "operationId": "getVendorDisputeRealtime"
+      "tags":
+        - "Vendor Disputes"
+      "description": "The caller's private dispute channel. Its name changes whenever the caller's access changes; only \"case changed\" signals travel over it."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/DisputeRealtimeEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/disputes/realtime/auth":
+    "post":
+      "operationId": "authorizeVendorDisputeChannel"
+      "tags":
+        - "Vendor Disputes"
+      "description": "Authorize the current dispute channel; a stale or revoked channel is refused."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/DisputeChannelAuthRequest"
+      "responses":
+        "200":
+          "description": "Reverb private-channel authorization."
+          "content":
+            "application/json":
+              "schema":
+                "type": "object"
+                "additionalProperties": true
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+        "503":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/orders/{orderId}/dispute-eligibility":
+    "get":
+      "operationId": "getVendorDisputeEligibility"
+      "tags":
+        - "Vendor Disputes"
+      "description": "Whether a case can be filed, the read-only masked original payment method and the affected-line amounts. Never a refund destination."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "orderId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/DisputeEligibilityEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/disputes/{caseId}":
+    "get":
+      "operationId": "getVendorDispute"
+      "tags":
+        - "Vendor Disputes"
+      "description": "The case with its single chronological timeline, signed evidence links, deadlines and server-computed actions."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "caseId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/DisputeDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/disputes/{caseId}/respond":
+    "post":
+      "operationId": "respondVendorDispute"
+      "tags":
+        - "Vendor Disputes"
+      "description": "The responding party answers within 48 hours. A response opens 72 hours of mutual resolution; REQUEST_ADMIN_REVIEW escalates. A late response returns 409 RESPONSE_WINDOW_CLOSED."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "caseId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "multipart/form-data":
+            "schema":
+              "$ref": "#/components/schemas/DisputeRespondForm"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/DisputeDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/disputes/{caseId}/proposals":
+    "post":
+      "operationId": "proposeVendorDisputeResolution"
+      "tags":
+        - "Vendor Disputes"
+      "description": "Propose a remedy during mutual resolution; it supersedes your earlier open proposal. Vendor refund proposals are Owner-only."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "caseId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/DisputeProposalRequest"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/DisputeDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/disputes/{caseId}/proposals/{proposalId}/answer":
+    "post":
+      "operationId": "answerVendorDisputeProposal"
+      "tags":
+        - "Vendor Disputes"
+      "description": "The other party accepts or rejects. Acceptance records the agreement as a final decision; a money agreement creates one DISPUTE_CONCLUSION refund per original payment and the case resolves only when it completes."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "caseId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "proposalId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/DisputeProposalAnswer"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/DisputeDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/disputes/{caseId}/escalate":
+    "post":
+      "operationId": "escalateVendorDispute"
+      "tags":
+        - "Vendor Disputes"
+      "description": "Ask for Admin review during mutual resolution (or as the responding party)."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "caseId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/DisputeEscalateRequest"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/DisputeDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/disputes/{caseId}/evidence":
+    "post":
+      "operationId": "addVendorDisputeEvidence"
+      "tags":
+        - "Vendor Disputes"
+      "description": "Labeled supplemental evidence; the original complaint is never edited."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "caseId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "multipart/form-data":
+            "schema":
+              "$ref": "#/components/schemas/DisputeEvidenceForm"
+      "responses":
+        "200":
+          "description": "Idempotent replay."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/DisputeDetailEnvelope"
+        "201":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/DisputeDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/disputes/{caseId}/messages":
+    "post":
+      "operationId": "sendVendorDisputeMessage"
+      "tags":
+        - "Vendor Disputes"
+      "description": "A case message, appended to the timeline."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "caseId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/DisputeMessageRequest"
+      "responses":
+        "200":
+          "description": "Idempotent replay."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/DisputeDetailEnvelope"
+        "201":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/DisputeDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/disputes/{caseId}/clarifications/{clarificationId}/answer":
+    "post":
+      "operationId": "answerVendorDisputeClarification"
+      "tags":
+        - "Vendor Disputes"
+      "description": "Answer an Admin clarification within 24 hours."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "caseId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "clarificationId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "multipart/form-data":
+            "schema":
+              "$ref": "#/components/schemas/DisputeClarificationAnswerForm"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/DisputeDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/disputes/{caseId}/appeal":
+    "post":
+      "operationId": "appealVendorDispute"
+      "tags":
+        - "Vendor Disputes"
+      "description": "The case's one appeal, within five business days of an Admin decision, with new evidence or a material process error."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "caseId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "multipart/form-data":
+            "schema":
+              "$ref": "#/components/schemas/DisputeAppealForm"
+      "responses":
+        "200":
+          "description": "Idempotent replay."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/DisputeDetailEnvelope"
+        "201":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/DisputeDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/disputes/{caseId}/remedies/{remedyId}/record":
+    "post":
+      "operationId": "recordVendorDisputeReplacement"
+      "tags":
+        - "Vendor Disputes"
+      "description": "Record the replacement; the Buyer confirms it."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "caseId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "remedyId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "multipart/form-data":
+            "schema":
+              "$ref": "#/components/schemas/DisputeReplacementForm"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/DisputeDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/disputes/exports":
+    "get":
+      "operationId": "listVendorDisputeExports"
+      "tags":
+        - "Vendor Disputes"
+      "description": "Your recent case exports."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/DisputeExportListEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+    "post":
+      "operationId": "requestVendorDisputeExport"
+      "tags":
+        - "Vendor Disputes"
+      "description": "Queue a CSV of case headers. The job re-checks access when it runs and on download; switching the staff dispute flag off revokes staff exports."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/DisputeExportRequest"
+      "responses":
+        "202":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/DisputeExportEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/disputes/exports/{exportId}/download":
+    "get":
+      "operationId": "downloadVendorDisputeExport"
+      "tags":
+        - "Vendor Disputes"
+      "description": "Download a ready, unexpired export (audited)."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "exportId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "responses":
+        "200":
+          "description": "CSV of case headers; spreadsheet formulas neutralized."
+          "content":
+            "text/csv":
+              "schema":
+                "type": "string"
+                "format": "binary"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "503":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/disputes/{caseId}/files/{fileId}/content":
+    "get":
+      "operationId": "getVendorDisputeEvidenceFile"
+      "tags":
+        - "Vendor Disputes"
+      "description": "Evidence bytes behind a five-minute signed link; the caller is re-authorized against the case."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "caseId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "fileId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "expires"
+          "in": "query"
+          "required": true
+          "schema":
+            "type": "integer"
+        - "name": "signature"
+          "in": "query"
+          "required": true
+          "schema":
+            "type": "string"
+      "responses":
+        "200":
+          "description": "Private evidence bytes for a signed, unexpired link and an authorized caller."
+          "content":
+            "image/png":
+              "schema":
+                "type": "string"
+                "format": "binary"
+            "image/jpeg":
+              "schema":
+                "type": "string"
+                "format": "binary"
+            "application/pdf":
+              "schema":
+                "type": "string"
+                "format": "binary"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "503":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/disputes":
+    "get":
+      "operationId": "listAdminDisputes"
+      "tags":
+        - "Admin Disputes"
+      "description": "disputes.view. Case ID, order, parties, issue, handler, deadline, status, requested remedy and refund state."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "status"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "enum":
+              - "NEEDS_ADMIN"
+              - "WITH_PARTIES"
+              - "REMEDY_TRACKING"
+              - "CONCLUDED"
+              - "ALL"
+        - "name": "page"
+          "in": "query"
+          "schema":
+            "type": "integer"
+            "minimum": 1
+            "maximum": 1000
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/DisputeListEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/disputes/realtime":
+    "get":
+      "operationId": "getAdminDisputeRealtime"
+      "tags":
+        - "Admin Disputes"
+      "description": "disputes.view. The caller's dispute channel."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/DisputeRealtimeEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/disputes/realtime/auth":
+    "post":
+      "operationId": "authorizeAdminDisputeChannel"
+      "tags":
+        - "Admin Disputes"
+      "description": "Authorize the current dispute channel."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/DisputeChannelAuthRequest"
+      "responses":
+        "200":
+          "description": "Reverb private-channel authorization."
+          "content":
+            "application/json":
+              "schema":
+                "type": "object"
+                "additionalProperties": true
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+        "503":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/disputes/{caseId}":
+    "get":
+      "operationId": "getAdminDispute"
+      "tags":
+        - "Admin Disputes"
+      "description": "disputes.view. The case with decision support."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "caseId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/DisputeDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/disputes/{caseId}/assign":
+    "post":
+      "operationId": "assignAdminDispute"
+      "tags":
+        - "Admin Disputes"
+      "description": "disputes.decide. Take the case."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "caseId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/DisputeDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/disputes/{caseId}/escalate":
+    "post":
+      "operationId": "escalateAdminDispute"
+      "tags":
+        - "Admin Disputes"
+      "description": "disputes.decide. Direct safety or compliance escalation."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "caseId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/DisputeEscalateRequest"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/DisputeDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/disputes/{caseId}/clarifications":
+    "post":
+      "operationId": "requestAdminDisputeClarification"
+      "tags":
+        - "Admin Disputes"
+      "description": "disputes.decide. Structured question with a 24-hour deadline per requested party."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "caseId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/AdminDisputeClarificationRequest"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/DisputeDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/disputes/{caseId}/decision":
+    "post":
+      "operationId": "decideAdminDispute"
+      "tags":
+        - "Admin Disputes"
+      "description": "disputes.decide. A new immutable decision version with the remedy, reason and conflict check. A money award executes now when immediately enforceable, otherwise after the appeal window lapses."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "caseId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/AdminDisputeDecisionRequest"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/DisputeDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/disputes/{caseId}/appeal-decision":
+    "post":
+      "operationId": "decideAdminDisputeAppeal"
+      "tags":
+        - "Admin Disputes"
+      "description": "disputes.decide by a different Admin than the appealed decision. Affirmed, Modified or Reversed; final."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "caseId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/AdminDisputeAppealDecisionRequest"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/DisputeDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/disputes/{caseId}/remedies/{remedyId}/confirm":
+    "post":
+      "operationId": "confirmAdminDisputeRemedy"
+      "tags":
+        - "Admin Disputes"
+      "description": "disputes.decide. Reasoned confirmation of a recorded replacement the Buyer did not acknowledge."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "caseId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "remedyId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/DisputeRemedyConfirmRequest"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/DisputeDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/disputes/{caseId}/files/{fileId}/content":
+    "get":
+      "operationId": "getAdminDisputeEvidenceFile"
+      "tags":
+        - "Admin Disputes"
+      "description": "disputes.view. Evidence behind a signed link."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "caseId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "fileId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "expires"
+          "in": "query"
+          "required": true
+          "schema":
+            "type": "integer"
+        - "name": "signature"
+          "in": "query"
+          "required": true
+          "schema":
+            "type": "string"
+      "responses":
+        "200":
+          "description": "Private evidence bytes for a signed, unexpired link and an authorized caller."
+          "content":
+            "image/png":
+              "schema":
+                "type": "string"
+                "format": "binary"
+            "image/jpeg":
+              "schema":
+                "type": "string"
+                "format": "binary"
+            "application/pdf":
+              "schema":
+                "type": "string"
+                "format": "binary"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "503":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/buyers/orders/{orderId}/invoices":
+    "get":
+      "operationId": "getBuyerOrderInvoices"
+      "tags":
+        - "Buyer Invoices"
+      "description": "Invoice copies as soon as the Vendor uploads them (not only after completion), requests with their three-business-day target and MateryalPH documents labelled not a tax invoice."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "orderId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/BuyerOrderInvoicesEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/buyers/orders/{orderId}/invoices/details":
+    "put":
+      "operationId": "saveBuyerInvoiceDetails"
+      "tags":
+        - "Buyer Invoices"
+      "description": "Billing name, address and optional TIN for the Vendor's invoice. Stale lock_version returns 409."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "orderId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/InvoiceBillingDetailsRequest"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/BuyerOrderInvoicesEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/buyers/orders/{orderId}/invoices/requests":
+    "post":
+      "operationId": "requestBuyerInvoice"
+      "tags":
+        - "Buyer Invoices"
+      "description": "Request a copy or a correction. The service target never extends the Vendor's legal issuance deadline."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "orderId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/InvoiceRequestCreate"
+      "responses":
+        "200":
+          "description": "Idempotent replay."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/BuyerOrderInvoicesEnvelope"
+        "201":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/BuyerOrderInvoicesEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/buyers/orders/{orderId}/invoices/requests/{requestId}/answer":
+    "post":
+      "operationId": "answerBuyerInvoiceRequest"
+      "tags":
+        - "Buyer Invoices"
+      "description": "Return an uploaded document for correction, or close the request."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "orderId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "requestId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/InvoiceRequestAnswer"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/BuyerOrderInvoicesEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/buyers/invoice-records/{recordId}/content":
+    "get":
+      "operationId": "getBuyerInvoiceFile"
+      "tags":
+        - "Buyer Invoices"
+      "description": "Invoice copy behind a signed link; the download is recorded."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "recordId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "expires"
+          "in": "query"
+          "required": true
+          "schema":
+            "type": "integer"
+        - "name": "signature"
+          "in": "query"
+          "required": true
+          "schema":
+            "type": "string"
+      "responses":
+        "200":
+          "description": "Private evidence bytes for a signed, unexpired link and an authorized caller."
+          "content":
+            "image/png":
+              "schema":
+                "type": "string"
+                "format": "binary"
+            "image/jpeg":
+              "schema":
+                "type": "string"
+                "format": "binary"
+            "application/pdf":
+              "schema":
+                "type": "string"
+                "format": "binary"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "503":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/invoices":
+    "get":
+      "operationId": "listVendorInvoices"
+      "tags":
+        - "Vendor Invoices"
+      "description": "invoices.view. Open requests, orders without an invoice copy yet, uploaded records and reconciliation items. Never Earnings or other protected finance."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "view"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "enum":
+              - "REQUESTS"
+              - "DUE"
+              - "RECORDS"
+              - "RECONCILIATION"
+        - "name": "page"
+          "in": "query"
+          "schema":
+            "type": "integer"
+            "minimum": 1
+            "maximum": 1000
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/InvoiceLogEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/orders/{orderId}/invoices":
+    "get":
+      "operationId": "getVendorOrderInvoices"
+      "tags":
+        - "Vendor Invoices"
+      "description": "invoices.view. Customer Service sees status and metadata only; the full Buyer TIN only for roles that upload."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "orderId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/VendorOrderInvoicesEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+    "post":
+      "operationId": "uploadVendorInvoice"
+      "tags":
+        - "Vendor Invoices"
+      "description": "invoices.upload (Owner, Store Manager, Store Staff). Validates type and issuer; a total or VAT difference opens INVOICE_RECONCILIATION_REQUIRED without changing the accepted Buyer total."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "orderId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "multipart/form-data":
+            "schema":
+              "$ref": "#/components/schemas/InvoiceUploadForm"
+      "responses":
+        "200":
+          "description": "Idempotent replay."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/VendorOrderInvoicesEnvelope"
+        "201":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/VendorOrderInvoicesEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/orders/{orderId}/invoices/{recordId}/explanation":
+    "post":
+      "operationId": "explainVendorInvoiceDifference"
+      "tags":
+        - "Vendor Invoices"
+      "description": "invoices.upload. Explain a reconciliation difference."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "orderId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "recordId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/InvoiceExplanationRequest"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/VendorOrderInvoicesEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/invoice-records/{recordId}/content":
+    "get":
+      "operationId": "getVendorInvoiceFile"
+      "tags":
+        - "Vendor Invoices"
+      "description": "Owner, Store Manager, Store Staff, or the assigned Fulfillment Staff; signed link; recorded."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "recordId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "expires"
+          "in": "query"
+          "required": true
+          "schema":
+            "type": "integer"
+        - "name": "signature"
+          "in": "query"
+          "required": true
+          "schema":
+            "type": "string"
+      "responses":
+        "200":
+          "description": "Private evidence bytes for a signed, unexpired link and an authorized caller."
+          "content":
+            "image/png":
+              "schema":
+                "type": "string"
+                "format": "binary"
+            "image/jpeg":
+              "schema":
+                "type": "string"
+                "format": "binary"
+            "application/pdf":
+              "schema":
+                "type": "string"
+                "format": "binary"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "503":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/invoices":
+    "get":
+      "operationId": "listAdminInvoiceLog"
+      "tags":
+        - "Admin Invoices"
+      "description": "invoices.view. Read-only Invoice Request Log with records, mismatches and download events."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "view"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "enum":
+              - "REQUESTS"
+              - "RECORDS"
+              - "MISMATCHES"
+        - "name": "page"
+          "in": "query"
+          "schema":
+            "type": "integer"
+            "minimum": 1
+            "maximum": 1000
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/InvoiceLogEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/invoice-records/{recordId}/content":
+    "get":
+      "operationId": "getAdminInvoiceFile"
+      "tags":
+        - "Admin Invoices"
+      "description": "invoices.view. Signed link; recorded."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "recordId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "expires"
+          "in": "query"
+          "required": true
+          "schema":
+            "type": "integer"
+        - "name": "signature"
+          "in": "query"
+          "required": true
+          "schema":
+            "type": "string"
+      "responses":
+        "200":
+          "description": "Private evidence bytes for a signed, unexpired link and an authorized caller."
+          "content":
+            "image/png":
+              "schema":
+                "type": "string"
+                "format": "binary"
+            "image/jpeg":
+              "schema":
+                "type": "string"
+                "format": "binary"
+            "application/pdf":
+              "schema":
+                "type": "string"
+                "format": "binary"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "503":
+          "$ref": "#/components/responses/ErrorResponse"
   # Phase 12 fulfillment and cancellation operations
   "/buyers/orders/{orderId}/cancellation-preview":
     "get":
@@ -11473,6 +13892,8 @@ components:
         can_report_vehicle_issue: { type: boolean }
         can_retry_refund: { type: boolean }
         can_respond_problem: { type: boolean }
+        can_file_dispute: { type: boolean }
+        can_upload_invoice: { type: boolean }
     NrpcTermsRef:
       type: object
       required: [ id, version, title, available ]
@@ -11511,7 +13932,7 @@ components:
         nrpc: { oneOf: [ { $ref: "#/components/schemas/OrderNrpc" }, { type: 'null' } ] }
         timeline: { type: array, items: { $ref: "#/components/schemas/OrderTimelineEvent" } }
         lock_version: { type: integer }
-        available_actions: { type: array, items: { type: string, enum: [ APPROVE_REVISION, REJECT_REVISION, ACCEPT_NRPC, REJECT_NRPC, FLAG_NRPC, PAY, WITHDRAW, CANCEL, REQUEST_CANCELLATION, WITHDRAW_CANCELLATION_REQUEST, CONFIRM_RECEIPT, REPORT_PROBLEM, RESOLVE_PROBLEM, ACKNOWLEDGE_REIMBURSEMENT ] } }
+        available_actions: { type: array, items: { type: string, enum: [ APPROVE_REVISION, REJECT_REVISION, ACCEPT_NRPC, REJECT_NRPC, FLAG_NRPC, PAY, WITHDRAW, CANCEL, REQUEST_CANCELLATION, WITHDRAW_CANCELLATION_REQUEST, CONFIRM_RECEIPT, REPORT_PROBLEM, RESOLVE_PROBLEM, ACKNOWLEDGE_REIMBURSEMENT, FILE_DISPUTE, VIEW_DISPUTE, REQUEST_INVOICE ] } }
         payment: { $ref: "#/components/schemas/OrderPaymentAvailability" }
         buyer: { $ref: "#/components/schemas/OrderBuyerRef" }
         auto_accept: { oneOf: [ { $ref: "#/components/schemas/AutoAcceptOutcome" }, { type: 'null' } ] }
@@ -11523,6 +13944,8 @@ components:
         fulfillment: { $ref: "#/components/schemas/OrderFulfillment" }
         cancellation: { $ref: "#/components/schemas/OrderCancellation" }
         refund_timeline: { $ref: "#/components/schemas/OrderRefundTimeline" }
+        dispute: { oneOf: [ { $ref: "#/components/schemas/OrderDisputeRef" }, { type: 'null' } ] }
+        invoice: { oneOf: [ { $ref: "#/components/schemas/OrderInvoiceRef" }, { type: 'null' } ] }
     OrderDetailEnvelope:
       type: object
       required: [ data, meta, errors ]
@@ -11718,6 +14141,2350 @@ components:
         meta: { type: object, additionalProperties: true }
         errors: { type: array, items: { type: object, additionalProperties: true } }
 
+    # Phase 13 disputes and invoices schemas
+    "DisputeDeadline":
+      "type": "object"
+      "required":
+        - "kind"
+        - "at"
+        - "responsible_party"
+        - "label"
+      "properties":
+        "kind":
+          "type": "string"
+          "enum":
+            - "RESPONSE"
+            - "MUTUAL_RESOLUTION"
+            - "CLARIFICATION"
+            - "APPEAL"
+        "at":
+          "type": "string"
+          "format": "date-time"
+        "responsible_party":
+          "type": "string"
+          "enum":
+            - "BUYER"
+            - "VENDOR"
+            - "BOTH"
+            - "REQUESTED_PARTY"
+            - "EITHER"
+        "label":
+          "type": "string"
+      "description": "An exact stored instant for a countdown plus its Asia/Manila date and time label."
+    "DisputeAffectedLine":
+      "type": "object"
+      "required":
+        - "order_line_id"
+        - "display_name"
+        - "quantity"
+        - "line_total_centavos"
+        - "refundable_centavos"
+      "properties":
+        "order_line_id":
+          "type": "string"
+          "format": "uuid"
+        "display_name":
+          "type": "string"
+        "variant_label":
+          "type": "string"
+          "nullable": true
+        "quantity":
+          "type": "string"
+        "line_total_centavos":
+          "type": "integer"
+          "minimum": 0
+        "refundable_centavos":
+          "type": "integer"
+          "minimum": 0
+    "DisputeFileLink":
+      "type": "object"
+      "required":
+        - "url"
+        - "expires_at"
+      "properties":
+        "url":
+          "type": "string"
+        "expires_at":
+          "type": "string"
+          "format": "date-time"
+      "description": "A five-minute signed URL; the fetch also re-authorizes the signed-in caller."
+    "DisputeEvidence":
+      "type": "object"
+      "required":
+        - "file_id"
+        - "label"
+        - "content_type"
+        - "name"
+        - "byte_size"
+        - "url"
+        - "expires_at"
+      "properties":
+        "file_id":
+          "type": "string"
+          "format": "uuid"
+        "label":
+          "type": "string"
+          "enum":
+            - "ORIGINAL"
+            - "SUPPLEMENTAL"
+            - "RESPONSE"
+            - "CLARIFICATION"
+            - "APPEAL"
+            - "FULFILLMENT"
+            - "REMEDY"
+        "description":
+          "type": "string"
+          "nullable": true
+        "content_type":
+          "type": "string"
+        "name":
+          "type": "string"
+        "byte_size":
+          "type": "integer"
+        "url":
+          "type": "string"
+        "expires_at":
+          "type": "string"
+          "format": "date-time"
+    "DisputeTimelineActor":
+      "type": "object"
+      "required":
+        - "party"
+        - "display_name"
+      "properties":
+        "party":
+          "type": "string"
+          "enum":
+            - "BUYER"
+            - "VENDOR"
+            - "ADMIN"
+            - "SYSTEM"
+        "role":
+          "type": "string"
+          "nullable": true
+        "display_name":
+          "type": "string"
+    "DisputeTimelineEntry":
+      "type": "object"
+      "required":
+        - "id"
+        - "sequence"
+        - "type"
+        - "actor"
+        - "details"
+        - "evidence"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "sequence":
+          "type": "integer"
+        "type":
+          "type": "string"
+          "enum":
+            - "CASE_FILED"
+            - "RESPONSE_SUBMITTED"
+            - "EVIDENCE_ADDED"
+            - "MESSAGE"
+            - "PROPOSAL_MADE"
+            - "PROPOSAL_ACCEPTED"
+            - "PROPOSAL_REJECTED"
+            - "AGREEMENT_RECORDED"
+            - "ESCALATED"
+            - "CLARIFICATION_REQUESTED"
+            - "CLARIFICATION_ANSWERED"
+            - "CLARIFICATION_EXPIRED"
+            - "DECISION_ISSUED"
+            - "DECISION_ENFORCEABLE"
+            - "APPEAL_FILED"
+            - "APPEAL_DECIDED"
+            - "REMEDY_CREATED"
+            - "REMEDY_UPDATED"
+            - "REMEDY_COMPLETED"
+            - "REFUND_UPDATED"
+            - "SANCTION_RECORDED"
+            - "HANDLER_ASSIGNED"
+            - "HANDLER_REASSIGNED"
+            - "CASE_RESOLVED"
+            - "CASE_CLOSED_INCONCLUSIVE"
+            - "ORDER_HOLD_CHANGED"
+        "at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "actor":
+          "$ref": "#/components/schemas/DisputeTimelineActor"
+        "body":
+          "type": "string"
+          "nullable": true
+        "details":
+          "type": "object"
+          "additionalProperties": true
+        "evidence":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/DisputeEvidence"
+      "description": "One append-only, chronologically numbered event with its actor, role, exact time and evidence."
+    "DisputeProposal":
+      "type": "object"
+      "required":
+        - "id"
+        - "proposed_by_party"
+        - "remedy"
+        - "terms"
+        - "state"
+        - "can_answer"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "proposed_by_party":
+          "type": "string"
+          "enum":
+            - "BUYER"
+            - "VENDOR"
+        "remedy":
+          "type": "string"
+          "enum":
+            - "REPLACEMENT"
+            - "FULL_REFUND"
+            - "PARTIAL_REFUND"
+            - "NO_FURTHER_ACTION"
+        "amount_centavos":
+          "type": "integer"
+          "minimum": 0
+          "nullable": true
+        "terms":
+          "type": "string"
+        "state":
+          "type": "string"
+          "enum":
+            - "PROPOSED"
+            - "ACCEPTED"
+            - "REJECTED"
+            - "SUPERSEDED"
+            - "EXPIRED"
+        "proposed_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "answered_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "can_answer":
+          "type": "boolean"
+    "DisputeClarification":
+      "type": "object"
+      "required":
+        - "id"
+        - "requested_party"
+        - "question"
+        - "state"
+        - "can_answer"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "requested_party":
+          "type": "string"
+          "enum":
+            - "BUYER"
+            - "VENDOR"
+        "question":
+          "type": "string"
+        "due_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "state":
+          "type": "string"
+          "enum":
+            - "OPEN"
+            - "ANSWERED"
+            - "EXPIRED"
+        "response":
+          "type": "string"
+          "nullable": true
+        "responded_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "can_answer":
+          "type": "boolean"
+    "DisputeDecision":
+      "type": "object"
+      "required":
+        - "id"
+        - "version"
+        - "kind"
+        - "outcome"
+        - "awarded_centavos"
+        - "enforceable"
+        - "decider_role"
+        - "current"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "version":
+          "type": "integer"
+        "kind":
+          "type": "string"
+          "enum":
+            - "ADMIN_DECISION"
+            - "APPEAL_DECISION"
+            - "MUTUAL_AGREEMENT"
+        "outcome":
+          "type": "string"
+          "enum":
+            - "DISMISSED"
+            - "REPLACEMENT"
+            - "FULL_REFUND"
+            - "PARTIAL_REFUND"
+            - "INCONCLUSIVE"
+            - "NO_FURTHER_ACTION"
+        "appeal_result":
+          "type": "string"
+          "enum":
+            - "AFFIRMED"
+            - "MODIFIED"
+            - "REVERSED"
+          "nullable": true
+        "awarded_centavos":
+          "type": "integer"
+          "minimum": 0
+        "reason":
+          "type": "string"
+          "nullable": true
+        "evidence_limitation":
+          "type": "string"
+          "nullable": true
+        "enforceable":
+          "type": "boolean"
+        "decided_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "appeal_due_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "supersedes_decision_id":
+          "type": "string"
+          "format": "uuid"
+          "nullable": true
+        "decider_role":
+          "type": "string"
+        "decider_name":
+          "type": "string"
+          "nullable": true
+        "sanctions":
+          "type": "object"
+          "additionalProperties": true
+          "nullable": true
+        "current":
+          "type": "boolean"
+      "description": "Immutable decision versions. An appeal decision supersedes without erasing the original."
+    "DisputeAppeal":
+      "type": "object"
+      "required":
+        - "id"
+        - "appellant_party"
+        - "grounds"
+        - "statement"
+        - "state"
+        - "appealed_decision_id"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "appellant_party":
+          "type": "string"
+          "enum":
+            - "BUYER"
+            - "VENDOR"
+        "grounds":
+          "type": "string"
+          "enum":
+            - "NEW_EVIDENCE"
+            - "MATERIAL_PROCESS_ERROR"
+        "statement":
+          "type": "string"
+        "state":
+          "type": "string"
+          "enum":
+            - "OPEN"
+            - "DECIDED"
+        "filed_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "decided_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "appealed_decision_id":
+          "type": "string"
+          "format": "uuid"
+        "result_decision_id":
+          "type": "string"
+          "format": "uuid"
+          "nullable": true
+    "DisputeRemedy":
+      "type": "object"
+      "required":
+        - "id"
+        - "kind"
+        - "state"
+        - "amount_centavos"
+        - "recorded"
+        - "can_record"
+        - "can_confirm"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "kind":
+          "type": "string"
+          "enum":
+            - "ONLINE_REFUND"
+            - "CASH_REIMBURSEMENT"
+            - "REPLACEMENT"
+            - "FEE_CREDIT_REVIEW"
+            - "ORDER_CANCELLATION"
+        "state":
+          "type": "string"
+          "enum":
+            - "PENDING"
+            - "COMPLETED"
+            - "FAILED"
+        "amount_centavos":
+          "type": "integer"
+          "minimum": 0
+        "note":
+          "type": "string"
+          "nullable": true
+        "recorded":
+          "type": "boolean"
+        "completed_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "decision_id":
+          "type": "string"
+          "format": "uuid"
+          "nullable": true
+        "evidence":
+          "oneOf":
+            - "$ref": "#/components/schemas/DisputeFileLink"
+            - "type": "null"
+        "can_record":
+          "type": "boolean"
+        "can_confirm":
+          "type": "boolean"
+    "DisputeOriginalPaymentMethod":
+      "type": "object"
+      "required":
+        - "label"
+        - "physical"
+        - "notice"
+      "properties":
+        "label":
+          "type": "string"
+        "physical":
+          "type": "boolean"
+        "notice":
+          "type": "string"
+      "description": "Information only. No request anywhere accepts a different refund destination."
+    "DisputeOrderRef":
+      "type": "object"
+      "required":
+        - "id"
+        - "reference"
+        - "order_state"
+        - "dispute_state"
+        - "refund_state"
+        - "payment_method"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "reference":
+          "type": "string"
+        "order_state":
+          "type": "string"
+        "dispute_state":
+          "type": "string"
+        "refund_state":
+          "type": "string"
+        "payment_method":
+          "type": "string"
+    "DisputeHandlerRef":
+      "type": "object"
+      "required":
+        - "display_name"
+        - "role"
+      "properties":
+        "display_name":
+          "type": "string"
+        "role":
+          "type": "string"
+    "DisputeHandler":
+      "type": "object"
+      "required":
+        - "admin_assigned"
+        - "admin_is_me"
+      "properties":
+        "vendor":
+          "oneOf":
+            - "$ref": "#/components/schemas/DisputeHandlerRef"
+            - "type": "null"
+        "admin_assigned":
+          "type": "boolean"
+        "admin_is_me":
+          "type": "boolean"
+    "DisputeVendorPermissions":
+      "type": "object"
+      "required":
+        - "can_respond"
+        - "can_offer_refund"
+      "properties":
+        "can_respond":
+          "type": "boolean"
+        "can_offer_refund":
+          "type": "boolean"
+    "DisputeRefundable":
+      "type": "object"
+      "required":
+        - "online_centavos"
+        - "cash_centavos"
+      "properties":
+        "online_centavos":
+          "type": "integer"
+          "minimum": 0
+        "cash_centavos":
+          "type": "integer"
+          "minimum": 0
+    "DisputeAdminParty":
+      "type": "object"
+      "required":
+        - "display_name"
+        - "prior_cases"
+      "properties":
+        "display_name":
+          "type": "string"
+        "prior_cases":
+          "type": "integer"
+    "DisputeAdminContext":
+      "type": "object"
+      "required":
+        - "outcomes"
+        - "sanctions"
+        - "metric_events"
+        - "refundable"
+        - "already_awarded_centavos"
+        - "appeal_reviewer_conflict"
+        - "unanswered_clarification"
+        - "buyer"
+        - "vendor"
+        - "order_timeline"
+        - "enforcement"
+      "properties":
+        "outcomes":
+          "type": "array"
+          "items":
+            "type": "string"
+            "enum":
+              - "DISMISSED"
+              - "REPLACEMENT"
+              - "FULL_REFUND"
+              - "PARTIAL_REFUND"
+              - "INCONCLUSIVE"
+              - "NO_FURTHER_ACTION"
+        "sanctions":
+          "type": "array"
+          "items":
+            "type": "string"
+            "enum":
+              - "WARNING"
+              - "TEMPORARY_RESTRICTION"
+              - "SUSPENSION"
+              - "PERMANENT_BAN"
+        "metric_events":
+          "type": "array"
+          "items":
+            "type": "string"
+            "enum":
+              - "VALIDATED_DEFECT_RETURN"
+              - "VENDOR_NON_FULFILLMENT"
+              - "MISREPRESENTED_LISTING"
+        "refundable":
+          "$ref": "#/components/schemas/DisputeRefundable"
+        "already_awarded_centavos":
+          "type": "integer"
+          "minimum": 0
+        "appeal_reviewer_conflict":
+          "type": "boolean"
+        "unanswered_clarification":
+          "type": "boolean"
+        "buyer":
+          "$ref": "#/components/schemas/DisputeAdminParty"
+        "vendor":
+          "$ref": "#/components/schemas/DisputeAdminParty"
+        "order_timeline":
+          "type": "array"
+          "items":
+            "type": "object"
+            "additionalProperties": true
+        "enforcement":
+          "type": "array"
+          "items":
+            "type": "object"
+            "additionalProperties": true
+      "description": "Decision support for Order and Dispute Staff. Refundable amounts return only to the original payments; Admins never hold or disburse money."
+    "DisputeSummary":
+      "type": "object"
+      "required":
+        - "id"
+        - "reference"
+        - "order_id"
+        - "order_reference"
+        - "status"
+        - "case_kind"
+        - "issue_type"
+        - "requested_remedy"
+        - "filed_by_party"
+        - "responsible_party"
+        - "refund_state"
+        - "remedy_state"
+        - "appeal_available"
+        - "vendor_name"
+        - "assigned_to_admin"
+        - "decisions"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "reference":
+          "type": "string"
+        "order_id":
+          "type": "string"
+          "format": "uuid"
+        "order_reference":
+          "type": "string"
+        "status":
+          "type": "string"
+          "enum":
+            - "OPEN_AWAITING_RESPONSE"
+            - "MUTUAL_RESOLUTION"
+            - "ESCALATED_ADMIN_REVIEW"
+            - "AWAITING_CLARIFICATION"
+            - "DECIDED"
+            - "APPEAL_OPEN"
+            - "RESOLVED"
+            - "CLOSED_INCONCLUSIVE"
+        "case_kind":
+          "type": "string"
+          "enum":
+            - "TRANSACTION"
+            - "POST_COMPLETION_RETURN"
+        "issue_type":
+          "type": "string"
+          "enum":
+            - "WRONG_ITEM"
+            - "DEFECTIVE"
+            - "INCOMPLETE_DELIVERY"
+            - "LATE_OR_MISSING"
+            - "MISLEADING_LISTING"
+            - "PAYMENT"
+            - "INVOICE"
+            - "OTHER_TRANSACTION"
+            - "PHYSICAL_PAYMENT_NOT_RECEIVED"
+            - "PICKUP_NO_SHOW"
+            - "ABUSIVE_COMMUNICATION"
+            - "FALSE_EVIDENCE"
+            - "INACCESSIBLE_DELIVERY_SITE"
+        "requested_remedy":
+          "type": "string"
+          "enum":
+            - "REPLACEMENT"
+            - "FULL_REFUND"
+            - "PARTIAL_REFUND"
+            - "RETURN_AND_REFUND"
+            - "INVOICE_CORRECTION"
+            - "PAYMENT_OF_BALANCE"
+            - "WARNING_ONLY"
+            - "OTHER"
+        "requested_amount_centavos":
+          "type": "integer"
+          "minimum": 0
+          "nullable": true
+        "filed_by_party":
+          "type": "string"
+          "enum":
+            - "BUYER"
+            - "VENDOR"
+        "responsible_party":
+          "type": "string"
+          "enum":
+            - "BUYER"
+            - "VENDOR"
+            - "BOTH"
+            - "ADMIN"
+            - "REQUESTED_PARTY"
+            - "NONE"
+        "next_deadline":
+          "oneOf":
+            - "$ref": "#/components/schemas/DisputeDeadline"
+            - "type": "null"
+        "refund_state":
+          "type": "string"
+        "remedy_state":
+          "type": "string"
+          "enum":
+            - "NONE"
+            - "PENDING"
+            - "COMPLETED"
+            - "FAILED"
+        "appeal_available":
+          "type": "boolean"
+        "vendor_name":
+          "type": "string"
+        "buyer_name":
+          "type": "string"
+          "nullable": true
+        "assigned_to_admin":
+          "type": "boolean"
+        "decisions":
+          "type": "integer"
+        "filed_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "updated_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+    "DisputeDetail":
+      "type": "object"
+      "required":
+        - "id"
+        - "reference"
+        - "order_id"
+        - "order_reference"
+        - "status"
+        - "case_kind"
+        - "issue_type"
+        - "requested_remedy"
+        - "filed_by_party"
+        - "responsible_party"
+        - "refund_state"
+        - "remedy_state"
+        - "appeal_available"
+        - "vendor_name"
+        - "assigned_to_admin"
+        - "decisions"
+        - "affected_lines"
+        - "order"
+        - "deadlines"
+        - "server_time"
+        - "timezone"
+        - "handler"
+        - "lock_version"
+        - "timeline"
+        - "proposals"
+        - "clarifications"
+        - "remedies"
+        - "refunds"
+        - "available_actions"
+        - "limited_view"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "reference":
+          "type": "string"
+        "order_id":
+          "type": "string"
+          "format": "uuid"
+        "order_reference":
+          "type": "string"
+        "status":
+          "type": "string"
+          "enum":
+            - "OPEN_AWAITING_RESPONSE"
+            - "MUTUAL_RESOLUTION"
+            - "ESCALATED_ADMIN_REVIEW"
+            - "AWAITING_CLARIFICATION"
+            - "DECIDED"
+            - "APPEAL_OPEN"
+            - "RESOLVED"
+            - "CLOSED_INCONCLUSIVE"
+        "case_kind":
+          "type": "string"
+          "enum":
+            - "TRANSACTION"
+            - "POST_COMPLETION_RETURN"
+        "issue_type":
+          "type": "string"
+          "enum":
+            - "WRONG_ITEM"
+            - "DEFECTIVE"
+            - "INCOMPLETE_DELIVERY"
+            - "LATE_OR_MISSING"
+            - "MISLEADING_LISTING"
+            - "PAYMENT"
+            - "INVOICE"
+            - "OTHER_TRANSACTION"
+            - "PHYSICAL_PAYMENT_NOT_RECEIVED"
+            - "PICKUP_NO_SHOW"
+            - "ABUSIVE_COMMUNICATION"
+            - "FALSE_EVIDENCE"
+            - "INACCESSIBLE_DELIVERY_SITE"
+        "requested_remedy":
+          "type": "string"
+          "enum":
+            - "REPLACEMENT"
+            - "FULL_REFUND"
+            - "PARTIAL_REFUND"
+            - "RETURN_AND_REFUND"
+            - "INVOICE_CORRECTION"
+            - "PAYMENT_OF_BALANCE"
+            - "WARNING_ONLY"
+            - "OTHER"
+        "requested_amount_centavos":
+          "type": "integer"
+          "minimum": 0
+          "nullable": true
+        "filed_by_party":
+          "type": "string"
+          "enum":
+            - "BUYER"
+            - "VENDOR"
+        "responsible_party":
+          "type": "string"
+          "enum":
+            - "BUYER"
+            - "VENDOR"
+            - "BOTH"
+            - "ADMIN"
+            - "REQUESTED_PARTY"
+            - "NONE"
+        "next_deadline":
+          "oneOf":
+            - "$ref": "#/components/schemas/DisputeDeadline"
+            - "type": "null"
+        "refund_state":
+          "type": "string"
+        "remedy_state":
+          "type": "string"
+          "enum":
+            - "NONE"
+            - "PENDING"
+            - "COMPLETED"
+            - "FAILED"
+        "appeal_available":
+          "type": "boolean"
+        "vendor_name":
+          "type": "string"
+        "buyer_name":
+          "type": "string"
+          "nullable": true
+        "assigned_to_admin":
+          "type": "boolean"
+        "decisions":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/DisputeDecision"
+        "filed_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "updated_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "description":
+          "type": "string"
+          "nullable": true
+        "affected_lines":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/DisputeAffectedLine"
+        "original_payment_method":
+          "oneOf":
+            - "$ref": "#/components/schemas/DisputeOriginalPaymentMethod"
+            - "type": "null"
+        "preferred_contact_channel":
+          "type": "string"
+          "enum":
+            - "IN_APP"
+            - "EMAIL"
+          "nullable": true
+        "order":
+          "$ref": "#/components/schemas/DisputeOrderRef"
+        "deadlines":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/DisputeDeadline"
+        "server_time":
+          "type": "string"
+          "format": "date-time"
+        "timezone":
+          "type": "string"
+        "handler":
+          "$ref": "#/components/schemas/DisputeHandler"
+        "lock_version":
+          "type": "integer"
+        "timeline":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/DisputeTimelineEntry"
+        "proposals":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/DisputeProposal"
+        "clarifications":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/DisputeClarification"
+        "appeal":
+          "oneOf":
+            - "$ref": "#/components/schemas/DisputeAppeal"
+            - "type": "null"
+        "remedies":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/DisputeRemedy"
+        "refunds":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/RefundTimelineItem"
+        "reimbursements":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ReimbursementTimelineItem"
+          "nullable": true
+        "available_actions":
+          "type": "array"
+          "items":
+            "type": "string"
+            "enum":
+              - "RESPOND"
+              - "PROPOSE"
+              - "ANSWER_PROPOSAL"
+              - "ESCALATE"
+              - "ADD_EVIDENCE"
+              - "MESSAGE"
+              - "ANSWER_CLARIFICATION"
+              - "APPEAL"
+              - "RECORD_REPLACEMENT"
+              - "CONFIRM_REPLACEMENT"
+              - "ADD_FULFILLMENT_EVIDENCE"
+              - "ASSIGN_TO_ME"
+              - "REQUEST_CLARIFICATION"
+              - "DECIDE"
+              - "DECIDE_APPEAL"
+        "limited_view":
+          "type": "boolean"
+        "permissions":
+          "oneOf":
+            - "$ref": "#/components/schemas/DisputeVendorPermissions"
+            - "type": "null"
+        "admin":
+          "oneOf":
+            - "$ref": "#/components/schemas/DisputeAdminContext"
+            - "type": "null"
+      "description": "One case: the chronological timeline, proposals, clarifications, immutable decisions, the one appeal, remedies and the linked Dispute-Conclusion Refunds. Fulfillment Staff receive a limited view."
+    "DisputeEligibilityMethod":
+      "type": "object"
+      "required":
+        - "label"
+        - "physical"
+      "properties":
+        "label":
+          "type": "string"
+        "channel":
+          "type": "string"
+          "nullable": true
+        "physical":
+          "type": "boolean"
+    "DisputeEligibility":
+      "type": "object"
+      "required":
+        - "available"
+        - "reason"
+        - "case_kind"
+        - "issue_types"
+        - "requested_remedies"
+        - "lines"
+        - "original_payment_method"
+        - "refund_destination_notice"
+        - "filing_creates_refund"
+      "properties":
+        "available":
+          "type": "boolean"
+        "reason":
+          "type": "string"
+        "active_case_id":
+          "type": "string"
+          "format": "uuid"
+          "nullable": true
+        "case_kind":
+          "type": "string"
+          "enum":
+            - "TRANSACTION"
+            - "POST_COMPLETION_RETURN"
+        "post_completion_deadline":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "issue_types":
+          "type": "array"
+          "items":
+            "type": "string"
+            "enum":
+              - "WRONG_ITEM"
+              - "DEFECTIVE"
+              - "INCOMPLETE_DELIVERY"
+              - "LATE_OR_MISSING"
+              - "MISLEADING_LISTING"
+              - "PAYMENT"
+              - "INVOICE"
+              - "OTHER_TRANSACTION"
+              - "PHYSICAL_PAYMENT_NOT_RECEIVED"
+              - "PICKUP_NO_SHOW"
+              - "ABUSIVE_COMMUNICATION"
+              - "FALSE_EVIDENCE"
+              - "INACCESSIBLE_DELIVERY_SITE"
+        "requested_remedies":
+          "type": "array"
+          "items":
+            "type": "string"
+            "enum":
+              - "REPLACEMENT"
+              - "FULL_REFUND"
+              - "PARTIAL_REFUND"
+              - "RETURN_AND_REFUND"
+              - "INVOICE_CORRECTION"
+              - "PAYMENT_OF_BALANCE"
+              - "WARNING_ONLY"
+              - "OTHER"
+        "lines":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/DisputeAffectedLine"
+        "original_payment_method":
+          "$ref": "#/components/schemas/DisputeEligibilityMethod"
+        "refund_destination_notice":
+          "type": "string"
+        "filing_creates_refund":
+          "type": "boolean"
+      "description": "Filing creates a Case ID and dispute state only, never a refund."
+    "DisputeFileForm":
+      "type": "object"
+      "required":
+        - "order_id"
+        - "issue_type"
+        - "requested_remedy"
+        - "description"
+      "properties":
+        "order_id":
+          "type": "string"
+          "format": "uuid"
+        "issue_type":
+          "type": "string"
+          "enum":
+            - "WRONG_ITEM"
+            - "DEFECTIVE"
+            - "INCOMPLETE_DELIVERY"
+            - "LATE_OR_MISSING"
+            - "MISLEADING_LISTING"
+            - "PAYMENT"
+            - "INVOICE"
+            - "OTHER_TRANSACTION"
+            - "PHYSICAL_PAYMENT_NOT_RECEIVED"
+            - "PICKUP_NO_SHOW"
+            - "ABUSIVE_COMMUNICATION"
+            - "FALSE_EVIDENCE"
+            - "INACCESSIBLE_DELIVERY_SITE"
+        "requested_remedy":
+          "type": "string"
+          "enum":
+            - "REPLACEMENT"
+            - "FULL_REFUND"
+            - "PARTIAL_REFUND"
+            - "RETURN_AND_REFUND"
+            - "INVOICE_CORRECTION"
+            - "PAYMENT_OF_BALANCE"
+            - "WARNING_ONLY"
+            - "OTHER"
+        "requested_amount_centavos":
+          "type": "integer"
+          "minimum": 1
+          "description": "Required for PARTIAL_REFUND; at most the affected lines less earlier refunds."
+        "description":
+          "type": "string"
+          "minLength": 20
+          "maxLength": 4000
+        "affected_line_ids":
+          "type": "array"
+          "items":
+            "type": "string"
+            "format": "uuid"
+        "preferred_contact_channel":
+          "type": "string"
+          "enum":
+            - "IN_APP"
+            - "EMAIL"
+        "files":
+          "type": "array"
+          "maxItems": 5
+          "items":
+            "type": "string"
+            "format": "binary"
+          "description": "Up to five JPG, PNG or PDF files, validated and scanned, stored privately."
+      "description": "The structured Refund/Dispute Request Form. It has no refund-destination field; any destination key is refused with 422 REFUND_DESTINATION_NOT_ACCEPTED."
+    "DisputeRespondForm":
+      "type": "object"
+      "required":
+        - "position"
+        - "body"
+      "properties":
+        "position":
+          "type": "string"
+          "enum":
+            - "ACCEPT_REQUEST"
+            - "OFFER_REPLACEMENT"
+            - "OFFER_REFUND"
+            - "REJECT_WITH_EVIDENCE"
+            - "REQUEST_ADMIN_REVIEW"
+        "body":
+          "type": "string"
+          "minLength": 10
+          "maxLength": 4000
+        "amount_centavos":
+          "type": "integer"
+          "minimum": 1
+          "description": "OFFER_REFUND only; omit for a full refund. Vendor refund offers are Owner-only."
+        "files":
+          "type": "array"
+          "maxItems": 5
+          "items":
+            "type": "string"
+            "format": "binary"
+          "description": "Evidence; required to REJECT_WITH_EVIDENCE."
+    "DisputeProposalRequest":
+      "type": "object"
+      "required":
+        - "remedy"
+        - "terms"
+      "properties":
+        "remedy":
+          "type": "string"
+          "enum":
+            - "REPLACEMENT"
+            - "FULL_REFUND"
+            - "PARTIAL_REFUND"
+            - "NO_FURTHER_ACTION"
+        "amount_centavos":
+          "type": "integer"
+          "minimum": 1
+          "nullable": true
+        "terms":
+          "type": "string"
+          "minLength": 10
+          "maxLength": 2000
+    "DisputeProposalAnswer":
+      "type": "object"
+      "required":
+        - "decision"
+      "properties":
+        "decision":
+          "type": "string"
+          "enum":
+            - "ACCEPT"
+            - "REJECT"
+    "DisputeEscalateRequest":
+      "type": "object"
+      "required":
+        - "reason"
+      "properties":
+        "reason":
+          "type": "string"
+          "minLength": 10
+          "maxLength": 2000
+    "DisputeEvidenceForm":
+      "type": "object"
+      "required":
+        - "files"
+      "properties":
+        "description":
+          "type": "string"
+          "maxLength": 500
+        "files":
+          "type": "array"
+          "maxItems": 5
+          "items":
+            "type": "string"
+            "format": "binary"
+          "description": "Labeled supplemental (or assigned Fulfillment Staff fulfillment) evidence; the original complaint is never edited."
+    "DisputeMessageRequest":
+      "type": "object"
+      "required":
+        - "body"
+      "properties":
+        "body":
+          "type": "string"
+          "minLength": 2
+          "maxLength": 2000
+    "DisputeClarificationAnswerForm":
+      "type": "object"
+      "required":
+        - "response"
+      "properties":
+        "response":
+          "type": "string"
+          "minLength": 5
+          "maxLength": 4000
+        "files":
+          "type": "array"
+          "maxItems": 5
+          "items":
+            "type": "string"
+            "format": "binary"
+          "description": "Optional supporting files."
+    "DisputeAppealForm":
+      "type": "object"
+      "required":
+        - "grounds"
+        - "statement"
+      "properties":
+        "grounds":
+          "type": "string"
+          "enum":
+            - "NEW_EVIDENCE"
+            - "MATERIAL_PROCESS_ERROR"
+        "statement":
+          "type": "string"
+          "minLength": 20
+          "maxLength": 4000
+        "files":
+          "type": "array"
+          "maxItems": 5
+          "items":
+            "type": "string"
+            "format": "binary"
+          "description": "Required for NEW_EVIDENCE."
+    "DisputeReplacementForm":
+      "type": "object"
+      "required":
+        - "note"
+      "properties":
+        "note":
+          "type": "string"
+          "minLength": 10
+          "maxLength": 500
+        "files":
+          "type": "array"
+          "maxItems": 1
+          "items":
+            "type": "string"
+            "format": "binary"
+          "description": "Optional proof of the replacement."
+    "DisputeRemedyConfirmRequest":
+      "type": "object"
+      "required":
+        - "reason"
+      "properties":
+        "reason":
+          "type": "string"
+          "minLength": 10
+          "maxLength": 2000
+    "AdminDisputeClarificationRequest":
+      "type": "object"
+      "required":
+        - "parties"
+        - "question"
+      "properties":
+        "parties":
+          "type": "array"
+          "minItems": 1
+          "maxItems": 2
+          "items":
+            "type": "string"
+            "enum":
+              - "BUYER"
+              - "VENDOR"
+        "question":
+          "type": "string"
+          "minLength": 10
+          "maxLength": 2000
+    "DisputeSanctionInput":
+      "type": "object"
+      "required":
+        - "subject"
+        - "action"
+        - "reason"
+      "properties":
+        "subject":
+          "type": "string"
+          "enum":
+            - "BUYER"
+            - "VENDOR"
+        "action":
+          "type": "string"
+          "enum":
+            - "WARNING"
+            - "TEMPORARY_RESTRICTION"
+            - "SUSPENSION"
+            - "PERMANENT_BAN"
+        "reason":
+          "type": "string"
+          "minLength": 10
+          "maxLength": 1000
+        "scope":
+          "type": "string"
+          "maxLength": 160
+          "nullable": true
+        "duration_days":
+          "type": "integer"
+          "minimum": 1
+          "maximum": 365
+          "nullable": true
+        "restoration_condition":
+          "type": "string"
+          "maxLength": 1000
+          "nullable": true
+      "description": "A warning takes effect when the decision is final; restriction, suspension and ban are recorded and referred to User Management Staff."
+    "AdminDisputeDecisionRequest":
+      "type": "object"
+      "required":
+        - "outcome"
+        - "reason"
+        - "enforceable"
+        - "conflict_check_confirmed"
+        - "lock_version"
+      "properties":
+        "outcome":
+          "type": "string"
+          "enum":
+            - "DISMISSED"
+            - "REPLACEMENT"
+            - "FULL_REFUND"
+            - "PARTIAL_REFUND"
+            - "INCONCLUSIVE"
+        "reason":
+          "type": "string"
+          "minLength": 20
+          "maxLength": 4000
+        "amount_centavos":
+          "type": "integer"
+          "minimum": 1
+          "nullable": true
+        "affected_line_ids":
+          "type": "array"
+          "items":
+            "type": "string"
+            "format": "uuid"
+        "enforceable":
+          "type": "boolean"
+          "description": "Immediately enforceable; otherwise the award executes when the five-business-day appeal window lapses unappealed."
+        "conflict_check_confirmed":
+          "type": "boolean"
+        "evidence_limitation":
+          "type": "string"
+          "maxLength": 2000
+          "nullable": true
+        "sanctions":
+          "type": "array"
+          "maxItems": 4
+          "items":
+            "$ref": "#/components/schemas/DisputeSanctionInput"
+        "metric_event":
+          "type": "string"
+          "enum":
+            - "VALIDATED_DEFECT_RETURN"
+            - "VENDOR_NON_FULFILLMENT"
+            - "MISREPRESENTED_LISTING"
+          "nullable": true
+        "lock_version":
+          "type": "integer"
+          "minimum": 1
+      "description": "The remedy, the reason and the conflict check are required. A stale lock_version returns 409."
+    "AdminDisputeAppealDecisionRequest":
+      "type": "object"
+      "required":
+        - "result"
+        - "reason"
+        - "conflict_check_confirmed"
+        - "lock_version"
+      "properties":
+        "result":
+          "type": "string"
+          "enum":
+            - "AFFIRMED"
+            - "MODIFIED"
+            - "REVERSED"
+        "outcome":
+          "type": "string"
+          "enum":
+            - "DISMISSED"
+            - "REPLACEMENT"
+            - "FULL_REFUND"
+            - "PARTIAL_REFUND"
+            - "INCONCLUSIVE"
+          "nullable": true
+        "reason":
+          "type": "string"
+          "minLength": 20
+          "maxLength": 4000
+        "amount_centavos":
+          "type": "integer"
+          "minimum": 1
+          "nullable": true
+        "affected_line_ids":
+          "type": "array"
+          "items":
+            "type": "string"
+            "format": "uuid"
+        "conflict_check_confirmed":
+          "type": "boolean"
+        "sanctions":
+          "type": "array"
+          "maxItems": 4
+          "items":
+            "$ref": "#/components/schemas/DisputeSanctionInput"
+        "metric_event":
+          "type": "string"
+          "enum":
+            - "VALIDATED_DEFECT_RETURN"
+            - "VENDOR_NON_FULFILLMENT"
+            - "MISREPRESENTED_LISTING"
+          "nullable": true
+        "lock_version":
+          "type": "integer"
+          "minimum": 1
+      "description": "Reviewed by an Admin who did not make the appealed decision (409 CONFLICT_OF_INTEREST otherwise). Final and executed at once."
+    "DisputeExport":
+      "type": "object"
+      "required":
+        - "id"
+        - "state"
+        - "requested_at"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "state":
+          "type": "string"
+          "enum":
+            - "QUEUED"
+            - "READY"
+            - "REVOKED"
+            - "FAILED"
+            - "EXPIRED"
+        "row_count":
+          "type": "integer"
+          "nullable": true
+        "requested_at":
+          "type": "string"
+          "format": "date-time"
+        "completed_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "expires_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "revocation_reason":
+          "type": "string"
+          "nullable": true
+    "DisputeExportRequest":
+      "type": "object"
+      "properties":
+        "group":
+          "type": "string"
+          "enum":
+            - "ALL"
+            - "ACTIVE"
+            - "NEEDS_RESPONSE"
+            - "ADMIN_REVIEW"
+            - "DECIDED"
+            - "CONCLUDED"
+          "nullable": true
+    "DisputeRealtime":
+      "type": "object"
+      "required":
+        - "enabled"
+      "properties":
+        "channel":
+          "type": "string"
+          "nullable": true
+        "enabled":
+          "type": "boolean"
+        "key":
+          "type": "string"
+          "nullable": true
+        "host":
+          "type": "string"
+          "nullable": true
+        "port":
+          "type": "integer"
+          "nullable": true
+        "scheme":
+          "type": "string"
+          "nullable": true
+    "DisputeChannelAuthRequest":
+      "type": "object"
+      "required":
+        - "socket_id"
+        - "channel_name"
+      "properties":
+        "socket_id":
+          "type": "string"
+        "channel_name":
+          "type": "string"
+          "maxLength": 240
+    "DisputeListMeta":
+      "type": "object"
+      "properties":
+        "page":
+          "type": "integer"
+        "per_page":
+          "type": "integer"
+        "total":
+          "type": "integer"
+        "has_more":
+          "type": "boolean"
+        "group":
+          "type": "string"
+        "status":
+          "type": "string"
+        "counts":
+          "type": "object"
+          "additionalProperties":
+            "type": "integer"
+    "InvoiceRecordView":
+      "type": "object"
+      "required":
+        - "id"
+        - "invoice_type"
+        - "issuer"
+        - "invoice_number"
+        - "issued_on"
+        - "amount_centavos"
+        - "document_origin"
+        - "origin_label"
+        - "verification_state"
+        - "e_invoicing_coverage"
+        - "compliance_note"
+        - "reconciliation_state"
+        - "reconciliation_difference_centavos"
+        - "can_explain"
+        - "buyer_total_unchanged"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "invoice_type":
+          "type": "string"
+          "enum":
+            - "VENDOR_GOODS_INVOICE"
+            - "VENDOR_ADJUSTMENT_DOCUMENT"
+            - "PLATFORM_SERVICE_INVOICE"
+            - "PROCESSOR_INVOICE"
+        "issuer":
+          "type": "string"
+        "invoice_number":
+          "type": "string"
+        "issued_on":
+          "type": "string"
+        "amount_centavos":
+          "type": "integer"
+          "minimum": 0
+        "vat_centavos":
+          "type": "integer"
+          "minimum": 0
+          "nullable": true
+        "document_origin":
+          "type": "string"
+          "enum":
+            - "DEMO_SAMPLE"
+            - "VENDOR_REGISTERED_PROCESS"
+            - "PLATFORM_SAMPLE"
+        "origin_label":
+          "type": "string"
+        "verification_state":
+          "type": "string"
+          "enum":
+            - "UNVERIFIED"
+            - "VERIFIED"
+            - "REJECTED"
+        "e_invoicing_coverage":
+          "type": "string"
+          "enum":
+            - "REVIEW_REQUIRED"
+            - "COVERED"
+            - "NOT_COVERED"
+            - "EXEMPT_MICRO"
+        "compliance_note":
+          "type": "string"
+        "reconciliation_state":
+          "type": "string"
+          "enum":
+            - "NOT_APPLICABLE"
+            - "MATCHED"
+            - "INVOICE_RECONCILIATION_REQUIRED"
+            - "EXPLAINED"
+            - "CORRECTED"
+        "reconciliation_difference_centavos":
+          "type": "integer"
+        "expected_total_centavos":
+          "type": "integer"
+          "nullable": true
+        "reconciliation_note":
+          "type": "string"
+          "nullable": true
+        "amends_invoice_record_id":
+          "type": "string"
+          "format": "uuid"
+          "nullable": true
+        "uploaded_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "uploaded_role":
+          "type": "string"
+          "nullable": true
+        "source_system":
+          "type": "string"
+          "nullable": true
+        "invoicing_method":
+          "type": "string"
+          "nullable": true
+        "download":
+          "oneOf":
+            - "$ref": "#/components/schemas/DisputeFileLink"
+            - "type": "null"
+        "can_explain":
+          "type": "boolean"
+        "buyer_total_unchanged":
+          "type": "boolean"
+        "order_reference":
+          "type": "string"
+          "nullable": true
+        "vendor_name":
+          "type": "string"
+          "nullable": true
+        "downloads":
+          "type": "integer"
+          "nullable": true
+        "last_download_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+      "description": "A protected copy of an externally issued Vendor document. An uploaded PDF is not proof of BIR or structured e-invoicing compliance; a reconciliation difference never changes the accepted Buyer total."
+    "InvoiceRequestView":
+      "type": "object"
+      "required":
+        - "id"
+        - "kind"
+        - "state"
+        - "service_target_at"
+        - "service_target_label"
+        - "overdue"
+        - "can_return"
+        - "can_close"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "kind":
+          "type": "string"
+          "enum":
+            - "COPY"
+            - "CORRECTION"
+        "state":
+          "type": "string"
+          "enum":
+            - "REQUESTED"
+            - "UPLOADED"
+            - "DOWNLOADED"
+            - "RETURNED_FOR_CORRECTION"
+            - "CLOSED"
+        "details":
+          "type": "string"
+          "nullable": true
+        "invoice_record_id":
+          "type": "string"
+          "format": "uuid"
+          "nullable": true
+        "fulfilled_invoice_record_id":
+          "type": "string"
+          "format": "uuid"
+          "nullable": true
+        "requested_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "service_target_at":
+          "type": "string"
+          "format": "date-time"
+        "service_target_label":
+          "type": "string"
+        "overdue":
+          "type": "boolean"
+        "uploaded_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "downloaded_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "closed_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "can_return":
+          "type": "boolean"
+        "can_close":
+          "type": "boolean"
+        "order_reference":
+          "type": "string"
+          "nullable": true
+        "vendor_name":
+          "type": "string"
+          "nullable": true
+    "PlatformDocumentRef":
+      "type": "object"
+      "required":
+        - "kind"
+        - "title"
+        - "not_tax_invoice"
+        - "label"
+        - "availability"
+      "properties":
+        "kind":
+          "type": "string"
+          "enum":
+            - "PURCHASE_ORDER"
+            - "PAYMENT_CONFIRMATION"
+        "title":
+          "type": "string"
+        "not_tax_invoice":
+          "type": "boolean"
+        "label":
+          "type": "string"
+          "enum":
+            - "Not a tax invoice"
+        "availability":
+          "type": "string"
+      "description": "MateryalPH documents are always labelled not a tax invoice."
+    "BuyerInvoiceBillingDetails":
+      "type": "object"
+      "required":
+        - "billing_name"
+        - "billing_address"
+        - "lock_version"
+      "properties":
+        "billing_name":
+          "type": "string"
+        "billing_address":
+          "type": "string"
+        "tin_masked":
+          "type": "string"
+          "nullable": true
+        "lock_version":
+          "type": "integer"
+    "VendorInvoiceBillingDetails":
+      "type": "object"
+      "required":
+        - "billing_name"
+        - "billing_address"
+      "properties":
+        "billing_name":
+          "type": "string"
+        "billing_address":
+          "type": "string"
+        "tin":
+          "type": "string"
+          "nullable": true
+        "tin_masked":
+          "type": "string"
+          "nullable": true
+    "InvoiceOrderLine":
+      "type": "object"
+      "required":
+        - "order_line_id"
+        - "display_name"
+      "properties":
+        "order_line_id":
+          "type": "string"
+          "format": "uuid"
+        "display_name":
+          "type": "string"
+    "BuyerOrderInvoices":
+      "type": "object"
+      "required":
+        - "order_id"
+        - "order_reference"
+        - "status"
+        - "issuance_notice"
+        - "records"
+        - "requests"
+        - "platform_documents"
+        - "can_edit_billing_details"
+        - "can_request_copy"
+        - "can_request_correction"
+      "properties":
+        "order_id":
+          "type": "string"
+          "format": "uuid"
+        "order_reference":
+          "type": "string"
+        "status":
+          "type": "string"
+          "enum":
+            - "ISSUED"
+            - "NOT_YET_UPLOADED"
+            - "NOT_DUE"
+        "issuance_notice":
+          "type": "string"
+        "records":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/InvoiceRecordView"
+        "requests":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/InvoiceRequestView"
+        "platform_documents":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/PlatformDocumentRef"
+        "billing_details":
+          "oneOf":
+            - "$ref": "#/components/schemas/BuyerInvoiceBillingDetails"
+            - "type": "null"
+        "can_edit_billing_details":
+          "type": "boolean"
+        "can_request_copy":
+          "type": "boolean"
+        "can_request_correction":
+          "type": "boolean"
+    "VendorOrderInvoices":
+      "type": "object"
+      "required":
+        - "order_id"
+        - "order_reference"
+        - "status"
+        - "issuance_notice"
+        - "records"
+        - "requests"
+        - "platform_documents"
+        - "can_upload"
+        - "can_open_files"
+        - "issuer_name"
+        - "invoice_types"
+        - "source_systems"
+        - "invoicing_methods"
+        - "lines"
+      "properties":
+        "order_id":
+          "type": "string"
+          "format": "uuid"
+        "order_reference":
+          "type": "string"
+        "status":
+          "type": "string"
+          "enum":
+            - "ISSUED"
+            - "NOT_YET_UPLOADED"
+            - "NOT_DUE"
+        "issuance_notice":
+          "type": "string"
+        "records":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/InvoiceRecordView"
+        "requests":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/InvoiceRequestView"
+        "platform_documents":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/PlatformDocumentRef"
+        "billing_details":
+          "oneOf":
+            - "$ref": "#/components/schemas/VendorInvoiceBillingDetails"
+            - "type": "null"
+        "can_upload":
+          "type": "boolean"
+        "can_open_files":
+          "type": "boolean"
+        "issuer_name":
+          "type": "string"
+        "invoice_types":
+          "type": "array"
+          "items":
+            "type": "string"
+            "enum":
+              - "VENDOR_GOODS_INVOICE"
+              - "VENDOR_ADJUSTMENT_DOCUMENT"
+        "source_systems":
+          "type": "array"
+          "items":
+            "type": "string"
+            "enum":
+              - "REGISTERED_CAS"
+              - "BIR_EIS"
+              - "LOOSE_LEAF_OR_PRINTED"
+              - "OTHER_REGISTERED"
+        "invoicing_methods":
+          "type": "array"
+          "items":
+            "type": "string"
+            "enum":
+              - "ELECTRONIC"
+              - "COMPUTERIZED"
+              - "MANUAL"
+        "lines":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/InvoiceOrderLine"
+    "InvoiceLogRow":
+      "type": "object"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "order_id":
+          "type": "string"
+          "format": "uuid"
+        "order_reference":
+          "type": "string"
+        "order_state":
+          "type": "string"
+        "payment_state":
+          "type": "string"
+        "accepted_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "open_request":
+          "type": "boolean"
+        "note":
+          "type": "string"
+        "kind":
+          "type": "string"
+        "state":
+          "type": "string"
+        "details":
+          "type": "string"
+          "nullable": true
+        "service_target_at":
+          "type": "string"
+          "format": "date-time"
+        "service_target_label":
+          "type": "string"
+        "overdue":
+          "type": "boolean"
+        "invoice_type":
+          "type": "string"
+        "issuer":
+          "type": "string"
+        "invoice_number":
+          "type": "string"
+        "issued_on":
+          "type": "string"
+        "amount_centavos":
+          "type": "integer"
+        "reconciliation_state":
+          "type": "string"
+        "reconciliation_difference_centavos":
+          "type": "integer"
+        "origin_label":
+          "type": "string"
+        "compliance_note":
+          "type": "string"
+        "vendor_name":
+          "type": "string"
+          "nullable": true
+        "downloads":
+          "type": "integer"
+          "nullable": true
+        "last_download_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "uploaded_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "download":
+          "oneOf":
+            - "$ref": "#/components/schemas/DisputeFileLink"
+            - "type": "null"
+      "description": "One row of the selected view: an open request, an order without an invoice copy yet, an uploaded record or a reconciliation item."
+    "InvoiceListMeta":
+      "type": "object"
+      "properties":
+        "view":
+          "type": "string"
+        "counts":
+          "type": "object"
+          "additionalProperties":
+            "type": "integer"
+        "page":
+          "type": "integer"
+        "per_page":
+          "type": "integer"
+        "total":
+          "type": "integer"
+        "has_more":
+          "type": "boolean"
+        "can_upload":
+          "type": "boolean"
+        "issuance_notice":
+          "type": "string"
+        "notice":
+          "type": "string"
+    "InvoiceBillingDetailsRequest":
+      "type": "object"
+      "required":
+        - "billing_name"
+        - "billing_address"
+      "properties":
+        "billing_name":
+          "type": "string"
+          "minLength": 2
+          "maxLength": 180
+        "billing_address":
+          "type": "string"
+          "minLength": 10
+          "maxLength": 500
+        "tin":
+          "type": "string"
+          "maxLength": 20
+          "nullable": true
+        "lock_version":
+          "type": "integer"
+          "minimum": 1
+          "nullable": true
+      "description": "Collected only for the invoice. The TIN is encrypted and shown masked to the Buyer."
+    "InvoiceRequestCreate":
+      "type": "object"
+      "required":
+        - "kind"
+        - "details"
+      "properties":
+        "kind":
+          "type": "string"
+          "enum":
+            - "COPY"
+            - "CORRECTION"
+        "details":
+          "type": "string"
+          "minLength": 10
+          "maxLength": 2000
+        "invoice_record_id":
+          "type": "string"
+          "format": "uuid"
+          "nullable": true
+    "InvoiceRequestAnswer":
+      "type": "object"
+      "required":
+        - "action"
+      "properties":
+        "action":
+          "type": "string"
+          "enum":
+            - "RETURN"
+            - "CLOSE"
+        "reason":
+          "type": "string"
+          "maxLength": 1000
+          "nullable": true
+    "InvoiceUploadForm":
+      "type": "object"
+      "required":
+        - "invoice_type"
+        - "issuer_name"
+        - "invoice_number"
+        - "issued_on"
+        - "amount_centavos"
+        - "source_system"
+        - "invoicing_method"
+        - "file"
+      "properties":
+        "invoice_type":
+          "type": "string"
+          "enum":
+            - "VENDOR_GOODS_INVOICE"
+            - "VENDOR_ADJUSTMENT_DOCUMENT"
+        "issuer_name":
+          "type": "string"
+          "maxLength": 240
+          "description": "Must equal the registered business name."
+        "invoice_number":
+          "type": "string"
+          "maxLength": 64
+        "issued_on":
+          "type": "string"
+          "format": "date"
+        "amount_centavos":
+          "type": "integer"
+          "minimum": 0
+        "vat_centavos":
+          "type": "integer"
+          "minimum": 0
+        "vat_exempt_centavos":
+          "type": "integer"
+          "minimum": 0
+        "zero_rated_centavos":
+          "type": "integer"
+          "minimum": 0
+        "related_line_ids":
+          "type": "array"
+          "items":
+            "type": "string"
+            "format": "uuid"
+        "source_system":
+          "type": "string"
+          "enum":
+            - "REGISTERED_CAS"
+            - "BIR_EIS"
+            - "LOOSE_LEAF_OR_PRINTED"
+            - "OTHER_REGISTERED"
+        "invoicing_method":
+          "type": "string"
+          "enum":
+            - "ELECTRONIC"
+            - "COMPUTERIZED"
+            - "MANUAL"
+        "amends_invoice_record_id":
+          "type": "string"
+          "format": "uuid"
+        "invoice_request_id":
+          "type": "string"
+          "format": "uuid"
+        "file":
+          "type": "string"
+          "format": "binary"
+          "description": "PDF, JPG or PNG copy, validated and scanned fail-closed, stored privately."
+      "description": "Owner, Store Manager or Store Staff upload a copy of the invoice issued through their registered process. MateryalPH never assigns the official number."
+    "InvoiceExplanationRequest":
+      "type": "object"
+      "required":
+        - "note"
+      "properties":
+        "note":
+          "type": "string"
+          "minLength": 10
+          "maxLength": 2000
+    "OrderDisputeRef":
+      "type": "object"
+      "required":
+        - "case_id"
+        - "reference"
+        - "status"
+        - "filed_by_party"
+      "properties":
+        "case_id":
+          "type": "string"
+          "format": "uuid"
+        "reference":
+          "type": "string"
+        "status":
+          "type": "string"
+          "enum":
+            - "OPEN_AWAITING_RESPONSE"
+            - "MUTUAL_RESOLUTION"
+            - "ESCALATED_ADMIN_REVIEW"
+            - "AWAITING_CLARIFICATION"
+            - "DECIDED"
+            - "APPEAL_OPEN"
+            - "RESOLVED"
+            - "CLOSED_INCONCLUSIVE"
+        "filed_by_party":
+          "type": "string"
+          "enum":
+            - "BUYER"
+            - "VENDOR"
+        "filing_available":
+          "type": "boolean"
+        "filing_note":
+          "type": "string"
+    "OrderInvoiceRef":
+      "type": "object"
+      "required":
+        - "status"
+        - "records"
+        - "open_requests"
+      "properties":
+        "status":
+          "type": "string"
+          "enum":
+            - "ISSUED"
+            - "NOT_YET_UPLOADED"
+            - "NOT_DUE"
+        "records":
+          "type": "integer"
+        "open_requests":
+          "type": "integer"
+    "DisputeListEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/DisputeSummary"
+        "meta":
+          "$ref": "#/components/schemas/DisputeListMeta"
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "DisputeDetailEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/DisputeDetail"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "DisputeEligibilityEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/DisputeEligibility"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "DisputeExportEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/DisputeExport"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "DisputeExportListEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/DisputeExport"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "DisputeRealtimeEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/DisputeRealtime"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "BuyerOrderInvoicesEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/BuyerOrderInvoices"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "VendorOrderInvoicesEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/VendorOrderInvoices"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "InvoiceLogEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/InvoiceLogRow"
+        "meta":
+          "$ref": "#/components/schemas/InvoiceListMeta"
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
     # Phase 12 fulfillment and cancellation schemas
     "FulfillmentProof":
       "type": "object"
