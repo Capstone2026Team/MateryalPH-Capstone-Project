@@ -24,6 +24,7 @@ import '../features/map_discovery/discovery_result_cache.dart';
 import '../features/map_discovery/map_home_screen.dart';
 import '../features/map_discovery/supplier_map.dart';
 import '../widgets/buyer_account_widgets.dart';
+import '../features/trust/analytics_repository.dart';
 import 'buyer_profile_screen.dart';
 import 'buyer_store_browse_screen.dart';
 
@@ -40,6 +41,7 @@ class BuyerHomeScreen extends StatefulWidget {
     this.procurementRepository,
     this.ordersRepository,
     this.messagingRepository,
+    this.analyticsRepository,
     this.deviceLocation = const GeolocatorDeviceLocationService(),
     this.mapBuilder = defaultSupplierMapBuilder,
     this.resultStore,
@@ -54,6 +56,7 @@ class BuyerHomeScreen extends StatefulWidget {
   final ProcurementRepository? procurementRepository;
   final OrdersRepository? ordersRepository;
   final MessagingRepository? messagingRepository;
+  final AnalyticsRepository? analyticsRepository;
   final DeviceLocationService deviceLocation;
   final SupplierMapBuilder mapBuilder;
 
@@ -117,9 +120,18 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
           messaging: _messaging,
           orders: _orders,
           discovery: _discovery,
+          analytics: _analytics,
           deviceLocation: widget.deviceLocation,
           onOpenMap: () => _select(0),
         );
+  late final AnalyticsRepository? _analytics =
+      widget.analyticsRepository ??
+      (widget.repository == null
+          ? null
+          : ApiAnalyticsRepository(
+              client: widget.repository!.apiClient,
+              onSessionExpired: _expireSession,
+            ));
   late final MessagingRepository? _messaging =
       widget.messagingRepository ??
       (widget.repository == null
@@ -165,6 +177,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
       openStoreProfile: _openStore,
       messaging: _messaging,
       orders: _orders,
+      analytics: _analytics,
       onOpenMap: () {},
     );
     await Navigator.of(context).push<void>(
@@ -176,7 +189,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
               const Padding(
                 padding: EdgeInsets.all(16),
                 child: Text(
-                  'Browse current listings for this selected Project site. Historical Materials Analytics becomes available in Phase 14.',
+                  'Browse current listings and Materials Analytics for this Project site. The site is used only for this view and does not replace your saved locations.',
                 ),
               ),
               Expanded(

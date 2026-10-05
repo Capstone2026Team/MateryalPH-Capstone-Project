@@ -11,7 +11,7 @@ import 'procurement_models.dart';
 import 'procurement_navigation.dart';
 
 /// Catalog header, active location, search, and MAT-01 counts from one server snapshot,
-/// followed by the not-yet-available Materials Analytics entry and category grid.
+/// followed by the Materials Analytics entry (enabled once installed) and category grid.
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({
     super.key,
@@ -265,61 +265,73 @@ class _ExploreScreenState extends State<ExploreScreen> {
   );
 
   Widget _analytics() {
-    final message =
-        _controller.summary?.analyticsMessage ??
-        'Materials Analytics is not available yet.';
+    final summary = _controller.summary;
+    final enabled =
+        summary != null &&
+        summary.analyticsEnabled &&
+        widget.navigation.analytics != null &&
+        _controller.origin != null;
+    final message = summary == null
+        ? 'Daily local listed-price averages for comparable materials.'
+        : summary.analyticsMessage;
     return Semantics(
       button: true,
-      enabled: false,
+      enabled: enabled,
       label: 'View Materials Analytics. $message',
       excludeSemantics: true,
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: BuyerTheme.border),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: BuyerTheme.brandSoft,
-                borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: enabled
+            ? () => widget.navigation.openMaterialsAnalytics(context)
+            : null,
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: BuyerTheme.border),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: BuyerTheme.brandSoft,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  LucideIcons.chartLine,
+                  color: BuyerTheme.action,
+                ),
               ),
-              child: const Icon(
-                LucideIcons.chartLine,
-                color: BuyerTheme.action,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'View Materials Analytics',
-                    style: TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  Text(
-                    message,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: BuyerTheme.muted,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'View Materials Analytics',
+                      style: TextStyle(fontWeight: FontWeight.w700),
                     ),
-                  ),
-                ],
+                    Text(
+                      message,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: BuyerTheme.muted,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            const Icon(
-              LucideIcons.lockKeyhole,
-              size: 18,
-              color: BuyerTheme.muted,
-            ),
-          ],
+              const SizedBox(width: 8),
+              Icon(
+                enabled ? LucideIcons.chevronRight : LucideIcons.lockKeyhole,
+                size: 18,
+                color: BuyerTheme.muted,
+              ),
+            ],
+          ),
         ),
       ),
     );

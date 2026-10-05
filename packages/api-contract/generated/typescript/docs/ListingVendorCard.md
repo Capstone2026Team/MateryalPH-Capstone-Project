@@ -11,6 +11,7 @@ Name | Type
 `logoUrl` | string
 `scoreLabel` | [ScoreLabel](ScoreLabel.md)
 `vacationMode` | boolean
+`badges` | [Array&lt;PublicBadge&gt;](PublicBadge.md)
 
 ## Example
 
@@ -24,6 +25,7 @@ const example = {
   "logoUrl": null,
   "scoreLabel": null,
   "vacationMode": null,
+  "badges": null,
 } satisfies ListingVendorCard
 
 console.log(example)

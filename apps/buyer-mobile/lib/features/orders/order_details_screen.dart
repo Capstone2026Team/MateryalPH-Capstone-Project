@@ -10,6 +10,7 @@ import '../../design_system/components/dispute_components.dart';
 import '../../design_system/components/fulfillment_components.dart';
 import '../disputes/dispute_models.dart' show DisputeDetailView;
 import '../disputes/dispute_screens.dart';
+import '../trust/order_reviews_screen.dart';
 import '../../design_system/components/order_components.dart';
 import '../../design_system/components/procurement_components.dart';
 import '../../design_system/theme.dart';
@@ -730,6 +731,30 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
             onFileDispute: () => _fileDispute(order),
             onOpenCase: _openCase,
             onOpenInvoices: () => _openInvoices(order),
+          ),
+        ],
+        if (order.state('ORDER') == 'COMPLETED') ...[
+          const SizedBox(height: 16),
+          const _Heading('Ratings and reviews'),
+          const Text(
+            'Rate the seller and each product within 14 days of completion. Ratings stay hidden until the seller also rates you or the window ends.',
+            style: TextStyle(fontSize: 13),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => OrderReviewsScreen(
+                  repository: widget.repository.reviews,
+                  orderId: order.id,
+                ),
+              ),
+            ),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size.fromHeight(48),
+            ),
+            icon: const Icon(Icons.star_outline),
+            label: const Text('Rate this order'),
           ),
         ],
         const SizedBox(height: 16),

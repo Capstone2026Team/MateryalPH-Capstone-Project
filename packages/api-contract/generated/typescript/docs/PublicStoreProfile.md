@@ -31,6 +31,7 @@ Name | Type
 `hoursAsOf` | Date
 `hoursNotice` | string
 `hoursUnavailableReason` | string
+`badges` | [Array&lt;PublicBadge&gt;](PublicBadge.md)
 
 ## Example
 
@@ -64,6 +65,7 @@ const example = {
   "hoursAsOf": null,
   "hoursNotice": null,
   "hoursUnavailableReason": null,
+  "badges": null,
 } satisfies PublicStoreProfile
 
 console.log(example)

@@ -348,7 +348,7 @@ final class MarketplaceSearchService
                 'distance_meters' => $offer['distance'],
                 'badges' => array_values(array_filter([$offer['best_price'] ? 'BEST_PRICE' : null, $row->regulated && $row->compliance_status === 'VERIFIED' ? 'PS_ICC_VERIFIED' : null])),
                 'is_favorite' => $offer['favorite'],
-                'vendor' => ['id' => $vendor['id'], 'name' => $vendor['public_store_name'], 'logo_url' => $vendor['logo_url'], 'score_label' => $vendor['score_label'], 'vacation_mode' => $vendor['vacation_mode']],
+                'vendor' => ['id' => $vendor['id'], 'name' => $vendor['public_store_name'], 'logo_url' => $vendor['logo_url'], 'score_label' => $vendor['score_label'], 'vacation_mode' => $vendor['vacation_mode'], 'badges' => $vendor['badges']],
                 'fulfillment' => [
                     'pickup_available' => in_array($row->fulfillment_method, ['SELF_PICKUP', 'BOTH'], true),
                     'delivery' => $row->delivery_max_km === null || ! in_array($row->fulfillment_method, ['VENDOR_DELIVERY', 'BOTH'], true) ? 'NOT_OFFERED' : ($offer['distance'] <= (int) $row->delivery_max_km * 1000 ? 'WITHIN_STATED_AREA' : 'OUTSIDE_STATED_AREA'),

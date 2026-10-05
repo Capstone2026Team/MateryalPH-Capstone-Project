@@ -1,5 +1,8 @@
 <?php
 
+use App\Domain\Analytics\AnalyticsDataset;
+use App\Domain\Analytics\DemoMaterialsMarketplace;
+use App\Domain\Analytics\MaterialPriceCaptureService;
 use App\Domain\Disputes\DisputeAdminService;
 use App\Domain\Finance\StatementService;
 use App\Domain\Finance\WithholdingThresholdService;
@@ -10,6 +13,8 @@ use App\Domain\Orders\CancellationService;
 use App\Domain\Payments\PaymentGateway;
 use App\Domain\Payments\PaymentReconciliationService;
 use App\Domain\Payments\XenditWebhookInbox;
+use App\Domain\Reviews\ReviewService;
+use App\Domain\Scores\ScoreSnapshotService;
 use App\Infrastructure\Payments\FakePaymentGateway;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Inspiring;
@@ -62,6 +67,43 @@ Artisan::command('materyalph:finance-daily', function (): void {
     $this->info('Withholding accumulators rolled over: '.app(WithholdingThresholdService::class)->rollover(CarbonImmutable::now()));
 })->purpose('Statement due/overdue notices and FIN-04A taxable-year rollover');
 Schedule::command('materyalph:finance-daily')->dailyAt('00:10')->timezone('Asia/Manila')->withoutOverlapping();
+
+Artisan::command('analytics:capture-material-prices', function (): int {
+    $result = app(MaterialPriceCaptureService::class)->capture(CarbonImmutable::now());
+    $this->info('Material price capture: '.json_encode($result));
+
+    return $result['state'] === 'FAILED' ? 1 : 0;
+})->purpose('MAT-04 daily capture of eligible public ordinary prices into an immutable published run (TEST dataset only)');
+// One shared job: overlap protection plus database run uniqueness; a retry of a published day returns the same revision.
+Schedule::command('analytics:capture-material-prices')->dailyAt('00:10')->timezone('Asia/Manila')->withoutOverlapping()->onOneServer();
+
+Artisan::command('materyalph:materials-analytics-demo {--latitude=14.5995} {--longitude=120.9842} {--days=90} {--use-test : Switch analytics history back to the TEST capture dataset}', function (): int {
+    if ($this->option('use-test')) {
+        AnalyticsDataset::select(AnalyticsDataset::CAPTURE_ENVIRONMENT);
+        $this->info('Materials Analytics now reads the TEST capture dataset.');
+
+        return 0;
+    }
+    if (app()->isProduction()) {
+        $this->error('DEMO marketplace data cannot be seeded in production.');
+
+        return 1;
+    }
+    $result = app(DemoMaterialsMarketplace::class)->seed((float) $this->option('latitude'), (float) $this->option('longitude'), max(8, min(365, (int) $this->option('days'))));
+    $this->info('DEMO — Simulated Marketplace Data seeded: '.json_encode($result).'. Analytics now reads the isolated DEMO history; --use-test switches back.');
+
+    return 0;
+})->purpose('DEMO only: seed labelled demo stores, comparable groups and isolated simulated Materials Analytics history');
+
+Artisan::command('materyalph:scores-daily', function (): void {
+    $this->info('Scores: '.json_encode(app(ScoreSnapshotService::class)->run(CarbonImmutable::now())));
+})->purpose('Project metric events, write the daily score snapshots (OHS weekly) and award or remove badges');
+Schedule::command('materyalph:scores-daily')->dailyAt('00:30')->timezone('Asia/Manila')->withoutOverlapping()->onOneServer();
+
+Artisan::command('materyalph:reviews-sweep', function (): void {
+    $this->info('Reviews: '.json_encode(app(ReviewService::class)->sweep()));
+})->purpose('Open rating windows for completed orders and reveal ratings whose 14-day window ended');
+Schedule::command('materyalph:reviews-sweep')->everyFifteenMinutes()->withoutOverlapping();
 
 Artisan::command('materyalph:payments-simulate {payment} {--outcome=completed}', function (string $payment): int {
     $gateway = app(PaymentGateway::class);

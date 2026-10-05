@@ -48,6 +48,8 @@ import 'package:materyalph_api_client/src/model/account_session_list_envelope.da
 import 'package:materyalph_api_client/src/model/account_session_revocation.dart';
 import 'package:materyalph_api_client/src/model/account_type.dart';
 import 'package:materyalph_api_client/src/model/address_components.dart';
+import 'package:materyalph_api_client/src/model/admin_analytics_point.dart';
+import 'package:materyalph_api_client/src/model/admin_analytics_row.dart';
 import 'package:materyalph_api_client/src/model/admin_cancellation_request_list_envelope.dart';
 import 'package:materyalph_api_client/src/model/admin_cancellation_request_row.dart';
 import 'package:materyalph_api_client/src/model/admin_dashboard_audit_envelope.dart';
@@ -57,6 +59,11 @@ import 'package:materyalph_api_client/src/model/admin_dispute_appeal_decision_re
 import 'package:materyalph_api_client/src/model/admin_dispute_clarification_request.dart';
 import 'package:materyalph_api_client/src/model/admin_dispute_decision_request.dart';
 import 'package:materyalph_api_client/src/model/admin_invitation_request.dart';
+import 'package:materyalph_api_client/src/model/admin_materials_analytics_detail.dart';
+import 'package:materyalph_api_client/src/model/admin_materials_analytics_detail_envelope.dart';
+import 'package:materyalph_api_client/src/model/admin_materials_analytics_detail_group.dart';
+import 'package:materyalph_api_client/src/model/admin_materials_analytics_list.dart';
+import 'package:materyalph_api_client/src/model/admin_materials_analytics_list_envelope.dart';
 import 'package:materyalph_api_client/src/model/admin_order_action_result_envelope.dart';
 import 'package:materyalph_api_client/src/model/admin_order_operations_summary.dart';
 import 'package:materyalph_api_client/src/model/admin_order_operations_summary_envelope.dart';
@@ -66,12 +73,30 @@ import 'package:materyalph_api_client/src/model/admin_refund_row.dart';
 import 'package:materyalph_api_client/src/model/admin_reimbursement_decision.dart';
 import 'package:materyalph_api_client/src/model/admin_reimbursement_list_envelope.dart';
 import 'package:materyalph_api_client/src/model/admin_reimbursement_row.dart';
+import 'package:materyalph_api_client/src/model/admin_score_detail.dart';
+import 'package:materyalph_api_client/src/model/admin_score_detail_envelope.dart';
+import 'package:materyalph_api_client/src/model/admin_score_list_envelope.dart';
+import 'package:materyalph_api_client/src/model/admin_score_row.dart';
 import 'package:materyalph_api_client/src/model/admin_vendor_verification_decision.dart';
 import 'package:materyalph_api_client/src/model/admin_vendor_verification_detail_envelope.dart';
 import 'package:materyalph_api_client/src/model/admin_vendor_verification_queue_envelope.dart';
 import 'package:materyalph_api_client/src/model/admin_vendor_verification_queue_item.dart';
 import 'package:materyalph_api_client/src/model/agreement.dart';
 import 'package:materyalph_api_client/src/model/agreement_list_envelope.dart';
+import 'package:materyalph_api_client/src/model/analytics_category_ref.dart';
+import 'package:materyalph_api_client/src/model/analytics_correction_envelope.dart';
+import 'package:materyalph_api_client/src/model/analytics_correction_request.dart';
+import 'package:materyalph_api_client/src/model/analytics_correction_result.dart';
+import 'package:materyalph_api_client/src/model/analytics_current_counts.dart';
+import 'package:materyalph_api_client/src/model/analytics_material_ref.dart';
+import 'package:materyalph_api_client/src/model/analytics_run.dart';
+import 'package:materyalph_api_client/src/model/analytics_run_list_envelope.dart';
+import 'package:materyalph_api_client/src/model/analytics_snapshot_ref.dart';
+import 'package:materyalph_api_client/src/model/analytics_source.dart';
+import 'package:materyalph_api_client/src/model/analytics_source_list_envelope.dart';
+import 'package:materyalph_api_client/src/model/analytics_trend.dart';
+import 'package:materyalph_api_client/src/model/analytics_unit.dart';
+import 'package:materyalph_api_client/src/model/analytics_window.dart';
 import 'package:materyalph_api_client/src/model/api_error.dart';
 import 'package:materyalph_api_client/src/model/auth_envelope.dart';
 import 'package:materyalph_api_client/src/model/auth_envelope_all_of_data.dart';
@@ -89,11 +114,17 @@ import 'package:materyalph_api_client/src/model/auto_accept_policy_version.dart'
 import 'package:materyalph_api_client/src/model/auto_accept_reason.dart';
 import 'package:materyalph_api_client/src/model/auto_accept_resume.dart';
 import 'package:materyalph_api_client/src/model/auto_accept_status.dart';
+import 'package:materyalph_api_client/src/model/badge_metric.dart';
+import 'package:materyalph_api_client/src/model/badge_state.dart';
+import 'package:materyalph_api_client/src/model/badge_state_scopes_inner.dart';
+import 'package:materyalph_api_client/src/model/badge_suppression_request.dart';
 import 'package:materyalph_api_client/src/model/bot_proof_envelope.dart';
 import 'package:materyalph_api_client/src/model/bot_proof_envelope_all_of_data.dart';
 import 'package:materyalph_api_client/src/model/bot_step_up_error_envelope.dart';
 import 'package:materyalph_api_client/src/model/bot_step_up_error_envelope_all_of_errors.dart';
 import 'package:materyalph_api_client/src/model/bot_step_up_error_envelope_all_of_errors_all_of_details.dart';
+import 'package:materyalph_api_client/src/model/buyer_analytics_point.dart';
+import 'package:materyalph_api_client/src/model/buyer_analytics_row.dart';
 import 'package:materyalph_api_client/src/model/buyer_cancel_request.dart';
 import 'package:materyalph_api_client/src/model/buyer_cancellation_preview.dart';
 import 'package:materyalph_api_client/src/model/buyer_cancellation_preview_envelope.dart';
@@ -110,6 +141,12 @@ import 'package:materyalph_api_client/src/model/buyer_location_removed.dart';
 import 'package:materyalph_api_client/src/model/buyer_location_removed_envelope.dart';
 import 'package:materyalph_api_client/src/model/buyer_location_resolve_request.dart';
 import 'package:materyalph_api_client/src/model/buyer_location_update.dart';
+import 'package:materyalph_api_client/src/model/buyer_materials_analytics_detail.dart';
+import 'package:materyalph_api_client/src/model/buyer_materials_analytics_detail_envelope.dart';
+import 'package:materyalph_api_client/src/model/buyer_materials_analytics_detail_group.dart';
+import 'package:materyalph_api_client/src/model/buyer_materials_analytics_list.dart';
+import 'package:materyalph_api_client/src/model/buyer_materials_analytics_list_envelope.dart';
+import 'package:materyalph_api_client/src/model/buyer_materials_analytics_request.dart';
 import 'package:materyalph_api_client/src/model/buyer_mobile_google_oidc_start_request.dart';
 import 'package:materyalph_api_client/src/model/buyer_mobile_login_request.dart';
 import 'package:materyalph_api_client/src/model/buyer_mobile_password_recovery_request.dart';
@@ -120,7 +157,13 @@ import 'package:materyalph_api_client/src/model/buyer_onboarding_envelope.dart';
 import 'package:materyalph_api_client/src/model/buyer_onboarding_update.dart';
 import 'package:materyalph_api_client/src/model/buyer_order_invoices.dart';
 import 'package:materyalph_api_client/src/model/buyer_order_invoices_envelope.dart';
+import 'package:materyalph_api_client/src/model/buyer_order_reviews.dart';
+import 'package:materyalph_api_client/src/model/buyer_order_reviews_envelope.dart';
 import 'package:materyalph_api_client/src/model/buyer_origin_request.dart';
+import 'package:materyalph_api_client/src/model/buyer_review_edit_request.dart';
+import 'package:materyalph_api_client/src/model/buyer_review_submit_request.dart';
+import 'package:materyalph_api_client/src/model/buyer_review_submit_request_product_reviews_inner.dart';
+import 'package:materyalph_api_client/src/model/buyer_review_submit_request_vendor_rating.dart';
 import 'package:materyalph_api_client/src/model/cancellation_decision_view.dart';
 import 'package:materyalph_api_client/src/model/cancellation_plan.dart';
 import 'package:materyalph_api_client/src/model/cancellation_plan_payment.dart';
@@ -233,7 +276,10 @@ import 'package:materyalph_api_client/src/model/checkout_vendor_ref.dart';
 import 'package:materyalph_api_client/src/model/comparable_group_create.dart';
 import 'package:materyalph_api_client/src/model/comparable_group_envelope.dart';
 import 'package:materyalph_api_client/src/model/comparable_group_envelope_data.dart';
+import 'package:materyalph_api_client/src/model/comparable_specification.dart';
+import 'package:materyalph_api_client/src/model/comparable_specification_attributes_inner.dart';
 import 'package:materyalph_api_client/src/model/comparable_status.dart';
+import 'package:materyalph_api_client/src/model/comparable_variant.dart';
 import 'package:materyalph_api_client/src/model/compliance_evidence.dart';
 import 'package:materyalph_api_client/src/model/compliance_evidence_envelope.dart';
 import 'package:materyalph_api_client/src/model/compliance_extraction.dart';
@@ -250,6 +296,7 @@ import 'package:materyalph_api_client/src/model/conversation_detail_response.dar
 import 'package:materyalph_api_client/src/model/conversation_page.dart';
 import 'package:materyalph_api_client/src/model/conversation_page_response.dart';
 import 'package:materyalph_api_client/src/model/conversation_view.dart';
+import 'package:materyalph_api_client/src/model/counterpart_rating.dart';
 import 'package:materyalph_api_client/src/model/csrf_envelope.dart';
 import 'package:materyalph_api_client/src/model/csrf_envelope_all_of_data.dart';
 import 'package:materyalph_api_client/src/model/dataset_label.dart';
@@ -401,6 +448,8 @@ import 'package:materyalph_api_client/src/model/inventory_row_update.dart';
 import 'package:materyalph_api_client/src/model/inventory_settings.dart';
 import 'package:materyalph_api_client/src/model/inventory_settings_envelope.dart';
 import 'package:materyalph_api_client/src/model/inventory_settings_update.dart';
+import 'package:materyalph_api_client/src/model/investigation_ack_envelope.dart';
+import 'package:materyalph_api_client/src/model/investigation_reason_request.dart';
 import 'package:materyalph_api_client/src/model/invoice_billing_details_request.dart';
 import 'package:materyalph_api_client/src/model/invoice_explanation_request.dart';
 import 'package:materyalph_api_client/src/model/invoice_list_meta.dart';
@@ -442,6 +491,8 @@ import 'package:materyalph_api_client/src/model/login_request.dart';
 import 'package:materyalph_api_client/src/model/map_point.dart';
 import 'package:materyalph_api_client/src/model/marking_type.dart';
 import 'package:materyalph_api_client/src/model/material_category_option.dart';
+import 'package:materyalph_api_client/src/model/material_offer.dart';
+import 'package:materyalph_api_client/src/model/material_offer_list_envelope.dart';
 import 'package:materyalph_api_client/src/model/material_price_observation.dart';
 import 'package:materyalph_api_client/src/model/mfa_code_request.dart';
 import 'package:materyalph_api_client/src/model/mfa_enrollment_envelope.dart';
@@ -449,6 +500,10 @@ import 'package:materyalph_api_client/src/model/mfa_enrollment_envelope_all_of_d
 import 'package:materyalph_api_client/src/model/mfa_recovery_request.dart';
 import 'package:materyalph_api_client/src/model/mfa_status_envelope.dart';
 import 'package:materyalph_api_client/src/model/mfa_status_envelope_all_of_data.dart';
+import 'package:materyalph_api_client/src/model/moderation_detail.dart';
+import 'package:materyalph_api_client/src/model/moderation_detail_envelope.dart';
+import 'package:materyalph_api_client/src/model/moderation_queue_envelope.dart';
+import 'package:materyalph_api_client/src/model/moderation_queue_row.dart';
 import 'package:materyalph_api_client/src/model/money_breakdown.dart';
 import 'package:materyalph_api_client/src/model/money_delivery.dart';
 import 'package:materyalph_api_client/src/model/money_nrpc.dart';
@@ -502,6 +557,7 @@ import 'package:materyalph_api_client/src/model/order_timeline_event.dart';
 import 'package:materyalph_api_client/src/model/order_vendor_ref.dart';
 import 'package:materyalph_api_client/src/model/order_volume_tier.dart';
 import 'package:materyalph_api_client/src/model/overlap_resolve_request.dart';
+import 'package:materyalph_api_client/src/model/own_review.dart';
 import 'package:materyalph_api_client/src/model/page_meta.dart';
 import 'package:materyalph_api_client/src/model/password_recovery_request.dart';
 import 'package:materyalph_api_client/src/model/password_reset_request.dart';
@@ -574,6 +630,10 @@ import 'package:materyalph_api_client/src/model/psgc_resolution.dart';
 import 'package:materyalph_api_client/src/model/psgc_search_envelope.dart';
 import 'package:materyalph_api_client/src/model/psgc_search_envelope_data.dart';
 import 'package:materyalph_api_client/src/model/public_address_summary.dart';
+import 'package:materyalph_api_client/src/model/public_badge.dart';
+import 'package:materyalph_api_client/src/model/public_review.dart';
+import 'package:materyalph_api_client/src/model/public_review_list_envelope.dart';
+import 'package:materyalph_api_client/src/model/public_scores.dart';
 import 'package:materyalph_api_client/src/model/public_store_list_envelope.dart';
 import 'package:materyalph_api_client/src/model/public_store_list_envelope_meta.dart';
 import 'package:materyalph_api_client/src/model/public_store_profile.dart';
@@ -594,11 +654,24 @@ import 'package:materyalph_api_client/src/model/registration_envelope_all_of_dat
 import 'package:materyalph_api_client/src/model/regulated_material_rule.dart';
 import 'package:materyalph_api_client/src/model/reimbursement_timeline_item.dart';
 import 'package:materyalph_api_client/src/model/resend_bot_challenge_request.dart';
+import 'package:materyalph_api_client/src/model/review_display_option.dart';
+import 'package:materyalph_api_client/src/model/review_flag_request.dart';
+import 'package:materyalph_api_client/src/model/review_line.dart';
+import 'package:materyalph_api_client/src/model/review_list_meta.dart';
+import 'package:materyalph_api_client/src/model/review_media_link.dart';
+import 'package:materyalph_api_client/src/model/review_moderation_request.dart';
+import 'package:materyalph_api_client/src/model/review_ratings.dart';
+import 'package:materyalph_api_client/src/model/review_reported.dart';
+import 'package:materyalph_api_client/src/model/review_reported_envelope.dart';
 import 'package:materyalph_api_client/src/model/review_resolve_request.dart';
+import 'package:materyalph_api_client/src/model/review_window_rules.dart';
 import 'package:materyalph_api_client/src/model/route_estimate.dart';
 import 'package:materyalph_api_client/src/model/route_estimate_envelope.dart';
 import 'package:materyalph_api_client/src/model/route_estimate_request.dart';
+import 'package:materyalph_api_client/src/model/score_exclusion_request.dart';
+import 'package:materyalph_api_client/src/model/score_history_point.dart';
 import 'package:materyalph_api_client/src/model/score_label.dart';
+import 'package:materyalph_api_client/src/model/score_metric.dart';
 import 'package:materyalph_api_client/src/model/stale_listing.dart';
 import 'package:materyalph_api_client/src/model/statement_approve_request.dart';
 import 'package:materyalph_api_client/src/model/statement_payment_request.dart';
@@ -612,6 +685,8 @@ import 'package:materyalph_api_client/src/model/store_hours_day.dart';
 import 'package:materyalph_api_client/src/model/store_next_opening.dart';
 import 'package:materyalph_api_client/src/model/store_open_now.dart';
 import 'package:materyalph_api_client/src/model/store_operating_day.dart';
+import 'package:materyalph_api_client/src/model/store_performance.dart';
+import 'package:materyalph_api_client/src/model/store_performance_envelope.dart';
 import 'package:materyalph_api_client/src/model/success_envelope.dart';
 import 'package:materyalph_api_client/src/model/supplier_open_status.dart';
 import 'package:materyalph_api_client/src/model/supplier_result.dart';
@@ -625,12 +700,16 @@ import 'package:materyalph_api_client/src/model/vendor_activation_snapshot.dart'
 import 'package:materyalph_api_client/src/model/vendor_address_geocode.dart';
 import 'package:materyalph_api_client/src/model/vendor_address_geocode_envelope.dart';
 import 'package:materyalph_api_client/src/model/vendor_address_selection.dart';
+import 'package:materyalph_api_client/src/model/vendor_analytics_point.dart';
+import 'package:materyalph_api_client/src/model/vendor_analytics_row.dart';
 import 'package:materyalph_api_client/src/model/vendor_bot_protection_evidence.dart';
+import 'package:materyalph_api_client/src/model/vendor_buyer_rating_request.dart';
 import 'package:materyalph_api_client/src/model/vendor_cancel_request.dart';
 import 'package:materyalph_api_client/src/model/vendor_cancellation_preview.dart';
 import 'package:materyalph_api_client/src/model/vendor_cancellation_preview_envelope.dart';
 import 'package:materyalph_api_client/src/model/vendor_cancellation_request_ref.dart';
 import 'package:materyalph_api_client/src/model/vendor_commission_acceptance.dart';
+import 'package:materyalph_api_client/src/model/vendor_current_competitors.dart';
 import 'package:materyalph_api_client/src/model/vendor_document.dart';
 import 'package:materyalph_api_client/src/model/vendor_document_envelope.dart';
 import 'package:materyalph_api_client/src/model/vendor_earnings.dart';
@@ -645,6 +724,11 @@ import 'package:materyalph_api_client/src/model/vendor_invitation_acceptance.dar
 import 'package:materyalph_api_client/src/model/vendor_invitation_envelope.dart';
 import 'package:materyalph_api_client/src/model/vendor_invitation_request.dart';
 import 'package:materyalph_api_client/src/model/vendor_invoice_billing_details.dart';
+import 'package:materyalph_api_client/src/model/vendor_materials_analytics_detail.dart';
+import 'package:materyalph_api_client/src/model/vendor_materials_analytics_detail_envelope.dart';
+import 'package:materyalph_api_client/src/model/vendor_materials_analytics_detail_group.dart';
+import 'package:materyalph_api_client/src/model/vendor_materials_analytics_list.dart';
+import 'package:materyalph_api_client/src/model/vendor_materials_analytics_list_envelope.dart';
 import 'package:materyalph_api_client/src/model/vendor_media_envelope.dart';
 import 'package:materyalph_api_client/src/model/vendor_onboarding_envelope.dart';
 import 'package:materyalph_api_client/src/model/vendor_onboarding_section.dart';
@@ -658,11 +742,17 @@ import 'package:materyalph_api_client/src/model/vendor_order_invoices.dart';
 import 'package:materyalph_api_client/src/model/vendor_order_invoices_envelope.dart';
 import 'package:materyalph_api_client/src/model/vendor_order_permissions.dart';
 import 'package:materyalph_api_client/src/model/vendor_order_primary_action.dart';
+import 'package:materyalph_api_client/src/model/vendor_order_reviews.dart';
+import 'package:materyalph_api_client/src/model/vendor_order_reviews_envelope.dart';
+import 'package:materyalph_api_client/src/model/vendor_own_offer.dart';
 import 'package:materyalph_api_client/src/model/vendor_payment_onboarding.dart';
 import 'package:materyalph_api_client/src/model/vendor_payment_onboarding_envelope.dart';
 import 'package:materyalph_api_client/src/model/vendor_payment_reconciliation_envelope.dart';
 import 'package:materyalph_api_client/src/model/vendor_restriction.dart';
 import 'package:materyalph_api_client/src/model/vendor_restriction_envelope.dart';
+import 'package:materyalph_api_client/src/model/vendor_review_edit_request.dart';
+import 'package:materyalph_api_client/src/model/vendor_review_list_envelope.dart';
+import 'package:materyalph_api_client/src/model/vendor_review_row.dart';
 import 'package:materyalph_api_client/src/model/vendor_setup_complete.dart';
 import 'package:materyalph_api_client/src/model/vendor_setup_draft.dart';
 import 'package:materyalph_api_client/src/model/vendor_setup_draft_delivery.dart';
@@ -742,6 +832,8 @@ part 'serializers.g.dart';
   AccountSessionRevocation,
   AccountType,
   AddressComponents,
+  AdminAnalyticsPoint,
+  AdminAnalyticsRow,$AdminAnalyticsRow,
   AdminCancellationRequestListEnvelope,
   AdminCancellationRequestRow,
   AdminDashboardAuditEnvelope,
@@ -751,6 +843,11 @@ part 'serializers.g.dart';
   AdminDisputeClarificationRequest,
   AdminDisputeDecisionRequest,
   AdminInvitationRequest,
+  AdminMaterialsAnalyticsDetail,
+  AdminMaterialsAnalyticsDetailEnvelope,
+  AdminMaterialsAnalyticsDetailGroup,
+  AdminMaterialsAnalyticsList,
+  AdminMaterialsAnalyticsListEnvelope,
   AdminOrderActionResultEnvelope,
   AdminOrderOperationsSummary,
   AdminOrderOperationsSummaryEnvelope,
@@ -760,12 +857,30 @@ part 'serializers.g.dart';
   AdminReimbursementDecision,
   AdminReimbursementListEnvelope,
   AdminReimbursementRow,
+  AdminScoreDetail,
+  AdminScoreDetailEnvelope,
+  AdminScoreListEnvelope,
+  AdminScoreRow,
   AdminVendorVerificationDecision,
   AdminVendorVerificationDetailEnvelope,
   AdminVendorVerificationQueueEnvelope,
   AdminVendorVerificationQueueItem,
   Agreement,
   AgreementListEnvelope,
+  AnalyticsCategoryRef,
+  AnalyticsCorrectionEnvelope,
+  AnalyticsCorrectionRequest,
+  AnalyticsCorrectionResult,
+  AnalyticsCurrentCounts,
+  AnalyticsMaterialRef,
+  AnalyticsRun,
+  AnalyticsRunListEnvelope,
+  AnalyticsSnapshotRef,
+  AnalyticsSource,
+  AnalyticsSourceListEnvelope,
+  AnalyticsTrend,
+  AnalyticsUnit,
+  AnalyticsWindow,
   ApiError,
   AuthEnvelope,
   AuthEnvelopeAllOfData,
@@ -783,11 +898,17 @@ part 'serializers.g.dart';
   AutoAcceptReason,
   AutoAcceptResume,
   AutoAcceptStatus,
+  BadgeMetric,
+  BadgeState,
+  BadgeStateScopesInner,
+  BadgeSuppressionRequest,
   BotProofEnvelope,
   BotProofEnvelopeAllOfData,
   BotStepUpErrorEnvelope,
   BotStepUpErrorEnvelopeAllOfErrors,
   BotStepUpErrorEnvelopeAllOfErrorsAllOfDetails,
+  BuyerAnalyticsPoint,
+  BuyerAnalyticsRow,$BuyerAnalyticsRow,
   BuyerCancelRequest,
   BuyerCancellationPreview,
   BuyerCancellationPreviewEnvelope,
@@ -804,6 +925,12 @@ part 'serializers.g.dart';
   BuyerLocationRemovedEnvelope,
   BuyerLocationResolveRequest,
   BuyerLocationUpdate,
+  BuyerMaterialsAnalyticsDetail,
+  BuyerMaterialsAnalyticsDetailEnvelope,
+  BuyerMaterialsAnalyticsDetailGroup,
+  BuyerMaterialsAnalyticsList,
+  BuyerMaterialsAnalyticsListEnvelope,
+  BuyerMaterialsAnalyticsRequest,
   BuyerMobileGoogleOidcStartRequest,
   BuyerMobileLoginRequest,
   BuyerMobilePasswordRecoveryRequest,
@@ -814,7 +941,13 @@ part 'serializers.g.dart';
   BuyerOnboardingUpdate,
   BuyerOrderInvoices,
   BuyerOrderInvoicesEnvelope,
+  BuyerOrderReviews,
+  BuyerOrderReviewsEnvelope,
   BuyerOriginRequest,
+  BuyerReviewEditRequest,
+  BuyerReviewSubmitRequest,
+  BuyerReviewSubmitRequestProductReviewsInner,
+  BuyerReviewSubmitRequestVendorRating,
   CancellationDecisionView,
   CancellationPlan,
   CancellationPlanPayment,
@@ -927,7 +1060,10 @@ part 'serializers.g.dart';
   ComparableGroupCreate,
   ComparableGroupEnvelope,
   ComparableGroupEnvelopeData,
+  ComparableSpecification,
+  ComparableSpecificationAttributesInner,
   ComparableStatus,
+  ComparableVariant,
   ComplianceEvidence,
   ComplianceEvidenceEnvelope,
   ComplianceExtraction,
@@ -944,6 +1080,7 @@ part 'serializers.g.dart';
   ConversationPage,
   ConversationPageResponse,
   ConversationView,
+  CounterpartRating,
   CsrfEnvelope,
   CsrfEnvelopeAllOfData,
   DatasetLabel,
@@ -1095,6 +1232,8 @@ part 'serializers.g.dart';
   InventorySettings,
   InventorySettingsEnvelope,
   InventorySettingsUpdate,
+  InvestigationAckEnvelope,
+  InvestigationReasonRequest,
   InvoiceBillingDetailsRequest,
   InvoiceExplanationRequest,
   InvoiceListMeta,
@@ -1136,6 +1275,8 @@ part 'serializers.g.dart';
   MapPoint,
   MarkingType,
   MaterialCategoryOption,
+  MaterialOffer,
+  MaterialOfferListEnvelope,
   MaterialPriceObservation,
   MfaCodeRequest,
   MfaEnrollmentEnvelope,
@@ -1143,6 +1284,10 @@ part 'serializers.g.dart';
   MfaRecoveryRequest,
   MfaStatusEnvelope,
   MfaStatusEnvelopeAllOfData,
+  ModerationDetail,
+  ModerationDetailEnvelope,
+  ModerationQueueEnvelope,
+  ModerationQueueRow,
   MoneyBreakdown,
   MoneyDelivery,
   MoneyNrpc,
@@ -1196,6 +1341,7 @@ part 'serializers.g.dart';
   OrderVendorRef,
   OrderVolumeTier,
   OverlapResolveRequest,
+  OwnReview,
   PageMeta,
   PasswordRecoveryRequest,
   PasswordResetRequest,
@@ -1268,6 +1414,10 @@ part 'serializers.g.dart';
   PsgcSearchEnvelope,
   PsgcSearchEnvelopeData,
   PublicAddressSummary,
+  PublicBadge,
+  PublicReview,
+  PublicReviewListEnvelope,
+  PublicScores,
   PublicStoreListEnvelope,
   PublicStoreListEnvelopeMeta,
   PublicStoreProfile,
@@ -1288,11 +1438,24 @@ part 'serializers.g.dart';
   RegulatedMaterialRule,
   ReimbursementTimelineItem,
   ResendBotChallengeRequest,
+  ReviewDisplayOption,
+  ReviewFlagRequest,
+  ReviewLine,
+  ReviewListMeta,
+  ReviewMediaLink,
+  ReviewModerationRequest,
+  ReviewRatings,
+  ReviewReported,
+  ReviewReportedEnvelope,
   ReviewResolveRequest,
+  ReviewWindowRules,
   RouteEstimate,
   RouteEstimateEnvelope,
   RouteEstimateRequest,
+  ScoreExclusionRequest,
+  ScoreHistoryPoint,
   ScoreLabel,
+  ScoreMetric,
   StaleListing,
   StatementApproveRequest,
   StatementPaymentRequest,
@@ -1306,6 +1469,8 @@ part 'serializers.g.dart';
   StoreNextOpening,
   StoreOpenNow,
   StoreOperatingDay,
+  StorePerformance,
+  StorePerformanceEnvelope,
   SuccessEnvelope,$SuccessEnvelope,
   SupplierOpenStatus,
   SupplierResult,
@@ -1319,12 +1484,16 @@ part 'serializers.g.dart';
   VendorAddressGeocode,
   VendorAddressGeocodeEnvelope,
   VendorAddressSelection,
+  VendorAnalyticsPoint,
+  VendorAnalyticsRow,$VendorAnalyticsRow,
   VendorBotProtectionEvidence,
+  VendorBuyerRatingRequest,
   VendorCancelRequest,
   VendorCancellationPreview,
   VendorCancellationPreviewEnvelope,
   VendorCancellationRequestRef,
   VendorCommissionAcceptance,
+  VendorCurrentCompetitors,
   VendorDocument,
   VendorDocumentEnvelope,
   VendorEarnings,
@@ -1339,6 +1508,11 @@ part 'serializers.g.dart';
   VendorInvitationEnvelope,
   VendorInvitationRequest,
   VendorInvoiceBillingDetails,
+  VendorMaterialsAnalyticsDetail,
+  VendorMaterialsAnalyticsDetailEnvelope,
+  VendorMaterialsAnalyticsDetailGroup,
+  VendorMaterialsAnalyticsList,
+  VendorMaterialsAnalyticsListEnvelope,
   VendorMediaEnvelope,
   VendorOnboardingEnvelope,
   VendorOnboardingSection,
@@ -1352,11 +1526,17 @@ part 'serializers.g.dart';
   VendorOrderInvoicesEnvelope,
   VendorOrderPermissions,
   VendorOrderPrimaryAction,
+  VendorOrderReviews,
+  VendorOrderReviewsEnvelope,
+  VendorOwnOffer,
   VendorPaymentOnboarding,
   VendorPaymentOnboardingEnvelope,
   VendorPaymentReconciliationEnvelope,
   VendorRestriction,
   VendorRestrictionEnvelope,
+  VendorReviewEditRequest,
+  VendorReviewListEnvelope,
+  VendorReviewRow,
   VendorSetupComplete,
   VendorSetupDraft,
   VendorSetupDraftDelivery,
@@ -1414,6 +1594,10 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(DisputeProposal)]),
         () => ListBuilder<DisputeProposal>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(VendorAnalyticsRow)]),
+        () => ListBuilder<VendorAnalyticsRow>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(DisputeDecision)]),
@@ -1476,12 +1660,20 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<FleetVehicle>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ScoreMetric)]),
+        () => ListBuilder<ScoreMetric>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(NrpcAffectedLine)]),
         () => ListBuilder<NrpcAffectedLine>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(WithholdingAccumulatorView)]),
         () => ListBuilder<WithholdingAccumulatorView>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(VendorAnalyticsPoint)]),
+        () => ListBuilder<VendorAnalyticsPoint>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(VendorTeamActivity)]),
@@ -1524,6 +1716,10 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<OrderReservation>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(BuyerAnalyticsPoint)]),
+        () => ListBuilder<BuyerAnalyticsPoint>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(ListingImage)]),
         () => ListBuilder<ListingImage>(),
       )
@@ -1532,12 +1728,20 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<AccountSession>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(PublicReview)]),
+        () => ListBuilder<PublicReview>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltMap, [FullType(String), FullType(String)]),
         () => MapBuilder<String, String>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(OrderLineQuantity)]),
         () => ListBuilder<OrderLineQuantity>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(AnalyticsSource)]),
+        () => ListBuilder<AnalyticsSource>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(InventoryMovement)]),
@@ -1592,6 +1796,10 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<AccountAgreement>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(MaterialOffer)]),
+        () => ListBuilder<MaterialOffer>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltMap, [FullType(String), FullType(BuiltMap)]),
         () => MapBuilder<String, BuiltMap<String, JsonObject>>(),
       )
@@ -1602,6 +1810,14 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(StoreActivationBlocker)]),
         () => ListBuilder<StoreActivationBlocker>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ReviewLine)]),
+        () => ListBuilder<ReviewLine>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(VendorReviewRow)]),
+        () => ListBuilder<VendorReviewRow>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(FleetVehicleInput)]),
@@ -1616,8 +1832,16 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<FinanceReviewItem>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(BuyerAnalyticsRow)]),
+        () => ListBuilder<BuyerAnalyticsRow>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(PsgcAreaOption)]),
         () => ListBuilder<PsgcAreaOption>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(BadgeState)]),
+        () => ListBuilder<BadgeState>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(WorkPackageLineInput)]),
@@ -1696,6 +1920,14 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<DisputeSummary>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ScoreHistoryPoint)]),
+        () => ListBuilder<ScoreHistoryPoint>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ReviewMediaLink)]),
+        () => ListBuilder<ReviewMediaLink>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(StoreHoursDay)]),
         () => ListBuilder<StoreHoursDay>(),
       )
@@ -1716,12 +1948,28 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<CatalogMaterialMatch>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(BuyerReviewSubmitRequestProductReviewsInner)]),
+        () => ListBuilder<BuyerReviewSubmitRequestProductReviewsInner>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ComparableSpecificationAttributesInner)]),
+        () => ListBuilder<ComparableSpecificationAttributesInner>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(CartVendorGroup)]),
         () => ListBuilder<CartVendorGroup>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(BadgeStateScopesInner)]),
+        () => ListBuilder<BadgeStateScopesInner>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltSet, [FullType(String)]),
         () => SetBuilder<String>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(AdminScoreRow)]),
+        () => ListBuilder<AdminScoreRow>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(ChatAttachment)]),
@@ -1754,6 +2002,10 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(CheckoutChildOrder)]),
         () => ListBuilder<CheckoutChildOrder>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(AdminAnalyticsRow)]),
+        () => ListBuilder<AdminAnalyticsRow>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(ChatQuotationVersion)]),
@@ -1794,6 +2046,10 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(StoreOperatingDay)]),
         () => ListBuilder<StoreOperatingDay>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(BadgeMetric)]),
+        () => ListBuilder<BadgeMetric>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(RankingComponent)]),
@@ -1876,6 +2132,10 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<ChannelFeeVersion>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(PublicBadge)]),
+        () => ListBuilder<PublicBadge>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(InventoryRow)]),
         () => ListBuilder<InventoryRow>(),
       )
@@ -1894,6 +2154,10 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltMap, [FullType(String), FullType(int)]),
         () => MapBuilder<String, int>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(AdminAnalyticsPoint)]),
+        () => ListBuilder<AdminAnalyticsPoint>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(CatalogBlocker)]),
@@ -1984,6 +2248,10 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<LocationSuggestion>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ComparableVariant)]),
+        () => ListBuilder<ComparableVariant>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(CancellationRemedy)]),
         () => ListBuilder<CancellationRemedy>(),
       )
@@ -2000,10 +2268,25 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<ComplianceRegister>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ReviewDisplayOption)]),
+        () => ListBuilder<ReviewDisplayOption>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(AnalyticsRun)]),
+        () => ListBuilder<AnalyticsRun>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltMap, [FullType(String), FullType(VendorOnboardingSection)]),
         () => MapBuilder<String, VendorOnboardingSection>(),
       )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ModerationQueueRow)]),
+        () => ListBuilder<ModerationQueueRow>(),
+      )
+      ..add(AdminAnalyticsRow.serializer)
+      ..add(BuyerAnalyticsRow.serializer)
       ..add(SuccessEnvelope.serializer)
+      ..add(VendorAnalyticsRow.serializer)
       ..add(const OneOfSerializer())
       ..add(const AnyOfSerializer())
       ..add(_BooleanConstSerializer<AdminInvitationRequestTermsAcceptedEnum>(AdminInvitationRequestTermsAcceptedEnum.true_, true))

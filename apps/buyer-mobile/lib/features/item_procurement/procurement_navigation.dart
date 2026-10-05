@@ -20,6 +20,8 @@ import 'product_details_screen.dart';
 import 'ranking_preferences_screen.dart';
 import 'search_results_screen.dart';
 import 'material_search_screen.dart';
+import '../trust/analytics_repository.dart';
+import '../trust/materials_analytics_screen.dart';
 
 /// One place that opens the Item-Based pages with the shared controllers, so Search Results,
 /// Product Details, Cart and Checkout always see the same origin, radius, filters and cart.
@@ -33,8 +35,32 @@ class ProcurementNavigation {
     this.orders,
     this.messaging,
     this.discovery,
+    this.analytics,
     this.deviceLocation = const GeolocatorDeviceLocationService(),
   });
+
+  /// Materials Analytics (Phase 14); absent where the entry point is not offered.
+  final AnalyticsRepository? analytics;
+
+  /// Explore → Materials Analytics, inheriting the Explore origin and exact radius.
+  Future<void> openMaterialsAnalytics(
+    BuildContext context, {
+    String? originLabel,
+  }) async {
+    final repository = analytics;
+    final origin = explore.origin;
+    if (repository == null || origin == null) return;
+    await _push(
+      context,
+      MaterialsAnalyticsScreen(
+        repository: repository,
+        origin: origin,
+        radiusKm: explore.radiusKm,
+        originLabel: originLabel,
+        onOpenListing: openListing,
+      ),
+    );
+  }
 
   /// Location lookup and saving for the Checkout drop-off; absent where only a preview is shown.
   final DiscoveryRepository? discovery;

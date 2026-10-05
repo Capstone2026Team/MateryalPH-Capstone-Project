@@ -5,6 +5,7 @@ import 'package:materyalph/features/orders/order_models.dart';
 import 'package:materyalph/features/orders/orders_repository.dart';
 
 import 'disputes_fakes.dart';
+import 'trust_fakes.dart';
 
 /// Synthetic order fixtures for widget and golden tests. Not live marketplace, payment or provider data.
 List<OrderStateRowView> orderStates(
@@ -424,4 +425,8 @@ class FakeOrdersRepository implements OrdersRepository {
   // Phase 13 disputes and invoices: a separate scripted fake reached through the orders repository.
   @override
   final FakeDisputesRepository disputes = FakeDisputesRepository();
+
+  // Phase 14 verified-purchase reviews.
+  @override
+  final FakeReviewsRepository reviews = FakeReviewsRepository();
 }

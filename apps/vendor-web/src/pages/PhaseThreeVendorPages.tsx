@@ -4,7 +4,9 @@ import {
   Activity,
   Bell,
   ChartNoAxesCombined,
+  LineChart,
   MessageSquare,
+  Star,
   ReceiptText,
   Scale,
   Truck,
@@ -76,11 +78,11 @@ import {
 type JsonRecord = Record<string, ReactNode>
 type OnboardingSectionKey = 'STORE_VERIFICATION' | 'STORE_SETUP'
 
-const vendorModules: Record<string, string> = { orders: 'Orders', fulfillment: 'Fulfillment', messages: 'Messages', invoices: 'E-Invoices', notifications: 'Notifications', disputes: 'Disputes & Appeals', products: 'My Products', vehicles: 'Vehicles', wallet: 'Transaction History', tracking: 'Team Tracking', performance: 'Store Performance', earnings: 'Earnings' }
-const vendorModuleIcons = { orders: FileText, fulfillment: Truck, messages: MessageSquare, invoices: ReceiptText, notifications: Bell, disputes: Scale, products: Package, vehicles: Truck, wallet: Wallet, performance: ChartNoAxesCombined, earnings: CreditCard }
+const vendorModules: Record<string, string> = { orders: 'Orders', fulfillment: 'Fulfillment', messages: 'Messages', invoices: 'E-Invoices', notifications: 'Notifications', disputes: 'Disputes & Appeals', products: 'My Products', vehicles: 'Vehicles', wallet: 'Transaction History', tracking: 'Team Tracking', performance: 'Store Performance', materials_analytics: 'Materials Analytics', reviews: 'Ratings & Reviews', earnings: 'Earnings' }
+const vendorModuleIcons = { orders: FileText, fulfillment: Truck, messages: MessageSquare, invoices: ReceiptText, notifications: Bell, disputes: Scale, products: Package, vehicles: Truck, wallet: Wallet, performance: ChartNoAxesCombined, materials_analytics: LineChart, reviews: Star, earnings: CreditCard }
 const vendorNavigation: PortalNavSection[] = [
   { label: 'Overview', items: [{ label: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard size={16} aria-hidden="true" /> }] },
-  ...[['Store Operations', ['orders', 'fulfillment', 'messages', 'invoices', 'notifications', 'disputes']], ['Store Management', ['products', 'vehicles', 'wallet']], ['Analytics', ['performance', 'earnings']]].map(([label, keys]) => ({ label: label as string, items: (keys as string[]).map(key => ({ label: vendorModules[key] ?? key, href: key === 'products' ? '/products' : key === 'vehicles' ? '/vehicles' : key === 'orders' ? '/orders' : key === 'disputes' ? '/disputes' : key === 'invoices' ? '/invoices' : key === 'messages' ? '/messages' : key === 'wallet' ? '/finance' : key === 'earnings' ? '/finance/earnings' : `/preview/${key}`, icon: (() => { const Icon = vendorModuleIcons[key as keyof typeof vendorModuleIcons]; return <Icon size={18} aria-hidden="true" /> })() })) })),
+  ...[['Store Operations', ['orders', 'fulfillment', 'messages', 'invoices', 'notifications', 'disputes', 'reviews']], ['Store Management', ['products', 'vehicles', 'wallet']], ['Analytics', ['performance', 'materials_analytics', 'earnings']]].map(([label, keys]) => ({ label: label as string, items: (keys as string[]).map(key => ({ label: vendorModules[key] ?? key, href: key === 'products' ? '/products' : key === 'vehicles' ? '/vehicles' : key === 'orders' ? '/orders' : key === 'disputes' ? '/disputes' : key === 'invoices' ? '/invoices' : key === 'messages' ? '/messages' : key === 'wallet' ? '/finance' : key === 'earnings' ? '/finance/earnings' : key === 'performance' ? '/performance' : key === 'materials_analytics' ? '/analytics/materials' : key === 'reviews' ? '/reviews' : `/preview/${key}`, icon: (() => { const Icon = vendorModuleIcons[key as keyof typeof vendorModuleIcons]; return <Icon size={18} aria-hidden="true" /> })() })) })),
   { label: 'Vendor Team Accounts', items: [{ label: 'Team Accounts', href: '/team', icon: <Users size={16} aria-hidden="true" /> }, { label: 'Team Tracking', href: '/preview/tracking', icon: <Activity size={16} aria-hidden="true" /> }] },
   { label: 'Store Profile', items: [{ label: 'Store Profile', href: '/store-profile', icon: <Store size={16} aria-hidden="true" /> }] },
 ]
@@ -188,10 +190,14 @@ export function VendorShell({ activeHref, accountLabel, accountStatus, children,
       if (item.href === '/finance/earnings') return navigationSnapshot.permissions.includes('portal.earnings')
       if (item.href === '/disputes') return navigationSnapshot.permissions.includes('portal.disputes')
       if (item.href === '/invoices') return navigationSnapshot.permissions.includes('portal.invoices')
+      if (item.href === '/performance') return navigationSnapshot.permissions.includes('portal.performance')
+      // Materials Analytics is installed (Phase 14) and shown only to Owner and Store Manager; the API enforces it again.
+      if (item.href === '/analytics/materials') return navigationSnapshot.permissions.includes('materials_analytics.view_competitors')
+      if (item.href === '/reviews') return navigationSnapshot.permissions.includes('portal.reviews')
       if (item.href.startsWith('/preview/')) return navigationSnapshot.permissions.includes(`portal.${item.href.split('/').at(-1)}`)
       return true
     }).map(item => ({
-      ...item, disabled: item.disabled || ((item.href.startsWith('/preview/') || item.href.startsWith('/finance') || item.href === '/disputes' || item.href === '/invoices' || item.href === '/products' || item.href === '/vehicles') && item.href !== '/preview/tracking' && record(navigationSnapshot?.activation).status !== 'ACTIVE'),
+      ...item, disabled: item.disabled || ((item.href.startsWith('/preview/') || item.href.startsWith('/finance') || item.href === '/disputes' || item.href === '/invoices' || item.href === '/performance' || item.href === '/analytics/materials' || item.href === '/reviews' || item.href === '/products' || item.href === '/vehicles') && item.href !== '/preview/tracking' && record(navigationSnapshot?.activation).status !== 'ACTIVE'),
     })),
   })).filter(section => section.items.length > 0)
   const [logoutError, setLogoutError] = useState<string | null>(null)

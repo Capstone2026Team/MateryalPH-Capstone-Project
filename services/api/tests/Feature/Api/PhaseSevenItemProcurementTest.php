@@ -192,13 +192,15 @@ final class PhaseSevenItemProcurementTest extends TestCase
         EligibleOfferQuery::invalidate();
         $this->buyer();
 
+        // Materials Analytics is installed in Phase 14; the entry point is enabled unless the kill switch is off.
+        config()->set('finance.materials_analytics_enabled', true);
         $summary = $this->explore()->assertOk()
             ->assertJsonPath('data.counts.verified_vendors', 2)
             ->assertJsonPath('data.counts.vendor_listings', 3)
             ->assertJsonPath('data.labels.vendor_listings_unit', 'Vendor listings')
             ->assertJsonPath('data.count_scope', 'ALL_CATEGORIES_AT_LOCATION_RADIUS')
             ->assertJsonPath('data.scope.radius_km', 5)
-            ->assertJsonPath('data.materials_analytics.enabled', false)
+            ->assertJsonPath('data.materials_analytics.enabled', true)
             ->assertJsonPath('data.dataset.label', 'DEMO — Simulated Marketplace Data');
         self::assertNotNull($summary->json('data.current_as_of'));
         $masonry = collect($summary->json('data.categories'))->firstWhere('code', 'MASONRY');

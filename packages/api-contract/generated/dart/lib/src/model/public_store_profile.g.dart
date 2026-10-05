@@ -284,6 +284,8 @@ class _$PublicStoreProfile extends PublicStoreProfile {
   final String hoursNotice;
   @override
   final PublicStoreProfileHoursUnavailableReasonEnum? hoursUnavailableReason;
+  @override
+  final BuiltList<PublicBadge>? badges;
 
   factory _$PublicStoreProfile(
           [void Function(PublicStoreProfileBuilder)? updates]) =>
@@ -314,7 +316,8 @@ class _$PublicStoreProfile extends PublicStoreProfile {
       required this.allClosed,
       required this.hoursAsOf,
       required this.hoursNotice,
-      this.hoursUnavailableReason})
+      this.hoursUnavailableReason,
+      this.badges})
       : super._();
   @override
   PublicStoreProfile rebuild(
@@ -353,7 +356,8 @@ class _$PublicStoreProfile extends PublicStoreProfile {
         allClosed == other.allClosed &&
         hoursAsOf == other.hoursAsOf &&
         hoursNotice == other.hoursNotice &&
-        hoursUnavailableReason == other.hoursUnavailableReason;
+        hoursUnavailableReason == other.hoursUnavailableReason &&
+        badges == other.badges;
   }
 
   @override
@@ -384,6 +388,7 @@ class _$PublicStoreProfile extends PublicStoreProfile {
     _$hash = $jc(_$hash, hoursAsOf.hashCode);
     _$hash = $jc(_$hash, hoursNotice.hashCode);
     _$hash = $jc(_$hash, hoursUnavailableReason.hashCode);
+    _$hash = $jc(_$hash, badges.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -415,7 +420,8 @@ class _$PublicStoreProfile extends PublicStoreProfile {
           ..add('allClosed', allClosed)
           ..add('hoursAsOf', hoursAsOf)
           ..add('hoursNotice', hoursNotice)
-          ..add('hoursUnavailableReason', hoursUnavailableReason))
+          ..add('hoursUnavailableReason', hoursUnavailableReason)
+          ..add('badges', badges))
         .toString();
   }
 }
@@ -544,6 +550,11 @@ class PublicStoreProfileBuilder
               hoursUnavailableReason) =>
       _$this._hoursUnavailableReason = hoursUnavailableReason;
 
+  ListBuilder<PublicBadge>? _badges;
+  ListBuilder<PublicBadge> get badges =>
+      _$this._badges ??= ListBuilder<PublicBadge>();
+  set badges(ListBuilder<PublicBadge>? badges) => _$this._badges = badges;
+
   PublicStoreProfileBuilder() {
     PublicStoreProfile._defaults(this);
   }
@@ -576,6 +587,7 @@ class PublicStoreProfileBuilder
       _hoursAsOf = $v.hoursAsOf;
       _hoursNotice = $v.hoursNotice;
       _hoursUnavailableReason = $v.hoursUnavailableReason;
+      _badges = $v.badges?.toBuilder();
       _$v = null;
     }
     return this;
@@ -634,6 +646,7 @@ class PublicStoreProfileBuilder
             hoursNotice: BuiltValueNullFieldError.checkNotNull(
                 hoursNotice, r'PublicStoreProfile', 'hoursNotice'),
             hoursUnavailableReason: hoursUnavailableReason,
+            badges: _badges?.build(),
           );
     } catch (_) {
       late String _$failedField;
@@ -656,6 +669,9 @@ class PublicStoreProfileBuilder
         week.build();
         _$failedField = 'openNow';
         openNow.build();
+
+        _$failedField = 'badges';
+        _badges?.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
             r'PublicStoreProfile', _$failedField, e.toString());

@@ -13,6 +13,7 @@ import {
 import { newIdempotencyKey } from '../lib/onboarding-api'
 import { storeName } from '../lib/catalog-access'
 import { useOnboardingSnapshot } from '../lib/vendor-status'
+import { OrderReviewPanel } from './TrustPages'
 import { ErrorState, LoadingState, PageHeader, VendorShell } from './PhaseThreeVendorPages'
 import { OrderPaymentPanel } from './OrderPaymentPanel'
 import { CancellationPanel, FulfillmentWorkspace, RefundsPanel } from './OrderFulfillmentPanels'
@@ -196,6 +197,7 @@ function OrderDetailWorkspace({ orderId }: { orderId: string }) {
         {order.primaryAction === 'CONFIRM' && !order.permissions?.canConfirm && <StatusMessage tone="error">Your role can view this request but cannot confirm or decline it.</StatusMessage>}
         {inFulfillment && <FulfillmentWorkspace order={order} onChanged={changed} onReload={load} />}
         {order.invoice && <OrderInvoicePanel orderId={order.id} />}
+        {orderState === 'COMPLETED' && <OrderReviewPanel orderId={order.id} canRate />}
         {order.autoAccept && <AutoAcceptPanelView order={order} />}
         <TimelinePanel order={order} />
       </div>

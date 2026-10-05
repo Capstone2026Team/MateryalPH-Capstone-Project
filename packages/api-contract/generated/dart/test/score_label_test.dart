@@ -23,5 +23,11 @@ void main() {
       // TODO
     });
 
+    // Full wording: VPS n.nn of 5, or New Vendor — Building Track Record below the sample gates.
+    // String detailText
+    test('to test the property `detailText`', () async {
+      // TODO
+    });
+
   });
 }

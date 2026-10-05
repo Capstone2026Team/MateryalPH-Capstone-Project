@@ -54,3 +54,7 @@ export {
   DisputeStatusBadge, DisputeDeadlines, DisputeTimeline, SignedFileButton, OriginalPaymentMethodNotice, InvoiceRecordList, PlatformDocumentNotice,
   disputeIssueLabel, disputeRemedyLabel, disputeStateLabel, disputeEventLabel, disputeRoleLabel,
 } from './dispute-patterns'
+export {
+  PriceTrendChart, PriceTrendTable, PriceTrendPanel, TrendSummary, AnalyticsNullState, SuppressionNotice, DatasetNotice, BadgeList, StarRatingDisplay, StarRatingInput, ScoreTile,
+  formatAnalyticsDate, formatPhpDecimal, analyticsDay, type PricePoint, type TrendValue,
+} from './analytics-patterns'

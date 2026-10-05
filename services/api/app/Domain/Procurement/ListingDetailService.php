@@ -101,6 +101,7 @@ final class ListingDetailService
             'vendor' => [
                 'id' => $vendor['id'], 'name' => $vendor['public_store_name'], 'logo_url' => $vendor['logo_url'], 'score_label' => $vendor['score_label'],
                 'address' => $vendor['address'], 'open_status' => $vendor['open_status'], 'vacation_mode' => $vendor['vacation_mode'], 'supplier_type' => $vendor['supplier_type'],
+                'badges' => $vendor['badges'],
             ],
             'fulfillment' => [
                 'pickup_available' => in_array($vendor['fulfillment_method'], ['SELF_PICKUP', 'BOTH'], true),

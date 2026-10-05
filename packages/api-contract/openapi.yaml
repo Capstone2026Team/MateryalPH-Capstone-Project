@@ -1,12 +1,20 @@
 openapi: 3.1.0
 info:
   title: MateryalPH API
-  version: 1.0.0-phase.13
+  version: 1.0.0-phase.14
   description: >-
     Versioned Phase 1–4 contract. Vendor onboarding, verification, activation readiness, private evidence, team invitations, the Vendor catalog and product PS/ICC compliance are server-authorized. Browser credentials are isolated by configured frontend origin using _vendor and _admin suffixes on access, refresh, CSRF, MFA and bot-proof cookies. Existing unsuffixed browser sessions require sign-in again; cookie selection never replaces account authorization. Native Buyer transport is unchanged.
 servers:
   - url: /api/v1
 tags:
+  - name: Admin Materials Analytics
+  - name: Vendor Materials Analytics
+  - name: Buyer Materials Analytics
+  - name: Admin Score Monitoring
+  - name: Admin Review Moderation
+  - name: Vendor Store Performance
+  - name: Vendor Reviews
+  - name: Buyer Reviews
   - name: Admin Invoices
   - name: Vendor Invoices
   - name: Buyer Invoices
@@ -3354,6 +3362,1716 @@ paths:
         "404": { $ref: "#/components/responses/ErrorResponse" }
         "409": { $ref: "#/components/responses/ErrorResponse" }
         "422": { $ref: "#/components/responses/ErrorResponse" }
+  # Phase 14 reviews, scores and analytics operations
+  "/buyers/orders/{orderId}/reviews":
+    "get":
+      "operationId": "getBuyerOrderReviews"
+      "tags":
+        - "Buyer Reviews"
+      "description": "Rating eligibility, the exact 14-day deadline (with its Asia/Manila label), your submissions and, after the blind reveal, the Vendor's rating of you."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "orderId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/BuyerOrderReviewsEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+    "post":
+      "operationId": "submitBuyerOrderReviews"
+      "tags":
+        - "Buyer Reviews"
+      "description": "Rate the Vendor (Service Quality and Delivery or Processing Speed) and purchased lines (Product Quality). 409 REVIEW_NOT_ELIGIBLE before COMPLETED, REVIEW_WINDOW_CLOSED at 14 days, REVIEW_ALREADY_SUBMITTED for a repeat."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "orderId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/BuyerReviewSubmitRequest"
+      "responses":
+        "200":
+          "description": "Idempotent replay."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/BuyerOrderReviewsEnvelope"
+        "201":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/BuyerOrderReviewsEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/buyers/reviews/{reviewId}":
+    "patch":
+      "operationId": "editBuyerReview"
+      "tags":
+        - "Buyer Reviews"
+      "description": "Correct your review within 24 hours of submitting (409 REVIEW_LOCKED at the exact instant), or once within 7 days after an Admin requests a correction."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "reviewId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/BuyerReviewEditRequest"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/BuyerOrderReviewsEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/buyers/reviews/{reviewId}/media":
+    "post":
+      "operationId": "addBuyerReviewMedia"
+      "tags":
+        - "Buyer Reviews"
+      "description": "Up to three photos on your Product Review while it can still be edited."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "reviewId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "multipart/form-data":
+            "schema":
+              "$ref": "#/components/schemas/ReviewMediaForm"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/BuyerOrderReviewsEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/buyers/reviews/{reviewId}/media/{mediaId}":
+    "delete":
+      "operationId": "removeBuyerReviewMedia"
+      "tags":
+        - "Buyer Reviews"
+      "description": "Remove one of your photos while the review can still be edited (retired, not erased from history)."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "reviewId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "mediaId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/BuyerOrderReviewsEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/buyers/reviews/{reviewId}/flags":
+    "post":
+      "operationId": "reportBuyerReview"
+      "tags":
+        - "Buyer Reviews"
+      "description": "Report a public review for moderation. Nothing is hidden or deleted by a report."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "reviewId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/ReviewFlagRequest"
+      "responses":
+        "200":
+          "description": "Idempotent replay."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/ReviewReportedEnvelope"
+        "201":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/ReviewReportedEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/buyers/listings/{listingId}/reviews":
+    "get":
+      "operationId": "listListingReviews"
+      "tags":
+        - "Buyer Reviews"
+      "description": "Visible Product Reviews of one listing with its own product average (separate from the Vendor's MQS)."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "listingId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "page"
+          "in": "query"
+          "schema":
+            "type": "integer"
+            "minimum": 1
+            "maximum": 500
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/PublicReviewListEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/buyers/stores/{vendorId}/reviews":
+    "get":
+      "operationId": "listStoreReviews"
+      "tags":
+        - "Buyer Reviews"
+      "description": "Visible Vendor ratings, published scores (or New Vendor — Building Track Record) and active badges."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "vendorId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "page"
+          "in": "query"
+          "schema":
+            "type": "integer"
+            "minimum": 1
+            "maximum": 500
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/PublicReviewListEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/buyers/reviews/{reviewId}/media/{mediaId}/content":
+    "get":
+      "operationId": "getBuyerReviewPhoto"
+      "tags":
+        - "Buyer Reviews"
+      "description": "Photo behind a five-minute signed link; re-authorized on every fetch."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "reviewId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "mediaId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "expires"
+          "in": "query"
+          "required": true
+          "schema":
+            "type": "integer"
+        - "name": "signature"
+          "in": "query"
+          "required": true
+          "schema":
+            "type": "string"
+      "responses":
+        "200":
+          "description": "Review photo bytes for a signed, unexpired link and an authorized caller."
+          "content":
+            "image/png":
+              "schema":
+                "type": "string"
+                "format": "binary"
+            "image/jpeg":
+              "schema":
+                "type": "string"
+                "format": "binary"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "503":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/reviews":
+    "get":
+      "operationId": "listVendorReviews"
+      "tags":
+        - "Vendor Reviews"
+      "description": "reviews.view (Owner, Store Manager, Store Staff, Customer Service). Visible received Vendor ratings or Product Reviews, or your store's Buyer ratings. There is no delete operation."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "type"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "enum":
+              - "VENDOR"
+              - "PRODUCT"
+              - "BUYER"
+        - "name": "page"
+          "in": "query"
+          "schema":
+            "type": "integer"
+            "minimum": 1
+            "maximum": 500
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/VendorReviewListEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/reviews/{reviewId}":
+    "patch":
+      "operationId": "editVendorBuyerRating"
+      "tags":
+        - "Vendor Reviews"
+      "description": "reviews.rate_buyer. Correct your store's Buyer rating within 24 hours."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "reviewId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/VendorReviewEditRequest"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/VendorOrderReviewsEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/reviews/{reviewId}/flags":
+    "post":
+      "operationId": "reportVendorReview"
+      "tags":
+        - "Vendor Reviews"
+      "description": "reviews.report. Report a review of your store; a Vendor can never remove a Buyer review."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "reviewId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/ReviewFlagRequest"
+      "responses":
+        "200":
+          "description": "Idempotent replay."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/ReviewReportedEnvelope"
+        "201":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/ReviewReportedEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/orders/{orderId}/reviews":
+    "get":
+      "operationId": "getVendorOrderReviews"
+      "tags":
+        - "Vendor Reviews"
+      "description": "reviews.view. The order's rating window; Buyer ratings appear only after the blind reveal."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "orderId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/VendorOrderReviewsEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/orders/{orderId}/buyer-rating":
+    "post":
+      "operationId": "submitVendorBuyerRating"
+      "tags":
+        - "Vendor Reviews"
+      "description": "reviews.rate_buyer (Owner, Store Manager, Store Staff, Customer Service): Inquiry Seriousness, Communication Quality and Payment Reliability (CCS inputs)."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "orderId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/VendorBuyerRatingRequest"
+      "responses":
+        "200":
+          "description": "Idempotent replay."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/VendorOrderReviewsEnvelope"
+        "201":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/VendorOrderReviewsEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/reviews/{reviewId}/media/{mediaId}/content":
+    "get":
+      "operationId": "getVendorReviewPhoto"
+      "tags":
+        - "Vendor Reviews"
+      "description": "Photo of a visible review of your store behind a signed link."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "reviewId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "mediaId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "expires"
+          "in": "query"
+          "required": true
+          "schema":
+            "type": "integer"
+        - "name": "signature"
+          "in": "query"
+          "required": true
+          "schema":
+            "type": "string"
+      "responses":
+        "200":
+          "description": "Review photo bytes for a signed, unexpired link and an authorized caller."
+          "content":
+            "image/png":
+              "schema":
+                "type": "string"
+                "format": "binary"
+            "image/jpeg":
+              "schema":
+                "type": "string"
+                "format": "binary"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "503":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/performance":
+    "get":
+      "operationId": "getVendorStorePerformance"
+      "tags":
+        - "Vendor Store Performance"
+      "description": "scores.view_store (Owner, Store Manager). VPS, VCS, MQS, OHS, CRR, FRR, sample gates, windows, OHS components and badge states."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/StorePerformanceEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/reviews":
+    "get":
+      "operationId": "listAdminReviewModeration"
+      "tags":
+        - "Admin Review Moderation"
+      "description": "reviews.moderate (Super Admin, User Management Staff). The Product Review Moderation Queue."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "state"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "enum":
+              - "NEEDS_ACTION"
+              - "ALL"
+              - "NONE"
+              - "FLAGGED"
+              - "HIDDEN_PENDING_REVIEW"
+              - "CORRECTION_REQUESTED"
+              - "REMOVED"
+        - "name": "page"
+          "in": "query"
+          "schema":
+            "type": "integer"
+            "minimum": 1
+            "maximum": 500
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/ModerationQueueEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/reviews/{reviewId}":
+    "get":
+      "operationId": "getAdminReviewModeration"
+      "tags":
+        - "Admin Review Moderation"
+      "description": "reviews.moderate. Review, media, flags, verified-purchase reference, related dispute, immutable revisions and moderation history."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "reviewId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/ModerationDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/reviews/{reviewId}/moderation":
+    "post":
+      "operationId": "moderateAdminReview"
+      "tags":
+        - "Admin Review Moderation"
+      "description": "reviews.moderate. Dismiss Flag, Request Correction, Hide Pending Review, Remove or Restore, each with a reason and audit record; original content is preserved."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "reviewId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/ReviewModerationRequest"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/ModerationDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/reviews/{reviewId}/media/{mediaId}/content":
+    "get":
+      "operationId": "getAdminReviewPhoto"
+      "tags":
+        - "Admin Review Moderation"
+      "description": "reviews.moderate. Photo behind a signed link."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "reviewId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "mediaId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "expires"
+          "in": "query"
+          "required": true
+          "schema":
+            "type": "integer"
+        - "name": "signature"
+          "in": "query"
+          "required": true
+          "schema":
+            "type": "string"
+      "responses":
+        "200":
+          "description": "Review photo bytes for a signed, unexpired link and an authorized caller."
+          "content":
+            "image/png":
+              "schema":
+                "type": "string"
+                "format": "binary"
+            "image/jpeg":
+              "schema":
+                "type": "string"
+                "format": "binary"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "503":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/scores":
+    "get":
+      "operationId": "listAdminScores"
+      "tags":
+        - "Admin Score Monitoring"
+      "description": "scores.view (Super Admin, User Management Staff, Order and Dispute Staff)."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "q"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "maxLength": 120
+        - "name": "page"
+          "in": "query"
+          "schema":
+            "type": "integer"
+            "minimum": 1
+            "maximum": 500
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/AdminScoreListEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/scores/{vendorId}":
+    "get":
+      "operationId": "getAdminScore"
+      "tags":
+        - "Admin Score Monitoring"
+      "description": "scores.view. Components, sample sizes, windows, badge history, suppressions, exclusions and paginated source events."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "vendorId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "metric"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "enum":
+              - "ORDER_CONFIRMED"
+              - "FULFILLMENT_DISPATCHED"
+              - "ORDER_FULFILLED"
+              - "ORDER_COMPLETED"
+              - "VENDOR_NON_FULFILLMENT"
+              - "VALIDATED_DEFECT_RETURN"
+              - "ORDER_DEFECT"
+              - "MISREPRESENTED_LISTING"
+              - "INQUIRY"
+        - "name": "page"
+          "in": "query"
+          "schema":
+            "type": "integer"
+            "minimum": 1
+            "maximum": 500
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/AdminScoreDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/scores/{vendorId}/exclusions":
+    "post":
+      "operationId": "excludeAdminScoreSource"
+      "tags":
+        - "Admin Score Monitoring"
+      "description": "scores.investigate. Reversibly exclude one order (fraud, duplicate, test, invalid source) from later snapshots."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "vendorId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/ScoreExclusionRequest"
+      "responses":
+        "200":
+          "description": "Idempotent replay."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/AdminScoreDetailEnvelope"
+        "201":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/AdminScoreDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/scores/exclusions/{exclusionId}/revoke":
+    "post":
+      "operationId": "revokeAdminScoreExclusion"
+      "tags":
+        - "Admin Score Monitoring"
+      "description": "scores.investigate. Reverse an exclusion with a reason."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "exclusionId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/InvestigationReasonRequest"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/InvestigationAckEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/scores/{vendorId}/badge-suppressions":
+    "post":
+      "operationId": "suppressAdminBadge"
+      "tags":
+        - "Admin Score Monitoring"
+      "description": "scores.investigate. Suppress a badge's display for a documented fraud or compliance case. Admins can never award a badge."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "vendorId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/BadgeSuppressionRequest"
+      "responses":
+        "200":
+          "description": "Idempotent replay."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/AdminScoreDetailEnvelope"
+        "201":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/AdminScoreDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/scores/badge-suppressions/{suppressionId}/lift":
+    "post":
+      "operationId": "liftAdminBadgeSuppression"
+      "tags":
+        - "Admin Score Monitoring"
+      "description": "scores.investigate. Lift a suppression with a reason."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "suppressionId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/InvestigationReasonRequest"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/InvestigationAckEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/buyers/materials-analytics":
+    "post":
+      "operationId": "listBuyerMaterialsAnalytics"
+      "tags":
+        - "Buyer Materials Analytics"
+      "description": "Categorized comparable variants within your origin and radius: daily equal-Vendor averages (one-Vendor limited data), exact-endpoint trends needing two Vendors at each endpoint, and current offering counts. Read-only; POST keeps the origin out of URLs."
+      "security":
+        - "passportBearer": []
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/BuyerMaterialsAnalyticsRequest"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/BuyerMaterialsAnalyticsListEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+        "503":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/buyers/materials-analytics/{groupId}":
+    "post":
+      "operationId": "getBuyerMaterialPriceDetails"
+      "tags":
+        - "Buyer Materials Analytics"
+      "description": "Material Price Details: every date in the window (gaps are MISSING_DAY), the trend and the comparable variant selector."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "groupId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/BuyerMaterialsAnalyticsRequest"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/BuyerMaterialsAnalyticsDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+        "503":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/buyers/materials-analytics/{groupId}/offers":
+    "post":
+      "operationId": "listBuyerMaterialOffers"
+      "tags":
+        - "Buyer Materials Analytics"
+      "description": "Current public offers (Buyer only), cheapest per canonical unit first; each opens the existing Product Details."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "groupId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/BuyerMaterialsAnalyticsRequest"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/MaterialOfferListEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+        "503":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/materials-analytics":
+    "get":
+      "operationId": "listVendorMaterialsAnalytics"
+      "tags":
+        - "Vendor Materials Analytics"
+      "description": "materials_analytics.view_competitors (Owner, Store Manager only). Competitor aggregates excluding your organization, suppressed below three competitors at every point and endpoint, and your own price separately. No offers, identities or protected finance."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "preset_days"
+          "in": "query"
+          "schema":
+            "type": "integer"
+            "enum":
+              - 7
+              - 30
+              - 90
+        - "name": "start_date"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "format": "date"
+        - "name": "end_date"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "format": "date"
+        - "name": "category_id"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "q"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "maxLength": 100
+        - "name": "cursor"
+          "in": "query"
+          "schema":
+            "type": "string"
+        - "name": "per_page"
+          "in": "query"
+          "schema":
+            "type": "integer"
+            "minimum": 1
+            "maximum": 50
+        - "name": "radius_km"
+          "in": "query"
+          "schema":
+            "type": "integer"
+            "enum":
+              - 5
+              - 10
+              - 20
+              - 30
+              - 40
+              - 50
+          "description": "Around your own verified store point (default 50 km). Any origin or competitor field is refused."
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/VendorMaterialsAnalyticsListEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+        "503":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/materials-analytics/export":
+    "get":
+      "operationId": "exportVendorMaterialsAnalytics"
+      "tags":
+        - "Vendor Materials Analytics"
+      "description": "materials_analytics.view_competitors. Aggregate-only CSV with the same suppression; re-authorized on every request."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "preset_days"
+          "in": "query"
+          "schema":
+            "type": "integer"
+            "enum":
+              - 7
+              - 30
+              - 90
+        - "name": "start_date"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "format": "date"
+        - "name": "end_date"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "format": "date"
+        - "name": "radius_km"
+          "in": "query"
+          "schema":
+            "type": "integer"
+            "enum":
+              - 5
+              - 10
+              - 20
+              - 30
+              - 40
+              - 50
+          "description": "Around your own verified store point (default 50 km). Any origin or competitor field is refused."
+      "responses":
+        "200":
+          "description": "Competitor aggregates CSV; formulas neutralized."
+          "content":
+            "text/csv":
+              "schema":
+                "type": "string"
+                "format": "binary"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+        "503":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/materials-analytics/{groupId}":
+    "get":
+      "operationId": "getVendorMaterialPriceDetails"
+      "tags":
+        - "Vendor Materials Analytics"
+      "description": "materials_analytics.view_competitors. The aggregate graph/table for one comparable variant; there is no competitor-offers child."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "groupId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "preset_days"
+          "in": "query"
+          "schema":
+            "type": "integer"
+            "enum":
+              - 7
+              - 30
+              - 90
+        - "name": "start_date"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "format": "date"
+        - "name": "end_date"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "format": "date"
+        - "name": "radius_km"
+          "in": "query"
+          "schema":
+            "type": "integer"
+            "enum":
+              - 5
+              - 10
+              - 20
+              - 30
+              - 40
+              - 50
+          "description": "Around your own verified store point (default 50 km). Any origin or competitor field is refused."
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/VendorMaterialsAnalyticsDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+        "503":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/materials-analytics":
+    "get":
+      "operationId": "listAdminMaterialsAnalytics"
+      "tags":
+        - "Admin Materials Analytics"
+      "description": "analytics.view_aggregates. PSGC-scoped (or Philippines-wide) aggregates; payment/order filters do not apply to listed-price history."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "preset_days"
+          "in": "query"
+          "schema":
+            "type": "integer"
+            "enum":
+              - 7
+              - 30
+              - 90
+        - "name": "start_date"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "format": "date"
+        - "name": "end_date"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "format": "date"
+        - "name": "category_id"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "q"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "maxLength": 100
+        - "name": "cursor"
+          "in": "query"
+          "schema":
+            "type": "string"
+        - "name": "per_page"
+          "in": "query"
+          "schema":
+            "type": "integer"
+            "minimum": 1
+            "maximum": 50
+        - "name": "psgc_code"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "maxLength": 16
+        - "name": "psgc_version_id"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/AdminMaterialsAnalyticsListEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+        "503":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/materials-analytics/export":
+    "get":
+      "operationId": "exportAdminMaterialsAnalytics"
+      "tags":
+        - "Admin Materials Analytics"
+      "description": "analytics.view_aggregates and analytics.export. Aggregate CSV."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "preset_days"
+          "in": "query"
+          "schema":
+            "type": "integer"
+            "enum":
+              - 7
+              - 30
+              - 90
+        - "name": "start_date"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "format": "date"
+        - "name": "end_date"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "format": "date"
+        - "name": "psgc_code"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "maxLength": 16
+        - "name": "psgc_version_id"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "responses":
+        "200":
+          "description": "Aggregate CSV; formulas neutralized."
+          "content":
+            "text/csv":
+              "schema":
+                "type": "string"
+                "format": "binary"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+        "503":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/materials-analytics/runs":
+    "get":
+      "operationId": "listAdminMaterialPriceRuns"
+      "tags":
+        - "Admin Materials Analytics"
+      "description": "analytics.view_aggregates. Snapshot health: state, revision, actual capture time and delay."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/AnalyticsRunListEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "503":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/materials-analytics/runs/{runId}/corrections":
+    "post":
+      "operationId": "correctAdminMaterialPriceRun"
+      "tags":
+        - "Admin Materials Analytics"
+      "description": "materials_analytics.inspect_sources. Append a reviewed replacement revision excluding proven-invalid observations; originals are retained."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "runId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/AnalyticsCorrectionRequest"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/AnalyticsCorrectionEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/materials-analytics/{groupId}":
+    "get":
+      "operationId": "getAdminMaterialPriceDetails"
+      "tags":
+        - "Admin Materials Analytics"
+      "description": "analytics.view_aggregates. Graph/table with counts and exact means."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "groupId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "preset_days"
+          "in": "query"
+          "schema":
+            "type": "integer"
+            "enum":
+              - 7
+              - 30
+              - 90
+        - "name": "start_date"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "format": "date"
+        - "name": "end_date"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "format": "date"
+        - "name": "psgc_code"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "maxLength": 16
+        - "name": "psgc_version_id"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/AdminMaterialsAnalyticsDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+        "503":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/materials-analytics/{groupId}/sources":
+    "get":
+      "operationId": "listAdminMaterialPriceSources"
+      "tags":
+        - "Admin Materials Analytics"
+      "description": "materials_analytics.inspect_sources. Public listing identity, price/version, capture time and recorded geography for one published date; audited with your reason."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "groupId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "snapshot_date"
+          "in": "query"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "date"
+        - "name": "reason"
+          "in": "query"
+          "required": true
+          "schema":
+            "type": "string"
+            "minLength": 10
+            "maxLength": 500
+        - "name": "psgc_code"
+          "in": "query"
+          "schema":
+            "type": "string"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/AnalyticsSourceListEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+        "503":
+          "$ref": "#/components/responses/ErrorResponse"
   # Phase 13 disputes and invoices operations
   "/buyers/disputes":
     "get":
@@ -9974,7 +11692,7 @@ components:
       required: [ enabled, status, message ]
       properties:
         enabled: { type: boolean }
-        status: { type: string, enum: [ NOT_YET_AVAILABLE, AVAILABLE ] }
+        status: { type: string, enum: [ NOT_YET_AVAILABLE, AVAILABLE, TEMPORARILY_UNAVAILABLE ] }
         message: { type: string }
     DatasetLabel:
       type: object
@@ -10079,6 +11797,7 @@ components:
         logo_url: { type: [ string, 'null' ], format: uri }
         score_label: { $ref: "#/components/schemas/ScoreLabel" }
         vacation_mode: { type: boolean }
+        badges: { type: array, items: { $ref: "#/components/schemas/PublicBadge" }, description: "Active automatic badges (text plus icon); Admin-suppressed badges are omitted." }
     ListingFulfillmentSummary:
       type: object
       required: [ pickup_available, delivery, basis ]
@@ -10244,6 +11963,7 @@ components:
         open_status: { $ref: "#/components/schemas/SupplierOpenStatus" }
         vacation_mode: { type: boolean }
         supplier_type: { type: [ string, 'null' ] }
+        badges: { type: array, items: { $ref: "#/components/schemas/PublicBadge" }, description: "Active automatic badges (text plus icon); Admin-suppressed badges are omitted." }
     ListingDetailFulfillment:
       type: object
       required: [ pickup_available, delivery, delivery_maximum_km, basis, notice ]
@@ -10675,6 +12395,7 @@ components:
         kind: { type: string, enum: [ VPS, NEW_VENDOR, DIRECTORY ] }
         value: { type: [ string, 'null' ], description: One-decimal VPS for kind VPS; null otherwise. }
         text: { type: string }
+        detail_text: { type: string, description: "Full wording: VPS n.nn of 5, or New Vendor — Building Track Record below the sample gates." }
     MapPoint:
       type: object
       required: [ latitude, longitude ]
@@ -11740,6 +13461,7 @@ components:
         hours_as_of: { type: string, format: date-time }
         hours_notice: { type: string }
         hours_unavailable_reason: { type: string, enum: [ SCHEDULE_NOT_AVAILABLE ] }
+        badges: { type: array, items: { $ref: "#/components/schemas/PublicBadge" }, description: "Active automatic badges (text plus icon); Admin-suppressed badges are omitted." }
     PublicStoreProfileEnvelope:
       type: object
       required: [ data, meta, errors ]
@@ -14141,6 +15863,2517 @@ components:
         meta: { type: object, additionalProperties: true }
         errors: { type: array, items: { type: object, additionalProperties: true } }
 
+    # Phase 14 reviews, scores and analytics schemas
+    "PublicBadge":
+      "type": "object"
+      "required":
+        - "code"
+        - "name"
+        - "description"
+        - "earned_at"
+      "properties":
+        "code":
+          "type": "string"
+          "enum":
+            - "FAST_RESPONDER"
+            - "ON_TIME"
+            - "MOST_ORDERED"
+            - "HIGHLY_RATED"
+            - "HIGH_QUALITY_MATERIALS"
+            - "TRUSTED_SUPPLIER"
+            - "BEST_PRICE"
+        "name":
+          "type": "string"
+        "scope_label":
+          "type": "string"
+          "nullable": true
+        "description":
+          "type": "string"
+        "earned_at":
+          "type": "string"
+          "format": "date-time"
+      "description": "An active automatic badge, shown as text plus an icon. Admin-suppressed badges are omitted."
+    "ReviewWindowRules":
+      "type": "object"
+      "required":
+        - "window_days"
+        - "edit_hours"
+        - "comment_max"
+        - "media_max"
+        - "blind_reveal"
+      "properties":
+        "window_days":
+          "type": "integer"
+        "edit_hours":
+          "type": "integer"
+        "comment_max":
+          "type": "integer"
+        "media_max":
+          "type": "integer"
+        "blind_reveal":
+          "type": "string"
+    "ReviewRatings":
+      "type": "object"
+      "properties":
+        "service_quality":
+          "type": "integer"
+          "minimum": 1
+          "maximum": 5
+        "speed_rating":
+          "type": "integer"
+          "minimum": 1
+          "maximum": 5
+        "speed_kind":
+          "type": "string"
+          "enum":
+            - "DELIVERY_SPEED"
+            - "PROCESSING_SPEED"
+        "product_quality":
+          "type": "integer"
+          "minimum": 1
+          "maximum": 5
+        "inquiry_seriousness":
+          "type": "integer"
+          "minimum": 1
+          "maximum": 5
+        "communication_quality":
+          "type": "integer"
+          "minimum": 1
+          "maximum": 5
+        "payment_reliability":
+          "type": "integer"
+          "minimum": 1
+          "maximum": 5
+    "ReviewMediaLink":
+      "type": "object"
+      "required":
+        - "id"
+        - "url"
+        - "expires_at"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "url":
+          "type": "string"
+        "expires_at":
+          "type": "string"
+          "format": "date-time"
+      "description": "A five-minute signed link; the fetch re-authorizes the caller."
+    "PublicReview":
+      "type": "object"
+      "required":
+        - "id"
+        - "type"
+        - "ratings"
+        - "display_name"
+        - "verified_purchase"
+        - "edited"
+        - "media"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "type":
+          "type": "string"
+          "enum":
+            - "VENDOR"
+            - "PRODUCT"
+            - "BUYER"
+        "ratings":
+          "$ref": "#/components/schemas/ReviewRatings"
+        "comment":
+          "type": "string"
+          "nullable": true
+        "display_name":
+          "type": "string"
+        "verified_purchase":
+          "type": "boolean"
+        "submitted_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "edited":
+          "type": "boolean"
+        "variant_label":
+          "type": "string"
+          "nullable": true
+        "media":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ReviewMediaLink"
+      "description": "Privacy-safe public review: first name and last initial or Verified Buyer; no reviewer id or contact."
+    "OwnReview":
+      "type": "object"
+      "required":
+        - "id"
+        - "type"
+        - "ratings"
+        - "display_name"
+        - "can_edit"
+        - "correction_requested"
+        - "visibility"
+        - "revision"
+        - "lock_version"
+        - "media"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "type":
+          "type": "string"
+          "enum":
+            - "VENDOR"
+            - "PRODUCT"
+            - "BUYER"
+        "ratings":
+          "$ref": "#/components/schemas/ReviewRatings"
+        "comment":
+          "type": "string"
+          "nullable": true
+        "display_name":
+          "type": "string"
+        "submitted_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "editable_until":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "editable_until_label":
+          "type": "string"
+          "nullable": true
+        "can_edit":
+          "type": "boolean"
+        "correction_requested":
+          "type": "boolean"
+        "correction_due_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "visibility":
+          "type": "string"
+          "enum":
+            - "PUBLIC"
+            - "HIDDEN_UNTIL_REVEAL"
+            - "WITHHELD_ACTIVE_DISPUTE"
+            - "HIDDEN_BY_MODERATION"
+            - "REMOVED"
+            - "EXCLUDED_BY_INVESTIGATION"
+        "revision":
+          "type": "integer"
+        "lock_version":
+          "type": "integer"
+        "media":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ReviewMediaLink"
+    "ReviewDisplayOption":
+      "type": "object"
+      "required":
+        - "choice"
+        - "preview"
+      "properties":
+        "choice":
+          "type": "string"
+          "enum":
+            - "FIRST_NAME_LAST_INITIAL"
+            - "VERIFIED_BUYER"
+        "preview":
+          "type": "string"
+    "ReviewLine":
+      "type": "object"
+      "required":
+        - "order_line_id"
+        - "listing_id"
+        - "display_name"
+        - "can_review"
+      "properties":
+        "order_line_id":
+          "type": "string"
+          "format": "uuid"
+        "listing_id":
+          "type": "string"
+          "format": "uuid"
+        "display_name":
+          "type": "string"
+        "variant_label":
+          "type": "string"
+          "nullable": true
+        "review":
+          "oneOf":
+            - "$ref": "#/components/schemas/OwnReview"
+            - "type": "null"
+        "can_review":
+          "type": "boolean"
+    "CounterpartRating":
+      "type": "object"
+      "required":
+        - "ratings"
+        - "display_name"
+      "properties":
+        "ratings":
+          "$ref": "#/components/schemas/ReviewRatings"
+        "comment":
+          "type": "string"
+          "nullable": true
+        "display_name":
+          "type": "string"
+        "submitted_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+    "BuyerOrderReviews":
+      "type": "object"
+      "required":
+        - "order_id"
+        - "order_reference"
+        - "state"
+        - "revealed"
+        - "withheld_for_dispute"
+        - "rules"
+        - "party"
+        - "speed_kind"
+        - "speed_label"
+        - "display_name_options"
+        - "can_submit_vendor_rating"
+        - "lines"
+      "properties":
+        "order_id":
+          "type": "string"
+          "format": "uuid"
+        "order_reference":
+          "type": "string"
+        "state":
+          "type": "string"
+          "enum":
+            - "NOT_COMPLETED"
+            - "OPEN"
+            - "CLOSED"
+        "completed_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "closes_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "closes_at_label":
+          "type": "string"
+          "nullable": true
+        "revealed":
+          "type": "boolean"
+        "revealed_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "reveal_reason":
+          "type": "string"
+          "enum":
+            - "BOTH_SUBMITTED"
+            - "WINDOW_EXPIRED"
+          "nullable": true
+        "withheld_for_dispute":
+          "type": "boolean"
+        "rules":
+          "$ref": "#/components/schemas/ReviewWindowRules"
+        "party":
+          "type": "string"
+          "enum":
+            - "BUYER"
+        "speed_kind":
+          "type": "string"
+          "enum":
+            - "DELIVERY_SPEED"
+            - "PROCESSING_SPEED"
+        "speed_label":
+          "type": "string"
+        "display_name_options":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ReviewDisplayOption"
+        "vendor_rating":
+          "oneOf":
+            - "$ref": "#/components/schemas/OwnReview"
+            - "type": "null"
+        "can_submit_vendor_rating":
+          "type": "boolean"
+        "lines":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ReviewLine"
+        "counterpart_rating":
+          "oneOf":
+            - "$ref": "#/components/schemas/CounterpartRating"
+            - "type": "null"
+      "description": "The Vendor's rating of the Buyer appears only after the blind reveal and while visible."
+    "VendorOrderReviews":
+      "type": "object"
+      "required":
+        - "order_id"
+        - "order_reference"
+        - "state"
+        - "revealed"
+        - "withheld_for_dispute"
+        - "rules"
+        - "party"
+        - "can_submit_buyer_rating"
+        - "received"
+      "properties":
+        "order_id":
+          "type": "string"
+          "format": "uuid"
+        "order_reference":
+          "type": "string"
+        "state":
+          "type": "string"
+          "enum":
+            - "NOT_COMPLETED"
+            - "OPEN"
+            - "CLOSED"
+        "completed_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "closes_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "closes_at_label":
+          "type": "string"
+          "nullable": true
+        "revealed":
+          "type": "boolean"
+        "revealed_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "reveal_reason":
+          "type": "string"
+          "enum":
+            - "BOTH_SUBMITTED"
+            - "WINDOW_EXPIRED"
+          "nullable": true
+        "withheld_for_dispute":
+          "type": "boolean"
+        "rules":
+          "$ref": "#/components/schemas/ReviewWindowRules"
+        "party":
+          "type": "string"
+          "enum":
+            - "VENDOR"
+        "buyer_rating":
+          "oneOf":
+            - "$ref": "#/components/schemas/OwnReview"
+            - "type": "null"
+        "can_submit_buyer_rating":
+          "type": "boolean"
+        "received":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/PublicReview"
+    "BuyerReviewSubmitRequest":
+      "type": "object"
+      "required":
+        - "display_name_choice"
+      "properties":
+        "display_name_choice":
+          "type": "string"
+          "enum":
+            - "FIRST_NAME_LAST_INITIAL"
+            - "VERIFIED_BUYER"
+        "vendor_rating":
+          "type": "object"
+          "required":
+            - "service_quality"
+            - "speed_rating"
+          "properties":
+            "service_quality":
+              "type": "integer"
+              "minimum": 1
+              "maximum": 5
+            "speed_rating":
+              "type": "integer"
+              "minimum": 1
+              "maximum": 5
+            "comment":
+              "type": "string"
+              "maxLength": 1000
+              "nullable": true
+          "nullable": true
+        "product_reviews":
+          "type": "array"
+          "maxItems": 100
+          "items":
+            "type": "object"
+            "required":
+              - "order_line_id"
+              - "rating"
+            "properties":
+              "order_line_id":
+                "type": "string"
+                "format": "uuid"
+              "rating":
+                "type": "integer"
+                "minimum": 1
+                "maximum": 5
+              "comment":
+                "type": "string"
+                "maxLength": 1000
+                "nullable": true
+      "description": "Any not-yet-submitted subset; each rating once per order or purchased line. Requires a COMPLETED order inside its 14-day window."
+    "BuyerReviewEditRequest":
+      "type": "object"
+      "required":
+        - "lock_version"
+      "properties":
+        "lock_version":
+          "type": "integer"
+          "minimum": 1
+        "service_quality":
+          "type": "integer"
+          "minimum": 1
+          "maximum": 5
+        "speed_rating":
+          "type": "integer"
+          "minimum": 1
+          "maximum": 5
+        "rating":
+          "type": "integer"
+          "minimum": 1
+          "maximum": 5
+        "comment":
+          "type": "string"
+          "maxLength": 1000
+          "nullable": true
+    "VendorBuyerRatingRequest":
+      "type": "object"
+      "required":
+        - "inquiry_seriousness"
+        - "communication_quality"
+        - "payment_reliability"
+      "properties":
+        "inquiry_seriousness":
+          "type": "integer"
+          "minimum": 1
+          "maximum": 5
+        "communication_quality":
+          "type": "integer"
+          "minimum": 1
+          "maximum": 5
+        "payment_reliability":
+          "type": "integer"
+          "minimum": 1
+          "maximum": 5
+        "comment":
+          "type": "string"
+          "maxLength": 1000
+          "nullable": true
+    "VendorReviewEditRequest":
+      "type": "object"
+      "required":
+        - "lock_version"
+      "properties":
+        "lock_version":
+          "type": "integer"
+          "minimum": 1
+        "inquiry_seriousness":
+          "type": "integer"
+          "minimum": 1
+          "maximum": 5
+        "communication_quality":
+          "type": "integer"
+          "minimum": 1
+          "maximum": 5
+        "payment_reliability":
+          "type": "integer"
+          "minimum": 1
+          "maximum": 5
+        "comment":
+          "type": "string"
+          "maxLength": 1000
+          "nullable": true
+    "ReviewMediaForm":
+      "type": "object"
+      "required":
+        - "files"
+      "properties":
+        "files":
+          "type": "array"
+          "minItems": 1
+          "maxItems": 3
+          "items":
+            "type": "string"
+            "format": "binary"
+          "description": "JPG or PNG, content-validated and scanned fail-closed."
+    "ReviewFlagRequest":
+      "type": "object"
+      "required":
+        - "reason_code"
+      "properties":
+        "reason_code":
+          "type": "string"
+          "enum":
+            - "OFFENSIVE"
+            - "PERSONAL_INFORMATION"
+            - "SPAM"
+            - "IRRELEVANT"
+            - "CONFLICT_OF_INTEREST"
+            - "FALSE_CLAIM"
+            - "OTHER"
+        "details":
+          "type": "string"
+          "maxLength": 1000
+          "nullable": true
+    "ReviewReported":
+      "type": "object"
+      "required":
+        - "reported"
+      "properties":
+        "reported":
+          "type": "boolean"
+    "ReviewListMeta":
+      "type": "object"
+      "properties":
+        "page":
+          "type": "integer"
+        "per_page":
+          "type": "integer"
+        "total":
+          "type": "integer"
+        "type":
+          "type": "string"
+        "summary":
+          "type": "object"
+          "additionalProperties": true
+        "scores":
+          "$ref": "#/components/schemas/PublicScores"
+        "correlation_id":
+          "type": "string"
+    "VendorReviewRow":
+      "type": "object"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "type":
+          "type": "string"
+          "enum":
+            - "VENDOR"
+            - "PRODUCT"
+            - "BUYER"
+        "ratings":
+          "$ref": "#/components/schemas/ReviewRatings"
+        "comment":
+          "type": "string"
+          "nullable": true
+        "display_name":
+          "type": "string"
+        "verified_purchase":
+          "type": "boolean"
+        "submitted_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "edited":
+          "type": "boolean"
+        "variant_label":
+          "type": "string"
+          "nullable": true
+        "media":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ReviewMediaLink"
+        "visibility":
+          "type": "string"
+          "enum":
+            - "PUBLIC"
+            - "HIDDEN_UNTIL_REVEAL"
+            - "WITHHELD_ACTIVE_DISPUTE"
+            - "HIDDEN_BY_MODERATION"
+            - "REMOVED"
+            - "EXCLUDED_BY_INVESTIGATION"
+        "order_id":
+          "type": "string"
+          "format": "uuid"
+        "order_reference":
+          "type": "string"
+        "can_report":
+          "type": "boolean"
+    "ModerationQueueRow":
+      "type": "object"
+      "required":
+        - "id"
+        - "type"
+        - "moderation_state"
+        - "order_reference"
+        - "store_name"
+        - "display_name"
+        - "ratings"
+        - "open_flags"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "type":
+          "type": "string"
+          "enum":
+            - "VENDOR"
+            - "PRODUCT"
+            - "BUYER"
+        "moderation_state":
+          "type": "string"
+          "enum":
+            - "NONE"
+            - "FLAGGED"
+            - "HIDDEN_PENDING_REVIEW"
+            - "CORRECTION_REQUESTED"
+            - "REMOVED"
+        "order_reference":
+          "type": "string"
+        "store_name":
+          "type": "string"
+        "display_name":
+          "type": "string"
+        "ratings":
+          "$ref": "#/components/schemas/ReviewRatings"
+        "comment":
+          "type": "string"
+          "nullable": true
+        "open_flags":
+          "type": "integer"
+        "submitted_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "updated_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+    "ModerationDetail":
+      "type": "object"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "type":
+          "type": "string"
+        "ratings":
+          "$ref": "#/components/schemas/ReviewRatings"
+        "comment":
+          "type": "string"
+          "nullable": true
+        "display_name":
+          "type": "string"
+        "moderation_state":
+          "type": "string"
+          "enum":
+            - "NONE"
+            - "FLAGGED"
+            - "HIDDEN_PENDING_REVIEW"
+            - "CORRECTION_REQUESTED"
+            - "REMOVED"
+        "reviewer_party":
+          "type": "string"
+          "enum":
+            - "BUYER"
+            - "VENDOR"
+        "display_name_choice":
+          "type": "string"
+        "author_display_rule":
+          "type": "string"
+        "verified_purchase":
+          "type": "object"
+          "additionalProperties": true
+        "related_dispute":
+          "type": "object"
+          "additionalProperties": true
+          "nullable": true
+        "revisions":
+          "type": "array"
+          "items":
+            "type": "object"
+            "additionalProperties": true
+        "flags":
+          "type": "array"
+          "items":
+            "type": "object"
+            "additionalProperties": true
+        "history":
+          "type": "array"
+          "items":
+            "type": "object"
+            "additionalProperties": true
+        "available_actions":
+          "type": "array"
+          "items":
+            "type": "string"
+            "enum":
+              - "DISMISS_FLAG"
+              - "REQUEST_CORRECTION"
+              - "HIDE_PENDING_REVIEW"
+              - "REMOVE"
+              - "RESTORE"
+        "media":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ReviewMediaLink"
+        "lock_version":
+          "type": "integer"
+        "visibility":
+          "type": "string"
+          "enum":
+            - "PUBLIC"
+            - "HIDDEN_UNTIL_REVEAL"
+            - "WITHHELD_ACTIVE_DISPUTE"
+            - "HIDDEN_BY_MODERATION"
+            - "REMOVED"
+            - "EXCLUDED_BY_INVESTIGATION"
+    "ReviewModerationRequest":
+      "type": "object"
+      "required":
+        - "action"
+        - "reason"
+        - "lock_version"
+      "properties":
+        "action":
+          "type": "string"
+          "enum":
+            - "DISMISS_FLAG"
+            - "REQUEST_CORRECTION"
+            - "HIDE_PENDING_REVIEW"
+            - "REMOVE"
+            - "RESTORE"
+        "reason":
+          "type": "string"
+          "minLength": 10
+          "maxLength": 2000
+        "lock_version":
+          "type": "integer"
+          "minimum": 1
+      "description": "There is no delete action. Request Correction hides the review and gives its author one correction within 7 days."
+    "PublicScores":
+      "type": "object"
+      "required":
+        - "label"
+        - "new_vendor"
+        - "badges"
+      "properties":
+        "label":
+          "type": "string"
+        "new_vendor":
+          "type": "boolean"
+        "vps":
+          "type": "string"
+          "pattern": "^-?\\d+\\.\\d{2}$"
+          "nullable": true
+        "vcs":
+          "type": "string"
+          "pattern": "^-?\\d+\\.\\d{2}$"
+          "nullable": true
+        "mqs":
+          "type": "string"
+          "pattern": "^-?\\d+\\.\\d{2}$"
+          "nullable": true
+        "ohs":
+          "type": "string"
+          "pattern": "^-?\\d+\\.\\d{2}$"
+          "nullable": true
+        "as_of":
+          "type": "string"
+          "format": "date"
+          "nullable": true
+        "badges":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/PublicBadge"
+    "ScoreMetric":
+      "type": "object"
+      "required":
+        - "key"
+        - "published"
+        - "sample_count"
+        - "minimum_sample"
+        - "window"
+        - "status_text"
+      "properties":
+        "key":
+          "type": "string"
+          "enum":
+            - "VPS"
+            - "VCS"
+            - "MQS"
+            - "OHS"
+        "value":
+          "type": "string"
+          "pattern": "^-?\\d+\\.\\d{2}$"
+          "nullable": true
+        "published":
+          "type": "boolean"
+        "sample_count":
+          "type": "integer"
+        "minimum_sample":
+          "type": "integer"
+        "window":
+          "type": "string"
+        "status_text":
+          "type": "string"
+    "BadgeMetric":
+      "type": "object"
+      "required":
+        - "key"
+        - "sample_count"
+        - "window"
+        - "definition"
+      "properties":
+        "key":
+          "type": "string"
+          "enum":
+            - "CRR"
+            - "FRR"
+        "value":
+          "type": "string"
+          "pattern": "^-?\\d+\\.\\d{2}$"
+          "nullable": true
+        "sample_count":
+          "type": "integer"
+        "window":
+          "type": "string"
+        "definition":
+          "type": "string"
+    "BadgeState":
+      "type": "object"
+      "required":
+        - "code"
+        - "name"
+        - "description"
+        - "status"
+        - "scopes"
+      "properties":
+        "code":
+          "type": "string"
+          "enum":
+            - "FAST_RESPONDER"
+            - "ON_TIME"
+            - "MOST_ORDERED"
+            - "HIGHLY_RATED"
+            - "HIGH_QUALITY_MATERIALS"
+            - "TRUSTED_SUPPLIER"
+        "name":
+          "type": "string"
+        "description":
+          "type": "string"
+        "status":
+          "type": "string"
+          "enum":
+            - "EARNED"
+            - "NOT_EARNED"
+            - "SUPPRESSED"
+        "scopes":
+          "type": "array"
+          "items":
+            "type": "object"
+            "required": []
+            "properties":
+              "scope_label":
+                "type": "string"
+                "nullable": true
+              "earned_at":
+                "type": "string"
+                "format": "date-time"
+                "nullable": true
+        "suppression":
+          "type": "object"
+          "additionalProperties": true
+          "nullable": true
+    "ScoreHistoryPoint":
+      "type": "object"
+      "required":
+        - "date"
+      "properties":
+        "date":
+          "type": "string"
+          "format": "date"
+        "vps":
+          "type": "string"
+          "nullable": true
+        "vcs":
+          "type": "string"
+          "nullable": true
+        "mqs":
+          "type": "string"
+          "nullable": true
+        "ohs":
+          "type": "string"
+          "nullable": true
+    "StorePerformance":
+      "type": "object"
+      "required":
+        - "calculated"
+        - "label"
+        - "scores"
+        - "rating_components"
+        - "next_ohs_recalculation_on"
+        - "badge_metrics"
+        - "completed_orders"
+        - "history"
+        - "badges"
+      "properties":
+        "calculated":
+          "type": "boolean"
+        "as_of":
+          "type": "string"
+          "format": "date"
+          "nullable": true
+        "calculated_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "label":
+          "type": "string"
+        "scores":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ScoreMetric"
+        "rating_components":
+          "type": "object"
+          "additionalProperties": true
+        "operations":
+          "type": "object"
+          "additionalProperties": true
+          "nullable": true
+        "ohs_calculated_on":
+          "type": "string"
+          "format": "date"
+          "nullable": true
+        "next_ohs_recalculation_on":
+          "type": "string"
+          "format": "date"
+        "badge_metrics":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/BadgeMetric"
+        "completed_orders":
+          "type": "object"
+          "additionalProperties": true
+        "history":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ScoreHistoryPoint"
+        "badges":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/BadgeState"
+      "description": "Owner and Store Manager. The same formulas and thresholds as the System Workflow; no Buyer identity, order amounts or protected finance."
+    "AdminScoreRow":
+      "type": "object"
+      "required":
+        - "vendor_id"
+        - "store_name"
+        - "scores"
+        - "sample_counts"
+        - "active_suppressions"
+        - "active_exclusions"
+      "properties":
+        "vendor_id":
+          "type": "string"
+          "format": "uuid"
+        "store_name":
+          "type": "string"
+        "scores":
+          "$ref": "#/components/schemas/PublicScores"
+        "crr":
+          "type": "string"
+          "nullable": true
+        "frr":
+          "type": "string"
+          "nullable": true
+        "sample_counts":
+          "type": "object"
+          "additionalProperties": true
+        "active_suppressions":
+          "type": "integer"
+        "active_exclusions":
+          "type": "integer"
+    "AdminScoreDetail":
+      "type": "object"
+      "properties":
+        "vendor_id":
+          "type": "string"
+          "format": "uuid"
+        "store_name":
+          "type": "string"
+        "calculated":
+          "type": "boolean"
+        "as_of":
+          "type": "string"
+          "format": "date"
+          "nullable": true
+        "label":
+          "type": "string"
+        "scores":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ScoreMetric"
+        "operations":
+          "type": "object"
+          "additionalProperties": true
+          "nullable": true
+        "badge_metrics":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/BadgeMetric"
+        "badges":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/BadgeState"
+        "badge_history":
+          "type": "array"
+          "items":
+            "type": "object"
+            "additionalProperties": true
+        "suppressions":
+          "type": "array"
+          "items":
+            "type": "object"
+            "additionalProperties": true
+        "exclusions":
+          "type": "array"
+          "items":
+            "type": "object"
+            "additionalProperties": true
+        "source_events":
+          "type": "object"
+          "additionalProperties": true
+        "history":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ScoreHistoryPoint"
+        "can_investigate":
+          "type": "boolean"
+    "ScoreExclusionRequest":
+      "type": "object"
+      "required":
+        - "order_id"
+        - "reason_code"
+        - "note"
+      "properties":
+        "order_id":
+          "type": "string"
+          "format": "uuid"
+        "reason_code":
+          "type": "string"
+          "enum":
+            - "FRAUD"
+            - "DUPLICATE"
+            - "TEST"
+            - "INVALID_SOURCE"
+        "note":
+          "type": "string"
+          "minLength": 10
+          "maxLength": 2000
+    "BadgeSuppressionRequest":
+      "type": "object"
+      "required":
+        - "badge_code"
+        - "reason_code"
+        - "case_reference"
+        - "note"
+      "properties":
+        "badge_code":
+          "type": "string"
+          "enum":
+            - "FAST_RESPONDER"
+            - "ON_TIME"
+            - "MOST_ORDERED"
+            - "HIGHLY_RATED"
+            - "HIGH_QUALITY_MATERIALS"
+            - "TRUSTED_SUPPLIER"
+        "reason_code":
+          "type": "string"
+          "enum":
+            - "FRAUD"
+            - "COMPLIANCE"
+        "case_reference":
+          "type": "string"
+          "minLength": 3
+          "maxLength": 120
+        "note":
+          "type": "string"
+          "minLength": 10
+          "maxLength": 2000
+      "description": "Display suppression for a documented fraud or compliance case. There is no award command."
+    "InvestigationReasonRequest":
+      "type": "object"
+      "required":
+        - "reason"
+      "properties":
+        "reason":
+          "type": "string"
+          "minLength": 10
+          "maxLength": 2000
+    "AnalyticsMaterialRef":
+      "type": "object"
+      "required":
+        - "id"
+        - "name"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "name":
+          "type": "string"
+    "AnalyticsCategoryRef":
+      "type": "object"
+      "required":
+        - "id"
+        - "code"
+        - "name"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "code":
+          "type": "string"
+        "name":
+          "type": "string"
+    "AnalyticsUnit":
+      "type": "object"
+      "required":
+        - "code"
+        - "name"
+      "properties":
+        "code":
+          "type": "string"
+        "name":
+          "type": "string"
+    "ComparableSpecification":
+      "type": "object"
+      "required":
+        - "attributes"
+      "properties":
+        "brand":
+          "type": "string"
+          "nullable": true
+        "model":
+          "type": "string"
+          "nullable": true
+        "attributes":
+          "type": "array"
+          "items":
+            "type": "object"
+            "required":
+              - "key"
+              - "value"
+            "properties":
+              "key":
+                "type": "string"
+              "value":
+                "type": "string"
+    "AnalyticsWindow":
+      "type": "object"
+      "required":
+        - "max_days"
+        - "presets"
+      "properties":
+        "preset_days":
+          "type": "integer"
+          "nullable": true
+        "start_date":
+          "type": "string"
+          "format": "date"
+          "nullable": true
+        "end_date":
+          "type": "string"
+          "format": "date"
+          "nullable": true
+        "earliest_available_date":
+          "type": "string"
+          "format": "date"
+          "nullable": true
+        "latest_available_date":
+          "type": "string"
+          "format": "date"
+          "nullable": true
+        "max_days":
+          "type": "integer"
+        "presets":
+          "type": "array"
+          "items":
+            "type": "integer"
+    "AnalyticsSnapshotRef":
+      "type": "object"
+      "required":
+        - "date"
+        - "observed_at"
+        - "revision"
+      "properties":
+        "date":
+          "type": "string"
+          "format": "date"
+        "observed_at":
+          "type": "string"
+          "format": "date-time"
+        "revision":
+          "type": "integer"
+    "AnalyticsTrend":
+      "type": "object"
+      "required": []
+      "properties":
+        "change_percent":
+          "type": "string"
+          "pattern": "^-?\\d+\\.\\d{2}$"
+          "description": "((end − start) / start) × 100 from unrounded means, half-up to 2 dp"
+          "nullable": true
+        "direction":
+          "type": "string"
+          "enum":
+            - "INCREASING"
+            - "DECREASING"
+            - "NO_MATERIAL_CHANGE"
+          "nullable": true
+        "reason":
+          "type": "string"
+          "enum":
+            - "INSUFFICIENT_LOCAL_DATA"
+            - "INSUFFICIENT_COMPETITOR_DATA"
+            - "MISSING_ENDPOINT_SNAPSHOT"
+            - "ZERO_BASELINE"
+            - "NO_PUBLISHED_HISTORY"
+          "nullable": true
+        "composition_changed":
+          "type": "boolean"
+          "nullable": true
+        "start_date":
+          "type": "string"
+          "format": "date"
+          "nullable": true
+        "end_date":
+          "type": "string"
+          "format": "date"
+          "nullable": true
+        "label":
+          "type": "string"
+          "nullable": true
+        "composition_note":
+          "type": "string"
+          "nullable": true
+      "description": "Endpoints are exact dates; a missing or insufficient endpoint returns a null percentage with its reason — never zero."
+    "BuyerAnalyticsPoint":
+      "type": "object"
+      "required":
+        - "date"
+        - "status"
+      "properties":
+        "date":
+          "type": "string"
+          "format": "date"
+        "status":
+          "type": "string"
+          "enum":
+            - "OK"
+            - "LIMITED_DATA"
+            - "NO_LOCAL_OBSERVATIONS"
+            - "SUPPRESSED"
+            - "MISSING_DAY"
+        "label":
+          "type": "string"
+          "nullable": true
+        "average_php":
+          "type": "string"
+          "pattern": "^-?\\d+\\.\\d{2}$"
+          "description": "Equal-Vendor mean, PHP per canonical unit"
+          "nullable": true
+        "vendor_count":
+          "type": "integer"
+          "nullable": true
+        "participants_changed":
+          "type": "boolean"
+          "nullable": true
+    "VendorAnalyticsPoint":
+      "type": "object"
+      "required":
+        - "date"
+        - "status"
+      "properties":
+        "date":
+          "type": "string"
+          "format": "date"
+        "status":
+          "type": "string"
+          "enum":
+            - "OK"
+            - "SUPPRESSED"
+            - "MISSING_DAY"
+        "label":
+          "type": "string"
+          "nullable": true
+        "average_php":
+          "type": "string"
+          "pattern": "^-?\\d+\\.\\d{2}$"
+          "description": "Competitor equal-Vendor mean excluding your organization"
+          "nullable": true
+        "competitor_count":
+          "type": "integer"
+          "minimum": 3
+          "nullable": true
+        "participants_changed":
+          "type": "boolean"
+          "nullable": true
+      "description": "Below three competing Vendors every value and count is null; the sub-threshold count is never returned."
+    "AdminAnalyticsPoint":
+      "type": "object"
+      "required":
+        - "date"
+        - "status"
+      "properties":
+        "date":
+          "type": "string"
+          "format": "date"
+        "status":
+          "type": "string"
+          "enum":
+            - "OK"
+            - "LIMITED_DATA"
+            - "NO_LOCAL_OBSERVATIONS"
+            - "SUPPRESSED"
+            - "MISSING_DAY"
+        "label":
+          "type": "string"
+          "nullable": true
+        "average_php":
+          "type": "string"
+          "pattern": "^-?\\d+\\.\\d{2}$"
+          "nullable": true
+        "average_php_exact":
+          "type": "string"
+          "nullable": true
+        "vendor_count":
+          "type": "integer"
+          "nullable": true
+        "participants_changed":
+          "type": "boolean"
+          "nullable": true
+    "AnalyticsCurrentCounts":
+      "type": "object"
+      "required":
+        - "vendor_count"
+        - "listing_count"
+        - "status"
+      "properties":
+        "vendor_count":
+          "type": "integer"
+        "listing_count":
+          "type": "integer"
+        "status":
+          "type": "string"
+          "enum":
+            - "AVAILABLE"
+            - "NO_CURRENT_OFFERS"
+    "VendorCurrentCompetitors":
+      "type": "object"
+      "required":
+        - "status"
+      "properties":
+        "competitor_count":
+          "type": "integer"
+          "minimum": 3
+          "nullable": true
+        "status":
+          "type": "string"
+          "enum":
+            - "AVAILABLE"
+            - "SUPPRESSED"
+        "label":
+          "type": "string"
+          "nullable": true
+    "VendorOwnOffer":
+      "type": "object"
+      "required":
+        - "listing_id"
+        - "variant_id"
+        - "display_name"
+        - "price_centavos"
+        - "normalized_php"
+        - "tax_label"
+        - "price_as_of"
+      "properties":
+        "listing_id":
+          "type": "string"
+          "format": "uuid"
+        "variant_id":
+          "type": "string"
+          "format": "uuid"
+        "display_name":
+          "type": "string"
+        "variant_label":
+          "type": "string"
+          "nullable": true
+        "price_centavos":
+          "type": "integer"
+        "normalized_php":
+          "type": "string"
+          "pattern": "^-?\\d+\\.\\d{2}$"
+        "tax_label":
+          "type": "string"
+        "price_as_of":
+          "type": "string"
+          "format": "date-time"
+      "description": "Your own current comparable price; never part of the competitor average."
+    "BuyerAnalyticsRow":
+      "type": "object"
+      "required":
+        - "group_id"
+        - "display_name"
+        - "material"
+        - "category"
+        - "specification"
+        - "unit"
+        - "start_point"
+        - "end_point"
+        - "trend"
+        - "current"
+      "properties":
+        "group_id":
+          "type": "string"
+          "format": "uuid"
+        "display_name":
+          "type": "string"
+        "material":
+          "$ref": "#/components/schemas/AnalyticsMaterialRef"
+        "category":
+          "$ref": "#/components/schemas/AnalyticsCategoryRef"
+        "specification":
+          "$ref": "#/components/schemas/ComparableSpecification"
+        "unit":
+          "$ref": "#/components/schemas/AnalyticsUnit"
+        "start_point":
+          "$ref": "#/components/schemas/BuyerAnalyticsPoint"
+        "end_point":
+          "$ref": "#/components/schemas/BuyerAnalyticsPoint"
+        "trend":
+          "$ref": "#/components/schemas/AnalyticsTrend"
+        "current":
+          "$ref": "#/components/schemas/AnalyticsCurrentCounts"
+    "VendorAnalyticsRow":
+      "type": "object"
+      "required":
+        - "group_id"
+        - "display_name"
+        - "material"
+        - "category"
+        - "specification"
+        - "unit"
+        - "start_point"
+        - "end_point"
+        - "trend"
+        - "current_competitors"
+      "properties":
+        "group_id":
+          "type": "string"
+          "format": "uuid"
+        "display_name":
+          "type": "string"
+        "material":
+          "$ref": "#/components/schemas/AnalyticsMaterialRef"
+        "category":
+          "$ref": "#/components/schemas/AnalyticsCategoryRef"
+        "specification":
+          "$ref": "#/components/schemas/ComparableSpecification"
+        "unit":
+          "$ref": "#/components/schemas/AnalyticsUnit"
+        "start_point":
+          "$ref": "#/components/schemas/VendorAnalyticsPoint"
+        "end_point":
+          "$ref": "#/components/schemas/VendorAnalyticsPoint"
+        "trend":
+          "$ref": "#/components/schemas/AnalyticsTrend"
+        "current_competitors":
+          "$ref": "#/components/schemas/VendorCurrentCompetitors"
+        "own_offer":
+          "oneOf":
+            - "$ref": "#/components/schemas/VendorOwnOffer"
+            - "type": "null"
+    "AdminAnalyticsRow":
+      "type": "object"
+      "required":
+        - "group_id"
+        - "display_name"
+        - "material"
+        - "category"
+        - "specification"
+        - "unit"
+        - "start_point"
+        - "end_point"
+        - "trend"
+        - "current"
+      "properties":
+        "group_id":
+          "type": "string"
+          "format": "uuid"
+        "display_name":
+          "type": "string"
+        "material":
+          "$ref": "#/components/schemas/AnalyticsMaterialRef"
+        "category":
+          "$ref": "#/components/schemas/AnalyticsCategoryRef"
+        "specification":
+          "$ref": "#/components/schemas/ComparableSpecification"
+        "unit":
+          "$ref": "#/components/schemas/AnalyticsUnit"
+        "start_point":
+          "$ref": "#/components/schemas/AdminAnalyticsPoint"
+        "end_point":
+          "$ref": "#/components/schemas/AdminAnalyticsPoint"
+        "trend":
+          "$ref": "#/components/schemas/AnalyticsTrend"
+        "current":
+          "$ref": "#/components/schemas/AnalyticsCurrentCounts"
+    "ComparableVariant":
+      "type": "object"
+      "required":
+        - "group_id"
+        - "display_name"
+        - "material"
+        - "category"
+        - "specification"
+        - "unit"
+      "properties":
+        "group_id":
+          "type": "string"
+          "format": "uuid"
+        "display_name":
+          "type": "string"
+        "material":
+          "$ref": "#/components/schemas/AnalyticsMaterialRef"
+        "category":
+          "$ref": "#/components/schemas/AnalyticsCategoryRef"
+        "specification":
+          "$ref": "#/components/schemas/ComparableSpecification"
+        "unit":
+          "$ref": "#/components/schemas/AnalyticsUnit"
+    "BuyerMaterialsAnalyticsList":
+      "type": "object"
+      "required":
+        - "audience"
+        - "scope"
+        - "source_kind"
+        - "dataset"
+        - "window"
+        - "current_as_of"
+        - "update_schedule"
+        - "explanation"
+        - "items"
+      "properties":
+        "audience":
+          "type": "string"
+          "enum":
+            - "BUYER"
+            - "VENDOR"
+            - "ADMIN"
+        "scope":
+          "type": "object"
+          "additionalProperties": true
+        "source_kind":
+          "type": "string"
+          "enum":
+            - "PUBLIC_LISTING"
+        "dataset":
+          "$ref": "#/components/schemas/DatasetLabel"
+        "window":
+          "$ref": "#/components/schemas/AnalyticsWindow"
+        "current_as_of":
+          "type": "string"
+          "format": "date-time"
+        "snapshot":
+          "oneOf":
+            - "$ref": "#/components/schemas/AnalyticsSnapshotRef"
+            - "type": "null"
+        "update_schedule":
+          "type": "string"
+        "explanation":
+          "type": "string"
+        "items":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/BuyerAnalyticsRow"
+        "next_cursor":
+          "type": "string"
+          "nullable": true
+    "VendorMaterialsAnalyticsList":
+      "type": "object"
+      "required":
+        - "audience"
+        - "scope"
+        - "source_kind"
+        - "dataset"
+        - "window"
+        - "current_as_of"
+        - "update_schedule"
+        - "explanation"
+        - "items"
+      "properties":
+        "audience":
+          "type": "string"
+          "enum":
+            - "BUYER"
+            - "VENDOR"
+            - "ADMIN"
+        "scope":
+          "type": "object"
+          "additionalProperties": true
+        "source_kind":
+          "type": "string"
+          "enum":
+            - "PUBLIC_LISTING"
+        "dataset":
+          "$ref": "#/components/schemas/DatasetLabel"
+        "window":
+          "$ref": "#/components/schemas/AnalyticsWindow"
+        "current_as_of":
+          "type": "string"
+          "format": "date-time"
+        "snapshot":
+          "oneOf":
+            - "$ref": "#/components/schemas/AnalyticsSnapshotRef"
+            - "type": "null"
+        "update_schedule":
+          "type": "string"
+        "explanation":
+          "type": "string"
+        "items":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/VendorAnalyticsRow"
+        "next_cursor":
+          "type": "string"
+          "nullable": true
+    "AdminMaterialsAnalyticsList":
+      "type": "object"
+      "required":
+        - "audience"
+        - "scope"
+        - "source_kind"
+        - "dataset"
+        - "window"
+        - "current_as_of"
+        - "update_schedule"
+        - "explanation"
+        - "items"
+      "properties":
+        "audience":
+          "type": "string"
+          "enum":
+            - "BUYER"
+            - "VENDOR"
+            - "ADMIN"
+        "scope":
+          "type": "object"
+          "additionalProperties": true
+        "source_kind":
+          "type": "string"
+          "enum":
+            - "PUBLIC_LISTING"
+        "dataset":
+          "$ref": "#/components/schemas/DatasetLabel"
+        "window":
+          "$ref": "#/components/schemas/AnalyticsWindow"
+        "current_as_of":
+          "type": "string"
+          "format": "date-time"
+        "snapshot":
+          "oneOf":
+            - "$ref": "#/components/schemas/AnalyticsSnapshotRef"
+            - "type": "null"
+        "update_schedule":
+          "type": "string"
+        "explanation":
+          "type": "string"
+        "items":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/AdminAnalyticsRow"
+        "next_cursor":
+          "type": "string"
+          "nullable": true
+    "BuyerMaterialsAnalyticsDetail":
+      "type": "object"
+      "required":
+        - "audience"
+        - "scope"
+        - "source_kind"
+        - "dataset"
+        - "window"
+        - "current_as_of"
+        - "update_schedule"
+        - "explanation"
+        - "group"
+        - "variants"
+        - "series"
+      "properties":
+        "audience":
+          "type": "string"
+          "enum":
+            - "BUYER"
+            - "VENDOR"
+            - "ADMIN"
+        "scope":
+          "type": "object"
+          "additionalProperties": true
+        "source_kind":
+          "type": "string"
+          "enum":
+            - "PUBLIC_LISTING"
+        "dataset":
+          "$ref": "#/components/schemas/DatasetLabel"
+        "window":
+          "$ref": "#/components/schemas/AnalyticsWindow"
+        "current_as_of":
+          "type": "string"
+          "format": "date-time"
+        "snapshot":
+          "oneOf":
+            - "$ref": "#/components/schemas/AnalyticsSnapshotRef"
+            - "type": "null"
+        "update_schedule":
+          "type": "string"
+        "explanation":
+          "type": "string"
+        "group":
+          "allOf":
+            - "$ref": "#/components/schemas/BuyerAnalyticsRow"
+            - "type": "object"
+              "properties":
+                "description":
+                  "type": "string"
+                  "nullable": true
+        "variants":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ComparableVariant"
+        "series":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/BuyerAnalyticsPoint"
+    "VendorMaterialsAnalyticsDetail":
+      "type": "object"
+      "required":
+        - "audience"
+        - "scope"
+        - "source_kind"
+        - "dataset"
+        - "window"
+        - "current_as_of"
+        - "update_schedule"
+        - "explanation"
+        - "group"
+        - "variants"
+        - "series"
+        - "can_edit_own_listing"
+      "properties":
+        "audience":
+          "type": "string"
+          "enum":
+            - "BUYER"
+            - "VENDOR"
+            - "ADMIN"
+        "scope":
+          "type": "object"
+          "additionalProperties": true
+        "source_kind":
+          "type": "string"
+          "enum":
+            - "PUBLIC_LISTING"
+        "dataset":
+          "$ref": "#/components/schemas/DatasetLabel"
+        "window":
+          "$ref": "#/components/schemas/AnalyticsWindow"
+        "current_as_of":
+          "type": "string"
+          "format": "date-time"
+        "snapshot":
+          "oneOf":
+            - "$ref": "#/components/schemas/AnalyticsSnapshotRef"
+            - "type": "null"
+        "update_schedule":
+          "type": "string"
+        "explanation":
+          "type": "string"
+        "group":
+          "allOf":
+            - "$ref": "#/components/schemas/VendorAnalyticsRow"
+            - "type": "object"
+              "properties":
+                "description":
+                  "type": "string"
+                  "nullable": true
+        "variants":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ComparableVariant"
+        "series":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/VendorAnalyticsPoint"
+        "can_edit_own_listing":
+          "type": "boolean"
+    "AdminMaterialsAnalyticsDetail":
+      "type": "object"
+      "required":
+        - "audience"
+        - "scope"
+        - "source_kind"
+        - "dataset"
+        - "window"
+        - "current_as_of"
+        - "update_schedule"
+        - "explanation"
+        - "group"
+        - "variants"
+        - "series"
+        - "can_inspect_sources"
+      "properties":
+        "audience":
+          "type": "string"
+          "enum":
+            - "BUYER"
+            - "VENDOR"
+            - "ADMIN"
+        "scope":
+          "type": "object"
+          "additionalProperties": true
+        "source_kind":
+          "type": "string"
+          "enum":
+            - "PUBLIC_LISTING"
+        "dataset":
+          "$ref": "#/components/schemas/DatasetLabel"
+        "window":
+          "$ref": "#/components/schemas/AnalyticsWindow"
+        "current_as_of":
+          "type": "string"
+          "format": "date-time"
+        "snapshot":
+          "oneOf":
+            - "$ref": "#/components/schemas/AnalyticsSnapshotRef"
+            - "type": "null"
+        "update_schedule":
+          "type": "string"
+        "explanation":
+          "type": "string"
+        "group":
+          "allOf":
+            - "$ref": "#/components/schemas/AdminAnalyticsRow"
+            - "type": "object"
+              "properties":
+                "description":
+                  "type": "string"
+                  "nullable": true
+        "variants":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ComparableVariant"
+        "series":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/AdminAnalyticsPoint"
+        "can_inspect_sources":
+          "type": "boolean"
+    "MaterialOffer":
+      "type": "object"
+      "required":
+        - "vendor_id"
+        - "store_name"
+        - "listing_id"
+        - "variant_id"
+        - "display_name"
+        - "price_centavos"
+        - "normalized_php"
+        - "tax_category"
+        - "tax_label"
+        - "availability"
+        - "distance_meters"
+        - "price_as_of"
+      "properties":
+        "vendor_id":
+          "type": "string"
+          "format": "uuid"
+        "store_name":
+          "type": "string"
+        "listing_id":
+          "type": "string"
+          "format": "uuid"
+        "variant_id":
+          "type": "string"
+          "format": "uuid"
+        "display_name":
+          "type": "string"
+        "variant_label":
+          "type": "string"
+          "nullable": true
+        "price_centavos":
+          "type": "integer"
+        "normalized_php":
+          "type": "string"
+          "pattern": "^-?\\d+\\.\\d{2}$"
+        "tax_category":
+          "type": "string"
+        "tax_label":
+          "type": "string"
+        "availability":
+          "type": "string"
+          "enum":
+            - "IN_STOCK"
+            - "LIMITED_STOCK"
+            - "OUT_OF_STOCK"
+        "distance_meters":
+          "type": "integer"
+        "price_as_of":
+          "type": "string"
+          "format": "date-time"
+      "description": "Buyer-only current public offer; opens the existing Product Details. Never exact stock."
+    "AnalyticsSource":
+      "type": "object"
+      "required":
+        - "observation_id"
+        - "store_name"
+        - "listing_id"
+        - "display_name"
+        - "price_version"
+        - "ordinary_payable_centavos"
+        - "normalized_php_exact"
+        - "tax_category"
+        - "captured_at"
+        - "selected_for_average"
+        - "geography"
+      "properties":
+        "observation_id":
+          "type": "string"
+          "format": "uuid"
+        "store_name":
+          "type": "string"
+        "listing_id":
+          "type": "string"
+          "format": "uuid"
+        "display_name":
+          "type": "string"
+        "variant_label":
+          "type": "string"
+          "nullable": true
+        "price_version":
+          "type": "integer"
+        "ordinary_payable_centavos":
+          "type": "integer"
+        "normalized_php_exact":
+          "type": "string"
+        "tax_category":
+          "type": "string"
+        "captured_at":
+          "type": "string"
+          "format": "date-time"
+        "price_effective_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "selected_for_average":
+          "type": "boolean"
+        "exclusion_reason":
+          "type": "string"
+          "nullable": true
+        "geography":
+          "type": "object"
+          "additionalProperties": true
+    "AnalyticsRun":
+      "type": "object"
+      "required":
+        - "id"
+        - "snapshot_date"
+        - "revision"
+        - "state"
+        - "observations"
+        - "selected"
+        - "vendors"
+        - "delayed"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "snapshot_date":
+          "type": "string"
+          "format": "date"
+        "revision":
+          "type": "integer"
+        "state":
+          "type": "string"
+          "enum":
+            - "RUNNING"
+            - "VALIDATED"
+            - "PUBLISHED"
+            - "FAILED"
+            - "SUPERSEDED"
+        "error_code":
+          "type": "string"
+          "nullable": true
+        "observed_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "published_at":
+          "type": "string"
+          "format": "date-time"
+          "nullable": true
+        "observations":
+          "type": "integer"
+        "selected":
+          "type": "integer"
+        "vendors":
+          "type": "integer"
+        "delayed":
+          "type": "boolean"
+        "reviewer_reason":
+          "type": "string"
+          "nullable": true
+    "AnalyticsCorrectionRequest":
+      "type": "object"
+      "required":
+        - "excluded_observation_ids"
+        - "reason"
+      "properties":
+        "excluded_observation_ids":
+          "type": "array"
+          "minItems": 1
+          "maxItems": 200
+          "items":
+            "type": "string"
+            "format": "uuid"
+        "reason":
+          "type": "string"
+          "minLength": 10
+          "maxLength": 1000
+    "AnalyticsCorrectionResult":
+      "type": "object"
+      "properties":
+        "state":
+          "type": "string"
+        "snapshot_date":
+          "type": "string"
+          "format": "date"
+        "run_id":
+          "type": "string"
+          "format": "uuid"
+        "revision":
+          "type": "integer"
+        "observations":
+          "type": "integer"
+        "selected":
+          "type": "integer"
+        "vendors":
+          "type": "integer"
+    "BuyerMaterialsAnalyticsRequest":
+      "type": "object"
+      "properties":
+        "location_id":
+          "type": "string"
+          "format": "uuid"
+          "nullable": true
+        "latitude":
+          "type": "number"
+        "longitude":
+          "type": "number"
+        "origin_source":
+          "type": "string"
+          "enum":
+            - "DEVICE"
+            - "MAP_PIN"
+            - "SEARCH"
+        "radius_km":
+          "type": "integer"
+          "enum":
+            - 5
+            - 10
+            - 20
+            - 30
+            - 40
+            - 50
+        "preset_days":
+          "type": "integer"
+          "enum":
+            - 7
+            - 30
+            - 90
+        "start_date":
+          "type": "string"
+          "format": "date"
+          "nullable": true
+        "end_date":
+          "type": "string"
+          "format": "date"
+          "nullable": true
+        "category_id":
+          "type": "string"
+          "format": "uuid"
+          "nullable": true
+        "q":
+          "type": "string"
+          "maxLength": 100
+          "nullable": true
+        "cursor":
+          "type": "string"
+          "nullable": true
+        "per_page":
+          "type": "integer"
+          "minimum": 1
+          "maximum": 50
+      "additionalProperties": false
+      "description": "Origins travel in the body. Any other field (a role, competitor id or include flag) is refused with 422."
+    "BuyerOrderReviewsEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/BuyerOrderReviews"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "VendorOrderReviewsEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/VendorOrderReviews"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "PublicReviewListEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/PublicReview"
+        "meta":
+          "$ref": "#/components/schemas/ReviewListMeta"
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "VendorReviewListEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/VendorReviewRow"
+        "meta":
+          "$ref": "#/components/schemas/ReviewListMeta"
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "ReviewReportedEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/ReviewReported"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "ModerationQueueEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ModerationQueueRow"
+        "meta":
+          "$ref": "#/components/schemas/ReviewListMeta"
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "ModerationDetailEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/ModerationDetail"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "StorePerformanceEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/StorePerformance"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "AdminScoreListEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/AdminScoreRow"
+        "meta":
+          "$ref": "#/components/schemas/ReviewListMeta"
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "AdminScoreDetailEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/AdminScoreDetail"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "InvestigationAckEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "type": "object"
+          "additionalProperties": true
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "BuyerMaterialsAnalyticsListEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/BuyerMaterialsAnalyticsList"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "VendorMaterialsAnalyticsListEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/VendorMaterialsAnalyticsList"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "AdminMaterialsAnalyticsListEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/AdminMaterialsAnalyticsList"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "BuyerMaterialsAnalyticsDetailEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/BuyerMaterialsAnalyticsDetail"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "VendorMaterialsAnalyticsDetailEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/VendorMaterialsAnalyticsDetail"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "AdminMaterialsAnalyticsDetailEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/AdminMaterialsAnalyticsDetail"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "MaterialOfferListEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/MaterialOffer"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "AnalyticsSourceListEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/AnalyticsSource"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "AnalyticsRunListEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/AnalyticsRun"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "AnalyticsCorrectionEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/AnalyticsCorrectionResult"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
     # Phase 13 disputes and invoices schemas
     "DisputeDeadline":
       "type": "object"

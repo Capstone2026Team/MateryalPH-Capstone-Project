@@ -23,6 +23,8 @@ class _$ListingDetailVendor extends ListingDetailVendor {
   final bool vacationMode;
   @override
   final String? supplierType;
+  @override
+  final BuiltList<PublicBadge>? badges;
 
   factory _$ListingDetailVendor(
           [void Function(ListingDetailVendorBuilder)? updates]) =>
@@ -36,7 +38,8 @@ class _$ListingDetailVendor extends ListingDetailVendor {
       required this.address,
       required this.openStatus,
       required this.vacationMode,
-      this.supplierType})
+      this.supplierType,
+      this.badges})
       : super._();
   @override
   ListingDetailVendor rebuild(
@@ -58,7 +61,8 @@ class _$ListingDetailVendor extends ListingDetailVendor {
         address == other.address &&
         openStatus == other.openStatus &&
         vacationMode == other.vacationMode &&
-        supplierType == other.supplierType;
+        supplierType == other.supplierType &&
+        badges == other.badges;
   }
 
   @override
@@ -72,6 +76,7 @@ class _$ListingDetailVendor extends ListingDetailVendor {
     _$hash = $jc(_$hash, openStatus.hashCode);
     _$hash = $jc(_$hash, vacationMode.hashCode);
     _$hash = $jc(_$hash, supplierType.hashCode);
+    _$hash = $jc(_$hash, badges.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -86,7 +91,8 @@ class _$ListingDetailVendor extends ListingDetailVendor {
           ..add('address', address)
           ..add('openStatus', openStatus)
           ..add('vacationMode', vacationMode)
-          ..add('supplierType', supplierType))
+          ..add('supplierType', supplierType)
+          ..add('badges', badges))
         .toString();
   }
 }
@@ -133,6 +139,11 @@ class ListingDetailVendorBuilder
   String? get supplierType => _$this._supplierType;
   set supplierType(String? supplierType) => _$this._supplierType = supplierType;
 
+  ListBuilder<PublicBadge>? _badges;
+  ListBuilder<PublicBadge> get badges =>
+      _$this._badges ??= ListBuilder<PublicBadge>();
+  set badges(ListBuilder<PublicBadge>? badges) => _$this._badges = badges;
+
   ListingDetailVendorBuilder() {
     ListingDetailVendor._defaults(this);
   }
@@ -148,6 +159,7 @@ class ListingDetailVendorBuilder
       _openStatus = $v.openStatus.toBuilder();
       _vacationMode = $v.vacationMode;
       _supplierType = $v.supplierType;
+      _badges = $v.badges?.toBuilder();
       _$v = null;
     }
     return this;
@@ -182,6 +194,7 @@ class ListingDetailVendorBuilder
             vacationMode: BuiltValueNullFieldError.checkNotNull(
                 vacationMode, r'ListingDetailVendor', 'vacationMode'),
             supplierType: supplierType,
+            badges: _badges?.build(),
           );
     } catch (_) {
       late String _$failedField;
@@ -192,6 +205,9 @@ class ListingDetailVendorBuilder
         address.build();
         _$failedField = 'openStatus';
         openStatus.build();
+
+        _$failedField = 'badges';
+        _badges?.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
             r'ListingDetailVendor', _$failedField, e.toString());

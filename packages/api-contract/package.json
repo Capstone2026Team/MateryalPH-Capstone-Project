@@ -19,7 +19,8 @@
     "test:projects-contract": "node scripts/check-projects-contract.mjs",
     "test:payments-contract": "node scripts/check-payments-contract.mjs",
     "test:fulfillment-contract": "node scripts/check-fulfillment-contract.mjs",
-    "test:disputes-contract": "node scripts/check-disputes-contract.mjs"
+    "test:disputes-contract": "node scripts/check-disputes-contract.mjs",
+    "test:trust-contract": "node scripts/check-trust-contract.mjs"
   },
   "devDependencies": {
     "@openapitools/openapi-generator-cli": "^2.41.0",

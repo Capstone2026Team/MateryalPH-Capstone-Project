@@ -32,6 +32,7 @@ import { VendorMessagesPage } from './pages/MessagingPage'
 import { VendorOrderDetailPage, VendorOrdersPage } from './pages/OrderPages'
 import { VendorDisputeDetailPage, VendorDisputesPage, VendorFileDisputePage } from './pages/DisputePages'
 import { VendorInvoicesPage } from './pages/InvoicePages'
+import { VendorMaterialPriceDetailsPage, VendorMaterialsAnalyticsPage, VendorReviewsPage, VendorStorePerformancePage } from './pages/TrustPages'
 import { VendorEarningsPage, VendorFinancePage, VendorStatementPage, VendorTransactionHistoryPage } from './pages/FinancePages'
 import { VendorAccountPage, VendorStoreProfilePage, VendorDashboardPage, VendorSetupPage, VendorTeamPage, VendorVerificationPage, VendorWelcomePage } from './pages/PhaseThreeVendorPages'
 
@@ -70,6 +71,10 @@ function App() {
           <Route path="/disputes/new" element={<VendorFileDisputePage />} />
           <Route path="/disputes/:caseId" element={<VendorDisputeDetailPage />} />
           <Route path="/invoices" element={<VendorInvoicesPage />} />
+          <Route path="/reviews" element={<VendorReviewsPage />} />
+          <Route path="/performance" element={<VendorStorePerformancePage />} />
+          <Route path="/analytics/materials" element={<VendorMaterialsAnalyticsPage />} />
+          <Route path="/analytics/materials/:groupId" element={<VendorMaterialPriceDetailsPage />} />
           <Route path="/finance" element={<VendorFinancePage />} />
           <Route path="/finance/transactions" element={<VendorTransactionHistoryPage />} />
           <Route path="/finance/statements/:statementId" element={<VendorStatementPage />} />

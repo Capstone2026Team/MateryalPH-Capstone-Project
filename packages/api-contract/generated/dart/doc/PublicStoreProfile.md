@@ -33,6 +33,7 @@ Name | Type | Description | Notes
 **hoursAsOf** | [**DateTime**](DateTime.md) |  |
 **hoursNotice** | **String** |  |
 **hoursUnavailableReason** | **String** |  | [optional]
+**badges** | [**BuiltList&lt;PublicBadge&gt;**](PublicBadge.md) | Active automatic badges (text plus icon); Admin-suppressed badges are omitted. | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

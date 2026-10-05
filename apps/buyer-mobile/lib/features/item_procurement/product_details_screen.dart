@@ -10,6 +10,7 @@ import 'cart_controller.dart';
 import 'explore_controller.dart';
 import 'procurement_models.dart';
 import 'procurement_navigation.dart';
+import '../trust/listing_reviews_section.dart';
 import 'procurement_repository.dart';
 import 'product_finalization_sheet.dart';
 
@@ -683,9 +684,18 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
       ),
       const SizedBox(height: 8),
       const Text(
-        'Product ratings come from completed orders. Written reviews are not shown in this version.',
+        'This product'
+        's own rating, from completed verified purchases. It is separate from the seller'
+        's score.',
         style: TextStyle(color: BuyerTheme.muted),
       ),
+      if (widget.navigation.orders != null) ...[
+        const SizedBox(height: 12),
+        ListingReviewsSection(
+          repository: widget.navigation.orders!.reviews,
+          listingId: detail.listingId,
+        ),
+      ],
     ];
   }
 

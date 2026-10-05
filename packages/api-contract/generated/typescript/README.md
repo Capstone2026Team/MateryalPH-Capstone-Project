@@ -1,4 +1,4 @@
-# @materyalph/api-client-ts@1.0.0-phase.13
+# @materyalph/api-client-ts@1.0.0-phase.14
 
 A TypeScript SDK client for the localhost API.
 
@@ -113,6 +113,12 @@ All URIs are relative to */api/v1*
 *AdminFinanceApi* | [**runPaymentReconciliation**](docs/AdminFinanceApi.md#runpaymentreconciliation) | **POST** /admin/finance/reconciliation/run |
 *AdminInvoicesApi* | [**getAdminInvoiceFile**](docs/AdminInvoicesApi.md#getadmininvoicefile) | **GET** /admin/invoice-records/{recordId}/content |
 *AdminInvoicesApi* | [**listAdminInvoiceLog**](docs/AdminInvoicesApi.md#listadmininvoicelog) | **GET** /admin/invoices |
+*AdminMaterialsAnalyticsApi* | [**correctAdminMaterialPriceRun**](docs/AdminMaterialsAnalyticsApi.md#correctadminmaterialpricerun) | **POST** /admin/materials-analytics/runs/{runId}/corrections |
+*AdminMaterialsAnalyticsApi* | [**exportAdminMaterialsAnalytics**](docs/AdminMaterialsAnalyticsApi.md#exportadminmaterialsanalytics) | **GET** /admin/materials-analytics/export |
+*AdminMaterialsAnalyticsApi* | [**getAdminMaterialPriceDetails**](docs/AdminMaterialsAnalyticsApi.md#getadminmaterialpricedetails) | **GET** /admin/materials-analytics/{groupId} |
+*AdminMaterialsAnalyticsApi* | [**listAdminMaterialPriceRuns**](docs/AdminMaterialsAnalyticsApi.md#listadminmaterialpriceruns) | **GET** /admin/materials-analytics/runs |
+*AdminMaterialsAnalyticsApi* | [**listAdminMaterialPriceSources**](docs/AdminMaterialsAnalyticsApi.md#listadminmaterialpricesources) | **GET** /admin/materials-analytics/{groupId}/sources |
+*AdminMaterialsAnalyticsApi* | [**listAdminMaterialsAnalytics**](docs/AdminMaterialsAnalyticsApi.md#listadminmaterialsanalytics) | **GET** /admin/materials-analytics |
 *AdminOrderOperationsApi* | [**confirmAdminReimbursement**](docs/AdminOrderOperationsApi.md#confirmadminreimbursement) | **POST** /admin/order-operations/reimbursements/{reimbursementId}/confirm |
 *AdminOrderOperationsApi* | [**getAdminOrderOperationsSummary**](docs/AdminOrderOperationsApi.md#getadminorderoperationssummary) | **GET** /admin/order-operations/summary |
 *AdminOrderOperationsApi* | [**listAdminCancellationRequests**](docs/AdminOrderOperationsApi.md#listadmincancellationrequests) | **GET** /admin/order-operations/cancellation-requests |
@@ -127,6 +133,16 @@ All URIs are relative to */api/v1*
 *AdminProductComplianceApi* | [**importComplianceRegister**](docs/AdminProductComplianceApi.md#importcomplianceregister) | **POST** /admin/product-compliance/registers |
 *AdminProductComplianceApi* | [**listComplianceRegisters**](docs/AdminProductComplianceApi.md#listcomplianceregisters) | **GET** /admin/product-compliance/registers |
 *AdminProductComplianceApi* | [**listProductComplianceQueue**](docs/AdminProductComplianceApi.md#listproductcompliancequeue) | **GET** /admin/product-compliance |
+*AdminReviewModerationApi* | [**getAdminReviewModeration**](docs/AdminReviewModerationApi.md#getadminreviewmoderation) | **GET** /admin/reviews/{reviewId} |
+*AdminReviewModerationApi* | [**getAdminReviewPhoto**](docs/AdminReviewModerationApi.md#getadminreviewphoto) | **GET** /admin/reviews/{reviewId}/media/{mediaId}/content |
+*AdminReviewModerationApi* | [**listAdminReviewModeration**](docs/AdminReviewModerationApi.md#listadminreviewmoderation) | **GET** /admin/reviews |
+*AdminReviewModerationApi* | [**moderateAdminReview**](docs/AdminReviewModerationApi.md#moderateadminreview) | **POST** /admin/reviews/{reviewId}/moderation |
+*AdminScoreMonitoringApi* | [**excludeAdminScoreSource**](docs/AdminScoreMonitoringApi.md#excludeadminscoresource) | **POST** /admin/scores/{vendorId}/exclusions |
+*AdminScoreMonitoringApi* | [**getAdminScore**](docs/AdminScoreMonitoringApi.md#getadminscore) | **GET** /admin/scores/{vendorId} |
+*AdminScoreMonitoringApi* | [**liftAdminBadgeSuppression**](docs/AdminScoreMonitoringApi.md#liftadminbadgesuppression) | **POST** /admin/scores/badge-suppressions/{suppressionId}/lift |
+*AdminScoreMonitoringApi* | [**listAdminScores**](docs/AdminScoreMonitoringApi.md#listadminscores) | **GET** /admin/scores |
+*AdminScoreMonitoringApi* | [**revokeAdminScoreExclusion**](docs/AdminScoreMonitoringApi.md#revokeadminscoreexclusion) | **POST** /admin/scores/exclusions/{exclusionId}/revoke |
+*AdminScoreMonitoringApi* | [**suppressAdminBadge**](docs/AdminScoreMonitoringApi.md#suppressadminbadge) | **POST** /admin/scores/{vendorId}/badge-suppressions |
 *AdminVendorVerificationApi* | [**decideVendorVerificationRequirement**](docs/AdminVendorVerificationApi.md#decidevendorverificationrequirement) | **POST** /admin/vendor-verification/{organizationId}/requirements/{requirementKey}/decision |
 *AdminVendorVerificationApi* | [**getAdminDashboard**](docs/AdminVendorVerificationApi.md#getadmindashboard) | **GET** /admin/dashboard |
 *AdminVendorVerificationApi* | [**getAdminVendorEvidenceUrl**](docs/AdminVendorVerificationApi.md#getadminvendorevidenceurl) | **GET** /admin/vendor-verification/files/{fileId} |
@@ -229,6 +245,9 @@ All URIs are relative to */api/v1*
 *BuyerLocationsApi* | [**resolveBuyerLocation**](docs/BuyerLocationsApi.md#resolvebuyerlocation) | **POST** /buyers/locations/resolve |
 *BuyerLocationsApi* | [**saveBuyerOnboarding**](docs/BuyerLocationsApi.md#savebuyeronboarding) | **PUT** /buyers/onboarding |
 *BuyerLocationsApi* | [**updateBuyerLocation**](docs/BuyerLocationsApi.md#updatebuyerlocation) | **PATCH** /buyers/locations/{locationId} |
+*BuyerMaterialsAnalyticsApi* | [**getBuyerMaterialPriceDetails**](docs/BuyerMaterialsAnalyticsApi.md#getbuyermaterialpricedetails) | **POST** /buyers/materials-analytics/{groupId} |
+*BuyerMaterialsAnalyticsApi* | [**listBuyerMaterialOffers**](docs/BuyerMaterialsAnalyticsApi.md#listbuyermaterialoffers) | **POST** /buyers/materials-analytics/{groupId}/offers |
+*BuyerMaterialsAnalyticsApi* | [**listBuyerMaterialsAnalytics**](docs/BuyerMaterialsAnalyticsApi.md#listbuyermaterialsanalytics) | **POST** /buyers/materials-analytics |
 *BuyerOrdersApi* | [**acceptBuyerOrderNrpc**](docs/BuyerOrdersApi.md#acceptbuyerordernrpc) | **POST** /buyers/orders/{orderId}/nrpc/accept |
 *BuyerOrdersApi* | [**approveBuyerOrderRevision**](docs/BuyerOrdersApi.md#approvebuyerorderrevision) | **POST** /buyers/orders/{orderId}/revision/approve |
 *BuyerOrdersApi* | [**flagBuyerOrderNrpc**](docs/BuyerOrdersApi.md#flagbuyerordernrpc) | **POST** /buyers/orders/{orderId}/nrpc/flag |
@@ -266,6 +285,15 @@ All URIs are relative to */api/v1*
 *BuyerProjectsApi* | [**searchProjectMaterials**](docs/BuyerProjectsApi.md#searchprojectmaterials) | **GET** /buyers/project-materials |
 *BuyerProjectsApi* | [**selectProjectVendor**](docs/BuyerProjectsApi.md#selectprojectvendor) | **POST** /buyers/work-packages/{packageId}/selection |
 *BuyerProjectsApi* | [**updateProject**](docs/BuyerProjectsApi.md#updateproject) | **PATCH** /buyers/projects/{projectId} |
+*BuyerReviewsApi* | [**addBuyerReviewMedia**](docs/BuyerReviewsApi.md#addbuyerreviewmedia) | **POST** /buyers/reviews/{reviewId}/media |
+*BuyerReviewsApi* | [**editBuyerReview**](docs/BuyerReviewsApi.md#editbuyerreview) | **PATCH** /buyers/reviews/{reviewId} |
+*BuyerReviewsApi* | [**getBuyerOrderReviews**](docs/BuyerReviewsApi.md#getbuyerorderreviews) | **GET** /buyers/orders/{orderId}/reviews |
+*BuyerReviewsApi* | [**getBuyerReviewPhoto**](docs/BuyerReviewsApi.md#getbuyerreviewphoto) | **GET** /buyers/reviews/{reviewId}/media/{mediaId}/content |
+*BuyerReviewsApi* | [**listListingReviews**](docs/BuyerReviewsApi.md#listlistingreviews) | **GET** /buyers/listings/{listingId}/reviews |
+*BuyerReviewsApi* | [**listStoreReviews**](docs/BuyerReviewsApi.md#liststorereviews) | **GET** /buyers/stores/{vendorId}/reviews |
+*BuyerReviewsApi* | [**removeBuyerReviewMedia**](docs/BuyerReviewsApi.md#removebuyerreviewmedia) | **DELETE** /buyers/reviews/{reviewId}/media/{mediaId} |
+*BuyerReviewsApi* | [**reportBuyerReview**](docs/BuyerReviewsApi.md#reportbuyerreview) | **POST** /buyers/reviews/{reviewId}/flags |
+*BuyerReviewsApi* | [**submitBuyerOrderReviews**](docs/BuyerReviewsApi.md#submitbuyerorderreviews) | **POST** /buyers/orders/{orderId}/reviews |
 *MessagingApi* | [**archiveChatConversation**](docs/MessagingApi.md#archivechatconversation) | **PUT** /{messagingPortal}/conversations/{conversationId}/archive |
 *MessagingApi* | [**authorizeChatChannel**](docs/MessagingApi.md#authorizechatchannel) | **POST** /{messagingPortal}/messaging/auth |
 *MessagingApi* | [**createConversation**](docs/MessagingApi.md#createconversation) | **POST** /{messagingPortal}/conversations |
@@ -377,6 +405,9 @@ All URIs are relative to */api/v1*
 *VendorInvoicesApi* | [**getVendorOrderInvoices**](docs/VendorInvoicesApi.md#getvendororderinvoices) | **GET** /vendor/orders/{orderId}/invoices |
 *VendorInvoicesApi* | [**listVendorInvoices**](docs/VendorInvoicesApi.md#listvendorinvoices) | **GET** /vendor/invoices |
 *VendorInvoicesApi* | [**uploadVendorInvoice**](docs/VendorInvoicesApi.md#uploadvendorinvoice) | **POST** /vendor/orders/{orderId}/invoices |
+*VendorMaterialsAnalyticsApi* | [**exportVendorMaterialsAnalytics**](docs/VendorMaterialsAnalyticsApi.md#exportvendormaterialsanalytics) | **GET** /vendor/materials-analytics/export |
+*VendorMaterialsAnalyticsApi* | [**getVendorMaterialPriceDetails**](docs/VendorMaterialsAnalyticsApi.md#getvendormaterialpricedetails) | **GET** /vendor/materials-analytics/{groupId} |
+*VendorMaterialsAnalyticsApi* | [**listVendorMaterialsAnalytics**](docs/VendorMaterialsAnalyticsApi.md#listvendormaterialsanalytics) | **GET** /vendor/materials-analytics |
 *VendorOnboardingApi* | [**acceptVendorCommission**](docs/VendorOnboardingApi.md#acceptvendorcommission) | **POST** /vendors/onboarding/verification/commission |
 *VendorOnboardingApi* | [**activateVendorStore**](docs/VendorOnboardingApi.md#activatevendorstore) | **POST** /vendors/onboarding/activation |
 *VendorOnboardingApi* | [**changeVendorStaffDisputes**](docs/VendorOnboardingApi.md#changevendorstaffdisputes) | **PATCH** /vendors/account/staff-disputes |
@@ -411,6 +442,13 @@ All URIs are relative to */api/v1*
 *VendorOrdersApi* | [**getVendorOrder**](docs/VendorOrdersApi.md#getvendororder) | **GET** /vendor/orders/{orderId} |
 *VendorOrdersApi* | [**getVendorOrderDeliveryPlan**](docs/VendorOrdersApi.md#getvendororderdeliveryplan) | **POST** /vendor/orders/{orderId}/delivery-recommendations |
 *VendorOrdersApi* | [**listVendorOrders**](docs/VendorOrdersApi.md#listvendororders) | **GET** /vendor/orders |
+*VendorReviewsApi* | [**editVendorBuyerRating**](docs/VendorReviewsApi.md#editvendorbuyerrating) | **PATCH** /vendor/reviews/{reviewId} |
+*VendorReviewsApi* | [**getVendorOrderReviews**](docs/VendorReviewsApi.md#getvendororderreviews) | **GET** /vendor/orders/{orderId}/reviews |
+*VendorReviewsApi* | [**getVendorReviewPhoto**](docs/VendorReviewsApi.md#getvendorreviewphoto) | **GET** /vendor/reviews/{reviewId}/media/{mediaId}/content |
+*VendorReviewsApi* | [**listVendorReviews**](docs/VendorReviewsApi.md#listvendorreviews) | **GET** /vendor/reviews |
+*VendorReviewsApi* | [**reportVendorReview**](docs/VendorReviewsApi.md#reportvendorreview) | **POST** /vendor/reviews/{reviewId}/flags |
+*VendorReviewsApi* | [**submitVendorBuyerRating**](docs/VendorReviewsApi.md#submitvendorbuyerrating) | **POST** /vendor/orders/{orderId}/buyer-rating |
+*VendorStorePerformanceApi* | [**getVendorStorePerformance**](docs/VendorStorePerformanceApi.md#getvendorstoreperformance) | **GET** /vendor/performance |
 
 
 ### Models
@@ -450,6 +488,8 @@ All URIs are relative to */api/v1*
 - [AccountSessionRevocation](docs/AccountSessionRevocation.md)
 - [AccountType](docs/AccountType.md)
 - [AddressComponents](docs/AddressComponents.md)
+- [AdminAnalyticsPoint](docs/AdminAnalyticsPoint.md)
+- [AdminAnalyticsRow](docs/AdminAnalyticsRow.md)
 - [AdminCancellationRequestListEnvelope](docs/AdminCancellationRequestListEnvelope.md)
 - [AdminCancellationRequestRow](docs/AdminCancellationRequestRow.md)
 - [AdminDashboardAuditEnvelope](docs/AdminDashboardAuditEnvelope.md)
@@ -459,6 +499,11 @@ All URIs are relative to */api/v1*
 - [AdminDisputeClarificationRequest](docs/AdminDisputeClarificationRequest.md)
 - [AdminDisputeDecisionRequest](docs/AdminDisputeDecisionRequest.md)
 - [AdminInvitationRequest](docs/AdminInvitationRequest.md)
+- [AdminMaterialsAnalyticsDetail](docs/AdminMaterialsAnalyticsDetail.md)
+- [AdminMaterialsAnalyticsDetailEnvelope](docs/AdminMaterialsAnalyticsDetailEnvelope.md)
+- [AdminMaterialsAnalyticsDetailGroup](docs/AdminMaterialsAnalyticsDetailGroup.md)
+- [AdminMaterialsAnalyticsList](docs/AdminMaterialsAnalyticsList.md)
+- [AdminMaterialsAnalyticsListEnvelope](docs/AdminMaterialsAnalyticsListEnvelope.md)
 - [AdminOrderActionResultEnvelope](docs/AdminOrderActionResultEnvelope.md)
 - [AdminOrderOperationsSummary](docs/AdminOrderOperationsSummary.md)
 - [AdminOrderOperationsSummaryEnvelope](docs/AdminOrderOperationsSummaryEnvelope.md)
@@ -468,12 +513,30 @@ All URIs are relative to */api/v1*
 - [AdminReimbursementDecision](docs/AdminReimbursementDecision.md)
 - [AdminReimbursementListEnvelope](docs/AdminReimbursementListEnvelope.md)
 - [AdminReimbursementRow](docs/AdminReimbursementRow.md)
+- [AdminScoreDetail](docs/AdminScoreDetail.md)
+- [AdminScoreDetailEnvelope](docs/AdminScoreDetailEnvelope.md)
+- [AdminScoreListEnvelope](docs/AdminScoreListEnvelope.md)
+- [AdminScoreRow](docs/AdminScoreRow.md)
 - [AdminVendorVerificationDecision](docs/AdminVendorVerificationDecision.md)
 - [AdminVendorVerificationDetailEnvelope](docs/AdminVendorVerificationDetailEnvelope.md)
 - [AdminVendorVerificationQueueEnvelope](docs/AdminVendorVerificationQueueEnvelope.md)
 - [AdminVendorVerificationQueueItem](docs/AdminVendorVerificationQueueItem.md)
 - [Agreement](docs/Agreement.md)
 - [AgreementListEnvelope](docs/AgreementListEnvelope.md)
+- [AnalyticsCategoryRef](docs/AnalyticsCategoryRef.md)
+- [AnalyticsCorrectionEnvelope](docs/AnalyticsCorrectionEnvelope.md)
+- [AnalyticsCorrectionRequest](docs/AnalyticsCorrectionRequest.md)
+- [AnalyticsCorrectionResult](docs/AnalyticsCorrectionResult.md)
+- [AnalyticsCurrentCounts](docs/AnalyticsCurrentCounts.md)
+- [AnalyticsMaterialRef](docs/AnalyticsMaterialRef.md)
+- [AnalyticsRun](docs/AnalyticsRun.md)
+- [AnalyticsRunListEnvelope](docs/AnalyticsRunListEnvelope.md)
+- [AnalyticsSnapshotRef](docs/AnalyticsSnapshotRef.md)
+- [AnalyticsSource](docs/AnalyticsSource.md)
+- [AnalyticsSourceListEnvelope](docs/AnalyticsSourceListEnvelope.md)
+- [AnalyticsTrend](docs/AnalyticsTrend.md)
+- [AnalyticsUnit](docs/AnalyticsUnit.md)
+- [AnalyticsWindow](docs/AnalyticsWindow.md)
 - [ApiError](docs/ApiError.md)
 - [AuthEnvelope](docs/AuthEnvelope.md)
 - [AuthEnvelopeAllOfData](docs/AuthEnvelopeAllOfData.md)
@@ -491,11 +554,17 @@ All URIs are relative to */api/v1*
 - [AutoAcceptReason](docs/AutoAcceptReason.md)
 - [AutoAcceptResume](docs/AutoAcceptResume.md)
 - [AutoAcceptStatus](docs/AutoAcceptStatus.md)
+- [BadgeMetric](docs/BadgeMetric.md)
+- [BadgeState](docs/BadgeState.md)
+- [BadgeStateScopesInner](docs/BadgeStateScopesInner.md)
+- [BadgeSuppressionRequest](docs/BadgeSuppressionRequest.md)
 - [BotProofEnvelope](docs/BotProofEnvelope.md)
 - [BotProofEnvelopeAllOfData](docs/BotProofEnvelopeAllOfData.md)
 - [BotStepUpErrorEnvelope](docs/BotStepUpErrorEnvelope.md)
 - [BotStepUpErrorEnvelopeAllOfErrors](docs/BotStepUpErrorEnvelopeAllOfErrors.md)
 - [BotStepUpErrorEnvelopeAllOfErrorsAllOfDetails](docs/BotStepUpErrorEnvelopeAllOfErrorsAllOfDetails.md)
+- [BuyerAnalyticsPoint](docs/BuyerAnalyticsPoint.md)
+- [BuyerAnalyticsRow](docs/BuyerAnalyticsRow.md)
 - [BuyerCancelRequest](docs/BuyerCancelRequest.md)
 - [BuyerCancellationPreview](docs/BuyerCancellationPreview.md)
 - [BuyerCancellationPreviewEnvelope](docs/BuyerCancellationPreviewEnvelope.md)
@@ -512,6 +581,12 @@ All URIs are relative to */api/v1*
 - [BuyerLocationRemovedEnvelope](docs/BuyerLocationRemovedEnvelope.md)
 - [BuyerLocationResolveRequest](docs/BuyerLocationResolveRequest.md)
 - [BuyerLocationUpdate](docs/BuyerLocationUpdate.md)
+- [BuyerMaterialsAnalyticsDetail](docs/BuyerMaterialsAnalyticsDetail.md)
+- [BuyerMaterialsAnalyticsDetailEnvelope](docs/BuyerMaterialsAnalyticsDetailEnvelope.md)
+- [BuyerMaterialsAnalyticsDetailGroup](docs/BuyerMaterialsAnalyticsDetailGroup.md)
+- [BuyerMaterialsAnalyticsList](docs/BuyerMaterialsAnalyticsList.md)
+- [BuyerMaterialsAnalyticsListEnvelope](docs/BuyerMaterialsAnalyticsListEnvelope.md)
+- [BuyerMaterialsAnalyticsRequest](docs/BuyerMaterialsAnalyticsRequest.md)
 - [BuyerMobileGoogleOidcStartRequest](docs/BuyerMobileGoogleOidcStartRequest.md)
 - [BuyerMobileLoginRequest](docs/BuyerMobileLoginRequest.md)
 - [BuyerMobilePasswordRecoveryRequest](docs/BuyerMobilePasswordRecoveryRequest.md)
@@ -522,7 +597,13 @@ All URIs are relative to */api/v1*
 - [BuyerOnboardingUpdate](docs/BuyerOnboardingUpdate.md)
 - [BuyerOrderInvoices](docs/BuyerOrderInvoices.md)
 - [BuyerOrderInvoicesEnvelope](docs/BuyerOrderInvoicesEnvelope.md)
+- [BuyerOrderReviews](docs/BuyerOrderReviews.md)
+- [BuyerOrderReviewsEnvelope](docs/BuyerOrderReviewsEnvelope.md)
 - [BuyerOriginRequest](docs/BuyerOriginRequest.md)
+- [BuyerReviewEditRequest](docs/BuyerReviewEditRequest.md)
+- [BuyerReviewSubmitRequest](docs/BuyerReviewSubmitRequest.md)
+- [BuyerReviewSubmitRequestProductReviewsInner](docs/BuyerReviewSubmitRequestProductReviewsInner.md)
+- [BuyerReviewSubmitRequestVendorRating](docs/BuyerReviewSubmitRequestVendorRating.md)
 - [CancellationDecisionView](docs/CancellationDecisionView.md)
 - [CancellationPlan](docs/CancellationPlan.md)
 - [CancellationPlanPayment](docs/CancellationPlanPayment.md)
@@ -635,7 +716,10 @@ All URIs are relative to */api/v1*
 - [ComparableGroupCreate](docs/ComparableGroupCreate.md)
 - [ComparableGroupEnvelope](docs/ComparableGroupEnvelope.md)
 - [ComparableGroupEnvelopeData](docs/ComparableGroupEnvelopeData.md)
+- [ComparableSpecification](docs/ComparableSpecification.md)
+- [ComparableSpecificationAttributesInner](docs/ComparableSpecificationAttributesInner.md)
 - [ComparableStatus](docs/ComparableStatus.md)
+- [ComparableVariant](docs/ComparableVariant.md)
 - [ComplianceEvidence](docs/ComplianceEvidence.md)
 - [ComplianceEvidenceEnvelope](docs/ComplianceEvidenceEnvelope.md)
 - [ComplianceExtraction](docs/ComplianceExtraction.md)
@@ -652,6 +736,7 @@ All URIs are relative to */api/v1*
 - [ConversationPage](docs/ConversationPage.md)
 - [ConversationPageResponse](docs/ConversationPageResponse.md)
 - [ConversationView](docs/ConversationView.md)
+- [CounterpartRating](docs/CounterpartRating.md)
 - [CsrfEnvelope](docs/CsrfEnvelope.md)
 - [CsrfEnvelopeAllOfData](docs/CsrfEnvelopeAllOfData.md)
 - [DatasetLabel](docs/DatasetLabel.md)
@@ -803,6 +888,8 @@ All URIs are relative to */api/v1*
 - [InventorySettings](docs/InventorySettings.md)
 - [InventorySettingsEnvelope](docs/InventorySettingsEnvelope.md)
 - [InventorySettingsUpdate](docs/InventorySettingsUpdate.md)
+- [InvestigationAckEnvelope](docs/InvestigationAckEnvelope.md)
+- [InvestigationReasonRequest](docs/InvestigationReasonRequest.md)
 - [InvoiceBillingDetailsRequest](docs/InvoiceBillingDetailsRequest.md)
 - [InvoiceExplanationRequest](docs/InvoiceExplanationRequest.md)
 - [InvoiceListMeta](docs/InvoiceListMeta.md)
@@ -844,6 +931,8 @@ All URIs are relative to */api/v1*
 - [MapPoint](docs/MapPoint.md)
 - [MarkingType](docs/MarkingType.md)
 - [MaterialCategoryOption](docs/MaterialCategoryOption.md)
+- [MaterialOffer](docs/MaterialOffer.md)
+- [MaterialOfferListEnvelope](docs/MaterialOfferListEnvelope.md)
 - [MaterialPriceObservation](docs/MaterialPriceObservation.md)
 - [MfaCodeRequest](docs/MfaCodeRequest.md)
 - [MfaEnrollmentEnvelope](docs/MfaEnrollmentEnvelope.md)
@@ -851,6 +940,10 @@ All URIs are relative to */api/v1*
 - [MfaRecoveryRequest](docs/MfaRecoveryRequest.md)
 - [MfaStatusEnvelope](docs/MfaStatusEnvelope.md)
 - [MfaStatusEnvelopeAllOfData](docs/MfaStatusEnvelopeAllOfData.md)
+- [ModerationDetail](docs/ModerationDetail.md)
+- [ModerationDetailEnvelope](docs/ModerationDetailEnvelope.md)
+- [ModerationQueueEnvelope](docs/ModerationQueueEnvelope.md)
+- [ModerationQueueRow](docs/ModerationQueueRow.md)
 - [MoneyBreakdown](docs/MoneyBreakdown.md)
 - [MoneyDelivery](docs/MoneyDelivery.md)
 - [MoneyNrpc](docs/MoneyNrpc.md)
@@ -904,6 +997,7 @@ All URIs are relative to */api/v1*
 - [OrderVendorRef](docs/OrderVendorRef.md)
 - [OrderVolumeTier](docs/OrderVolumeTier.md)
 - [OverlapResolveRequest](docs/OverlapResolveRequest.md)
+- [OwnReview](docs/OwnReview.md)
 - [PageMeta](docs/PageMeta.md)
 - [PasswordRecoveryRequest](docs/PasswordRecoveryRequest.md)
 - [PasswordResetRequest](docs/PasswordResetRequest.md)
@@ -976,6 +1070,10 @@ All URIs are relative to */api/v1*
 - [PsgcSearchEnvelope](docs/PsgcSearchEnvelope.md)
 - [PsgcSearchEnvelopeData](docs/PsgcSearchEnvelopeData.md)
 - [PublicAddressSummary](docs/PublicAddressSummary.md)
+- [PublicBadge](docs/PublicBadge.md)
+- [PublicReview](docs/PublicReview.md)
+- [PublicReviewListEnvelope](docs/PublicReviewListEnvelope.md)
+- [PublicScores](docs/PublicScores.md)
 - [PublicStoreListEnvelope](docs/PublicStoreListEnvelope.md)
 - [PublicStoreListEnvelopeMeta](docs/PublicStoreListEnvelopeMeta.md)
 - [PublicStoreProfile](docs/PublicStoreProfile.md)
@@ -996,11 +1094,24 @@ All URIs are relative to */api/v1*
 - [RegulatedMaterialRule](docs/RegulatedMaterialRule.md)
 - [ReimbursementTimelineItem](docs/ReimbursementTimelineItem.md)
 - [ResendBotChallengeRequest](docs/ResendBotChallengeRequest.md)
+- [ReviewDisplayOption](docs/ReviewDisplayOption.md)
+- [ReviewFlagRequest](docs/ReviewFlagRequest.md)
+- [ReviewLine](docs/ReviewLine.md)
+- [ReviewListMeta](docs/ReviewListMeta.md)
+- [ReviewMediaLink](docs/ReviewMediaLink.md)
+- [ReviewModerationRequest](docs/ReviewModerationRequest.md)
+- [ReviewRatings](docs/ReviewRatings.md)
+- [ReviewReported](docs/ReviewReported.md)
+- [ReviewReportedEnvelope](docs/ReviewReportedEnvelope.md)
 - [ReviewResolveRequest](docs/ReviewResolveRequest.md)
+- [ReviewWindowRules](docs/ReviewWindowRules.md)
 - [RouteEstimate](docs/RouteEstimate.md)
 - [RouteEstimateEnvelope](docs/RouteEstimateEnvelope.md)
 - [RouteEstimateRequest](docs/RouteEstimateRequest.md)
+- [ScoreExclusionRequest](docs/ScoreExclusionRequest.md)
+- [ScoreHistoryPoint](docs/ScoreHistoryPoint.md)
 - [ScoreLabel](docs/ScoreLabel.md)
+- [ScoreMetric](docs/ScoreMetric.md)
 - [StaleListing](docs/StaleListing.md)
 - [StatementApproveRequest](docs/StatementApproveRequest.md)
 - [StatementPaymentRequest](docs/StatementPaymentRequest.md)
@@ -1014,6 +1125,8 @@ All URIs are relative to */api/v1*
 - [StoreNextOpening](docs/StoreNextOpening.md)
 - [StoreOpenNow](docs/StoreOpenNow.md)
 - [StoreOperatingDay](docs/StoreOperatingDay.md)
+- [StorePerformance](docs/StorePerformance.md)
+- [StorePerformanceEnvelope](docs/StorePerformanceEnvelope.md)
 - [SuccessEnvelope](docs/SuccessEnvelope.md)
 - [SupplierOpenStatus](docs/SupplierOpenStatus.md)
 - [SupplierResult](docs/SupplierResult.md)
@@ -1027,12 +1140,16 @@ All URIs are relative to */api/v1*
 - [VendorAddressGeocode](docs/VendorAddressGeocode.md)
 - [VendorAddressGeocodeEnvelope](docs/VendorAddressGeocodeEnvelope.md)
 - [VendorAddressSelection](docs/VendorAddressSelection.md)
+- [VendorAnalyticsPoint](docs/VendorAnalyticsPoint.md)
+- [VendorAnalyticsRow](docs/VendorAnalyticsRow.md)
 - [VendorBotProtectionEvidence](docs/VendorBotProtectionEvidence.md)
+- [VendorBuyerRatingRequest](docs/VendorBuyerRatingRequest.md)
 - [VendorCancelRequest](docs/VendorCancelRequest.md)
 - [VendorCancellationPreview](docs/VendorCancellationPreview.md)
 - [VendorCancellationPreviewEnvelope](docs/VendorCancellationPreviewEnvelope.md)
 - [VendorCancellationRequestRef](docs/VendorCancellationRequestRef.md)
 - [VendorCommissionAcceptance](docs/VendorCommissionAcceptance.md)
+- [VendorCurrentCompetitors](docs/VendorCurrentCompetitors.md)
 - [VendorDocument](docs/VendorDocument.md)
 - [VendorDocumentEnvelope](docs/VendorDocumentEnvelope.md)
 - [VendorEarnings](docs/VendorEarnings.md)
@@ -1047,6 +1164,11 @@ All URIs are relative to */api/v1*
 - [VendorInvitationEnvelope](docs/VendorInvitationEnvelope.md)
 - [VendorInvitationRequest](docs/VendorInvitationRequest.md)
 - [VendorInvoiceBillingDetails](docs/VendorInvoiceBillingDetails.md)
+- [VendorMaterialsAnalyticsDetail](docs/VendorMaterialsAnalyticsDetail.md)
+- [VendorMaterialsAnalyticsDetailEnvelope](docs/VendorMaterialsAnalyticsDetailEnvelope.md)
+- [VendorMaterialsAnalyticsDetailGroup](docs/VendorMaterialsAnalyticsDetailGroup.md)
+- [VendorMaterialsAnalyticsList](docs/VendorMaterialsAnalyticsList.md)
+- [VendorMaterialsAnalyticsListEnvelope](docs/VendorMaterialsAnalyticsListEnvelope.md)
 - [VendorMediaEnvelope](docs/VendorMediaEnvelope.md)
 - [VendorOnboardingEnvelope](docs/VendorOnboardingEnvelope.md)
 - [VendorOnboardingSection](docs/VendorOnboardingSection.md)
@@ -1060,11 +1182,17 @@ All URIs are relative to */api/v1*
 - [VendorOrderInvoicesEnvelope](docs/VendorOrderInvoicesEnvelope.md)
 - [VendorOrderPermissions](docs/VendorOrderPermissions.md)
 - [VendorOrderPrimaryAction](docs/VendorOrderPrimaryAction.md)
+- [VendorOrderReviews](docs/VendorOrderReviews.md)
+- [VendorOrderReviewsEnvelope](docs/VendorOrderReviewsEnvelope.md)
+- [VendorOwnOffer](docs/VendorOwnOffer.md)
 - [VendorPaymentOnboarding](docs/VendorPaymentOnboarding.md)
 - [VendorPaymentOnboardingEnvelope](docs/VendorPaymentOnboardingEnvelope.md)
 - [VendorPaymentReconciliationEnvelope](docs/VendorPaymentReconciliationEnvelope.md)
 - [VendorRestriction](docs/VendorRestriction.md)
 - [VendorRestrictionEnvelope](docs/VendorRestrictionEnvelope.md)
+- [VendorReviewEditRequest](docs/VendorReviewEditRequest.md)
+- [VendorReviewListEnvelope](docs/VendorReviewListEnvelope.md)
+- [VendorReviewRow](docs/VendorReviewRow.md)
 - [VendorSetupComplete](docs/VendorSetupComplete.md)
 - [VendorSetupDraft](docs/VendorSetupDraft.md)
 - [VendorSetupDraftDelivery](docs/VendorSetupDraftDelivery.md)
@@ -1150,8 +1278,8 @@ This TypeScript SDK client supports the [Fetch API](https://fetch.spec.whatwg.or
 and is automatically generated by the
 [OpenAPI Generator](https://openapi-generator.tech) project:
 
-- API version: `1.0.0-phase.13`
-- Package version: `1.0.0-phase.13`
+- API version: `1.0.0-phase.14`
+- Package version: `1.0.0-phase.14`
 - Generator version: `7.25.0`
 - Build package: `org.openapitools.codegen.languages.TypeScriptFetchClientCodegen`
 

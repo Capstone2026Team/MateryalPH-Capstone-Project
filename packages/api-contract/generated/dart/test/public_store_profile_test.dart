@@ -137,5 +137,11 @@ void main() {
       // TODO
     });
 
+    // Active automatic badges (text plus icon); Admin-suppressed badges are omitted.
+    // BuiltList<PublicBadge> badges
+    test('to test the property `badges`', () async {
+      // TODO
+    });
+
   });
 }

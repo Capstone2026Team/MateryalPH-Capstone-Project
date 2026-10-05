@@ -6,6 +6,7 @@ import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 
 import '../../core/api_guard.dart';
 import '../disputes/disputes_repository.dart';
+import '../trust/reviews_repository.dart';
 import 'order_models.dart';
 
 /// Buyer order submission and decisions through `/api/v1` only. Every mutation carries an
@@ -131,6 +132,9 @@ abstract interface class OrdersRepository {
 
   /// Transaction disputes and Vendor invoice copies for this Buyer's orders.
   DisputesRepository get disputes;
+
+  /// Verified-purchase ratings and reviews of this Buyer's completed orders and public listings.
+  ReviewsRepository get reviews;
 }
 
 final class ApiOrdersRepository implements OrdersRepository {
@@ -147,6 +151,12 @@ final class ApiOrdersRepository implements OrdersRepository {
 
   @override
   late final DisputesRepository disputes = ApiDisputesRepository(
+    client: _client,
+    guard: _api,
+  );
+
+  @override
+  late final ReviewsRepository reviews = ApiReviewsRepository(
     client: _client,
     guard: _api,
   );

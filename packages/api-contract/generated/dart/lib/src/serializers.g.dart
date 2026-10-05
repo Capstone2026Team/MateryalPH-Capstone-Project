@@ -7,7 +7,10 @@ part of 'serializers.dart';
 // **************************************************************************
 
 Serializers _$serializers = (Serializers().toBuilder()
+      ..add($AdminAnalyticsRow.serializer)
+      ..add($BuyerAnalyticsRow.serializer)
       ..add($SuccessEnvelope.serializer)
+      ..add($VendorAnalyticsRow.serializer)
       ..add(AccountAdminChange.serializer)
       ..add(AccountAdminChangeStatusEnum.serializer)
       ..add(AccountAdminInvitation.serializer)
@@ -47,6 +50,8 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(AccountSessionRevocationScopeEnum.serializer)
       ..add(AccountType.serializer)
       ..add(AddressComponents.serializer)
+      ..add(AdminAnalyticsPoint.serializer)
+      ..add(AdminAnalyticsPointStatusEnum.serializer)
       ..add(AdminCancellationRequestListEnvelope.serializer)
       ..add(AdminCancellationRequestRow.serializer)
       ..add(AdminDashboardAuditEnvelope.serializer)
@@ -64,6 +69,15 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(AdminInvitationRequest.serializer)
       ..add(AdminInvitationRequestPrivacyAcceptedEnum.serializer)
       ..add(AdminInvitationRequestTermsAcceptedEnum.serializer)
+      ..add(AdminMaterialsAnalyticsDetail.serializer)
+      ..add(AdminMaterialsAnalyticsDetailAudienceEnum.serializer)
+      ..add(AdminMaterialsAnalyticsDetailEnvelope.serializer)
+      ..add(AdminMaterialsAnalyticsDetailGroup.serializer)
+      ..add(AdminMaterialsAnalyticsDetailSourceKindEnum.serializer)
+      ..add(AdminMaterialsAnalyticsList.serializer)
+      ..add(AdminMaterialsAnalyticsListAudienceEnum.serializer)
+      ..add(AdminMaterialsAnalyticsListEnvelope.serializer)
+      ..add(AdminMaterialsAnalyticsListSourceKindEnum.serializer)
       ..add(AdminOrderActionResultEnvelope.serializer)
       ..add(AdminOrderOperationsSummary.serializer)
       ..add(AdminOrderOperationsSummaryEnvelope.serializer)
@@ -78,6 +92,10 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(AdminReimbursementListEnvelope.serializer)
       ..add(AdminReimbursementRow.serializer)
       ..add(AdminReimbursementRowStateEnum.serializer)
+      ..add(AdminScoreDetail.serializer)
+      ..add(AdminScoreDetailEnvelope.serializer)
+      ..add(AdminScoreListEnvelope.serializer)
+      ..add(AdminScoreRow.serializer)
       ..add(AdminVendorVerificationDecision.serializer)
       ..add(AdminVendorVerificationDecisionAuthorityScopesEnum.serializer)
       ..add(AdminVendorVerificationDecisionDecisionEnum.serializer)
@@ -88,6 +106,24 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(AdminVendorVerificationQueueItem.serializer)
       ..add(Agreement.serializer)
       ..add(AgreementListEnvelope.serializer)
+      ..add(AnalyticsCategoryRef.serializer)
+      ..add(AnalyticsCorrectionEnvelope.serializer)
+      ..add(AnalyticsCorrectionRequest.serializer)
+      ..add(AnalyticsCorrectionResult.serializer)
+      ..add(AnalyticsCurrentCounts.serializer)
+      ..add(AnalyticsCurrentCountsStatusEnum.serializer)
+      ..add(AnalyticsMaterialRef.serializer)
+      ..add(AnalyticsRun.serializer)
+      ..add(AnalyticsRunListEnvelope.serializer)
+      ..add(AnalyticsRunStateEnum.serializer)
+      ..add(AnalyticsSnapshotRef.serializer)
+      ..add(AnalyticsSource.serializer)
+      ..add(AnalyticsSourceListEnvelope.serializer)
+      ..add(AnalyticsTrend.serializer)
+      ..add(AnalyticsTrendDirectionEnum.serializer)
+      ..add(AnalyticsTrendReasonEnum.serializer)
+      ..add(AnalyticsUnit.serializer)
+      ..add(AnalyticsWindow.serializer)
       ..add(ApiError.serializer)
       ..add(AuthEnvelope.serializer)
       ..add(AuthEnvelopeAllOfData.serializer)
@@ -111,6 +147,15 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(AutoAcceptReason.serializer)
       ..add(AutoAcceptResume.serializer)
       ..add(AutoAcceptStatus.serializer)
+      ..add(BadgeMetric.serializer)
+      ..add(BadgeMetricKeyEnum.serializer)
+      ..add(BadgeState.serializer)
+      ..add(BadgeStateCodeEnum.serializer)
+      ..add(BadgeStateScopesInner.serializer)
+      ..add(BadgeStateStatusEnum.serializer)
+      ..add(BadgeSuppressionRequest.serializer)
+      ..add(BadgeSuppressionRequestBadgeCodeEnum.serializer)
+      ..add(BadgeSuppressionRequestReasonCodeEnum.serializer)
       ..add(BotProofEnvelope.serializer)
       ..add(BotProofEnvelopeAllOfData.serializer)
       ..add(BotProofEnvelopeAllOfDataVerifiedEnum.serializer)
@@ -118,6 +163,8 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(BotStepUpErrorEnvelopeAllOfErrors.serializer)
       ..add(BotStepUpErrorEnvelopeAllOfErrorsAllOfDetails.serializer)
       ..add(BotStepUpErrorEnvelopeAllOfErrorsCodeEnum.serializer)
+      ..add(BuyerAnalyticsPoint.serializer)
+      ..add(BuyerAnalyticsPointStatusEnum.serializer)
       ..add(BuyerCancelRequest.serializer)
       ..add(BuyerCancelRequestReasonCodeEnum.serializer)
       ..add(BuyerCancellationPreview.serializer)
@@ -138,6 +185,19 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(BuyerLocationResolveRequest.serializer)
       ..add(BuyerLocationResolveRequestModeEnum.serializer)
       ..add(BuyerLocationUpdate.serializer)
+      ..add(BuyerMaterialsAnalyticsDetail.serializer)
+      ..add(BuyerMaterialsAnalyticsDetailAudienceEnum.serializer)
+      ..add(BuyerMaterialsAnalyticsDetailEnvelope.serializer)
+      ..add(BuyerMaterialsAnalyticsDetailGroup.serializer)
+      ..add(BuyerMaterialsAnalyticsDetailSourceKindEnum.serializer)
+      ..add(BuyerMaterialsAnalyticsList.serializer)
+      ..add(BuyerMaterialsAnalyticsListAudienceEnum.serializer)
+      ..add(BuyerMaterialsAnalyticsListEnvelope.serializer)
+      ..add(BuyerMaterialsAnalyticsListSourceKindEnum.serializer)
+      ..add(BuyerMaterialsAnalyticsRequest.serializer)
+      ..add(BuyerMaterialsAnalyticsRequestOriginSourceEnum.serializer)
+      ..add(BuyerMaterialsAnalyticsRequestPresetDaysEnum.serializer)
+      ..add(BuyerMaterialsAnalyticsRequestRadiusKmEnum.serializer)
       ..add(BuyerMobileGoogleOidcStartRequest.serializer)
       ..add(BuyerMobileGoogleOidcStartRequestModeEnum.serializer)
       ..add(BuyerMobileLoginRequest.serializer)
@@ -154,8 +214,19 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(BuyerOrderInvoices.serializer)
       ..add(BuyerOrderInvoicesEnvelope.serializer)
       ..add(BuyerOrderInvoicesStatusEnum.serializer)
+      ..add(BuyerOrderReviews.serializer)
+      ..add(BuyerOrderReviewsEnvelope.serializer)
+      ..add(BuyerOrderReviewsPartyEnum.serializer)
+      ..add(BuyerOrderReviewsRevealReasonEnum.serializer)
+      ..add(BuyerOrderReviewsSpeedKindEnum.serializer)
+      ..add(BuyerOrderReviewsStateEnum.serializer)
       ..add(BuyerOriginRequest.serializer)
       ..add(BuyerOriginRequestOriginSourceEnum.serializer)
+      ..add(BuyerReviewEditRequest.serializer)
+      ..add(BuyerReviewSubmitRequest.serializer)
+      ..add(BuyerReviewSubmitRequestDisplayNameChoiceEnum.serializer)
+      ..add(BuyerReviewSubmitRequestProductReviewsInner.serializer)
+      ..add(BuyerReviewSubmitRequestVendorRating.serializer)
       ..add(CancellationDecisionView.serializer)
       ..add(CancellationDecisionViewCauseEnum.serializer)
       ..add(CancellationDecisionViewDecidedByEnum.serializer)
@@ -316,8 +387,11 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(ComparableGroupCreate.serializer)
       ..add(ComparableGroupEnvelope.serializer)
       ..add(ComparableGroupEnvelopeData.serializer)
+      ..add(ComparableSpecification.serializer)
+      ..add(ComparableSpecificationAttributesInner.serializer)
       ..add(ComparableStatus.serializer)
       ..add(ComparableStatusStatusEnum.serializer)
+      ..add(ComparableVariant.serializer)
       ..add(ComplianceEvidence.serializer)
       ..add(ComplianceEvidenceEnvelope.serializer)
       ..add(ComplianceEvidenceEvidenceKindEnum.serializer)
@@ -345,6 +419,7 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(ConversationView.serializer)
       ..add(ConversationViewContextTypeEnum.serializer)
       ..add(ConversationViewPurposeEnum.serializer)
+      ..add(CounterpartRating.serializer)
       ..add(CsrfEnvelope.serializer)
       ..add(CsrfEnvelopeAllOfData.serializer)
       ..add(DatasetLabel.serializer)
@@ -604,6 +679,8 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(InventorySettingsInAppRemindersEnum.serializer)
       ..add(InventorySettingsTimezoneEnum.serializer)
       ..add(InventorySettingsUpdate.serializer)
+      ..add(InvestigationAckEnvelope.serializer)
+      ..add(InvestigationReasonRequest.serializer)
       ..add(InvoiceBillingDetailsRequest.serializer)
       ..add(InvoiceExplanationRequest.serializer)
       ..add(InvoiceListMeta.serializer)
@@ -672,6 +749,9 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(MapPoint.serializer)
       ..add(MarkingType.serializer)
       ..add(MaterialCategoryOption.serializer)
+      ..add(MaterialOffer.serializer)
+      ..add(MaterialOfferAvailabilityEnum.serializer)
+      ..add(MaterialOfferListEnvelope.serializer)
       ..add(MaterialPriceObservation.serializer)
       ..add(MaterialPriceObservationEnvironmentEnum.serializer)
       ..add(MfaCodeRequest.serializer)
@@ -681,6 +761,16 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(MfaStatusEnvelope.serializer)
       ..add(MfaStatusEnvelopeAllOfData.serializer)
       ..add(MfaStatusEnvelopeAllOfDataMfaRequiredEnum.serializer)
+      ..add(ModerationDetail.serializer)
+      ..add(ModerationDetailAvailableActionsEnum.serializer)
+      ..add(ModerationDetailEnvelope.serializer)
+      ..add(ModerationDetailModerationStateEnum.serializer)
+      ..add(ModerationDetailReviewerPartyEnum.serializer)
+      ..add(ModerationDetailVisibilityEnum.serializer)
+      ..add(ModerationQueueEnvelope.serializer)
+      ..add(ModerationQueueRow.serializer)
+      ..add(ModerationQueueRowModerationStateEnum.serializer)
+      ..add(ModerationQueueRowTypeEnum.serializer)
       ..add(MoneyBreakdown.serializer)
       ..add(MoneyBreakdownCurrencyEnum.serializer)
       ..add(MoneyBreakdownExcludesEnum.serializer)
@@ -784,6 +874,9 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(OrderVendorRef.serializer)
       ..add(OrderVolumeTier.serializer)
       ..add(OverlapResolveRequest.serializer)
+      ..add(OwnReview.serializer)
+      ..add(OwnReviewTypeEnum.serializer)
+      ..add(OwnReviewVisibilityEnum.serializer)
       ..add(PageMeta.serializer)
       ..add(PasswordRecoveryRequest.serializer)
       ..add(PasswordRecoveryRequestPortalEnum.serializer)
@@ -885,6 +978,12 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(PsgcSearchEnvelope.serializer)
       ..add(PsgcSearchEnvelopeData.serializer)
       ..add(PublicAddressSummary.serializer)
+      ..add(PublicBadge.serializer)
+      ..add(PublicBadgeCodeEnum.serializer)
+      ..add(PublicReview.serializer)
+      ..add(PublicReviewListEnvelope.serializer)
+      ..add(PublicReviewTypeEnum.serializer)
+      ..add(PublicScores.serializer)
       ..add(PublicStoreListEnvelope.serializer)
       ..add(PublicStoreListEnvelopeMeta.serializer)
       ..add(PublicStoreProfile.serializer)
@@ -919,14 +1018,33 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(ReimbursementTimelineItem.serializer)
       ..add(ReimbursementTimelineItemStateEnum.serializer)
       ..add(ResendBotChallengeRequest.serializer)
+      ..add(ReviewDisplayOption.serializer)
+      ..add(ReviewDisplayOptionChoiceEnum.serializer)
+      ..add(ReviewFlagRequest.serializer)
+      ..add(ReviewFlagRequestReasonCodeEnum.serializer)
+      ..add(ReviewLine.serializer)
+      ..add(ReviewListMeta.serializer)
+      ..add(ReviewMediaLink.serializer)
+      ..add(ReviewModerationRequest.serializer)
+      ..add(ReviewModerationRequestActionEnum.serializer)
+      ..add(ReviewRatings.serializer)
+      ..add(ReviewRatingsSpeedKindEnum.serializer)
+      ..add(ReviewReported.serializer)
+      ..add(ReviewReportedEnvelope.serializer)
       ..add(ReviewResolveRequest.serializer)
+      ..add(ReviewWindowRules.serializer)
       ..add(RouteEstimate.serializer)
       ..add(RouteEstimateDurationBasisEnum.serializer)
       ..add(RouteEstimateEnvelope.serializer)
       ..add(RouteEstimateRequest.serializer)
       ..add(RouteEstimateRequestOriginSourceEnum.serializer)
+      ..add(ScoreExclusionRequest.serializer)
+      ..add(ScoreExclusionRequestReasonCodeEnum.serializer)
+      ..add(ScoreHistoryPoint.serializer)
       ..add(ScoreLabel.serializer)
       ..add(ScoreLabelKindEnum.serializer)
+      ..add(ScoreMetric.serializer)
+      ..add(ScoreMetricKeyEnum.serializer)
       ..add(StaleListing.serializer)
       ..add(StatementApproveRequest.serializer)
       ..add(StatementPaymentRequest.serializer)
@@ -947,6 +1065,8 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(StoreOpenNowStatusEnum.serializer)
       ..add(StoreOperatingDay.serializer)
       ..add(StoreOperatingDayStatusEnum.serializer)
+      ..add(StorePerformance.serializer)
+      ..add(StorePerformanceEnvelope.serializer)
       ..add(SupplierOpenStatus.serializer)
       ..add(SupplierOpenStatusBasisEnum.serializer)
       ..add(SupplierOpenStatusStatusEnum.serializer)
@@ -967,7 +1087,10 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(VendorAddressGeocode.serializer)
       ..add(VendorAddressGeocodeEnvelope.serializer)
       ..add(VendorAddressSelection.serializer)
+      ..add(VendorAnalyticsPoint.serializer)
+      ..add(VendorAnalyticsPointStatusEnum.serializer)
       ..add(VendorBotProtectionEvidence.serializer)
+      ..add(VendorBuyerRatingRequest.serializer)
       ..add(VendorCancelRequest.serializer)
       ..add(VendorCancelRequestReasonCodeEnum.serializer)
       ..add(VendorCancellationPreview.serializer)
@@ -975,6 +1098,8 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(VendorCancellationRequestRef.serializer)
       ..add(VendorCommissionAcceptance.serializer)
       ..add(VendorCommissionAcceptanceAcceptedEnum.serializer)
+      ..add(VendorCurrentCompetitors.serializer)
+      ..add(VendorCurrentCompetitorsStatusEnum.serializer)
       ..add(VendorDocument.serializer)
       ..add(VendorDocumentEnvelope.serializer)
       ..add(VendorDocumentScanStateEnum.serializer)
@@ -992,6 +1117,15 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(VendorInvitationRequest.serializer)
       ..add(VendorInvitationRequestRoleEnum.serializer)
       ..add(VendorInvoiceBillingDetails.serializer)
+      ..add(VendorMaterialsAnalyticsDetail.serializer)
+      ..add(VendorMaterialsAnalyticsDetailAudienceEnum.serializer)
+      ..add(VendorMaterialsAnalyticsDetailEnvelope.serializer)
+      ..add(VendorMaterialsAnalyticsDetailGroup.serializer)
+      ..add(VendorMaterialsAnalyticsDetailSourceKindEnum.serializer)
+      ..add(VendorMaterialsAnalyticsList.serializer)
+      ..add(VendorMaterialsAnalyticsListAudienceEnum.serializer)
+      ..add(VendorMaterialsAnalyticsListEnvelope.serializer)
+      ..add(VendorMaterialsAnalyticsListSourceKindEnum.serializer)
       ..add(VendorMediaEnvelope.serializer)
       ..add(VendorOnboardingEnvelope.serializer)
       ..add(VendorOnboardingSection.serializer)
@@ -1011,6 +1145,12 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(VendorOrderInvoicesStatusEnum.serializer)
       ..add(VendorOrderPermissions.serializer)
       ..add(VendorOrderPrimaryAction.serializer)
+      ..add(VendorOrderReviews.serializer)
+      ..add(VendorOrderReviewsEnvelope.serializer)
+      ..add(VendorOrderReviewsPartyEnum.serializer)
+      ..add(VendorOrderReviewsRevealReasonEnum.serializer)
+      ..add(VendorOrderReviewsStateEnum.serializer)
+      ..add(VendorOwnOffer.serializer)
       ..add(VendorPaymentOnboarding.serializer)
       ..add(VendorPaymentOnboardingEnvelope.serializer)
       ..add(VendorPaymentOnboardingEnvironmentEnum.serializer)
@@ -1018,6 +1158,11 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(VendorPaymentReconciliationEnvelope.serializer)
       ..add(VendorRestriction.serializer)
       ..add(VendorRestrictionEnvelope.serializer)
+      ..add(VendorReviewEditRequest.serializer)
+      ..add(VendorReviewListEnvelope.serializer)
+      ..add(VendorReviewRow.serializer)
+      ..add(VendorReviewRowTypeEnum.serializer)
+      ..add(VendorReviewRowVisibilityEnum.serializer)
       ..add(VendorSetupComplete.serializer)
       ..add(VendorSetupDraft.serializer)
       ..add(VendorSetupDraftDelivery.serializer)
@@ -1214,6 +1359,12 @@ Serializers _$serializers = (Serializers().toBuilder()
           const FullType(BuiltList, const [const FullType(ApiError)]),
           () => ListBuilder<ApiError>())
       ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(AdminScoreRow)]),
+          () => ListBuilder<AdminScoreRow>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ApiError)]),
+          () => ListBuilder<ApiError>())
+      ..addBuilderFactory(
           const FullType(BuiltList, const [
             const FullType(AdminVendorVerificationDecisionAuthorityScopesEnum)
           ]),
@@ -1259,12 +1410,46 @@ Serializers _$serializers = (Serializers().toBuilder()
           ]),
           () => ListBuilder<BuiltMap<String, JsonObject?>>())
       ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(AnalyticsRun)]),
+          () => ListBuilder<AnalyticsRun>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ApiError)]),
+          () => ListBuilder<ApiError>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(AnalyticsSource)]),
+          () => ListBuilder<AnalyticsSource>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ApiError)]),
+          () => ListBuilder<ApiError>())
+      ..addBuilderFactory(
           const FullType(
               BuiltList, const [const FullType(AutoAcceptPolicyVersion)]),
           () => ListBuilder<AutoAcceptPolicyVersion>())
       ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(AutoAcceptReason)]),
           () => ListBuilder<AutoAcceptReason>())
+      ..addBuilderFactory(
+          const FullType(
+              BuiltList, const [const FullType(BadgeStateScopesInner)]),
+          () => ListBuilder<BadgeStateScopesInner>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
       ..addBuilderFactory(
           const FullType(BuiltList, const [
             const FullType(BuiltMap, const [
@@ -1392,6 +1577,11 @@ Serializers _$serializers = (Serializers().toBuilder()
             ])
           ]),
           () => ListBuilder<BuiltMap<String, JsonObject?>>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [
+            const FullType(BuyerReviewSubmitRequestProductReviewsInner)
+          ]),
+          () => ListBuilder<BuyerReviewSubmitRequestProductReviewsInner>())
       ..addBuilderFactory(
           const FullType(
               BuiltList, const [const FullType(CancellationPlanPayment)]),
@@ -1592,6 +1782,10 @@ Serializers _$serializers = (Serializers().toBuilder()
           const FullType(
               BuiltList, const [const FullType(PaymentMethodEligibility)]),
           () => ListBuilder<PaymentMethodEligibility>())
+      ..addBuilderFactory(
+          const FullType(BuiltList,
+              const [const FullType(ComparableSpecificationAttributesInner)]),
+          () => ListBuilder<ComparableSpecificationAttributesInner>())
       ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(ComplianceRegister)]),
           () => ListBuilder<ComplianceRegister>())
@@ -1956,6 +2150,24 @@ Serializers _$serializers = (Serializers().toBuilder()
           ]),
           () => ListBuilder<BuiltMap<String, JsonObject?>>())
       ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(MaterialOffer)]),
+          () => ListBuilder<MaterialOffer>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ApiError)]),
+          () => ListBuilder<ApiError>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ModerationQueueRow)]),
+          () => ListBuilder<ModerationQueueRow>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ApiError)]),
+          () => ListBuilder<ApiError>())
+      ..addBuilderFactory(
           const FullType(
               BuiltList, const [const FullType(MoneyBreakdownExcludesEnum)]),
           () => ListBuilder<MoneyBreakdownExcludesEnum>())
@@ -2091,6 +2303,24 @@ Serializers _$serializers = (Serializers().toBuilder()
           ]),
           () => ListBuilder<BuiltMap<String, JsonObject?>>())
       ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(PublicBadge)]),
+          () => ListBuilder<PublicBadge>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(PublicBadge)]),
+          () => ListBuilder<PublicBadge>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(PublicBadge)]),
+          () => ListBuilder<PublicBadge>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(PublicReview)]),
+          () => ListBuilder<PublicReview>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(PublicReview)]),
+          () => ListBuilder<PublicReview>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ApiError)]),
+          () => ListBuilder<ApiError>())
+      ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(PublicStoreSummary)]),
           () => ListBuilder<PublicStoreSummary>())
       ..addBuilderFactory(
@@ -2111,6 +2341,100 @@ Serializers _$serializers = (Serializers().toBuilder()
           const FullType(
               BuiltList, const [const FullType(ReimbursementTimelineItem)]),
           () => ListBuilder<ReimbursementTimelineItem>())
+      ..addBuilderFactory(
+          const FullType(
+              BuiltList, const [const FullType(ReviewDisplayOption)]),
+          () => ListBuilder<ReviewDisplayOption>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ReviewLine)]),
+          () => ListBuilder<ReviewLine>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ReviewMediaLink)]),
+          () => ListBuilder<ReviewMediaLink>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ReviewMediaLink)]),
+          () => ListBuilder<ReviewMediaLink>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ReviewMediaLink)]),
+          () => ListBuilder<ReviewMediaLink>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ScoreMetric)]),
+          () => ListBuilder<ScoreMetric>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(BadgeMetric)]),
+          () => ListBuilder<BadgeMetric>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(BadgeState)]),
+          () => ListBuilder<BadgeState>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [
+            const FullType(BuiltMap, const [
+              const FullType(String),
+              const FullType.nullable(JsonObject)
+            ])
+          ]),
+          () => ListBuilder<BuiltMap<String, JsonObject?>>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [
+            const FullType(BuiltMap, const [
+              const FullType(String),
+              const FullType.nullable(JsonObject)
+            ])
+          ]),
+          () => ListBuilder<BuiltMap<String, JsonObject?>>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [
+            const FullType(BuiltMap, const [
+              const FullType(String),
+              const FullType.nullable(JsonObject)
+            ])
+          ]),
+          () => ListBuilder<BuiltMap<String, JsonObject?>>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ScoreHistoryPoint)]),
+          () => ListBuilder<ScoreHistoryPoint>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ScoreMetric)]),
+          () => ListBuilder<ScoreMetric>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(BadgeMetric)]),
+          () => ListBuilder<BadgeMetric>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ScoreHistoryPoint)]),
+          () => ListBuilder<ScoreHistoryPoint>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(BadgeState)]),
+          () => ListBuilder<BadgeState>())
       ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(StaleListing)]),
           () => ListBuilder<StaleListing>())
@@ -2135,12 +2459,18 @@ Serializers _$serializers = (Serializers().toBuilder()
           const FullType(BuiltList, const [const FullType(StoreHoursDay)]),
           () => ListBuilder<StoreHoursDay>())
       ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(PublicBadge)]),
+          () => ListBuilder<PublicBadge>())
+      ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(StoreOperatingDay)]),
           () => ListBuilder<StoreOperatingDay>())
       ..addBuilderFactory(
           const FullType(
               BuiltList, const [const FullType(VendorSetupDraftVehiclesInner)]),
           () => ListBuilder<VendorSetupDraftVehiclesInner>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(String)]),
+          () => ListBuilder<String>())
       ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(String)]),
           () => ListBuilder<String>())
@@ -2283,6 +2613,12 @@ Serializers _$serializers = (Serializers().toBuilder()
               BuiltList, const [const FullType(ThresholdStatusEvent)]),
           () => ListBuilder<ThresholdStatusEvent>())
       ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(VendorReviewRow)]),
+          () => ListBuilder<VendorReviewRow>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ApiError)]),
+          () => ListBuilder<ApiError>())
+      ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(VendorTeamActivity)]),
           () => ListBuilder<VendorTeamActivity>())
       ..addBuilderFactory(
@@ -2340,6 +2676,9 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(WorkPackageVersion)]),
           () => ListBuilder<WorkPackageVersion>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(int)]),
+          () => ListBuilder<int>())
       ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(int)]),
           () => ListBuilder<int>())
@@ -2474,6 +2813,150 @@ Serializers _$serializers = (Serializers().toBuilder()
             const FullType.nullable(JsonObject)
           ]),
           () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(AdminAnalyticsRow)]),
+          () => ListBuilder<AdminAnalyticsRow>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ApiError)]),
+          () => ListBuilder<ApiError>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ApiError)]),
+          () => ListBuilder<ApiError>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ApiError)]),
+          () => ListBuilder<ApiError>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ApiError)]),
+          () => ListBuilder<ApiError>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ApiError)]),
+          () => ListBuilder<ApiError>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ApiError)]),
+          () => ListBuilder<ApiError>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ApiError)]),
+          () => ListBuilder<ApiError>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ApiError)]),
+          () => ListBuilder<ApiError>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ApiError)]),
+          () => ListBuilder<ApiError>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ApiError)]),
+          () => ListBuilder<ApiError>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ApiError)]),
+          () => ListBuilder<ApiError>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ApiError)]),
+          () => ListBuilder<ApiError>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ApiError)]),
+          () => ListBuilder<ApiError>())
       ..addBuilderFactory(
           const FullType(BuiltMap, const [
             const FullType(String),
@@ -3493,6 +3976,54 @@ Serializers _$serializers = (Serializers().toBuilder()
           ]),
           () => MapBuilder<String, JsonObject?>())
       ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(BuyerAnalyticsRow)]),
+          () => ListBuilder<BuyerAnalyticsRow>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ComparableVariant)]),
+          () => ListBuilder<ComparableVariant>())
+      ..addBuilderFactory(
+          const FullType(
+              BuiltList, const [const FullType(AdminAnalyticsPoint)]),
+          () => ListBuilder<AdminAnalyticsPoint>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ComparableVariant)]),
+          () => ListBuilder<ComparableVariant>())
+      ..addBuilderFactory(
+          const FullType(
+              BuiltList, const [const FullType(BuyerAnalyticsPoint)]),
+          () => ListBuilder<BuyerAnalyticsPoint>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ComparableVariant)]),
+          () => ListBuilder<ComparableVariant>())
+      ..addBuilderFactory(
+          const FullType(
+              BuiltList, const [const FullType(VendorAnalyticsPoint)]),
+          () => ListBuilder<VendorAnalyticsPoint>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(DisputeEvidence)]),
           () => ListBuilder<DisputeEvidence>())
       ..addBuilderFactory(
@@ -3556,6 +4087,15 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(String)]),
           () => ListBuilder<String>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(VendorAnalyticsRow)]),
+          () => ListBuilder<VendorAnalyticsRow>())
       ..addBuilderFactory(
           const FullType(BuiltMap, const [
             const FullType(String),
@@ -3642,13 +4182,8 @@ Serializers _$serializers = (Serializers().toBuilder()
           ]),
           () => MapBuilder<String, JsonObject?>())
       ..addBuilderFactory(
-          const FullType(BuiltList, const [
-            const FullType(BuiltMap, const [
-              const FullType(String),
-              const FullType.nullable(JsonObject)
-            ])
-          ]),
-          () => ListBuilder<BuiltMap<String, JsonObject?>>())
+          const FullType(BuiltList, const [const FullType(ApiError)]),
+          () => ListBuilder<ApiError>())
       ..addBuilderFactory(
           const FullType(BuiltMap, const [
             const FullType(String),
@@ -3810,6 +4345,18 @@ Serializers _$serializers = (Serializers().toBuilder()
           ]),
           () => ListBuilder<BuiltMap<String, JsonObject?>>())
       ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
           const FullType(BuiltList, const [
             const FullType(BuiltMap, const [
               const FullType(String),
@@ -3817,6 +4364,57 @@ Serializers _$serializers = (Serializers().toBuilder()
             ])
           ]),
           () => ListBuilder<BuiltMap<String, JsonObject?>>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [
+            const FullType(BuiltMap, const [
+              const FullType(String),
+              const FullType.nullable(JsonObject)
+            ])
+          ]),
+          () => ListBuilder<BuiltMap<String, JsonObject?>>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [
+            const FullType(BuiltMap, const [
+              const FullType(String),
+              const FullType.nullable(JsonObject)
+            ])
+          ]),
+          () => ListBuilder<BuiltMap<String, JsonObject?>>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [
+            const FullType(BuiltMap, const [
+              const FullType(String),
+              const FullType.nullable(JsonObject)
+            ])
+          ]),
+          () => ListBuilder<BuiltMap<String, JsonObject?>>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [
+            const FullType(BuiltMap, const [
+              const FullType(String),
+              const FullType.nullable(JsonObject)
+            ])
+          ]),
+          () => ListBuilder<BuiltMap<String, JsonObject?>>())
+      ..addBuilderFactory(
+          const FullType(BuiltList,
+              const [const FullType(ModerationDetailAvailableActionsEnum)]),
+          () => ListBuilder<ModerationDetailAvailableActionsEnum>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ReviewMediaLink)]),
+          () => ListBuilder<ReviewMediaLink>())
       ..addBuilderFactory(
           const FullType(BuiltMap, const [
             const FullType(String),

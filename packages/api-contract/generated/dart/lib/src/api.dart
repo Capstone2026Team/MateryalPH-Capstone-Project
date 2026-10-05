@@ -13,8 +13,11 @@ import 'package:materyalph_api_client/src/api/accounts_api.dart';
 import 'package:materyalph_api_client/src/api/admin_disputes_api.dart';
 import 'package:materyalph_api_client/src/api/admin_finance_api.dart';
 import 'package:materyalph_api_client/src/api/admin_invoices_api.dart';
+import 'package:materyalph_api_client/src/api/admin_materials_analytics_api.dart';
 import 'package:materyalph_api_client/src/api/admin_order_operations_api.dart';
 import 'package:materyalph_api_client/src/api/admin_product_compliance_api.dart';
+import 'package:materyalph_api_client/src/api/admin_review_moderation_api.dart';
+import 'package:materyalph_api_client/src/api/admin_score_monitoring_api.dart';
 import 'package:materyalph_api_client/src/api/admin_vendor_verification_api.dart';
 import 'package:materyalph_api_client/src/api/agreements_api.dart';
 import 'package:materyalph_api_client/src/api/authentication_api.dart';
@@ -25,9 +28,11 @@ import 'package:materyalph_api_client/src/api/buyer_explore_api.dart';
 import 'package:materyalph_api_client/src/api/buyer_fulfillment_api.dart';
 import 'package:materyalph_api_client/src/api/buyer_invoices_api.dart';
 import 'package:materyalph_api_client/src/api/buyer_locations_api.dart';
+import 'package:materyalph_api_client/src/api/buyer_materials_analytics_api.dart';
 import 'package:materyalph_api_client/src/api/buyer_orders_api.dart';
 import 'package:materyalph_api_client/src/api/buyer_payments_api.dart';
 import 'package:materyalph_api_client/src/api/buyer_projects_api.dart';
+import 'package:materyalph_api_client/src/api/buyer_reviews_api.dart';
 import 'package:materyalph_api_client/src/api/messaging_api.dart';
 import 'package:materyalph_api_client/src/api/payment_webhooks_api.dart';
 import 'package:materyalph_api_client/src/api/stores_api.dart';
@@ -40,8 +45,11 @@ import 'package:materyalph_api_client/src/api/vendor_fleet_api.dart';
 import 'package:materyalph_api_client/src/api/vendor_fulfillment_api.dart';
 import 'package:materyalph_api_client/src/api/vendor_inventory_api.dart';
 import 'package:materyalph_api_client/src/api/vendor_invoices_api.dart';
+import 'package:materyalph_api_client/src/api/vendor_materials_analytics_api.dart';
 import 'package:materyalph_api_client/src/api/vendor_onboarding_api.dart';
 import 'package:materyalph_api_client/src/api/vendor_orders_api.dart';
+import 'package:materyalph_api_client/src/api/vendor_reviews_api.dart';
+import 'package:materyalph_api_client/src/api/vendor_store_performance_api.dart';
 
 class MateryalphApiClient {
   static const String basePath = r'/api/v1';
@@ -161,6 +169,12 @@ class MateryalphApiClient {
     return AdminInvoicesApi(dio, serializers);
   }
 
+  /// Get AdminMaterialsAnalyticsApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  AdminMaterialsAnalyticsApi getAdminMaterialsAnalyticsApi() {
+    return AdminMaterialsAnalyticsApi(dio, serializers);
+  }
+
   /// Get AdminOrderOperationsApi instance, base route and serializer can be overridden by a given but be careful,
   /// by doing that all interceptors will not be executed
   AdminOrderOperationsApi getAdminOrderOperationsApi() {
@@ -171,6 +185,18 @@ class MateryalphApiClient {
   /// by doing that all interceptors will not be executed
   AdminProductComplianceApi getAdminProductComplianceApi() {
     return AdminProductComplianceApi(dio, serializers);
+  }
+
+  /// Get AdminReviewModerationApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  AdminReviewModerationApi getAdminReviewModerationApi() {
+    return AdminReviewModerationApi(dio, serializers);
+  }
+
+  /// Get AdminScoreMonitoringApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  AdminScoreMonitoringApi getAdminScoreMonitoringApi() {
+    return AdminScoreMonitoringApi(dio, serializers);
   }
 
   /// Get AdminVendorVerificationApi instance, base route and serializer can be overridden by a given but be careful,
@@ -233,6 +259,12 @@ class MateryalphApiClient {
     return BuyerLocationsApi(dio, serializers);
   }
 
+  /// Get BuyerMaterialsAnalyticsApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  BuyerMaterialsAnalyticsApi getBuyerMaterialsAnalyticsApi() {
+    return BuyerMaterialsAnalyticsApi(dio, serializers);
+  }
+
   /// Get BuyerOrdersApi instance, base route and serializer can be overridden by a given but be careful,
   /// by doing that all interceptors will not be executed
   BuyerOrdersApi getBuyerOrdersApi() {
@@ -249,6 +281,12 @@ class MateryalphApiClient {
   /// by doing that all interceptors will not be executed
   BuyerProjectsApi getBuyerProjectsApi() {
     return BuyerProjectsApi(dio, serializers);
+  }
+
+  /// Get BuyerReviewsApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  BuyerReviewsApi getBuyerReviewsApi() {
+    return BuyerReviewsApi(dio, serializers);
   }
 
   /// Get MessagingApi instance, base route and serializer can be overridden by a given but be careful,
@@ -323,6 +361,12 @@ class MateryalphApiClient {
     return VendorInvoicesApi(dio, serializers);
   }
 
+  /// Get VendorMaterialsAnalyticsApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  VendorMaterialsAnalyticsApi getVendorMaterialsAnalyticsApi() {
+    return VendorMaterialsAnalyticsApi(dio, serializers);
+  }
+
   /// Get VendorOnboardingApi instance, base route and serializer can be overridden by a given but be careful,
   /// by doing that all interceptors will not be executed
   VendorOnboardingApi getVendorOnboardingApi() {
@@ -333,5 +377,17 @@ class MateryalphApiClient {
   /// by doing that all interceptors will not be executed
   VendorOrdersApi getVendorOrdersApi() {
     return VendorOrdersApi(dio, serializers);
+  }
+
+  /// Get VendorReviewsApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  VendorReviewsApi getVendorReviewsApi() {
+    return VendorReviewsApi(dio, serializers);
+  }
+
+  /// Get VendorStorePerformanceApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  VendorStorePerformanceApi getVendorStorePerformanceApi() {
+    return VendorStorePerformanceApi(dio, serializers);
   }
 }

@@ -4,6 +4,8 @@
 
 // ignore_for_file: unused_element
 import 'package:materyalph_api_client/src/model/score_label.dart';
+import 'package:built_collection/built_collection.dart';
+import 'package:materyalph_api_client/src/model/public_badge.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -17,6 +19,7 @@ part 'listing_vendor_card.g.dart';
 /// * [logoUrl]
 /// * [scoreLabel]
 /// * [vacationMode]
+/// * [badges] - Active automatic badges (text plus icon); Admin-suppressed badges are omitted.
 @BuiltValue()
 abstract class ListingVendorCard implements Built<ListingVendorCard, ListingVendorCardBuilder> {
   @BuiltValueField(wireName: r'id')
@@ -33,6 +36,10 @@ abstract class ListingVendorCard implements Built<ListingVendorCard, ListingVend
 
   @BuiltValueField(wireName: r'vacation_mode')
   bool get vacationMode;
+
+  /// Active automatic badges (text plus icon); Admin-suppressed badges are omitted.
+  @BuiltValueField(wireName: r'badges')
+  BuiltList<PublicBadge>? get badges;
 
   ListingVendorCard._();
 
@@ -82,6 +89,13 @@ class _$ListingVendorCardSerializer implements PrimitiveSerializer<ListingVendor
       object.vacationMode,
       specifiedType: const FullType(bool),
     );
+    if (object.badges != null) {
+      yield r'badges';
+      yield serializers.serialize(
+        object.badges,
+        specifiedType: const FullType(BuiltList, [FullType(PublicBadge)]),
+      );
+    }
   }
 
   @override
@@ -140,6 +154,14 @@ class _$ListingVendorCardSerializer implements PrimitiveSerializer<ListingVendor
             specifiedType: const FullType(bool),
           ) as bool;
           result.vacationMode = valueDes;
+          break;
+        case r'badges':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltList, [FullType(PublicBadge)]),
+          ) as BuiltList<PublicBadge>?;
+          if (valueDes == null) continue;
+          result.badges.replace(valueDes);
           break;
         default:
           unhandled.add(key);

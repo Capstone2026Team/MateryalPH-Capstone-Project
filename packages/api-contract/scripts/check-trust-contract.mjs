@@ -1,0 +1,83 @@
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { spawnSync } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
+import { parse } from 'yaml'
+
+// Phase 14 contract test: every documented review, score and Materials Analytics operation exists with the right
+// transport and audience middleware, every Phase 14 route is documented, retry-sensitive mutations require an
+// Idempotency-Key, signed photo links require the signature middleware, no review delete or badge award operation
+// exists, and the Vendor analytics resources cannot carry competitor offers, identities or sub-threshold counts.
+const spec = parse(readFileSync(new URL('../openapi.yaml', import.meta.url), 'utf8'))
+const routeFile = process.argv[2]
+let routes
+if (routeFile) {
+  routes = JSON.parse(readFileSync(routeFile, 'utf8'))
+} else {
+  const result = spawnSync('php', ['artisan', 'route:list', '--json', '-v'], { cwd: fileURLToPath(new URL('../../../services/api/', import.meta.url)), encoding: 'utf8', timeout: 60000 })
+  assert.equal(result.status, 0, 'Laravel route export must succeed')
+  routes = JSON.parse(result.stdout)
+}
+const TAGS = { 'Buyer Reviews': 'BUYER', 'Vendor Reviews': 'VENDOR', 'Vendor Store Performance': 'VENDOR', 'Admin Review Moderation': 'ADMIN', 'Admin Score Monitoring': 'ADMIN',
+  'Buyer Materials Analytics': 'BUYER', 'Vendor Materials Analytics': 'VENDOR', 'Admin Materials Analytics': 'ADMIN' }
+// Read-only analytics queries use POST only to keep Buyer origins out of URLs.
+const NO_KEY = [/^\/buyers\/materials-analytics/]
+const expected = new Set()
+for (const [path, methods] of Object.entries(spec.paths)) {
+  for (const [method, operation] of Object.entries(methods)) {
+    const tag = operation.tags?.find(value => value in TAGS)
+    if (!tag) continue
+    const uri = `api/v1${path.replace(/\{[^}]+\}/g, '{}')}`
+    const key = `${method.toUpperCase()} ${uri}`
+    expected.add(key)
+    const actual = routes.find(route => route.uri.replace(/\{[^}]+\}/g, '{}') === uri && route.method.split('|').includes(method.toUpperCase()))
+    assert.ok(actual, `Missing Laravel route ${key}`)
+    const audience = TAGS[tag]
+    const has = (...names) => names.some(name => actual.middleware.includes(name))
+    assert.ok(has('auth:api', 'Illuminate\\Auth\\Middleware\\Authenticate:api') && has(`account.access:${audience}`, `App\\Http\\Middleware\\RequireAccountAccess:${audience}`), `${key} must authorize the ${audience}`)
+    if (audience !== 'BUYER' && method !== 'get') assert.ok(has('App\\Http\\Middleware\\VerifyAccountCsrf'), `${key} must verify CSRF`)
+    if (audience === 'BUYER') assert.deepEqual(operation.security, [{ passportBearer: [] }], `${key} uses the native Buyer bearer`)
+    else assert.deepEqual(operation.security, [{ accessCookie: [], webCsrf: [] }], `${key} uses cookies with CSRF`)
+    assert.ok(operation.responses['401'] && operation.responses['403'], `${key} documents authentication and authorization errors`)
+    if (method === 'post' && !NO_KEY.some(pattern => pattern.test(path))) {
+      assert.ok(operation.parameters?.some(p => p.name === 'Idempotency-Key' && p.required), `${key} requires an Idempotency-Key`)
+    }
+    if (/\/content$/.test(path)) {
+      assert.ok(has('signed', 'Illuminate\\Routing\\Middleware\\ValidateSignature'), `${key} is a short-lived signed link`)
+      assert.ok(operation.parameters?.some(p => p.name === 'signature' && p.required), `${key} documents the signature`)
+    }
+  }
+}
+const phaseFourteen = /^api\/v1\/((buyers|vendor|admin)\/(reviews|materials-analytics)|(buyers|vendor)\/orders\/\{[^}]+\}\/(reviews|buyer-rating)|buyers\/(listings|stores)\/\{[^}]+\}\/reviews|vendor\/performance|admin\/scores)/
+for (const route of routes.filter(route => phaseFourteen.test(route.uri))) {
+  for (const method of route.method.split('|').filter(method => method !== 'HEAD')) {
+    assert.ok(expected.has(`${method} ${route.uri.replace(/\{[^}]+\}/g, '{}')}`), `Undocumented Phase 14 route ${method} ${route.uri}`)
+  }
+}
+// No operation deletes a review (photo retirement only) and none awards a badge or sets a score.
+for (const [path, methods] of Object.entries(spec.paths)) {
+  if (/reviews\/\{reviewId\}$/.test(path)) assert.ok(!('delete' in methods), `${path} must not delete a review`)
+  assert.ok(!/\/badges$|\/scores\/\{vendorId\}\/(score|award)/.test(path), `${path} must not award a badge or set a score`)
+}
+assert.ok(!routes.some(route => /api\/v1\/vendor\/reviews\/\{[^}]+\}$/.test(route.uri) && route.method.includes('DELETE')), 'No Vendor review delete route')
+const s = spec.components.schemas
+assert.deepEqual(s.ReviewModerationRequest.properties.action.enum, ['DISMISS_FLAG', 'REQUEST_CORRECTION', 'HIDE_PENDING_REVIEW', 'REMOVE', 'RESTORE'])
+assert.deepEqual(s.BadgeSuppressionRequest.properties.reason_code.enum, ['FRAUD', 'COMPLIANCE'])
+assert.ok(!s.BadgeSuppressionRequest.properties.badge_code.enum.includes('BEST_PRICE'), 'Best Price is evaluated at query time and never stored')
+assert.deepEqual(s.ScoreExclusionRequest.properties.reason_code.enum, ['FRAUD', 'DUPLICATE', 'TEST', 'INVALID_SOURCE'])
+// Vendor analytics resources: aggregates only, no identities, no offers, no exact sub-threshold count.
+const identity = /store_name|vendor_id|organization|listing_id|offer|coordinate|latitude|longitude|minimum|maximum|vendor_ids|average_php_exact|logo/i
+for (const name of ['VendorAnalyticsPoint', 'VendorCurrentCompetitors', 'VendorMaterialsAnalyticsList']) {
+  for (const field of Object.keys(s[name].properties)) assert.ok(!identity.test(field), `${name}.${field} must not identify a competitor`)
+}
+assert.equal(s.VendorAnalyticsPoint.properties.competitor_count.minimum, 3, 'A displayed competitor count is never below three')
+assert.ok(!Object.keys(spec.paths).some(path => /^\/vendor\/materials-analytics\/\{groupId\}\/offers/.test(path)), 'Vendors have no competitor-offers child')
+for (const name of ['VendorAnalyticsRow', 'VendorMaterialsAnalyticsDetail', 'StorePerformance']) {
+  for (const field of Object.keys(s[name].properties ?? {})) assert.ok(!/commission|withholding|earning|payout|taxpayer|remittance|fee_statement|transaction/i.test(field), `${name}.${field} must not expose protected finance`)
+}
+assert.equal(s.BuyerMaterialsAnalyticsRequest.additionalProperties, false, 'Undocumented analytics filters are refused')
+assert.deepEqual(s.AnalyticsWindow.properties.max_days, { type: 'integer' })
+assert.ok(JSON.stringify(s.AnalyticsTrend.properties.reason).includes('INSUFFICIENT_COMPETITOR_DATA'), 'Null trends carry their reason')
+assert.ok(s.PublicBadge && s.ListingVendorCard.properties.badges && s.PublicStoreProfile.properties.badges, 'Badges are published on vendor cards and store profiles')
+assert.match(spec.info.version, /phase\.(1[4-9]|20)$/)
+console.log(`Trust and analytics contract passed: ${expected.size} operations, transports, signed links, idempotency, no delete/award path and aggregate-only Vendor analytics`)

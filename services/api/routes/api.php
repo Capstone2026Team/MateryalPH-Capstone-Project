@@ -93,3 +93,4 @@ require __DIR__.'/projects.php';
 require __DIR__.'/payments.php';
 require __DIR__.'/fulfillment.php';
 require __DIR__.'/disputes.php';
+require __DIR__.'/trust.php';
