@@ -10,10 +10,10 @@ use App\Models\User;
 use App\Models\VendorMembership;
 use App\Models\VendorOrganization;
 use Database\Seeders\SystemFoundationSeeder;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Tests\Support\RebuildsIsolatedDatabase;
 use Tests\TestCase;
 
 /**
@@ -22,7 +22,7 @@ use Tests\TestCase;
  */
 final class InventoryConcurrencyTest extends TestCase
 {
-    use DatabaseMigrations;
+    use RebuildsIsolatedDatabase;
 
     public function test_a_concurrent_manual_edit_waits_for_the_lock_and_then_conflicts_instead_of_overwriting(): void
     {

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Vendors;
 
+use App\Domain\Notifications\OnboardingNotices;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -170,6 +171,9 @@ final class OnboardingRequirementResolver
                 $query->update(['status' => $status, 'blocking' => ! in_array($status, ['COMPLETED', 'NOT_APPLICABLE'], true),
                     'applicability_reason' => $status === 'NOT_APPLICABLE' ? 'Vendor selected Self-Pickup only.' : null,
                     'lock_version' => (int) $row->lock_version + 1, 'updated_at' => now()]);
+                if (in_array($row->status, ['COMPLETED', 'NOT_APPLICABLE'], true) && ! in_array($status, ['COMPLETED', 'NOT_APPLICABLE'], true)) {
+                    app(OnboardingNotices::class)->fromAudit('setup:'.$row->id.':'.$row->lock_version, 'VENDOR_SETUP_INVALIDATED', 'VENDOR_ORGANIZATION', $organizationId, $organizationId, ['requirement' => $key]);
+                }
             }
         }
         if (DB::table('vendor_organizations')->where('id', $organizationId)->where('store_setup_status', 'COMPLETED')->exists()

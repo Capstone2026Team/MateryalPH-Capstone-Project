@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Finance;
 
 use App\Domain\Identity\AuthenticationException;
+use App\Domain\Reporting\TaxCalendar;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -100,6 +101,9 @@ final class RemittanceAssessmentService
                 'id' => $assessmentId, 'remittance_group_id' => $groupId, 'financial_snapshot_id' => $input['financial_snapshot_id'], 'order_id' => $input['order_id'],
                 'environment' => $input['environment'], 'taxpayer_key_hash' => $context['taxpayer_key'], 'obligation_type' => self::OBLIGATION,
                 'assigned_withholding_entity' => $context['scenario'], 'collections_centavos' => $input['collected'], 'refunds_centavos' => $input['refunds'],
+                'tax_profile_version_id' => $context['version_id'],
+                'reporting_atc' => TaxCalendar::atc($context['scenario'], $context['entity_class'], $input['instant']->setTimezone('Asia/Manila')->toDateString()),
+                'atc_rule_version' => 'FIN08-RMO26-2025-DEMO-v1',
                 'discounts_refunded_centavos' => 0, 'vat_refunded_centavos' => 0, 'delivery_centavos' => $input['delivery'], 'vat_centavos' => $input['vat'],
                 'provider_charge_centavos' => $input['provider_charge'], 'principal_centavos' => $input['principal'], 'gross_basis_centavos' => max(0, $gross),
                 'withheld_centavos' => $withheld, 'threshold_before_centavos' => $before, 'threshold_after_centavos' => $decision['g_after_centavos'] ?? $before,

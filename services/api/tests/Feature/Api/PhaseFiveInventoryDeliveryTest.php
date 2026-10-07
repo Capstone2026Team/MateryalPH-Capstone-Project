@@ -11,6 +11,7 @@ use App\Domain\Inventory\AutoAcceptGate;
 use App\Domain\Inventory\AutoAcceptPolicyService;
 use App\Domain\Inventory\InventoryLocks;
 use App\Domain\Messaging\BuyerInboxChannel;
+use App\Domain\Notifications\NotificationPolicy;
 use App\Domain\Operations\OutboxProcessor;
 use App\Domain\Operations\OutboxPublisher;
 use App\Domain\Vendors\ConfirmedDeliverySnapshot;
@@ -23,12 +24,14 @@ use App\Models\VendorMembership;
 use App\Models\VendorOrganization;
 use Carbon\CarbonImmutable;
 use Database\Seeders\SystemFoundationSeeder;
+use Illuminate\Contracts\Broadcasting\Broadcaster;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Broadcast;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
@@ -241,6 +244,8 @@ final class PhaseFiveInventoryDeliveryTest extends TestCase
             ->assertJsonPath('data.policy.status', 'PAUSED')->assertJsonPath('data.policy.pause_reason', 'ALLOTMENT_EXHAUSTED');
         foreach ([$owner, $manager, $inventory] as $recipient) {
             $this->assertDatabaseHas('notifications', ['user_id' => $recipient->id, 'category' => 'AUTO_ACCEPT', 'title' => 'Auto-accept paused']);
+            $notice = DB::table('notifications')->where('user_id', $recipient->id)->where('category', 'AUTO_ACCEPT')->first();
+            self::assertSame('/products/inventory', app(NotificationPolicy::class)->target($recipient, $notice));
         }
         $this->assertDatabaseMissing('notifications', ['user_id' => $staff->id, 'category' => 'AUTO_ACCEPT']);
         self::assertSame(3, DB::table('outbox_events')->where('event_type', 'VENDOR_INVENTORY_NOTICE')->count());
@@ -426,6 +431,7 @@ final class PhaseFiveInventoryDeliveryTest extends TestCase
 
     public function test_fleet_and_delivery_changes_broadcast_private_empty_invalidations_only_to_current_managers(): void
     {
+        Queue::fake();
         [$organization, $owner] = $this->activeStore(delivery: true);
         $manager = $this->member($organization, 'STORE_MANAGER');
         $this->member($organization, 'STORE_STAFF');
@@ -436,7 +442,7 @@ final class PhaseFiveInventoryDeliveryTest extends TestCase
         self::assertNotNull($event);
         self::assertNull($event->processed_at);
         config()->set('broadcasting.default', 'reverb');
-        $broadcast = \Mockery::mock(\Illuminate\Contracts\Broadcasting\Broadcaster::class);
+        $broadcast = \Mockery::mock(Broadcaster::class);
         Broadcast::shouldReceive('connection')->with('reverb')->andReturn($broadcast);
         $ownerChannel = 'private-'.app(BuyerInboxChannel::class)->name($owner);
         $managerChannel = 'private-'.app(BuyerInboxChannel::class)->name($manager);

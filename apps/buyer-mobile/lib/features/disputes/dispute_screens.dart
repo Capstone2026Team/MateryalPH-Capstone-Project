@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../design_system/components/buyer_overlays.dart';
 import '../../design_system/components/buyer_app_bar.dart';
 import '../../design_system/components/dispute_components.dart';
 import '../../design_system/components/fulfillment_components.dart'
@@ -52,22 +53,7 @@ Future<void> openCaseFile(
   if (contentType.startsWith('image/')) {
     await showDialog<void>(
       context: context,
-      builder: (context) => Dialog(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Flexible(
-              child: InteractiveViewer(
-                child: Image.memory(bytes, semanticLabel: name),
-              ),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Close'),
-            ),
-          ],
-        ),
-      ),
+      builder: (context) => BuyerImageDialog(bytes: bytes, label: name),
     );
     return;
   }
@@ -218,7 +204,7 @@ class _PromptDialogState extends State<_PromptDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => AlertDialog(
+  Widget build(BuildContext context) => BuyerDialog(
     title: Text(widget.title),
     content: SingleChildScrollView(
       child: Column(
@@ -1261,7 +1247,7 @@ class _ProposalCard extends StatelessWidget {
   Future<void> _confirm(BuildContext context, bool accept) async {
     final ok = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => BuyerDialog(
         title: Text(accept ? 'Accept this proposal?' : 'Reject this proposal?'),
         content: Text(
           accept

@@ -12,6 +12,7 @@ use App\Domain\Finance\WithholdingThresholdService;
 use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Identity\EmailOtpService;
+use App\Domain\Notifications\OnboardingNotices;
 use App\Domain\Operations\OutboxPublisher;
 use App\Http\Requests\Vendor\VendorVerificationDraftRequest;
 use App\Policies\VendorEvidencePolicy;
@@ -1003,6 +1004,7 @@ final class VendorOnboardingService
             $result = $this->xendit->reconcile((string) $account->provider_account_id);
         } catch (XenditProviderUnavailable) {
             DB::table('vendor_payment_accounts')->where('id', $account->id)->where('lock_version', $account->lock_version)->update(['last_error_code' => 'PROVIDER_UNAVAILABLE', 'updated_at' => now()]);
+            app(OnboardingNotices::class)->fromAudit('reconciliation:'.$account->id.':'.$account->lock_version, 'VENDOR_PAYMENT_RECONCILIATION_FAILED', 'VENDOR_PAYMENT_ACCOUNT', $account->id, $account->vendor_organization_id, []);
 
             return ['status' => $account->connection_status, 'provider_available' => false, 'message' => 'Xendit is temporarily unavailable. The saved connection state is unchanged.'];
         }

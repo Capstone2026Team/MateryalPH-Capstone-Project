@@ -19,7 +19,7 @@ for (const [path, methods] of Object.entries(spec.paths)) {
   for (const [method, operation] of Object.entries(methods)) {
     if (!operation.tags?.includes('Messaging')) continue
     assert.ok(operation.responses['401'] && operation.responses['403'] && operation.responses['409'])
-    const portals = operation.parameters.find(p => p.name === 'messagingPortal').schema.enum
+    const portals = operation.parameters.find(p => p.name === 'messagingPortal')?.schema.enum ?? ['vendor']
     for (const portal of portals) {
       const uri = `api/v1${path.replace('{messagingPortal}', portal)}`
       const route = routes.find(r => r.uri === uri && r.method.split('|').includes(method.toUpperCase()))
@@ -30,7 +30,7 @@ for (const [path, methods] of Object.entries(spec.paths)) {
       assert.match(middleware, portal === 'buyers' ? /RequireAccountAccess:BUYER|account.access:BUYER/ : /RequireAccountAccess:VENDOR|account.access:VENDOR/)
       if (portal === 'vendor' && method !== 'get') assert.match(middleware, /VerifyAccountCsrf/)
     }
-    if (['publishChatQuotation', 'startNextChatQuotation', 'decideChatQuotation', 'createConversation'].includes(operation.operationId)) {
+    if (['publishChatQuotation', 'startNextChatQuotation', 'decideChatQuotation', 'createConversation', 'openVendorOrderConversation'].includes(operation.operationId)) {
       assert.ok(operation.parameters.some(p => p.name === 'Idempotency-Key' && p.required))
     }
   }

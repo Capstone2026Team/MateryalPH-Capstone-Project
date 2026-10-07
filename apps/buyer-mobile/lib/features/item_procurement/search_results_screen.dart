@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../design_system/components/buyer_overlays.dart';
 import '../../design_system/components/discovery_controls.dart';
 import '../../design_system/components/procurement_components.dart';
 import '../../design_system/generated/color_tokens.dart';
@@ -75,10 +76,8 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
 
   Future<void> _chooseRelevance() async {
     final current = _controller.effectiveSort;
-    final choice = await showModalBottomSheet<ListingSort>(
+    final choice = await showBuyerBottomSheet<ListingSort>(
       context: context,
-      useSafeArea: true,
-      isScrollControlled: true,
       builder: (context) => SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(8, 8, 8, 16),
         child: Column(
@@ -128,10 +127,8 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
   }
 
   Future<void> _chooseRadius() async {
-    final selected = await showModalBottomSheet<int>(
+    final selected = await showBuyerBottomSheet<int>(
       context: context,
-      useSafeArea: true,
-      isScrollControlled: true,
       builder: (context) => SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(8, 8, 8, 16),
         child: Column(
@@ -166,10 +163,8 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
     }
   }
 
-  void _explain(ListingCardView card) => showModalBottomSheet<void>(
+  void _explain(ListingCardView card) => showBuyerBottomSheet<void>(
     context: context,
-    useSafeArea: true,
-    isScrollControlled: true,
     builder: (context) => SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       child: RankingExplanation(card: card),

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { AlertTriangle, Camera, ClipboardCheck, MessageSquare, PauseCircle, ShieldAlert, Truck, UserRoundCheck } from 'lucide-react'
 import {
-  Button, CancellationAvailability, ConfirmDialog, DeadlineCountdown, Field, MilestoneStepper, RefundTimeline, StatusBadge, StatusMessage,
+  Button, CancellationAvailability, ConfirmDialog, DeadlineCountdown, Field, FileSelectionField, MilestoneStepper, RefundTimeline, StatusBadge, StatusMessage,
   formatManilaDateTime, formatPesoCentavos, readOrderEvidenceFile, roleLabel,
 } from '@materyalph/web-ui'
 import type { FulfillmentProof, FulfillmentStep } from '@materyalph/api-client-ts'
@@ -154,10 +154,10 @@ function MilestoneAction({ order, onChanged, onReload }: { order: OrderDetail; o
       <Field label={milestone === 'DELIVERED' ? 'Receiver name' : 'Collected by'} name="receiver_name" required value={receiver} maxLength={120} error={errors.receiver_name} onChange={event => setReceiver(event.target.value)} />
       {milestone === 'PICKED_UP' && <label className="grid gap-2 text-sm font-semibold">Receiver<select className={control} value={receiverKind} onChange={event => setReceiverKind(event.target.value as 'BUYER' | 'AUTHORIZED_RECEIVER')}>
         <option value="BUYER">The Buyer</option><option value="AUTHORIZED_RECEIVER">An authorized receiver</option></select></label>}
-      <label className="grid gap-2 text-sm font-semibold">{milestone === 'DELIVERED' ? 'Delivery photo' : 'Handover photo (optional)'}{milestone === 'DELIVERED' && <span className="sr-only"> (required)</span>}
-        <input type="file" accept="image/png,image/jpeg" className="min-h-12 w-full min-w-0 text-sm" aria-invalid={Boolean(errors.file)} onChange={event => setPhoto(event.target.files?.[0] ?? null)} /></label>
-      {milestone === 'DELIVERED' && <label className="grid gap-2 text-sm font-semibold">Receiver signature (optional)<input type="file" accept="image/png,image/jpeg" className="min-h-12 w-full min-w-0 text-sm" onChange={event => setSignature(event.target.files?.[0] ?? null)} /></label>}
-      {errors.file && <p className="text-sm text-status-error sm:col-span-2" role="alert">{errors.file}</p>}
+      <div className={milestone === 'PICKED_UP' ? 'min-w-0 sm:col-span-2' : 'min-w-0'}>
+        <FileSelectionField label={milestone === 'DELIVERED' ? 'Delivery photo' : 'Handover photo (optional)'} chooseLabel="Choose photo" accept="image/png,image/jpeg" hint="JPG or PNG" required={milestone === 'DELIVERED'} file={photo} disabled={busy} error={errors.file} onChange={setPhoto} />
+      </div>
+      {milestone === 'DELIVERED' && <FileSelectionField label="Receiver signature (optional)" chooseLabel="Choose signature" accept="image/png,image/jpeg" hint="JPG or PNG" file={signature} disabled={busy} onChange={setSignature} />}
       {milestone === 'PICKED_UP' && <label className="flex min-h-11 items-start gap-3 text-sm sm:col-span-2"><input type="checkbox" className="mt-0.5 h-5 w-5 accent-action-primary" checked={handover} onChange={event => setHandover(event.target.checked)} />
         <span>I handed over every line of this order to the person named above.</span></label>}
       {errors.handover_confirmed && <p className="text-sm text-status-error sm:col-span-2" role="alert">{errors.handover_confirmed}</p>}

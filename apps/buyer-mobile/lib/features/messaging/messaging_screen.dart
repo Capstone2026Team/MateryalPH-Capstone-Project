@@ -18,6 +18,7 @@ import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 
 import 'package:share_plus/share_plus.dart';
 
+import '../../design_system/components/buyer_overlays.dart';
 import '../../design_system/components/messaging_components.dart';
 
 import '../../design_system/theme.dart';
@@ -35,6 +36,7 @@ import '../orders/order_details_screen.dart';
 class MessagingScreen extends StatefulWidget {
   const MessagingScreen({
     super.key,
+    this.active = true,
     required this.repository,
     this.conversationId,
     this.orders,
@@ -46,6 +48,7 @@ class MessagingScreen extends StatefulWidget {
   });
 
   final MessagingRepository repository;
+  final bool active;
 
   final String? conversationId;
   final OrdersRepository? orders;
@@ -170,6 +173,7 @@ class _MessagingScreenState extends State<MessagingScreen>
   Timer? _timer;
 
   void Function()? _stop;
+  int _subscriptionGeneration = 0;
 
   @override
   void initState() {
@@ -181,6 +185,7 @@ class _MessagingScreenState extends State<MessagingScreen>
 
     _timer = Timer.periodic(const Duration(seconds: 2), (_) {
       if (!mounted ||
+          !widget.active ||
           !_foreground ||
           ModalRoute.of(context)?.isCurrent == false) {
         return;
@@ -220,6 +225,7 @@ class _MessagingScreenState extends State<MessagingScreen>
 
   @override
   void dispose() {
+    _subscriptionGeneration++;
     WidgetsBinding.instance.removeObserver(this);
     _scroll.dispose();
     _timer?.cancel();
@@ -234,11 +240,22 @@ class _MessagingScreenState extends State<MessagingScreen>
   }
 
   Future<void> _watchInbox() async {
+    if (!widget.active || !_foreground) return;
+    final generation = ++_subscriptionGeneration;
+    _stop?.call();
+    _stop = null;
     final stop = await widget.repository.watchInbox(
-      () => unawaited(_load()),
-      onLive: _onLive,
+      () {
+        if (generation == _subscriptionGeneration) unawaited(_load());
+      },
+      onLive: (live) {
+        if (generation == _subscriptionGeneration) _onLive(live);
+      },
     );
-    if (!mounted || !_foreground) {
+    if (!mounted ||
+        !_foreground ||
+        !widget.active ||
+        generation != _subscriptionGeneration) {
       stop();
       return;
     }
@@ -246,9 +263,26 @@ class _MessagingScreenState extends State<MessagingScreen>
   }
 
   @override
+  void didUpdateWidget(covariant MessagingScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.active == widget.active) return;
+    if (!widget.active) {
+      _subscriptionGeneration++;
+      _stop?.call();
+      _stop = null;
+      _channel = null;
+      _live = false;
+    } else if (_foreground) {
+      unawaited(_load());
+      if (widget.conversationId == null) unawaited(_watchInbox());
+    }
+  }
+
+  @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _foreground = state == AppLifecycleState.resumed;
     if (!_foreground) {
+      _subscriptionGeneration++;
       _stop?.call();
       _stop = null;
       _channel = null;
@@ -264,7 +298,7 @@ class _MessagingScreenState extends State<MessagingScreen>
       : 'Unable to load messages. Please retry.';
 
   Future<void> _load() async {
-    if (!mounted || !_foreground) return;
+    if (!mounted || !_foreground || !widget.active) return;
     if (_refreshing) {
       _reloadPending = true;
       return;
@@ -426,7 +460,7 @@ class _MessagingScreenState extends State<MessagingScreen>
             onLive: _onLive,
           );
 
-          if (!mounted) {
+          if (!mounted || !_foreground || !widget.active) {
             stop();
             return;
           }
@@ -463,7 +497,11 @@ class _MessagingScreenState extends State<MessagingScreen>
                 DiscoveryFailureKind.sessionExpired,
               ].contains(e.kind)) {
             _detail = null;
+            _inbox = null;
+            _avatar = null;
+            _subscriptionGeneration++;
             _stop?.call();
+            _stop = null;
           }
         });
       }
@@ -606,7 +644,7 @@ class _MessagingScreenState extends State<MessagingScreen>
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, update) => AlertDialog(
+        builder: (context, update) => BuyerDialog(
           title: Text(
             action == 'accept'
                 ? 'Review and accept quotation'
@@ -771,18 +809,8 @@ class _MessagingScreenState extends State<MessagingScreen>
     if (file.mediaType.startsWith('image/')) {
       await showDialog<void>(
         context: context,
-        builder: (context) => Dialog(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Flexible(child: InteractiveViewer(child: Image.memory(bytes))),
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Close'),
-              ),
-            ],
-          ),
-        ),
+        builder: (context) =>
+            BuyerImageDialog(bytes: bytes, label: file.displayName),
       );
     } else {
       await SharePlus.instance.share(

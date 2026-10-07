@@ -102,7 +102,7 @@ void main() {
   }
 
   testWidgets(
-    'unimplemented actions open centered artwork and deletion never mutates account',
+    'notifications open the inbox and deletion never mutates account',
     (tester) async {
       await tester.pumpWidget(
         MaterialApp(
@@ -117,12 +117,9 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Notifications'));
       await tester.pumpAndSettle();
-      expect(find.text('Not yet implemented'), findsOneWidget);
-      expect(find.byType(Image), findsOneWidget);
-      expect(
-        tester.getCenter(find.byType(Image)).dx,
-        tester.view.physicalSize.width / tester.view.devicePixelRatio / 2,
-      );
+      expect(find.text('Inbox'), findsOneWidget);
+      expect(find.text('Preferences'), findsOneWidget);
+      expect(find.text('Not yet implemented'), findsNothing);
       await tester.tap(find.byTooltip('Back'));
       await tester.pumpAndSettle();
       await reveal(tester, 'Account Setting');

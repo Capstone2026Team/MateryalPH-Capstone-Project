@@ -9,6 +9,7 @@ use App\Domain\Catalog\CatalogFileStore;
 use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Operations\OutboxPublisher;
+use App\Domain\Reporting\DocumentRenderer;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
@@ -158,10 +159,7 @@ final class DisputeExportService
 
     private static function cell(mixed $value): string
     {
-        $text = (string) ($value ?? '');
-        if ($text !== '' && in_array($text[0], ['=', '+', '-', '@', "\t", "\r"], true)) {
-            $text = "'".$text;
-        }
+        $text = DocumentRenderer::cell($value);
 
         return '"'.str_replace('"', '""', $text).'"';
     }

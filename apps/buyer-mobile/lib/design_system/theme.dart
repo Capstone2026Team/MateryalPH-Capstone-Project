@@ -45,6 +45,63 @@ abstract final class BuyerTheme {
     );
 
     return base.copyWith(
+      dialogTheme: DialogThemeData(
+        backgroundColor: scheme.surface,
+        surfaceTintColor: Colors.transparent,
+        barrierColor: const Color(0x6B0F172A),
+        elevation: 8,
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        titleTextStyle: const TextStyle(
+          fontFamily: 'Inter',
+          fontSize: 18,
+          height: 26 / 18,
+          fontWeight: FontWeight.w700,
+          color: ink,
+        ),
+        contentTextStyle: const TextStyle(
+          fontFamily: 'Inter',
+          fontSize: 14,
+          height: 1.5,
+          color: muted,
+        ),
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: scheme.surface,
+        modalBackgroundColor: scheme.surface,
+        surfaceTintColor: Colors.transparent,
+        modalBarrierColor: const Color(0x6B0F172A),
+        elevation: 8,
+        clipBehavior: Clip.antiAlias,
+        dragHandleColor: border,
+        dragHandleSize: const Size(40, 4),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        ),
+      ),
+      popupMenuTheme: PopupMenuThemeData(
+        color: scheme.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 8,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: border),
+        ),
+        textStyle: const TextStyle(
+          fontFamily: 'Inter',
+          fontSize: 14,
+          height: 1.5,
+          color: ink,
+        ),
+      ),
+      datePickerTheme: DatePickerThemeData(
+        backgroundColor: scheme.surface,
+        surfaceTintColor: Colors.transparent,
+        headerBackgroundColor: canvas,
+        headerForegroundColor: ink,
+        dividerColor: border,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
       textTheme: base.textTheme
           .apply(bodyColor: ink, displayColor: ink)
           .copyWith(

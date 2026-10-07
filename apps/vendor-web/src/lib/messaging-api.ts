@@ -6,6 +6,7 @@ const basePath = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api
 const api = () => new MessagingApi(createWebApiConfiguration(basePath, { refreshSession: true }))
 const scope = { messagingPortal: 'vendor' as const }
 export const chatApi = {
+  forOrder: async (orderId: string, idempotencyKey: string) => (await api().openVendorOrderConversation({ orderId, idempotencyKey })).data.id,
   list: async (page = 1) => (await api().listConversations({ ...scope, page })).data,
   get: async (conversationId: string, before?: string, page = 1, legacyPage = 1) => (await api().getConversation({ ...scope, conversationId, ...(before ? { before } : {}), page, legacyPage })).data,
   send: (conversationId: string, body: string, clientMessageId: string, productId?: string) => api().sendChatMessage({ ...scope, conversationId, chatSend: { ...(body ? { body } : {}), clientMessageId, ...(productId ? { productId } : {}) } }),

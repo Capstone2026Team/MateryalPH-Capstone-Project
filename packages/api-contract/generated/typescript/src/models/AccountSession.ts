@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * MateryalPH API
- * Versioned Phase 1–4 contract. Vendor onboarding, verification, activation readiness, private evidence, team invitations, the Vendor catalog and product PS/ICC compliance are server-authorized. Browser credentials are isolated by configured frontend origin using _vendor and _admin suffixes on access, refresh, CSRF, MFA and bot-proof cookies. Existing unsuffixed browser sessions require sign-in again; cookie selection never replaces account authorization. Native Buyer transport is unchanged.
+ * Versioned Phase 1–4 contract. Vendor onboarding, verification, activation readiness, private evidence, team invitations, the Vendor catalog and product PS/ICC compliance are server-authorized. Browser credentials are isolated by configured frontend origin using _vendor and _admin suffixes on access, refresh, CSRF, MFA and bot-proof cookies. Existing unsuffixed browser sessions require sign-in again; cookie selection never replaces account authorization. Native Buyer transport is unchanged. Everyday Buyer, Vendor and Admin activity has no application request-rate limits. Authentication, credential changes, email verification and provider webhooks retain their dedicated limits.
  *
  * The version of the OpenAPI document: 1.0.0-phase.14
  *
@@ -36,7 +36,7 @@ export interface AccountSession {
      */
     createdAt: string | null;
     /**
-     *
+     * Session activity display, updated at most once per minute. Authentication, revocation and expiry are checked on every request.
      */
     lastActiveAt: string | null;
 }

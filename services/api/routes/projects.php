@@ -3,7 +3,7 @@
 use App\Http\Controllers\Api\BuyerProjectController as P;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('buyers')->middleware(['auth.transport:MOBILE', 'auth:api', 'account.access:BUYER', 'throttle:account'])->group(function (): void {
+Route::prefix('buyers')->middleware(['auth.transport:MOBILE', 'auth:api', 'account.access:BUYER'])->group(function (): void {
     Route::get('project-ranking-preferences', [P::class, 'preferences']);
     Route::put('project-ranking-preferences', [P::class, 'savePreferences']);
     Route::post('project-ranking-preferences/reset', [P::class, 'resetPreferences']);

@@ -978,7 +978,7 @@ GitHub describes encrypted repository/environment secrets in its [Actions secret
 - Strict CORS allowlist.
 - Content Security Policy and secure headers.
 - Server-side validation and output encoding.
-- Rate limits by route, account, IP, device, and organization where appropriate.
+- Rate limits remain for authentication, credentials, verification and provider webhooks. Everyday Buyer, Vendor and Admin API operations have no application request-rate limit. Platform-wide billable-provider daily budgets remain separate.
 - File validation and malware scanning.
 - Webhook verification and replay protection.
 - Database parameter binding.
@@ -986,6 +986,10 @@ GitHub describes encrypted repository/environment secrets in its [Actions secret
 - Backups, restore drills, dependency scanning, static analysis, and audit trails.
 
 ## 16. Reliability and Consistency
+
+Navigation reuses display state within the mounted signed-in client. Vendor onboarding navigation and Admin dashboard/verification-list snapshots may be shown while a fresh authorized request runs; reuse on return is limited to 30 seconds and keyed by the complete filter/page selection. Snapshots stay in memory, are bounded, and are cleared on session termination or denied access. They never authorize a command. Dashboard sections retain visited UI state with inactive effects stopped; Buyer tabs retain visited screens while hidden messaging subscriptions and polling are paused. Requests and mutations still use current server authorization and concurrency versions.
+
+Routine protected requests record session `last_used_at` at most once per minute to avoid contending on the same session row during navigation and polling. Session creation and token rotation also record activity. This timestamp is for the device/activity display; authentication, session expiry/revocation, MFA and account permissions are evaluated on every request and are not cached by this optimization.
 
 - PostgreSQL is authoritative for commercial state.
 - Redis is never the only store for an order, payment, refund, permission, or audit fact.

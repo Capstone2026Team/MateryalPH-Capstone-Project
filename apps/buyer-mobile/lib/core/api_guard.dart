@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:dio/dio.dart';
 
 import '../features/map_discovery/discovery_models.dart';
@@ -38,7 +39,15 @@ final class ApiGuard {
 
   Future<DiscoveryFailure> _failure(DioException error) async {
     final status = error.response?.statusCode;
-    final body = error.response?.data;
+    var body = error.response?.data;
+    // Binary export requests still return the canonical JSON envelope on failure.
+    if (body is List<int> && body.length <= 65536) {
+      try {
+        body = jsonDecode(utf8.decode(body));
+      } catch (_) {
+        body = null;
+      }
+    }
     String? code;
     String? message;
     var details = const <String, Object?>{};

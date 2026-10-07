@@ -17,6 +17,7 @@ use App\Domain\Operations\OutboxProcessor;
 use App\Domain\Operations\OutboxPublisher;
 use App\Domain\Orders\OrderActor;
 use App\Domain\Vendors\AddressGeocoder;
+use App\Domain\Vendors\StoreOperatingSchedule;
 use App\Domain\Vendors\VendorFileScanner;
 use App\Models\AuthSession;
 use App\Models\User;
@@ -207,6 +208,7 @@ final class PhaseThirteenDisputesTest extends TestCase
     {
         [$store, $owner, $buyer, $orderId] = $this->paidPickup('Admin Review Store');
         $this->toPickedUp($owner, $orderId);
+        app(StoreOperatingSchedule::class)->replaceWeekly((string) DB::table('store_profiles')->where('vendor_organization_id', $store->id)->value('id'), array_map(static fn (int $day): array => ['day_of_week' => $day, 'status' => 'CLOSED', 'opens_at' => null, 'closes_at' => null], range(1, 7)));
         $line = (string) DB::table('order_lines')->where('order_id', $orderId)->value('id');
         $caseId = (string) $this->fileCase($buyer, $orderId, ['requested_remedy' => 'FULL_REFUND'])->assertCreated()->json('data.id');
 

@@ -11,6 +11,7 @@ Future<T?> showBuyerFormDialog<T>({
     context: context,
     builder: builder,
     barrierDismissible: false,
+    barrierColor: Theme.of(context).dialogTheme.barrierColor,
     themes: InheritedTheme.capture(from: context, to: navigator.context),
   );
   final result = await navigator.push(route);

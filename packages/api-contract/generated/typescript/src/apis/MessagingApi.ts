@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * MateryalPH API
- * Versioned Phase 1–4 contract. Vendor onboarding, verification, activation readiness, private evidence, team invitations, the Vendor catalog and product PS/ICC compliance are server-authorized. Browser credentials are isolated by configured frontend origin using _vendor and _admin suffixes on access, refresh, CSRF, MFA and bot-proof cookies. Existing unsuffixed browser sessions require sign-in again; cookie selection never replaces account authorization. Native Buyer transport is unchanged.
+ * Versioned Phase 1–4 contract. Vendor onboarding, verification, activation readiness, private evidence, team invitations, the Vendor catalog and product PS/ICC compliance are server-authorized. Browser credentials are isolated by configured frontend origin using _vendor and _admin suffixes on access, refresh, CSRF, MFA and bot-proof cookies. Existing unsuffixed browser sessions require sign-in again; cookie selection never replaces account authorization. Native Buyer transport is unchanged. Everyday Buyer, Vendor and Admin activity has no application request-rate limits. Authentication, credential changes, email verification and provider webhooks retain their dedicated limits.
  *
  * The version of the OpenAPI document: 1.0.0-phase.14
  *
@@ -113,6 +113,11 @@ import {
     ConversationPageResponseFromJSON,
     ConversationPageResponseToJSON,
 } from '../models/ConversationPageResponse';
+import {
+    type ErrorEnvelope,
+    ErrorEnvelopeFromJSON,
+    ErrorEnvelopeToJSON,
+} from '../models/ErrorEnvelope';
 
 export interface ArchiveChatConversationRequest {
     /**
@@ -285,6 +290,17 @@ export interface ListConversationsRequest {
      * Buyer only. true lists the Buyer's archived sales conversations; omitted or false lists the active inbox. Order fulfillment threads are never listed for a Buyer; they open from Order Details.
      */
     archived?: boolean;
+}
+
+export interface OpenVendorOrderConversationRequest {
+    /**
+     *
+     */
+    orderId: string;
+    /**
+     *
+     */
+    idempotencyKey: string;
 }
 
 export interface PublishChatQuotationRequest {
@@ -1230,6 +1246,66 @@ export class MessagingApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates request options for openVendorOrderConversation without sending the request
+     */
+    async openVendorOrderConversationRequestOpts(requestParameters: OpenVendorOrderConversationRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['orderId'] == null) {
+            throw new runtime.RequiredError(
+                'orderId',
+                'Required parameter "orderId" was null or undefined when calling openVendorOrderConversation().'
+            );
+        }
+
+        if (requestParameters['idempotencyKey'] == null) {
+            throw new runtime.RequiredError(
+                'idempotencyKey',
+                'Required parameter "idempotencyKey" was null or undefined when calling openVendorOrderConversation().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (requestParameters['idempotencyKey'] != null) {
+            headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
+        }
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/vendor/orders/{orderId}/conversation`;
+        urlPath = urlPath.replace('{orderId}', encodeURIComponent(String(requestParameters['orderId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Opens the authorized order\'s quotation conversation or permanent Item-Based store chat, creating the latter if absent. Existing handler access is preserved. Assigned Fulfillment Staff can only open their existing order fulfillment thread. Does not send a message or change commercial terms.
+     */
+    async openVendorOrderConversationRaw(requestParameters: OpenVendorOrderConversationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ChatIdResponse>> {
+        const requestOptions = await this.openVendorOrderConversationRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ChatIdResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Opens the authorized order\'s quotation conversation or permanent Item-Based store chat, creating the latter if absent. Existing handler access is preserved. Assigned Fulfillment Staff can only open their existing order fulfillment thread. Does not send a message or change commercial terms.
+     */
+    async openVendorOrderConversation(requestParameters: OpenVendorOrderConversationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ChatIdResponse> {
+        const response = await this.openVendorOrderConversationRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Creates request options for publishChatQuotation without sending the request
      */
     async publishChatQuotationRequestOpts(requestParameters: PublishChatQuotationRequest): Promise<runtime.RequestOpts> {
@@ -1643,7 +1719,7 @@ export class MessagingApi extends runtime.BaseAPI {
     }
 
     /**
-     * Ephemeral authorized conversation.typing event on existing viewer channels, with typing boolean and server millisecond timestamp at. Never persisted; receivers ignore older events and clear after three seconds. Existing account rate limits apply.
+     * Ephemeral authorized conversation.typing event on existing viewer channels, with typing boolean and server millisecond timestamp at. Never persisted; receivers ignore older events and clear after three seconds. No account request-rate limit applies.
      */
     async sendChatTypingRaw(requestParameters: SendChatTypingRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ChatEmptyResponse>> {
         const requestOptions = await this.sendChatTypingRequestOpts(requestParameters);
@@ -1653,7 +1729,7 @@ export class MessagingApi extends runtime.BaseAPI {
     }
 
     /**
-     * Ephemeral authorized conversation.typing event on existing viewer channels, with typing boolean and server millisecond timestamp at. Never persisted; receivers ignore older events and clear after three seconds. Existing account rate limits apply.
+     * Ephemeral authorized conversation.typing event on existing viewer channels, with typing boolean and server millisecond timestamp at. Never persisted; receivers ignore older events and clear after three seconds. No account request-rate limit applies.
      */
     async sendChatTyping(requestParameters: SendChatTypingRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ChatEmptyResponse> {
         const response = await this.sendChatTypingRaw(requestParameters, initOverrides);

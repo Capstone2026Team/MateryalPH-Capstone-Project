@@ -40,7 +40,14 @@ final class RequireAccountAccess
         }
         $request->attributes->set('account_scope', $scope);
         $request->attributes->set('auth_session', $session);
-        $session->update(['last_used_at' => now()]);
+        // Activity display has minute precision. Authentication, expiry, revocation and
+        // permissions above are still checked on every request; avoid a shared row write
+        // for every parallel page request and background poll.
+        if ($session->last_used_at->lte(now()->subMinute())) {
+            AuthSession::query()->whereKey($session->getKey())
+                ->where('last_used_at', '<=', now()->subMinute())
+                ->update(['last_used_at' => now()]);
+        }
         $response = $next($request);
         $response->headers->set('Cache-Control', 'no-store, private');
 

@@ -34,7 +34,9 @@ import 'package:materyalph_api_client/src/api/buyer_payments_api.dart';
 import 'package:materyalph_api_client/src/api/buyer_projects_api.dart';
 import 'package:materyalph_api_client/src/api/buyer_reviews_api.dart';
 import 'package:materyalph_api_client/src/api/messaging_api.dart';
+import 'package:materyalph_api_client/src/api/notifications_api.dart';
 import 'package:materyalph_api_client/src/api/payment_webhooks_api.dart';
+import 'package:materyalph_api_client/src/api/reporting_api.dart';
 import 'package:materyalph_api_client/src/api/stores_api.dart';
 import 'package:materyalph_api_client/src/api/system_api.dart';
 import 'package:materyalph_api_client/src/api/vendor_auto_accept_api.dart';
@@ -295,10 +297,22 @@ class MateryalphApiClient {
     return MessagingApi(dio, serializers);
   }
 
+  /// Get NotificationsApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  NotificationsApi getNotificationsApi() {
+    return NotificationsApi(dio, serializers);
+  }
+
   /// Get PaymentWebhooksApi instance, base route and serializer can be overridden by a given but be careful,
   /// by doing that all interceptors will not be executed
   PaymentWebhooksApi getPaymentWebhooksApi() {
     return PaymentWebhooksApi(dio, serializers);
+  }
+
+  /// Get ReportingApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  ReportingApi getReportingApi() {
+    return ReportingApi(dio, serializers);
   }
 
   /// Get StoresApi instance, base route and serializer can be overridden by a given but be careful,

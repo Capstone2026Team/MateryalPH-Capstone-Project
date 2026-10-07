@@ -25,7 +25,7 @@ import {
 import { type FormEvent, type ReactNode, useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 
-import { Button, Field, PortalShell, StatusBadge, StatusMessage, type PortalNavSection } from '@materyalph/web-ui'
+import { Button, Field, PortalShell, StatusBadge, StatusMessage, usePortalResource, type PortalNavSection } from '@materyalph/web-ui'
 import {
   decideVendorVerificationRequirement,
   getAdminVendorEvidenceUrl,
@@ -61,7 +61,7 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry: () 
 
 export function AdminShell({ activeHref, children }: { activeHref: string; children: ReactNode }) {
   const navigate = useNavigate()
-  return <PortalShell apiBasePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} onNavigate={navigate} headerActions={<Link className="inline-flex min-h-11 items-center text-sm font-semibold" to="/workspace">Account settings</Link>} homeHref="/dashboard" portalLabel="ADMIN PORTAL" pageTitle={activeHref === '/dashboard' ? 'Dashboard' : activeHref === '/workspace' ? 'Settings' : activeHref === '/audit' ? 'Audit tracking' : adminNavigation.flatMap(section => section.items).find(item => item.href === activeHref)?.label ?? 'Vendor Management'} dateLabel={adminDate()} sections={adminNavigation} activeHref={activeHref} accountLabel="Admin review team" accountStatus="Audited access">{children}</PortalShell>
+  return <PortalShell apiBasePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} onNavigate={navigate} headerActions={<><Link className="inline-flex min-h-11 items-center text-sm font-semibold" to="/notifications">Notifications</Link><Link className="inline-flex min-h-11 items-center text-sm font-semibold" to="/workspace">Account settings</Link></>} homeHref="/dashboard" portalLabel="ADMIN PORTAL" pageTitle={activeHref === '/dashboard' ? 'Dashboard' : activeHref === '/workspace' ? 'Settings' : activeHref === '/audit' ? 'Audit tracking' : adminNavigation.flatMap(section => section.items).find(item => item.href === activeHref)?.label ?? 'Vendor Management'} dateLabel={adminDate()} sections={adminNavigation} activeHref={activeHref} accountLabel="Admin review team" accountStatus="Audited access">{children}</PortalShell>
 }
 
 export function PageHeader({ eyebrow, title, description, actions, compact = false }: { eyebrow: string; title: string; description: string; actions?: ReactNode; compact?: boolean }) {
@@ -69,36 +69,37 @@ export function PageHeader({ eyebrow, title, description, actions, compact = fal
 }
 
 export function AdminVendorVerificationQueuePage() {
-  const [items, setItems] = useState<import('@materyalph/api-client-ts').AdminVendorVerificationQueueItem[]>([])
-  const [meta, setMeta] = useState<JsonRecord>({})
   const [filters, setFilters] = useState({ status: 'PENDING_VERIFICATION', regionCode: '', submittedFrom: '', submittedTo: '', sort: 'submitted_desc' })
   const [applied, setApplied] = useState(filters)
   const [page, setPage] = useState(1)
-  const [attempt, setAttempt] = useState(0)
-  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  useEffect(() => {
-    let active = true
-    setLoading(true); setError(null)
-    void listVendorVerificationQueue({
+  const loadQueue = useCallback(() => listVendorVerificationQueue({
       ...(applied.status ? { status: applied.status } : {}), ...(applied.regionCode ? { regionCode: applied.regionCode } : {}),
       ...(applied.submittedFrom ? { submittedFrom: new Date(applied.submittedFrom + 'T00:00:00Z') } : {}),
       ...(applied.submittedTo ? { submittedTo: new Date(applied.submittedTo + 'T00:00:00Z') } : {}),
       sort: applied.sort as 'submitted_asc' | 'submitted_desc' | 'location', page,
-    }).then(result => { if (active) { setItems(result.items); setMeta(result.meta) } }).catch(async cause => { const message = await readableVerificationError(cause); if (active) setError(message) }).finally(() => { if (active) setLoading(false) })
+    }), [applied, page])
+  const { data, error: failure, refresh } = usePortalResource(`admin-verification:${JSON.stringify(applied)}:${page}`, loadQueue)
+  const items = data?.items ?? []
+  const meta = data?.meta ?? {}
+  const loading = !data && !failure
+  useEffect(() => {
+    let active = true
+    setError(null)
+    if (failure) void readableVerificationError(failure).then(message => { if (active) setError(message) })
     return () => { active = false }
-  }, [applied, page, attempt])
+  }, [failure])
   const [dateLabel, setDateLabel] = useState('All dates')
   const controlClass = "min-h-11 rounded-control border border-border-default bg-surface-primary px-3 font-normal"
   return <AdminShell activeHref="/vendor-verification"><div className="space-y-6">
-    <PageHeader eyebrow="Admin review" title="Vendor Verification" description="Review submitted business requirements. Choose a review status and submission period, then open a case to review its evidence." actions={<Button variant="secondary" disabled={loading} onClick={() => setAttempt(value => value + 1)}>Refresh queue</Button>} />
+    <PageHeader eyebrow="Admin review" title="Vendor Verification" description="Review submitted business requirements. Choose a review status and submission period, then open a case to review its evidence." actions={<Button variant="secondary" disabled={loading} onClick={() => void refresh()}>Refresh queue</Button>} />
     <div className="flex flex-wrap items-end gap-3 rounded-surface border border-border-default bg-surface-primary p-4">
       <label className="grid gap-2 text-sm font-semibold">Review status<select className={controlClass} value={filters.status} onChange={event => setFilters({ ...filters, status: event.target.value })}><option value="">All review cases</option>{['PENDING_VERIFICATION', 'CHANGES_REQUIRED', 'REJECTED', 'APPROVED', 'EXPIRED'].map(status => <option key={status} value={status}>{statusLabel(status)}</option>)}</select></label>
       <label className="grid gap-2 text-sm font-semibold">Sort by<select className={controlClass} value={filters.sort} onChange={event => setFilters({ ...filters, sort: event.target.value })}><option value="submitted_desc">Newest submission first</option><option value="submitted_asc">Oldest submission first</option></select></label>
       <DateFilter title="Submission dates" value={{ label: dateLabel, from: filters.submittedFrom, to: filters.submittedTo }} onChange={range => { setDateLabel(range.label); const next = { ...filters, submittedFrom: range.from, submittedTo: range.to }; setFilters(next); setApplied(next); setPage(1) }} />
       <div className="flex items-end gap-3"><Button disabled={loading} onClick={() => { setPage(1); setApplied({ ...filters }) }}>Apply filters</Button><Button variant="secondary" disabled={loading} onClick={() => { const cleared = { status: '', regionCode: '', submittedFrom: '', submittedTo: '', sort: 'submitted_desc' }; setDateLabel('All dates'); setFilters(cleared); setApplied(cleared); setPage(1) }}>Reset</Button></div>
     </div>
-    {loading ? <LoadingState /> : error ? <ErrorState message={error} onRetry={() => setAttempt(value => value + 1)} /> : <><p className="text-sm text-text-secondary">{numberValue(meta.total)} matching cases</p>{items.length === 0 ? <EmptyQueue status={applied.status} /> : <div className="overflow-x-auto"><table className="w-full min-w-[800px] text-left text-sm"><thead><tr>{['Store', 'Location', 'Verification', 'Setup', 'Progress', 'Submitted', 'Action'].map(label => <th className="px-4 py-3" scope="col" key={label}>{label}</th>)}</tr></thead><tbody>{items.map(item => <tr className="border-t border-border-default" key={item.id}><td className="px-4 py-4"><Link className="font-semibold text-action-primary underline" to={`/vendor-verification/${item.id}`}>{item.storeName}</Link><p className="mt-1 text-text-secondary">{item.registeredName ?? 'Registered name pending'}</p></td><td className="px-4 py-4"><p>{item.regionName ?? 'Unassigned region'}</p><p className="mt-1 text-text-secondary">{[item.province, item.cityMunicipality].filter(Boolean).join(' · ') || 'Address not recorded'}</p></td><td className="px-4 py-4"><StatusBadge label={statusLabel(item.verificationStatus)} tone={statusTone(item.verificationStatus)} /></td><td className="px-4 py-4">{statusLabel(item.setupStatus ?? 'NOT_STARTED')}</td><td className="px-4 py-4"><ProgressText progress={item.progress} /></td><td className="px-4 py-4">{formatDate(item.submittedAt)}</td><td className="px-4 py-4"><Link className="inline-flex min-h-11 items-center font-semibold text-action-primary" to={`/vendor-verification/${item.id}`}>Review</Link></td></tr>)}</tbody></table></div>}<div className="flex items-center gap-4"><Button variant="secondary" disabled={page <= 1} onClick={() => setPage(value => value - 1)}>Previous</Button><span>Page {page} of {numberValue(meta.last_page, 1)}</span><Button variant="secondary" disabled={page >= numberValue(meta.last_page, 1)} onClick={() => setPage(value => value + 1)}>Next</Button></div></>}
+    {loading ? <LoadingState /> : error ? <ErrorState message={error} onRetry={() => void refresh()} /> : <><p className="text-sm text-text-secondary">{numberValue(meta.total)} matching cases</p>{items.length === 0 ? <EmptyQueue status={applied.status} /> : <div className="overflow-x-auto"><table className="w-full min-w-[800px] text-left text-sm"><thead><tr>{['Store', 'Location', 'Verification', 'Setup', 'Progress', 'Submitted', 'Action'].map(label => <th className="px-4 py-3" scope="col" key={label}>{label}</th>)}</tr></thead><tbody>{items.map(item => <tr className="border-t border-border-default" key={item.id}><td className="px-4 py-4"><Link className="font-semibold text-action-primary underline" to={`/vendor-verification/${item.id}`}>{item.storeName}</Link><p className="mt-1 text-text-secondary">{item.registeredName ?? 'Registered name pending'}</p></td><td className="px-4 py-4"><p>{item.regionName ?? 'Unassigned region'}</p><p className="mt-1 text-text-secondary">{[item.province, item.cityMunicipality].filter(Boolean).join(' · ') || 'Address not recorded'}</p></td><td className="px-4 py-4"><StatusBadge label={statusLabel(item.verificationStatus)} tone={statusTone(item.verificationStatus)} /></td><td className="px-4 py-4">{statusLabel(item.setupStatus ?? 'NOT_STARTED')}</td><td className="px-4 py-4"><ProgressText progress={item.progress} /></td><td className="px-4 py-4">{formatDate(item.submittedAt)}</td><td className="px-4 py-4"><Link className="inline-flex min-h-11 items-center font-semibold text-action-primary" to={`/vendor-verification/${item.id}`}>Review</Link></td></tr>)}</tbody></table></div>}<div className="flex items-center gap-4"><Button variant="secondary" disabled={page <= 1} onClick={() => setPage(value => value - 1)}>Previous</Button><span>Page {page} of {numberValue(meta.last_page, 1)}</span><Button variant="secondary" disabled={page >= numberValue(meta.last_page, 1)} onClick={() => setPage(value => value + 1)}>Next</Button></div></>}
   </div></AdminShell>
 }
 
@@ -348,3 +349,4 @@ function ReviewHistory({ reviews }: { reviews: JsonRecord[] }) {
     </div>}
   </section>
 }
+

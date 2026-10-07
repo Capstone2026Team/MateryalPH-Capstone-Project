@@ -4,12 +4,15 @@ use App\Http\Controllers\Api\ConversationController as C;
 use App\Http\Middleware\VerifyAccountCsrf;
 use Illuminate\Support\Facades\Route;
 
-foreach (['buyers' => ['auth.transport:MOBILE', 'auth:api', 'account.access:BUYER', 'throttle:account'],
-    'vendor' => ['auth.transport:WEB', 'auth.cookie', VerifyAccountCsrf::class, 'auth:api', 'account.access:VENDOR', 'throttle:account']] as $prefix => $middleware) {
+foreach (['buyers' => ['auth.transport:MOBILE', 'auth:api', 'account.access:BUYER'],
+    'vendor' => ['auth.transport:WEB', 'auth.cookie', VerifyAccountCsrf::class, 'auth:api', 'account.access:VENDOR']] as $prefix => $middleware) {
     Route::prefix($prefix)->middleware($middleware)->group(function () use ($prefix): void {
         Route::get('/messaging/realtime', [C::class, 'realtime']);
         Route::post('/messaging/auth', [C::class, 'authorizeChannel']);
         Route::get('/conversations', [C::class, 'index']);
+        if ($prefix === 'vendor') {
+            Route::post('/orders/{orderId}/conversation', [C::class, 'fromOrder'])->whereUuid('orderId');
+        }
         if ($prefix === 'buyers') {
             Route::post('/conversations', [C::class, 'create']);
         }
@@ -24,7 +27,7 @@ foreach (['buyers' => ['auth.transport:MOBILE', 'auth:api', 'account.access:BUYE
                 Route::put('/archive', [C::class, 'archive']);
                 Route::delete('/archive', [C::class, 'restore']);
             }
-            Route::post('/attachments', [C::class, 'upload'])->middleware('throttle:account-upload');
+            Route::post('/attachments', [C::class, 'upload']);
             Route::get('/attachments/{attachmentId}', [C::class, 'download'])->whereUuid('attachmentId');
             Route::get('/avatars/{userId}', [C::class, 'avatar'])->whereNumber('userId');
             if ($prefix === 'vendor') {

@@ -1,4 +1,10 @@
 import '../features/messaging/messaging_repository.dart';
+import 'dart:async';
+import '../features/notifications/notifications_repository.dart';
+import '../features/notifications/notifications_screen.dart';
+import '../features/notifications/buyer_push.dart';
+import '../features/notifications/notification_scope.dart';
+import '../features/disputes/dispute_screens.dart';
 import '../features/messaging/messaging_screen.dart';
 import 'package:flutter/material.dart';
 import '../design_system/components/buyer_app_bar.dart';
@@ -65,6 +71,97 @@ class BuyerHomeScreen extends StatefulWidget {
 }
 
 class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
+  late final NotificationsRepository? _notifications = widget.repository == null
+      ? null
+      : NotificationsRepository(widget.repository!.apiClient, _expireSession);
+  late final BuyerPush? _push = _notifications == null
+      ? null
+      : BuyerPush(_notifications, (id) => _openNotifications(id));
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_push?.start().catchError((Object _) {}));
+  }
+
+  void _openNotifications([String? notice]) {
+    if (_notifications == null) return;
+    Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => NotificationScope(
+          repository: _notifications,
+          child: NotificationsScreen(
+            repository: _notifications,
+            initialNotice: notice,
+            enablePush: BuyerPush.enabled ? _push?.enable : null,
+            open: _openNoticeTarget,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openNoticeTarget(String path) async {
+    final segments = Uri.parse(path).pathSegments;
+    Widget? destination;
+    if (segments.length == 2 && segments[0] == 'orders' && _orders != null) {
+      destination = OrderDetailsScreen(
+        orderId: segments[1],
+        repository: _orders,
+        openConversation: _messaging == null ? null : _openConversation,
+      );
+    } else if (segments.length == 2 &&
+        segments[0] == 'disputes' &&
+        _orders != null) {
+      destination = DisputeDetailScreen(
+        caseId: segments[1],
+        repository: _orders.disputes,
+      );
+    } else if (segments.length == 2 &&
+        segments[0] == 'projects' &&
+        _projects != null &&
+        _discovery != null) {
+      destination = ProjectsScreen(
+        repository: _projects,
+        discovery: _discovery,
+        initialProjectId: segments[1],
+        deviceLocation: widget.deviceLocation,
+        mapBuilder: widget.mapBuilder,
+        openConversation: _openConversation,
+        openOrder: (context, id) {
+          unawaited(_openNoticeTarget('/orders/$id'));
+        },
+        openStore: _openStore,
+        openAnalysis: _projectAnalysis,
+      );
+    } else if (path == '/settings') {
+      Navigator.of(context).popUntil((route) => route.isFirst);
+      _select(4);
+      return;
+    }
+    if (destination == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'This resource is unavailable or your permission has changed.',
+            ),
+          ),
+        );
+      }
+      return;
+    }
+    if (mounted) {
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (_) => NotificationScope(
+            repository: _notifications!,
+            child: destination!,
+          ),
+        ),
+      );
+    }
+  }
+
   static const _labels = ['Map', 'Explore', 'Projects', 'Messages', 'Profile'];
   int _destination = 0;
   late final DiscoveryRepository? _discovery =
@@ -142,6 +239,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
             ));
   bool _cartLoaded = false;
   bool _projectsVisited = false;
+  final Set<int> _visitedDestinations = {};
   late final ProjectsRepository? _projects = widget.repository == null
       ? null
       : ProjectsRepository(
@@ -198,7 +296,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                   cart: _cart,
                   navigation: navigation,
                   onOpenMap: () => Navigator.pop(context),
-                  onOpenNotifications: () => _unavailable('Notifications'),
+                  onOpenNotifications: _openNotifications,
                 ),
               ),
             ],
@@ -212,6 +310,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
 
   @override
   void dispose() {
+    _push?.dispose();
     _explore?.dispose();
     _cart?.dispose();
     _discoveryController?.dispose();
@@ -269,6 +368,8 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
       );
 
   void _select(int index) {
+    if (_destination == index) return;
+    _visitedDestinations.add(index);
     if (index == 2) _projectsVisited = true;
     if (index == 1 && !_cartLoaded) {
       _cartLoaded = true;
@@ -298,7 +399,9 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                       controller: _discoveryController,
                       deviceLocation: widget.deviceLocation,
                       mapBuilder: widget.mapBuilder,
-                      onUnavailable: _unavailable,
+                      onUnavailable: (title) => title == 'Notifications'
+                          ? _openNotifications()
+                          : _unavailable(title),
                       onOpenSearch: navigation == null
                           ? null
                           : () => navigation.openSearch(context),
@@ -325,8 +428,16 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                 child: _projectsPage(),
               ),
             ),
-          if (_destination != 0 && _destination != 2)
-            Positioned.fill(child: _destinationPage()),
+          for (final index in [1, 3, 4])
+            if (_visitedDestinations.contains(index))
+              Offstage(
+                key: ValueKey('buyer-destination-$index'),
+                offstage: _destination != index,
+                child: TickerMode(
+                  enabled: _destination == index,
+                  child: _destinationPage(index),
+                ),
+              ),
         ],
       ),
       bottomNavigationBar: _navigationBar(),
@@ -346,7 +457,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
             onOpenCart: _navigation == null
                 ? null
                 : () => _navigation.openCart(context),
-            onOpenNotifications: () => _unavailable('Notifications'),
+            onOpenNotifications: _openNotifications,
           ),
         ),
       );
@@ -376,9 +487,10 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
     return const SafeArea(child: BuyerUnavailableContent());
   }
 
-  Widget _destinationPage() {
-    if (_destination == 3 && _messaging != null) {
+  Widget _destinationPage(int index) {
+    if (index == 3 && _messaging != null) {
       return MessagingScreen(
+        active: _destination == index,
         repository: _messaging,
         onSetDelivery: _navigation == null
             ? null
@@ -391,11 +503,12 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
         onOpenCart: _navigation == null
             ? null
             : () => _navigation.openCart(context),
-        onOpenNotifications: () => _unavailable('Notifications'),
+        onOpenNotifications: _openNotifications,
       );
     }
-    if (_destination == 4 && widget.repository != null) {
+    if (index == 4 && widget.repository != null) {
       return BuyerProfileScreen(
+        active: _destination == index,
         repository: widget.repository!,
         discoveryRepository: _discovery,
         onRemoveFavorite: _discoveryController == null
@@ -420,19 +533,22 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
         onOpenSearch: _navigation == null
             ? null
             : () => _navigation.openSearch(context),
-        onOpenNotifications: () => _unavailable('Notifications'),
+        onOpenNotifications: _openNotifications,
         onRankingPreferences: _navigation == null
             ? null
             : () => _navigation.openPreferences(context),
         deviceLocation: widget.deviceLocation,
         onSignedOut: _sessionEnded,
         onSignOut: () async {
+          try {
+            await _push?.revoke();
+          } catch (_) {}
           await _resultStore.clear();
           await widget.onSignOut();
         },
       );
     }
-    if (_destination == 1) {
+    if (index == 1) {
       final explore = _explore;
       final cart = _cart;
       final navigation = _navigation;
@@ -442,7 +558,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
           cart: cart,
           navigation: navigation,
           onOpenMap: () => _select(0),
-          onOpenNotifications: () => _unavailable('Notifications'),
+          onOpenNotifications: _openNotifications,
         );
       }
       return Scaffold(
@@ -452,10 +568,10 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
     }
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: buyerAppBar(context, _labels[_destination]),
+      appBar: buyerAppBar(context, _labels[index]),
       body: SafeArea(
         child: BuyerUnavailableContent(
-          artwork: _destination == 3 ? 'inbox' : 'not-implemented',
+          artwork: index == 3 ? 'inbox' : 'not-implemented',
         ),
       ),
     );

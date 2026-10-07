@@ -1,3 +1,5 @@
+import 'features/notifications/notification_scope.dart';
+import 'features/notifications/notifications_repository.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -199,7 +201,7 @@ class _BuyerAppState extends State<BuyerApp> {
       theme: BuyerTheme.light,
       builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
         value: BuyerTheme.systemUi,
-        child: child ?? const SizedBox.shrink(),
+        child: NotificationScope(repository: NotificationsRepository(_authRepository.apiClient, () async { await _authRepository.clearAccountSession(); if (mounted) setState(() => _stage = _AppStage.welcome); }), child: child ?? const SizedBox.shrink()),
       ),
       home: Builder(
         builder: (context) {
@@ -299,3 +301,4 @@ class _BuyerAppState extends State<BuyerApp> {
     }
   }
 }
+

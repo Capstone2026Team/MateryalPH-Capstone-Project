@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../design_system/components/buyer_overlays.dart';
 import '../../design_system/components/buyer_app_bar.dart';
 import '../../design_system/components/procurement_components.dart';
 import '../../design_system/theme.dart';
@@ -203,7 +204,7 @@ class _CheckoutPreviewScreenState extends State<CheckoutPreviewScreen> {
     if (split) {
       final confirmed = await showDialog<bool>(
         context: context,
-        builder: (context) => AlertDialog(
+        builder: (context) => BuyerDialog(
           title: Text(
             'Submit ${ready.length} of ${preview.groups.length} stores?',
           ),

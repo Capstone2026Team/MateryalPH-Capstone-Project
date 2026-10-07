@@ -222,7 +222,7 @@ final class AdminVendorVerificationService
             $verificationStatus = $this->recomputeVerificationStatus($organizationId);
             DB::table('vendor_organizations')->where('id', $organizationId)->update(['store_verification_status' => $verificationStatus, 'updated_at' => now()]);
             $this->claimIdempotency($request, 'ADMIN_VENDOR_DECISION', $key, $organizationId.'|'.$requirementKey, 200);
-            $this->notifyOwner($request, $organizationId, $decision, $reason);
+            $this->notifyOwner($request, $organizationId, $decision, $reason, $requirementKey);
             $this->audit->account($request, 'VENDOR_VERIFICATION_DECISION_RECORDED', 'VENDOR_ONBOARDING_STEP', (string) $step->id, after: ['requirement_key' => $requirementKey, 'decision' => $decision], reason: $reason);
         });
 
@@ -308,7 +308,7 @@ final class AdminVendorVerificationService
             }
             DB::table('vendor_organizations')->where('id', $organizationId)->update(['store_verification_status' => $this->recomputeVerificationStatus($organizationId), 'updated_at' => now()]);
             $this->claimIdempotency($request, 'ADMIN_VENDOR_DECISION', $idempotencyKey, $organizationId.'|'.$groupKey, 200);
-            $this->notifyOwner($request, $organizationId, $decision, $reason);
+            $this->notifyOwner($request, $organizationId, $decision, $reason, $groupKey);
             $this->audit->account($request, 'VENDOR_VERIFICATION_DECISION_RECORDED', 'VENDOR_ORGANIZATION', $organizationId, after: ['requirement_key' => $groupKey, 'underlying_keys' => $steps->pluck('requirement_key')->all(), 'decision' => $decision], reason: $reason);
         });
 
@@ -374,16 +374,17 @@ final class AdminVendorVerificationService
         DB::table('idempotency_records')->insert(['id' => (string) Str::uuid7(), 'actor_user_id' => $request->user()->getKey(), 'endpoint' => $endpoint, 'idempotency_key' => $key, 'request_hash' => hash_hmac('sha256', $endpoint.'|'.$scope.'|'.$request->getContent(), (string) config('app.key')), 'response_status' => $status, 'expires_at' => now()->addDay(), 'created_at' => now(), 'updated_at' => now()]);
     }
 
-    private function notifyOwner(Request $request, string $organizationId, string $decision, ?string $reason): void
+    private function notifyOwner(Request $request, string $organizationId, string $decision, ?string $reason, string $requirementKey): void
     {
         $owner = DB::table('vendor_memberships as m')->join('users as u', 'u.id', '=', 'm.user_id')->where('m.vendor_organization_id', $organizationId)->where('m.role', 'OWNER')->where('m.status', 'ACTIVE')->first(['u.id', 'u.email']);
         if ($owner === null) {
             return;
         }
         $title = 'Store Verification decision recorded';
-        $body = $decision === 'APPROVED' ? 'An Admin approved a Store Verification requirement.' : 'An Admin requested a Store Verification correction. Review the requirement and reason in your onboarding dashboard.'.($reason ? ' Reason: '.$reason : '');
-        DB::table('notifications')->insert(['id' => (string) Str::uuid7(), 'user_id' => $owner->id, 'category' => 'VENDOR_VERIFICATION', 'title' => $title, 'body' => $body, 'resource_type' => 'VENDOR_ORGANIZATION', 'resource_id' => $organizationId, 'created_at' => now(), 'updated_at' => now()]);
-        $this->outbox->publish('VENDOR_ONBOARDING_NOTICE', 'VENDOR_ORGANIZATION', $organizationId, ['recipient' => $owner->email, 'message' => $body]);
+        $body = $decision === 'APPROVED' ? 'An Admin approved a Store Verification requirement.' : 'An Admin requested a Store Verification correction. Review the requirement and reason in your onboarding dashboard.';
+        $notificationId = (string) Str::uuid7();
+        DB::table('notifications')->insert(['id' => $notificationId, 'resume_key' => $requirementKey, 'user_id' => $owner->id, 'category' => 'VENDOR_VERIFICATION', 'title' => $title, 'body' => $body, 'resource_type' => 'VENDOR_ORGANIZATION', 'resource_id' => $organizationId, 'created_at' => now(), 'updated_at' => now()]);
+        $this->outbox->publish('VENDOR_ONBOARDING_NOTICE', 'VENDOR_ORGANIZATION', $organizationId, ['recipient' => $owner->email, 'message' => $body, 'notification_id' => $notificationId]);
     }
 
     /** @return array<string, mixed> */

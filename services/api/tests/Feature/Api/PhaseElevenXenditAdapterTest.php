@@ -71,6 +71,27 @@ final class PhaseElevenXenditAdapterTest extends TestCase
         });
     }
 
+    public function test_inline_customer_references_do_not_collide_across_attempts_or_accounts(): void
+    {
+        $this->configure();
+        $references = [];
+        Http::fake(['api.xendit.co/sessions' => function (Request $request) use (&$references) {
+            $reference = $request['customer']['reference_id'];
+            self::assertMatchesRegularExpression('/^[a-f0-9]{64}$/', $reference);
+            self::assertNotContains($reference, $references, 'Each inline customer creation needs a unique reference.');
+            $references[] = $reference;
+
+            return Http::response(['payment_session_id' => 'ps-6752710abcdef0123456789', 'reference_id' => $request['reference_id'],
+                'amount' => $request['amount'], 'currency' => 'PHP', 'status' => 'ACTIVE'], 201);
+        }]);
+        $base = $this->request();
+        foreach ([['attempt1', 'vendor1'], ['attempt2', 'vendor1'], ['attempt1', 'vendor2'], ['attempt1', null]] as [$attempt, $account]) {
+            (new XenditPaymentSessionGateway)->createSession(new SessionRequest($attempt, $base->amountCentavos, $base->currency,
+                $base->providerChannelCode, $base->expiresAt, $base->description, $account, $base->customer, null, null));
+        }
+        Http::assertSentCount(4);
+    }
+
     public function test_create_outcomes_map_to_rejected_or_uncertain_and_are_never_retried(): void
     {
         $this->configure();

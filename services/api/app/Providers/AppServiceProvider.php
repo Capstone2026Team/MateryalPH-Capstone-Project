@@ -2,7 +2,6 @@
 
 namespace App\Providers;
 
-use App\Domain\Authorization\AccountAccess;
 use App\Domain\Compliance\ComplianceReferenceProvider;
 use App\Domain\Compliance\ComplianceTextExtractor;
 use App\Domain\Finance\DemoWithholdingEvidenceAdapter;
@@ -14,6 +13,7 @@ use App\Domain\Identity\OtpCodeGenerator;
 use App\Domain\Identity\PassportAccessTokenIssuer;
 use App\Domain\Identity\RecaptchaAssessmentGateway;
 use App\Domain\Identity\SecureOtpCodeGenerator;
+use App\Domain\Notifications\PushGateway;
 use App\Domain\Payments\PaymentGateway;
 use App\Domain\Vendors\AddressGeocoder;
 use App\Domain\Vendors\PsgcProvider;
@@ -26,6 +26,8 @@ use App\Infrastructure\Geography\GooglePlacesProvider;
 use App\Infrastructure\Geography\GoogleRoutesProvider;
 use App\Infrastructure\Geography\PsgcCloudProvider;
 use App\Infrastructure\Identity\GoogleRecaptchaEnterpriseGateway;
+use App\Infrastructure\Notifications\FakePushGateway;
+use App\Infrastructure\Notifications\FcmPushGateway;
 use App\Infrastructure\Payments\ConfiguredXenditAccountVerificationGateway;
 use App\Infrastructure\Payments\FakePaymentGateway;
 use App\Infrastructure\Payments\XenditPaymentSessionGateway;
@@ -43,6 +45,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        $this->app->singleton(PushGateway::class, fn () => config('notifications.push_driver') === 'fake' && ! app()->isProduction()
+            ? new FakePushGateway : new FcmPushGateway);
         $this->app->bind(OtpCodeGenerator::class, SecureOtpCodeGenerator::class);
         $this->app->bind(AccessTokenIssuer::class, PassportAccessTokenIssuer::class);
         $this->app->bind(RecaptchaAssessmentGateway::class, GoogleRecaptchaEnterpriseGateway::class);
@@ -65,21 +69,8 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         require base_path('routes/channels.php');
-        RateLimiter::for('account', fn (Request $request): Limit => Limit::perMinute(60)->by((string) $request->user()?->getAuthIdentifier()));
-        RateLimiter::for('profile-photo', fn (Request $request): Limit => Limit::perMinute(5)->by((string) $request->user()?->getAuthIdentifier()));
+        // Throttle credential and verification actions, without a shared app-activity budget.
         RateLimiter::for('account-security', fn (Request $request): Limit => Limit::perMinutes(15, 5)->by((string) $request->user()?->getAuthIdentifier().'|'.$request->path()));
-        RateLimiter::for('vendor-payment-status', fn (Request $request): Limit => Limit::perMinute(6)->by((string) $request->user()?->getAuthIdentifier()));
-        RateLimiter::for('account-upload', function (Request $request): array {
-            $scope = $request->attributes->get('account_scope');
-            if (! is_array($scope)) {
-                $scope = app(AccountAccess::class)->resolve($request->user());
-            }
-
-            return [
-                Limit::perMinute(20)->by('user|'.$request->user()->getAuthIdentifier()),
-                Limit::perMinute(20)->by('organization|'.$scope['organization_id']),
-            ];
-        });
         $keyPath = config('passport.key_path');
         if (is_string($keyPath) && trim($keyPath) !== '') {
             Passport::loadKeysFrom($keyPath);
@@ -94,21 +85,12 @@ class AppServiceProvider extends ServiceProvider
         Passport::refreshTokensExpireIn(now()->addDays((int) config('materyalph.auth.refresh_token_days', 14)));
 
         RateLimiter::for('auth-public', fn (Request $request): Limit => Limit::perMinute(10)->by($request->ip()));
-        // Browsing, bootstrap and provider traffic must not exhaust authentication attempts.
-        RateLimiter::for('public-store', fn (Request $request): Limit => Limit::perMinute(10)->by($request->ip()));
+        // Bootstrap and provider traffic must not exhaust authentication attempts.
         RateLimiter::for('auth-csrf', fn (Request $request): Limit => Limit::perMinute(10)->by($request->ip()));
         // Xendit retries and bursts payment events from a small set of addresses; the inbox only stores and acknowledges.
         RateLimiter::for('payment-webhook', fn (Request $request): Limit => Limit::perMinute(600)->by($request->ip()));
-        RateLimiter::for('payment-create', fn (Request $request): Limit => Limit::perMinute(12)->by((string) $request->user()?->getAuthIdentifier()));
         RateLimiter::for('provider-webhook', fn (Request $request): Limit => Limit::perMinute(10)->by($request->ip()));
-        RateLimiter::for('vendor-address', fn (Request $request): Limit => Limit::perMinute(10)->by((string) $request->user()?->getAuthIdentifier()));
         RateLimiter::for('auth-registration', fn (Request $request): Limit => Limit::perHour(5)->by($request->ip()));
         RateLimiter::for('auth-refresh', fn (Request $request): Limit => Limit::perMinute(30)->by($request->ip()));
-        // Buyer maps traffic: per-user budgets inside the overall account budget. Platform-wide daily provider
-        // budgets are enforced separately by ProviderBudget.
-        RateLimiter::for('buyer-discovery', fn (Request $request): Limit => Limit::perMinute(30)->by((string) $request->user()?->getAuthIdentifier()));
-        RateLimiter::for('buyer-geocode', fn (Request $request): Limit => Limit::perMinute(12)->by((string) $request->user()?->getAuthIdentifier()));
-        RateLimiter::for('buyer-places', fn (Request $request): Limit => Limit::perMinute(20)->by((string) $request->user()?->getAuthIdentifier()));
-        RateLimiter::for('buyer-route', fn (Request $request): Limit => Limit::perMinute(20)->by((string) $request->user()?->getAuthIdentifier()));
     }
 }

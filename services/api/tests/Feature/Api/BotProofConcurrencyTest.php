@@ -7,15 +7,15 @@ namespace Tests\Feature\Api;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Identity\BotProtectionService;
 use App\Models\BotRiskChallenge;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Tests\Support\RebuildsIsolatedDatabase;
 use Tests\TestCase;
 
 final class BotProofConcurrencyTest extends TestCase
 {
-    use DatabaseMigrations;
+    use RebuildsIsolatedDatabase;
 
     public function test_only_one_concurrent_consumer_can_use_a_risk_proof(): void
     {

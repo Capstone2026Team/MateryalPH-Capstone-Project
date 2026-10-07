@@ -47,7 +47,7 @@ products.responses['200'].content['application/json'].schema = ref('ChatProductP
 doc.setIn(['paths', `${base}/products`], { get: products })
 const typing = doc.getIn(['paths', `${base}/read`, 'post']).toJSON()
 typing.operationId = 'sendChatTyping'
-typing.description = 'Ephemeral authorized conversation.typing event on existing viewer channels, with typing boolean and server millisecond timestamp at. Never persisted; receivers ignore older events and clear after three seconds. Existing account rate limits apply.'
+typing.description = 'Ephemeral authorized conversation.typing event on existing viewer channels, with typing boolean and server millisecond timestamp at. Never persisted; receivers ignore older events and clear after three seconds. No account request-rate limit applies.'
 typing.requestBody.content['application/json'].schema = ref('ChatTyping')
 doc.setIn(['paths', `${base}/typing`], { post: typing })
 const startPath = `${base}/quotation/start`

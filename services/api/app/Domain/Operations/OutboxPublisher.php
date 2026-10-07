@@ -20,6 +20,18 @@ final class OutboxPublisher
         array $sensitivePayload,
     ): string {
         $id = (string) Str::uuid7();
+        if ($eventType === 'ACCOUNT_SECURITY_NOTICE') {
+            $userId = DB::table('users')->where('public_id', $aggregateId)->value('id');
+            if ($userId !== null) {
+                $noticeId = (string) Str::uuid7();
+                DB::table('notifications')->insert(['id' => $noticeId, 'user_id' => $userId, 'category' => 'SECURITY', 'title' => 'Account security update',
+                    'body' => $sensitivePayload['message'], 'resource_type' => 'ACCOUNT', 'resource_id' => $aggregateId, 'event_key' => hash('sha256', $id), 'created_at' => now(), 'updated_at' => now()]);
+                $sensitivePayload['notification_id'] = $noticeId;
+            }
+        }
+        if (is_string($sensitivePayload['notification_id'] ?? null) && $aggregateType === 'VENDOR_ORGANIZATION') {
+            DB::table('notifications')->where('id', $sensitivePayload['notification_id'])->update(['vendor_organization_id' => $aggregateId]);
+        }
         $sealedPayload = Crypt::encryptString(json_encode($sensitivePayload, JSON_THROW_ON_ERROR));
 
         DB::table('outbox_events')->insert([

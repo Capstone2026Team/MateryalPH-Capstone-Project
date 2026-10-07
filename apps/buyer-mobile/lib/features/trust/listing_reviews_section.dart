@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../design_system/components/buyer_overlays.dart';
 import '../../design_system/components/star_rating.dart';
 import '../../design_system/theme.dart';
 import '../item_procurement/procurement_models.dart' show formatManilaTimestamp;
@@ -55,7 +56,7 @@ class _ListingReviewsSectionState extends State<ListingReviewsSection> {
   }
 
   Future<void> _report(PublicReviewView review) async {
-    final reason = await showModalBottomSheet<String>(
+    final reason = await showBuyerBottomSheet<String>(
       context: context,
       builder: (context) => SafeArea(
         child: ListView(

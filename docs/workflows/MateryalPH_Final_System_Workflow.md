@@ -109,10 +109,12 @@ The backend applies deny-by-default, least-privilege access control. Role and or
 | Login | Five failed attempts per account and IP within 15 minutes, followed by temporary throttling |
 | Registration | Five attempts per IP per hour, with device and risk controls |
 | Email OTP | Resend cooldown, expiration, attempt limit, and one active code per purpose |
-| Authenticated API | Sixty requests per minute per user unless a feature-specific limit applies |
-| Unauthenticated API | Ten requests per minute per IP unless a public-service limit applies |
-| Payment and refund | Three creation attempts per minute per user, plus idempotency |
-| Messages and file uploads | Per-user and per-organization abuse limits |
+| Everyday Buyer, Vendor and Admin API | No application request-rate limit, including browsing, maps, orders, fulfillment, uploads and administrative operations |
+| Public store browsing and payment return | No application request-rate limit |
+| Payment and refund | Idempotency, authorization and provider verification; no application request-rate limit for user activity |
+| Messages and file uploads | Authorization, validation and private-file scanning; no per-user or per-organization request-rate limit |
+| Authentication, credentials and verification | Existing login, registration, OTP, recovery, MFA, credential-change, invitation and session-bootstrap limits remain |
+| Provider webhooks | Dedicated provider limits remain |
 
 Bot detection such as reCAPTCHA may be used on registration, suspicious login, password recovery, dispute filing, and other abuse-prone actions. It must be risk-based and must offer an accessible fallback. It must not be the only protection.
 
@@ -873,7 +875,7 @@ Product Details opens that store conversation and prepares an unsent, removable 
 
 Client-generated message IDs bind immutable sender, text and product content. Optimistic messages show Sending, failure and Retry; retry reuses the same identifier. Inbox rows show the public other-party identity/avatar, latest message preview (Sent a product: [name] for product messages), Manila timestamp and unread count, ordered by activity. Opening the thread marks received messages read. Loading, No messages yet and real failures with functional Retry are separate states.
 
-Use existing Reverb viewer-authorized channels and account inbox invalidations. Reconnect reauthorizes and fetches missed history; REST polling is a recovery fallback. Typing is an ephemeral, debounced event with a server timestamp, no database/outbox persistence, and approximately three-second expiry. Read/send/file/channel checks continue to revalidate account, store, role and handler authority; preserve scanner, rate-limit, commercial-history and privacy safeguards. No Admin receives general conversation access through this change.
+Use existing Reverb viewer-authorized channels and account inbox invalidations. Reconnect reauthorizes and fetches missed history; REST polling is a recovery fallback. Typing is an ephemeral, debounced event with a server timestamp, no database/outbox persistence, and approximately three-second expiry. Read/send/file/channel checks continue to revalidate account, store, role and handler authority; preserve scanner, commercial-history and privacy safeguards. Everyday messaging and uploads have no application request-rate limit; authentication and verification protections remain. No Admin receives general conversation access through this change.
 
 Legacy duplicate general inquiries are linked to the oldest canonical thread without moving or deleting immutable commercial history. They remain reachable from Earlier inquiry history; new general chat goes to the canonical thread. Existing quotation actions retain their purpose-specific authorization. The unique partial index excludes Work Package and fulfillment threads.
 

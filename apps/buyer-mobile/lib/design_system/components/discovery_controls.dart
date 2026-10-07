@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import 'buyer_overlays.dart';
 import '../../features/map_discovery/discovery_models.dart';
 import '../generated/color_tokens.dart';
 import '../theme.dart';
@@ -102,7 +103,7 @@ Future<bool> confirmRadiusExpansion(
 }) async {
   final confirmed = await showDialog<bool>(
     context: context,
-    builder: (context) => AlertDialog(
+    builder: (context) => BuyerDialog(
       title: Text('Search within $toKm km?'),
       content: Text(
         verifiedCount == 0

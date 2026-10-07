@@ -429,6 +429,7 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(DeliveryConfirmation.serializer)
       ..add(DeliveryEstimate.serializer)
       ..add(DeliveryEstimateOption.serializer)
+      ..add(DeliveryFailure.serializer)
       ..add(DeliveryPlan.serializer)
       ..add(DeliveryPlanAdvisoryEnum.serializer)
       ..add(DeliveryPlanEndpoint.serializer)
@@ -559,6 +560,10 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(DisputeTimelineEntry.serializer)
       ..add(DisputeTimelineEntryTypeEnum.serializer)
       ..add(DisputeVendorPermissions.serializer)
+      ..add(DocumentExport.serializer)
+      ..add(DocumentExportInput.serializer)
+      ..add(DocumentExportInputFormatEnum.serializer)
+      ..add(DocumentExportInputTypeEnum.serializer)
       ..add(EmailRequest.serializer)
       ..add(ErrorEnvelope.serializer)
       ..add(ExploreCategoryCount.serializer)
@@ -567,6 +572,7 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(ExploreSummary.serializer)
       ..add(ExploreSummaryCountScopeEnum.serializer)
       ..add(ExploreSummaryEnvelope.serializer)
+      ..add(ExportAccessRecord.serializer)
       ..add(FavoriteSupplier.serializer)
       ..add(FavoriteSupplierListEnvelope.serializer)
       ..add(FavoriteSupplierState.serializer)
@@ -641,6 +647,7 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(FulfillmentVehicleIssue.serializer)
       ..add(FulfillmentVehicleIssueCategoryEnum.serializer)
       ..add(GenericDataEnvelope.serializer)
+      ..add(GetNotificationPreferences200Response.serializer)
       ..add(GoogleContentAuthor.serializer)
       ..add(GoogleMobileExchangeRequest.serializer)
       ..add(GoogleOidcStartRequest.serializer)
@@ -700,6 +707,10 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(InvoiceRequestView.serializer)
       ..add(InvoiceRequestViewKindEnum.serializer)
       ..add(InvoiceRequestViewStateEnum.serializer)
+      ..add(ListDocumentExports200Response.serializer)
+      ..add(ListNotificationFailures200Response.serializer)
+      ..add(ListNotifications200Response.serializer)
+      ..add(ListTaxPackages200Response.serializer)
       ..add(ListingCategoryRef.serializer)
       ..add(ListingCompliance.serializer)
       ..add(ListingComplianceBadgeEnum.serializer)
@@ -783,6 +794,14 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(MoneyNrpcStatusEnum.serializer)
       ..add(MoneyNrpcWithinOrderValueEnum.serializer)
       ..add(MoneyRange.serializer)
+      ..add(NotificationAction.serializer)
+      ..add(NotificationDeviceInput.serializer)
+      ..add(NotificationDeviceInputPlatformEnum.serializer)
+      ..add(NotificationDeviceResult.serializer)
+      ..add(NotificationItem.serializer)
+      ..add(NotificationPreference.serializer)
+      ..add(NotificationPreferenceInput.serializer)
+      ..add(NotificationTarget.serializer)
       ..add(NrpcAcceptRequest.serializer)
       ..add(NrpcAcceptRequestAcknowledgedEnum.serializer)
       ..add(NrpcAffectedLine.serializer)
@@ -917,6 +936,7 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(PlatformDocumentRef.serializer)
       ..add(PlatformDocumentRefKindEnum.serializer)
       ..add(PlatformDocumentRefLabelEnum.serializer)
+      ..add(PrepareTaxPackage201Response.serializer)
       ..add(PriceHistoryEntry.serializer)
       ..add(PriceHistoryEntryPriceKindEnum.serializer)
       ..add(PriceHistoryEnvelope.serializer)
@@ -1004,10 +1024,12 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(RankingPreferencesTotalPercentEnum.serializer)
       ..add(RankingPreferencesUpdate.serializer)
       ..add(RankingWeightSet.serializer)
+      ..add(RecordTaxSimulation200Response.serializer)
       ..add(RefundTimelineItem.serializer)
       ..add(RefundTimelineItemDisplayStateEnum.serializer)
       ..add(RefundTimelineItemStateEnum.serializer)
       ..add(RefundTimelineItemTriggerEnum.serializer)
+      ..add(RegisterNotificationDevice201Response.serializer)
       ..add(RegisterRequest.serializer)
       ..add(RegisterRequestPrivacyAcceptedEnum.serializer)
       ..add(RegisterRequestTermsAcceptedEnum.serializer)
@@ -1017,7 +1039,9 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(RegulatedMaterialRuleRequiredMarkingEnum.serializer)
       ..add(ReimbursementTimelineItem.serializer)
       ..add(ReimbursementTimelineItemStateEnum.serializer)
+      ..add(RequestDocumentExport202Response.serializer)
       ..add(ResendBotChallengeRequest.serializer)
+      ..add(ResolveNotification200Response.serializer)
       ..add(ReviewDisplayOption.serializer)
       ..add(ReviewDisplayOptionChoiceEnum.serializer)
       ..add(ReviewFlagRequest.serializer)
@@ -1033,6 +1057,7 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(ReviewReportedEnvelope.serializer)
       ..add(ReviewResolveRequest.serializer)
       ..add(ReviewWindowRules.serializer)
+      ..add(RevokeNotificationDevice200Response.serializer)
       ..add(RouteEstimate.serializer)
       ..add(RouteEstimateDurationBasisEnum.serializer)
       ..add(RouteEstimateEnvelope.serializer)
@@ -1076,6 +1101,11 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(SupplierServiceabilityDeliveryEnum.serializer)
       ..add(SupplierTier.serializer)
       ..add(TaxCategory.serializer)
+      ..add(TaxPackage.serializer)
+      ..add(TaxPackageInput.serializer)
+      ..add(TaxPackageInputFormEnum.serializer)
+      ..add(TaxPackageInputWithholdingEntityEnum.serializer)
+      ..add(TaxPackageReview.serializer)
       ..add(ThresholdStatusEvent.serializer)
       ..add(ThresholdStatusEventActorTypeEnum.serializer)
       ..add(ThresholdStatusEventFromStatusEnum.serializer)
@@ -1811,6 +1841,23 @@ Serializers _$serializers = (Serializers().toBuilder()
               BuiltList, const [const FullType(DeliveryEstimateOption)]),
           () => ListBuilder<DeliveryEstimateOption>())
       ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(DeliveryFailure)]),
+          () => ListBuilder<DeliveryFailure>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [
+            const FullType(BuiltMap, const [
+              const FullType(String),
+              const FullType.nullable(JsonObject)
+            ])
+          ]),
+          () => ListBuilder<BuiltMap<String, JsonObject?>>())
+      ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(DeliveryPlanGroup)]),
           () => ListBuilder<DeliveryPlanGroup>())
       ..addBuilderFactory(
@@ -1914,6 +1961,23 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(ApiError)]),
           () => ListBuilder<ApiError>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(DocumentExport)]),
+          () => ListBuilder<DocumentExport>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [
+            const FullType(BuiltMap, const [
+              const FullType(String),
+              const FullType.nullable(JsonObject)
+            ])
+          ]),
+          () => ListBuilder<BuiltMap<String, JsonObject?>>())
       ..addBuilderFactory(
           const FullType(
               BuiltList, const [const FullType(ExploreCategoryCount)]),
@@ -2171,6 +2235,41 @@ Serializers _$serializers = (Serializers().toBuilder()
           const FullType(
               BuiltList, const [const FullType(MoneyBreakdownExcludesEnum)]),
           () => ListBuilder<MoneyBreakdownExcludesEnum>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(NotificationItem)]),
+          () => ListBuilder<NotificationItem>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [
+            const FullType(BuiltMap, const [
+              const FullType(String),
+              const FullType.nullable(JsonObject)
+            ])
+          ]),
+          () => ListBuilder<BuiltMap<String, JsonObject?>>())
+      ..addBuilderFactory(
+          const FullType(
+              BuiltList, const [const FullType(NotificationPreference)]),
+          () => ListBuilder<NotificationPreference>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [
+            const FullType(BuiltMap, const [
+              const FullType(String),
+              const FullType.nullable(JsonObject)
+            ])
+          ]),
+          () => ListBuilder<BuiltMap<String, JsonObject?>>())
       ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(NrpcAffectedLine)]),
           () => ListBuilder<NrpcAffectedLine>())
@@ -2609,6 +2708,23 @@ Serializers _$serializers = (Serializers().toBuilder()
           ]),
           () => ListBuilder<BuiltMap<String, JsonObject?>>())
       ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(TaxPackage)]),
+          () => ListBuilder<TaxPackage>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [
+            const FullType(BuiltMap, const [
+              const FullType(String),
+              const FullType.nullable(JsonObject)
+            ])
+          ]),
+          () => ListBuilder<BuiltMap<String, JsonObject?>>())
+      ..addBuilderFactory(
           const FullType(
               BuiltList, const [const FullType(ThresholdStatusEvent)]),
           () => ListBuilder<ThresholdStatusEvent>())
@@ -2735,6 +2851,18 @@ Serializers _$serializers = (Serializers().toBuilder()
           const FullType(
               BuiltMap, const [const FullType(String), const FullType(int)]),
           () => MapBuilder<String, int>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
       ..addBuilderFactory(
           const FullType(BuiltMap, const [
             const FullType(String),
@@ -3950,6 +4078,76 @@ Serializers _$serializers = (Serializers().toBuilder()
           ]),
           () => ListBuilder<BuiltMap<String, JsonObject?>>())
       ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [
+            const FullType(BuiltMap, const [
+              const FullType(String),
+              const FullType.nullable(JsonObject)
+            ])
+          ]),
+          () => ListBuilder<BuiltMap<String, JsonObject?>>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [
+            const FullType(BuiltMap, const [
+              const FullType(String),
+              const FullType.nullable(JsonObject)
+            ])
+          ]),
+          () => ListBuilder<BuiltMap<String, JsonObject?>>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [
+            const FullType(BuiltMap, const [
+              const FullType(String),
+              const FullType.nullable(JsonObject)
+            ])
+          ]),
+          () => ListBuilder<BuiltMap<String, JsonObject?>>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [
+            const FullType(BuiltMap, const [
+              const FullType(String),
+              const FullType.nullable(JsonObject)
+            ])
+          ]),
+          () => ListBuilder<BuiltMap<String, JsonObject?>>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [
+            const FullType(BuiltMap, const [
+              const FullType(String),
+              const FullType.nullable(JsonObject)
+            ])
+          ]),
+          () => ListBuilder<BuiltMap<String, JsonObject?>>())
+      ..addBuilderFactory(
           const FullType(BuiltList, const [
             const FullType(BuiltMap, const [
               const FullType(String),
@@ -4365,6 +4563,26 @@ Serializers _$serializers = (Serializers().toBuilder()
           ]),
           () => ListBuilder<BuiltMap<String, JsonObject?>>())
       ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [
+            const FullType(BuiltMap, const [
+              const FullType(String),
+              const FullType.nullable(JsonObject)
+            ])
+          ]),
+          () => ListBuilder<BuiltMap<String, JsonObject?>>())
+      ..addBuilderFactory(
           const FullType(BuiltList, const [
             const FullType(BuiltMap, const [
               const FullType(String),
@@ -4473,6 +4691,21 @@ Serializers _$serializers = (Serializers().toBuilder()
             ])
           ]),
           () => ListBuilder<BuiltMap<String, JsonObject?>>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ExportAccessRecord)]),
+          () => ListBuilder<ExportAccessRecord>())
       ..addBuilderFactory(
           const FullType(BuiltMap, const [
             const FullType(String),

@@ -7,6 +7,8 @@ import '../widgets/auth_content.dart';
 import '../design_system/theme.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../design_system/components/buyer_overlays.dart';
+
 class BuyerAccountScreen extends StatefulWidget {
   const BuyerAccountScreen({
     super.key,
@@ -161,12 +163,7 @@ class _BuyerAccountScreenState extends State<BuyerAccountScreen> {
   Future<bool> _confirm(String message) async =>
       await showDialog<bool>(
         context: context,
-        builder: (context) => AlertDialog(
-          scrollable: true,
-          insetPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 24,
-          ),
+        builder: (context) => BuyerDialog(
           title: const Text('Confirm account action'),
           content: Text(message),
           actions: [

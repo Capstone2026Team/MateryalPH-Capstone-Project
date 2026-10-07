@@ -43,6 +43,23 @@ final class PhaseTwoAccountSecurityTest extends TestCase
         $this->assertDatabaseHas('audit_logs', ['action' => 'PROFILE_UPDATED', 'actor_user_id' => $user->getKey()]);
     }
 
+    public function test_navigation_batches_activity_writes_but_rechecks_revoked_sessions(): void
+    {
+        [, $session] = $this->buyer();
+        $this->freezeTime();
+        $session->update(['last_used_at' => now()->subMinutes(2)]);
+        $this->getJson('/api/v1/buyers/account/profile')->assertOk();
+        $recorded = $session->refresh()->last_used_at;
+        $this->travel(10)->seconds();
+        $this->getJson('/api/v1/buyers/account/profile')->assertOk();
+        self::assertTrue($session->refresh()->last_used_at->equalTo($recorded));
+        $this->travel(51)->seconds();
+        $this->getJson('/api/v1/buyers/account/profile')->assertOk();
+        self::assertTrue($session->refresh()->last_used_at->greaterThan($recorded));
+        $session->update(['revoked_at' => now()]);
+        $this->getJson('/api/v1/buyers/account/profile')->assertUnauthorized();
+    }
+
     public function test_buyer_contact_number_is_owned_and_full_email_still_requires_recent_identity_verification(): void
     {
         [$user] = $this->buyer();

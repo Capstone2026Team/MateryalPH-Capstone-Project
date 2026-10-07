@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../design_system/components/buyer_overlays.dart';
 import '../map_discovery/discovery_models.dart';
 import 'messaging_repository.dart';
 
@@ -21,7 +23,7 @@ Future<void> showChatDeliveryDialog(
   await showDialog<void>(
     context: context,
     builder: (context) => StatefulBuilder(
-      builder: (context, update) => AlertDialog(
+      builder: (context, update) => BuyerDialog(
         title: const Text('Delivery details'),
         content: SingleChildScrollView(
           child: Column(

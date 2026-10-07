@@ -21,8 +21,8 @@ use App\Http\Controllers\Api\XenditAccountVerificationWebhookController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', HealthController::class);
-Route::get('/stores', [PublicStoreProfileController::class, 'index'])->middleware('throttle:public-store');
-Route::get('/stores/{storeId}/profile', PublicStoreProfileController::class)->whereUuid('storeId')->middleware('throttle:public-store');
+Route::get('/stores', [PublicStoreProfileController::class, 'index']);
+Route::get('/stores/{storeId}/profile', PublicStoreProfileController::class)->whereUuid('storeId');
 Route::get('/agreements/current', AgreementController::class);
 
 require __DIR__.'/account.php';
@@ -94,3 +94,4 @@ require __DIR__.'/payments.php';
 require __DIR__.'/fulfillment.php';
 require __DIR__.'/disputes.php';
 require __DIR__.'/trust.php';
+require __DIR__.'/notifications.php';

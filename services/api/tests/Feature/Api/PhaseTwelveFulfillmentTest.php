@@ -11,6 +11,7 @@ use App\Domain\Identity\TokenSessionService;
 use App\Domain\Orders\CancellationService;
 use App\Domain\Payments\PaymentReconciliationService;
 use App\Domain\Vendors\AddressGeocoder;
+use App\Domain\Vendors\StoreOperatingSchedule;
 use App\Domain\Vendors\VendorFileScanner;
 use App\Models\AuthSession;
 use App\Models\User;
@@ -194,6 +195,8 @@ final class PhaseTwelveFulfillmentTest extends TestCase
     {
         [$store, $owner, $buyer, $orderId] = $this->paidPickup('Auto Confirm');
         $this->toPickedUp($owner, $orderId);
+        // Public Closed hours must never postpone statutory or transaction reminder clocks.
+        app(StoreOperatingSchedule::class)->replaceWeekly((string) DB::table('store_profiles')->where('vendor_organization_id', $store->id)->value('id'), array_map(static fn (int $day): array => ['day_of_week' => $day, 'status' => 'CLOSED', 'opens_at' => null, 'closes_at' => null], range(1, 7)));
 
         $this->travel(24)->hours();
         $this->travel(1)->minutes();
@@ -341,9 +344,10 @@ final class PhaseTwelveFulfillmentTest extends TestCase
         $this->requestCancellation($buyerTwo, $withdrawn);
         $this->postJson('/api/v1/buyers/orders/'.$withdrawn.'/cancellation-request/withdraw', [], ['Idempotency-Key' => (string) Str::uuid7()])->assertOk()->assertJsonPath('data.states.0.state', 'PROCESSING');
 
-        [, $ownerThree, $buyerThree, $ignored, $ignoredPayment] = $this->paidPickup('Ignored Request');
+        [$closedStore, $ownerThree, $buyerThree, $ignored, $ignoredPayment] = $this->paidPickup('Ignored Request');
         $this->milestone($ownerThree, $ignored, 'PROCESSING')->assertOk();
         $this->requestCancellation($buyerThree, $ignored);
+        app(StoreOperatingSchedule::class)->replaceWeekly((string) DB::table('store_profiles')->where('vendor_organization_id', $closedStore->id)->value('id'), array_map(static fn (int $day): array => ['day_of_week' => $day, 'status' => 'CLOSED', 'opens_at' => null, 'closes_at' => null], range(1, 7)));
         $this->travel(23)->hours();
         self::assertSame(0, app(CancellationService::class)->sweep());
         $this->travel(61)->minutes();

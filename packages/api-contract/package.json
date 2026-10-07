@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "description": "OpenAPI 3.1 source and generated-client boundary for MateryalPH",
   "scripts": {
+    "test:rate-limit-contract": "node scripts/check-rate-limit-contract.mjs",
     "validate": "openapi-generator-cli validate -i openapi.yaml",
     "generate:typescript": "openapi-generator-cli generate -i openapi.yaml -g typescript-fetch -o generated/typescript --additional-properties npmName=@materyalph/api-client-ts --additional-properties supportsES6=true --additional-properties typescriptThreePlus=true",
     "generate:dart": "openapi-generator-cli generate -i openapi.yaml -g dart-dio -o generated/dart --additional-properties pubName=materyalph_api_client --additional-properties pubVersion=1.0.0",
@@ -20,7 +21,8 @@
     "test:payments-contract": "node scripts/check-payments-contract.mjs",
     "test:fulfillment-contract": "node scripts/check-fulfillment-contract.mjs",
     "test:disputes-contract": "node scripts/check-disputes-contract.mjs",
-    "test:trust-contract": "node scripts/check-trust-contract.mjs"
+    "test:trust-contract": "node scripts/check-trust-contract.mjs",
+    "test:notifications-contract": "node scripts/check-notifications-contract.mjs"
   },
   "devDependencies": {
     "@openapitools/openapi-generator-cli": "^2.41.0",

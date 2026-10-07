@@ -43,6 +43,9 @@ apps/buyer-mobile/.dart_tool/
 apps/buyer-mobile/build/
 
 # Local runtime data
+tmp/pdf-tools/
+services/api/phase15-*.log
+apps/*/phase15-*.log
 services/api/storage/logs/*.log
 services/api/.env.testing
 .idea/

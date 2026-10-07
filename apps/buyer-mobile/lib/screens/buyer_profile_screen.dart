@@ -14,6 +14,7 @@ import 'buyer_account_screen.dart';
 class BuyerProfileScreen extends StatefulWidget {
   const BuyerProfileScreen({
     super.key,
+    this.active = true,
     required this.repository,
     required this.onSignedOut,
     required this.onSignOut,
@@ -27,6 +28,7 @@ class BuyerProfileScreen extends StatefulWidget {
     this.deviceLocation = const GeolocatorDeviceLocationService(),
   });
   final AuthRepository repository;
+  final bool active;
   final VoidCallback? onRankingPreferences;
   final VoidCallback? onOpenOrders;
   final VoidCallback? onOpenCart;
@@ -51,7 +53,14 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
     _load();
   }
 
+  @override
+  void didUpdateWidget(covariant BuyerProfileScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.active && !oldWidget.active) _load();
+  }
+
   Future<void> _load() async {
+    if (_busy) return;
     setState(() {
       _busy = true;
       _error = null;
@@ -71,6 +80,7 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
         return;
       }
       if (mounted) {
+        _profile = null;
         setState(
           () => _error = error is BuyerAuthException
               ? error.message
@@ -193,8 +203,7 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
               BuyerMenuRow(
                 label: 'Cart',
                 icon: LucideIcons.shoppingCart,
-                onTap:
-                    widget.onOpenCart ?? () => _unavailable('Cart', 'cart'),
+                onTap: widget.onOpenCart ?? () => _unavailable('Cart', 'cart'),
               ),
               BuyerMenuRow(
                 label: 'Cancellations & Refunds',

@@ -1,6 +1,7 @@
+import { VendorNotificationsPage } from './pages/NotificationPages'
 import { VendorPlaceholderPage } from './pages/PhaseThreeVendorPages'
 import { AcceptStaffInvitation } from './pages/AcceptStaffInvitation'
-import { Button, Field, PhoneField, StatusMessage, PortalIdentityProvider } from '@materyalph/web-ui'
+import { Button, Field, PhoneField, StatusMessage, PortalIdentityProvider, PortalResourceProvider } from '@materyalph/web-ui'
 import { ArrowRight } from 'lucide-react'
 import { type FormEvent, type ReactNode, useEffect, useRef, useState } from 'react'
 import { BrowserRouter, Link, Outlet, Route, Routes, useNavigate, useSearchParams } from 'react-router-dom'
@@ -51,7 +52,7 @@ function App() {
         <Route path="/auth/mfa" element={<VendorMfaPage />} />
         <Route path="/auth/callback" element={<VendorAuthCallbackPage />} />
         <Route path="/entry" element={<VendorEntryPage />} />
-        <Route element={<PortalIdentityProvider portal="vendors" basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'}><Outlet /></PortalIdentityProvider>}>
+        <Route element={<PortalResourceProvider><PortalIdentityProvider portal="vendors" basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'}><Outlet /></PortalIdentityProvider></PortalResourceProvider>}>
           <Route path="/welcome" element={<VendorWelcomePage />} />
           <Route path="/preview/:module" element={<VendorPlaceholderPage />} />
           <Route path="/dashboard" element={<VendorDashboardPage />} />
@@ -65,7 +66,7 @@ function App() {
           <Route path="/products/inventory" element={<VendorInventoryPage />} />
           <Route path="/vehicles" element={<VendorFleetPage />} />
           <Route path="/messages" element={<VendorMessagesPage />} />
-          <Route path="/orders" element={<VendorOrdersPage />} />
+          <Route path="/notifications" element={<VendorNotificationsPage />} /><Route path="/orders" element={<VendorOrdersPage />} />
           <Route path="/orders/:orderId" element={<VendorOrderDetailPage />} />
           <Route path="/disputes" element={<VendorDisputesPage />} />
           <Route path="/disputes/new" element={<VendorFileDisputePage />} />
@@ -346,3 +347,4 @@ function NotFound() {
 }
 
 export default App
+

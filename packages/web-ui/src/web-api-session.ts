@@ -64,6 +64,7 @@ export function getWebCsrfToken(basePath: string, force = false): Promise<string
 }
 
 export function clearWebSessionTransport(basePath?: string): void {
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('materyalph:session-cleared'))
   reads.clear()
   cooldowns.clear()
   if (basePath) {
@@ -113,6 +114,9 @@ async function coordinatedFetch(basePath: string, refreshSession: boolean, input
   if (mutation && mutations.has(key)) throw new Error('This action is already processing. Please wait for it to finish.')
   if (mutation) mutations.add(key)
   const request = webFetch(basePath, refreshSession, input, init).then(response => {
+    if (typeof window !== 'undefined') {
+      if ([401, 403].includes(response.status)) window.dispatchEvent(new CustomEvent('materyalph:access-denied', { detail: response.clone() }))
+    }
     if (response.status === 429 && response.headers.has('Retry-After')) {
       const until = Date.now() + retryAfterSeconds(response) * 1000
       cooldowns.set(key, { until, response: response.clone() })

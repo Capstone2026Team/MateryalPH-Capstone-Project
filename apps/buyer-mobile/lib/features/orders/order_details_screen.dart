@@ -1,3 +1,5 @@
+import '../notifications/notification_scope.dart';
+import '../notifications/notifications_screen.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -6,6 +8,7 @@ import '../projects/projects_repository.dart';
 import '../projects/projects_screen.dart' show ProjectBudgetCard;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../design_system/components/buyer_overlays.dart';
 import '../../design_system/components/dispute_components.dart';
 import '../../design_system/components/fulfillment_components.dart';
 import '../disputes/dispute_models.dart' show DisputeDetailView;
@@ -135,7 +138,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
   Future<void> _confirmReject(OrderDetailView order) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => BuyerDialog(
         title: const Text('Reject this version?'),
         content: const Text(
           'The order request is cancelled and the reserved stock is released. You are not charged.',
@@ -184,7 +187,26 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     final order = _order;
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: buyerAppBar(context, 'Order details'),
+      appBar: buyerAppBar(
+        context,
+        'Order details',
+        actions: [
+          if (NotificationScope.of(context) != null)
+            IconButton(
+              tooltip: 'Order documents',
+              icon: const Icon(Icons.description_outlined),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute<void>(
+                  builder: (_) => BuyerReportsScreen(
+                    repository: NotificationScope.of(context)!,
+                    resourceId: widget.orderId,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
       bottomNavigationBar: order == null ? null : _actionBar(order),
       body: SafeArea(
         child: order == null
@@ -370,7 +392,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
   }) async =>
       await showDialog<bool>(
         context: context,
-        builder: (context) => AlertDialog(
+        builder: (context) => BuyerDialog(
           title: Text(title),
           content: Text(message),
           actions: [

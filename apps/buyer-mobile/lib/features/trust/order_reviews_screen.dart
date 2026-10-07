@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../design_system/components/buyer_overlays.dart';
 import '../../design_system/components/buyer_app_bar.dart';
 import '../../design_system/components/procurement_components.dart';
 import '../../design_system/components/star_rating.dart';
@@ -102,7 +103,7 @@ class _OrderReviewsScreenState extends State<OrderReviewsScreen> {
         .preview;
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => BuyerDialog(
         title: const Text('Submit your ratings?'),
         content: Text(
           'They will appear as “$name”, marked Verified purchase, once the seller also rates or the 14-day window ends. You can correct them for 24 hours after submitting.',
@@ -170,7 +171,7 @@ class _OrderReviewsScreenState extends State<OrderReviewsScreen> {
     final saved = await showDialog<bool>(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setDialog) => AlertDialog(
+        builder: (context, setDialog) => BuyerDialog(
           title: Text(
             review.correctionRequested
                 ? 'Submit the requested correction'

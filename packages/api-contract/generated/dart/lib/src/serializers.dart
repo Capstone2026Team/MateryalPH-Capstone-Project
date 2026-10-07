@@ -304,6 +304,7 @@ import 'package:materyalph_api_client/src/model/delivery_amount.dart';
 import 'package:materyalph_api_client/src/model/delivery_confirmation.dart';
 import 'package:materyalph_api_client/src/model/delivery_estimate.dart';
 import 'package:materyalph_api_client/src/model/delivery_estimate_option.dart';
+import 'package:materyalph_api_client/src/model/delivery_failure.dart';
 import 'package:materyalph_api_client/src/model/delivery_plan.dart';
 import 'package:materyalph_api_client/src/model/delivery_plan_endpoint.dart';
 import 'package:materyalph_api_client/src/model/delivery_plan_envelope.dart';
@@ -368,6 +369,8 @@ import 'package:materyalph_api_client/src/model/dispute_summary.dart';
 import 'package:materyalph_api_client/src/model/dispute_timeline_actor.dart';
 import 'package:materyalph_api_client/src/model/dispute_timeline_entry.dart';
 import 'package:materyalph_api_client/src/model/dispute_vendor_permissions.dart';
+import 'package:materyalph_api_client/src/model/document_export.dart';
+import 'package:materyalph_api_client/src/model/document_export_input.dart';
 import 'package:materyalph_api_client/src/model/email_request.dart';
 import 'package:materyalph_api_client/src/model/error_envelope.dart';
 import 'package:materyalph_api_client/src/model/explore_category_count.dart';
@@ -375,6 +378,7 @@ import 'package:materyalph_api_client/src/model/explore_counts.dart';
 import 'package:materyalph_api_client/src/model/explore_labels.dart';
 import 'package:materyalph_api_client/src/model/explore_summary.dart';
 import 'package:materyalph_api_client/src/model/explore_summary_envelope.dart';
+import 'package:materyalph_api_client/src/model/export_access_record.dart';
 import 'package:materyalph_api_client/src/model/favorite_supplier.dart';
 import 'package:materyalph_api_client/src/model/favorite_supplier_list_envelope.dart';
 import 'package:materyalph_api_client/src/model/favorite_supplier_state.dart';
@@ -421,6 +425,7 @@ import 'package:materyalph_api_client/src/model/fulfillment_trip.dart';
 import 'package:materyalph_api_client/src/model/fulfillment_trip_request.dart';
 import 'package:materyalph_api_client/src/model/fulfillment_vehicle_issue.dart';
 import 'package:materyalph_api_client/src/model/generic_data_envelope.dart';
+import 'package:materyalph_api_client/src/model/get_notification_preferences200_response.dart';
 import 'package:materyalph_api_client/src/model/google_content_author.dart';
 import 'package:materyalph_api_client/src/model/google_mobile_exchange_request.dart';
 import 'package:materyalph_api_client/src/model/google_oidc_start_request.dart';
@@ -460,6 +465,10 @@ import 'package:materyalph_api_client/src/model/invoice_record_view.dart';
 import 'package:materyalph_api_client/src/model/invoice_request_answer.dart';
 import 'package:materyalph_api_client/src/model/invoice_request_create.dart';
 import 'package:materyalph_api_client/src/model/invoice_request_view.dart';
+import 'package:materyalph_api_client/src/model/list_document_exports200_response.dart';
+import 'package:materyalph_api_client/src/model/list_notification_failures200_response.dart';
+import 'package:materyalph_api_client/src/model/list_notifications200_response.dart';
+import 'package:materyalph_api_client/src/model/list_tax_packages200_response.dart';
 import 'package:materyalph_api_client/src/model/listing_category_ref.dart';
 import 'package:materyalph_api_client/src/model/listing_compliance.dart';
 import 'package:materyalph_api_client/src/model/listing_compliance_status.dart';
@@ -508,6 +517,13 @@ import 'package:materyalph_api_client/src/model/money_breakdown.dart';
 import 'package:materyalph_api_client/src/model/money_delivery.dart';
 import 'package:materyalph_api_client/src/model/money_nrpc.dart';
 import 'package:materyalph_api_client/src/model/money_range.dart';
+import 'package:materyalph_api_client/src/model/notification_action.dart';
+import 'package:materyalph_api_client/src/model/notification_device_input.dart';
+import 'package:materyalph_api_client/src/model/notification_device_result.dart';
+import 'package:materyalph_api_client/src/model/notification_item.dart';
+import 'package:materyalph_api_client/src/model/notification_preference.dart';
+import 'package:materyalph_api_client/src/model/notification_preference_input.dart';
+import 'package:materyalph_api_client/src/model/notification_target.dart';
 import 'package:materyalph_api_client/src/model/nrpc_accept_request.dart';
 import 'package:materyalph_api_client/src/model/nrpc_affected_line.dart';
 import 'package:materyalph_api_client/src/model/nrpc_flag.dart';
@@ -580,6 +596,7 @@ import 'package:materyalph_api_client/src/model/physical_payment_summary_envelop
 import 'package:materyalph_api_client/src/model/pickup_confirmation.dart';
 import 'package:materyalph_api_client/src/model/pickup_preview.dart';
 import 'package:materyalph_api_client/src/model/platform_document_ref.dart';
+import 'package:materyalph_api_client/src/model/prepare_tax_package201_response.dart';
 import 'package:materyalph_api_client/src/model/price_history_entry.dart';
 import 'package:materyalph_api_client/src/model/price_history_envelope.dart';
 import 'package:materyalph_api_client/src/model/problem_resolve_request.dart';
@@ -647,13 +664,17 @@ import 'package:materyalph_api_client/src/model/ranking_preferences.dart';
 import 'package:materyalph_api_client/src/model/ranking_preferences_envelope.dart';
 import 'package:materyalph_api_client/src/model/ranking_preferences_update.dart';
 import 'package:materyalph_api_client/src/model/ranking_weight_set.dart';
+import 'package:materyalph_api_client/src/model/record_tax_simulation200_response.dart';
 import 'package:materyalph_api_client/src/model/refund_timeline_item.dart';
+import 'package:materyalph_api_client/src/model/register_notification_device201_response.dart';
 import 'package:materyalph_api_client/src/model/register_request.dart';
 import 'package:materyalph_api_client/src/model/registration_envelope.dart';
 import 'package:materyalph_api_client/src/model/registration_envelope_all_of_data.dart';
 import 'package:materyalph_api_client/src/model/regulated_material_rule.dart';
 import 'package:materyalph_api_client/src/model/reimbursement_timeline_item.dart';
+import 'package:materyalph_api_client/src/model/request_document_export202_response.dart';
 import 'package:materyalph_api_client/src/model/resend_bot_challenge_request.dart';
+import 'package:materyalph_api_client/src/model/resolve_notification200_response.dart';
 import 'package:materyalph_api_client/src/model/review_display_option.dart';
 import 'package:materyalph_api_client/src/model/review_flag_request.dart';
 import 'package:materyalph_api_client/src/model/review_line.dart';
@@ -665,6 +686,7 @@ import 'package:materyalph_api_client/src/model/review_reported.dart';
 import 'package:materyalph_api_client/src/model/review_reported_envelope.dart';
 import 'package:materyalph_api_client/src/model/review_resolve_request.dart';
 import 'package:materyalph_api_client/src/model/review_window_rules.dart';
+import 'package:materyalph_api_client/src/model/revoke_notification_device200_response.dart';
 import 'package:materyalph_api_client/src/model/route_estimate.dart';
 import 'package:materyalph_api_client/src/model/route_estimate_envelope.dart';
 import 'package:materyalph_api_client/src/model/route_estimate_request.dart';
@@ -693,6 +715,9 @@ import 'package:materyalph_api_client/src/model/supplier_result.dart';
 import 'package:materyalph_api_client/src/model/supplier_serviceability.dart';
 import 'package:materyalph_api_client/src/model/supplier_tier.dart';
 import 'package:materyalph_api_client/src/model/tax_category.dart';
+import 'package:materyalph_api_client/src/model/tax_package.dart';
+import 'package:materyalph_api_client/src/model/tax_package_input.dart';
+import 'package:materyalph_api_client/src/model/tax_package_review.dart';
 import 'package:materyalph_api_client/src/model/threshold_status_event.dart';
 import 'package:materyalph_api_client/src/model/user_identity.dart';
 import 'package:materyalph_api_client/src/model/vehicle_issue_request.dart';
@@ -1088,6 +1113,7 @@ part 'serializers.g.dart';
   DeliveryConfirmation,
   DeliveryEstimate,
   DeliveryEstimateOption,
+  DeliveryFailure,
   DeliveryPlan,
   DeliveryPlanEndpoint,
   DeliveryPlanEnvelope,
@@ -1152,6 +1178,8 @@ part 'serializers.g.dart';
   DisputeTimelineActor,
   DisputeTimelineEntry,
   DisputeVendorPermissions,
+  DocumentExport,
+  DocumentExportInput,
   EmailRequest,
   ErrorEnvelope,
   ExploreCategoryCount,
@@ -1159,6 +1187,7 @@ part 'serializers.g.dart';
   ExploreLabels,
   ExploreSummary,
   ExploreSummaryEnvelope,
+  ExportAccessRecord,
   FavoriteSupplier,
   FavoriteSupplierListEnvelope,
   FavoriteSupplierState,
@@ -1205,6 +1234,7 @@ part 'serializers.g.dart';
   FulfillmentTripRequest,
   FulfillmentVehicleIssue,
   GenericDataEnvelope,
+  GetNotificationPreferences200Response,
   GoogleContentAuthor,
   GoogleMobileExchangeRequest,
   GoogleOidcStartRequest,
@@ -1244,6 +1274,10 @@ part 'serializers.g.dart';
   InvoiceRequestAnswer,
   InvoiceRequestCreate,
   InvoiceRequestView,
+  ListDocumentExports200Response,
+  ListNotificationFailures200Response,
+  ListNotifications200Response,
+  ListTaxPackages200Response,
   ListingCategoryRef,
   ListingCompliance,
   ListingComplianceStatus,
@@ -1292,6 +1326,13 @@ part 'serializers.g.dart';
   MoneyDelivery,
   MoneyNrpc,
   MoneyRange,
+  NotificationAction,
+  NotificationDeviceInput,
+  NotificationDeviceResult,
+  NotificationItem,
+  NotificationPreference,
+  NotificationPreferenceInput,
+  NotificationTarget,
   NrpcAcceptRequest,
   NrpcAffectedLine,
   NrpcFlag,
@@ -1364,6 +1405,7 @@ part 'serializers.g.dart';
   PickupConfirmation,
   PickupPreview,
   PlatformDocumentRef,
+  PrepareTaxPackage201Response,
   PriceHistoryEntry,
   PriceHistoryEnvelope,
   ProblemResolveRequest,
@@ -1431,13 +1473,17 @@ part 'serializers.g.dart';
   RankingPreferencesEnvelope,
   RankingPreferencesUpdate,
   RankingWeightSet,
+  RecordTaxSimulation200Response,
   RefundTimelineItem,
+  RegisterNotificationDevice201Response,
   RegisterRequest,
   RegistrationEnvelope,
   RegistrationEnvelopeAllOfData,
   RegulatedMaterialRule,
   ReimbursementTimelineItem,
+  RequestDocumentExport202Response,
   ResendBotChallengeRequest,
+  ResolveNotification200Response,
   ReviewDisplayOption,
   ReviewFlagRequest,
   ReviewLine,
@@ -1449,6 +1495,7 @@ part 'serializers.g.dart';
   ReviewReportedEnvelope,
   ReviewResolveRequest,
   ReviewWindowRules,
+  RevokeNotificationDevice200Response,
   RouteEstimate,
   RouteEstimateEnvelope,
   RouteEstimateRequest,
@@ -1477,6 +1524,9 @@ part 'serializers.g.dart';
   SupplierServiceability,
   SupplierTier,
   TaxCategory,
+  TaxPackage,
+  TaxPackageInput,
+  TaxPackageReview,
   ThresholdStatusEvent,
   UserIdentity,
   VehicleIssueRequest,
@@ -1696,6 +1746,10 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<OrderSummary>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(NotificationPreference)]),
+        () => ListBuilder<NotificationPreference>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(ListingStatusChange)]),
         () => ListBuilder<ListingStatusChange>(),
       )
@@ -1742,6 +1796,10 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(AnalyticsSource)]),
         () => ListBuilder<AnalyticsSource>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(DeliveryFailure)]),
+        () => ListBuilder<DeliveryFailure>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(InventoryMovement)]),
@@ -1952,6 +2010,10 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<BuyerReviewSubmitRequestProductReviewsInner>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(NotificationItem)]),
+        () => ListBuilder<NotificationItem>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(ComparableSpecificationAttributesInner)]),
         () => ListBuilder<ComparableSpecificationAttributesInner>(),
       )
@@ -2068,6 +2130,10 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<CatalogVolumeTierInput>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(DocumentExport)]),
+        () => ListBuilder<DocumentExport>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(VendorOrderDeclineReason)]),
         () => ListBuilder<VendorOrderDeclineReason>(),
       )
@@ -2130,6 +2196,10 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(ChannelFeeVersion)]),
         () => ListBuilder<ChannelFeeVersion>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ExportAccessRecord)]),
+        () => ListBuilder<ExportAccessRecord>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(PublicBadge)]),
@@ -2262,6 +2332,10 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(WorkPackageSummary)]),
         () => ListBuilder<WorkPackageSummary>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(TaxPackage)]),
+        () => ListBuilder<TaxPackage>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(ComplianceRegister)]),

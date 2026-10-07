@@ -12,6 +12,7 @@ use App\Domain\Catalog\EligibleOfferQuery;
 use App\Domain\Geography\PlacesProvider;
 use App\Domain\Geography\RouteProvider;
 use App\Domain\Identity\TokenSessionService;
+use App\Domain\Reporting\DocumentExportService;
 use App\Domain\Scores\ScoreCalculator;
 use App\Domain\Vendors\AddressGeocoder;
 use App\Domain\Vendors\StoreOperatingSchedule;
@@ -206,6 +207,14 @@ final class PhaseFourteenAnalyticsTest extends TestCase
         self::assertNull($suppressed['trend']['change_percent']);
         self::assertSame('INSUFFICIENT_COMPETITOR_DATA', $suppressed['trend']['reason']);
         self::assertSame('80.00', $suppressed['own_offer']['normalized_php']);
+
+        $export = $this->postJson('/api/v1/vendor/reports', ['type' => 'MATERIALS_ANALYTICS', 'format' => 'CSV', 'purpose' => 'Review aggregate materials trends', 'filters' => ['start_date' => $date, 'end_date' => $next]], ['Idempotency-Key' => (string) Str::uuid7()])->assertAccepted()->json('data');
+        app(DocumentExportService::class)->process($export['id']);
+        $csv = $this->get('/api/v1/vendor/reports/'.$export['id'].'/download')->assertOk()->streamedContent();
+        self::assertStringContainsString('Insufficient Competitor Data', $csv);
+        foreach (['Competitor One', 'Competitor Two', 'Competitor Three', $third->id, $thirdListing, $c3, 'vendor_ids', 'average_php_exact'] as $leak) {
+            self::assertStringNotContainsString($leak, $csv);
+        }
 
         // The own organization never contributes, so the Buyer sees four Vendors where the Vendor sees three competitors.
         $this->buyer();

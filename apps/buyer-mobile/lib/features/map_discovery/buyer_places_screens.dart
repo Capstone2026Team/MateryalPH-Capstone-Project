@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../design_system/components/buyer_overlays.dart';
 import '../../design_system/components/buyer_app_bar.dart';
 import '../../widgets/auth_content.dart';
 import 'device_location.dart';
@@ -90,7 +91,7 @@ class _SavedLocationsScreenState extends State<SavedLocationsScreen> {
   Future<void> _remove(SavedLocationView location) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => BuyerDialog(
         title: Text('Remove ${location.label}?'),
         content: const Text(
           'It will no longer appear in your saved locations. Past orders keep their captured address.',

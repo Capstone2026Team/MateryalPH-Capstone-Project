@@ -305,6 +305,7 @@ All URIs are relative to */api/v1*
 *MessagingApi* | [**listChatHandlers**](docs/MessagingApi.md#listchathandlers) | **GET** /{messagingPortal}/conversations/{conversationId}/handlers |
 *MessagingApi* | [**listChatProducts**](docs/MessagingApi.md#listchatproducts) | **GET** /{messagingPortal}/conversations/{conversationId}/products |
 *MessagingApi* | [**listConversations**](docs/MessagingApi.md#listconversations) | **GET** /{messagingPortal}/conversations |
+*MessagingApi* | [**openVendorOrderConversation**](docs/MessagingApi.md#openvendororderconversation) | **POST** /vendor/orders/{orderId}/conversation |
 *MessagingApi* | [**publishChatQuotation**](docs/MessagingApi.md#publishchatquotation) | **POST** /{messagingPortal}/conversations/{conversationId}/quotation/publish |
 *MessagingApi* | [**readChatMessages**](docs/MessagingApi.md#readchatmessages) | **POST** /{messagingPortal}/conversations/{conversationId}/read |
 *MessagingApi* | [**restoreChatConversation**](docs/MessagingApi.md#restorechatconversation) | **DELETE** /{messagingPortal}/conversations/{conversationId}/archive |
@@ -315,8 +316,24 @@ All URIs are relative to */api/v1*
 *MessagingApi* | [**transferChatHandler**](docs/MessagingApi.md#transferchathandler) | **POST** /{messagingPortal}/conversations/{conversationId}/transfer |
 *MessagingApi* | [**updateChatDestination**](docs/MessagingApi.md#updatechatdestination) | **PUT** /{messagingPortal}/conversations/{conversationId}/destination |
 *MessagingApi* | [**uploadChatAttachment**](docs/MessagingApi.md#uploadchatattachment) | **POST** /{messagingPortal}/conversations/{conversationId}/attachments |
+*NotificationsApi* | [**getNotificationPreferences**](docs/NotificationsApi.md#getnotificationpreferences) | **GET** /{audience}/notifications/preferences | get Notification Preferences
+*NotificationsApi* | [**listNotificationFailures**](docs/NotificationsApi.md#listnotificationfailures) | **GET** /admin/notifications/failures | list Notification Failures
+*NotificationsApi* | [**listNotifications**](docs/NotificationsApi.md#listnotifications) | **GET** /{audience}/notifications | list Notifications
+*NotificationsApi* | [**readNotification**](docs/NotificationsApi.md#readnotification) | **POST** /{audience}/notifications/{noticeId}/read | read Notification
+*NotificationsApi* | [**registerNotificationDevice**](docs/NotificationsApi.md#registernotificationdevice) | **POST** /{audience}/notifications/devices | register Notification Device
+*NotificationsApi* | [**resolveNotification**](docs/NotificationsApi.md#resolvenotification) | **POST** /{audience}/notifications/{noticeId}/resolve | resolve Notification
+*NotificationsApi* | [**revokeNotificationDevice**](docs/NotificationsApi.md#revokenotificationdevice) | **DELETE** /{audience}/notifications/devices/{deviceId} | revoke Notification Device
+*NotificationsApi* | [**updateNotificationPreference**](docs/NotificationsApi.md#updatenotificationpreference) | **PUT** /{audience}/notifications/preferences | update Notification Preference
 *PaymentWebhooksApi* | [**receiveXenditPaymentWebhook**](docs/PaymentWebhooksApi.md#receivexenditpaymentwebhook) | **POST** /webhooks/xendit |
 *PaymentWebhooksApi* | [**showPaymentReturnPage**](docs/PaymentWebhooksApi.md#showpaymentreturnpage) | **GET** /payments/return |
+*ReportingApi* | [**downloadDocumentExport**](docs/ReportingApi.md#downloaddocumentexport) | **GET** /{audience}/reports/{exportId}/download | download Document Export
+*ReportingApi* | [**getTaxPackage**](docs/ReportingApi.md#gettaxpackage) | **GET** /admin/reports/tax/{packageId} | get Tax Package
+*ReportingApi* | [**listDocumentExports**](docs/ReportingApi.md#listdocumentexports) | **GET** /{audience}/reports | list Document Exports
+*ReportingApi* | [**listTaxPackages**](docs/ReportingApi.md#listtaxpackages) | **GET** /admin/reports/tax | list Tax Packages
+*ReportingApi* | [**prepareTaxPackage**](docs/ReportingApi.md#preparetaxpackage) | **POST** /admin/reports/tax | prepare Tax Package
+*ReportingApi* | [**recordTaxSimulation**](docs/ReportingApi.md#recordtaxsimulation) | **POST** /admin/reports/tax/{packageId}/simulation | record Tax Simulation
+*ReportingApi* | [**requestDocumentExport**](docs/ReportingApi.md#requestdocumentexport) | **POST** /{audience}/reports | request Document Export
+*ReportingApi* | [**reviewTaxPackage**](docs/ReportingApi.md#reviewtaxpackage) | **POST** /admin/reports/tax/{packageId}/review | review Tax Package
 *StoresApi* | [**getPublicStoreProfile**](docs/StoresApi.md#getpublicstoreprofile) | **GET** /stores/{storeId}/profile |
 *StoresApi* | [**listPublicStores**](docs/StoresApi.md#listpublicstores) | **GET** /stores |
 *SystemApi* | [**getApiHealth**](docs/SystemApi.md#getapihealth) | **GET** /health |
@@ -744,6 +761,7 @@ All URIs are relative to */api/v1*
 - [DeliveryConfirmation](docs/DeliveryConfirmation.md)
 - [DeliveryEstimate](docs/DeliveryEstimate.md)
 - [DeliveryEstimateOption](docs/DeliveryEstimateOption.md)
+- [DeliveryFailure](docs/DeliveryFailure.md)
 - [DeliveryPlan](docs/DeliveryPlan.md)
 - [DeliveryPlanEndpoint](docs/DeliveryPlanEndpoint.md)
 - [DeliveryPlanEnvelope](docs/DeliveryPlanEnvelope.md)
@@ -808,6 +826,8 @@ All URIs are relative to */api/v1*
 - [DisputeTimelineActor](docs/DisputeTimelineActor.md)
 - [DisputeTimelineEntry](docs/DisputeTimelineEntry.md)
 - [DisputeVendorPermissions](docs/DisputeVendorPermissions.md)
+- [DocumentExport](docs/DocumentExport.md)
+- [DocumentExportInput](docs/DocumentExportInput.md)
 - [EmailRequest](docs/EmailRequest.md)
 - [ErrorEnvelope](docs/ErrorEnvelope.md)
 - [ExploreCategoryCount](docs/ExploreCategoryCount.md)
@@ -815,6 +835,7 @@ All URIs are relative to */api/v1*
 - [ExploreLabels](docs/ExploreLabels.md)
 - [ExploreSummary](docs/ExploreSummary.md)
 - [ExploreSummaryEnvelope](docs/ExploreSummaryEnvelope.md)
+- [ExportAccessRecord](docs/ExportAccessRecord.md)
 - [FavoriteSupplier](docs/FavoriteSupplier.md)
 - [FavoriteSupplierListEnvelope](docs/FavoriteSupplierListEnvelope.md)
 - [FavoriteSupplierState](docs/FavoriteSupplierState.md)
@@ -861,6 +882,7 @@ All URIs are relative to */api/v1*
 - [FulfillmentTripRequest](docs/FulfillmentTripRequest.md)
 - [FulfillmentVehicleIssue](docs/FulfillmentVehicleIssue.md)
 - [GenericDataEnvelope](docs/GenericDataEnvelope.md)
+- [GetNotificationPreferences200Response](docs/GetNotificationPreferences200Response.md)
 - [GoogleContentAuthor](docs/GoogleContentAuthor.md)
 - [GoogleMobileExchangeRequest](docs/GoogleMobileExchangeRequest.md)
 - [GoogleOidcStartRequest](docs/GoogleOidcStartRequest.md)
@@ -900,6 +922,10 @@ All URIs are relative to */api/v1*
 - [InvoiceRequestAnswer](docs/InvoiceRequestAnswer.md)
 - [InvoiceRequestCreate](docs/InvoiceRequestCreate.md)
 - [InvoiceRequestView](docs/InvoiceRequestView.md)
+- [ListDocumentExports200Response](docs/ListDocumentExports200Response.md)
+- [ListNotificationFailures200Response](docs/ListNotificationFailures200Response.md)
+- [ListNotifications200Response](docs/ListNotifications200Response.md)
+- [ListTaxPackages200Response](docs/ListTaxPackages200Response.md)
 - [ListingCategoryRef](docs/ListingCategoryRef.md)
 - [ListingCompliance](docs/ListingCompliance.md)
 - [ListingComplianceStatus](docs/ListingComplianceStatus.md)
@@ -948,6 +974,13 @@ All URIs are relative to */api/v1*
 - [MoneyDelivery](docs/MoneyDelivery.md)
 - [MoneyNrpc](docs/MoneyNrpc.md)
 - [MoneyRange](docs/MoneyRange.md)
+- [NotificationAction](docs/NotificationAction.md)
+- [NotificationDeviceInput](docs/NotificationDeviceInput.md)
+- [NotificationDeviceResult](docs/NotificationDeviceResult.md)
+- [NotificationItem](docs/NotificationItem.md)
+- [NotificationPreference](docs/NotificationPreference.md)
+- [NotificationPreferenceInput](docs/NotificationPreferenceInput.md)
+- [NotificationTarget](docs/NotificationTarget.md)
 - [NrpcAcceptRequest](docs/NrpcAcceptRequest.md)
 - [NrpcAffectedLine](docs/NrpcAffectedLine.md)
 - [NrpcFlag](docs/NrpcFlag.md)
@@ -1020,6 +1053,7 @@ All URIs are relative to */api/v1*
 - [PickupConfirmation](docs/PickupConfirmation.md)
 - [PickupPreview](docs/PickupPreview.md)
 - [PlatformDocumentRef](docs/PlatformDocumentRef.md)
+- [PrepareTaxPackage201Response](docs/PrepareTaxPackage201Response.md)
 - [PriceHistoryEntry](docs/PriceHistoryEntry.md)
 - [PriceHistoryEnvelope](docs/PriceHistoryEnvelope.md)
 - [ProblemResolveRequest](docs/ProblemResolveRequest.md)
@@ -1087,13 +1121,17 @@ All URIs are relative to */api/v1*
 - [RankingPreferencesEnvelope](docs/RankingPreferencesEnvelope.md)
 - [RankingPreferencesUpdate](docs/RankingPreferencesUpdate.md)
 - [RankingWeightSet](docs/RankingWeightSet.md)
+- [RecordTaxSimulation200Response](docs/RecordTaxSimulation200Response.md)
 - [RefundTimelineItem](docs/RefundTimelineItem.md)
+- [RegisterNotificationDevice201Response](docs/RegisterNotificationDevice201Response.md)
 - [RegisterRequest](docs/RegisterRequest.md)
 - [RegistrationEnvelope](docs/RegistrationEnvelope.md)
 - [RegistrationEnvelopeAllOfData](docs/RegistrationEnvelopeAllOfData.md)
 - [RegulatedMaterialRule](docs/RegulatedMaterialRule.md)
 - [ReimbursementTimelineItem](docs/ReimbursementTimelineItem.md)
+- [RequestDocumentExport202Response](docs/RequestDocumentExport202Response.md)
 - [ResendBotChallengeRequest](docs/ResendBotChallengeRequest.md)
+- [ResolveNotification200Response](docs/ResolveNotification200Response.md)
 - [ReviewDisplayOption](docs/ReviewDisplayOption.md)
 - [ReviewFlagRequest](docs/ReviewFlagRequest.md)
 - [ReviewLine](docs/ReviewLine.md)
@@ -1105,6 +1143,7 @@ All URIs are relative to */api/v1*
 - [ReviewReportedEnvelope](docs/ReviewReportedEnvelope.md)
 - [ReviewResolveRequest](docs/ReviewResolveRequest.md)
 - [ReviewWindowRules](docs/ReviewWindowRules.md)
+- [RevokeNotificationDevice200Response](docs/RevokeNotificationDevice200Response.md)
 - [RouteEstimate](docs/RouteEstimate.md)
 - [RouteEstimateEnvelope](docs/RouteEstimateEnvelope.md)
 - [RouteEstimateRequest](docs/RouteEstimateRequest.md)
@@ -1133,6 +1172,9 @@ All URIs are relative to */api/v1*
 - [SupplierServiceability](docs/SupplierServiceability.md)
 - [SupplierTier](docs/SupplierTier.md)
 - [TaxCategory](docs/TaxCategory.md)
+- [TaxPackage](docs/TaxPackage.md)
+- [TaxPackageInput](docs/TaxPackageInput.md)
+- [TaxPackageReview](docs/TaxPackageReview.md)
 - [ThresholdStatusEvent](docs/ThresholdStatusEvent.md)
 - [UserIdentity](docs/UserIdentity.md)
 - [VehicleIssueRequest](docs/VehicleIssueRequest.md)

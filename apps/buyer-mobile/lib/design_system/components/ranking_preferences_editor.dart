@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import 'buyer_overlays.dart';
 import 'buyer_app_bar.dart';
 import 'procurement_components.dart';
 import '../ranking_weights.dart';
@@ -120,7 +121,7 @@ class _RankingPreferencesEditorState extends State<RankingPreferencesEditor> {
     }
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => BuyerDialog(
         title: const Text('Reset to Default?'),
         content: Text(widget.resetMessage),
         actions: [

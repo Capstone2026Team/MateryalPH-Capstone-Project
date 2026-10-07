@@ -1,28 +1,24 @@
-import { DashboardHeader, DashboardPanel, DashboardPreviewSection, MetricCard, SectionWorkspace, StatusBadge, useAutomaticRefresh } from '@materyalph/web-ui'
+import { DashboardHeader, DashboardPanel, DashboardPreviewSection, MetricCard, SectionWorkspace, StatusBadge, useAutomaticRefresh, usePortalResource } from '@materyalph/web-ui'
 import { ArrowRight, ClipboardCheck, Store, Users } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { useCallback, useEffect, useState } from 'react'
-import { AdminVendorVerificationApi, ResponseError, type AdminDashboardSummary } from '@materyalph/api-client-ts'
+import { useEffect, useState } from 'react'
+import { AdminVendorVerificationApi } from '@materyalph/api-client-ts'
 import { Button, StatusMessage, createWebApiConfiguration } from '@materyalph/web-ui'
 import { AdminShell } from './PhaseThreeAdminPages'
 import { readableVerificationError } from '../lib/vendor-verification-api'
 
 const api = new AdminVendorVerificationApi(createWebApiConfiguration(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1', { refreshSession: true }))
+const loadDashboard = async () => (await api.getAdminDashboard()).data
 
 export function AdminDashboardPage() {
-  const [summary, setSummary] = useState<AdminDashboardSummary | null>(null)
+  const { data: summary, error: failure, pending: busy, refresh: load } = usePortalResource('admin-dashboard', loadDashboard)
   const [error, setError] = useState<string | null>(null)
-  const [busy, setBusy] = useState(true)
-  const load = useCallback(async () => {
-    setBusy(true); setError(null)
-    try { setSummary((await api.getAdminDashboard()).data) }
-    catch (cause) {
-      if (cause instanceof ResponseError && [401, 403].includes(cause.response.status)) setSummary(null)
-      setError(await readableVerificationError(cause))
-    }
-    finally { setBusy(false) }
-  }, [])
-  useEffect(() => { void load() }, [load])
+  useEffect(() => {
+    let active = true
+    setError(null)
+    if (failure) void readableVerificationError(failure).then(message => { if (active) setError(message) })
+    return () => { active = false }
+  }, [failure])
   useAutomaticRefresh(load, { enabled: !busy, intervalMs: error ? 120_000 : 30_000 })
   return <AdminShell activeHref="/dashboard"><div className="space-y-5">
     <DashboardHeader eyebrow="Platform overview" description="A clear view of marketplace activity and the reviews that need your attention." status={<StatusBadge label="Admin workspace" />} />

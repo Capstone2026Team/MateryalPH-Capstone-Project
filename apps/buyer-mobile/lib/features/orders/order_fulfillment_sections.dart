@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../design_system/components/buyer_overlays.dart';
 import '../../design_system/components/fulfillment_components.dart';
 import '../../design_system/components/order_components.dart';
 import '../../design_system/components/procurement_components.dart';
@@ -369,30 +370,8 @@ class _EvidencePhotoState extends State<EvidencePhoto> {
         child: InkWell(
           onTap: () => showDialog<void>(
             context: context,
-            builder: (context) => Dialog(
-              insetPadding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Flexible(
-                    child: InteractiveViewer(
-                      child: Image.memory(
-                        bytes,
-                        semanticLabel: widget.semanticLabel,
-                        errorBuilder: (_, _, _) => const Padding(
-                          padding: EdgeInsets.all(24),
-                          child: Text('This photo could not be shown.'),
-                        ),
-                      ),
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Close'),
-                  ),
-                ],
-              ),
-            ),
+            builder: (context) =>
+                BuyerImageDialog(bytes: bytes, label: widget.semanticLabel),
           ),
           child: Image.memory(
             bytes,
@@ -544,14 +523,8 @@ Future<CancellationInput?> showCancellationSheet(
   BuildContext context, {
   required OrderDetailView order,
   required OrdersRepository repository,
-}) => showModalBottomSheet<CancellationInput>(
+}) => showBuyerBottomSheet<CancellationInput>(
   context: context,
-  isScrollControlled: true,
-  useSafeArea: true,
-  backgroundColor: Colors.white,
-  shape: const RoundedRectangleBorder(
-    borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-  ),
   builder: (_) => _CancellationSheet(order: order, repository: repository),
 );
 
@@ -846,14 +819,8 @@ Future<ProblemPhoto?> pickProblemPhoto() async {
 Future<ProblemInput?> showProblemSheet(
   BuildContext context, {
   ProblemPhotoPicker picker = pickProblemPhoto,
-}) => showModalBottomSheet<ProblemInput>(
+}) => showBuyerBottomSheet<ProblemInput>(
   context: context,
-  isScrollControlled: true,
-  useSafeArea: true,
-  backgroundColor: Colors.white,
-  shape: const RoundedRectangleBorder(
-    borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-  ),
   builder: (_) => _ProblemSheet(picker: picker),
 );
 

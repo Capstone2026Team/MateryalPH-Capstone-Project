@@ -2,13 +2,15 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, expect, test, vi } from 'vitest'
 import { ResponseError } from '@materyalph/api-client-ts'
-import { DeadlineCountdown, MoneyBreakdown, OrderStateRows } from '@materyalph/web-ui'
+import { DeadlineCountdown, MoneyBreakdown, OrderProgress, OrderStateRows } from '@materyalph/web-ui'
 import * as onboarding from '../lib/onboarding-api'
 import * as orders from '../lib/orders-api'
+import { chatApi } from '../lib/messaging-api'
 import type { OrderDetail, OrderLine, OrderSummary } from '../lib/orders-api'
 import { VendorOrderDetailPage, VendorOrdersPage } from './OrderPages'
 
 vi.mock('../lib/onboarding-api', async original => ({ ...await original<typeof import('../lib/onboarding-api')>(), getVendorOnboarding: vi.fn(), getVendorPrivateFileUrl: vi.fn() }))
+vi.mock('../lib/messaging-api', async original => ({ ...await original<typeof import('../lib/messaging-api')>(), chatApi: { forOrder: vi.fn() } }))
 vi.mock('../lib/orders-api', async original => ({ ...await original<typeof import('../lib/orders-api')>(), listOrders: vi.fn(), getOrder: vi.fn(), confirmOrder: vi.fn(), declineOrder: vi.fn(), getDeliveryPlan: vi.fn() }))
 
 const states = (order: string, payment = 'NOT_REQUIRED') => [
@@ -65,7 +67,7 @@ function failure(status: number, code: string, details: Record<string, unknown> 
 
 beforeEach(() => {
   vi.clearAllMocks()
-  vi.mocked(onboarding.getVendorOnboarding).mockResolvedValue(snapshot(['portal.orders', 'orders.confirm', 'orders.revise']))
+  vi.mocked(onboarding.getVendorOnboarding).mockResolvedValue(snapshot(['portal.messages', 'portal.orders', 'orders.confirm', 'orders.revise']))
   vi.mocked(onboarding.getVendorPrivateFileUrl).mockResolvedValue({ url: 'https://example.test/logo', expiresAt: new Date() })
 })
 
@@ -79,7 +81,7 @@ test('the status-filtered list shows counts, separate payment state and one domi
   const filters = screen.getByRole('group', { name: 'Filter orders by status' })
   expect(await within(filters).findByRole('button', { name: /New requests\s*2/ })).toHaveAttribute('aria-pressed', 'true')
   expect(vi.mocked(orders.listOrders)).toHaveBeenCalledWith({ group: 'NEW', q: '', page: 1 })
-  const table = await screen.findByRole('table', { name: 'New requests' })
+  const table = await screen.findByRole('list', { name: 'New requests' })
   expect(within(table).getAllByRole('link', { name: 'Review request' })).toHaveLength(1)
   expect(within(table).getAllByRole('link', { name: 'View order' })).toHaveLength(1)
   expect(within(table).getByText('Payment: Payment due')).toBeInTheDocument()
@@ -91,6 +93,51 @@ test('an empty group explains itself instead of showing a false table', async ()
   vi.mocked(orders.listOrders).mockResolvedValue({ items: [], meta: { group: 'NEW', counts: { ALL: 0, NEW: 0 }, page: 1, perPage: 20, total: 0, hasMore: false, currentAsOf: new Date() } })
   render(<MemoryRouter initialEntries={['/orders']}><Routes><Route path="/orders" element={<VendorOrdersPage />} /></Routes></MemoryRouter>)
   expect(await screen.findByText(/New Item-Based order requests appear here with a 24-hour response window/)).toBeInTheDocument()
+})
+
+test('order links open a panel, retain the list, and use the existing confirmation workflow', async () => {
+  vi.mocked(orders.listOrders).mockResolvedValue({ items: [summary()], meta: { group: 'NEW', counts: { NEW: 1 }, page: 1, perPage: 20, total: 1, hasMore: false, currentAsOf: new Date() } })
+  vi.mocked(orders.getOrder).mockResolvedValue(detail())
+  vi.mocked(orders.confirmOrder).mockResolvedValue(detail({ states: states('AWAITING_PAYMENT', 'PENDING'), primaryAction: 'WAITING_FOR_PAYMENT' }))
+  render(<MemoryRouter initialEntries={['/orders']}><Routes><Route path="/orders" element={<VendorOrdersPage />} /></Routes></MemoryRouter>)
+  fireEvent.click(await screen.findByRole('link', { name: 'Review request' }))
+  const panel = await screen.findByRole('dialog', { name: 'ORD-2026-ABCDEFGH' })
+  expect(await within(panel).findByRole('table', { name: 'Ordered materials and prices' })).toBeInTheDocument()
+  expect(screen.getByRole('list', { name: 'New requests' })).toBeInTheDocument()
+  expect(within(panel).queryByText('History')).not.toBeInTheDocument()
+  expect(within(panel).queryByText('Order documents')).not.toBeInTheDocument()
+  expect(within(panel).queryByText('Materials subtotal')).not.toBeInTheDocument()
+  expect(within(panel).getByRole('link', { name: 'Open full order' })).toHaveAttribute('href', '/orders/order-1')
+  expect(orders.confirmOrder).not.toHaveBeenCalled()
+  fireEvent.click(within(panel).getByRole('button', { name: 'Review & confirm order' }))
+  const editor = await screen.findByRole('dialog', { name: 'Review and confirm' })
+  fireEvent.click(within(editor).getByRole('button', { name: 'Confirm order' }))
+  fireEvent.click(within(await screen.findByRole('dialog', { name: 'Reserve stock and confirm?' })).getByRole('button', { name: 'Confirm order' }))
+  expect(await within(panel).findByText(/Order confirmed and stock reserved/)).toBeInTheDocument()
+  fireEvent.click(within(panel).getByRole('button', { name: 'Close order details' }))
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  expect(orders.listOrders).toHaveBeenCalledTimes(3)
+})
+
+test('a read-only order panel does not offer confirmation or decline', async () => {
+  vi.mocked(orders.listOrders).mockResolvedValue({ items: [summary({ primaryAction: 'NONE' })], meta: { group: 'NEW', counts: { NEW: 1 }, page: 1, perPage: 20, total: 1, hasMore: false, currentAsOf: new Date() } })
+  vi.mocked(orders.getOrder).mockResolvedValue(detail({}, { canConfirm: false, canDecline: false }))
+  render(<MemoryRouter initialEntries={['/orders']}><Routes><Route path="/orders" element={<VendorOrdersPage />} /></Routes></MemoryRouter>)
+  fireEvent.click(await screen.findByRole('link', { name: 'View order' }))
+  const panel = await screen.findByRole('dialog')
+  expect(await within(panel).findByText('Your role can view this request but cannot confirm it.')).toBeInTheDocument()
+  expect(within(panel).queryByRole('button', { name: 'Review & confirm order' })).not.toBeInTheDocument()
+  expect(within(panel).queryByRole('button', { name: 'Decline request' })).not.toBeInTheDocument()
+})
+
+test('a failed panel request can retry without leaving the order list', async () => {
+  vi.mocked(orders.listOrders).mockResolvedValue({ items: [summary()], meta: { group: 'NEW', counts: { NEW: 1 }, page: 1, perPage: 20, total: 1, hasMore: false, currentAsOf: new Date() } })
+  vi.mocked(orders.getOrder).mockRejectedValueOnce(new Error('Offline')).mockResolvedValue(detail())
+  render(<MemoryRouter initialEntries={['/orders?order=order-1']}><Routes><Route path="/orders" element={<VendorOrdersPage />} /></Routes></MemoryRouter>)
+  const panel = await screen.findByRole('dialog')
+  fireEvent.click(await within(panel).findByRole('button', { name: /retry|try again/i }))
+  expect(await within(panel).findByRole('table', { name: 'Ordered materials and prices' })).toBeInTheDocument()
+  expect(orders.getOrder).toHaveBeenCalledTimes(2)
 })
 
 test('customer service confirms the request as submitted: quantities are read-only and the pickup date is sent', async () => {
@@ -177,4 +224,63 @@ test('five separate state rows name each area in text', () => {
   expect(rows.map(row => row.textContent)).toEqual(['Order', 'Payment', 'Fulfillment', 'Refund', 'Dispute'])
   expect(screen.getByText('Awaiting payment')).toBeInTheDocument()
   expect(screen.getByText('Payment due')).toBeInTheDocument()
+})
+
+
+test('Message opens the authorized buyer thread without sending text', async () => {
+  vi.mocked(orders.getOrder).mockResolvedValue(detail())
+  vi.mocked(chatApi.forOrder).mockResolvedValue('conversation-1')
+  render(<MemoryRouter initialEntries={['/orders/order-1']}><Routes><Route path="/orders/:orderId" element={<VendorOrderDetailPage />} /><Route path="/messages" element={<p>Buyer conversation</p>} /></Routes></MemoryRouter>)
+  fireEvent.click(await screen.findByRole('button', { name: 'Message' }))
+  expect(await screen.findByText('Buyer conversation')).toBeInTheDocument()
+  expect(chatApi.forOrder).toHaveBeenCalledWith('order-1', expect.any(String))
+})
+
+test.each([
+  ['AWAITING_VENDOR_CONFIRMATION', 'DELIVERY', 'Awaiting acceptance'],
+  ['AWAITING_PAYMENT', 'DELIVERY', 'Awaiting payment'],
+  ['PROCESSING', 'DELIVERY', 'Preparing order'],
+  ['READY_FOR_PICKUP', 'PICKUP', 'Ready for pickup'],
+  ['DELIVERED', 'DELIVERY', 'Delivered · awaiting confirmation'],
+] as const)('order progress maps %s honestly', (state, fulfillmentMethod, label) => {
+  render(<OrderProgress state={state} fulfillmentMethod={fulfillmentMethod} />)
+  const tracker = screen.getByRole('list', { name: 'Order progress' })
+  expect(within(tracker).getByText(label).closest('li')).toHaveAttribute('aria-current', 'step')
+})
+
+test.each(['CANCELLED', 'DECLINED', 'EXPIRED', 'DISPUTED'])('interrupted %s never implies successful completion', state => {
+  render(<OrderProgress state={state} fulfillmentMethod="DELIVERY" />)
+  expect(screen.getByText(/Normal progress is interrupted/)).toBeInTheDocument()
+  expect(screen.getByRole('list', { name: 'Order progress' }).querySelector('[aria-current]')).toBeNull()
+})
+
+
+test('a completed order marks every progress step complete', () => {
+  render(<OrderProgress state="COMPLETED" fulfillmentMethod="DELIVERY" />)
+  expect(within(screen.getByRole('list', { name: 'Order progress' })).getAllByText('— complete')).toHaveLength(5)
+})
+
+test('Message preserves its retry key and reports failures', async () => {
+  vi.mocked(orders.getOrder).mockResolvedValue(detail())
+  vi.mocked(chatApi.forOrder).mockRejectedValue(new Error('Offline'))
+  openDetail()
+  fireEvent.click(await screen.findByRole('button', { name: 'Message' }))
+  await screen.findByRole('alert')
+  fireEvent.click(screen.getByRole('button', { name: 'Message' }))
+  await waitFor(() => expect(chatApi.forOrder).toHaveBeenCalledTimes(2))
+  expect(vi.mocked(chatApi.forOrder).mock.calls[0]).toEqual(vi.mocked(chatApi.forOrder).mock.calls[1])
+})
+
+
+test.each(['AWAITING_PAYMENT', 'COMPLETED', 'CANCELLED'])('compact %s review excludes operational panels', async state => {
+  vi.mocked(orders.listOrders).mockResolvedValue({ items: [summary({ primaryAction: 'NONE' })], meta: { group: 'NEW', counts: { NEW: 1 }, page: 1, perPage: 20, total: 1, hasMore: false, currentAsOf: new Date() } })
+  vi.mocked(orders.getOrder).mockResolvedValue(detail({ states: states(state, 'PENDING'), primaryAction: 'NONE', fulfillmentMethod: 'DELIVERY', destination: { type: 'DELIVERY', intended: { locationId: 'site-1', label: 'Project site', kind: 'PROJECT_SITE', formattedAddress: 'Sample delivery address' }, accessInstructions: 'Use the north gate.' } }))
+  render(<MemoryRouter initialEntries={['/orders?order=order-1']}><Routes><Route path="/orders" element={<VendorOrdersPage />} /></Routes></MemoryRouter>)
+  const panel = await screen.findByRole('dialog')
+  expect(await within(panel).findByText('Sample delivery address')).toBeInTheDocument()
+  expect(within(panel).getByText('Use the north gate.')).toBeInTheDocument()
+  expect(within(panel).getByText('Payment due')).toBeInTheDocument()
+  expect(within(panel).queryByText('History')).not.toBeInTheDocument()
+  expect(within(panel).queryByText('Order documents')).not.toBeInTheDocument()
+  expect(within(panel).queryByRole('button', { name: 'Review & confirm order' })).not.toBeInTheDocument()
 })

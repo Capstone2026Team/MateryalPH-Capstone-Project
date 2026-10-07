@@ -10,6 +10,7 @@ use App\Domain\Orders\NrpcTerms;
 use App\Domain\Orders\OrderExpiryService;
 use App\Domain\Orders\OrderPaymentReminders;
 use App\Domain\Vendors\AddressGeocoder;
+use App\Domain\Vendors\StoreOperatingSchedule;
 use App\Domain\Vendors\VendorFileScanner;
 use Carbon\CarbonImmutable;
 use Database\Seeders\SystemFoundationSeeder;
@@ -182,7 +183,8 @@ final class PhaseElevenPendingPaymentWindowTest extends TestCase
 
     public function test_reminders_go_out_once_at_12_hours_and_once_at_1_hour(): void
     {
-        [, , $buyer, $orderId] = $this->awaitingPayment('Reminder Hardware');
+        [$store, , $buyer, $orderId] = $this->awaitingPayment('Reminder Hardware');
+        app(StoreOperatingSchedule::class)->replaceWeekly((string) DB::table('store_profiles')->where('vendor_organization_id', $store->id)->value('id'), array_map(static fn (int $day): array => ['day_of_week' => $day, 'status' => 'CLOSED', 'opens_at' => null, 'closes_at' => null], range(1, 7)));
         $deadline = $this->deadline($orderId);
         $reminders = fn (): int => DB::table('notifications')->where('resource_id', $orderId)->where('user_id', $buyer->id)->where('title', 'like', '%left to pay%')->count();
 
@@ -198,6 +200,9 @@ final class PhaseElevenPendingPaymentWindowTest extends TestCase
         self::assertSame(0, app(OrderPaymentReminders::class)->send());
         self::assertSame(2, $reminders());
         self::assertSame([12, 1], DB::table('order_payment_reminders')->where('order_id', $orderId)->orderByDesc('hours_before')->pluck('hours_before')->map(fn ($hours) => (int) $hours)->all());
+        $this->travelTo($deadline->addSecond());
+        app(OrderExpiryService::class)->sweep();
+        self::assertSame('EXPIRED', $this->orderState($orderId));
     }
 
     public function test_a_late_scheduler_sends_only_the_most_urgent_reminder_and_never_for_paid_or_closed_orders(): void

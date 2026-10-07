@@ -1,5 +1,8 @@
 export { Button, type ButtonProps, type ButtonVariant } from './button'
+export { NotificationsWorkspace, DocumentExportWorkspace, notificationError } from './notifications-workspace'
+export { enableWebPush } from './web-push'
 export { ConfirmDialog } from './confirm-dialog'
+export { FormDialog } from './form-dialog'
 export { VendorTeamInvitations } from './vendor-team-invitations'
 export { VendorTeamActivity } from './vendor-team-activity'
 export { DateFilter, ALL_DATES, type DateFilterRange } from './date-filter'
@@ -7,6 +10,7 @@ export { SectionWorkspace, PreviewMetrics } from './section-workspace'
 export { DashboardHeader, MetricCard, DashboardPanel, DashboardEmptyState, DashboardPreviewSection } from './dashboard-patterns'
 export { useAutomaticRefresh } from './use-automatic-refresh'
 export { Field, FormErrors, type FieldProps } from './field'
+export { FileSelectionField } from './file-selection-field'
 export { StatusMessage } from './status-message'
 export { PhoneField, type PhoneFieldProps } from './phone-field'
 export { PortalBrand } from './portal-brand'
@@ -44,7 +48,7 @@ export { XenditConnection, type XenditConnectionProps } from './xendit-connectio
 export { StoreOperationSchedule, StoreHours, emptyStoreSchedule, storeScheduleErrors, type StoreOperatingDay } from './store-operation-schedule'
 
 export { ProfileDetails, ProfileSplitPanel } from './profile-details'
-export { OrderStateRows, DeadlineCountdown, MoneyBreakdown, formatPesoCentavos, orderStateLabel, orderStateTone } from './order-patterns'
+export { OrderProgress, OrderSummaryCard, OrderStateRows, DeadlineCountdown, MoneyBreakdown, formatPesoCentavos, orderStateLabel, orderStateTone } from './order-patterns'
 
 export { ConversationHeader, ConversationInbox, ChatMessageBubble, ChatAvatar, QuotationVersionCard, ChatAttachmentButton, chatRoleLabel, conversationLabel } from './messaging-patterns'
 export { DemoLabel, WithholdingStatusBadge, ThresholdPanel, PaymentAttemptBadge, PaymentChannelList, FinanceSection, type ThresholdPanelData, type PaymentChannelRow } from './finance-patterns'
@@ -58,3 +62,6 @@ export {
   PriceTrendChart, PriceTrendTable, PriceTrendPanel, TrendSummary, AnalyticsNullState, SuppressionNotice, DatasetNotice, BadgeList, StarRatingDisplay, StarRatingInput, ScoreTile,
   formatAnalyticsDate, formatPhpDecimal, analyticsDay, type PricePoint, type TrendValue,
 } from './analytics-patterns'
+
+export { SidePanel } from './side-panel'
+export { PortalResourceProvider, usePortalResource } from './portal-resources'

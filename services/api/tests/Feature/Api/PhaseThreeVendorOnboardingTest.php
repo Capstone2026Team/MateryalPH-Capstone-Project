@@ -253,21 +253,19 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
         return array_map(fn (int $day): array => ['day_of_week' => $day, 'status' => $day === 7 ? 'CLOSED' : 'OPEN', 'opens_at' => $day === 7 ? null : '08:00', 'closes_at' => $day === 7 ? null : '17:00'], range(1, 7));
     }
 
-    public function test_upload_budget_is_shared_by_organization_and_does_not_block_reads(): void
+    public function test_uploads_and_reads_are_not_rate_limited_across_organization_members(): void
     {
         [$organization, $owner] = $this->vendorFixture('OWNER');
         [, $manager] = $this->vendorFixture('STORE_MANAGER', $organization);
         $this->signInVendor($owner);
-        for ($attempt = 0; $attempt < 20; $attempt++) {
+        for ($attempt = 0; $attempt < 21; $attempt++) {
             $this->postJson('/api/v1/vendors/onboarding/documents', [])->assertUnprocessable();
         }
         $this->signInVendor($manager);
-        $this->postJson('/api/v1/vendors/onboarding/media', [])
-            ->assertStatus(429)->assertHeader('Retry-After')
-            ->assertJsonPath('errors.0.code', 'RATE_LIMITED');
-        $this->getJson('/api/v1/vendors/onboarding')->assertOk();
-        $this->travel(61)->seconds();
         $this->postJson('/api/v1/vendors/onboarding/media', [])->assertUnprocessable();
+        for ($attempt = 0; $attempt < 61; $attempt++) {
+            $this->getJson('/api/v1/vendors/onboarding')->assertOk()->assertHeaderMissing('X-RateLimit-Limit');
+        }
     }
 
     public function test_personal_photo_is_scanned_private_versioned_and_owner_only(): void
@@ -901,7 +899,8 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
         $this->postJson('/api/v1/vendors/onboarding/payment-connection/reconcile')->assertOk()->assertJsonPath('data.status', 'CONNECTED_TEST');
         $this->postJson('/api/v1/vendors/onboarding/payment-connection/reconcile')->assertOk()->assertJsonPath('data.status', 'CONNECTED_TEST')->assertJsonPath('data.provider_available', false);
         self::assertSame(1, DB::table('audit_logs')->where('action', 'VENDOR_PAYMENT_REGISTRATION_RECONCILED')->count());
-        self::assertSame(1, DB::table('notifications')->where('category', 'VENDOR_PAYMENT_CONNECTION')->count());
+        self::assertSame(3, DB::table('notifications')->where('category', 'VENDOR_PAYMENT_CONNECTION')->count());
+        self::assertSame(2, DB::table('notifications')->where('category', 'VENDOR_PAYMENT_CONNECTION')->where('title', 'Payment connection needs attention')->count());
     }
 
     public function test_connect_requires_current_organizational_authority_and_does_not_retry_uncertain_creation(): void

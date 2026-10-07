@@ -82,7 +82,7 @@ const vendorModules: Record<string, string> = { orders: 'Orders', fulfillment: '
 const vendorModuleIcons = { orders: FileText, fulfillment: Truck, messages: MessageSquare, invoices: ReceiptText, notifications: Bell, disputes: Scale, products: Package, vehicles: Truck, wallet: Wallet, performance: ChartNoAxesCombined, materials_analytics: LineChart, reviews: Star, earnings: CreditCard }
 const vendorNavigation: PortalNavSection[] = [
   { label: 'Overview', items: [{ label: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard size={16} aria-hidden="true" /> }] },
-  ...[['Store Operations', ['orders', 'fulfillment', 'messages', 'invoices', 'notifications', 'disputes', 'reviews']], ['Store Management', ['products', 'vehicles', 'wallet']], ['Analytics', ['performance', 'materials_analytics', 'earnings']]].map(([label, keys]) => ({ label: label as string, items: (keys as string[]).map(key => ({ label: vendorModules[key] ?? key, href: key === 'products' ? '/products' : key === 'vehicles' ? '/vehicles' : key === 'orders' ? '/orders' : key === 'disputes' ? '/disputes' : key === 'invoices' ? '/invoices' : key === 'messages' ? '/messages' : key === 'wallet' ? '/finance' : key === 'earnings' ? '/finance/earnings' : key === 'performance' ? '/performance' : key === 'materials_analytics' ? '/analytics/materials' : key === 'reviews' ? '/reviews' : `/preview/${key}`, icon: (() => { const Icon = vendorModuleIcons[key as keyof typeof vendorModuleIcons]; return <Icon size={18} aria-hidden="true" /> })() })) })),
+  ...[['Store Operations', ['orders', 'fulfillment', 'messages', 'invoices', 'notifications', 'disputes', 'reviews']], ['Store Management', ['products', 'vehicles', 'wallet']], ['Analytics', ['performance', 'materials_analytics', 'earnings']]].map(([label, keys]) => ({ label: label as string, items: (keys as string[]).map(key => ({ label: vendorModules[key] ?? key, href: key === 'notifications' ? '/notifications' : key === 'products' ? '/products' : key === 'vehicles' ? '/vehicles' : key === 'orders' ? '/orders' : key === 'disputes' ? '/disputes' : key === 'invoices' ? '/invoices' : key === 'messages' ? '/messages' : key === 'wallet' ? '/finance' : key === 'earnings' ? '/finance/earnings' : key === 'performance' ? '/performance' : key === 'materials_analytics' ? '/analytics/materials' : key === 'reviews' ? '/reviews' : `/preview/${key}`, icon: (() => { const Icon = vendorModuleIcons[key as keyof typeof vendorModuleIcons]; return <Icon size={18} aria-hidden="true" /> })() })) })),
   { label: 'Vendor Team Accounts', items: [{ label: 'Team Accounts', href: '/team', icon: <Users size={16} aria-hidden="true" /> }, { label: 'Team Tracking', href: '/preview/tracking', icon: <Activity size={16} aria-hidden="true" /> }] },
   { label: 'Store Profile', items: [{ label: 'Store Profile', href: '/store-profile', icon: <Store size={16} aria-hidden="true" /> }] },
 ]
@@ -426,7 +426,7 @@ function VerificationForm({ snapshot, onSaved, onRefresh, editing = false, regis
     void previewVendorRequirements(selectedBusinessType, representativeRole, identityType, representativeIdType).then(result => { if (current) setPreview(record(result)) }).catch(() => { if (current) setPreviewError('Requirements could not be refreshed. Retry before saving.') }).finally(() => { if (current) setPreviewPending(false) })
     return () => { current = false }
   }, [selectedBusinessType, representativeRole, identityType, representativeIdType, previewRetry])
-  const [step, setStep] = useState(0)
+  const [step, setStep] = useState(() => { const key = new URLSearchParams(window.location.search).get('requirement'); return Math.max(0, verificationSteps.findIndex(item => item.requirements.includes(key ?? ''))) })
   const [privacyAcknowledged, setPrivacyAcknowledged] = useState(false)
   const [dirty, setDirty] = useState(false)
   const [editedFields, setEditedFields] = useState<string[]>([])
@@ -891,7 +891,7 @@ function SetupForm({ snapshot, onSaved, onRefresh }: { snapshot: VendorOnboardin
   }) : arrayValue(setup.vehicles).length ? arrayValue(setup.vehicles).map(vehicleDraft) : [emptyDeliveryVehicle()])
   const [vehiclesTouched, setVehiclesTouched] = useState(false)
   const payment = record(setup.payment)
-  const [step, setStep] = useState(0)
+  const [step, setStep] = useState(() => { const value = new URLSearchParams(window.location.search).get('step'); return /^S[1-6]$/.test(value ?? '') ? Number(value!.slice(1)) - 1 : 0 })
   const [dirty, setDirty] = useState(false)
   const [schedule, setSchedule] = useState<StoreOperatingDay[]>(() => operatingDays(progress.operatingScheduleDraft ?? setup.operating_schedule))
   const [scheduleTouched, setScheduleTouched] = useState(false)
@@ -1253,3 +1253,5 @@ function StoreMediaPreview({ media, kind, storefront = false }: { media: JsonRec
     {fileId && url && !failed ? <img src={url} alt={stringValue(media?.altText, `Store ${kind.toLowerCase()}`)} className={`h-full w-full ${kind === 'LOGO' ? 'object-contain' : 'object-cover'}`} onError={() => setFailed(true)} /> : <div className="grid justify-items-center gap-2 p-2 text-center text-xs text-text-secondary">{kind === 'LOGO' ? <Store size={24} aria-hidden="true" /> : <ImagePlus size={28} aria-hidden="true" />}{!fileId ? <span>{kind === 'LOGO' ? 'Store logo' : 'Store banner'}</span> : failed ? <button type="button" className="min-h-11 px-2 font-semibold text-action-primary underline" onClick={() => setAttempt(value => value + 1)}>Reload {kind.toLowerCase()}</button> : <span role="status">Loading image…</span>}</div>}
   </div>
 }
+
+

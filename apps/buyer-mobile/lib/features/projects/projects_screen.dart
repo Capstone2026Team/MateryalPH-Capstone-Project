@@ -1,7 +1,11 @@
+import '../notifications/notification_scope.dart';
+import '../notifications/notifications_screen.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+
+import '../../design_system/components/buyer_overlays.dart';
 import '../../design_system/components/work_package_attachment.dart';
 import '../../design_system/components/buyer_app_bar.dart';
 import '../../design_system/components/form_dialog.dart';
@@ -33,8 +37,10 @@ class ProjectsScreen extends StatefulWidget {
     required this.openStore,
     required this.openAnalysis,
     this.active = true,
+    this.initialProjectId,
   });
   final bool active;
+  final String? initialProjectId;
   final ProjectsRepository repository;
   final DiscoveryRepository discovery;
   final DeviceLocationService deviceLocation;
@@ -65,7 +71,11 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
   @override
   void initState() {
     super.initState();
-    unawaited(_run(_reload));
+    unawaited(
+      widget.initialProjectId == null
+          ? _run(_reload)
+          : _openProject(widget.initialProjectId!),
+    );
     _refresh = Timer.periodic(const Duration(seconds: 45), (_) {
       if (mounted &&
           widget.active &&
@@ -252,7 +262,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
   Future<bool> _confirm(String title, String message) async =>
       await showBuyerFormDialog<bool>(
         context: context,
-        builder: (context) => AlertDialog(
+        builder: (context) => BuyerDialog(
           title: Text(title),
           content: Text(message),
           actions: [
@@ -315,7 +325,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
           override = TextEditingController();
       final confirmed = await showBuyerFormDialog<bool>(
         context: context,
-        builder: (context) => AlertDialog(
+        builder: (context) => BuyerDialog(
           title: Text('Select ${row['store_name']}?'),
           content: SingleChildScrollView(
             child: Column(
@@ -409,6 +419,21 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                 if (!_busy) _back();
               },
         actions: [
+          if (_project != null && NotificationScope.of(context) != null)
+            IconButton(
+              tooltip: 'Project reports',
+              icon: const Icon(Icons.description_outlined),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute<void>(
+                  builder: (_) => BuyerReportsScreen(
+                    repository: NotificationScope.of(context)!,
+                    resourceId: projectText(_project?['id']),
+                    project: true,
+                  ),
+                ),
+              ),
+            ),
           IconButton(
             onPressed: _busy ? null : _preferences,
             icon: const Icon(Icons.tune),
@@ -1252,9 +1277,8 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
         override = TextEditingController();
     final confirmed = await showBuyerFormDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => BuyerDialog(
         title: const Text('Resolve missing material'),
-        scrollable: true,
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -1483,7 +1507,7 @@ class _WorkPackageEditorState extends State<WorkPackageEditor> {
     await showBuyerFormDialog<void>(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, update) => AlertDialog(
+        builder: (context, update) => BuyerDialog(
           title: Text(projectText(material['name'])),
           content: SingleChildScrollView(
             child: Column(
@@ -1613,9 +1637,8 @@ class _WorkPackageEditorState extends State<WorkPackageEditor> {
     await showBuyerFormDialog<void>(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, update) => AlertDialog(
+        builder: (context, update) => BuyerDialog(
           title: const Text('Import material CSV'),
-          scrollable: true,
           content: SizedBox(
             width: 540,
             child: Column(

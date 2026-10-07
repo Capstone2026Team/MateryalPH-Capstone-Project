@@ -7,7 +7,7 @@ namespace App\Domain\Geography;
 use Illuminate\Support\Facades\Cache;
 
 /**
- * Platform-wide daily call budgets for billable maps providers, independent of per-Buyer rate limits. When
+ * Platform-wide daily call budgets for billable maps providers, independent of user request traffic. When
  * a budget is spent, callers degrade exactly as for a provider outage instead of incurring more charges.
  */
 final class ProviderBudget

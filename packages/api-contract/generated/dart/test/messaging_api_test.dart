@@ -84,6 +84,13 @@ void main() {
       // TODO
     });
 
+    // Opens the authorized order's quotation conversation or permanent Item-Based store chat, creating the latter if absent. Existing handler access is preserved. Assigned Fulfillment Staff can only open their existing order fulfillment thread. Does not send a message or change commercial terms.
+    //
+    //Future<ChatIdResponse> openVendorOrderConversation(String orderId, String idempotencyKey) async
+    test('test openVendorOrderConversation', () async {
+      // TODO
+    });
+
     // Current purpose, participant, account and fixed-role authority are checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses native bearer transport.
     //
     //Future<ChatQuotationPageResponse> publishChatQuotation(String messagingPortal, String conversationId, String idempotencyKey, ChatPublish chatPublish) async
@@ -119,7 +126,7 @@ void main() {
       // TODO
     });
 
-    // Ephemeral authorized conversation.typing event on existing viewer channels, with typing boolean and server millisecond timestamp at. Never persisted; receivers ignore older events and clear after three seconds. Existing account rate limits apply.
+    // Ephemeral authorized conversation.typing event on existing viewer channels, with typing boolean and server millisecond timestamp at. Never persisted; receivers ignore older events and clear after three seconds. No account request-rate limit applies.
     //
     //Future<ChatEmptyResponse> sendChatTyping(String messagingPortal, String conversationId, ChatTyping chatTyping) async
     test('test sendChatTyping', () async {

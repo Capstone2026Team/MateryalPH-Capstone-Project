@@ -10,7 +10,7 @@ foreach (['buyers' => ['BUYER', 'MOBILE'], 'vendors' => ['VENDOR', 'WEB'], 'admi
     if ($transport === 'WEB') {
         $middleware = [...$middleware, 'auth.cookie', VerifyAccountCsrf::class];
     }
-    Route::prefix($prefix.'/account')->middleware([...$middleware, 'auth:api', 'account.access:'.$portal, 'throttle:account'])->group(function () use ($portal): void {
+    Route::prefix($prefix.'/account')->middleware([...$middleware, 'auth:api', 'account.access:'.$portal])->group(function () use ($portal): void {
         Route::get('/profile', [AccountController::class, 'profile']);
         Route::patch('/profile', [AccountController::class, 'updateProfile']);
         Route::get('/security', [AccountController::class, 'security']);
@@ -25,7 +25,7 @@ foreach (['buyers' => ['BUYER', 'MOBILE'], 'vendors' => ['VENDOR', 'WEB'], 'admi
         Route::get('/agreements', [AccountController::class, 'agreements']);
         Route::post('/agreements', [AccountController::class, 'acceptAgreements']);
         if ($portal !== 'BUYER') {
-            Route::post('/photo', [AccountController::class, 'uploadPhoto'])->middleware('throttle:profile-photo');
+            Route::post('/photo', [AccountController::class, 'uploadPhoto']);
             Route::get('/photo', [AccountController::class, 'photo'])->middleware('signed')->name('account.photo.'.strtolower($portal));
             Route::post('/factor', [AccountController::class, 'startFactor'])->middleware('throttle:account-security');
             Route::post('/factor/confirm', [AccountController::class, 'confirmFactor'])->middleware('throttle:account-security');

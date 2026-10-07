@@ -13,6 +13,7 @@ use App\Domain\Orders\CancellationService;
 use App\Domain\Payments\PaymentGateway;
 use App\Domain\Payments\PaymentReconciliationService;
 use App\Domain\Payments\XenditWebhookInbox;
+use App\Domain\Reporting\TaxReminderService;
 use App\Domain\Reviews\ReviewService;
 use App\Domain\Scores\ScoreSnapshotService;
 use App\Infrastructure\Payments\FakePaymentGateway;
@@ -27,6 +28,10 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote')->hourly();
 
 Schedule::command('materyalph:outbox-dispatch')->everyMinute()->withoutOverlapping();
+Artisan::command('materyalph:tax-reminders', function (): void {
+    $this->info('Tax reminder recipients evaluated: '.app(TaxReminderService::class)->sweep());
+});
+Schedule::command('materyalph:tax-reminders')->dailyAt('08:00')->timezone('Asia/Manila')->withoutOverlapping();
 Schedule::command('materyalph:vendor-evidence-evaluate')->hourly()->withoutOverlapping();
 Schedule::command('materyalph:vendor-media-recover')->everyFifteenMinutes()->withoutOverlapping();
 Schedule::command('materyalph:vendor-expiry-scan')->dailyAt('01:00')->withoutOverlapping();

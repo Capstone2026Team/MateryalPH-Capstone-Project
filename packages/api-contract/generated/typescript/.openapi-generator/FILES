@@ -317,6 +317,7 @@ docs/DeliveryAmount.md
 docs/DeliveryConfirmation.md
 docs/DeliveryEstimate.md
 docs/DeliveryEstimateOption.md
+docs/DeliveryFailure.md
 docs/DeliveryPlan.md
 docs/DeliveryPlanEndpoint.md
 docs/DeliveryPlanEnvelope.md
@@ -381,6 +382,8 @@ docs/DisputeSummary.md
 docs/DisputeTimelineActor.md
 docs/DisputeTimelineEntry.md
 docs/DisputeVendorPermissions.md
+docs/DocumentExport.md
+docs/DocumentExportInput.md
 docs/EmailRequest.md
 docs/ErrorEnvelope.md
 docs/ExploreCategoryCount.md
@@ -388,6 +391,7 @@ docs/ExploreCounts.md
 docs/ExploreLabels.md
 docs/ExploreSummary.md
 docs/ExploreSummaryEnvelope.md
+docs/ExportAccessRecord.md
 docs/FavoriteSupplier.md
 docs/FavoriteSupplierListEnvelope.md
 docs/FavoriteSupplierState.md
@@ -434,6 +438,7 @@ docs/FulfillmentTrip.md
 docs/FulfillmentTripRequest.md
 docs/FulfillmentVehicleIssue.md
 docs/GenericDataEnvelope.md
+docs/GetNotificationPreferences200Response.md
 docs/GoogleContentAuthor.md
 docs/GoogleMobileExchangeRequest.md
 docs/GoogleOidcStartRequest.md
@@ -473,6 +478,10 @@ docs/InvoiceRecordView.md
 docs/InvoiceRequestAnswer.md
 docs/InvoiceRequestCreate.md
 docs/InvoiceRequestView.md
+docs/ListDocumentExports200Response.md
+docs/ListNotificationFailures200Response.md
+docs/ListNotifications200Response.md
+docs/ListTaxPackages200Response.md
 docs/ListingCategoryRef.md
 docs/ListingCompliance.md
 docs/ListingComplianceStatus.md
@@ -522,6 +531,14 @@ docs/MoneyBreakdown.md
 docs/MoneyDelivery.md
 docs/MoneyNrpc.md
 docs/MoneyRange.md
+docs/NotificationAction.md
+docs/NotificationDeviceInput.md
+docs/NotificationDeviceResult.md
+docs/NotificationItem.md
+docs/NotificationPreference.md
+docs/NotificationPreferenceInput.md
+docs/NotificationTarget.md
+docs/NotificationsApi.md
 docs/NrpcAcceptRequest.md
 docs/NrpcAffectedLine.md
 docs/NrpcFlag.md
@@ -595,6 +612,7 @@ docs/PhysicalPaymentSummaryEnvelope.md
 docs/PickupConfirmation.md
 docs/PickupPreview.md
 docs/PlatformDocumentRef.md
+docs/PrepareTaxPackage201Response.md
 docs/PriceHistoryEntry.md
 docs/PriceHistoryEnvelope.md
 docs/ProblemResolveRequest.md
@@ -662,13 +680,18 @@ docs/RankingPreferences.md
 docs/RankingPreferencesEnvelope.md
 docs/RankingPreferencesUpdate.md
 docs/RankingWeightSet.md
+docs/RecordTaxSimulation200Response.md
 docs/RefundTimelineItem.md
+docs/RegisterNotificationDevice201Response.md
 docs/RegisterRequest.md
 docs/RegistrationEnvelope.md
 docs/RegistrationEnvelopeAllOfData.md
 docs/RegulatedMaterialRule.md
 docs/ReimbursementTimelineItem.md
+docs/ReportingApi.md
+docs/RequestDocumentExport202Response.md
 docs/ResendBotChallengeRequest.md
+docs/ResolveNotification200Response.md
 docs/ReviewDisplayOption.md
 docs/ReviewFlagRequest.md
 docs/ReviewLine.md
@@ -680,6 +703,7 @@ docs/ReviewReported.md
 docs/ReviewReportedEnvelope.md
 docs/ReviewResolveRequest.md
 docs/ReviewWindowRules.md
+docs/RevokeNotificationDevice200Response.md
 docs/RouteEstimate.md
 docs/RouteEstimateEnvelope.md
 docs/RouteEstimateRequest.md
@@ -710,6 +734,9 @@ docs/SupplierServiceability.md
 docs/SupplierTier.md
 docs/SystemApi.md
 docs/TaxCategory.md
+docs/TaxPackage.md
+docs/TaxPackageInput.md
+docs/TaxPackageReview.md
 docs/ThresholdStatusEvent.md
 docs/UserIdentity.md
 docs/VehicleIssueRequest.md
@@ -849,7 +876,9 @@ src/apis/BuyerPaymentsApi.ts
 src/apis/BuyerProjectsApi.ts
 src/apis/BuyerReviewsApi.ts
 src/apis/MessagingApi.ts
+src/apis/NotificationsApi.ts
 src/apis/PaymentWebhooksApi.ts
+src/apis/ReportingApi.ts
 src/apis/StoresApi.ts
 src/apis/SystemApi.ts
 src/apis/VendorAutoAcceptApi.ts
@@ -1158,6 +1187,7 @@ src/models/DeliveryAmount.ts
 src/models/DeliveryConfirmation.ts
 src/models/DeliveryEstimate.ts
 src/models/DeliveryEstimateOption.ts
+src/models/DeliveryFailure.ts
 src/models/DeliveryPlan.ts
 src/models/DeliveryPlanEndpoint.ts
 src/models/DeliveryPlanEnvelope.ts
@@ -1222,6 +1252,8 @@ src/models/DisputeSummary.ts
 src/models/DisputeTimelineActor.ts
 src/models/DisputeTimelineEntry.ts
 src/models/DisputeVendorPermissions.ts
+src/models/DocumentExport.ts
+src/models/DocumentExportInput.ts
 src/models/EmailRequest.ts
 src/models/ErrorEnvelope.ts
 src/models/ExploreCategoryCount.ts
@@ -1229,6 +1261,7 @@ src/models/ExploreCounts.ts
 src/models/ExploreLabels.ts
 src/models/ExploreSummary.ts
 src/models/ExploreSummaryEnvelope.ts
+src/models/ExportAccessRecord.ts
 src/models/FavoriteSupplier.ts
 src/models/FavoriteSupplierListEnvelope.ts
 src/models/FavoriteSupplierState.ts
@@ -1275,6 +1308,7 @@ src/models/FulfillmentTrip.ts
 src/models/FulfillmentTripRequest.ts
 src/models/FulfillmentVehicleIssue.ts
 src/models/GenericDataEnvelope.ts
+src/models/GetNotificationPreferences200Response.ts
 src/models/GoogleContentAuthor.ts
 src/models/GoogleMobileExchangeRequest.ts
 src/models/GoogleOidcStartRequest.ts
@@ -1314,6 +1348,10 @@ src/models/InvoiceRecordView.ts
 src/models/InvoiceRequestAnswer.ts
 src/models/InvoiceRequestCreate.ts
 src/models/InvoiceRequestView.ts
+src/models/ListDocumentExports200Response.ts
+src/models/ListNotificationFailures200Response.ts
+src/models/ListNotifications200Response.ts
+src/models/ListTaxPackages200Response.ts
 src/models/ListingCategoryRef.ts
 src/models/ListingCompliance.ts
 src/models/ListingComplianceStatus.ts
@@ -1362,6 +1400,13 @@ src/models/MoneyBreakdown.ts
 src/models/MoneyDelivery.ts
 src/models/MoneyNrpc.ts
 src/models/MoneyRange.ts
+src/models/NotificationAction.ts
+src/models/NotificationDeviceInput.ts
+src/models/NotificationDeviceResult.ts
+src/models/NotificationItem.ts
+src/models/NotificationPreference.ts
+src/models/NotificationPreferenceInput.ts
+src/models/NotificationTarget.ts
 src/models/NrpcAcceptRequest.ts
 src/models/NrpcAffectedLine.ts
 src/models/NrpcFlag.ts
@@ -1434,6 +1479,7 @@ src/models/PhysicalPaymentSummaryEnvelope.ts
 src/models/PickupConfirmation.ts
 src/models/PickupPreview.ts
 src/models/PlatformDocumentRef.ts
+src/models/PrepareTaxPackage201Response.ts
 src/models/PriceHistoryEntry.ts
 src/models/PriceHistoryEnvelope.ts
 src/models/ProblemResolveRequest.ts
@@ -1501,13 +1547,17 @@ src/models/RankingPreferences.ts
 src/models/RankingPreferencesEnvelope.ts
 src/models/RankingPreferencesUpdate.ts
 src/models/RankingWeightSet.ts
+src/models/RecordTaxSimulation200Response.ts
 src/models/RefundTimelineItem.ts
+src/models/RegisterNotificationDevice201Response.ts
 src/models/RegisterRequest.ts
 src/models/RegistrationEnvelope.ts
 src/models/RegistrationEnvelopeAllOfData.ts
 src/models/RegulatedMaterialRule.ts
 src/models/ReimbursementTimelineItem.ts
+src/models/RequestDocumentExport202Response.ts
 src/models/ResendBotChallengeRequest.ts
+src/models/ResolveNotification200Response.ts
 src/models/ReviewDisplayOption.ts
 src/models/ReviewFlagRequest.ts
 src/models/ReviewLine.ts
@@ -1519,6 +1569,7 @@ src/models/ReviewReported.ts
 src/models/ReviewReportedEnvelope.ts
 src/models/ReviewResolveRequest.ts
 src/models/ReviewWindowRules.ts
+src/models/RevokeNotificationDevice200Response.ts
 src/models/RouteEstimate.ts
 src/models/RouteEstimateEnvelope.ts
 src/models/RouteEstimateRequest.ts
@@ -1547,6 +1598,9 @@ src/models/SupplierResult.ts
 src/models/SupplierServiceability.ts
 src/models/SupplierTier.ts
 src/models/TaxCategory.ts
+src/models/TaxPackage.ts
+src/models/TaxPackageInput.ts
+src/models/TaxPackageReview.ts
 src/models/ThresholdStatusEvent.ts
 src/models/UserIdentity.ts
 src/models/VehicleIssueRequest.ts

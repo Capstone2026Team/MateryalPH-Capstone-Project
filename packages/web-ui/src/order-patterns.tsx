@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
-import { AlertTriangle, CheckCircle2, CircleDashed, Clock, CreditCard, PackageCheck, Scale, Undo2, XCircle } from 'lucide-react'
-import type { MoneyBreakdown as MoneyBreakdownData, OrderStateRow } from '@materyalph/api-client-ts'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { AlertTriangle, Check, CheckCircle2, CircleDashed, Clock, CreditCard, Hourglass, PackageCheck, Scale, Undo2, XCircle } from 'lucide-react'
+import type { MoneyBreakdown as MoneyBreakdownData, OrderStateRow, OrderSummary } from '@materyalph/api-client-ts'
+import { StatusBadge } from './portal-shell'
 import { formatManilaDateTime, type DateLike } from './stock-ledger'
 
 const peso = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', minimumFractionDigits: 2 })
@@ -12,6 +13,37 @@ export function formatPesoCentavos(centavos: number | null | undefined): string 
 }
 
 const familyLabels: Record<string, string> = { ORDER: 'Order', PAYMENT: 'Payment', FULFILLMENT: 'Fulfillment', REFUND: 'Refund', DISPUTE: 'Dispute' }
+
+/** The order journey alone: payment, refund and dispute remain independent state families. */
+export function OrderProgress({ state, fulfillmentMethod }: { state: string; fulfillmentMethod: 'DELIVERY' | 'PICKUP' }) {
+  const pickup = fulfillmentMethod === 'PICKUP'
+  const steps = ['Request received', 'Awaiting acceptance', 'Preparing order', pickup ? 'Ready for pickup' : 'Out for delivery', pickup ? 'Picked up & confirmed' : 'Delivered & confirmed']
+  const stage = ({ AWAITING_VENDOR_CONFIRMATION: 1, AWAITING_BUYER_APPROVAL: 1, AWAITING_NRPC_ACCEPTANCE: 1, AWAITING_PAYMENT: 1, CONFIRMED: 2, PROCESSING: 2, READY_FOR_PICKUP: 3, OUT_FOR_DELIVERY: 3, DELIVERED: 4, PICKED_UP: 4, COMPLETED: 5 } as Record<string, number>)[state]
+  const labels = [...steps]
+  if (state === 'AWAITING_BUYER_APPROVAL') labels[1] = 'Buyer approval'
+  if (state === 'AWAITING_NRPC_ACCEPTANCE') labels[1] = 'NRPC acceptance'
+  if (state === 'AWAITING_PAYMENT') labels[1] = 'Awaiting payment'
+  if (state === 'CONFIRMED') labels[2] = 'Confirmed · awaiting preparation'
+  if (state === 'DELIVERED' || state === 'PICKED_UP') labels[4] = pickup ? 'Picked up · awaiting confirmation' : 'Delivered · awaiting confirmation'
+  return <div className="grid gap-3">
+    <div className="overflow-x-auto pb-1" tabIndex={0} role="group" aria-label="Order progress steps, scroll horizontally on small screens">
+    <ol aria-label="Order progress" className="flex min-w-[26rem] items-start">
+      {labels.map((label, index) => {
+        const complete = index === 0 || (stage !== undefined && index < stage)
+        const current = index === stage
+        return <li key={index} aria-current={current ? 'step' : undefined} className="relative grid min-w-0 flex-1 justify-items-center gap-2 text-center">
+          {index < 4 && <span aria-hidden="true" className="absolute left-1/2 top-4 h-0.5 w-full bg-border-default" />}
+          <span className={`relative z-10 grid h-8 w-8 place-items-center rounded-full border-2 ${complete ? 'border-action-primary bg-action-primary text-white' : current ? 'border-brand-orange-500 bg-brand-orange-500 text-text-strong' : 'border-border-default bg-surface-primary text-text-secondary'}`}>
+            {complete ? <Check size={16} aria-hidden="true" /> : current ? <Hourglass size={15} aria-hidden="true" /> : index + 1}
+          </span>
+          <span className="px-1 text-xs font-semibold leading-4">{label}<span className="sr-only">{complete ? ' — complete' : current ? ' — current' : ' — not complete'}</span></span>
+        </li>
+      })}
+    </ol>
+    </div>
+    <p className="text-xs text-text-secondary">Current status: <strong>{orderStateLabel(state)}</strong>{stage === undefined ? ' · Normal progress is interrupted.' : ''}</p>
+  </div>
+}
 
 const stateLabels: Record<string, string> = {
   AWAITING_VENDOR_CONFIRMATION: 'Awaiting Vendor confirmation', AWAITING_BUYER_APPROVAL: 'Awaiting Buyer approval', AWAITING_NRPC_ACCEPTANCE: 'Awaiting NRPC acceptance',
@@ -119,12 +151,30 @@ function MoneyRow({ label, value, note, strong = false, muted = false }: { label
  * FIN-02 Buyer amounts: materials, discount, included VAT (never added again), delivery, NRPC as part of the
  * materials value, processing fee and the total. Vendor commission and withholding never appear here.
  */
-export function MoneyBreakdown({ money, title = 'Payment breakdown' }: { money: MoneyBreakdownData; title?: string }) {
+export function MoneyBreakdown({ money, title = 'Payment breakdown', compact = false }: { money: MoneyBreakdownData; title?: string; compact?: boolean }) {
   const delivery = money.delivery.status === 'NOT_APPLICABLE' ? 'Not applicable (Self-Pickup)'
     : money.delivery.amountCentavos !== null ? formatPesoCentavos(money.delivery.amountCentavos)
       : money.delivery.estimate ? `Estimate ${formatPesoCentavos(money.delivery.estimate.minCentavos)}${money.delivery.estimate.maxCentavos !== money.delivery.estimate.minCentavos ? ` – ${formatPesoCentavos(money.delivery.estimate.maxCentavos)}` : ''}` : 'Set by the Vendor'
   const fee = money.processingFee.status === 'NOT_APPLICABLE' ? 'None' : money.processingFee.amountCentavos === null ? 'Shown at payment' : formatPesoCentavos(money.processingFee.amountCentavos)
   const physical = money.paymentPurpose !== 'FULL_ORDER_PAYMENT' && (money.physicalBalanceCentavos ?? 0) > 0
+  if (compact) return <section aria-label={title} className="min-w-0 border-t border-border-default pt-4">
+    <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-text-secondary">Payment summary</h3>
+    <dl className="grid gap-2 border-y-2 border-text-strong py-3">
+      <ReviewMoneyRow label="Materials" value={formatPesoCentavos(money.materialsGrossCentavos)} />
+      {money.vendorDiscountCentavos > 0 && <ReviewMoneyRow label="Vendor discount" value={`− ${formatPesoCentavos(money.vendorDiscountCentavos)}`} />}
+      {money.includedVatCentavos > 0 && <ReviewMoneyRow label="Included VAT (in materials)" value={formatPesoCentavos(money.includedVatCentavos)} muted />}
+      <ReviewMoneyRow label="Delivery fee" value={delivery} />
+      {money.nrpc.amountCentavos > 0 && <ReviewMoneyRow label="NRPC (in materials)" value={formatPesoCentavos(money.nrpc.amountCentavos)} muted />}
+      <ReviewMoneyRow label="Payment processing fee" value={fee} />
+      <div className="mt-1 grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4 border-t-2 border-text-strong pt-3 text-xs font-bold text-text-strong">
+        <dt className="uppercase tracking-wide">{money.commercialTotalCentavos === null ? 'Total before delivery' : 'Order total'}</dt>
+        <dd className="text-right tabular-nums">{formatPesoCentavos(money.commercialTotalCentavos ?? money.materialsSubtotalCentavos)}</dd>
+      </div>
+      {physical && <ReviewMoneyRow label="Pay the Vendor directly" value={formatPesoCentavos(money.physicalBalanceCentavos)} />}
+    </dl>
+    {money.delivery.status === 'PENDING_VENDOR_CONFIRMATION' && <p className="mt-2 text-xs leading-5 text-text-secondary">Delivery fee is awaiting Vendor confirmation.</p>}
+    {money.processingFee.status === 'PENDING_PAYMENT_CHANNEL' && <p className="mt-2 text-xs leading-5 text-text-secondary">Order total excludes the processing fee, disclosed when a payment channel is selected.</p>}
+  </section>
   return <section aria-labelledby="money-breakdown-heading" className="min-w-0">
     <h3 id="money-breakdown-heading" className="text-base font-semibold text-text-strong">{title}</h3>
     <dl className="mt-2 divide-y divide-border-default/70">
@@ -139,4 +189,47 @@ export function MoneyBreakdown({ money, title = 'Payment breakdown' }: { money: 
       {physical && <MoneyRow label="Pay the Vendor directly" value={formatPesoCentavos(money.physicalBalanceCentavos)} />}
     </dl>
   </section>
+}
+
+function ReviewMoneyRow({ label, value, muted = false }: { label: string; value: string; muted?: boolean }) {
+  return <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-baseline gap-x-4 text-xs leading-5">
+    <dt className={muted ? 'text-text-secondary' : 'text-text-strong'}>{label}</dt>
+    <dd className={`break-words text-right tabular-nums ${muted ? 'text-text-secondary' : 'font-medium text-text-strong'}`}>{value}</dd>
+  </div>
+}
+
+/** Shared stacked order summary; navigation stays with the consuming client. */
+export function OrderSummaryCard({ order, identity, action }: { order: OrderSummary; identity: ReactNode; action: ReactNode }) {
+  const orderState = order.states.find(row => row.family === 'ORDER')?.state ?? ''
+  const facts = [
+    { label: 'Items', value: `${order.lineCount} ${order.lineCount === 1 ? 'item' : 'items'}` },
+    { label: 'Fulfillment', value: order.fulfillmentMethod === 'DELIVERY' ? 'Site Delivery' : 'Self-Pickup' },
+    { label: 'Payment method', value: order.paymentMethod === 'ONLINE' ? 'Online payment' : order.paymentMethod === 'CASH_ON_DELIVERY' ? 'Cash on Delivery' : 'In-Store Payment' },
+    { label: 'Confirmation', value: order.confirmationSource === 'AUTO_ACCEPT' ? 'Auto-accepted' : order.confirmationSource === 'MANUAL' ? 'Manual' : 'Awaiting review' },
+  ]
+  return <article aria-label={order.reference} className="min-w-0 overflow-hidden rounded-surface border border-border-default bg-surface-primary">
+    <header className="flex min-w-0 flex-col justify-between gap-4 p-4 sm:flex-row sm:p-5">
+      <div className="flex min-w-0 items-start gap-3">
+        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-control border border-border-default bg-surface-canvas text-action-primary"><PackageCheck size={22} aria-hidden="true" /></span>
+        {identity}
+      </div>
+      <div className="grid shrink-0 justify-items-start gap-1 sm:justify-items-end">
+        <p className="text-lg font-semibold tabular-nums text-text-strong">{formatPesoCentavos(order.commercialTotalCentavos)}</p>
+        {order.deliveryPending && <p className="text-xs text-text-secondary">+ delivery to confirm</p>}
+        {order.nrpcIndicator && <p className="text-xs font-semibold text-text-secondary">Includes NRPC</p>}
+        <p className="text-xs text-text-secondary">Requested {formatManilaDateTime(order.submittedAt)}</p>
+        <StatusBadge label={orderStateLabel(orderState)} tone={orderStateTone(orderState)} />
+      </div>
+    </header>
+    <dl className="grid grid-cols-2 gap-x-4 gap-y-4 border-t border-border-default px-4 py-3 sm:px-5 lg:grid-cols-4">
+      {facts.map(fact => <div key={fact.label} className="min-w-0 border-l border-border-default pl-3 first:border-l-0 first:pl-0"><dt className="text-xs text-text-secondary">{fact.label}</dt><dd className="mt-1 break-words text-sm font-semibold">{fact.value}</dd></div>)}
+    </dl>
+    <div className="flex flex-wrap gap-x-4 gap-y-1 px-4 pb-3 text-xs text-text-secondary sm:px-5">
+      {order.states.filter(row => row.family !== 'ORDER').map(row => <span key={row.family}>{familyLabels[row.family] ?? row.family}: {orderStateLabel(row.state)}</span>)}
+    </div>
+    <div className="flex flex-col gap-3 border-t border-border-default bg-surface-canvas px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+      <div className="min-w-0">{order.deadline ? <DeadlineCountdown at={order.deadline.at} label={order.deadline.kind === 'VENDOR_RESPONSE' ? 'Respond within' : order.deadline.kind === 'BUYER_RESPONSE' ? 'Buyer response' : 'Payment window'} /> : <span className="text-xs text-text-secondary">No pending response deadline</span>}</div>
+      <div className="shrink-0">{action}</div>
+    </div>
+  </article>
 }

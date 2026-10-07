@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../design_system/components/buyer_overlays.dart';
 import '../../design_system/components/procurement_components.dart';
 import '../../design_system/generated/color_tokens.dart';
 import '../../design_system/theme.dart';
@@ -82,10 +83,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     if (_finalizing || variant == null) return;
     _finalizing = true;
     String? addedConfiguration;
-    final completed = await showModalBottomSheet<bool>(
+    final completed = await showBuyerBottomSheet<bool>(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
       isDismissible: false,
       enableDrag: false,
       builder: (_) => ProductFinalizationSheet(

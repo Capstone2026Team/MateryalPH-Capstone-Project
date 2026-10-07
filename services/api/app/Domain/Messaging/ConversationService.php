@@ -10,6 +10,7 @@ use App\Domain\Geography\BuyerProfiles;
 use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Operations\OutboxPublisher;
+use App\Domain\Orders\OrderAccess;
 use App\Domain\Orders\OrderEligibility;
 use App\Domain\Vendors\NewProcurementAvailability;
 use App\Models\User;
@@ -22,6 +23,55 @@ final class ConversationService
 {
     public function __construct(private readonly ConversationAccess $access, private readonly BuyerProfiles $buyers,
         private readonly CatalogAccess $idempotency, private readonly OutboxPublisher $outbox, private readonly AuditRecorder $audit) {}
+
+    /** Open the authorized order's existing sales context, or its permanent store chat. */
+    public function fromOrder(Request $request, string $orderId): string
+    {
+        $orders = app(OrderAccess::class);
+        $scope = $orders->vendorScope($request);
+        $order = $orders->vendorOrder($scope, $orderId);
+        $key = $this->idempotency->requireIdempotencyKey($request);
+        if (! in_array($scope['role'], [...ConversationAccess::SALES_ROLES, 'FULFILLMENT'], true)) {
+            throw new AuthenticationException('PERMISSION_DENIED', 'Your role cannot message this Buyer.', 403);
+        }
+
+        return DB::transaction(function () use ($request, $order, $scope, $key): string {
+            $buyer = DB::table('buyer_profiles')->where('id', $order->buyer_profile_id)->lockForUpdate()->first();
+            $replayed = $this->idempotency->replayed($request, 'ORDER_CONVERSATION', $key, $order->id);
+            if ($scope['role'] === 'FULFILLMENT') {
+                $id = DB::table('conversations')->where('order_id', $order->id)->where('purpose', 'FULFILLMENT')->value('id');
+            } elseif ($order->quotation_version_id !== null) {
+                $id = DB::table('quotation_versions as v')->join('quotations as q', 'q.id', '=', 'v.quotation_id')->where('v.id', $order->quotation_version_id)->value('q.conversation_id');
+            } else {
+                $id = DB::table('conversations')->where('buyer_profile_id', $order->buyer_profile_id)->where('vendor_organization_id', $order->vendor_organization_id)
+                    ->where('purpose', 'SALES')->where('context_type', 'ITEM_BASED')->whereNull('canonical_conversation_id')->value('id');
+            }
+            if ($id === null) {
+                if ($scope['role'] === 'FULFILLMENT' || $order->procurement_type !== 'ITEM_BASED' || $order->quotation_version_id !== null || $buyer === null) {
+                    throw new AuthenticationException('CONVERSATION_UNAVAILABLE', 'This order does not have an available conversation yet.', 409);
+                }
+                $id = (string) Str::uuid7();
+                DB::table('conversations')->insert(['id' => $id, 'buyer_profile_id' => $order->buyer_profile_id, 'vendor_organization_id' => $order->vendor_organization_id,
+                    'purpose' => 'SALES', 'context_type' => 'ITEM_BASED', 'context_id' => null, 'handler_user_id' => $request->user()->id,
+                    'locked_reference' => '{}', 'created_at' => now(), 'updated_at' => now()]);
+                $this->participant($id, (int) $buyer->user_id, 'BUYER');
+                $this->participant($id, (int) $request->user()->id, $scope['role']);
+                DB::table('conversation_assignments')->insert(['id' => (string) Str::uuid7(), 'conversation_id' => $id, 'assigned_user_id' => $request->user()->id,
+                    'assigned_role' => $scope['role'], 'created_at' => now(), 'updated_at' => now()]);
+                $this->audit->account($request, 'CONVERSATION_CREATED', 'CONVERSATION', $id, after: ['purpose' => 'SALES', 'order_id' => $order->id]);
+                $this->changed($id);
+            }
+            $conversation = $this->access->require($request->user(), (string) $id);
+            if ($conversation->canonical_conversation_id !== null) {
+                $id = $this->access->require($request->user(), $conversation->canonical_conversation_id)->id;
+            }
+            if (! $replayed) {
+                $this->idempotency->claim($request, 'ORDER_CONVERSATION', $key, $order->id, 200);
+            }
+
+            return (string) $id;
+        });
+    }
 
     /**
      * @param array<string, mixed> $input */

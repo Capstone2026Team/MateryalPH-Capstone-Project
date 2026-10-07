@@ -9,6 +9,7 @@ use App\Domain\Finance\StatementService;
 use App\Domain\Geography\PlacesProvider;
 use App\Domain\Geography\RouteProvider;
 use App\Domain\Identity\TokenSessionService;
+use App\Domain\Reporting\DocumentExportService;
 use App\Domain\Vendors\AddressGeocoder;
 use App\Domain\Vendors\VendorFileScanner;
 use App\Models\AuthSession;
@@ -140,6 +141,11 @@ final class PhaseElevenFinanceFlowsTest extends TestCase
         self::assertNotNull(DB::table('physical_payment_records')->where('id', $record['id'])->value('buyer_acknowledged_at'));
         self::assertSame([0, 0, 'NOT_REQUIRED'], [DB::table('payments')->count(), DB::table('remittance_assessments')->count(), (string) DB::table('orders')->where('id', $orderId)->value('payment_state')],
             'Direct cash never creates an online success or a platform CWT event.');
+        $export = $this->postJson('/api/v1/buyers/reports', ['type' => 'PAYMENT_CONFIRMATION', 'resource_id' => $orderId, 'format' => 'CSV', 'purpose' => 'Review recorded physical payment'], ['Idempotency-Key' => (string) Str::uuid7()])->assertAccepted()->json('data');
+        app(DocumentExportService::class)->process($export['id']);
+        $document = $this->get('/api/v1/buyers/reports/'.$export['id'].'/download')->assertOk()->streamedContent();
+        self::assertStringContainsString('Vendor-recorded physical payment', $document);
+        self::assertStringNotContainsString('receipt.png', $document);
     }
 
     public function test_nrpc_assurance_and_online_balance_are_counted_once_and_assessed_separately(): void
@@ -217,6 +223,12 @@ final class PhaseElevenFinanceFlowsTest extends TestCase
 
         $this->signInStoreMember($owner);
         $view = $this->getJson('/api/v1/vendor/finance/statements/'.$statement->id)->assertOk()->json('data');
+        $export = $this->postJson('/api/v1/vendor/reports', ['type' => 'FEE_STATEMENT', 'resource_id' => $statement->id, 'format' => 'PDF', 'purpose' => 'Review monthly platform fee statement'], ['Idempotency-Key' => (string) Str::uuid7()])->assertAccepted()->json('data');
+        app(DocumentExportService::class)->process($export['id']);
+        self::assertStringStartsWith('%PDF-', $this->get('/api/v1/vendor/reports/'.$export['id'].'/download')->assertOk()->streamedContent());
+        $this->signInStoreMember($manager);
+        $this->getJson('/api/v1/vendor/reports/'.$export['id'].'/download')->assertForbidden();
+        $this->signInStoreMember($owner);
         self::assertSame(0, collect($view['channels'])->firstWhere('code', 'GCASH')['fee_centavos'], 'The platform absorbs its own bill processing charge.');
         $first = $this->postJson('/api/v1/vendor/finance/statements/'.$statement->id.'/payments', ['channel_code' => 'GCASH', 'amount_centavos' => 5000], ['Idempotency-Key' => (string) Str::uuid7()])->assertCreated()->json('data');
         $payment = DB::table('payments')->where('id', $first['id'])->first();

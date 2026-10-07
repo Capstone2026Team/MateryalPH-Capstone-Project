@@ -53,6 +53,11 @@ final class ConversationController extends Controller
         return ApiResponse::success(['id' => $this->conversations->create($request, $input)], [], 201);
     }
 
+    public function fromOrder(Request $request, string $orderId): JsonResponse
+    {
+        return ApiResponse::success(['id' => $this->conversations->fromOrder($request, $orderId)]);
+    }
+
     public function show(Request $request, string $conversationId, QuotationService $quotations): JsonResponse
     {
         $c = $this->access->require($request->user(), $conversationId);

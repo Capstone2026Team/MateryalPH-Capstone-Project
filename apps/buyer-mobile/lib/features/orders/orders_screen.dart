@@ -51,6 +51,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
   int _page = 1;
   DiscoveryFailure? _failure;
   int _sequence = 0;
+  String? _loadedGroup;
 
   @override
   void initState() {
@@ -64,19 +65,29 @@ class _OrdersScreenState extends State<OrdersScreen> {
     setState(() {
       _loading = true;
       _failure = null;
-      if (!more) _items.clear();
+      if (_loadedGroup != _group) _items.clear();
     });
     try {
       final result = await widget.repository.orders(group: _group, page: page);
       if (!mounted || sequence != _sequence) return;
       setState(() {
+        if (!more) _items.clear();
         _items.addAll(result.items);
+        _loadedGroup = _group;
         _counts = result.counts;
         _hasMore = result.hasMore;
         _page = result.page;
       });
     } on DiscoveryFailure catch (error) {
-      if (mounted && sequence == _sequence) setState(() => _failure = error);
+      if (mounted && sequence == _sequence) {
+        setState(() {
+          _failure = error;
+          if (error.kind == DiscoveryFailureKind.sessionExpired ||
+              error.kind == DiscoveryFailureKind.forbidden) {
+            _items.clear();
+          }
+        });
+      }
     } finally {
       if (mounted && sequence == _sequence) setState(() => _loading = false);
     }
@@ -176,7 +187,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
         ],
       );
     }
-    if (_failure != null && _items.isEmpty) {
+    if (_failure != null) {
       return StateMessage(
         kind: _failure!.kind == DiscoveryFailureKind.offline
             ? StateKind.offline

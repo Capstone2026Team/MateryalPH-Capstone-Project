@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Operations;
 
+use App\Domain\Authorization\AccountAccess;
 use App\Domain\Catalog\EligibilityInvalidation;
 use App\Domain\Catalog\EligibleOfferQuery;
 use App\Domain\Disputes\DisputeAccess;
@@ -13,11 +14,14 @@ use App\Domain\Finance\RemittanceAssessmentService;
 use App\Domain\Finance\WithholdingThresholdService;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Messaging\ConversationBroadcast;
+use App\Domain\Notifications\NotificationDelivery;
+use App\Domain\Notifications\NotificationService;
 use App\Domain\Payments\PaymentGateway;
 use App\Domain\Payments\PaymentProviderException;
 use App\Domain\Payments\PaymentReconciliationService;
 use App\Domain\Payments\RefundService;
 use App\Domain\Payments\XenditWebhookProcessor;
+use App\Domain\Reporting\DocumentExportService;
 use App\Domain\Vendors\FleetBroadcast;
 use App\Mail\AccountSecurityMail;
 use App\Mail\AdminInvitationMail;
@@ -57,6 +61,12 @@ final class OutboxProcessor
 
                 /** @var array<string, mixed> $payload */
                 $payload = json_decode(Crypt::decryptString($envelope['sealed_payload']), true, flags: JSON_THROW_ON_ERROR);
+                if (in_array($event->event_type, ['VENDOR_INVITATION_REQUESTED', 'ADMIN_INVITATION_REQUESTED', 'ADMIN_BOOTSTRAP_INVITATION_REQUESTED'], true)
+                    && ! $this->invitationCurrent($event, $payload)) {
+                    DB::table('outbox_events')->where('id', $eventId)->update(['processed_at' => now(), 'updated_at' => now()]);
+
+                    return;
+                }
                 $this->deliver((string) $event->event_type, $payload);
 
                 DB::table('outbox_events')
@@ -64,13 +74,56 @@ final class OutboxProcessor
                     ->whereNull('processed_at')
                     ->update(['processed_at' => now(), 'updated_at' => now()]);
             } catch (Throwable $exception) {
+                $attempt = (int) $event->attempts + 1;
                 DB::table('outbox_events')
                     ->where('id', $eventId)
-                    ->increment('attempts', 1, ['updated_at' => now()]);
+                    ->increment('attempts', 1, ['available_at' => now()->addSeconds([30, 120, 300, 900, 900][min(4, $attempt - 1)]), 'updated_at' => now()]);
+
+                if ($attempt >= self::MAX_ATTEMPTS && $event->event_type === 'DOCUMENT_EXPORT_REQUESTED') {
+                    DB::table('data_exports')->where('id', $event->aggregate_id)->where('state', 'QUEUED')->update(['state' => 'FAILED', 'failure_code' => 'GENERATION_FAILED', 'updated_at' => now()]);
+                }
 
                 throw $exception;
             }
         });
+    }
+
+    /** @param array<string, mixed> $payload */
+    private function invitationCurrent(object $event, array $payload): bool
+    {
+        $vendor = $event->event_type === 'VENDOR_INVITATION_REQUESTED';
+        $invitation = DB::table($vendor ? 'vendor_invitations' : 'admin_invitations')->where('id', $event->aggregate_id)->first();
+        if ($invitation === null || $invitation->accepted_at !== null || $invitation->revoked_at !== null || now()->greaterThanOrEqualTo($invitation->expires_at)
+            || ($payload['recipient'] ?? null) !== $invitation->normalized_email) {
+            return false;
+        }
+        if ($vendor) {
+            $actor = User::query()->find($invitation->invited_by_user_id);
+            if (! $actor instanceof User) {
+                return false;
+            }
+            try {
+                $scope = app(AccountAccess::class)->resolve($actor);
+            } catch (AuthenticationException) {
+                return false;
+            }
+
+            return $scope['organization_id'] === $invitation->vendor_organization_id && in_array('staff.manage', $scope['permissions'], true)
+                && ($invitation->role !== 'STORE_MANAGER' || $scope['role'] === 'OWNER');
+        }
+
+        if ($invitation->bootstrap) {
+            return true;
+        }
+        $actor = User::query()->find($invitation->invited_by_user_id);
+        if (! $actor instanceof User) {
+            return false;
+        }
+        try {
+            return $actor->account_type === 'ADMIN' && app(AccountAccess::class)->allows($actor, 'admin.invite');
+        } catch (AuthenticationException) {
+            return false;
+        }
     }
 
     /**
@@ -86,6 +139,22 @@ final class OutboxProcessor
     /** @param array<string, mixed> $payload */
     private function deliver(string $eventType, array $payload): void
     {
+        if ($eventType === 'NOTIFICATION_DELIVERY') {
+            app(NotificationDelivery::class)->send($this->requiredString($payload, 'delivery_id'));
+
+            return;
+        }
+        if ($eventType === 'DOCUMENT_EXPORT_REQUESTED') {
+            app(DocumentExportService::class)->process($this->requiredString($payload, 'export_id'));
+
+            return;
+        }
+        if (in_array($eventType, ['NOTIFICATION_READY', 'FINANCE_NOTICE', 'ORDER_NOTICE', 'DISPUTE_NOTICE', 'VENDOR_ONBOARDING_NOTICE', 'PRODUCT_COMPLIANCE_NOTICE', 'VENDOR_INVENTORY_NOTICE', 'ACCOUNT_SECURITY_NOTICE'], true) && is_string($payload['notification_id'] ?? null)) {
+            app(NotificationService::class)->enqueue($payload['notification_id'], $eventType,
+                $eventType === 'ACCOUNT_SECURITY_NOTICE' && is_string($payload['recipient'] ?? null) ? $payload['recipient'] : null);
+
+            return;
+        }
         if ($eventType === 'VENDOR_FLEET_CHANGED' || ($eventType === 'ORDER_STATE_CHANGED' && str_contains((string) ($payload['changes'] ?? ''), 'OUT_FOR_DELIVERY'))) {
             app(FleetBroadcast::class)->deliver($this->requiredString($payload, 'vendor_organization_id'));
 
