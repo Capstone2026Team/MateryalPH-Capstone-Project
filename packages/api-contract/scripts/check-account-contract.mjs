@@ -89,3 +89,16 @@ assert.ok(invite.parameters.some(parameter => parameter.name === 'Idempotency-Ke
 assert.deepEqual(spec.paths['/{accountPortal}/account/administrators'].get.parameters[0].schema.enum, ['admin'])
 assert.deepEqual(spec.paths['/{accountPortal}/account/memberships'].get.parameters[0].schema.enum, ['vendors'])
 console.log(`Account contract passed: ${expected.size} protected operations match Laravel routes, audiences, transport, and response envelopes.`)
+
+for (const [path, id] of [['/vendors/account/memberships/{membershipId}', 'deleteVendorTeamMember'], ['/vendors/account/invitations/{invitationId}', 'deleteVendorTeamInvitation']]) {
+  const operation = spec.paths[path].delete
+  assert.equal(operation.operationId, id)
+  assert.equal(operation.requestBody.content['application/json'].schema.$ref, '#/components/schemas/VendorTeamDeletion')
+  assert.ok(operation.responses['409'])
+  assert.ok(operation.responses['403'])
+  assert.ok(operation.security.some(security => 'accessCookie' in security && 'webCsrf' in security))
+}
+assert.deepEqual(spec.components.schemas.VendorTeamDeletion.required, ['lock_version'])
+assert.ok(spec.components.schemas.VendorTeamInvitationRecord.required.includes('can_delete'))
+assert.ok(spec.components.schemas.VendorTeamInvitationRecord.required.includes('lock_version'))
+console.log('Team deletion contract passed: versioned Owner deletion, cookie/CSRF guards and invitation eligibility.')

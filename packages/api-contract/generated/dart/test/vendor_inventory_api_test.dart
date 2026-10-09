@@ -21,7 +21,7 @@ void main() {
 
     // Vendor-only inventory ledger, one row per active variant. Exact quantities are private to authorized Vendor users (Owner, Store Manager, Store Staff, Inventory Staff; Customer Service Staff read-only). Fulfillment Staff are denied. Buyers only ever receive public_label.
     //
-    //Future<InventoryLedgerEnvelope> listVendorInventoryItems({ String q, String listingId, StockLabel stock, String confirmation, int page }) async
+    //Future<InventoryLedgerEnvelope> listVendorInventoryItems({ String categoryId, String q, String listingId, StockLabel stock, String confirmation, int page }) async
     test('test listVendorInventoryItems', () async {
       // TODO
     });

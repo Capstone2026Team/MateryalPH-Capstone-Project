@@ -13,6 +13,7 @@ Name | Type
 `pendingDocumentReviews` | number
 `auditEvents` | number
 `canViewAudit` | boolean
+`queues` | [Array&lt;OperationsQueue&gt;](OperationsQueue.md)
 
 ## Example
 
@@ -28,6 +29,7 @@ const example = {
   "pendingDocumentReviews": null,
   "auditEvents": null,
   "canViewAudit": null,
+  "queues": null,
 } satisfies AdminDashboardSummary
 
 console.log(example)

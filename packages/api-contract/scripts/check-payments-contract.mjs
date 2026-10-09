@@ -16,7 +16,8 @@ if (routeFile) {
   assert.equal(result.status, 0, 'Laravel route export must succeed')
   routes = JSON.parse(result.stdout)
 }
-const TAGS = { 'Buyer Payments': 'BUYER', 'Vendor Finance': 'VENDOR', 'Admin Finance': 'ADMIN', 'Payment Webhooks': null }
+// Phase 16 FIN-10 queues and the Owner review status extend the same finance families.
+const TAGS = { 'Buyer Payments': 'BUYER', 'Vendor Finance': 'VENDOR', 'Admin Finance': 'ADMIN', 'Admin Finance Operations': 'ADMIN', 'Vendor Finance Reviews': 'VENDOR', 'Payment Webhooks': null }
 const expected = new Set()
 for (const [path, methods] of Object.entries(spec.paths)) {
   for (const [method, operation] of Object.entries(methods)) {

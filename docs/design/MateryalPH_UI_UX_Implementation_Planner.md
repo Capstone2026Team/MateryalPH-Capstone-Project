@@ -539,7 +539,7 @@ Avoid unsupported marketing claims such as guaranteed sales, instant activation,
 | Inventory | SKU/variant ledger, adjustments, reservations, soft holds, stale stock, auto-accept allotments/caps |
 | Orders | Status-filtered list, job order, confirmation/revision, manual NRPC, fulfillment actions, cancellation result |
 | Messages/quotes | Conversations, staff identity, Work Package copies, quote builder, versions, deadline, counter-offer, change summary |
-| Team | Optional members, individual fixed-role invitations, Owner delegation toggle, invitation expiry, suspension/reactivation, and immutable action history |
+| Team | Optional members, individual fixed-role invitations, Owner delegation toggle, invitation expiry, suspension/reactivation, Owner-only confirmed deletion of deactivated memberships and eligible invitations, and immutable action history |
 | Delivery | Self-Pickup, Vendor Delivery, or Both; conditional vehicles, capacities, dimensions, fees, service radius, and assignment only when Vendor Delivery applies |
 | Finance/reporting | Payment/refund status, Vendor Tax Profile reference, processing fees, approved 2% Vendor-paid monthly commission, Xendit connection, order/export reports; no wallet/escrow UI |
 | Settings | Store public information, notifications, sessions/security, allowed integrations/status only |

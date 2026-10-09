@@ -1,5 +1,6 @@
+import { PageHeader as SharedPageHeader, StatCard, InfoNote, FilterTabs, PortalPagePatterns } from '@materyalph/web-ui'
 import { useParams } from 'react-router-dom'
-import { ProfileDetails, useAutomaticRefresh, DashboardHeader, DashboardPanel, DashboardPreviewSection, MetricCard, SectionWorkspace, CustomLabelInput, OnboardingReview, ChecklistPanel, verificationChecklist, checklistProgress, PrivateEvidenceButton, readWebPrivateFile, XenditConnection, StoreOperationSchedule, StoreHours, emptyStoreSchedule, storeScheduleErrors, type StoreOperatingDay } from '@materyalph/web-ui'
+import { ProfileDetails, useAutomaticRefresh, DashboardPanel, DashboardPreviewSection, SectionWorkspace, CustomLabelInput, OnboardingReview, ChecklistPanel, verificationChecklist, checklistProgress, PrivateEvidenceButton, readWebPrivateFile, XenditConnection, StoreOperationSchedule, StoreHours, emptyStoreSchedule, storeScheduleErrors, type StoreOperatingDay } from '@materyalph/web-ui'
 import {
   Activity,
   Bell,
@@ -30,7 +31,7 @@ import { type FormEvent, type ReactNode, createContext, useContext, useCallback,
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 
 import {
-  AccountWorkspace, VersionedAgreementPanel, VendorTeamInvitations, VendorTeamActivity,
+  AccountWorkspace, VersionedAgreementPanel, VendorTeamInvitations, VendorTeamActivity, VendorTeamMembers, useAccountVerification, type RequestAccountVerification,
   DeliveryVehicles, emptyDeliveryVehicle, ChoiceField, FieldRow, OnboardingFormSection, EmailVerificationPanel, AuthorityScopePanel, DocumentUploadField,
   Button,
   Field, FormErrors,
@@ -45,11 +46,13 @@ import {
 import { QRCodeSVG } from 'qrcode.react'
 import { ResponseError } from '@materyalph/api-client-ts'
 import { signOut } from '../lib/auth-api'
+import { watchTeamActivity } from '../lib/messaging-api'
 import { vehicleDraft, vehiclePayload, vehicleErrors } from '../lib/delivery-vehicles'
 import { vendorLoginDestination } from '../lib/vendor-destination'
 import type { VendorOnboardingSection } from '@materyalph/api-client-ts'
 import { OnboardingFlow, OnboardingStepContent } from '../components/OnboardingFlow'
 import { statusLabel, statusTone, useOnboardingSnapshot } from '../lib/vendor-status'
+import { useVendorNavigationUpdates } from '../lib/navigation-updates'
 import { verificationSteps, setupSteps } from '../lib/onboarding-steps'
 import { StoreBusinessInformation, StoreLocation, StoreVacationMode } from '../components/StoreProfileSections'
 import { VendorBusinessAddress } from '../components/VendorBusinessAddress'
@@ -64,6 +67,7 @@ import {
   previewVendorRequirements,
   getVendorPrivateFileUrl,
   inviteVendorTeamMember, listVendorTeamInvitations, listVendorTeamActivity, changeVendorStaffDisputes,
+  teamAccountsApi, listVendorTeamMembers, updateVendorTeamMember, deleteVendorTeamMember, deleteVendorTeamInvitation, changeVendorTeamMemberStatus, changeVendorTeamMemberDelegation,
   readableOnboardingError, onboardingFieldErrors, removePendingVendorDocument,
   removeVendorMedia,
   requestStoreEmailVerification,
@@ -93,9 +97,9 @@ export function VendorPlaceholderPage() {
   if (loading) return <LoadingState />
   if (error) return <ErrorState message={error} onRetry={() => void refresh()} />
   if (!snapshot) return null
-  if (module === 'tracking' && snapshot.permissions.includes('staff.manage')) return <VendorShell navigationData={snapshot} activeHref="/preview/tracking" accountLabel={stringValue(record(snapshot.organization).storeName, 'Vendor')}><VendorTeamActivity list={listVendorTeamActivity} explainError={readableOnboardingError} /></VendorShell>
+  if (module === 'tracking' && snapshot.permissions.includes('staff.manage')) return <VendorShell navigationData={snapshot} activeHref="/preview/tracking" accountLabel={stringValue(record(snapshot.organization).storeName, 'Vendor')}><VendorTeamActivity listMembers={listVendorTeamMembers} canManageManagers={snapshot.permissions.includes('managers.manage')} list={listVendorTeamActivity} explainError={readableOnboardingError} watchUpdates={watchTeamActivity} /></VendorShell>
   if (record(snapshot.activation).status !== 'ACTIVE' || !vendorModules[module] || !snapshot.permissions.includes(`portal.${module}`)) return <Navigate to="/dashboard" replace />
-  return <VendorShell navigationData={snapshot} activeHref={`/preview/${module}`} accountLabel={stringValue(record(snapshot.organization).storeName, 'Vendor')}><h1 className="text-3xl font-semibold">{vendorModules[module]}</h1><p className="mt-6 text-text-secondary">Not yet implemented</p></VendorShell>
+  return <VendorShell navigationData={snapshot} activeHref={`/preview/${module}`} accountLabel={stringValue(record(snapshot.organization).storeName, 'Vendor')}><PageHeader eyebrow="Vendor Portal" title={vendorModules[module]} description="This workspace is not yet available." /><p className="mt-6 text-text-secondary">Not yet implemented</p></VendorShell>
 }
 
 function portalDate(): string {
@@ -157,7 +161,7 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry: () 
 }
 
 export function PageHeader({ eyebrow, title, description, status, actions }: { eyebrow: string; title: string; description: string; status?: string; actions?: ReactNode }) {
-  return <div className="flex flex-col gap-5 border-b border-border-default pb-7 lg:flex-row lg:items-end lg:justify-between"><div className="max-w-3xl"><p className="text-xs font-semibold uppercase tracking-[0.14em] text-action-primary">{eyebrow}</p><div className="mt-3 flex flex-wrap items-center gap-3"><h1 className="text-3xl font-semibold tracking-tight text-text-strong sm:text-4xl">{title}</h1>{status && <StatusBadge label={statusLabel(status)} tone={statusTone(status)} />}</div><p className="mt-3 max-w-2xl text-base leading-7 text-text-secondary">{description}</p></div>{actions && <div className="flex shrink-0 flex-wrap gap-3">{actions}</div>}</div>
+  return <SharedPageHeader eyebrow={eyebrow} title={title} description={description} actions={actions} status={status && <StatusBadge label={statusLabel(status)} tone={statusTone(status)} />} />
 }
 
 function Checklist({ title, section }: { title: string; section: ReturnType<typeof sectionFor> }) {
@@ -172,6 +176,7 @@ export function VendorShell({ activeHref, accountLabel, accountStatus, children,
   const navigate = useNavigate()
   const { snapshot: shellSnapshot } = useOnboardingSnapshot(navigationData === undefined)
   const navigationSnapshot = navigationData === undefined ? shellSnapshot : navigationData
+  const navigationUpdates = useVendorNavigationUpdates(Boolean(navigationSnapshot) && activeHref !== '/welcome' && !activeHref.startsWith('/onboarding'))
   const logoFileId = stringValue(arrayValue(record(navigationSnapshot?.setup).media).filter(item => item.kind === 'LOGO').at(-1)?.fileId)
   const [storeLogoUrl, setStoreLogoUrl] = useState<string | null>(null)
   useEffect(() => {
@@ -197,6 +202,9 @@ export function VendorShell({ activeHref, accountLabel, accountStatus, children,
       if (item.href.startsWith('/preview/')) return navigationSnapshot.permissions.includes(`portal.${item.href.split('/').at(-1)}`)
       return true
     }).map(item => ({
+      ...(item.href === '/orders' ? { updateCountLabel: 'active order' } : {}),
+      ...(item.href === '/team' ? { updateCountLabel: 'active team member' } : {}),
+      updateCount: item.href === '/store-profile' ? 0 : navigationUpdates?.[item.href] ?? 0,
       ...item, disabled: item.disabled || ((item.href.startsWith('/preview/') || item.href.startsWith('/finance') || item.href === '/disputes' || item.href === '/invoices' || item.href === '/performance' || item.href === '/analytics/materials' || item.href === '/reviews' || item.href === '/products' || item.href === '/vehicles') && item.href !== '/preview/tracking' && record(navigationSnapshot?.activation).status !== 'ACTIVE'),
     })),
   })).filter(section => section.items.length > 0)
@@ -209,7 +217,7 @@ export function VendorShell({ activeHref, accountLabel, accountStatus, children,
     finally { setSigningOut(false) }
   }
   if (activeHref === '/welcome' || activeHref.startsWith('/onboarding')) return <div className="min-h-screen bg-surface-canvas text-text-strong"><header className="flex flex-wrap items-center justify-between gap-3 border-b border-border-default bg-surface-primary px-6 py-4"><Link to="/dashboard" className="text-xl font-bold">Materyal<span className="text-action-primary">PH</span></Link><p className="text-xs text-text-secondary" aria-label="System date">{portalDate()}</p><PortalAccountMenu portal="vendors" basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} onNavigate={navigate} onSignOut={logout} /></header><main className="mx-auto max-w-7xl p-5 sm:p-8">{refreshError && <StatusMessage tone="error">{refreshError}</StatusMessage>}{children}</main></div>
-  return <PortalShell apiBasePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} onSignOut={logout} onNavigate={navigate} portalLabel="VENDOR PORTAL" pageTitle={activeHref === '/settings' ? 'Settings' : activeHref === '/store-profile' ? 'Store Profile' : activeHref.includes('onboarding') ? 'Vendor Onboarding' : vendorNavigation.flatMap(section => section.items).find(item => item.href === activeHref)?.label ?? 'Dashboard'} dateLabel={portalDate()} sections={navigation} activeHref={activeHref} accountLabel={accountLabel} accountStatus={accountStatus ?? 'Vendor account'} accountAvatarUrl={storeLogoUrl} headerActions={<><Link className="inline-flex min-h-11 items-center px-3 text-sm font-semibold" to="/settings">Account</Link><Button variant="secondary" disabled={signingOut} onClick={() => void logout()}>{signingOut ? 'Signing out…' : 'Sign out'}</Button></>}>{logoutError && <StatusMessage tone="error">{logoutError}</StatusMessage>}{refreshError && navigationSnapshot && <StatusMessage tone="error">{refreshError}</StatusMessage>}{children}</PortalShell>
+  return <PortalShell contentLayout={activeHref === '/preview/tracking' ? 'full' : 'standard'} apiBasePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} onSignOut={logout} onNavigate={navigate} portalLabel="VENDOR PORTAL" pageTitle={activeHref === '/settings' ? 'Settings' : activeHref === '/store-profile' ? 'Store Profile' : activeHref.includes('onboarding') ? 'Vendor Onboarding' : vendorNavigation.flatMap(section => section.items).find(item => item.href === activeHref)?.label ?? 'Dashboard'} dateLabel={portalDate()} sections={navigation} activeHref={activeHref} accountLabel={accountLabel} accountStatus={accountStatus ?? 'Vendor account'} accountAvatarUrl={storeLogoUrl} headerActions={<><Link className="inline-flex min-h-11 items-center px-3 text-sm font-semibold" to="/settings">Account</Link><Button variant="secondary" disabled={signingOut} onClick={() => void logout()}>{signingOut ? 'Signing out…' : 'Sign out'}</Button></>}>{logoutError && <StatusMessage tone="error">{logoutError}</StatusMessage>}{refreshError && navigationSnapshot && <StatusMessage tone="error">{refreshError}</StatusMessage>}<PortalPagePatterns.Provider value><div className="vendor-page text-sm">{children}</div></PortalPagePatterns.Provider></PortalShell>
 }
 
 export function VendorWelcomePage() {
@@ -231,7 +239,7 @@ export function VendorWelcomePage() {
   if (!snapshot) return null
 
   const org = record(snapshot.organization)
-  return <VendorShell refreshError={error} navigationData={snapshot} activeHref="/welcome" accountLabel={stringValue(org.storeName, 'Vendor Owner')} accountStatus="Pending onboarding"><div className="mx-auto flex min-h-[calc(100vh-10rem)] max-w-3xl items-center justify-center"><section className="w-full border-y border-border-default py-12 text-center sm:py-16"><div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-brand-orange-50 text-action-primary"><Store size={30} aria-hidden="true" /></div><p className="mt-7 text-xs font-semibold uppercase tracking-[0.15em] text-action-primary">Welcome to MateryalPH</p><h1 className="mt-3 text-4xl font-semibold tracking-tight sm:text-5xl">Let’s prepare your store for review.</h1><p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-text-secondary">Complete Store Verification for business review, then finish Store Setup so Buyers see an accurate, trustworthy store when your activation is approved.</p><div className="mx-auto mt-8 grid max-w-2xl gap-3 text-left sm:grid-cols-2"><WelcomeTrack icon={<FileCheck2 size={20} aria-hidden="true" />} title="Store Verification" text="Business identity, address, classification, tax profile, and private evidence." /><WelcomeTrack icon={<Store size={20} aria-hidden="true" />} title="Store Setup" text="Public profile, fulfillment, payment connection, and the TEST commission terms." /></div><div className="mt-9 flex flex-wrap justify-center gap-3"><Button disabled={busy} onClick={() => void continueOnboarding()}>{busy ? 'Saving…' : 'Continue'} <ArrowRight size={16} aria-hidden="true" /></Button></div><p className="mx-auto mt-5 max-w-xl text-xs leading-5 text-text-secondary">You can save drafts and return later. Store Setup can be completed while Store Verification is pending, but Store Activation stays gated until all required decisions are complete.</p></section></div></VendorShell>
+  return <VendorShell refreshError={error} navigationData={snapshot} activeHref="/welcome" accountLabel={stringValue(org.storeName, 'Vendor Owner')} accountStatus="Pending onboarding"><div className="mx-auto flex min-h-[calc(100vh-10rem)] max-w-3xl items-center justify-center"><section className="w-full border-y border-border-default py-12 text-center sm:py-16"><div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-brand-orange-50 text-action-primary"><Store size={30} aria-hidden="true" /></div><div className="mt-6 text-left"><PageHeader eyebrow="Welcome to MateryalPH" title="Let’s prepare your store for review." description="Complete Store Verification and Store Setup to prepare for activation." /></div><div className="mx-auto mt-8 grid max-w-2xl gap-3 text-left sm:grid-cols-2"><WelcomeTrack icon={<FileCheck2 size={20} aria-hidden="true" />} title="Store Verification" text="Business identity, address, classification, tax profile, and private evidence." /><WelcomeTrack icon={<Store size={20} aria-hidden="true" />} title="Store Setup" text="Public profile, fulfillment, payment connection, and the TEST commission terms." /></div><div className="mt-9 flex flex-wrap justify-center gap-3"><Button disabled={busy} onClick={() => void continueOnboarding()}>{busy ? 'Saving…' : 'Continue'} <ArrowRight size={16} aria-hidden="true" /></Button></div><div className="mt-6"><InfoNote>You can save drafts and return later. Store Setup can be completed while Store Verification is pending, but Store Activation stays gated until all required decisions are complete.</InfoNote></div></section></div></VendorShell>
 }
 
 function WelcomeTrack({ icon, title, text }: { icon: ReactNode; title: string; text: string }) {
@@ -263,14 +271,14 @@ export function VendorDashboardPage() {
   const setupProgress = checklistProgress(setupSection)
   const activationBlockers = arrayValue(readiness.blockers)
   const accountLabel = stringValue(org.storeName, stringValue(org.legalName, 'Vendor Owner'))
-  if (!snapshot.permissions.includes('vendor.onboarding.submit')) return <VendorShell refreshError={error} navigationData={snapshot} activeHref="/dashboard" accountLabel={accountLabel} accountStatus={activation.status === 'ACTIVE' ? 'Store Active' : 'Limited access'}><div className="space-y-6"><DashboardHeader eyebrow={accountLabel} title="Your team dashboard" description={activation.status === 'ACTIVE' ? 'Use the sections available for your assigned role. Organization and assignment restrictions apply to every action.' : 'This store is not yet active for marketplace participation. Required onboarding and verification must be completed before marketplace features become available.'} /><p className="text-sm text-text-secondary">Your individual account is connected to this store. The Vendor Owner manages onboarding and protected store settings.</p><Link to="/settings" className="inline-flex min-h-11 items-center text-action-primary underline">My Account Profile</Link></div></VendorShell>
-  if (activation.status === 'ACTIVE') return <VendorShell refreshError={error} navigationData={snapshot} activeHref="/dashboard" accountLabel={accountLabel} accountStatus="Store Active"><div className="space-y-5"><DashboardHeader eyebrow={accountLabel} title="Dashboard" description="Your store at a glance. Switch sections to focus on the work that matters today." status={<StatusBadge label="Active" tone="success" />} /><SectionWorkspace dashboard sections={[
+  if (!snapshot.permissions.includes('vendor.onboarding.submit')) return <VendorShell refreshError={error} navigationData={snapshot} activeHref="/dashboard" accountLabel={accountLabel} accountStatus={activation.status === 'ACTIVE' ? 'Store Active' : 'Limited access'}><div className="space-y-6"><SharedPageHeader eyebrow={accountLabel} title="Your team dashboard" description={activation.status === 'ACTIVE' ? 'Use the sections available for your assigned role.' : 'Your store must complete onboarding and verification before marketplace features become available.'} /><p className="text-sm text-text-secondary">Your individual account is connected to this store. The Vendor Owner manages onboarding and protected store settings.</p><Link to="/settings" className="inline-flex min-h-11 items-center text-action-primary underline">My Account Profile</Link></div></VendorShell>
+  if (activation.status === 'ACTIVE') return <VendorShell refreshError={error} navigationData={snapshot} activeHref="/dashboard" accountLabel={accountLabel} accountStatus="Store Active"><div className="space-y-6"><SharedPageHeader eyebrow={accountLabel} title="Dashboard" description="Your store at a glance. Switch sections to focus on the work that matters today." status={<StatusBadge label="Active" tone="success" />} /><SectionWorkspace dashboard sections={[
     { label: 'Overview', content: <>
       <p className="text-xs text-text-secondary">Store status is current. Operational dashboard reporting is not yet available.</p>
       <dl className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{[
         { label: 'Pending fulfillment', icon: Truck }, { label: 'Sales & revenue', icon: Wallet },
         { label: 'Response time', icon: MessageSquare }, { label: 'Store visitors', icon: Users },
-      ].map(({ label, icon: Icon }, index) => <MetricCard key={label} label={label} value="—" description="Reporting not yet available" icon={<Icon size={16} aria-hidden="true" />} accent={index === 0} />)}</dl>
+      ].map(({ label, icon: Icon }) => <StatCard key={label} label={label} value="—" hint="Reporting not yet available" icon={<Icon size={16} aria-hidden="true" />} />)}</dl>
       <div className="grid items-start gap-5 xl:grid-cols-3">
         <div className="xl:col-span-2"><DashboardPanel title="Store workspace" description="Keep your store details and requirements up to date.">
           <div className="divide-y divide-border-default">{[
@@ -279,7 +287,7 @@ export function VendorDashboardPage() {
             { title: 'Store Setup', description: `Setup status: ${statusLabel(setupStatus)}`, href: '/onboarding/setup', icon: Package },
           ].map(({ title, description, href, icon: Icon }) => <Link key={href} to={href} className="group flex min-h-11 items-center gap-3 rounded-control py-4 first:pt-0 last:pb-0"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-control bg-surface-canvas text-action-primary"><Icon size={18} aria-hidden="true" /></span><span className="min-w-0 flex-1"><span className="text-sm font-semibold group-hover:text-action-primary">{title}</span><span className="mt-1 block text-xs leading-5 text-text-secondary">{description}</span></span><ArrowRight size={16} className="shrink-0 text-text-secondary" aria-hidden="true" /></Link>)}</div>
         </DashboardPanel></div>
-        <DashboardPanel title="Marketplace readiness" description="Activation and discoverability are separate."><dl className="space-y-5"><div><dt className="text-xs text-text-secondary">Store activation</dt><dd className="mt-2"><StatusBadge label="Active" tone="success" /></dd></div><div className="border-t border-border-default pt-4"><dt className="text-xs text-text-secondary">Marketplace discoverability</dt><dd className="mt-2 text-sm font-semibold">{statusLabel(stringValue(activation.marketplaceDiscoverabilityStatus, 'NO_ACTIVE_LISTINGS'))}</dd></div></dl><p className="mt-4 text-xs leading-5 text-text-secondary">Eligible published listings remain required for marketplace discovery.</p></DashboardPanel>
+        <DashboardPanel title="Marketplace readiness" description="Activation and discoverability are separate."><dl className="space-y-6"><div><dt className="text-xs text-text-secondary">Store activation</dt><dd className="mt-2"><StatusBadge label="Active" tone="success" /></dd></div><div className="border-t border-border-default pt-4"><dt className="text-xs text-text-secondary">Marketplace discoverability</dt><dd className="mt-2 text-sm font-semibold">{statusLabel(stringValue(activation.marketplaceDiscoverabilityStatus, 'NO_ACTIVE_LISTINGS'))}</dd></div></dl><p className="mt-4 text-xs leading-5 text-text-secondary">Eligible published listings remain required for marketplace discovery.</p></DashboardPanel>
       </div>
     </> },
     { label: 'Performance', content: <DashboardPreviewSection title="Store performance" description="Response, processing and service quality." labels={['Response rate / time', 'Order processing time', 'Cancellation rate', 'Return rate']} /> },
@@ -291,7 +299,7 @@ export function VendorDashboardPage() {
 
   return <VendorShell refreshError={error} navigationData={snapshot} activeHref="/dashboard" accountLabel={accountLabel} accountStatus={`${statusLabel(stringValue(activation.status, 'NOT_READY'))} activation`}>
     <div className="phase3-page space-y-6">
-      <DashboardHeader eyebrow="Limited-Access Vendor Dashboard" title={`Welcome back, ${accountLabel}.`} description={booleanValue(readiness.ready) ? 'Your store meets the activation requirements. Request Store Activation to unlock the marketplace features allowed for your role.' : 'Your store is not active yet. Review the activation requirements below; checklist progress alone does not grant marketplace access.'} status={<StatusBadge label={statusLabel(stringValue(activation.status, 'NOT_READY'))} tone="warning" />} />
+      <SharedPageHeader eyebrow="Limited-Access Vendor Dashboard" title={`Welcome back, ${accountLabel}.`} description={booleanValue(readiness.ready) ? 'Your store meets activation requirements. Request activation to open marketplace features.' : 'Review and complete the requirements for Store Activation below.'} status={<StatusBadge label={statusLabel(stringValue(activation.status, 'NOT_READY'))} tone="warning" />} />
       {actionMessage && <StatusMessage tone={actionMessage.includes('recorded') ? 'success' : 'error'}>{actionMessage}</StatusMessage>}
       {!booleanValue(readiness.ready) && <section aria-label="Store activation requirements" className="rounded-surface border border-border-default bg-surface-primary p-5 sm:p-6"><h2 className="text-lg font-semibold">Store activation requirements</h2>{activationBlockers.length ? <><p className="mt-2 text-sm text-text-secondary">The server reports these items before your store can be activated:</p><ul className="mt-4 list-disc space-y-2 pl-5 text-sm text-text-strong">{activationBlockers.map((blocker, index) => <li key={`${stringValue(blocker.key)}-${index}`}>{stringValue(blocker.reason, 'An activation requirement needs attention.')}</li>)}</ul></> : <p className="mt-2 text-sm text-text-secondary">Activation readiness is unavailable. The dashboard will check again automatically.</p>}</section>}
       {booleanValue(readiness.ready) && <Button className="w-fit" disabled={busy} onClick={() => void activate()}>{busy ? 'Recording…' : 'Request Store Activation'} <ArrowRight size={16} aria-hidden="true" /></Button>}
@@ -312,6 +320,7 @@ export function VendorSetupPage() {
 }
 
 function VendorOnboardingPage({ initialSection }: { initialSection: OnboardingSectionKey }) {
+  const navigate = useNavigate()
   const { snapshot, loading, error, refresh, setSnapshot } = useOnboardingSnapshot()
   const activeSection = initialSection
 
@@ -328,27 +337,10 @@ function VendorOnboardingPage({ initialSection }: { initialSection: OnboardingSe
   return <VendorShell refreshError={error} navigationData={snapshot} activeHref={activeHref} accountLabel={accountLabel} accountStatus="Onboarding in progress"><div className="phase3-page mx-auto max-w-[1120px] space-y-8"><header className="space-y-4">
         <Link className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-text-secondary hover:text-action-primary" to="/dashboard"><ArrowLeft size={16} aria-hidden="true" />Back to dashboard</Link>
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-10">
-          <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-action-primary">Store onboarding</p>
-            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
-              <h1 className="text-3xl font-semibold tracking-tight text-text-strong sm:text-4xl">{activeSection === 'STORE_SETUP' ? 'Store Setup' : 'Store Verification'}</h1>
-              <StatusBadge label={statusLabel(stringValue(record(activeSection === 'STORE_SETUP' ? snapshot.setup : snapshot.verification).status, 'NOT_STARTED'))} tone={statusTone(stringValue(record(activeSection === 'STORE_SETUP' ? snapshot.setup : snapshot.verification).status, 'NOT_STARTED'))} />
-            </div>
-            <p className="mt-3 max-w-2xl text-base leading-7 text-text-secondary">{activeSection === 'STORE_SETUP' ? 'Configure your public store profile, fulfillment and TEST payment connection. Store Setup is separate from Admin business verification.' : 'Provide your business information and private evidence for Admin review before Store Activation.'}</p>
-          </div>
-          <div className="min-w-0 space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Onboarding area</p>
-            <nav aria-label="Onboarding area" className="grid grid-cols-2 gap-1 rounded-surface border border-border-default bg-surface-primary p-1">
-              <SectionTab active={activeSection === 'STORE_VERIFICATION'} href="/onboarding/verification" label="Store Verification" description={`${checklistProgress(verificationSection).complete}/${checklistProgress(verificationSection).total} checklist items complete`} />
-              <SectionTab active={activeSection === 'STORE_SETUP'} href="/onboarding/setup" label="Store Setup" description={`${checklistProgress(setupSection).complete}/${checklistProgress(setupSection).total} checklist items complete`} />
-            </nav>
-          </div>
+          <PageHeader eyebrow="Store onboarding" title={activeSection === 'STORE_SETUP' ? 'Store Setup' : 'Store Verification'} status={stringValue(record(activeSection === 'STORE_SETUP' ? snapshot.setup : snapshot.verification).status, 'NOT_STARTED')} description={activeSection === 'STORE_SETUP' ? 'Configure your public profile, fulfillment and TEST payment connection.' : 'Provide business information and private evidence for Admin review.'} />
+          <div className="min-w-0 space-y-4"><FilterTabs appearance="tabs" label="Onboarding area" value={activeSection} chips={[{ value: 'STORE_VERIFICATION', label: 'Store Verification' }, { value: 'STORE_SETUP', label: 'Store Setup' }]} onChange={value => navigate(value === 'STORE_SETUP' ? '/onboarding/setup' : '/onboarding/verification')} /><p className="text-[13px] text-text-secondary">Verification: {checklistProgress(verificationSection).complete}/{checklistProgress(verificationSection).total} · Setup: {checklistProgress(setupSection).complete}/{checklistProgress(setupSection).total} checklist items complete</p></div>
         </div>
       </header>{activeSection === 'STORE_VERIFICATION' ? <VerificationWorkspace snapshot={snapshot} onSaved={setSnapshot} onRefresh={refresh} /> : <SetupWorkspace snapshot={snapshot} onSaved={setSnapshot} onRefresh={refresh} />}</div></VendorShell>
-}
-
-function SectionTab({ active, href, label, description }: { active: boolean; href: string; label: string; description: string }) {
-  return <Link className={`grid min-h-16 min-w-0 content-center gap-1 rounded-control border px-3 py-3 text-sm leading-5 no-underline transition-colors ${active ? 'border-action-primary bg-brand-orange-50 text-action-primary' : 'border-transparent text-text-secondary hover:bg-surface-canvas hover:text-text-strong'}`} aria-current={active ? 'page' : undefined} to={href}><span className="font-semibold">{label}</span><span className="text-xs text-text-secondary">{description}</span></Link>
 }
 
 function VerificationWorkspace({ snapshot, onSaved, onRefresh }: { snapshot: VendorOnboardingSnapshot; onSaved: (snapshot: VendorOnboardingSnapshot) => void; onRefresh: () => Promise<void> }) {
@@ -1013,7 +1005,7 @@ function SetupForm({ snapshot, onSaved, onRefresh }: { snapshot: VendorOnboardin
         try { return await reconcileVendorPaymentConnection() } finally { await onRefresh() }
       }}
     /></OnboardingStepContent>
-    <OnboardingStepContent active={step === 3}>{snapshot.permissions.includes('staff.manage') ? <VendorTeamInvitations organizationName={stringValue(record(snapshot.organization).storeName, 'Your store')} canInviteManager={snapshot.permissions.includes('managers.manage')} invite={inviteVendorTeamMember} list={listVendorTeamInvitations} explainError={readableOnboardingError} /> : <p>Team Accounts are optional. The Vendor Owner can invite employees before or after Store Activation.</p>}</OnboardingStepContent>
+    <OnboardingStepContent active={step === 3}><div className="space-y-4"><h3 className="text-lg font-semibold">Team Accounts are optional</h3><p className="text-sm text-text-secondary">Continue setting up your store. You can invite and manage employees in Team Accounts before or after Store Activation.</p>{snapshot.permissions.includes('staff.manage') && <Link to="/team" className="inline-flex min-h-11 items-center text-action-primary underline">Open Team Accounts</Link>}</div></OnboardingStepContent>
     <OnboardingStepContent active={step === 4}><StoreOperationSchedule days={schedule} errors={scheduleErrors} onChange={next => { editRevision.current += 1; setSchedule(next); setScheduleTouched(true); setDirty(true); setScheduleErrors({}) }} /></OnboardingStepContent>
     <OnboardingStepContent active={step === 5}><p className="mb-5 text-sm leading-6 text-text-secondary">Review the saved setup below. Completion requires a valid weekly schedule and confirmed TEST payment connection. Store Activation remains a separate gate.</p>{dirty && <StatusMessage tone="info">Your changes will save when you continue or finish later.</StatusMessage>}<ReviewDetails items={[["Public store name", stringValue(profile.publicStoreName)], ["Services Capability", statusLabel(stringValue(profile.fulfillmentMethod))], ["Bulk Order Capability", profile.bulkCapability === true ? 'Yes — Item-Based and Project-Based' : profile.bulkCapability === false ? 'No — Item-Based only' : 'Not configured'], ["TEST payment connection", statusLabel(stringValue(payment.connectionStatus, 'UNVERIFIED'))]]} /><StoreHours days={operatingDays(record(snapshot.setup).operating_schedule)} /><Checklist title="Setup checklist" section={sectionFor(snapshot, 'STORE_SETUP')} /></OnboardingStepContent>
   </OnboardingFlow>
@@ -1057,17 +1049,18 @@ function SetupCompletion({ snapshot, onSaved, dirty }: { snapshot: VendorOnboard
 
 export function VendorTeamPage() {
   const { snapshot, loading, error, refresh } = useOnboardingSnapshot()
+  const verification = useAccountVerification({ api: teamAccountsApi, portal: 'vendors', explainError: readableOnboardingError, enabled: !!snapshot?.permissions.includes('staff.manage') })
   if (loading && !snapshot) return <VendorShell navigationData={snapshot} activeHref="/team" accountLabel="Vendor team"><LoadingState /></VendorShell>
   if (error && !snapshot) return <VendorShell navigationData={snapshot} activeHref="/team" accountLabel="Vendor team"><ErrorState message={error} onRetry={() => void refresh()} /></VendorShell>
   if (!snapshot) return null
   if (!snapshot.permissions.includes('staff.manage')) return <Navigate to="/dashboard" replace />
-  return <VendorShell refreshError={error} navigationData={snapshot} activeHref="/team" accountLabel="Vendor team"><div className="mx-auto max-w-6xl space-y-7"><PageHeader eyebrow="Team accounts" title="Your store team" description="Invite individual employees and assign one fixed role. The Vendor Owner retains control and oversight of the store." /><section className="min-w-0 rounded-surface border border-border-default bg-surface-primary p-5 sm:p-7"><VendorTeamInvitations organizationName={stringValue(record(snapshot.organization).storeName, 'Your store')} canInviteManager={snapshot.permissions.includes('managers.manage')} invite={inviteVendorTeamMember} list={listVendorTeamInvitations} explainError={readableOnboardingError} /></section>{snapshot.permissions.includes('staff.delegate') && <StaffDisputeSetting snapshot={snapshot} refresh={refresh} />}<Link to="/settings" className="inline-flex min-h-11 items-center text-action-primary underline">Manage existing staff access in Account Settings</Link></div></VendorShell>
+  return <VendorShell refreshError={error} navigationData={snapshot} activeHref="/team" accountLabel="Vendor team"><div className="mx-auto max-w-[1600px] space-y-6"><PageHeader eyebrow="Store Management" title="Team Accounts" description="Manage your store’s people, roles and account access." /><section className="min-w-0"><VendorTeamInvitations organizationName={stringValue(record(snapshot.organization).storeName, 'Your store')} verifyChange={verification.verify} canInviteManager={snapshot.permissions.includes('managers.manage')} invite={inviteVendorTeamMember} deleteInvitation={snapshot.permissions.includes('managers.manage') ? deleteVendorTeamInvitation : undefined} list={listVendorTeamInvitations} explainError={readableOnboardingError}><VendorTeamMembers list={listVendorTeamMembers} explainError={readableOnboardingError} canManageManagers={snapshot.permissions.includes('managers.manage')} update={updateVendorTeamMember} deleteAccount={snapshot.permissions.includes('managers.manage') ? deleteVendorTeamMember : undefined} changeStatus={changeVendorTeamMemberStatus} changeDelegation={changeVendorTeamMemberDelegation} verifyChange={verification.verify} /></VendorTeamInvitations></section>{snapshot.permissions.includes('staff.delegate') && <StaffDisputeSetting snapshot={snapshot} refresh={refresh} verifyChange={verification.verify} />}{verification.dialog}</div></VendorShell>
 }
-function StaffDisputeSetting({ snapshot, refresh }: { snapshot: VendorOnboardingSnapshot; refresh: () => Promise<unknown> }) {
+function StaffDisputeSetting({ snapshot, refresh, verifyChange }: { snapshot: VendorOnboardingSnapshot; refresh: () => Promise<unknown>; verifyChange: RequestAccountVerification }) {
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const org = record(snapshot.organization)
-  return <section className="space-y-3 border-t border-border-default pt-6"><h2 className="text-lg font-semibold">Staff dispute access</h2><label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" className="h-5 w-5 accent-action-primary" checked={booleanValue(org.staffDisputesEnabled, true)} disabled={busy} onChange={async event => { setBusy(true); setMessage(null); try { await changeVendorStaffDisputes(event.target.checked, numberValue(org.lockVersion, snapshot.lockVersion)); await refresh() } catch (error) { setMessage(await readableOnboardingError(error)) } finally { setBusy(false) } }} />Allow staff to handle disputes and appeals</label><p className="text-sm text-text-secondary">Applies to Store Staff and Customer Service Staff. Enabled by default. Verify your identity in Account Settings → Security before changing this setting.</p>{message && <StatusMessage tone="error">{message}</StatusMessage>}</section>
+  return <section className="space-y-3 border-t border-border-default pt-6"><h2 className="text-lg font-semibold">Staff dispute access</h2><label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" className="h-5 w-5 accent-action-primary" checked={booleanValue(org.staffDisputesEnabled, true)} disabled={busy} onChange={async event => { if (busy) return; const enabled = event.target.checked; setBusy(true); setMessage(null); try { if (!await verifyChange(`Authenticate ${enabled ? 'enabling' : 'disabling'} staff dispute access`)) return; await changeVendorStaffDisputes(enabled, numberValue(org.lockVersion, snapshot.lockVersion)); await refresh() } catch (error) { setMessage(await readableOnboardingError(error)) } finally { setBusy(false) } }} />Allow staff to handle disputes and appeals</label><p className="text-sm text-text-secondary">Applies to Store Staff and Customer Service Staff. Enabled by default. Authentication is required each time you change this setting.</p>{message && <StatusMessage tone="error">{message}</StatusMessage>}</section>
 }
 
 export function VendorAccountPage() {
@@ -1083,18 +1076,17 @@ export function VendorStoreProfilePage() {
   if (loading && !snapshot) return <VendorShell refreshError={error} navigationData={snapshot} activeHref="/store-profile" accountLabel="Vendor account"><LoadingState /></VendorShell>
   if (error && !snapshot) return <VendorShell refreshError={error} navigationData={snapshot} activeHref="/store-profile" accountLabel="Vendor account"><ErrorState message={error} onRetry={() => void refresh()} /></VendorShell>
   if (!snapshot) return null
-  if (!snapshot.permissions.includes('vendor.onboarding.submit')) return <VendorShell navigationData={snapshot} activeHref="/store-profile" accountLabel="Store Profile"><h1 className="text-3xl font-semibold">Store Profile</h1><p className="mt-4">{stringValue(record(snapshot.organization).storeName, 'Your store')}</p><p className="mt-3 text-text-secondary">Your individual account belongs to this Vendor organization. Protected business and ownership details are managed by the Vendor Owner.</p></VendorShell>
+  if (!snapshot.permissions.includes('vendor.onboarding.submit')) return <VendorShell navigationData={snapshot} activeHref="/store-profile" accountLabel="Store Profile"><PageHeader eyebrow="Store Management" title="Store Profile" description="Your store’s public profile and business information." /><p className="mt-4">{stringValue(record(snapshot.organization).storeName, 'Your store')}</p><p className="mt-3 text-text-secondary">Your individual account belongs to this Vendor organization. Protected business and ownership details are managed by the Vendor Owner.</p></VendorShell>
   if (record(snapshot.activation).status !== 'ACTIVE') return <Navigate to="/dashboard" replace />
   const org = record(snapshot.organization)
   const profile = record(record(snapshot.setup).profile)
-  return <VendorShell refreshError={error} navigationData={snapshot} activeHref="/store-profile" accountLabel={stringValue(org.storeName, 'Your store')}><div className="mx-auto max-w-[1600px] space-y-6"><header className="rounded-surface border border-border-default bg-surface-primary p-6"><div className="mb-5 min-h-24 rounded-control bg-surface-canvas"><StoreMediaPreview media={arrayValue(record(snapshot.setup).media).filter(item => stringValue(item.kind) === 'BANNER').at(-1)} kind="BANNER" /></div><div className="flex flex-col gap-5 sm:flex-row sm:items-center"><div className="w-24 shrink-0"><StoreMediaPreview media={arrayValue(record(snapshot.setup).media).filter(item => stringValue(item.kind) === 'LOGO').at(-1)} kind="LOGO" /></div><div className="min-w-0 flex-1"><p className="text-xs font-semibold uppercase tracking-widest text-text-secondary">Store profile</p><h1 className="mt-2 break-words text-2xl font-semibold sm:text-3xl">{stringValue(profile.publicStoreName, stringValue(org.storeName, 'Store Profile'))}</h1><p className="mt-2 break-words text-text-secondary">{stringValue(profile.description, 'Your marketplace business profile')}</p></div><StatusBadge label={record(snapshot.setup).vacationMode === true ? 'Vacation Mode on' : 'Active store'} /></div></header><div className="rounded-surface border border-border-default bg-surface-primary p-4 sm:p-7"><SectionWorkspace beforeSectionChange={() => businessSave.current?.() ?? configurationSave.current?.() ?? true} sections={[
+  return <VendorShell refreshError={error} navigationData={snapshot} activeHref="/store-profile" accountLabel={stringValue(org.storeName, 'Your store')}><div className="mx-auto max-w-[1600px] space-y-6"><header className="rounded-surface border border-border-default bg-surface-primary p-6"><div className="mb-5 min-h-24 rounded-control bg-surface-canvas"><StoreMediaPreview media={arrayValue(record(snapshot.setup).media).filter(item => stringValue(item.kind) === 'BANNER').at(-1)} kind="BANNER" /></div><div className="flex flex-col gap-5 sm:flex-row sm:items-center"><div className="w-24 shrink-0"><StoreMediaPreview media={arrayValue(record(snapshot.setup).media).filter(item => stringValue(item.kind) === 'LOGO').at(-1)} kind="LOGO" /></div><div className="min-w-0 flex-1"><p className="text-xs font-semibold uppercase tracking-widest text-text-secondary">Store profile</p><h2 className="mt-2 break-words text-lg font-semibold">{stringValue(profile.publicStoreName, stringValue(org.storeName, 'Store Profile'))}</h2><p className="mt-2 break-words text-text-secondary">{stringValue(profile.description, 'Your marketplace business profile')}</p></div><StatusBadge label={record(snapshot.setup).vacationMode === true ? 'Vacation Mode on' : 'Active store'} /></div></header><div className="rounded-surface border border-border-default bg-surface-primary p-4 sm:p-7"><SectionWorkspace beforeSectionChange={() => businessSave.current?.() ?? configurationSave.current?.() ?? true} sections={[
     { label: 'Store Information', content: <div className="grid items-start gap-8 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]"><PublicStoreProfileEditor snapshot={snapshot} onSaved={setSnapshot} /><MediaUploader embedded snapshot={snapshot} onRefresh={refresh} /></div> },
     { label: 'Business Information', content: <StoreBusinessInformation snapshot={snapshot} renderEditor={() => <VerificationForm editing registerBeforeLeave={registerBeforeLeave} snapshot={snapshot} onSaved={setSnapshot} onRefresh={refresh} />} /> },
     { label: 'Store Location', content: <StoreLocation snapshot={snapshot} /> },
     { label: 'Vacation Mode', content: <StoreVacationMode snapshot={snapshot} onSaved={setSnapshot} /> },
     { label: 'Operating Hours', content: <StoreOperationEditor snapshot={snapshot} onSaved={setSnapshot} /> },
     { label: 'Fulfillment Configuration', content: <StoreFulfillmentEditor snapshot={snapshot} onSaved={setSnapshot} registerBeforeLeave={registerConfigurationSave} /> },
-    { label: 'Vehicles Management', content: <StoreVehiclesEditor snapshot={snapshot} onSaved={setSnapshot} registerBeforeLeave={registerConfigurationSave} /> },
   ]} /></div></div></VendorShell>
 }
 type ProfileSectionEditorProps = { snapshot: VendorOnboardingSnapshot; onSaved: (snapshot: VendorOnboardingSnapshot) => void; registerBeforeLeave: (save: (() => Promise<boolean>) | null) => void }
@@ -1193,7 +1185,7 @@ function StoreOperationEditor({ snapshot, onSaved }: { snapshot: VendorOnboardin
     } catch (cause) { setMessage({ tone: 'error', text: await readableOnboardingError(cause) }) }
     finally { setBusy(false) }
   }
-  return <div className="space-y-5">{message && <StatusMessage tone={message.tone}>{message.text}</StatusMessage>}<StoreHours days={operatingDays(record(snapshot.setup).operating_schedule)} /><StoreOperationSchedule days={days} errors={errors} onChange={next => { setDays(next); setErrors({}) }} /><Button disabled={busy} onClick={() => void save()}>{busy ? 'Saving…' : 'Save Store Hours'}</Button></div>
+  return <div className="space-y-6">{message && <StatusMessage tone={message.tone}>{message.text}</StatusMessage>}<StoreHours days={operatingDays(record(snapshot.setup).operating_schedule)} /><StoreOperationSchedule days={days} errors={errors} onChange={next => { setDays(next); setErrors({}) }} /><Button disabled={busy} onClick={() => void save()}>{busy ? 'Saving…' : 'Save Store Hours'}</Button></div>
 }
 function PublicStoreProfileEditor({ snapshot, onSaved }: { snapshot: VendorOnboardingSnapshot; onSaved: (snapshot: VendorOnboardingSnapshot) => void }) {
   const profile = record(record(snapshot.setup).profile)

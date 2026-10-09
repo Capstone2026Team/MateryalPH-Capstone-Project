@@ -26,6 +26,10 @@ const DocumentExportInputTypeEnum
     const DocumentExportInputTypeEnum._('MATERIALS_ANALYTICS');
 const DocumentExportInputTypeEnum _$documentExportInputTypeEnum_TAX_PACKAGE =
     const DocumentExportInputTypeEnum._('TAX_PACKAGE');
+const DocumentExportInputTypeEnum _$documentExportInputTypeEnum_AUDIT_LOG =
+    const DocumentExportInputTypeEnum._('AUDIT_LOG');
+const DocumentExportInputTypeEnum _$documentExportInputTypeEnum_GEO_ANALYTICS =
+    const DocumentExportInputTypeEnum._('GEO_ANALYTICS');
 
 DocumentExportInputTypeEnum _$documentExportInputTypeEnumValueOf(String name) {
   switch (name) {
@@ -45,6 +49,10 @@ DocumentExportInputTypeEnum _$documentExportInputTypeEnumValueOf(String name) {
       return _$documentExportInputTypeEnum_MATERIALS_ANALYTICS;
     case 'TAX_PACKAGE':
       return _$documentExportInputTypeEnum_TAX_PACKAGE;
+    case 'AUDIT_LOG':
+      return _$documentExportInputTypeEnum_AUDIT_LOG;
+    case 'GEO_ANALYTICS':
+      return _$documentExportInputTypeEnum_GEO_ANALYTICS;
     default:
       throw ArgumentError(name);
   }
@@ -61,6 +69,8 @@ final BuiltSet<DocumentExportInputTypeEnum>
   _$documentExportInputTypeEnum_FEE_STATEMENT,
   _$documentExportInputTypeEnum_MATERIALS_ANALYTICS,
   _$documentExportInputTypeEnum_TAX_PACKAGE,
+  _$documentExportInputTypeEnum_AUDIT_LOG,
+  _$documentExportInputTypeEnum_GEO_ANALYTICS,
 ]);
 
 const DocumentExportInputFormatEnum _$documentExportInputFormatEnum_PDF =
@@ -105,6 +115,8 @@ class _$DocumentExportInputTypeEnumSerializer
     'FEE_STATEMENT': 'FEE_STATEMENT',
     'MATERIALS_ANALYTICS': 'MATERIALS_ANALYTICS',
     'TAX_PACKAGE': 'TAX_PACKAGE',
+    'AUDIT_LOG': 'AUDIT_LOG',
+    'GEO_ANALYTICS': 'GEO_ANALYTICS',
   };
   static const Map<Object, String> _fromWire = const <Object, String>{
     'PURCHASE_ORDER': 'PURCHASE_ORDER',
@@ -115,6 +127,8 @@ class _$DocumentExportInputTypeEnumSerializer
     'FEE_STATEMENT': 'FEE_STATEMENT',
     'MATERIALS_ANALYTICS': 'MATERIALS_ANALYTICS',
     'TAX_PACKAGE': 'TAX_PACKAGE',
+    'AUDIT_LOG': 'AUDIT_LOG',
+    'GEO_ANALYTICS': 'GEO_ANALYTICS',
   };
 
   @override

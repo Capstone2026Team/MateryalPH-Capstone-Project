@@ -173,7 +173,7 @@ final class DisputeFilingService
         $vendorHandler = $party === 'VENDOR' ? $actor->userId : ($flag ? null : $owner);
         DB::table('dispute_cases')->insert([
             'id' => $id, 'reference' => self::reference(), 'order_id' => $order->id, 'status' => DisputeRules::OPEN_AWAITING_RESPONSE, 'issue_type' => $input['issue_type'],
-            'requested_remedy' => $input['requested_remedy'], 'response_due_at' => now()->addHours(DisputeRules::RESPONSE_HOURS), 'vendor_organization_id' => $order->vendor_organization_id,
+            'requested_remedy' => $input['requested_remedy'], 'response_due_at' => now()->addHours(DisputeRules::deadline('response_hours')), 'vendor_organization_id' => $order->vendor_organization_id,
             'buyer_profile_id' => $order->buyer_profile_id, 'environment' => 'TEST', 'case_kind' => $eligibility['case_kind'], 'filed_by_party' => $party, 'filed_by_user_id' => $actor->userId,
             'filed_by_role' => $actor->role, 'responding_party' => DisputeRules::otherParty($party), 'order_state_at_filing' => $order->order_state,
             'description' => mb_substr(trim($input['description']), 0, 4000), 'requested_amount_centavos' => $amount, 'affected_lines' => json_encode($lines, JSON_THROW_ON_ERROR),
@@ -219,7 +219,7 @@ final class DisputeFilingService
 
     public static function postCompletionDeadline(object $order): ?CarbonImmutable
     {
-        return $order->order_state === OrderStates::COMPLETED && $order->closed_at !== null ? CarbonImmutable::parse((string) $order->closed_at)->addDays(DisputeRules::POST_COMPLETION_DAYS) : null;
+        return $order->order_state === OrderStates::COMPLETED && $order->closed_at !== null ? CarbonImmutable::parse((string) $order->closed_at)->addDays(DisputeRules::deadline('post_completion_filing_days')) : null;
     }
 
     public static function rejectDestination(Request $request): void

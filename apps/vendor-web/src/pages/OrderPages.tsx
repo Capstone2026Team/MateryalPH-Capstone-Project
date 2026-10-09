@@ -1,16 +1,15 @@
 import { WorkPackageAttachment } from '../components/WorkPackageAttachment'
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type MouseEvent, type ReactNode } from 'react'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Bot, CheckCircle2, ClipboardList, Hand, MapPin, MessageSquare, PackageSearch, Search, ShieldAlert, Store, Truck } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { ArrowLeft, Bot, CheckCircle2, FileText, Store, Hand, MapPin, MessageSquare, PackageSearch, ShieldAlert, Truck } from 'lucide-react'
 import {
-  Button, FormDialog, OrderProgress, SidePanel, ConfirmDialog, DeadlineCountdown, Field, FilterChips, MoneyBreakdown, MetricCard, OrderSummaryCard, OrderStateRows, ResponsiveRecordList, StatusMessage,
+  Button, FormDialog, OrderProgress, SidePanel, ConfirmDialog, DeadlineCountdown, Field, FilterTabs, MoneyBreakdown, Toolbar, EmptyState, OrderSummaryCard, OrderStateRows, ProfileDetails, ResponsiveRecordList, StatusMessage,
   formatManilaDateTime, formatPesoCentavos, orderStateLabel, type RecordColumn,
 } from '@materyalph/web-ui'
 import {
   apiFailure, confirmOrder, declineOrder, getDeliveryPlan, getOrder, listOrders, pesoInputToCentavos, quantityText, readableOrderError,
-  type DeliveryPlan, type DeliveryVehicleSelection, type OrderDetail, type OrderGroup, type OrderLine, type OrderListMeta, type OrderSummary, type VendorOrderConfirmRequest, type VendorOrderDeclineReason,
+  type ClosedOrderState, type DeliveryPlan, type DeliveryVehicleSelection, type OrderDetail, type OrderGroup, type OrderLine, type OrderListMeta, type OrderSummary, type VendorOrderConfirmRequest, type VendorOrderDeclineReason,
 } from '../lib/orders-api'
-import { chatApi, readableChatError } from '../lib/messaging-api'
 import { newIdempotencyKey } from '../lib/onboarding-api'
 import { storeName } from '../lib/catalog-access'
 import { useOnboardingSnapshot } from '../lib/vendor-status'
@@ -20,16 +19,23 @@ import { OrderPaymentPanel } from './OrderPaymentPanel'
 import { CancellationPanel, FulfillmentWorkspace, RefundsPanel } from './OrderFulfillmentPanels'
 import { OrderInvoicePanel } from './InvoicePages'
 import { DisputeStatusBadge } from '@materyalph/web-ui'
+import { FulfillmentConversationDialog } from './FulfillmentConversationDialog'
+import { FileDisputeDialog } from './DisputePages'
 
-const GROUPS: { value: OrderGroup; label: string }[] = [
+type VisibleOrderGroup = Exclude<OrderGroup, 'ALL'>
+const GROUPS: { value: VisibleOrderGroup; label: string }[] = [
   { value: 'NEW', label: 'New requests' }, { value: 'WAITING_ON_BUYER', label: 'Waiting on Buyer' }, { value: 'AWAITING_PAYMENT', label: 'Awaiting payment' },
-  { value: 'CONFIRMED', label: 'Confirmed' }, { value: 'CLOSED', label: 'Closed' }, { value: 'ALL', label: 'All' },
+  { value: 'CONFIRMED', label: 'Confirmed' }, { value: 'CLOSED', label: 'Closed' },
 ]
-const EMPTY: Record<OrderGroup, string> = {
-  NEW: 'No new requests. New Item-Based order requests appear here with a 24-hour response window.',
+const EMPTY: Record<VisibleOrderGroup, string> = {
+  NEW: 'No new requests yet.',
   WAITING_ON_BUYER: 'Nothing is waiting on a Buyer decision.', AWAITING_PAYMENT: 'No confirmed orders are waiting for payment.',
-  CONFIRMED: 'No confirmed orders yet.', CLOSED: 'No completed, declined, expired or cancelled orders yet.', ALL: 'No orders yet. Orders appear once Buyers submit requests for your listings.',
+  CONFIRMED: 'No confirmed orders yet.', CLOSED: 'No completed, declined, expired or cancelled orders yet.',
 }
+const CLOSED_STATES: { value: ClosedOrderState; label: string }[] = [
+  { value: 'COMPLETED', label: 'Completed' }, { value: 'CANCELLED', label: 'Cancelled' },
+  { value: 'EXPIRED', label: 'Expired' }, { value: 'DECLINED', label: 'Declined' },
+]
 const DECLINE_LABELS: Record<string, string> = { STOCK_UNAVAILABLE: 'Stock unavailable', OPERATIONAL_INABILITY: 'Operational inability', DELIVERY_INABILITY: 'Cannot deliver', COMPLIANCE_RESTRICTION: 'Compliance restriction', BUYER_AGREEMENT: 'Agreed with the Buyer', OTHER: 'Other' }
 const control = 'min-h-12 w-full min-w-0 rounded-control border border-border-default bg-surface-primary px-3 text-base font-normal'
 const manilaToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date())
@@ -56,7 +62,8 @@ export function VendorOrdersPage() {
 
 function OrdersWorkspace({ canMessage }: { canMessage: boolean }) {
   const [searchParams, setSearchParams] = useSearchParams()
-  const group = (searchParams.get('group') ?? 'NEW') as OrderGroup
+  const group = GROUPS.find(item => item.value === searchParams.get('group'))?.value ?? 'NEW'
+  const closedState = group === 'CLOSED' ? CLOSED_STATES.find(item => item.value === searchParams.get('closed_state'))?.value : undefined
   const q = searchParams.get('q') ?? ''
   const selectedOrder = searchParams.get('order')
   const openOrder = (event: MouseEvent<HTMLAnchorElement>, id: string) => {
@@ -70,6 +77,7 @@ function OrdersWorkspace({ canMessage }: { canMessage: boolean }) {
   }
   const page = Math.max(1, Number(searchParams.get('page') ?? '1') || 1)
   const [query, setQuery] = useState(q)
+  useEffect(() => { setQuery(q) }, [q])
   const [rows, setRows] = useState<OrderSummary[]>([])
   const [meta, setMeta] = useState<OrderListMeta | null>(null)
   const [loading, setLoading] = useState(true)
@@ -78,6 +86,7 @@ function OrdersWorkspace({ canMessage }: { canMessage: boolean }) {
   const request = useRef(0)
   const setParams = (patch: Record<string, string>) => setSearchParams(current => {
     const next = new URLSearchParams(current)
+    next.delete('status_group')
     for (const [key, value] of Object.entries(patch)) { if (value) next.set(key, value); else next.delete(key) }
     if (!('page' in patch)) next.delete('page')
     return next
@@ -86,32 +95,23 @@ function OrdersWorkspace({ canMessage }: { canMessage: boolean }) {
   useEffect(() => {
     const id = ++request.current
     setLoading(true); setError(null)
-    listOrders({ group, q, page }).then(result => { if (id === request.current) { setRows(result.items); setMeta(result.meta) } })
+    listOrders({ group, q, page, ...(closedState ? { closedState } : {}) }).then(result => { if (id === request.current) { setRows(result.items); setMeta(result.meta) } })
       .catch(async cause => { const text = await readableOrderError(cause); if (id === request.current) setError(text) })
       .finally(() => { if (id === request.current) setLoading(false) })
-  }, [group, q, page, attempt])
+  }, [group, closedState, q, page, attempt])
 
   const chips = GROUPS.map(item => ({ value: item.value, label: item.label, count: meta?.counts[item.value] }))
 
   return <div className="grid min-w-0 gap-6">
     <PageHeader eyebrow="Store Operations" title="Orders" description="Review incoming requests and track payment and fulfillment across your orders." />
-    <dl aria-label="Order overview" className="grid min-w-0 grid-cols-2 gap-3 xl:grid-cols-4" aria-busy={loading}>
-      <MetricCard compact label="Incoming requests" value={error ? '—' : meta?.counts.NEW ?? '—'} description="Requests awaiting your response" icon={<ClipboardList size={16} aria-hidden="true" />} accent />
-      <MetricCard compact label="Waiting on Buyer" value={error ? '—' : meta?.counts.WAITING_ON_BUYER ?? '—'} description="Revisions and NRPC awaiting approval" icon={<Hand size={16} aria-hidden="true" />} />
-      <MetricCard compact label="Awaiting payment" value={error ? '—' : meta?.counts.AWAITING_PAYMENT ?? '—'} description="Orders waiting for Buyer payment" icon={<Store size={16} aria-hidden="true" />} />
-      <MetricCard compact label="Confirmed orders" value={error ? '—' : meta?.counts.CONFIRMED ?? '—'} description="Confirmed orders and fulfillment" icon={<Truck size={16} aria-hidden="true" />} />
-    </dl>
-    <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-      <FilterChips label="Filter orders by status" chips={chips} value={group} disabled={loading} onChange={value => setParams({ group: value })} />
-      <form role="search" className="flex min-w-0 gap-2 lg:w-96" onSubmit={(event: FormEvent) => { event.preventDefault(); setParams({ q: query.trim() }) }}>
-        <label htmlFor="order-search" className="sr-only">Search by Order ID or Buyer</label>
-        <input id="order-search" className={control} value={query} onChange={event => setQuery(event.target.value)} placeholder="Order ID or Buyer name" maxLength={120} />
-        <Button type="submit" variant="secondary" aria-label="Search orders"><Search size={16} aria-hidden="true" /></Button>
-      </form>
-    </div>
+    <FilterTabs label="Filter orders by status" chips={chips} value={group} disabled={loading} onChange={value => setParams({ group: value, closed_state: '' })} />
+    <Toolbar filters={group === 'CLOSED' ? <select aria-label="Closed status" className={`${control} sm:min-w-52`} value={closedState ?? ''} onChange={event => setParams({ closed_state: event.target.value })}>
+      <option value="">All closed orders</option>
+      {CLOSED_STATES.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
+    </select> : undefined} search={{ label: 'Search by Order ID or Buyer', placeholder: 'Order ID or Buyer name', value: query, onChange: setQuery, maxLength: 120, onSubmit: event => { event.preventDefault(); setParams({ q: query.trim() }) } }} />
     {error ? <ErrorState message={error} onRetry={() => setAttempt(value => value + 1)} />
       : loading && rows.length === 0 ? <div className="grid gap-3" aria-busy="true" aria-label="Loading orders">{[0, 1, 2].map(index => <div key={index} className="h-20 animate-pulse rounded-surface bg-surface-canvas motion-reduce:animate-none" />)}</div>
-        : rows.length === 0 ? <EmptyOrders text={q ? `No orders match “${q}”.` : EMPTY[group]} />
+        : rows.length === 0 ? <EmptyState message={q ? `No orders match “${q}”${closedState ? ` with status ${orderStateLabel(closedState)}` : ''}.` : closedState ? `No ${orderStateLabel(closedState).toLowerCase()} orders yet.` : EMPTY[group]} action={q || closedState ? <Button variant="secondary" onClick={() => setParams({ group, closed_state: '', q: '' })}>Clear filters</Button> : undefined} />
           : <div aria-busy={loading}>
             <ul aria-label={GROUPS.find(item => item.value === group)?.label ?? 'Orders'} className="grid min-w-0 gap-4">
               {rows.map(row => <li key={row.id} className="min-w-0"><OrderSummaryCard order={row} identity={<OrderIdentity row={row} onOpen={openOrder} />} action={<ActionLink row={row} onOpen={openOrder} />} /></li>)}
@@ -137,16 +137,9 @@ function OrderIdentity({ row, onOpen }: { row: OrderSummary; onOpen?: (event: Mo
 
 function ActionLink({ row, onOpen }: { row: OrderSummary; onOpen?: (event: MouseEvent<HTMLAnchorElement>, id: string) => void }) {
   const confirm = row.primaryAction === 'CONFIRM'
-  return <Link to={`/orders/${row.id}`} onClick={event => onOpen?.(event, row.id)} className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-control px-4 text-sm font-semibold ${confirm ? 'bg-action-primary text-white hover:bg-action-primary-pressed' : 'border border-border-default bg-surface-primary text-text-strong hover:bg-surface-canvas'}`}>
+  return <Link to={`/orders/${row.id}`} onClick={event => onOpen?.(event, row.id)} className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-control px-4 text-sm font-semibold border border-border-default bg-surface-primary text-text-strong hover:bg-surface-canvas`}>
     {confirm ? 'Review request' : 'View order'}
   </Link>
-}
-
-function EmptyOrders({ text }: { text: string }) {
-  return <div className="grid justify-items-center gap-3 rounded-surface border border-dashed border-border-default bg-surface-primary px-6 py-12 text-center">
-    <ClipboardList size={28} className="text-action-primary" aria-hidden="true" />
-    <p className="max-w-md text-sm text-text-secondary">{text}</p>
-  </div>
 }
 
 // ── Detail ──────────────────────────────────────────────────────────────────────────────────────
@@ -180,17 +173,27 @@ function OrderDetailWorkspace({ orderId, panel = false, canMessage = false, onOr
 
   if (panel) return <OrderPanelContent order={order} canMessage={canMessage} notice={notice} onChanged={changed} onReload={load} />
 
+  const information: [string, ReactNode][] = [
+    ['Buyer', order.buyer?.displayName ?? '—'],
+    ['Requested', formatManilaDateTime(order.submittedAt)],
+    ['Fulfillment', order.fulfillmentMethod === 'DELIVERY' ? 'Site Delivery' : 'Self-Pickup'],
+    ['Payment method', order.paymentMethod === 'ONLINE' ? 'Online payment' : order.paymentMethod === 'CASH_ON_DELIVERY' ? 'Cash on Delivery' : 'In-Store Payment'],
+    ['Source', order.confirmationSource === 'AUTO_ACCEPT' ? 'Auto-accepted' : order.confirmationSource === 'MANUAL' ? 'Manual confirmation' : 'Manual review'],
+  ]
+  if (order.expectedFulfillmentDate) information.push([
+    order.fulfillmentMethod === 'DELIVERY' ? 'Delivery date' : 'Ready for pickup',
+    order.expectedFulfillmentDate.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }),
+  ])
+
   return <div className="grid min-w-0 gap-6">
-    <div className="flex items-center justify-between gap-3"><BackLink />{canMessage && <OrderMessageButton orderId={order.id} />}</div>
-    <PageHeader eyebrow="Job order" title={order.reference} status={orderState} description={primaryDescription(order)} /><Link className="inline-flex min-h-11 items-center text-action-primary underline" to={`/notifications?tab=reports&resource=${order.id}`}>Order documents</Link>
-    <dl className="flex min-w-0 flex-wrap gap-x-8 gap-y-2 border-b border-border-default pb-5 text-sm">
-      <Meta label="Buyer" value={order.buyer?.displayName ?? '—'} />
-      <Meta label="Requested" value={formatManilaDateTime(order.submittedAt)} />
-      <Meta label="Fulfillment" value={order.fulfillmentMethod === 'DELIVERY' ? 'Site Delivery' : 'Self-Pickup'} />
-      <Meta label="Payment method" value={order.paymentMethod === 'ONLINE' ? 'Online payment' : order.paymentMethod === 'CASH_ON_DELIVERY' ? 'Cash on Delivery' : 'In-Store Payment'} />
-      <Meta label="Source" value={order.confirmationSource === 'AUTO_ACCEPT' ? 'Auto-accepted' : order.confirmationSource === 'MANUAL' ? 'Manual confirmation' : 'Manual review'} />
-      {order.expectedFulfillmentDate && <Meta label={order.fulfillmentMethod === 'DELIVERY' ? 'Delivery date' : 'Ready for pickup'} value={String(order.expectedFulfillmentDate).slice(0, 10)} />}
-    </dl>
+    <BackLink />
+    <PageHeader eyebrow="Job order" title={order.reference} status={orderState} description={primaryDescription(order)} />
+    <div className="min-w-0 rounded-surface border border-border-default bg-surface-primary px-4 pt-4 sm:px-5 sm:pt-5">
+      <ProfileDetails title="Order information" columns={3} items={information} action={<div className="flex min-w-0 flex-wrap items-start gap-2">
+        <Link className="inline-flex min-h-11 max-w-full items-center justify-center gap-2 rounded-control border border-border-default px-4 text-sm font-semibold text-text-strong transition-colors hover:bg-surface-canvas focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring" to={`/notifications?tab=reports&resource=${order.id}`}><FileText size={16} aria-hidden="true" />Order documents</Link>
+        {canMessage && <OrderMessageButton order={order} />}
+      </div>} />
+    </div>
     {deadline?.at && <DeadlineCountdown at={deadline.at} label={deadline.label} onExpire={load} />}
     {notice && <StatusMessage tone={notice.tone}>{notice.text}</StatusMessage>}
     {order.projectContext && <><WorkPackageAttachment reference={order.projectContext} />{order.projectContext.note != null && <StatusMessage tone="info">Informational Note: {String(order.projectContext.note)} · No response required</StatusMessage>}</>}
@@ -223,26 +226,15 @@ function OrderDetailWorkspace({ orderId, panel = false, canMessage = false, onOr
   </div>
 }
 
-function OrderMessageButton({ orderId }: { orderId: string }) {
-  const navigate = useNavigate()
-  const key = useRef(newIdempotencyKey())
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const active = useRef(true)
-  useEffect(() => { active.current = true; return () => { active.current = false } }, [])
-  const open = async () => {
-    setBusy(true); setError(null)
-    try {
-      const id = await chatApi.forOrder(orderId, key.current)
-      if (active.current) navigate(`/messages?conversation=${encodeURIComponent(id)}`)
-    } catch (cause) {
-      const message = await readableChatError(cause)
-      if (active.current) setError(message)
-    } finally { if (active.current) setBusy(false) }
-  }
+function OrderMessageButton({ order }: { order: OrderDetail }) {
+  const [open, setOpen] = useState(false)
+  const thread = order.fulfillment?.thread
+  const conversationId = thread?.available ? thread.conversationId : null
+  const noticeId = `fulfillment-message-notice-${order.id}`
   return <div className="ml-auto grid justify-items-end gap-2">
-    <Button variant="secondary" disabled={busy} onClick={() => void open()}><MessageSquare size={16} aria-hidden="true" />{busy ? 'Opening…' : 'Message'}</Button>
-    {error && <p role="alert" className="max-w-xs text-xs text-status-error">{error}</p>}
+    <Button variant="secondary" disabled={!conversationId} aria-haspopup="dialog" aria-describedby={!conversationId ? noticeId : undefined} onClick={() => setOpen(true)}><MessageSquare size={16} aria-hidden="true" />Message</Button>
+    {!conversationId && <p id={noticeId} className="max-w-xs text-xs text-text-secondary">{thread?.notice ?? 'Fulfillment Messages open when the order is ready for pickup or out for delivery.'}</p>}
+    {open && conversationId && <FulfillmentConversationDialog conversationId={conversationId} onClose={() => setOpen(false)} />}
   </div>
 }
 
@@ -264,12 +256,12 @@ function OrderPanelContent({ order, notice, onChanged, onReload, canMessage }: {
       <div className="flex flex-wrap items-start gap-3 border-b border-border-default pb-5">
         <span className="grid h-11 w-11 shrink-0 place-items-center rounded-control bg-surface-canvas text-action-primary"><Store size={20} aria-hidden="true" /></span>
         <div className="min-w-[8rem] flex-1"><h3 className="break-words text-sm font-semibold">{order.buyer?.displayName ?? 'Buyer'}</h3><p className="text-xs text-text-secondary">{order.procurementType === 'PROJECT_BASED' ? 'Project-Based' : 'Item-Based'} · {order.reference}</p><p className="mt-1 text-xs text-text-secondary">Requested {formatManilaDateTime(order.submittedAt)}</p></div>
-        {canMessage && <OrderMessageButton orderId={order.id} />}
+        {canMessage && <OrderMessageButton order={order} />}
       </div>
       {notice && <StatusMessage tone={notice.tone}>{notice.text}</StatusMessage>}
       <section className="grid gap-2" aria-label="Order status"><h3 className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Order status</h3><OrderProgress state={stateOf(order.states, 'ORDER')} fulfillmentMethod={order.fulfillmentMethod} /></section>
       {deadline && <DeadlineCountdown at={deadline.at} label={deadline.label} onExpire={onReload} />}
-      
+
       <section aria-label="Order items" className="min-w-0">
         <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-text-secondary">Order items ({order.lines.length})</h3>
         <div role="region" aria-label="Order items table" tabIndex={0} className="overflow-x-auto">
@@ -326,22 +318,20 @@ function primaryDescription(order: OrderDetail): string {
   }
 }
 
-/** Link to this order's case, or filing for a Buyer issue when the role and order state allow it. */
+/** Open this order's case, or file a Buyer issue without leaving the order. */
 function CasePanel({ order }: { order: OrderDetail }) {
+  const [filing, setFiling] = useState(false)
   if (!order.dispute && !order.permissions?.canFileDispute) return null
   return <section aria-labelledby="case-heading" className="grid gap-3 rounded-surface border border-border-default bg-surface-primary p-4">
     <h2 id="case-heading" className="flex items-center gap-2 text-base font-semibold"><ShieldAlert size={16} aria-hidden="true" />Dispute</h2>
     {order.dispute ? <div className="grid gap-2"><DisputeStatusBadge status={order.dispute.status} /><Link to={`/disputes/${order.dispute.caseId}`} className="font-semibold text-action-primary underline-offset-4 hover:underline">Open case {order.dispute.reference}</Link></div>
-      : <><p className="text-sm text-text-secondary">Report a Buyer issue such as an unpaid cash balance, a pickup no-show or abusive communication. Filing never creates a refund.</p><Link to={`/disputes/new?order=${order.id}`} className="inline-flex min-h-11 w-fit items-center rounded-control border border-border-default px-4 text-sm font-semibold hover:bg-surface-canvas">File a case</Link></>}
+      : <><p className="text-sm text-text-secondary">Report a Buyer issue such as an unpaid cash balance, a pickup no-show or abusive communication. Filing never creates a refund.</p><Button variant="secondary" className="w-fit" aria-haspopup="dialog" onClick={() => setFiling(true)}>File a case</Button>
+        {filing && <FileDisputeDialog orderId={order.id} onClose={() => setFiling(false)} />}</>}
   </section>
 }
 
 function BackLink() {
   return <Link to="/orders" className="inline-flex min-h-11 w-fit items-center gap-2 text-sm font-semibold text-text-secondary hover:text-text-strong"><ArrowLeft size={16} aria-hidden="true" />All orders</Link>
-}
-
-function Meta({ label, value }: { label: string; value: string }) {
-  return <div className="min-w-0"><dt className="text-xs text-text-secondary">{label}</dt><dd className="font-semibold text-text-strong">{value}</dd></div>
 }
 
 function LineIdentity({ line }: { line: OrderLine }) {

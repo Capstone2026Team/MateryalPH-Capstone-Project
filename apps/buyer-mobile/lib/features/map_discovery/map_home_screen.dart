@@ -9,6 +9,7 @@ import '../../design_system/components/buyer_overlays.dart';
 import '../../design_system/components/discovery_controls.dart';
 import '../../design_system/motion.dart';
 import '../../design_system/theme.dart';
+import '../notifications/buyer_notification_button.dart';
 import '../../widgets/auth_content.dart';
 import 'buyer_onboarding_screen.dart';
 import 'device_location.dart';
@@ -305,10 +306,8 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
                 icon: const Icon(LucideIcons.search),
               ),
 
-              IconButton(
-                tooltip: 'Notifications',
+              BuyerNotificationButton(
                 onPressed: () => widget.onUnavailable?.call('Notifications'),
-                icon: const Icon(LucideIcons.bell),
               ),
 
               IconButton(

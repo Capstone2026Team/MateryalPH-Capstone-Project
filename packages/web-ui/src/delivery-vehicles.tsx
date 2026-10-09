@@ -1,3 +1,4 @@
+import { EmptyState } from './page-patterns'
 import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { ConfirmDialog } from './confirm-dialog'
 import { Button } from './button'
@@ -146,15 +147,15 @@ export function DeliveryVehicles({ vehicles, onChange, uploadImage, resolveImage
   return <section ref={panel} aria-label="Delivery Configuration" className="rounded-surface border border-border-default bg-surface-primary p-5 sm:p-7">
     {operational && selectedKey ? <Button className="mb-5" variant="quiet" disabled={disabled} onClick={() => edit(null)}><ArrowLeft size={18} aria-hidden="true" />Back to vehicles</Button> : null}
     <div className="flex flex-wrap items-start justify-between gap-4">
-      <div><h3 data-vehicle-overview tabIndex={-1} className="text-xl font-semibold">{operational ? selectedKey ? 'Vehicle details' : 'Your vehicles' : 'Delivery Configuration'}</h3>{operational && !selectedKey && <p className="mt-1 text-sm text-text-secondary">{visible.length} vehicle {visible.length === 1 ? 'configuration' : 'configurations'}</p>}</div>
-      {operational && !selectedKey && <Button disabled={disabled} onClick={() => { const vehicle = emptyDeliveryVehicle(); onChange([...vehicles, vehicle]); edit(vehicle.key) }}><Plus size={18} aria-hidden="true" />Add vehicle</Button>}
+      <div><h3 data-vehicle-overview tabIndex={-1} className={operational && !selectedKey ? 'sr-only' : 'text-lg font-semibold'}>{operational ? selectedKey ? 'Vehicle details' : 'Your vehicles' : 'Delivery Configuration'}</h3></div>
+      {operational && !selectedKey && visible.length > 0 && <Button variant="secondary" disabled={disabled} onClick={() => { const vehicle = emptyDeliveryVehicle(); onChange([...vehicles, vehicle]); edit(vehicle.key) }}><Plus size={18} aria-hidden="true" />Add vehicle</Button>}
     </div>
-    <p className="mt-2 max-w-3xl text-sm leading-6 text-text-secondary">{operational ? 'Changes apply to future delivery proposals. Accepted orders keep their confirmed vehicle, rate and address.' : 'Configure the vehicles your store operates or legitimately controls. At least one eligible vehicle is required for Vendor Delivery before Store Activation.'}</p>
+    <p className={operational ? 'sr-only' : 'mt-2 max-w-3xl text-sm leading-6 text-text-secondary'}>{operational ? 'Changes apply to future delivery proposals. Accepted orders keep their confirmed vehicle, rate and address.' : 'Configure the vehicles your store operates or legitimately controls. At least one eligible vehicle is required for Vendor Delivery before Store Activation.'}</p>
     <ConfirmDialog open={pendingRemoval !== null} title="Remove this vehicle?" confirmLabel="Remove vehicle" onCancel={() => setPendingRemoval(null)} onConfirm={() => { if (pendingRemoval) { update(pendingRemoval.key, { removed: true }); onImagePending?.(pendingRemoval.key, false) }; edit(null); setPendingRemoval(null) }}>
       <p>“{pendingRemoval?.name || 'This vehicle'}” will no longer be offered for future deliveries after you save. Accepted orders keep their confirmed vehicle. To stop using it for a while instead, turn off “Available now”.</p>
     </ConfirmDialog>
     {operational && !selectedKey && <div className="mt-6 divide-y divide-border-default border-t border-border-default">
-      {visible.length === 0 && <div className="grid justify-items-center gap-3 py-12 text-center"><Truck size={36} className="text-text-secondary" aria-hidden="true" /><h4 className="text-lg font-semibold">No vehicles yet.</h4><p className="max-w-md text-sm leading-6 text-text-secondary">Add the vehicles your store operates, then configure their capacity and delivery rates.</p></div>}
+      {visible.length === 0 && <EmptyState icon={<Truck size={24} aria-hidden="true" />} message="No vehicles yet." action={<Button variant="secondary" disabled={disabled} onClick={() => { const vehicle = emptyDeliveryVehicle(); onChange([...vehicles, vehicle]); edit(vehicle.key) }}>Add vehicle</Button>} />}
       {visible.map((vehicle, index) => <article key={vehicle.key} aria-label={vehicle.name || `Vehicle ${index + 1}`} className="grid min-w-0 gap-5 py-6 lg:grid-cols-[8rem_minmax(0,1fr)]">
         <VehicleThumbnail vehicle={vehicle} resolve={resolveImage} />
         <div className="min-w-0 space-y-4">

@@ -14,6 +14,7 @@ use App\Domain\Identity\AuthenticationException;
 use App\Domain\Identity\EmailOtpService;
 use App\Domain\Notifications\OnboardingNotices;
 use App\Domain\Operations\OutboxPublisher;
+use App\Domain\Settings\PlatformSettings;
 use App\Http\Requests\Vendor\VendorVerificationDraftRequest;
 use App\Policies\VendorEvidencePolicy;
 use Illuminate\Http\Request;
@@ -662,7 +663,7 @@ final class VendorOnboardingService
         if ($requirementKey === 'tax_relief_evidence' && $file->getMimeType() !== 'application/pdf') {
             throw new AuthenticationException('FILE_VALIDATION_FAILED', 'Upload the BIR-received Sworn Declaration as a PDF.', 422);
         }
-        $maxKb = (int) config('materyalph.files.max_document_kb', 10240);
+        $maxKb = min((int) config('materyalph.files.max_document_kb', 10240), PlatformSettings::current()->uploadKb('vendor_document'));
         $this->ensureBlueprint($organizationId);
         if ($file->getSize() > $maxKb * 1024 || ! in_array(mb_strtolower((string) $file->getMimeType()), ['image/jpeg', 'image/png', 'application/pdf'], true)) {
             throw new AuthenticationException('FILE_VALIDATION_FAILED', 'Upload a JPG, PNG, or PDF within the allowed file size.', 422);
@@ -801,7 +802,7 @@ final class VendorOnboardingService
             throw new AuthenticationException('MEDIA_TYPE_UNAVAILABLE', 'This store-media type is unavailable.', 422);
         }
         $allowed = $kind === 'PROMOTIONAL_VIDEO' ? ['video/mp4'] : ['image/jpeg', 'image/png', 'image/webp'];
-        if ($file->getSize() > (int) config('materyalph.files.max_media_kb', 20480) * 1024 || ! in_array(mb_strtolower((string) $file->getMimeType()), $allowed, true)) {
+        if ($file->getSize() > min((int) config('materyalph.files.max_media_kb', 20480), PlatformSettings::current()->uploadKb('store_media')) * 1024 || ! in_array(mb_strtolower((string) $file->getMimeType()), $allowed, true)) {
             throw new AuthenticationException('FILE_VALIDATION_FAILED', 'Upload an allowed store image or MP4 video within the allowed file size.', 422);
         }
         $organizationId = $this->organizationId($request);

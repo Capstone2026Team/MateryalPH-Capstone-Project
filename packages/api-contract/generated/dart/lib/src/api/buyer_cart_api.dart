@@ -15,6 +15,8 @@ import 'package:materyalph_api_client/src/model/cart_item_create.dart';
 import 'package:materyalph_api_client/src/model/cart_item_update.dart';
 import 'package:materyalph_api_client/src/model/checkout_preview_envelope.dart';
 import 'package:materyalph_api_client/src/model/checkout_preview_request.dart';
+import 'package:materyalph_api_client/src/model/delivery_preview_envelope.dart';
+import 'package:materyalph_api_client/src/model/product_delivery_preview_request.dart';
 
 class BuyerCartApi {
 
@@ -297,6 +299,107 @@ class BuyerCartApi {
     }
 
     return Response<CheckoutPreviewEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// previewBuyerProductDelivery
+  /// Calculates an advisory delivery fee for the selected eligible product and quantity using the authenticated Buyer&#39;s saved cart destination, declared vehicle endpoint, road route and Vendor vehicle rates/capacities. Recalculate after quantity, variant or destination changes. Does not add or change cart lines, reserve stock or confirm a fee. Missing destination/access information, measurements, vehicles or routes returns an explicit action-required, manual-review or blocked delivery preview, never a fabricated zero fee.
+  ///
+  /// Parameters:
+  /// * [productDeliveryPreviewRequest]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [DeliveryPreviewEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<DeliveryPreviewEnvelope>> previewBuyerProductDelivery({
+    required ProductDeliveryPreviewRequest productDeliveryPreviewRequest,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/buyers/cart/delivery-preview';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'passportBearer',
+          },
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(ProductDeliveryPreviewRequest);
+      _bodyData = _serializers.serialize(productDeliveryPreviewRequest, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    DeliveryPreviewEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(DeliveryPreviewEnvelope),
+      ) as DeliveryPreviewEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<DeliveryPreviewEnvelope>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

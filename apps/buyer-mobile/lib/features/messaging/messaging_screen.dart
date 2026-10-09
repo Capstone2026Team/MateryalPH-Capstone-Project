@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import '../../design_system/components/buyer_app_bar.dart';
+import '../notifications/buyer_notification_button.dart';
 import '../../design_system/components/work_package_attachment.dart';
 import '../projects/projects_repository.dart';
 
@@ -825,21 +826,23 @@ class _MessagingScreenState extends State<MessagingScreen>
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: Theme.of(context).colorScheme.surface,
-    appBar: buyerAppBar(
-      context,
-      widget.conversationId == null ? 'Messages' : 'Conversation',
-      toolbarHeight: _detail == null || widget.conversationId == null
-          ? null
-          : 64 + (MediaQuery.textScalerOf(context).scale(14) - 14) * 2,
-      centerTitle: _detail == null || widget.conversationId == null,
-      titleWidget: _detail == null || widget.conversationId == null
-          ? null
-          : ConversationHeader(
-              conversation: _detail!.conversation,
-              compact: true,
-            ),
-      actions: widget.conversationId == null ? null : _headerActions(),
-    ),
+    appBar: widget.conversationId == null
+        ? buyerTabAppBar(context, 'Messages', actions: _headerActions())
+        : buyerAppBar(
+            context,
+            'Conversation',
+            toolbarHeight: _detail == null
+                ? null
+                : 64 + (MediaQuery.textScalerOf(context).scale(14) - 14) * 2,
+            centerTitle: _detail == null,
+            titleWidget: _detail == null
+                ? null
+                : ConversationHeader(
+                    conversation: _detail!.conversation,
+                    compact: true,
+                  ),
+            actions: _headerActions(),
+          ),
 
     body: _loading
         ? const Center(child: CircularProgressIndicator())
@@ -882,14 +885,12 @@ class _MessagingScreenState extends State<MessagingScreen>
 
   List<Widget> _headerActions() => [
     if (widget.onOpenCart != null)
-      RoundIconButton(
+      BuyerHeaderIconButton(
         icon: LucideIcons.shoppingCart,
         tooltip: 'Cart',
         onPressed: widget.onOpenCart,
       ),
-    RoundIconButton(
-      icon: LucideIcons.bell,
-      tooltip: 'Notifications',
+    BuyerNotificationButton(
       onPressed:
           widget.onOpenNotifications ??
           () => Navigator.of(context).push<void>(
@@ -980,24 +981,19 @@ class _MessagingScreenState extends State<MessagingScreen>
         padding: const EdgeInsets.only(bottom: 16),
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 12, 16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: PillSearchField(
-                    controller: _search,
-                    hintText: 'Search messages',
-                    textStyle: const TextStyle(fontSize: 14),
-                    onChanged: (_) => setState(() {}),
-                    onSearch: () => FocusScope.of(context).unfocus(),
-                    onClear: _search.text.isEmpty
-                        ? null
-                        : () => setState(_search.clear),
-                  ),
-                ),
-                const SizedBox(width: 4),
-                ..._headerActions(),
-              ],
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: PillSearchField(
+              controller: _search,
+              hintText: 'Search messages',
+              textStyle: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w400,
+              ),
+              onChanged: (_) => setState(() {}),
+              onSearch: () => FocusScope.of(context).unfocus(),
+              onClear: _search.text.isEmpty
+                  ? null
+                  : () => setState(_search.clear),
             ),
           ),
           const Divider(height: 1),

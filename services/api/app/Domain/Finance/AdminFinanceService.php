@@ -160,7 +160,9 @@ final class AdminFinanceService
     {
         $this->access->admin($request, 'finance.view');
         $query = DB::table('fee_statements as s')->join('vendor_organizations as v', 'v.id', '=', 's.vendor_organization_id')
-            ->when($filters['state'] ?? null, fn (Builder $q, string $state) => $q->where('s.state', $state))->orderByDesc('s.period_start')->orderByDesc('s.created_at')->select(['s.*', 'v.store_name']);
+            ->when($filters['state'] ?? null, fn (Builder $q, string $state) => $q->where('s.state', $state))
+            // Overdue debt: issued balances past their due date (a receivable task, never a Buyer cancellation).
+            ->when(! empty($filters['overdue']), fn (Builder $q) => $q->where('s.outstanding_centavos', '>', 0)->where('s.due_on', '<', CarbonImmutable::now('Asia/Manila')->toDateString()))->orderByDesc('s.period_start')->orderByDesc('s.created_at')->select(['s.*', 'v.store_name']);
 
         return $this->page($query, (int) ($filters['page'] ?? 1), static fn (object $row): array => VendorFinanceService::statementView($row) + ['vendor_name' => (string) $row->store_name,
             'line_count' => DB::table('fee_statement_lines')->where('fee_statement_id', $row->id)->count(), 'approved_at' => self::iso($row->approved_at)]);

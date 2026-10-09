@@ -41,6 +41,7 @@ Route::prefix('buyers')->middleware(['auth.transport:MOBILE', 'auth:api', 'accou
     Route::put('/cart/vendor-groups/{vendorId}/fulfillment', [BuyerCartController::class, 'fulfillment'])->whereUuid('vendorId');
     Route::put('/cart/destination', [BuyerCartController::class, 'destination']);
     Route::post('/cart/checkout-preview', [BuyerCartController::class, 'preview']);
+    Route::post('/cart/delivery-preview', [BuyerCartController::class, 'deliveryPreview']);
 
     Route::get('/favorite-suppliers', [BuyerDiscoveryController::class, 'favorites']);
     Route::put('/favorite-suppliers/{vendorId}', [BuyerDiscoveryController::class, 'addFavorite'])->whereUuid('vendorId');

@@ -33,6 +33,7 @@ final class ReviewService
         private readonly CatalogAccess $keys,
         private readonly AuditRecorder $audit,
         private readonly OrderEvidenceFiles $files,
+        private readonly ReviewMediaFiles $mediaFiles,
         private readonly ReviewPresenter $presenter,
     ) {}
 
@@ -210,7 +211,7 @@ final class ReviewService
     }
 
     /**
-     * Adds up to three JPG/PNG photos to the Buyer's own Product Review while it can still be edited.
+     * Adds up to three photos or videos to the Buyer's own Product Review while it can still be edited.
      *
      * @param  list<UploadedFile>  $uploads
      * @return array<string, mixed>
@@ -220,15 +221,20 @@ final class ReviewService
         $key = $this->keys->requireIdempotencyKey($request);
         $peek = $this->ownReview($request, 'BUYER', $reviewId, null, false);
         if ($peek->review_type !== ReviewRules::PRODUCT) {
-            throw new AuthenticationException('REVIEW_MEDIA_NOT_ALLOWED', 'Photos can be added to Product Reviews only.', 422);
+            throw new AuthenticationException('REVIEW_MEDIA_NOT_ALLOWED', 'Media can be added to Product Reviews only.', 422);
         }
+        if ($this->keys->replayed($request, 'REVIEW_MEDIA_ADD', $key, $reviewId)) {
+            return $this->buyerOrder($request, (string) $peek->order_id);
+        }
+        $this->assertEditable($peek);
         $userId = (int) $request->user()->getKey();
         $stored = [];
+        $attached = false;
         try {
             foreach ($uploads as $upload) {
-                $stored[] = $this->files->store($upload, (string) $peek->order_id, 'REVIEW_MEDIA', $userId, true);
+                $stored[] = $this->mediaFiles->store($upload, (string) $peek->order_id, $userId);
             }
-            DB::transaction(function () use ($request, $reviewId, $key, $stored, $userId): void {
+            DB::transaction(function () use ($request, $reviewId, $key, $stored, $userId, &$attached): void {
                 if ($this->keys->replayed($request, 'REVIEW_MEDIA_ADD', $key, $reviewId)) {
                     return;
                 }
@@ -236,20 +242,25 @@ final class ReviewService
                 $this->assertEditable($review);
                 $existing = DB::table('review_media')->where('review_id', $review->id)->whereNull('retired_at')->count();
                 if ($existing + count($stored) > ReviewRules::MEDIA_MAX) {
-                    throw new AuthenticationException('VALIDATION_FAILED', 'A Product Review can have up to three photos.', 422, ['files' => ['A Product Review can have up to three photos.']]);
+                    throw new AuthenticationException('VALIDATION_FAILED', 'A Product Review can have up to three attachments.', 422, ['files' => ['A Product Review can have up to three attachments.']]);
                 }
                 foreach ($stored as $index => $fileId) {
                     DB::table('review_media')->insert(['id' => (string) Str::uuid7(), 'review_id' => $review->id, 'actor_user_id' => $userId, 'file_id' => $fileId, 'sort_order' => $existing + $index,
-                        'payload' => json_encode(['kind' => 'PHOTO'], JSON_THROW_ON_ERROR), 'created_at' => now(), 'updated_at' => now()]);
+                        'payload' => json_encode(['kind' => str_starts_with((string) DB::table('files')->where('id', $fileId)->value('content_type'), 'video/') ? 'VIDEO' : 'PHOTO'], JSON_THROW_ON_ERROR), 'created_at' => now(), 'updated_at' => now()]);
                 }
                 DB::table('reviews')->where('id', $review->id)->update(['revision' => (int) $review->revision + 1, 'lock_version' => (int) $review->lock_version + 1, 'edited_at' => now(), 'updated_at' => now()]);
                 $this->revision(DB::table('reviews')->where('id', $review->id)->first(), $userId, 'EDITED');
                 $this->keys->claim($request, 'REVIEW_MEDIA_ADD', $key, $reviewId, 200);
                 $this->audit->account($request, 'REVIEW_MEDIA_ADDED', 'REVIEW', (string) $review->id, after: ['files' => count($stored)]);
+                $attached = true;
             });
         } catch (Throwable $exception) {
             $this->files->discard($stored);
             throw $exception;
+        }
+
+        if (! $attached) {
+            $this->files->discard($stored);
         }
 
         return $this->buyerOrder($request, (string) $peek->order_id);
@@ -263,7 +274,7 @@ final class ReviewService
             $this->assertEditable($review);
             $updated = DB::table('review_media')->where('review_id', $review->id)->where('id', ReviewAccess::uuid($mediaId))->whereNull('retired_at')->update(['retired_at' => now(), 'updated_at' => now()]);
             if ($updated === 0) {
-                throw new AuthenticationException('REVIEW_MEDIA_NOT_FOUND', 'This photo is unavailable.', 404);
+                throw new AuthenticationException('REVIEW_MEDIA_NOT_FOUND', 'This attachment is unavailable.', 404);
             }
             DB::table('reviews')->where('id', $review->id)->update(['revision' => (int) $review->revision + 1, 'lock_version' => (int) $review->lock_version + 1, 'edited_at' => now(), 'updated_at' => now()]);
             $this->revision(DB::table('reviews')->where('id', $review->id)->first(), (int) $request->user()->getKey(), 'EDITED');

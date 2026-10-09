@@ -12,7 +12,7 @@ void main() {
       // TODO
     });
 
-    // VendorTeamActivityEnvelopeMeta meta
+    // VendorTeamInvitationListEnvelopeMeta meta
     test('to test the property `meta`', () async {
       // TODO
     });

@@ -25,7 +25,15 @@ final class AdminVendorVerificationController extends Controller
             'region_code' => ['sometimes', 'string', 'max:16'],
             'submitted_from' => ['sometimes', 'date_format:Y-m-d'],
             'submitted_to' => ['sometimes', 'date_format:Y-m-d', ...($request->filled('submitted_from') ? ['after_or_equal:submitted_from'] : [])],
-            'sort' => ['sometimes', Rule::in(['submitted_asc', 'submitted_desc', 'location'])],
+            'sort' => ['sometimes', Rule::in(['submitted_asc', 'submitted_desc', 'location', 'oldest_pending'])],
+            // Phase 16 operations filters on the same queue (no second approval engine).
+            'setup_status' => ['sometimes', Rule::in(['NOT_STARTED', 'IN_PROGRESS', 'COMPLETED', 'CHANGES_REQUIRED'])],
+            'activation' => ['sometimes', Rule::in(['ACTIVE', 'NOT_ACTIVE', 'READY', 'NOT_READY', 'RESTRICTED', 'SUSPENDED'])],
+            'discoverability' => ['sometimes', Rule::in(['DISCOVERABLE', 'NOT_DISCOVERABLE'])],
+            'blocker' => ['sometimes', Rule::in(['MEDIA', 'HOURS', 'DELIVERY', 'AUTHORITY', 'TERMS', 'PROVIDER'])],
+            'requirement_key' => ['sometimes', 'string', 'max:64', 'regex:/^[a-z0-9_]+$/'],
+            'age_days' => ['sometimes', 'integer', 'between:1,365'],
+            'expiry_days' => ['sometimes', 'integer', 'between:1,365'],
         ]);
         $result = $verification->queue($request, $filters);
 

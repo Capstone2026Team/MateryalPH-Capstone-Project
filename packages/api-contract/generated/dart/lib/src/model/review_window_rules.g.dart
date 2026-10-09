@@ -16,6 +16,10 @@ class _$ReviewWindowRules extends ReviewWindowRules {
   @override
   final int mediaMax;
   @override
+  final int? photoMaxBytes;
+  @override
+  final int? videoMaxBytes;
+  @override
   final String blindReveal;
 
   factory _$ReviewWindowRules(
@@ -27,6 +31,8 @@ class _$ReviewWindowRules extends ReviewWindowRules {
       required this.editHours,
       required this.commentMax,
       required this.mediaMax,
+      this.photoMaxBytes,
+      this.videoMaxBytes,
       required this.blindReveal})
       : super._();
   @override
@@ -45,6 +51,8 @@ class _$ReviewWindowRules extends ReviewWindowRules {
         editHours == other.editHours &&
         commentMax == other.commentMax &&
         mediaMax == other.mediaMax &&
+        photoMaxBytes == other.photoMaxBytes &&
+        videoMaxBytes == other.videoMaxBytes &&
         blindReveal == other.blindReveal;
   }
 
@@ -55,6 +63,8 @@ class _$ReviewWindowRules extends ReviewWindowRules {
     _$hash = $jc(_$hash, editHours.hashCode);
     _$hash = $jc(_$hash, commentMax.hashCode);
     _$hash = $jc(_$hash, mediaMax.hashCode);
+    _$hash = $jc(_$hash, photoMaxBytes.hashCode);
+    _$hash = $jc(_$hash, videoMaxBytes.hashCode);
     _$hash = $jc(_$hash, blindReveal.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
@@ -67,6 +77,8 @@ class _$ReviewWindowRules extends ReviewWindowRules {
           ..add('editHours', editHours)
           ..add('commentMax', commentMax)
           ..add('mediaMax', mediaMax)
+          ..add('photoMaxBytes', photoMaxBytes)
+          ..add('videoMaxBytes', videoMaxBytes)
           ..add('blindReveal', blindReveal))
         .toString();
   }
@@ -92,6 +104,16 @@ class ReviewWindowRulesBuilder
   int? get mediaMax => _$this._mediaMax;
   set mediaMax(int? mediaMax) => _$this._mediaMax = mediaMax;
 
+  int? _photoMaxBytes;
+  int? get photoMaxBytes => _$this._photoMaxBytes;
+  set photoMaxBytes(int? photoMaxBytes) =>
+      _$this._photoMaxBytes = photoMaxBytes;
+
+  int? _videoMaxBytes;
+  int? get videoMaxBytes => _$this._videoMaxBytes;
+  set videoMaxBytes(int? videoMaxBytes) =>
+      _$this._videoMaxBytes = videoMaxBytes;
+
   String? _blindReveal;
   String? get blindReveal => _$this._blindReveal;
   set blindReveal(String? blindReveal) => _$this._blindReveal = blindReveal;
@@ -107,6 +129,8 @@ class ReviewWindowRulesBuilder
       _editHours = $v.editHours;
       _commentMax = $v.commentMax;
       _mediaMax = $v.mediaMax;
+      _photoMaxBytes = $v.photoMaxBytes;
+      _videoMaxBytes = $v.videoMaxBytes;
       _blindReveal = $v.blindReveal;
       _$v = null;
     }
@@ -137,6 +161,8 @@ class ReviewWindowRulesBuilder
               commentMax, r'ReviewWindowRules', 'commentMax'),
           mediaMax: BuiltValueNullFieldError.checkNotNull(
               mediaMax, r'ReviewWindowRules', 'mediaMax'),
+          photoMaxBytes: photoMaxBytes,
+          videoMaxBytes: videoMaxBytes,
           blindReveal: BuiltValueNullFieldError.checkNotNull(
               blindReveal, r'ReviewWindowRules', 'blindReveal'),
         );

@@ -56,7 +56,7 @@ final class ReviewController extends Controller
 
     public function addMedia(Request $request, string $reviewId): JsonResponse
     {
-        $request->validate(['files' => ['required', 'array', 'min:1', 'max:'.ReviewRules::MEDIA_MAX], 'files.*' => ['file', 'max:5120']]);
+        $request->validate(['files' => ['required', 'array', 'min:1', 'max:'.ReviewRules::MEDIA_MAX], 'files.*' => ['required', 'file', 'max:'.(ReviewRules::VIDEO_MAX_BYTES / 1024)]]);
 
         return ApiResponse::success($this->reviews->addMedia($request, $reviewId, array_values($request->file('files', []))));
     }

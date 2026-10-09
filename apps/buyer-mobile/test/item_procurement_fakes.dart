@@ -156,6 +156,7 @@ ListingSearchPage searchPage(
 ListingDetailView listingDetail({
   bool purchasable = true,
   bool deliveryOffered = true,
+  String? categoryId = 'cat-roof',
 }) => ListingDetailView(
   listingId: 'listing-1',
   displayName: 'Apo Longspan Roofing - Tilespan',
@@ -212,6 +213,7 @@ ListingDetailView listingDetail({
   brand: 'Apo',
   manufacturer: 'Apo Galtek',
   countryOfManufacture: 'PH',
+  categoryId: categoryId,
   categoryName: 'Roofing Materials',
   complianceBadge: 'PS_ICC_VERIFIED',
 );
@@ -712,6 +714,12 @@ class FakeProcurementRepository implements ProcurementRepository {
     notice: preview.notice,
     currentAsOf: preview.currentAsOf,
   );
+
+  @override
+  Future<DeliveryPreviewView> productDeliveryPreview({
+    required String variantId,
+    required String quantity,
+  }) async => preview.groups.first.delivery;
 
   @override
   Future<StoreHoursView> storeHours(String storeId) async => hours!;

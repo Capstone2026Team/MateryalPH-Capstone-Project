@@ -12,6 +12,7 @@ Method | HTTP request | Description
 [**addBuyerCartItem**](BuyerCartApi.md#addbuyercartitem) | **POST** /buyers/cart/items |
 [**getBuyerCart**](BuyerCartApi.md#getbuyercart) | **GET** /buyers/cart |
 [**previewBuyerCheckout**](BuyerCartApi.md#previewbuyercheckout) | **POST** /buyers/cart/checkout-preview |
+[**previewBuyerProductDelivery**](BuyerCartApi.md#previewbuyerproductdelivery) | **POST** /buyers/cart/delivery-preview |
 [**removeBuyerCartItem**](BuyerCartApi.md#removebuyercartitem) | **DELETE** /buyers/cart/items/{itemId} |
 [**setBuyerCartDestination**](BuyerCartApi.md#setbuyercartdestination) | **PUT** /buyers/cart/destination |
 [**setBuyerCartFulfillment**](BuyerCartApi.md#setbuyercartfulfillment) | **PUT** /buyers/cart/vendor-groups/{vendorId}/fulfillment |
@@ -133,6 +134,49 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**CheckoutPreviewEnvelope**](CheckoutPreviewEnvelope.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **previewBuyerProductDelivery**
+> DeliveryPreviewEnvelope previewBuyerProductDelivery(productDeliveryPreviewRequest)
+
+
+
+Calculates an advisory delivery fee for the selected eligible product and quantity using the authenticated Buyer's saved cart destination, declared vehicle endpoint, road route and Vendor vehicle rates/capacities. Recalculate after quantity, variant or destination changes. Does not add or change cart lines, reserve stock or confirm a fee. Missing destination/access information, measurements, vehicles or routes returns an explicit action-required, manual-review or blocked delivery preview, never a fabricated zero fee.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+
+final api = MateryalphApiClient().getBuyerCartApi();
+final ProductDeliveryPreviewRequest productDeliveryPreviewRequest = ; // ProductDeliveryPreviewRequest |
+
+try {
+    final response = api.previewBuyerProductDelivery(productDeliveryPreviewRequest);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling BuyerCartApi->previewBuyerProductDelivery: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **productDeliveryPreviewRequest** | [**ProductDeliveryPreviewRequest**](ProductDeliveryPreviewRequest.md)|  |
+
+### Return type
+
+[**DeliveryPreviewEnvelope**](DeliveryPreviewEnvelope.md)
 
 ### Authorization
 

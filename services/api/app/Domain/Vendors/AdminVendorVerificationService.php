@@ -8,6 +8,7 @@ use App\Domain\Finance\WithholdingThresholdService;
 use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Operations\OutboxPublisher;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -61,17 +62,68 @@ final class AdminVendorVerificationService
                 $query->whereRaw("(submission.submitted_at AT TIME ZONE 'Asia/Manila')::date $operator ?", [$filters[$key]]);
             }
         }
+        $this->operationsFilters($query, $filters);
         $sort = $filters['sort'] ?? 'submitted_desc';
         if ($sort === 'location') {
             $query->orderBy('region.region_name')->orderBy('address.province')->orderBy('address.city_municipality');
         }
-        $query->orderByRaw('submission.submitted_at '.($sort === 'submitted_asc' ? 'ASC' : 'DESC').' NULLS LAST');
+        if ($sort === 'oldest_pending') {
+            $query->orderByRaw('(SELECT MIN(r.submitted_at) FROM vendor_onboarding_requirements r WHERE r.vendor_organization_id = vendor_organizations.id AND r.is_current AND r.status = ? ) ASC NULLS LAST', ['PENDING_VERIFICATION']);
+        }
+        $query->orderByRaw('submission.submitted_at '.($sort === 'submitted_asc' || $sort === 'oldest_pending' ? 'ASC' : 'DESC').' NULLS LAST');
         $rows = $query->orderBy('vendor_organizations.id')->paginate(20);
 
         return [
             'items' => array_map(fn (mixed $row): array => $this->queueItem($row), $rows->items()),
             'meta' => ['current_page' => $rows->currentPage(), 'last_page' => $rows->lastPage(), 'per_page' => $rows->perPage(), 'total' => $rows->total(), 'regions' => $regions->options()],
         ];
+    }
+
+    /**
+     * Phase 16 operations filters on the existing queue: workstream states, blocker category from saved data, a pending
+     * requirement, pending age and approved document expiry. The case detail runs the authoritative gate.
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    private function operationsFilters(Builder $query, array $filters): void
+    {
+        if (! empty($filters['setup_status'])) {
+            $query->where('vendor_organizations.store_setup_status', (string) $filters['setup_status']);
+        }
+        $activation = (string) ($filters['activation'] ?? '');
+        if ($activation === 'NOT_ACTIVE') {
+            $query->where('vendor_organizations.store_activation_status', '<>', 'ACTIVE');
+        } elseif ($activation !== '') {
+            $query->where('vendor_organizations.store_activation_status', $activation);
+        }
+        if (! empty($filters['discoverability'])) {
+            $query->where('vendor_organizations.marketplace_discoverability_status', (string) $filters['discoverability']);
+        }
+        $requirement = static fn (string $key, array $satisfied) => static fn ($q) => $q->selectRaw('1')->from('vendor_onboarding_requirements as r')
+            ->whereColumn('r.vendor_organization_id', 'vendor_organizations.id')->where('r.is_current', true)->where('r.requirement_key', $key)->whereNotIn('r.status', $satisfied);
+        match ((string) ($filters['blocker'] ?? '')) {
+            'MEDIA' => $query->whereExists($requirement('public_store_profile', ['COMPLETED'])),
+            'HOURS' => $query->whereExists($requirement('store_operation', ['COMPLETED'])),
+            'DELIVERY' => $query->whereExists($requirement('delivery_configuration', ['COMPLETED', 'NOT_APPLICABLE'])),
+            'AUTHORITY' => $query->whereExists($requirement('authority_to_act', ['APPROVED', 'NOT_APPLICABLE'])),
+            'TERMS' => $query->whereExists($requirement('commission_terms', ['COMPLETED'])),
+            'PROVIDER' => $query->whereNotExists(fn ($q) => $q->selectRaw('1')->from('vendor_payment_accounts as p')->whereColumn('p.vendor_organization_id', 'vendor_organizations.id')
+                ->where('p.connection_status', 'CONNECTED_TEST')->where('p.provider_status', 'LIVE')),
+            default => null,
+        };
+        if (! empty($filters['requirement_key'])) {
+            $query->whereExists(fn ($q) => $q->selectRaw('1')->from('vendor_onboarding_requirements as r')->whereColumn('r.vendor_organization_id', 'vendor_organizations.id')
+                ->where('r.is_current', true)->where('r.requirement_key', (string) $filters['requirement_key'])->whereIn('r.status', ['SUBMITTED', 'PENDING_VERIFICATION']));
+        }
+        if (! empty($filters['age_days'])) {
+            $query->whereExists(fn ($q) => $q->selectRaw('1')->from('vendor_onboarding_requirements as r')->whereColumn('r.vendor_organization_id', 'vendor_organizations.id')
+                ->where('r.is_current', true)->where('r.status', 'PENDING_VERIFICATION')->where('r.submitted_at', '<=', now()->subDays((int) $filters['age_days'])));
+        }
+        if (! empty($filters['expiry_days'])) {
+            $query->whereExists(fn ($q) => $q->selectRaw('1')->from('business_document_reviews as br')->join('vendor_document_versions as v', 'v.id', '=', 'br.business_document_version_id')
+                ->join('vendor_documents as d', 'd.id', '=', 'v.business_document_id')->whereColumn('d.vendor_organization_id', 'vendor_organizations.id')->whereNull('d.superseded_at')
+                ->where('br.decision', 'APPROVED')->where('br.expiration_kind', 'DATE')->whereBetween('br.verified_expiration_date', [now()->toDateString(), now()->addDays((int) $filters['expiry_days'])->toDateString()]));
+        }
     }
 
     /** @return array<string, mixed> */
@@ -81,8 +133,11 @@ final class AdminVendorVerificationService
             throw new \RuntimeException('Unexpected Vendor verification queue row.');
         }
         $steps = DB::table('vendor_onboarding_steps')->where('vendor_organization_id', $value->id)->where('section', 'STORE_VERIFICATION')->where('requirement_key', '!=', 'commission_terms')->where('is_current', true)->get(['status', 'level', 'submitted_at']);
+        $pending = DB::table('vendor_onboarding_requirements')->where('vendor_organization_id', $value->id)->where('is_current', true)->where('status', 'PENDING_VERIFICATION');
+        $connection = DB::table('vendor_payment_accounts')->where('vendor_organization_id', $value->id)->value('connection_status');
 
-        return ['id' => $value->id, 'store_name' => $value->store_name, 'registered_name' => $value->registered_name, 'business_type' => $value->business_type, 'verification_status' => $value->store_verification_status, 'setup_status' => $value->store_setup_status, 'activation_status' => $value->store_activation_status, 'submitted_at' => $value->submitted_at, 'region_code' => $value->region_code, 'region_name' => $value->region_name, 'province' => $value->province, 'city_municipality' => $value->city_municipality, 'progress' => ['complete' => $steps->whereIn('status', ['APPROVED', 'NOT_APPLICABLE'])->count(), 'total' => $steps->where('level', '!=', 'OPTIONAL')->count()]];
+        return ['pending_requirements' => (clone $pending)->count(), 'oldest_pending_at' => (clone $pending)->min('submitted_at'), 'provider_status' => $connection ?? 'NOT_STARTED',
+            'discoverability_status' => $value->marketplace_discoverability_status, 'hold_code' => $value->activation_hold_code, 'id' => $value->id, 'store_name' => $value->store_name, 'registered_name' => $value->registered_name, 'business_type' => $value->business_type, 'verification_status' => $value->store_verification_status, 'setup_status' => $value->store_setup_status, 'activation_status' => $value->store_activation_status, 'submitted_at' => $value->submitted_at, 'region_code' => $value->region_code, 'region_name' => $value->region_name, 'province' => $value->province, 'city_municipality' => $value->city_municipality, 'progress' => ['complete' => $steps->whereIn('status', ['APPROVED', 'NOT_APPLICABLE'])->count(), 'total' => $steps->where('level', '!=', 'OPTIONAL')->count()]];
     }
 
     /** @return array<string, mixed> */
@@ -103,8 +158,11 @@ final class AdminVendorVerificationService
         $businessType = (string) ($organization->business_type ?? '');
         $companyIdentityRequired = in_array($businessType, ['PARTNERSHIP', 'CORPORATION', 'ONE_PERSON_CORPORATION', 'COOPERATIVE'], true);
         $individualIdentityRequired = in_array($businessType, ['SOLE_PROPRIETORSHIP', 'ONE_PERSON_CORPORATION'], true);
+        $readiness = $this->onboarding->readinessForOrganization($organizationId);
 
-        return ['representative' => $this->authority->snapshot($organizationId), 'representative_history' => DB::table('vendor_representative_versions')->where('vendor_organization_id', $organizationId)->orderByDesc('version')->get(['id', 'version', 'created_at', 'created_by_user_id'])->map(fn (object $row): array => (array) $row)->all(), 'authority_reviews' => DB::table('vendor_authority_reviews as r')->join('vendor_representative_versions as v', 'v.id', '=', 'r.representative_version_id')->where('v.vendor_organization_id', $organizationId)->orderByDesc('r.reviewed_at')->get(['r.*', 'v.version'])->map(fn (object $row): array => (array) $row)->all(), 'organization' => ['id' => $organization->id, 'store_name' => $organization->store_name, 'registered_name' => $organization->registered_name, 'legal_name' => $organization->legal_name, 'business_type' => $organization->business_type, 'date_established' => $organization->date_established, 'store_email' => $organization->store_email, 'store_phone' => $organization->store_phone, 'verification_status' => $organization->store_verification_status, 'setup_status' => $organization->store_setup_status, 'activation_status' => $organization->store_activation_status, 'lock_version' => (int) $organization->lock_version], 'sections' => ['STORE_VERIFICATION' => $steps->where('section', 'STORE_VERIFICATION')->values()->map(fn (object $step): array => $this->step($step, $organization->business_type))->all(), 'STORE_SETUP' => $steps->where('section', 'STORE_SETUP')->values()->map(fn (object $step): array => $this->step($step, $organization->business_type))->all()], 'legal_identity' => ['individual_required' => $individualIdentityRequired, 'company_required' => $companyIdentityRequired, 'same_as_owner' => (bool) ($organization->legal_identity_same_as_owner ?? false), 'surname' => $organization->individual_registered_surname ?? null, 'first_name' => $organization->individual_registered_first_name ?? null, 'middle_name' => $organization->individual_registered_middle_name ?? null, 'suffix' => $organization->individual_registered_suffix ?? null, 'company_registered_name' => $organization->company_registered_name ?? $organization->registered_name ?? null, 'id_type' => $organization->identity_id_type ?? null, 'id_number_last4' => $organization->identity_id_number_last4 ?? null], 'address' => $address === null ? null : ['street' => $address->street, 'unit' => $address->unit, 'barangay' => $address->barangay, 'city_municipality' => $address->city_municipality, 'province' => $address->province, 'postal_code' => $address->postal_code, 'formatted_address' => $address->formatted_address, 'latitude' => $address->latitude === null ? null : (float) $address->latitude, 'longitude' => $address->longitude === null ? null : (float) $address->longitude, 'review_state' => $address->review_state, 'version' => (int) $address->version], 'classification' => $classification === null ? null : ['supplier_type' => $classification->supplier_type, 'niches' => $this->jsonArray($classification->niches), 'custom_label' => $classification->custom_label, 'custom_labels' => $this->jsonArray($classification->custom_labels)], 'tax_profile' => $tax === null ? null : ['status' => $tax->status, 'environment' => $tax->environment, 'version' => $tax->version === null ? null : (int) $tax->version, 'entity_class' => $tax->entity_class, 'registration_category' => $tax->registration_category, 'vat_category' => $tax->vat_category, 'vat_verified_category' => $tax->vat_verified_category, 'bir_cor_reference' => $tax->bir_cor_reference, 'fiscal_year_start_month' => $tax->fiscal_year_start_month, 'taxpayer_key_last4' => $tax->taxpayer_key_last4, 'tin_last4' => $tax->tin_last4, 'details' => array_diff_key(is_string($tax->tax_details) ? (json_decode($tax->tax_details, true) ?: []) : [], array_flip(['head_office', 'branch_code_length'])), 'owner_attested' => $tax->owner_attested_at !== null], 'payment' => $payment === null ? null : ['provider' => $payment->provider, 'environment' => $payment->environment, 'provider_account_id' => $payment->provider_account_id, 'connection_status' => $payment->connection_status, 'provider_status' => $payment->provider_status, 'capabilities' => is_string($payment->capabilities) ? (json_decode($payment->capabilities, true) ?: []) : [], 'invitation_url_masked' => $payment->invitation_url_masked, 'last_reconciled_at' => $payment->last_reconciled_at, 'last_error_code' => $payment->last_error_code], 'documents' => $documents->map(fn (object $document): array => ['id' => $document->id, 'requirement_key' => $document->requirement_key, 'document_type' => $document->document_type, 'status' => $document->status, 'lock_version' => (int) $document->lock_version, 'version_id' => $document->version_id, 'version' => $document->version === null ? null : (int) $document->version, 'scan_state' => $document->scan_state, 'file_id' => $document->file_id])->all(), 'reviews' => $reviews->map(fn (object $review): array => (array) $review)->all(), 'readiness' => $this->onboarding->readinessForOrganization($organizationId)];
+        return ['representative' => $this->authority->snapshot($organizationId), 'representative_history' => DB::table('vendor_representative_versions')->where('vendor_organization_id', $organizationId)->orderByDesc('version')->get(['id', 'version', 'created_at', 'created_by_user_id'])->map(fn (object $row): array => (array) $row)->all(), 'authority_reviews' => DB::table('vendor_authority_reviews as r')->join('vendor_representative_versions as v', 'v.id', '=', 'r.representative_version_id')->where('v.vendor_organization_id', $organizationId)->orderByDesc('r.reviewed_at')->get(['r.*', 'v.version'])->map(fn (object $row): array => (array) $row)->all(), 'organization' => ['id' => $organization->id, 'store_name' => $organization->store_name, 'registered_name' => $organization->registered_name, 'legal_name' => $organization->legal_name, 'business_type' => $organization->business_type, 'date_established' => $organization->date_established, 'store_email' => $organization->store_email, 'store_phone' => $organization->store_phone, 'verification_status' => $organization->store_verification_status, 'setup_status' => $organization->store_setup_status, 'activation_status' => $organization->store_activation_status, 'lock_version' => (int) $organization->lock_version], 'sections' => ['STORE_VERIFICATION' => $steps->where('section', 'STORE_VERIFICATION')->values()->map(fn (object $step): array => $this->step($step, $organization->business_type))->all(), 'STORE_SETUP' => $steps->where('section', 'STORE_SETUP')->values()->map(fn (object $step): array => $this->step($step, $organization->business_type))->all()], 'legal_identity' => ['individual_required' => $individualIdentityRequired, 'company_required' => $companyIdentityRequired, 'same_as_owner' => (bool) ($organization->legal_identity_same_as_owner ?? false), 'surname' => $organization->individual_registered_surname ?? null, 'first_name' => $organization->individual_registered_first_name ?? null, 'middle_name' => $organization->individual_registered_middle_name ?? null, 'suffix' => $organization->individual_registered_suffix ?? null, 'company_registered_name' => $organization->company_registered_name ?? $organization->registered_name ?? null, 'id_type' => $organization->identity_id_type ?? null, 'id_number_last4' => $organization->identity_id_number_last4 ?? null], 'address' => $address === null ? null : ['street' => $address->street, 'unit' => $address->unit, 'barangay' => $address->barangay, 'city_municipality' => $address->city_municipality, 'province' => $address->province, 'postal_code' => $address->postal_code, 'formatted_address' => $address->formatted_address, 'latitude' => $address->latitude === null ? null : (float) $address->latitude, 'longitude' => $address->longitude === null ? null : (float) $address->longitude, 'review_state' => $address->review_state, 'version' => (int) $address->version], 'classification' => $classification === null ? null : ['supplier_type' => $classification->supplier_type, 'niches' => $this->jsonArray($classification->niches), 'custom_label' => $classification->custom_label, 'custom_labels' => $this->jsonArray($classification->custom_labels)], 'tax_profile' => $tax === null ? null : ['status' => $tax->status, 'environment' => $tax->environment, 'version' => $tax->version === null ? null : (int) $tax->version, 'entity_class' => $tax->entity_class, 'registration_category' => $tax->registration_category, 'vat_category' => $tax->vat_category, 'vat_verified_category' => $tax->vat_verified_category, 'bir_cor_reference' => $tax->bir_cor_reference, 'fiscal_year_start_month' => $tax->fiscal_year_start_month, 'taxpayer_key_last4' => $tax->taxpayer_key_last4, 'tin_last4' => $tax->tin_last4, 'details' => array_diff_key(is_string($tax->tax_details) ? (json_decode($tax->tax_details, true) ?: []) : [], array_flip(['head_office', 'branch_code_length'])), 'owner_attested' => $tax->owner_attested_at !== null], 'payment' => $payment === null ? null : ['provider' => $payment->provider, 'environment' => $payment->environment, 'provider_account_id' => $payment->provider_account_id, 'connection_status' => $payment->connection_status, 'provider_status' => $payment->provider_status, 'capabilities' => is_string($payment->capabilities) ? (json_decode($payment->capabilities, true) ?: []) : [], 'invitation_url_masked' => $payment->invitation_url_masked, 'last_reconciled_at' => $payment->last_reconciled_at, 'last_error_code' => $payment->last_error_code], 'documents' => $documents->map(fn (object $document): array => ['id' => $document->id, 'requirement_key' => $document->requirement_key, 'document_type' => $document->document_type, 'status' => $document->status, 'lock_version' => (int) $document->lock_version, 'version_id' => $document->version_id, 'version' => $document->version === null ? null : (int) $document->version, 'scan_state' => $document->scan_state, 'file_id' => $document->file_id])->all(), 'reviews' => $reviews->map(fn (object $review): array => (array) $review)->all(), 'readiness' => $readiness,
+            'workstreams' => app(ActivationRestrictions::class)->workstreams(DB::table('vendor_organizations')->where('id', $organizationId)->first()),
+            'activation_restrictions' => app(ActivationRestrictions::class)->explain($organizationId, $readiness)];
     }
 
     /**

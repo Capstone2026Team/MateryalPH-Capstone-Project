@@ -26,7 +26,7 @@ final class InvoiceQueries
 
     public const COMPLIANCE_NOTE = 'Uploaded copy for reference. An uploaded PDF or image is not proof of BIR registration or structured e-invoicing compliance; the Vendor issues its invoice through its registered process.';
 
-    public const ISSUANCE_NOTICE = 'The Vendor issues its invoice through its own registered process when it is legally due. This does not wait for order completion or a Buyer request, and the three-business-day copy target never extends that deadline.';
+    public const ISSUANCE_NOTICE = 'The Vendor issues its invoice through its own registered process when it is legally due. This does not wait for order completion or a Buyer request, and the business-day copy service target never extends that deadline.';
 
     private const NOT_YET_A_SALE = [...OrderStates::PENDING_ACCEPTANCE, OrderStates::AWAITING_PAYMENT, OrderStates::DECLINED, OrderStates::EXPIRED];
 

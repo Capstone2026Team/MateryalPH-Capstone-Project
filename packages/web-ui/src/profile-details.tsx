@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react'
 
-export function ProfileDetails({ title, items, action }: { title: string; items: [string, ReactNode][]; action?: ReactNode }) {
-  return <section className="min-w-0 space-y-5">
+export function ProfileDetails({ title, items, action, columns = 2 }: { title: string; items: [string, ReactNode][]; action?: ReactNode; columns?: 2 | 3 }) {
+  return <section aria-label={title} className="min-w-0 space-y-5">
     <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-lg font-semibold">{title}</h2>{action}</div>
-    <dl className="grid gap-x-8 sm:grid-cols-2">{items.map(([label, value]) => <div key={label} className="min-w-0 border-t border-border-default py-4"><dt className="text-sm text-text-secondary">{label}</dt><dd className="mt-1 break-words text-sm font-semibold">{value || 'Not recorded'}</dd></div>)}</dl>
+    <dl className={`grid gap-x-8 sm:grid-cols-2 ${columns === 3 ? 'xl:grid-cols-3' : ''}`}>{items.map(([label, value]) => <div key={label} className="min-w-0 border-t border-border-default py-4"><dt className="text-sm text-text-secondary">{label}</dt><dd className="mt-1 break-words text-sm font-semibold">{value || 'Not recorded'}</dd></div>)}</dl>
   </section>
 }
 

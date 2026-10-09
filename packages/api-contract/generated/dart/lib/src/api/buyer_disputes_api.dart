@@ -10,7 +10,6 @@ import 'package:dio/dio.dart';
 
 import 'dart:typed_data';
 import 'package:built_collection/built_collection.dart';
-import 'package:built_value/json_object.dart';
 import 'package:materyalph_api_client/src/api_util.dart';
 import 'package:materyalph_api_client/src/model/dispute_channel_auth_request.dart';
 import 'package:materyalph_api_client/src/model/dispute_detail_envelope.dart';

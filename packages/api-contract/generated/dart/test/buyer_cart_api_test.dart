@@ -28,6 +28,13 @@ void main() {
       // TODO
     });
 
+    // Calculates an advisory delivery fee for the selected eligible product and quantity using the authenticated Buyer's saved cart destination, declared vehicle endpoint, road route and Vendor vehicle rates/capacities. Recalculate after quantity, variant or destination changes. Does not add or change cart lines, reserve stock or confirm a fee. Missing destination/access information, measurements, vehicles or routes returns an explicit action-required, manual-review or blocked delivery preview, never a fabricated zero fee.
+    //
+    //Future<DeliveryPreviewEnvelope> previewBuyerProductDelivery(ProductDeliveryPreviewRequest productDeliveryPreviewRequest) async
+    test('test previewBuyerProductDelivery', () async {
+      // TODO
+    });
+
     // Removes one cart line. Requires the cart lock_version.
     //
     //Future<CartEnvelope> removeBuyerCartItem(int lockVersion, String itemId) async

@@ -77,7 +77,9 @@ void main() {
       // TODO
     });
 
-    //Future<VendorTeamActivityEnvelope> listVendorTeamActivity({ int page }) async
+    // Team Tracking synchronizes through payload-free team.activity.changed events on the existing viewer-bound Vendor inbox channel after audit, Vendor message or quotation activity commits. Delivery rechecks current organization, membership and staff-management authority; delegated Managers receive only non-manager activity invalidations. Re-fetch this endpoint for authoritative data. Clients poll automatically while realtime is unavailable and after reconnect.
+    //
+    //Future<VendorTeamActivityEnvelope> listVendorTeamActivity({ int page, String memberId, String role, int days, String category }) async
     test('test listVendorTeamActivity', () async {
       // TODO
     });

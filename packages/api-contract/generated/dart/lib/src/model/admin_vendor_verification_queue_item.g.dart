@@ -34,6 +34,16 @@ class _$AdminVendorVerificationQueueItem
   final DateTime? submittedAt;
   @override
   final BuiltMap<String, JsonObject?> progress;
+  @override
+  final int? pendingRequirements;
+  @override
+  final DateTime? oldestPendingAt;
+  @override
+  final String? providerStatus;
+  @override
+  final String? discoverabilityStatus;
+  @override
+  final String? holdCode;
 
   factory _$AdminVendorVerificationQueueItem(
           [void Function(AdminVendorVerificationQueueItemBuilder)? updates]) =>
@@ -52,7 +62,12 @@ class _$AdminVendorVerificationQueueItem
       this.setupStatus,
       this.activationStatus,
       this.submittedAt,
-      required this.progress})
+      required this.progress,
+      this.pendingRequirements,
+      this.oldestPendingAt,
+      this.providerStatus,
+      this.discoverabilityStatus,
+      this.holdCode})
       : super._();
   @override
   AdminVendorVerificationQueueItem rebuild(
@@ -79,7 +94,12 @@ class _$AdminVendorVerificationQueueItem
         setupStatus == other.setupStatus &&
         activationStatus == other.activationStatus &&
         submittedAt == other.submittedAt &&
-        progress == other.progress;
+        progress == other.progress &&
+        pendingRequirements == other.pendingRequirements &&
+        oldestPendingAt == other.oldestPendingAt &&
+        providerStatus == other.providerStatus &&
+        discoverabilityStatus == other.discoverabilityStatus &&
+        holdCode == other.holdCode;
   }
 
   @override
@@ -98,6 +118,11 @@ class _$AdminVendorVerificationQueueItem
     _$hash = $jc(_$hash, activationStatus.hashCode);
     _$hash = $jc(_$hash, submittedAt.hashCode);
     _$hash = $jc(_$hash, progress.hashCode);
+    _$hash = $jc(_$hash, pendingRequirements.hashCode);
+    _$hash = $jc(_$hash, oldestPendingAt.hashCode);
+    _$hash = $jc(_$hash, providerStatus.hashCode);
+    _$hash = $jc(_$hash, discoverabilityStatus.hashCode);
+    _$hash = $jc(_$hash, holdCode.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -117,7 +142,12 @@ class _$AdminVendorVerificationQueueItem
           ..add('setupStatus', setupStatus)
           ..add('activationStatus', activationStatus)
           ..add('submittedAt', submittedAt)
-          ..add('progress', progress))
+          ..add('progress', progress)
+          ..add('pendingRequirements', pendingRequirements)
+          ..add('oldestPendingAt', oldestPendingAt)
+          ..add('providerStatus', providerStatus)
+          ..add('discoverabilityStatus', discoverabilityStatus)
+          ..add('holdCode', holdCode))
         .toString();
   }
 }
@@ -186,6 +216,30 @@ class AdminVendorVerificationQueueItemBuilder
   set progress(MapBuilder<String, JsonObject?>? progress) =>
       _$this._progress = progress;
 
+  int? _pendingRequirements;
+  int? get pendingRequirements => _$this._pendingRequirements;
+  set pendingRequirements(int? pendingRequirements) =>
+      _$this._pendingRequirements = pendingRequirements;
+
+  DateTime? _oldestPendingAt;
+  DateTime? get oldestPendingAt => _$this._oldestPendingAt;
+  set oldestPendingAt(DateTime? oldestPendingAt) =>
+      _$this._oldestPendingAt = oldestPendingAt;
+
+  String? _providerStatus;
+  String? get providerStatus => _$this._providerStatus;
+  set providerStatus(String? providerStatus) =>
+      _$this._providerStatus = providerStatus;
+
+  String? _discoverabilityStatus;
+  String? get discoverabilityStatus => _$this._discoverabilityStatus;
+  set discoverabilityStatus(String? discoverabilityStatus) =>
+      _$this._discoverabilityStatus = discoverabilityStatus;
+
+  String? _holdCode;
+  String? get holdCode => _$this._holdCode;
+  set holdCode(String? holdCode) => _$this._holdCode = holdCode;
+
   AdminVendorVerificationQueueItemBuilder() {
     AdminVendorVerificationQueueItem._defaults(this);
   }
@@ -206,6 +260,11 @@ class AdminVendorVerificationQueueItemBuilder
       _activationStatus = $v.activationStatus;
       _submittedAt = $v.submittedAt;
       _progress = $v.progress.toBuilder();
+      _pendingRequirements = $v.pendingRequirements;
+      _oldestPendingAt = $v.oldestPendingAt;
+      _providerStatus = $v.providerStatus;
+      _discoverabilityStatus = $v.discoverabilityStatus;
+      _holdCode = $v.holdCode;
       _$v = null;
     }
     return this;
@@ -247,6 +306,11 @@ class AdminVendorVerificationQueueItemBuilder
             activationStatus: activationStatus,
             submittedAt: submittedAt,
             progress: progress.build(),
+            pendingRequirements: pendingRequirements,
+            oldestPendingAt: oldestPendingAt,
+            providerStatus: providerStatus,
+            discoverabilityStatus: discoverabilityStatus,
+            holdCode: holdCode,
           );
     } catch (_) {
       late String _$failedField;

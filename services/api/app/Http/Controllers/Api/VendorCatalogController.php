@@ -45,6 +45,7 @@ final class VendorCatalogController extends Controller
     {
         $filters = $request->validate([
             'status' => ['sometimes', Rule::in(['DRAFT', 'PENDING_COMPLIANCE', 'PENDING_ADMIN_REVIEW', 'ACTIVE', 'INACTIVE', 'TEMPORARILY_HIDDEN_STOCK_NOT_CONFIRMED', 'REJECTED'])],
+            'group' => ['sometimes', Rule::in(['NEEDS_ATTENTION', 'OUT_OF_STOCK'])],
             'compliance_status' => ['sometimes', Rule::in(['NOT_REQUIRED', 'NOT_SUBMITTED', 'PENDING_ADMIN_REVIEW', 'VERIFIED', 'CHANGES_REQUIRED', 'REJECTED'])],
             'category_id' => ['sometimes', 'uuid'],
             'q' => ['sometimes', 'string', 'max:120'],

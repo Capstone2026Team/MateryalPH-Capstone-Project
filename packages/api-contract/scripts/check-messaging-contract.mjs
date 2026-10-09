@@ -39,6 +39,10 @@ for (const route of routes.filter(r => /api\/v1\/(buyers|vendor)\/(conversations
   for (const method of route.method.split('|').filter(m => m !== 'HEAD')) assert.ok(expected.has(`${method} ${route.uri}`), `Undocumented messaging route ${route.uri}`)
 }
 assert.deepEqual(spec.components.schemas.ConversationView.properties.purpose.enum, ['SALES', 'FULFILLMENT'])
+assert.equal(spec.components.schemas.ConversationView.properties.can_list_fulfillment_conversations.type, 'boolean')
+assert.equal(spec.paths['/vendor/conversations/{conversationId}/fulfillment-conversations'].get.operationId, 'listVendorFulfillmentConversations')
+assert.equal(spec.components.schemas.FulfillmentConversationPage.properties.items.maxItems, 25)
+assert.ok(spec.components.schemas.FulfillmentConversationSummary.required.includes('read_only'))
 assert.equal(spec.components.schemas.ChatRealtime.properties.inbox_channel.type, 'string')
 assert.equal(spec.components.schemas.ChatRealtime.properties.inbox_channel.nullable, true)
 assert.equal(spec.components.schemas.ChatDraftContent.properties.deadline_hours.default, 24)

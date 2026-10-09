@@ -7,7 +7,7 @@ void main() {
   final instance = MateryalphApiClient().getBuyerReviewsApi();
 
   group(BuyerReviewsApi, () {
-    // Up to three photos on your Product Review while it can still be edited.
+    // Up to three photos or videos on your Product Review while it can still be edited. JPG/PNG up to 10 MB; MP4/MOV up to 100 MB. Content validated and scanned before private storage.
     //
     //Future<BuyerOrderReviewsEnvelope> addBuyerReviewMedia(String reviewId, String idempotencyKey, BuiltList<MultipartFile> files) async
     test('test addBuyerReviewMedia', () async {

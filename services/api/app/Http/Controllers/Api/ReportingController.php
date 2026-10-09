@@ -37,8 +37,8 @@ final class ReportingController extends Controller
     public function request(Request $request, DocumentExportService $service): JsonResponse
     {
         $input = $request->validate(['type' => ['required', Rule::in(DocumentExportService::TYPES)], 'format' => ['required', Rule::in(['PDF', 'CSV'])],
-            'resource_id' => ['nullable', 'uuid', 'required_unless:type,MATERIALS_ANALYTICS'], 'purpose' => ['required', 'string', 'min:10', 'max:500'],
-            'filters' => ['sometimes', 'array:preset_days,start_date,end_date,radius_km,category_id,q,psgc_code,psgc_version_id'],
+            'resource_id' => ['nullable', 'uuid', 'required_unless:type,MATERIALS_ANALYTICS,AUDIT_LOG,GEO_ANALYTICS'], 'purpose' => ['required', 'string', 'min:10', 'max:500'],
+            'filters' => ['sometimes', 'array:preset_days,start_date,end_date,radius_km,category_id,q,psgc_code,psgc_version_id,actor,actor_role,action,resource_type,organization_id,result,correlation_id,reason,from,to,dataset,area,granularity,procurement_type,material_id,fulfillment_method,payment_method,order_state'],
             'filters.preset_days' => ['sometimes', 'integer', Rule::in([7, 30, 90])], 'filters.start_date' => ['sometimes', 'date_format:Y-m-d'], 'filters.end_date' => ['sometimes', 'date_format:Y-m-d'],
             'filters.radius_km' => ['sometimes', 'integer', 'between:1,50'], 'filters.category_id' => ['sometimes', 'uuid'], 'filters.q' => ['sometimes', 'string', 'max:100'],
             'filters.psgc_code' => ['sometimes', 'string', 'max:16'], 'filters.psgc_version_id' => ['sometimes', 'uuid']]);

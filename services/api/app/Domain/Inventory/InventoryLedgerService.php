@@ -58,6 +58,9 @@ final class InventoryLedgerService
                 $term = '%'.addcslashes(mb_strtolower((string) $filters['q']), '%_\\').'%';
                 $query->where(fn (Builder $search) => $search->whereRaw('lower(l.display_name) LIKE ?', [$term])->orWhereRaw('lower(l.vendor_sku) LIKE ?', [$term])->orWhereRaw('lower(v.sku) LIKE ?', [$term]));
             }
+            if (! empty($filters['category_id'])) {
+                $query->where('l.material_category_id', $filters['category_id']);
+            }
             if (! empty($filters['listing_id'])) {
                 $query->where('l.id', $filters['listing_id']);
             }

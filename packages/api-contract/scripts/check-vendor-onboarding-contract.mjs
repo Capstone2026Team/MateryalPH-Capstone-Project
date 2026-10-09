@@ -181,3 +181,13 @@ assert.deepEqual(spec.components.schemas.XenditAccountVerificationWebhook.proper
 assert.deepEqual(spec.components.schemas.VendorPaymentOnboarding.required, ['status', 'environment'])
 assert.deepEqual(spec.components.schemas.VendorPaymentOnboarding.properties.status.enum, ['NOT_CONNECTED', 'CONNECTING', 'PENDING', 'CONNECTED_TEST', 'CONNECTION_FAILED'])
 assert.equal(spec.components.schemas.VendorPaymentOnboarding.properties.invitation_url, undefined)
+
+// Team monitoring counts all matching historical records, with bounded windows and safe detail fields.
+const tracking = spec.paths['/vendors/account/activity'].get
+assert.deepEqual(tracking.parameters.map(parameter => parameter.name), ['page', 'member_id', 'role', 'days', 'category'])
+assert.deepEqual(tracking.parameters.find(parameter => parameter.name === 'days').schema.enum, [7, 30, 90])
+const trackingMeta = spec.components.schemas.VendorTeamActivityEnvelope.properties.meta
+for (const field of ['total', 'total_events', 'succeeded_events', 'failed_events', 'categories']) assert(trackingMeta.required.includes(field))
+for (const field of ['category', 'correlation_id']) assert(spec.components.schemas.VendorTeamActivity.required.includes(field))
+assert(!('body' in spec.components.schemas.VendorTeamActivity.properties))
+console.log('Team tracking contract passed: filters, complete summaries, attribution and private-content boundary.')

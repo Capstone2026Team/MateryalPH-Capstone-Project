@@ -19,6 +19,11 @@ Name | Type
 `activationStatus` | string
 `submittedAt` | Date
 `progress` | { [key: string]: any; }
+`pendingRequirements` | number
+`oldestPendingAt` | Date
+`providerStatus` | string
+`discoverabilityStatus` | string
+`holdCode` | string
 
 ## Example
 
@@ -40,6 +45,11 @@ const example = {
   "activationStatus": null,
   "submittedAt": null,
   "progress": null,
+  "pendingRequirements": null,
+  "oldestPendingAt": null,
+  "providerStatus": null,
+  "discoverabilityStatus": null,
+  "holdCode": null,
 } satisfies AdminVendorVerificationQueueItem
 
 console.log(example)

@@ -11,7 +11,7 @@ part 'chat_realtime.g.dart';
 /// ChatRealtime
 ///
 /// Properties:
-/// * [inboxChannel] - Viewer-bound Buyer or Vendor inbox invalidation channel. Re-fetch configuration on reconnect. No message content is broadcast.
+/// * [inboxChannel] - Viewer-bound inbox invalidation channel. Notification realtime also supports Admin accounts through a dedicated notifications channel. Re-fetch configuration on reconnect. No message or notification contents are broadcast. Authorized Team Tracking viewers also receive payload-free team.activity.changed invalidations on messaging inbox channels; activity details require the separately authorized Vendor team activity endpoint.
 /// * [enabled]
 /// * [key]
 /// * [host]
@@ -19,7 +19,7 @@ part 'chat_realtime.g.dart';
 /// * [scheme]
 @BuiltValue()
 abstract class ChatRealtime implements Built<ChatRealtime, ChatRealtimeBuilder> {
-  /// Viewer-bound Buyer or Vendor inbox invalidation channel. Re-fetch configuration on reconnect. No message content is broadcast.
+  /// Viewer-bound inbox invalidation channel. Notification realtime also supports Admin accounts through a dedicated notifications channel. Re-fetch configuration on reconnect. No message or notification contents are broadcast. Authorized Team Tracking viewers also receive payload-free team.activity.changed invalidations on messaging inbox channels; activity details require the separately authorized Vendor team activity endpoint.
   @BuiltValueField(wireName: r'inbox_channel')
   String? get inboxChannel;
 

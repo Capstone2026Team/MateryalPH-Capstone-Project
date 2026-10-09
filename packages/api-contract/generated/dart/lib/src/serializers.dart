@@ -47,6 +47,9 @@ import 'package:materyalph_api_client/src/model/account_session.dart';
 import 'package:materyalph_api_client/src/model/account_session_list_envelope.dart';
 import 'package:materyalph_api_client/src/model/account_session_revocation.dart';
 import 'package:materyalph_api_client/src/model/account_type.dart';
+import 'package:materyalph_api_client/src/model/activation_blocker.dart';
+import 'package:materyalph_api_client/src/model/activation_blocker_source.dart';
+import 'package:materyalph_api_client/src/model/activation_restrictions.dart';
 import 'package:materyalph_api_client/src/model/address_components.dart';
 import 'package:materyalph_api_client/src/model/admin_analytics_point.dart';
 import 'package:materyalph_api_client/src/model/admin_analytics_row.dart';
@@ -78,6 +81,7 @@ import 'package:materyalph_api_client/src/model/admin_score_detail_envelope.dart
 import 'package:materyalph_api_client/src/model/admin_score_list_envelope.dart';
 import 'package:materyalph_api_client/src/model/admin_score_row.dart';
 import 'package:materyalph_api_client/src/model/admin_vendor_verification_decision.dart';
+import 'package:materyalph_api_client/src/model/admin_vendor_verification_detail.dart';
 import 'package:materyalph_api_client/src/model/admin_vendor_verification_detail_envelope.dart';
 import 'package:materyalph_api_client/src/model/admin_vendor_verification_queue_envelope.dart';
 import 'package:materyalph_api_client/src/model/admin_vendor_verification_queue_item.dart';
@@ -98,6 +102,12 @@ import 'package:materyalph_api_client/src/model/analytics_trend.dart';
 import 'package:materyalph_api_client/src/model/analytics_unit.dart';
 import 'package:materyalph_api_client/src/model/analytics_window.dart';
 import 'package:materyalph_api_client/src/model/api_error.dart';
+import 'package:materyalph_api_client/src/model/audit_action_list_envelope.dart';
+import 'package:materyalph_api_client/src/model/audit_event.dart';
+import 'package:materyalph_api_client/src/model/audit_event_detail.dart';
+import 'package:materyalph_api_client/src/model/audit_event_detail_envelope.dart';
+import 'package:materyalph_api_client/src/model/audit_event_list_envelope.dart';
+import 'package:materyalph_api_client/src/model/audit_search_meta.dart';
 import 'package:materyalph_api_client/src/model/auth_envelope.dart';
 import 'package:materyalph_api_client/src/model/auth_envelope_all_of_data.dart';
 import 'package:materyalph_api_client/src/model/auto_accept_allotment_update.dart';
@@ -123,6 +133,8 @@ import 'package:materyalph_api_client/src/model/bot_proof_envelope_all_of_data.d
 import 'package:materyalph_api_client/src/model/bot_step_up_error_envelope.dart';
 import 'package:materyalph_api_client/src/model/bot_step_up_error_envelope_all_of_errors.dart';
 import 'package:materyalph_api_client/src/model/bot_step_up_error_envelope_all_of_errors_all_of_details.dart';
+import 'package:materyalph_api_client/src/model/budget_override_list_envelope.dart';
+import 'package:materyalph_api_client/src/model/budget_override_record.dart';
 import 'package:materyalph_api_client/src/model/buyer_analytics_point.dart';
 import 'package:materyalph_api_client/src/model/buyer_analytics_row.dart';
 import 'package:materyalph_api_client/src/model/buyer_cancel_request.dart';
@@ -314,6 +326,7 @@ import 'package:materyalph_api_client/src/model/delivery_plan_request.dart';
 import 'package:materyalph_api_client/src/model/delivery_plan_route.dart';
 import 'package:materyalph_api_client/src/model/delivery_plan_vehicle.dart';
 import 'package:materyalph_api_client/src/model/delivery_preview.dart';
+import 'package:materyalph_api_client/src/model/delivery_preview_envelope.dart';
 import 'package:materyalph_api_client/src/model/delivery_route.dart';
 import 'package:materyalph_api_client/src/model/delivery_vehicle_selection.dart';
 import 'package:materyalph_api_client/src/model/directory_availability.dart';
@@ -372,6 +385,17 @@ import 'package:materyalph_api_client/src/model/dispute_vendor_permissions.dart'
 import 'package:materyalph_api_client/src/model/document_export.dart';
 import 'package:materyalph_api_client/src/model/document_export_input.dart';
 import 'package:materyalph_api_client/src/model/email_request.dart';
+import 'package:materyalph_api_client/src/model/enforcement_apply_request.dart';
+import 'package:materyalph_api_client/src/model/enforcement_detail.dart';
+import 'package:materyalph_api_client/src/model/enforcement_detail_envelope.dart';
+import 'package:materyalph_api_client/src/model/enforcement_event.dart';
+import 'package:materyalph_api_client/src/model/enforcement_list_envelope.dart';
+import 'package:materyalph_api_client/src/model/enforcement_record_request.dart';
+import 'package:materyalph_api_client/src/model/enforcement_subject_envelope.dart';
+import 'package:materyalph_api_client/src/model/enforcement_subject_envelope_data.dart';
+import 'package:materyalph_api_client/src/model/enforcement_subject_match.dart';
+import 'package:materyalph_api_client/src/model/enforcement_subject_match_list_envelope.dart';
+import 'package:materyalph_api_client/src/model/enforcement_summary.dart';
 import 'package:materyalph_api_client/src/model/error_envelope.dart';
 import 'package:materyalph_api_client/src/model/explore_category_count.dart';
 import 'package:materyalph_api_client/src/model/explore_counts.dart';
@@ -392,12 +416,17 @@ import 'package:materyalph_api_client/src/model/fee_statement_detail_envelope.da
 import 'package:materyalph_api_client/src/model/fee_statement_envelope.dart';
 import 'package:materyalph_api_client/src/model/fee_statement_list_envelope.dart';
 import 'package:materyalph_api_client/src/model/finance_action_result_envelope.dart';
+import 'package:materyalph_api_client/src/model/finance_kpi.dart';
+import 'package:materyalph_api_client/src/model/finance_kpi_envelope.dart';
+import 'package:materyalph_api_client/src/model/finance_kpis.dart';
+import 'package:materyalph_api_client/src/model/finance_kpis_period.dart';
 import 'package:materyalph_api_client/src/model/finance_review_item.dart';
 import 'package:materyalph_api_client/src/model/finance_review_item_list_envelope.dart';
 import 'package:materyalph_api_client/src/model/finance_transaction_list_envelope.dart';
 import 'package:materyalph_api_client/src/model/financial_preview.dart';
 import 'package:materyalph_api_client/src/model/financial_preview_line.dart';
 import 'package:materyalph_api_client/src/model/financial_snapshot.dart';
+import 'package:materyalph_api_client/src/model/fixed_setting.dart';
 import 'package:materyalph_api_client/src/model/fleet_summary.dart';
 import 'package:materyalph_api_client/src/model/fleet_vehicle.dart';
 import 'package:materyalph_api_client/src/model/fleet_vehicle_eligibility.dart';
@@ -416,6 +445,9 @@ import 'package:materyalph_api_client/src/model/fulfillment_assignee.dart';
 import 'package:materyalph_api_client/src/model/fulfillment_assignee_list_envelope.dart';
 import 'package:materyalph_api_client/src/model/fulfillment_assignment.dart';
 import 'package:materyalph_api_client/src/model/fulfillment_assignment_request.dart';
+import 'package:materyalph_api_client/src/model/fulfillment_conversation_page.dart';
+import 'package:materyalph_api_client/src/model/fulfillment_conversation_page_response.dart';
+import 'package:materyalph_api_client/src/model/fulfillment_conversation_summary.dart';
 import 'package:materyalph_api_client/src/model/fulfillment_issue.dart';
 import 'package:materyalph_api_client/src/model/fulfillment_proof.dart';
 import 'package:materyalph_api_client/src/model/fulfillment_receipt.dart';
@@ -425,7 +457,38 @@ import 'package:materyalph_api_client/src/model/fulfillment_trip.dart';
 import 'package:materyalph_api_client/src/model/fulfillment_trip_request.dart';
 import 'package:materyalph_api_client/src/model/fulfillment_vehicle_issue.dart';
 import 'package:materyalph_api_client/src/model/generic_data_envelope.dart';
+import 'package:materyalph_api_client/src/model/geo_active_users.dart';
+import 'package:materyalph_api_client/src/model/geo_activity_point.dart';
+import 'package:materyalph_api_client/src/model/geo_boundary_collection.dart';
+import 'package:materyalph_api_client/src/model/geo_boundary_collection_psgc_version.dart';
+import 'package:materyalph_api_client/src/model/geo_boundary_envelope.dart';
+import 'package:materyalph_api_client/src/model/geo_breadcrumb.dart';
+import 'package:materyalph_api_client/src/model/geo_cell.dart';
+import 'package:materyalph_api_client/src/model/geo_child.dart';
+import 'package:materyalph_api_client/src/model/geo_child_registered_buyers.dart';
+import 'package:materyalph_api_client/src/model/geo_dashboard.dart';
+import 'package:materyalph_api_client/src/model/geo_dashboard_disclosure.dart';
+import 'package:materyalph_api_client/src/model/geo_dashboard_envelope.dart';
+import 'package:materyalph_api_client/src/model/geo_dashboard_period.dart';
+import 'package:materyalph_api_client/src/model/geo_dashboard_unresolved.dart';
+import 'package:materyalph_api_client/src/model/geo_dataset.dart';
+import 'package:materyalph_api_client/src/model/geo_demand.dart';
+import 'package:materyalph_api_client/src/model/geo_demand_cell.dart';
+import 'package:materyalph_api_client/src/model/geo_demand_cell_value.dart';
+import 'package:materyalph_api_client/src/model/geo_demand_columns_inner.dart';
+import 'package:materyalph_api_client/src/model/geo_demand_envelope.dart';
+import 'package:materyalph_api_client/src/model/geo_demand_rows_inner.dart';
+import 'package:materyalph_api_client/src/model/geo_filter_applicability.dart';
+import 'package:materyalph_api_client/src/model/geo_kpis.dart';
+import 'package:materyalph_api_client/src/model/geo_kpis_active_users.dart';
+import 'package:materyalph_api_client/src/model/geo_rate.dart';
+import 'package:materyalph_api_client/src/model/geo_response_time.dart';
+import 'package:materyalph_api_client/src/model/geo_scope.dart';
+import 'package:materyalph_api_client/src/model/geo_scope_psgc_version.dart';
+import 'package:materyalph_api_client/src/model/geo_trend_point.dart';
 import 'package:materyalph_api_client/src/model/get_notification_preferences200_response.dart';
+import 'package:materyalph_api_client/src/model/get_notification_unread_count200_response.dart';
+import 'package:materyalph_api_client/src/model/get_vendor_navigation_updates200_response.dart';
 import 'package:materyalph_api_client/src/model/google_content_author.dart';
 import 'package:materyalph_api_client/src/model/google_mobile_exchange_request.dart';
 import 'package:materyalph_api_client/src/model/google_oidc_start_request.dart';
@@ -435,6 +498,9 @@ import 'package:materyalph_api_client/src/model/google_place_review.dart';
 import 'package:materyalph_api_client/src/model/google_rating.dart';
 import 'package:materyalph_api_client/src/model/health_envelope.dart';
 import 'package:materyalph_api_client/src/model/health_envelope_all_of_data.dart';
+import 'package:materyalph_api_client/src/model/integration_overview.dart';
+import 'package:materyalph_api_client/src/model/integration_overview_envelope.dart';
+import 'package:materyalph_api_client/src/model/integration_status.dart';
 import 'package:materyalph_api_client/src/model/inventory_balance.dart';
 import 'package:materyalph_api_client/src/model/inventory_comparability.dart';
 import 'package:materyalph_api_client/src/model/inventory_ledger_envelope.dart';
@@ -498,6 +564,7 @@ import 'package:materyalph_api_client/src/model/location_suggestion_envelope.dar
 import 'package:materyalph_api_client/src/model/lock_version_request.dart';
 import 'package:materyalph_api_client/src/model/login_request.dart';
 import 'package:materyalph_api_client/src/model/map_point.dart';
+import 'package:materyalph_api_client/src/model/mark_notifications_read200_response.dart';
 import 'package:materyalph_api_client/src/model/marking_type.dart';
 import 'package:materyalph_api_client/src/model/material_category_option.dart';
 import 'package:materyalph_api_client/src/model/material_offer.dart';
@@ -518,12 +585,16 @@ import 'package:materyalph_api_client/src/model/money_delivery.dart';
 import 'package:materyalph_api_client/src/model/money_nrpc.dart';
 import 'package:materyalph_api_client/src/model/money_range.dart';
 import 'package:materyalph_api_client/src/model/notification_action.dart';
+import 'package:materyalph_api_client/src/model/notification_bulk_read_action.dart';
+import 'package:materyalph_api_client/src/model/notification_channel_auth_response.dart';
 import 'package:materyalph_api_client/src/model/notification_device_input.dart';
 import 'package:materyalph_api_client/src/model/notification_device_result.dart';
 import 'package:materyalph_api_client/src/model/notification_item.dart';
 import 'package:materyalph_api_client/src/model/notification_preference.dart';
 import 'package:materyalph_api_client/src/model/notification_preference_input.dart';
+import 'package:materyalph_api_client/src/model/notification_read_filter.dart';
 import 'package:materyalph_api_client/src/model/notification_target.dart';
+import 'package:materyalph_api_client/src/model/notification_unread_count.dart';
 import 'package:materyalph_api_client/src/model/nrpc_accept_request.dart';
 import 'package:materyalph_api_client/src/model/nrpc_affected_line.dart';
 import 'package:materyalph_api_client/src/model/nrpc_flag.dart';
@@ -536,6 +607,14 @@ import 'package:materyalph_api_client/src/model/nrpc_terms_version.dart';
 import 'package:materyalph_api_client/src/model/onboarding_draft_version.dart';
 import 'package:materyalph_api_client/src/model/onboarding_requirement.dart';
 import 'package:materyalph_api_client/src/model/onboarding_step_completion.dart';
+import 'package:materyalph_api_client/src/model/operation_failure.dart';
+import 'package:materyalph_api_client/src/model/operation_failure_list_envelope.dart';
+import 'package:materyalph_api_client/src/model/operation_retry_envelope.dart';
+import 'package:materyalph_api_client/src/model/operation_retry_list_envelope.dart';
+import 'package:materyalph_api_client/src/model/operation_retry_record.dart';
+import 'package:materyalph_api_client/src/model/operation_retry_request.dart';
+import 'package:materyalph_api_client/src/model/operation_retry_result.dart';
+import 'package:materyalph_api_client/src/model/operations_queue.dart';
 import 'package:materyalph_api_client/src/model/order_buyer_ref.dart';
 import 'package:materyalph_api_client/src/model/order_cancellation.dart';
 import 'package:materyalph_api_client/src/model/order_change.dart';
@@ -596,9 +675,24 @@ import 'package:materyalph_api_client/src/model/physical_payment_summary_envelop
 import 'package:materyalph_api_client/src/model/pickup_confirmation.dart';
 import 'package:materyalph_api_client/src/model/pickup_preview.dart';
 import 'package:materyalph_api_client/src/model/platform_document_ref.dart';
+import 'package:materyalph_api_client/src/model/platform_setting.dart';
+import 'package:materyalph_api_client/src/model/platform_setting_envelope.dart';
+import 'package:materyalph_api_client/src/model/platform_setting_history_envelope.dart';
+import 'package:materyalph_api_client/src/model/platform_setting_list_envelope.dart';
+import 'package:materyalph_api_client/src/model/platform_setting_list_meta.dart';
+import 'package:materyalph_api_client/src/model/platform_setting_update_request.dart';
+import 'package:materyalph_api_client/src/model/platform_setting_version.dart';
 import 'package:materyalph_api_client/src/model/prepare_tax_package201_response.dart';
 import 'package:materyalph_api_client/src/model/price_history_entry.dart';
 import 'package:materyalph_api_client/src/model/price_history_envelope.dart';
+import 'package:materyalph_api_client/src/model/privacy_handler.dart';
+import 'package:materyalph_api_client/src/model/privacy_request_create_request.dart';
+import 'package:materyalph_api_client/src/model/privacy_request_detail.dart';
+import 'package:materyalph_api_client/src/model/privacy_request_detail_envelope.dart';
+import 'package:materyalph_api_client/src/model/privacy_request_event.dart';
+import 'package:materyalph_api_client/src/model/privacy_request_list_envelope.dart';
+import 'package:materyalph_api_client/src/model/privacy_request_summary.dart';
+import 'package:materyalph_api_client/src/model/privacy_transition_request.dart';
 import 'package:materyalph_api_client/src/model/problem_resolve_request.dart';
 import 'package:materyalph_api_client/src/model/problem_response_request.dart';
 import 'package:materyalph_api_client/src/model/processing_fee.dart';
@@ -608,6 +702,7 @@ import 'package:materyalph_api_client/src/model/product_compliance_case_envelope
 import 'package:materyalph_api_client/src/model/product_compliance_decision.dart';
 import 'package:materyalph_api_client/src/model/product_compliance_queue_envelope.dart';
 import 'package:materyalph_api_client/src/model/product_compliance_queue_item.dart';
+import 'package:materyalph_api_client/src/model/product_delivery_preview_request.dart';
 import 'package:materyalph_api_client/src/model/product_rating_summary.dart';
 import 'package:materyalph_api_client/src/model/project_budget.dart';
 import 'package:materyalph_api_client/src/model/project_candidate.dart';
@@ -664,6 +759,7 @@ import 'package:materyalph_api_client/src/model/ranking_preferences.dart';
 import 'package:materyalph_api_client/src/model/ranking_preferences_envelope.dart';
 import 'package:materyalph_api_client/src/model/ranking_preferences_update.dart';
 import 'package:materyalph_api_client/src/model/ranking_weight_set.dart';
+import 'package:materyalph_api_client/src/model/reasoned_version_request.dart';
 import 'package:materyalph_api_client/src/model/record_tax_simulation200_response.dart';
 import 'package:materyalph_api_client/src/model/refund_timeline_item.dart';
 import 'package:materyalph_api_client/src/model/register_notification_device201_response.dart';
@@ -672,6 +768,8 @@ import 'package:materyalph_api_client/src/model/registration_envelope.dart';
 import 'package:materyalph_api_client/src/model/registration_envelope_all_of_data.dart';
 import 'package:materyalph_api_client/src/model/regulated_material_rule.dart';
 import 'package:materyalph_api_client/src/model/reimbursement_timeline_item.dart';
+import 'package:materyalph_api_client/src/model/remittance_queue_envelope.dart';
+import 'package:materyalph_api_client/src/model/remittance_queue_row.dart';
 import 'package:materyalph_api_client/src/model/request_document_export202_response.dart';
 import 'package:materyalph_api_client/src/model/resend_bot_challenge_request.dart';
 import 'package:materyalph_api_client/src/model/resolve_notification200_response.dart';
@@ -690,6 +788,7 @@ import 'package:materyalph_api_client/src/model/revoke_notification_device200_re
 import 'package:materyalph_api_client/src/model/route_estimate.dart';
 import 'package:materyalph_api_client/src/model/route_estimate_envelope.dart';
 import 'package:materyalph_api_client/src/model/route_estimate_request.dart';
+import 'package:materyalph_api_client/src/model/scheduled_task_health.dart';
 import 'package:materyalph_api_client/src/model/score_exclusion_request.dart';
 import 'package:materyalph_api_client/src/model/score_history_point.dart';
 import 'package:materyalph_api_client/src/model/score_label.dart';
@@ -709,12 +808,20 @@ import 'package:materyalph_api_client/src/model/store_open_now.dart';
 import 'package:materyalph_api_client/src/model/store_operating_day.dart';
 import 'package:materyalph_api_client/src/model/store_performance.dart';
 import 'package:materyalph_api_client/src/model/store_performance_envelope.dart';
+import 'package:materyalph_api_client/src/model/subject_review.dart';
 import 'package:materyalph_api_client/src/model/success_envelope.dart';
 import 'package:materyalph_api_client/src/model/supplier_open_status.dart';
 import 'package:materyalph_api_client/src/model/supplier_result.dart';
 import 'package:materyalph_api_client/src/model/supplier_serviceability.dart';
 import 'package:materyalph_api_client/src/model/supplier_tier.dart';
+import 'package:materyalph_api_client/src/model/tax_adjustment.dart';
+import 'package:materyalph_api_client/src/model/tax_adjustment_envelope.dart';
+import 'package:materyalph_api_client/src/model/tax_adjustment_list_envelope.dart';
+import 'package:materyalph_api_client/src/model/tax_adjustment_prepare_request.dart';
+import 'package:materyalph_api_client/src/model/tax_adjustment_review_request.dart';
 import 'package:materyalph_api_client/src/model/tax_category.dart';
+import 'package:materyalph_api_client/src/model/tax_evidence_queue_envelope.dart';
+import 'package:materyalph_api_client/src/model/tax_evidence_row.dart';
 import 'package:materyalph_api_client/src/model/tax_package.dart';
 import 'package:materyalph_api_client/src/model/tax_package_input.dart';
 import 'package:materyalph_api_client/src/model/tax_package_review.dart';
@@ -744,6 +851,9 @@ import 'package:materyalph_api_client/src/model/vendor_file_envelope.dart';
 import 'package:materyalph_api_client/src/model/vendor_finance_notice.dart';
 import 'package:materyalph_api_client/src/model/vendor_finance_overview.dart';
 import 'package:materyalph_api_client/src/model/vendor_finance_overview_envelope.dart';
+import 'package:materyalph_api_client/src/model/vendor_finance_reviews.dart';
+import 'package:materyalph_api_client/src/model/vendor_finance_reviews_envelope.dart';
+import 'package:materyalph_api_client/src/model/vendor_finance_reviews_open_reviews_inner.dart';
 import 'package:materyalph_api_client/src/model/vendor_invitation.dart';
 import 'package:materyalph_api_client/src/model/vendor_invitation_acceptance.dart';
 import 'package:materyalph_api_client/src/model/vendor_invitation_envelope.dart';
@@ -755,6 +865,7 @@ import 'package:materyalph_api_client/src/model/vendor_materials_analytics_detai
 import 'package:materyalph_api_client/src/model/vendor_materials_analytics_list.dart';
 import 'package:materyalph_api_client/src/model/vendor_materials_analytics_list_envelope.dart';
 import 'package:materyalph_api_client/src/model/vendor_media_envelope.dart';
+import 'package:materyalph_api_client/src/model/vendor_navigation_updates.dart';
 import 'package:materyalph_api_client/src/model/vendor_onboarding_envelope.dart';
 import 'package:materyalph_api_client/src/model/vendor_onboarding_section.dart';
 import 'package:materyalph_api_client/src/model/vendor_onboarding_snapshot.dart';
@@ -789,7 +900,10 @@ import 'package:materyalph_api_client/src/model/vendor_store_email_envelope.dart
 import 'package:materyalph_api_client/src/model/vendor_team_activity.dart';
 import 'package:materyalph_api_client/src/model/vendor_team_activity_envelope.dart';
 import 'package:materyalph_api_client/src/model/vendor_team_activity_envelope_meta.dart';
+import 'package:materyalph_api_client/src/model/vendor_team_activity_envelope_meta_categories_inner.dart';
+import 'package:materyalph_api_client/src/model/vendor_team_deletion.dart';
 import 'package:materyalph_api_client/src/model/vendor_team_invitation_list_envelope.dart';
+import 'package:materyalph_api_client/src/model/vendor_team_invitation_list_envelope_meta.dart';
 import 'package:materyalph_api_client/src/model/vendor_team_invitation_record.dart';
 import 'package:materyalph_api_client/src/model/vendor_verification_draft.dart';
 import 'package:materyalph_api_client/src/model/vendor_verification_draft_classification.dart';
@@ -798,6 +912,11 @@ import 'package:materyalph_api_client/src/model/vendor_verification_draft_repres
 import 'package:materyalph_api_client/src/model/vendor_verification_draft_tax_profile.dart';
 import 'package:materyalph_api_client/src/model/vendor_verification_submit.dart';
 import 'package:materyalph_api_client/src/model/vendor_webhook_envelope.dart';
+import 'package:materyalph_api_client/src/model/vendor_workstreams.dart';
+import 'package:materyalph_api_client/src/model/vendor_workstreams_activation.dart';
+import 'package:materyalph_api_client/src/model/vendor_workstreams_discoverability.dart';
+import 'package:materyalph_api_client/src/model/vendor_workstreams_provider_readiness.dart';
+import 'package:materyalph_api_client/src/model/vendor_workstreams_verification.dart';
 import 'package:materyalph_api_client/src/model/verified_vendor_summary.dart';
 import 'package:materyalph_api_client/src/model/verify_bot_challenge_request.dart';
 import 'package:materyalph_api_client/src/model/verify_email_request.dart';
@@ -856,6 +975,9 @@ part 'serializers.g.dart';
   AccountSessionListEnvelope,
   AccountSessionRevocation,
   AccountType,
+  ActivationBlocker,
+  ActivationBlockerSource,
+  ActivationRestrictions,
   AddressComponents,
   AdminAnalyticsPoint,
   AdminAnalyticsRow,$AdminAnalyticsRow,
@@ -887,6 +1009,7 @@ part 'serializers.g.dart';
   AdminScoreListEnvelope,
   AdminScoreRow,
   AdminVendorVerificationDecision,
+  AdminVendorVerificationDetail,
   AdminVendorVerificationDetailEnvelope,
   AdminVendorVerificationQueueEnvelope,
   AdminVendorVerificationQueueItem,
@@ -907,6 +1030,12 @@ part 'serializers.g.dart';
   AnalyticsUnit,
   AnalyticsWindow,
   ApiError,
+  AuditActionListEnvelope,
+  AuditEvent,$AuditEvent,
+  AuditEventDetail,
+  AuditEventDetailEnvelope,
+  AuditEventListEnvelope,
+  AuditSearchMeta,
   AuthEnvelope,
   AuthEnvelopeAllOfData,
   AutoAcceptAllotmentUpdate,
@@ -932,6 +1061,8 @@ part 'serializers.g.dart';
   BotStepUpErrorEnvelope,
   BotStepUpErrorEnvelopeAllOfErrors,
   BotStepUpErrorEnvelopeAllOfErrorsAllOfDetails,
+  BudgetOverrideListEnvelope,
+  BudgetOverrideRecord,
   BuyerAnalyticsPoint,
   BuyerAnalyticsRow,$BuyerAnalyticsRow,
   BuyerCancelRequest,
@@ -1123,6 +1254,7 @@ part 'serializers.g.dart';
   DeliveryPlanRoute,
   DeliveryPlanVehicle,
   DeliveryPreview,
+  DeliveryPreviewEnvelope,
   DeliveryRoute,
   DeliveryVehicleSelection,
   DirectoryAvailability,
@@ -1181,6 +1313,17 @@ part 'serializers.g.dart';
   DocumentExport,
   DocumentExportInput,
   EmailRequest,
+  EnforcementApplyRequest,
+  EnforcementDetail,
+  EnforcementDetailEnvelope,
+  EnforcementEvent,
+  EnforcementListEnvelope,
+  EnforcementRecordRequest,
+  EnforcementSubjectEnvelope,
+  EnforcementSubjectEnvelopeData,
+  EnforcementSubjectMatch,
+  EnforcementSubjectMatchListEnvelope,
+  EnforcementSummary,$EnforcementSummary,
   ErrorEnvelope,
   ExploreCategoryCount,
   ExploreCounts,
@@ -1201,12 +1344,17 @@ part 'serializers.g.dart';
   FeeStatementEnvelope,
   FeeStatementListEnvelope,
   FinanceActionResultEnvelope,
+  FinanceKpi,
+  FinanceKpiEnvelope,
+  FinanceKpis,
+  FinanceKpisPeriod,
   FinanceReviewItem,
   FinanceReviewItemListEnvelope,
   FinanceTransactionListEnvelope,
   FinancialPreview,
   FinancialPreviewLine,
   FinancialSnapshot,
+  FixedSetting,
   FleetSummary,
   FleetVehicle,
   FleetVehicleEligibility,
@@ -1225,6 +1373,9 @@ part 'serializers.g.dart';
   FulfillmentAssigneeListEnvelope,
   FulfillmentAssignment,
   FulfillmentAssignmentRequest,
+  FulfillmentConversationPage,
+  FulfillmentConversationPageResponse,
+  FulfillmentConversationSummary,
   FulfillmentIssue,
   FulfillmentProof,
   FulfillmentReceipt,
@@ -1234,7 +1385,38 @@ part 'serializers.g.dart';
   FulfillmentTripRequest,
   FulfillmentVehicleIssue,
   GenericDataEnvelope,
+  GeoActiveUsers,
+  GeoActivityPoint,
+  GeoBoundaryCollection,
+  GeoBoundaryCollectionPsgcVersion,
+  GeoBoundaryEnvelope,
+  GeoBreadcrumb,
+  GeoCell,
+  GeoChild,
+  GeoChildRegisteredBuyers,
+  GeoDashboard,
+  GeoDashboardDisclosure,
+  GeoDashboardEnvelope,
+  GeoDashboardPeriod,
+  GeoDashboardUnresolved,
+  GeoDataset,
+  GeoDemand,
+  GeoDemandCell,
+  GeoDemandCellValue,
+  GeoDemandColumnsInner,
+  GeoDemandEnvelope,
+  GeoDemandRowsInner,
+  GeoFilterApplicability,
+  GeoKpis,
+  GeoKpisActiveUsers,
+  GeoRate,
+  GeoResponseTime,
+  GeoScope,
+  GeoScopePsgcVersion,
+  GeoTrendPoint,
   GetNotificationPreferences200Response,
+  GetNotificationUnreadCount200Response,
+  GetVendorNavigationUpdates200Response,
   GoogleContentAuthor,
   GoogleMobileExchangeRequest,
   GoogleOidcStartRequest,
@@ -1244,6 +1426,9 @@ part 'serializers.g.dart';
   GoogleRating,
   HealthEnvelope,
   HealthEnvelopeAllOfData,
+  IntegrationOverview,
+  IntegrationOverviewEnvelope,
+  IntegrationStatus,
   InventoryBalance,
   InventoryComparability,
   InventoryLedgerEnvelope,
@@ -1307,6 +1492,7 @@ part 'serializers.g.dart';
   LockVersionRequest,
   LoginRequest,
   MapPoint,
+  MarkNotificationsRead200Response,
   MarkingType,
   MaterialCategoryOption,
   MaterialOffer,
@@ -1327,12 +1513,16 @@ part 'serializers.g.dart';
   MoneyNrpc,
   MoneyRange,
   NotificationAction,
+  NotificationBulkReadAction,
+  NotificationChannelAuthResponse,
   NotificationDeviceInput,
   NotificationDeviceResult,
   NotificationItem,
   NotificationPreference,
   NotificationPreferenceInput,
+  NotificationReadFilter,
   NotificationTarget,
+  NotificationUnreadCount,
   NrpcAcceptRequest,
   NrpcAffectedLine,
   NrpcFlag,
@@ -1345,6 +1535,14 @@ part 'serializers.g.dart';
   OnboardingDraftVersion,
   OnboardingRequirement,
   OnboardingStepCompletion,
+  OperationFailure,
+  OperationFailureListEnvelope,
+  OperationRetryEnvelope,
+  OperationRetryListEnvelope,
+  OperationRetryRecord,
+  OperationRetryRequest,
+  OperationRetryResult,
+  OperationsQueue,
   OrderBuyerRef,
   OrderCancellation,
   OrderChange,
@@ -1405,9 +1603,24 @@ part 'serializers.g.dart';
   PickupConfirmation,
   PickupPreview,
   PlatformDocumentRef,
+  PlatformSetting,
+  PlatformSettingEnvelope,
+  PlatformSettingHistoryEnvelope,
+  PlatformSettingListEnvelope,
+  PlatformSettingListMeta,
+  PlatformSettingUpdateRequest,
+  PlatformSettingVersion,
   PrepareTaxPackage201Response,
   PriceHistoryEntry,
   PriceHistoryEnvelope,
+  PrivacyHandler,
+  PrivacyRequestCreateRequest,
+  PrivacyRequestDetail,
+  PrivacyRequestDetailEnvelope,
+  PrivacyRequestEvent,
+  PrivacyRequestListEnvelope,
+  PrivacyRequestSummary,$PrivacyRequestSummary,
+  PrivacyTransitionRequest,
   ProblemResolveRequest,
   ProblemResponseRequest,
   ProcessingFee,
@@ -1417,6 +1630,7 @@ part 'serializers.g.dart';
   ProductComplianceDecision,
   ProductComplianceQueueEnvelope,
   ProductComplianceQueueItem,
+  ProductDeliveryPreviewRequest,
   ProductRatingSummary,
   ProjectBudget,
   ProjectCandidate,
@@ -1473,6 +1687,7 @@ part 'serializers.g.dart';
   RankingPreferencesEnvelope,
   RankingPreferencesUpdate,
   RankingWeightSet,
+  ReasonedVersionRequest,
   RecordTaxSimulation200Response,
   RefundTimelineItem,
   RegisterNotificationDevice201Response,
@@ -1481,6 +1696,8 @@ part 'serializers.g.dart';
   RegistrationEnvelopeAllOfData,
   RegulatedMaterialRule,
   ReimbursementTimelineItem,
+  RemittanceQueueEnvelope,
+  RemittanceQueueRow,
   RequestDocumentExport202Response,
   ResendBotChallengeRequest,
   ResolveNotification200Response,
@@ -1499,6 +1716,7 @@ part 'serializers.g.dart';
   RouteEstimate,
   RouteEstimateEnvelope,
   RouteEstimateRequest,
+  ScheduledTaskHealth,
   ScoreExclusionRequest,
   ScoreHistoryPoint,
   ScoreLabel,
@@ -1518,12 +1736,20 @@ part 'serializers.g.dart';
   StoreOperatingDay,
   StorePerformance,
   StorePerformanceEnvelope,
+  SubjectReview,$SubjectReview,
   SuccessEnvelope,$SuccessEnvelope,
   SupplierOpenStatus,
   SupplierResult,
   SupplierServiceability,
   SupplierTier,
+  TaxAdjustment,
+  TaxAdjustmentEnvelope,
+  TaxAdjustmentListEnvelope,
+  TaxAdjustmentPrepareRequest,
+  TaxAdjustmentReviewRequest,
   TaxCategory,
+  TaxEvidenceQueueEnvelope,
+  TaxEvidenceRow,
   TaxPackage,
   TaxPackageInput,
   TaxPackageReview,
@@ -1553,6 +1779,9 @@ part 'serializers.g.dart';
   VendorFinanceNotice,
   VendorFinanceOverview,
   VendorFinanceOverviewEnvelope,
+  VendorFinanceReviews,
+  VendorFinanceReviewsEnvelope,
+  VendorFinanceReviewsOpenReviewsInner,
   VendorInvitation,
   VendorInvitationAcceptance,
   VendorInvitationEnvelope,
@@ -1564,6 +1793,7 @@ part 'serializers.g.dart';
   VendorMaterialsAnalyticsList,
   VendorMaterialsAnalyticsListEnvelope,
   VendorMediaEnvelope,
+  VendorNavigationUpdates,
   VendorOnboardingEnvelope,
   VendorOnboardingSection,
   VendorOnboardingSnapshot,
@@ -1598,7 +1828,10 @@ part 'serializers.g.dart';
   VendorTeamActivity,
   VendorTeamActivityEnvelope,
   VendorTeamActivityEnvelopeMeta,
+  VendorTeamActivityEnvelopeMetaCategoriesInner,
+  VendorTeamDeletion,
   VendorTeamInvitationListEnvelope,
+  VendorTeamInvitationListEnvelopeMeta,
   VendorTeamInvitationRecord,
   VendorVerificationDraft,
   VendorVerificationDraftClassification,
@@ -1607,6 +1840,11 @@ part 'serializers.g.dart';
   VendorVerificationDraftTaxProfile,
   VendorVerificationSubmit,
   VendorWebhookEnvelope,
+  VendorWorkstreams,
+  VendorWorkstreamsActivation,
+  VendorWorkstreamsDiscoverability,
+  VendorWorkstreamsProviderReadiness,
+  VendorWorkstreamsVerification,
   VerifiedVendorSummary,
   VerifyBotChallengeRequest,
   VerifyEmailRequest,
@@ -1630,24 +1868,12 @@ part 'serializers.g.dart';
 ])
 Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(DisputeClarification)]),
-        () => ListBuilder<DisputeClarification>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(DisputeTimelineEntry)]),
-        () => ListBuilder<DisputeTimelineEntry>(),
-      )
-      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(AdminCancellationRequestRow)]),
         () => ListBuilder<AdminCancellationRequestRow>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(DisputeProposal)]),
         () => ListBuilder<DisputeProposal>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(VendorAnalyticsRow)]),
-        () => ListBuilder<VendorAnalyticsRow>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(DisputeDecision)]),
@@ -1666,14 +1892,6 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<DeliveryPlanGroup>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(ReimbursementTimelineItem)]),
-        () => ListBuilder<ReimbursementTimelineItem>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(PlatformDocumentRef)]),
-        () => ListBuilder<PlatformDocumentRef>(),
-      )
-      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(BuiltMap, [FullType(String), FullType(JsonObject)])]),
         () => ListBuilder<BuiltMap<String, JsonObject>>(),
       )
@@ -1682,36 +1900,8 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<InvoiceLogRow>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(PhysicalPaymentRecord)]),
-        () => ListBuilder<PhysicalPaymentRecord>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(PsgcArea)]),
-        () => ListBuilder<PsgcArea>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(ProjectSite)]),
-        () => ListBuilder<ProjectSite>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(Agreement)]),
-        () => ListBuilder<Agreement>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(VendorOnboardingStep)]),
-        () => ListBuilder<VendorOnboardingStep>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(CatalogCompletionStep)]),
-        () => ListBuilder<CatalogCompletionStep>(),
-      )
-      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(FleetVehicle)]),
         () => ListBuilder<FleetVehicle>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(ScoreMetric)]),
-        () => ListBuilder<ScoreMetric>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(NrpcAffectedLine)]),
@@ -1722,10 +1912,6 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<WithholdingAccumulatorView>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(VendorAnalyticsPoint)]),
-        () => ListBuilder<VendorAnalyticsPoint>(),
-      )
-      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(VendorTeamActivity)]),
         () => ListBuilder<VendorTeamActivity>(),
       )
@@ -1734,84 +1920,32 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<DisputeExport>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(ExploreCategoryCount)]),
-        () => ListBuilder<ExploreCategoryCount>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(InvoiceOrderLine)]),
-        () => ListBuilder<InvoiceOrderLine>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(OrderSummary)]),
-        () => ListBuilder<OrderSummary>(),
-      )
-      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(NotificationPreference)]),
         () => ListBuilder<NotificationPreference>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(ListingStatusChange)]),
-        () => ListBuilder<ListingStatusChange>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(PaymentMethodEligibility)]),
         () => ListBuilder<PaymentMethodEligibility>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltMap, [FullType(String), FullType(BuiltList, [FullType(String)])]),
-        () => MapBuilder<String, BuiltList<String>>(),
-      )
-      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(FulfillmentVehicleIssue)]),
         () => ListBuilder<FulfillmentVehicleIssue>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(OrderReservation)]),
-        () => ListBuilder<OrderReservation>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(BuyerAnalyticsPoint)]),
         () => ListBuilder<BuyerAnalyticsPoint>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(ListingImage)]),
-        () => ListBuilder<ListingImage>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(AccountSession)]),
-        () => ListBuilder<AccountSession>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(PublicReview)]),
-        () => ListBuilder<PublicReview>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltMap, [FullType(String), FullType(String)]),
-        () => MapBuilder<String, String>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(OrderLineQuantity)]),
-        () => ListBuilder<OrderLineQuantity>(),
+        const FullType(BuiltList, [FullType(ActivationBlocker)]),
+        () => ListBuilder<ActivationBlocker>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(AnalyticsSource)]),
         () => ListBuilder<AnalyticsSource>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(DeliveryFailure)]),
-        () => ListBuilder<DeliveryFailure>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(InventoryMovement)]),
-        () => ListBuilder<InventoryMovement>(),
-      )
-      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(DisputeDeadline)]),
         () => ListBuilder<DisputeDeadline>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(OrderStateRow)]),
-        () => ListBuilder<OrderStateRow>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(CheckoutGroupPreview)]),
@@ -1822,28 +1956,8 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<ChatMessage>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(ChatQuotationLine)]),
-        () => ListBuilder<ChatQuotationLine>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(MaterialCategoryOption)]),
-        () => ListBuilder<MaterialCategoryOption>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(OrderLine)]),
-        () => ListBuilder<OrderLine>(),
-      )
-      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(CatalogListingSummary)]),
         () => ListBuilder<CatalogListingSummary>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(VendorSetupDraftVehiclesInner)]),
-        () => ListBuilder<VendorSetupDraftVehiclesInner>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(ApiError)]),
-        () => ListBuilder<ApiError>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(CartLine)]),
@@ -1874,10 +1988,6 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<ReviewLine>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(VendorReviewRow)]),
-        () => ListBuilder<VendorReviewRow>(),
-      )
-      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(FleetVehicleInput)]),
         () => ListBuilder<FleetVehicleInput>(),
       )
@@ -1894,16 +2004,484 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<BuyerAnalyticsRow>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(WorkPackageLineInput)]),
+        () => ListBuilder<WorkPackageLineInput>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(GooglePlacePhoto)]),
+        () => ListBuilder<GooglePlacePhoto>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(OperationsQueue)]),
+        () => ListBuilder<OperationsQueue>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(CatalogReference)]),
+        () => ListBuilder<CatalogReference>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(OrderChange)]),
+        () => ListBuilder<OrderChange>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ChatDraftLine)]),
+        () => ListBuilder<ChatDraftLine>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(PrivacyRequestEvent)]),
+        () => ListBuilder<PrivacyRequestEvent>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(VolumeTier)]),
+        () => ListBuilder<VolumeTier>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(OperationRetryRecord)]),
+        () => ListBuilder<OperationRetryRecord>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(DisputeSummary)]),
+        () => ListBuilder<DisputeSummary>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(StoreHoursDay)]),
+        () => ListBuilder<StoreHoursDay>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(FulfillmentTrip)]),
+        () => ListBuilder<FulfillmentTrip>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(GeoActivityPoint)]),
+        () => ListBuilder<GeoActivityPoint>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ChatProduct)]),
+        () => ListBuilder<ChatProduct>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(BuyerIndustryClassification)]),
+        () => ListBuilder<BuyerIndustryClassification>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(CatalogMaterialMatch)]),
+        () => ListBuilder<CatalogMaterialMatch>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(NotificationItem)]),
+        () => ListBuilder<NotificationItem>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ComparableSpecificationAttributesInner)]),
+        () => ListBuilder<ComparableSpecificationAttributesInner>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(CartVendorGroup)]),
+        () => ListBuilder<CartVendorGroup>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(RemittanceQueueRow)]),
+        () => ListBuilder<RemittanceQueueRow>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(BadgeStateScopesInner)]),
+        () => ListBuilder<BadgeStateScopesInner>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(EnforcementSummary)]),
+        () => ListBuilder<EnforcementSummary>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(AdminScoreRow)]),
+        () => ListBuilder<AdminScoreRow>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ChatAttachment)]),
+        () => ListBuilder<ChatAttachment>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(DisputeSanctionInput)]),
+        () => ListBuilder<DisputeSanctionInput>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(DeliveryEstimateOption)]),
+        () => ListBuilder<DeliveryEstimateOption>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(BuyerLocation)]),
+        () => ListBuilder<BuyerLocation>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(OnboardingRequirement)]),
+        () => ListBuilder<OnboardingRequirement>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(CatalogImportRowError)]),
+        () => ListBuilder<CatalogImportRowError>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(InvoiceRecordView)]),
+        () => ListBuilder<InvoiceRecordView>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(AdminRefundRow)]),
+        () => ListBuilder<AdminRefundRow>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(EnforcementSubjectMatch)]),
+        () => ListBuilder<EnforcementSubjectMatch>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ThresholdStatusEvent)]),
+        () => ListBuilder<ThresholdStatusEvent>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(FavoriteSupplier)]),
+        () => ListBuilder<FavoriteSupplier>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(OrderDeliveryVehicle)]),
+        () => ListBuilder<OrderDeliveryVehicle>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(StoreOperatingDay)]),
+        () => ListBuilder<StoreOperatingDay>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(GeoTrendPoint)]),
+        () => ListBuilder<GeoTrendPoint>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(AccountRole)]),
+        () => ListBuilder<AccountRole>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ComplianceSubmissionSummary)]),
+        () => ListBuilder<ComplianceSubmissionSummary>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(CatalogVolumeTierInput)]),
+        () => ListBuilder<CatalogVolumeTierInput>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(DocumentExport)]),
+        () => ListBuilder<DocumentExport>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(VendorOrderDeclineReason)]),
+        () => ListBuilder<VendorOrderDeclineReason>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltMap, [FullType(String), FullType(JsonObject)]),
+        () => MapBuilder<String, JsonObject>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ListingSearchResult)]),
+        () => ListBuilder<ListingSearchResult>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(PriceHistoryEntry)]),
+        () => ListBuilder<PriceHistoryEntry>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(BotStepUpErrorEnvelopeAllOfErrors)]),
+        () => ListBuilder<BotStepUpErrorEnvelopeAllOfErrors>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(OrderTimelineEvent)]),
+        () => ListBuilder<OrderTimelineEvent>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(GoogleContentAuthor)]),
+        () => ListBuilder<GoogleContentAuthor>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ProjectSummary)]),
+        () => ListBuilder<ProjectSummary>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ExportAccessRecord)]),
+        () => ListBuilder<ExportAccessRecord>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(InventoryRow)]),
+        () => ListBuilder<InventoryRow>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(PrivacyRequestSummary)]),
+        () => ListBuilder<PrivacyRequestSummary>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(VendorTeamInvitationRecord)]),
+        () => ListBuilder<VendorTeamInvitationRecord>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltMap, [FullType(String), FullType(int)]),
+        () => MapBuilder<String, int>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(FinanceKpi)]),
+        () => ListBuilder<FinanceKpi>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(AdminAnalyticsPoint)]),
+        () => ListBuilder<AdminAnalyticsPoint>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(FulfillmentArrangementVehicle)]),
+        () => ListBuilder<FulfillmentArrangementVehicle>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(OnboardingDraftVersion)]),
+        () => ListBuilder<OnboardingDraftVersion>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(SupplierResult)]),
+        () => ListBuilder<SupplierResult>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(StockConfirmationItem)]),
+        () => ListBuilder<StockConfirmationItem>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(OnboardingStepCompletion)]),
+        () => ListBuilder<OnboardingStepCompletion>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ChatHandler)]),
+        () => ListBuilder<ChatHandler>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ConversationView)]),
+        () => ListBuilder<ConversationView>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ChatQuotationChange)]),
+        () => ListBuilder<ChatQuotationChange>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(LocationSuggestion)]),
+        () => ListBuilder<LocationSuggestion>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(GeoFilterApplicability)]),
+        () => ListBuilder<GeoFilterApplicability>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(PlatformSettingVersion)]),
+        () => ListBuilder<PlatformSettingVersion>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(TaxEvidenceRow)]),
+        () => ListBuilder<TaxEvidenceRow>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(CancellationRemedy)]),
+        () => ListBuilder<CancellationRemedy>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(WorkPackageSummary)]),
+        () => ListBuilder<WorkPackageSummary>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(TaxPackage)]),
+        () => ListBuilder<TaxPackage>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ComplianceRegister)]),
+        () => ListBuilder<ComplianceRegister>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ReviewDisplayOption)]),
+        () => ListBuilder<ReviewDisplayOption>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(AnalyticsRun)]),
+        () => ListBuilder<AnalyticsRun>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltMap, [FullType(String), FullType(VendorOnboardingSection)]),
+        () => MapBuilder<String, VendorOnboardingSection>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ModerationQueueRow)]),
+        () => ListBuilder<ModerationQueueRow>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(GeoDemandCell)]),
+        () => ListBuilder<GeoDemandCell>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(DisputeClarification)]),
+        () => ListBuilder<DisputeClarification>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(DisputeTimelineEntry)]),
+        () => ListBuilder<DisputeTimelineEntry>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(VendorAnalyticsRow)]),
+        () => ListBuilder<VendorAnalyticsRow>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(FulfillmentConversationSummary)]),
+        () => ListBuilder<FulfillmentConversationSummary>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ReimbursementTimelineItem)]),
+        () => ListBuilder<ReimbursementTimelineItem>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(PlatformDocumentRef)]),
+        () => ListBuilder<PlatformDocumentRef>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(OperationFailure)]),
+        () => ListBuilder<OperationFailure>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(PhysicalPaymentRecord)]),
+        () => ListBuilder<PhysicalPaymentRecord>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(PsgcArea)]),
+        () => ListBuilder<PsgcArea>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ProjectSite)]),
+        () => ListBuilder<ProjectSite>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(Agreement)]),
+        () => ListBuilder<Agreement>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(VendorOnboardingStep)]),
+        () => ListBuilder<VendorOnboardingStep>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(CatalogCompletionStep)]),
+        () => ListBuilder<CatalogCompletionStep>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(VendorTeamActivityEnvelopeMetaCategoriesInner)]),
+        () => ListBuilder<VendorTeamActivityEnvelopeMetaCategoriesInner>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ScoreMetric)]),
+        () => ListBuilder<ScoreMetric>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(VendorAnalyticsPoint)]),
+        () => ListBuilder<VendorAnalyticsPoint>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ExploreCategoryCount)]),
+        () => ListBuilder<ExploreCategoryCount>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(InvoiceOrderLine)]),
+        () => ListBuilder<InvoiceOrderLine>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(OrderSummary)]),
+        () => ListBuilder<OrderSummary>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ListingStatusChange)]),
+        () => ListBuilder<ListingStatusChange>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltMap, [FullType(String), FullType(BuiltList, [FullType(String)])]),
+        () => MapBuilder<String, BuiltList<String>>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(OrderReservation)]),
+        () => ListBuilder<OrderReservation>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ListingImage)]),
+        () => ListBuilder<ListingImage>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(AccountSession)]),
+        () => ListBuilder<AccountSession>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(GeoDemandColumnsInner)]),
+        () => ListBuilder<GeoDemandColumnsInner>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(PublicReview)]),
+        () => ListBuilder<PublicReview>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltMap, [FullType(String), FullType(String)]),
+        () => MapBuilder<String, String>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(OrderLineQuantity)]),
+        () => ListBuilder<OrderLineQuantity>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(IntegrationStatus)]),
+        () => ListBuilder<IntegrationStatus>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(DeliveryFailure)]),
+        () => ListBuilder<DeliveryFailure>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(InventoryMovement)]),
+        () => ListBuilder<InventoryMovement>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(OrderStateRow)]),
+        () => ListBuilder<OrderStateRow>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ChatQuotationLine)]),
+        () => ListBuilder<ChatQuotationLine>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(MaterialCategoryOption)]),
+        () => ListBuilder<MaterialCategoryOption>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(OrderLine)]),
+        () => ListBuilder<OrderLine>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(EnforcementEvent)]),
+        () => ListBuilder<EnforcementEvent>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(VendorSetupDraftVehiclesInner)]),
+        () => ListBuilder<VendorSetupDraftVehiclesInner>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ApiError)]),
+        () => ListBuilder<ApiError>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(TaxAdjustment)]),
+        () => ListBuilder<TaxAdjustment>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(VendorReviewRow)]),
+        () => ListBuilder<VendorReviewRow>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(PsgcAreaOption)]),
         () => ListBuilder<PsgcAreaOption>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(BadgeState)]),
-        () => ListBuilder<BadgeState>(),
+        const FullType(BuiltList, [FullType(GeoBreadcrumb)]),
+        () => ListBuilder<GeoBreadcrumb>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(WorkPackageLineInput)]),
-        () => ListBuilder<WorkPackageLineInput>(),
+        const FullType(BuiltList, [FullType(BadgeState)]),
+        () => ListBuilder<BadgeState>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
@@ -1914,8 +2492,12 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<CartIssue>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(GooglePlacePhoto)]),
-        () => ListBuilder<GooglePlacePhoto>(),
+        const FullType(BuiltList, [FullType(PlatformSetting)]),
+        () => ListBuilder<PlatformSetting>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(VendorFinanceReviewsOpenReviewsInner)]),
+        () => ListBuilder<VendorFinanceReviewsOpenReviewsInner>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(String)]),
@@ -1950,8 +2532,8 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<RefundTimelineItem>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(CatalogReference)]),
-        () => ListBuilder<CatalogReference>(),
+        const FullType(BuiltList, [FullType(GeoDemandRowsInner)]),
+        () => ListBuilder<GeoDemandRowsInner>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(TaxCategory)]),
@@ -1962,20 +2544,8 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<CatalogVariant>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(OrderChange)]),
-        () => ListBuilder<OrderChange>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(ChatDraftLine)]),
-        () => ListBuilder<ChatDraftLine>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(VolumeTier)]),
-        () => ListBuilder<VolumeTier>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(DisputeSummary)]),
-        () => ListBuilder<DisputeSummary>(),
+        const FullType(BuiltList, [FullType(GeoChild)]),
+        () => ListBuilder<GeoChild>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(ScoreHistoryPoint)]),
@@ -1986,80 +2556,24 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<ReviewMediaLink>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(StoreHoursDay)]),
-        () => ListBuilder<StoreHoursDay>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(FulfillmentTrip)]),
-        () => ListBuilder<FulfillmentTrip>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(ChatProduct)]),
-        () => ListBuilder<ChatProduct>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(BuyerIndustryClassification)]),
-        () => ListBuilder<BuyerIndustryClassification>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(CatalogMaterialMatch)]),
-        () => ListBuilder<CatalogMaterialMatch>(),
-      )
-      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(BuyerReviewSubmitRequestProductReviewsInner)]),
         () => ListBuilder<BuyerReviewSubmitRequestProductReviewsInner>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(NotificationItem)]),
-        () => ListBuilder<NotificationItem>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(ComparableSpecificationAttributesInner)]),
-        () => ListBuilder<ComparableSpecificationAttributesInner>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(CartVendorGroup)]),
-        () => ListBuilder<CartVendorGroup>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(BadgeStateScopesInner)]),
-        () => ListBuilder<BadgeStateScopesInner>(),
+        const FullType(BuiltList, [FullType(FixedSetting)]),
+        () => ListBuilder<FixedSetting>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltSet, [FullType(String)]),
         () => SetBuilder<String>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(AdminScoreRow)]),
-        () => ListBuilder<AdminScoreRow>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(ChatAttachment)]),
-        () => ListBuilder<ChatAttachment>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(DisputeSanctionInput)]),
-        () => ListBuilder<DisputeSanctionInput>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(DeliveryEstimateOption)]),
-        () => ListBuilder<DeliveryEstimateOption>(),
-      )
-      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(GooglePlaceReview)]),
         () => ListBuilder<GooglePlaceReview>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(BuyerLocation)]),
-        () => ListBuilder<BuyerLocation>(),
-      )
-      ..addBuilderFactory(
         const FullType(BuiltList, [FullType.nullable(JsonObject)]),
         () => ListBuilder<JsonObject>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(OnboardingRequirement)]),
-        () => ListBuilder<OnboardingRequirement>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(CheckoutChildOrder)]),
@@ -2074,40 +2588,12 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<ChatQuotationVersion>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(CatalogImportRowError)]),
-        () => ListBuilder<CatalogImportRowError>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(InvoiceRecordView)]),
-        () => ListBuilder<InvoiceRecordView>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(AdminRefundRow)]),
-        () => ListBuilder<AdminRefundRow>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(ThresholdStatusEvent)]),
-        () => ListBuilder<ThresholdStatusEvent>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(FavoriteSupplier)]),
-        () => ListBuilder<FavoriteSupplier>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(OrderDeliveryVehicle)]),
-        () => ListBuilder<OrderDeliveryVehicle>(),
-      )
-      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(CancellationPlanPayment)]),
         () => ListBuilder<CancellationPlanPayment>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(StaleListing)]),
         () => ListBuilder<StaleListing>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(StoreOperatingDay)]),
-        () => ListBuilder<StoreOperatingDay>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(BadgeMetric)]),
@@ -2118,44 +2604,12 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<RankingComponent>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(AccountRole)]),
-        () => ListBuilder<AccountRole>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(ComplianceSubmissionSummary)]),
-        () => ListBuilder<ComplianceSubmissionSummary>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(CatalogVolumeTierInput)]),
-        () => ListBuilder<CatalogVolumeTierInput>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(DocumentExport)]),
-        () => ListBuilder<DocumentExport>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(VendorOrderDeclineReason)]),
-        () => ListBuilder<VendorOrderDeclineReason>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltMap, [FullType(String), FullType(JsonObject)]),
-        () => MapBuilder<String, JsonObject>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(ListingSearchResult)]),
-        () => ListBuilder<ListingSearchResult>(),
+        const FullType(BuiltList, [FullType(ScheduledTaskHealth)]),
+        () => ListBuilder<ScheduledTaskHealth>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(CatalogAttributeDefinition)]),
         () => ListBuilder<CatalogAttributeDefinition>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(PriceHistoryEntry)]),
-        () => ListBuilder<PriceHistoryEntry>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(BotStepUpErrorEnvelopeAllOfErrors)]),
-        () => ListBuilder<BotStepUpErrorEnvelopeAllOfErrors>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(FulfillmentStep)]),
@@ -2166,24 +2620,12 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<CatalogVolumeTier>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(OrderTimelineEvent)]),
-        () => ListBuilder<OrderTimelineEvent>(),
-      )
-      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(VendorFinanceNotice)]),
         () => ListBuilder<VendorFinanceNotice>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(GoogleContentAuthor)]),
-        () => ListBuilder<GoogleContentAuthor>(),
-      )
-      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(ListingVariantOffer)]),
         () => ListBuilder<ListingVariantOffer>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(ProjectSummary)]),
-        () => ListBuilder<ProjectSummary>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(AutoAcceptPolicyVersion)]),
@@ -2198,16 +2640,8 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<ChannelFeeVersion>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(ExportAccessRecord)]),
-        () => ListBuilder<ExportAccessRecord>(),
-      )
-      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(PublicBadge)]),
         () => ListBuilder<PublicBadge>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(InventoryRow)]),
-        () => ListBuilder<InventoryRow>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(OrderVolumeTier)]),
@@ -2216,18 +2650,6 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(GooglePlaceAttribute)]),
         () => ListBuilder<GooglePlaceAttribute>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(VendorTeamInvitationRecord)]),
-        () => ListBuilder<VendorTeamInvitationRecord>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltMap, [FullType(String), FullType(int)]),
-        () => MapBuilder<String, int>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(AdminAnalyticsPoint)]),
-        () => ListBuilder<AdminAnalyticsPoint>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(CatalogBlocker)]),
@@ -2254,10 +2676,6 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<DeliveryVehicleSelection>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(FulfillmentArrangementVehicle)]),
-        () => ListBuilder<FulfillmentArrangementVehicle>(),
-      )
-      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(AccountAdministrator)]),
         () => ListBuilder<AccountAdministrator>(),
       )
@@ -2268,10 +2686,6 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(DisputeRemedy)]),
         () => ListBuilder<DisputeRemedy>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(OnboardingDraftVersion)]),
-        () => ListBuilder<OnboardingDraftVersion>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(PublicStoreSummary)]),
@@ -2286,83 +2700,40 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<CatalogVariantInput>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(SupplierResult)]),
-        () => ListBuilder<SupplierResult>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(StockConfirmationItem)]),
-        () => ListBuilder<StockConfirmationItem>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(OnboardingStepCompletion)]),
-        () => ListBuilder<OnboardingStepCompletion>(),
-      )
-      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(DisputeAffectedLine)]),
         () => ListBuilder<DisputeAffectedLine>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(ChatHandler)]),
-        () => ListBuilder<ChatHandler>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(ConversationView)]),
-        () => ListBuilder<ConversationView>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(ChatQuotationChange)]),
-        () => ListBuilder<ChatQuotationChange>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(LocationSuggestion)]),
-        () => ListBuilder<LocationSuggestion>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(ComparableVariant)]),
         () => ListBuilder<ComparableVariant>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(CancellationRemedy)]),
-        () => ListBuilder<CancellationRemedy>(),
+        const FullType(BuiltList, [FullType(PrivacyHandler)]),
+        () => ListBuilder<PrivacyHandler>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(int)]),
         () => ListBuilder<int>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(WorkPackageSummary)]),
-        () => ListBuilder<WorkPackageSummary>(),
+        const FullType(BuiltList, [FullType(BudgetOverrideRecord)]),
+        () => ListBuilder<BudgetOverrideRecord>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(TaxPackage)]),
-        () => ListBuilder<TaxPackage>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(ComplianceRegister)]),
-        () => ListBuilder<ComplianceRegister>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(ReviewDisplayOption)]),
-        () => ListBuilder<ReviewDisplayOption>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(AnalyticsRun)]),
-        () => ListBuilder<AnalyticsRun>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltMap, [FullType(String), FullType(VendorOnboardingSection)]),
-        () => MapBuilder<String, VendorOnboardingSection>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(ModerationQueueRow)]),
-        () => ListBuilder<ModerationQueueRow>(),
+        const FullType(BuiltList, [FullType(AuditEvent)]),
+        () => ListBuilder<AuditEvent>(),
       )
       ..add(AdminAnalyticsRow.serializer)
+      ..add(AuditEvent.serializer)
       ..add(BuyerAnalyticsRow.serializer)
+      ..add(EnforcementSummary.serializer)
+      ..add(PrivacyRequestSummary.serializer)
+      ..add(SubjectReview.serializer)
       ..add(SuccessEnvelope.serializer)
       ..add(VendorAnalyticsRow.serializer)
       ..add(const OneOfSerializer())
       ..add(const AnyOfSerializer())
+      ..add(_BooleanConstSerializer<ActivationRestrictionsOverrideAvailableEnum>(ActivationRestrictionsOverrideAvailableEnum.false_, false))
       ..add(_BooleanConstSerializer<AdminInvitationRequestTermsAcceptedEnum>(AdminInvitationRequestTermsAcceptedEnum.true_, true))
       ..add(_BooleanConstSerializer<AdminInvitationRequestPrivacyAcceptedEnum>(AdminInvitationRequestPrivacyAcceptedEnum.true_, true))
       ..add(_BooleanConstSerializer<AutoAcceptPolicyDetailScopeItemBasedOnlyEnum>(AutoAcceptPolicyDetailScopeItemBasedOnlyEnum.true_, true))

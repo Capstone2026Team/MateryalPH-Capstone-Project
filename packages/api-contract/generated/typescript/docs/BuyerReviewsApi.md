@@ -22,7 +22,7 @@ All URIs are relative to */api/v1*
 
 
 
-Up to three photos on your Product Review while it can still be edited.
+Up to three photos or videos on your Product Review while it can still be edited. JPG/PNG up to 10 MB; MP4/MOV up to 100 MB. Content validated and scanned before private storage.
 
 ### Example
 
@@ -46,7 +46,7 @@ async function example() {
     reviewId: '38400000-8cf0-11bd-b23e-10b96e4ef00d',
     // string
     idempotencyKey: '38400000-8cf0-11bd-b23e-10b96e4ef00d',
-    // Array<Blob> | JPG or PNG, content-validated and scanned fail-closed.
+    // Array<Blob> | JPG/PNG up to 10 MB or MP4/MOV up to 100 MB, content-validated and scanned fail-closed.
     files: [new Blob(['example file content'], { type: 'application/octet-stream' })],
   } satisfies AddBuyerReviewMediaRequest;
 
@@ -69,7 +69,7 @@ example().catch(console.error);
 |------------- | ------------- | ------------- | -------------|
 | **reviewId** | `string` |  | [Defaults to `undefined`] |
 | **idempotencyKey** | `string` |  | [Defaults to `undefined`] |
-| **files** | `Array<Blob>` | JPG or PNG, content-validated and scanned fail-closed. | |
+| **files** | `Array<Blob>` | JPG/PNG up to 10 MB or MP4/MOV up to 100 MB, content-validated and scanned fail-closed. | |
 
 ### Return type
 
@@ -320,13 +320,13 @@ example().catch(console.error);
 ### HTTP request headers
 
 - **Content-Type**: Not defined
-- **Accept**: `image/png`, `image/jpeg`, `application/json`
+- **Accept**: `image/png`, `image/jpeg`, `video/mp4`, `video/quicktime`, `application/json`
 
 
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **200** | Review photo bytes for a signed, unexpired link and an authorized caller. |  -  |
+| **200** | Review media bytes for a signed, unexpired link and an authorized caller. |  -  |
 | **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 | **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 | **404** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |

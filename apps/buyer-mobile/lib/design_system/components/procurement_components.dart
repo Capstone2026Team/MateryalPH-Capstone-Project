@@ -602,11 +602,12 @@ class PillSearchField extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
+                          fontSize: 14,
                           fontWeight: hasText
                               ? FontWeight.w600
                               : FontWeight.w400,
                           color: hasText ? BuyerTheme.ink : BuyerTheme.muted,
-                        ),
+                        ).merge(textStyle),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -633,15 +634,17 @@ class PillSearchField extends StatelessWidget {
       style: textStyle ?? const TextStyle(fontWeight: FontWeight.w600),
       decoration: InputDecoration(
         hintText: hintText,
+        hintStyle: const TextStyle(color: BuyerTheme.muted),
         counterText: '',
         isDense: true,
-        contentPadding: const EdgeInsets.fromLTRB(18, 14, 8, 14),
+        contentPadding: const EdgeInsets.fromLTRB(18, 12, 8, 12),
         border: _shape,
         enabledBorder: _shape,
         focusedBorder: _shape.copyWith(
           borderSide: const BorderSide(color: BuyerTheme.action, width: 2),
         ),
         suffixIcon: IconButton(
+          iconSize: 20,
           tooltip: onClear == null ? 'Search' : 'Clear search',
           onPressed: onClear ?? onSearch,
           icon: Icon(
@@ -1047,6 +1050,38 @@ class SpecificationRow extends StatelessWidget {
           ),
         ),
       ],
+    ),
+  );
+}
+
+class ProcurementReviewCard extends StatelessWidget {
+  const ProcurementReviewCard({
+    super.key,
+    required this.children,
+    this.padding = const EdgeInsets.all(12),
+  });
+
+  final List<Widget> children;
+  final EdgeInsets padding;
+
+  // A Material (not a coloured box) so list tiles and ink inside stay visible.
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: Material(
+      color: Colors.white,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: const BorderSide(color: BuyerTheme.border),
+      ),
+      child: Padding(
+        padding: padding,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: children,
+        ),
+      ),
     ),
   );
 }

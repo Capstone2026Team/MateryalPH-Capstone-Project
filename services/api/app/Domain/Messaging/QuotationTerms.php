@@ -13,6 +13,7 @@ use App\Domain\Orders\NrpcTerms;
 use App\Domain\Orders\OrderDeliveryPlanner;
 use App\Domain\Orders\OrderEligibility;
 use App\Domain\Payments\PaymentMethodPolicy;
+use App\Domain\Settings\PlatformSettings;
 use App\Domain\Vendors\ConfirmedDeliverySnapshot;
 use App\Domain\Vendors\DeliveryRecommendationService;
 use App\Models\User;
@@ -27,6 +28,8 @@ final class QuotationTerms
      * @return array<string, mixed> */
     public function validate(array $input): array
     {
+        $limits = (array) PlatformSettings::current()->value('quotations.deadline_limits');
+
         return Validator::make($input, [
             'lines' => ['required', 'array', 'min:1', 'max:100'],
             'lines.*.variant_id' => ['required', 'uuid', 'distinct'],
@@ -36,7 +39,7 @@ final class QuotationTerms
             'lines.*.specifications.*' => ['string', 'max:200'],
             'fulfillment_method' => ['required', 'in:PICKUP,DELIVERY'], 'payment_method' => ['required', 'in:ONLINE,CASH_ON_DELIVERY,IN_STORE'],
             'fulfillment_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:'.now('Asia/Manila')->toDateString()],
-            'deadline_hours' => ['sometimes', 'integer', 'between:1,72'], 'vendor_discount_centavos' => ['sometimes', 'integer', 'min:0'],
+            'deadline_hours' => ['sometimes', 'integer', 'between:'.(int) $limits['min_hours'].','.(int) $limits['max_hours']], 'vendor_discount_centavos' => ['sometimes', 'integer', 'min:0'],
             'delivery' => ['nullable', 'array'], 'delivery.vehicles' => ['required_if:fulfillment_method,DELIVERY', 'array', 'min:1', 'max:20'],
             'delivery.vehicles.*.vehicle_id' => ['required', 'uuid'], 'delivery.vehicles.*.number_of_vehicles' => ['required', 'integer', 'min:1'],
             'delivery.vehicles.*.total_vehicle_trips' => ['required', 'integer', 'min:1'], 'delivery.vehicles.*.group_key' => ['sometimes', 'string', 'max:40'],

@@ -1,9 +1,15 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { NotificationsApi, ReportingApi, type NotificationItem, type NotificationPreference, type DocumentExport, type DocumentExportInput } from '@materyalph/api-client-ts'
-import { Bell, Download, FileText, Settings2 } from 'lucide-react'
+import { PageHeader, FilterTabs } from './page-patterns'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { NotificationsApi, ReportingApi, type DocumentExport, type DocumentExportInput } from '@materyalph/api-client-ts'
+import { Download } from 'lucide-react'
 import { createWebApiConfiguration } from './web-api-session'
 import { Button } from './button'
 import { useAutomaticRefresh } from './use-automatic-refresh'
+import { NotificationInbox, type NotificationInboxWatcher } from './notification-inbox'
+import { notificationError } from './notification-error'
+import { NotificationPreferencesDialog } from './notification-preferences-dialog'
+
+export { notificationError } from './notification-error'
 
 export type NotificationAudience = 'vendor' | 'admin'
 
@@ -11,45 +17,19 @@ function accessRevoked(error: unknown): boolean {
   return Boolean(error && typeof error === 'object' && 'response' in error && error.response instanceof Response && [401, 403].includes(error.response.status))
 }
 
-export async function notificationError(error: unknown): Promise<string> {
-  if (error && typeof error === 'object' && 'response' in error && error.response instanceof Response) {
-    try {
-      const body: unknown = await error.response.clone().json()
-      if (body && typeof body === 'object' && 'errors' in body && Array.isArray(body.errors)) {
-        const first: unknown = body.errors[0]
-        if (first && typeof first === 'object' && 'message' in first && typeof first.message === 'string') return first.message
-      }
-    } catch { /* Use the safe network message below. */ }
-  }
-  return 'This request could not be completed. Check your connection and try again.'
-}
-
-export function NotificationsWorkspace({ basePath, audience, navigate, enablePush }: { basePath: string; audience: NotificationAudience; navigate: (path: string) => void; enablePush?: () => Promise<void> }) {
+export function NotificationsWorkspace({ basePath, audience, navigate, enablePush, watchUpdates, headerActions }: { basePath: string; audience: NotificationAudience; navigate: (path: string) => void; enablePush?: () => Promise<void>; watchUpdates?: NotificationInboxWatcher; headerActions?: ReactNode }) {
   const api = useMemo(() => new NotificationsApi(createWebApiConfiguration(basePath, { refreshSession: true })), [basePath])
-  const [tab, setTab] = useState<'inbox' | 'preferences' | 'reports'>(() => new URLSearchParams(window.location.search).get('tab') === 'reports' ? 'reports' : 'inbox')
-  const [items, setItems] = useState<NotificationItem[]>([])
-  const [preferences, setPreferences] = useState<NotificationPreference[]>([])
-  const [cursor, setCursor] = useState<string | undefined>()
+  const [tab, setTab] = useState<'inbox' | 'reports'>(() => new URLSearchParams(window.location.search).get('tab') === 'reports' ? 'reports' : 'inbox')
+  const [preferencesOpen, setPreferencesOpen] = useState(false)
   const [busy, setBusy] = useState(false)
-  const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState('')
-  const [status, setStatus] = useState('')
-  const load = useCallback(async (next?: string) => {
-    setBusy(true); setError('')
-    try {
-      const result = await api.listNotifications({ audience, ...(next ? { cursor: next } : {}) })
-      setItems(old => next ? [...old, ...result.data] : result.data)
-      setCursor(typeof result.meta.next_cursor === 'string' ? result.meta.next_cursor : undefined)
-      setLoaded(true)
-    } catch (cause) { if (accessRevoked(cause)) { setItems([]); setCursor(undefined); setLoaded(true) }; setError(await notificationError(cause)) } finally { setBusy(false) }
-  }, [api, audience])
-  useEffect(() => { void load() }, [load])
-  useAutomaticRefresh(load, { enabled: tab === 'inbox' && !busy })
   const open = useCallback(async (id: string) => {
     setBusy(true); setError('')
     try {
       const result = await api.resolveNotification({ audience, noticeId: id })
       await api.readNotification({ audience, noticeId: id })
+      window.dispatchEvent(new CustomEvent('materyalph:notification-read', { detail: { id, audience } }))
+      window.dispatchEvent(new Event('materyalph:navigation-updates'))
       if (!result.data.path.startsWith('/') || result.data.path.startsWith('//')) throw new Error('Invalid target')
       navigate(result.data.path)
     } catch (cause) { setError(await notificationError(cause)) } finally { setBusy(false) }
@@ -58,37 +38,12 @@ export function NotificationsWorkspace({ basePath, audience, navigate, enablePus
     const notice = new URLSearchParams(window.location.search).get('notice')
     if (notice && /^[0-9a-f-]{36}$/i.test(notice)) void open(notice)
   }, [open])
-  async function showPreferences() {
-    setTab('preferences'); setBusy(true); setError('')
-    try { setPreferences((await api.getNotificationPreferences({ audience })).data) }
-    catch (cause) { setError(await notificationError(cause)) } finally { setBusy(false) }
-  }
-  async function change(preference: NotificationPreference, channel: 'inApp' | 'email' | 'push', enabled: boolean) {
-    setBusy(true); setError(''); setStatus('')
-    try {
-      const result = await api.updateNotificationPreference({ audience, notificationPreferenceInput: { category: preference.category, inApp: preference.inApp, email: preference.email, push: preference.push, [channel]: enabled } })
-      setPreferences(result.data); setStatus('Notification preferences saved.')
-    } catch (cause) { setError(await notificationError(cause)) } finally { setBusy(false) }
-  }
   return <section className="grid gap-6" aria-busy={busy}>
-    <header><h1 className="text-2xl font-semibold text-text-strong">Notifications</h1><p className="mt-2 text-sm text-text-secondary">Updates that need your attention, with secure links to your work.</p></header>
-    <nav aria-label="Notification sections" className="flex flex-wrap gap-2 border-b border-border-default pb-3">
-      <Button variant={tab === 'inbox' ? 'primary' : 'secondary'} onClick={() => setTab('inbox')}><Bell size={16} aria-hidden="true" />Inbox</Button>
-      <Button variant={tab === 'preferences' ? 'primary' : 'secondary'} onClick={() => void showPreferences()}><Settings2 size={16} aria-hidden="true" />Preferences</Button>
-      <Button variant={tab === 'reports' ? 'primary' : 'secondary'} onClick={() => setTab('reports')}><FileText size={16} aria-hidden="true" />Documents & exports</Button>
-    </nav>
-    {error && <div role="alert" className="grid gap-2 rounded-surface border border-border-default bg-surface-primary p-4"><p>{error}</p><Button variant="secondary" onClick={() => void (tab === 'preferences' ? showPreferences() : load())}>Retry</Button></div>}
-    {status && <p role="status">{status}</p>}
-    {tab === 'inbox' && <div className="rounded-surface border border-border-default bg-surface-primary">
-      <div className="flex items-center justify-between gap-3 border-b border-border-default p-4"><h2 className="font-semibold">Your inbox</h2><Button variant="secondary" disabled={busy} onClick={() => void load()}>Refresh</Button></div>
-      {!loaded && busy ? <p role="status" className="p-6">Loading notifications…</p> : loaded && !items.length ? <div className="p-6"><h3 className="font-semibold">You’re up to date</h3><p className="mt-2 text-sm text-text-secondary">New account and transaction updates will appear here. You can review your preferences above.</p></div> : <ul className="divide-y divide-border-default">{items.map(item => <li key={item.id} className="p-4 sm:p-5"><div className="flex flex-wrap items-center gap-2"><h3 className="font-semibold">{item.title}</h3>{!item.readAt && <span className="text-xs font-semibold text-action-primary">Unread</span>}{item.mandatory && <span className="text-xs text-text-secondary">Required notice</span>}</div><p className="mt-2 text-sm text-text-secondary">{item.body}</p><div className="mt-3 flex flex-wrap items-center justify-between gap-3"><time className="text-xs text-text-secondary" dateTime={item.createdAt}>{new Date(item.createdAt).toLocaleString('en-PH', { timeZone: 'Asia/Manila' })} · Manila</time><Button variant="secondary" disabled={busy} onClick={() => void open(item.id)}>View details<span className="sr-only">: {item.title}</span></Button></div></li>)}</ul>}
-      {cursor && <div className="p-4"><Button variant="secondary" disabled={busy} onClick={() => void load(cursor)}>Load more</Button></div>}
-    </div>}
-    {tab === 'preferences' && <div className="rounded-surface border border-border-default bg-surface-primary p-5">
-      <h2 className="text-lg font-semibold">Delivery preferences</h2><p className="mt-2 text-sm text-text-secondary">Push also depends on this browser’s permission. You can always read required updates in your inbox.</p>
-      {enablePush && <Button className="mt-4" variant="secondary" disabled={busy} onClick={() => { setBusy(true); void enablePush().then(() => setStatus('Push notifications enabled on this browser.')).catch(async cause => setError(await notificationError(cause))).finally(() => setBusy(false)) }}>Enable browser notifications</Button>}
-      <div className="mt-5 divide-y divide-border-default">{preferences.map(p => <section key={p.category} className="py-4"><h3 className="font-semibold">{p.category.toLowerCase().replaceAll('_', ' ')}</h3><p className="mt-1 text-sm text-text-secondary">{p.explanation}</p>{p.mandatory ? <p className="mt-2 text-sm font-medium">Always enabled · In-app, email and registered push devices</p> : <div className="mt-3 flex flex-wrap gap-4">{(['inApp', 'email', 'push'] as const).map(channel => <label key={channel} className="inline-flex min-h-11 items-center gap-2"><input type="checkbox" checked={p[channel]} disabled={busy} onChange={event => void change(p, channel, event.target.checked)} />{channel === 'inApp' ? 'In-app' : channel === 'email' ? 'Email' : 'Push'}</label>)}</div>}</section>)}</div>
-    </div>}
+    <PageHeader eyebrow={audience === 'vendor' ? 'Vendor Portal' : 'Admin Portal'} title="Notifications" description="Updates that need your attention, with secure links to your work." actions={headerActions} />
+    <FilterTabs appearance="tabs" label="Notification sections" value={tab} chips={[{ value: 'inbox', label: 'Inbox' }, { value: 'reports', label: 'Documents & exports' }]} onChange={value => setTab(value === 'reports' ? 'reports' : 'inbox')} />
+    {error && <div role="alert" className="grid gap-2 rounded-surface border border-border-default bg-surface-primary p-4"><p>{error}</p><Button variant="secondary" onClick={() => { setError(''); window.dispatchEvent(new Event('materyalph:notifications-refresh')) }}>Retry</Button></div>}
+    {tab === 'inbox' && <NotificationInbox api={api} audience={audience} disabled={busy} onOpen={open} onPreferences={() => setPreferencesOpen(true)} {...(watchUpdates ? { watchUpdates } : {})} />}
+    {preferencesOpen && <NotificationPreferencesDialog api={api} audience={audience} onClose={() => setPreferencesOpen(false)} {...(enablePush ? { enablePush } : {})} />}
     {tab === 'reports' && <DocumentExportWorkspace basePath={basePath} audience={audience} />}
   </section>
 }

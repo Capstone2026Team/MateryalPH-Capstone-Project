@@ -8,6 +8,7 @@ import '../item_procurement/procurement_models.dart' show formatManilaTimestamp;
 import '../map_discovery/discovery_models.dart';
 import '../map_discovery/discovery_repository.dart' show newIdempotencyKey;
 import 'reviews_repository.dart';
+import 'review_media_section.dart';
 import 'trust_models.dart';
 
 const _reasons = {
@@ -172,6 +173,13 @@ class _ListingReviewsSectionState extends State<ListingReviewsSection> {
                   StarRatingLine(
                     label: 'Product Quality',
                     value: review.ratings.productQuality!,
+                  ),
+                if (review.media.isNotEmpty)
+                  ReviewMediaSection(
+                    repository: widget.repository,
+                    reviewId: review.id,
+                    media: review.media,
+                    onRefresh: _load,
                   ),
                 if (review.comment != null)
                   Padding(

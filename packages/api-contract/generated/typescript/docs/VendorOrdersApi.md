@@ -339,7 +339,7 @@ example().catch(console.error);
 
 ## listVendorOrders
 
-> OrderListEnvelope listVendorOrders(group, q, page)
+> OrderListEnvelope listVendorOrders(group, closedState, q, page)
 
 
 
@@ -365,6 +365,8 @@ async function example() {
   const body = {
     // 'ALL' | 'NEW' | 'WAITING_ON_BUYER' | 'AWAITING_PAYMENT' | 'CONFIRMED' | 'CLOSED' (optional)
     group: group_example,
+    // 'COMPLETED' | 'DECLINED' | 'EXPIRED' | 'CANCELLED' | Only valid with group CLOSED. Filters before pagination; group counts remain unfiltered. (optional)
+    closedState: closedState_example,
     // string (optional)
     q: q_example,
     // number (optional)
@@ -389,6 +391,7 @@ example().catch(console.error);
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
 | **group** | `ALL`, `NEW`, `WAITING_ON_BUYER`, `AWAITING_PAYMENT`, `CONFIRMED`, `CLOSED` |  | [Optional] [Defaults to `undefined`] [Enum: ALL, NEW, WAITING_ON_BUYER, AWAITING_PAYMENT, CONFIRMED, CLOSED] |
+| **closedState** | `COMPLETED`, `DECLINED`, `EXPIRED`, `CANCELLED` | Only valid with group CLOSED. Filters before pagination; group counts remain unfiltered. | [Optional] [Defaults to `undefined`] [Enum: COMPLETED, DECLINED, EXPIRED, CANCELLED] |
 | **q** | `string` |  | [Optional] [Defaults to `undefined`] |
 | **page** | `number` |  | [Optional] [Defaults to `undefined`] |
 

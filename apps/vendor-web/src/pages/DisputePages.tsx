@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Download, FileDown, Gavel, Handshake, Info, Paperclip, RefreshCw, Scale, Search, Send, ShieldAlert } from 'lucide-react'
+import { ArrowLeft, Download, FileDown, Gavel, Handshake, Info, Paperclip, RefreshCw, Scale, Send, ShieldAlert, Upload } from 'lucide-react'
 import {
-  Button, ConfirmDialog, DisputeDeadlines, DisputeStatusBadge, DisputeTimeline, FilterChips, OriginalPaymentMethodNotice, RefundTimeline, ResponsiveRecordList, StatusBadge, StatusMessage,
+  Button, ConfirmDialog, DisputeDeadlines, DisputeStatusBadge, DisputeTimeline, FileSelectionReview, FormDialog, FilterTabs, Toolbar, InfoNote, EmptyState, PageHeader as SharedPageHeader, OriginalPaymentMethodNotice, RefundTimeline, ResponsiveRecordList, StatusBadge, StatusMessage,
   disputeIssueLabel, disputeRemedyLabel, disputeRoleLabel, formatManilaDateTime, formatPesoCentavos, type RecordColumn,
 } from '@materyalph/web-ui'
 import {
@@ -77,18 +77,13 @@ function DisputesWorkspace({ canExport }: { canExport: boolean }) {
     { key: 'action', header: 'Action', cell: row => <Link to={`/disputes/${row.id}`} className="inline-flex min-h-11 items-center justify-center rounded-control border border-border-default bg-surface-primary px-4 text-sm font-semibold hover:bg-surface-canvas">Open case</Link> },
   ]
   return <div className="grid min-w-0 gap-6">
-    <PageHeader eyebrow="Store Operations" title="Disputes & Appeals" description="Respond within 48 hours, agree a remedy within 72 hours, answer MateryalPH's clarification requests and follow decided remedies. Filing a case never creates a refund; refunds return only to the Buyer's original payment method." />
-    <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-      <FilterChips label="Filter cases" value={group} onChange={value => update({ group: value })} chips={GROUPS.map(item => ({ value: item.value, label: item.label, count: meta?.counts?.[item.value] }))} />
-      <form role="search" className="flex min-w-0 gap-2 lg:w-96" onSubmit={(event: FormEvent) => { event.preventDefault(); update({ q: query.trim() }) }}>
-        <label htmlFor="case-search" className="sr-only">Search by Case ID or Order ID</label>
-        <input id="case-search" className={control} value={query} maxLength={120} placeholder="Case ID or Order ID" onChange={event => setQuery(event.target.value)} />
-        <Button type="submit" variant="secondary" aria-label="Search cases"><Search size={16} aria-hidden="true" /></Button>
-      </form>
-    </div>
+    <PageHeader eyebrow="Store Operations" title="Disputes & Appeals" description="Track cases, respond to requests and follow agreed or decided remedies." />
+    <InfoNote>Respond within 48 hours, agree a remedy within 72 hours, answer MateryalPH's clarification requests and follow decided remedies. Filing a case never creates a refund; refunds return only to the Buyer's original payment method.</InfoNote>
+    <FilterTabs label="Filter cases" value={group} onChange={value => update({ group: value })} chips={GROUPS.map(item => ({ value: item.value, label: item.label, count: meta?.counts?.[item.value] }))} />
+    <Toolbar search={{ label: 'Search by Case ID or Order ID', placeholder: 'Case ID or Order ID', value: query, onChange: setQuery, maxLength: 120, onSubmit: event => { event.preventDefault(); update({ q: query.trim() }) } }} />
     {error ? <ErrorState message={error} onRetry={() => setAttempt(value => value + 1)} />
       : rows === null ? <div className="grid gap-3" aria-busy="true" aria-label="Loading cases">{[0, 1, 2].map(index => <div key={index} className="h-20 animate-pulse rounded-surface bg-surface-canvas motion-reduce:animate-none" />)}</div>
-        : rows.length === 0 ? <div className="grid justify-items-center gap-2 rounded-surface border border-dashed border-border-default bg-surface-primary px-6 py-12 text-center"><Scale size={22} aria-hidden="true" /><p className="font-semibold">No cases here.</p><p className="max-w-md text-sm text-text-secondary">{q ? `No case matches “${q}”.` : 'Cases filed by Buyers or by your store appear here with their deadlines.'}</p></div>
+        : rows.length === 0 ? <EmptyState icon={<Scale size={24} aria-hidden="true" />} message={q ? `No case matches “${q}”.` : 'No cases in this view.'} action={<Button variant="secondary" onClick={() => { setQuery(''); update({ group: 'ALL', q: '' }) }}>View all cases</Button>} />
           : <div className="grid gap-3"><ResponsiveRecordList caption="Cases" rows={rows} columns={columns} rowKey={row => row.id} cardTitle={row => <CaseIdentity row={row} />} cardAction={row => <Link to={`/disputes/${row.id}`} className="inline-flex min-h-11 items-center font-semibold text-action-primary">Open case</Link>} />
             {meta && meta.total !== undefined && meta.perPage !== undefined && meta.total > meta.perPage && <nav aria-label="Case pages" className="flex flex-wrap items-center justify-between gap-3 text-sm"><span className="text-text-secondary">Page {meta.page} · {meta.total} cases</span>
               <span className="flex gap-2"><Button variant="secondary" disabled={page <= 1} onClick={() => update({ page: String(page - 1) })}>Previous</Button><Button variant="secondary" disabled={!meta.hasMore} onClick={() => update({ page: String(page + 1) })}>Next</Button></span></nav>}
@@ -152,15 +147,8 @@ function DisputeWorkspace({ caseId }: { caseId: string }) {
   const actions = new Set(detail.availableActions)
   return <div className="grid min-w-0 gap-6">
     <BackLink />
-    <div className="flex flex-col gap-4 border-b border-border-default pb-6 lg:flex-row lg:items-end lg:justify-between">
-      <div className="min-w-0 max-w-3xl">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-action-primary">Case</p>
-        <div className="mt-2 flex flex-wrap items-center gap-3"><h1 className="break-all text-3xl font-semibold tracking-tight">{detail.reference}</h1><DisputeStatusBadge status={detail.status} /></div>
-        <p className="mt-2 text-text-secondary">{disputeIssueLabel(detail.issueType)} · requested {disputeRemedyLabel(detail.requestedRemedy).toLowerCase()}{detail.requestedAmountCentavos ? ` of ${formatPesoCentavos(detail.requestedAmountCentavos)}` : ''} · {detail.caseKind === 'POST_COMPLETION_RETURN' ? 'post-completion return' : 'transaction case'}</p>
-      </div>
-      <div className="flex flex-wrap gap-3"><Link to={`/orders/${detail.order.id}`} className="inline-flex min-h-11 items-center rounded-control border border-border-default bg-surface-primary px-4 text-sm font-semibold hover:bg-surface-canvas">Order {detail.order.reference}</Link>
-        <Button variant="secondary" onClick={reload}><RefreshCw size={16} aria-hidden="true" />Refresh</Button></div>
-    </div>
+    <SharedPageHeader eyebrow="Case" title={detail.reference} status={<DisputeStatusBadge status={detail.status} />} description={`${disputeIssueLabel(detail.issueType)} · ${detail.caseKind === 'POST_COMPLETION_RETURN' ? 'Post-completion return' : 'Transaction case'}`} actions={<><Link to={`/orders/${detail.order.id}`} className="inline-flex min-h-11 items-center rounded-control border border-border-default bg-surface-primary px-4 text-sm font-semibold">Order {detail.order.reference}</Link><Button variant="secondary" onClick={reload}><RefreshCw size={16} aria-hidden="true" />Refresh</Button></>} />
+    <p className="text-sm text-text-secondary">Requested {disputeRemedyLabel(detail.requestedRemedy).toLowerCase()}{detail.requestedAmountCentavos ? ` of ${formatPesoCentavos(detail.requestedAmountCentavos)}` : ''}</p>
     {notice && <StatusMessage tone={notice.tone}>{notice.text}</StatusMessage>}
     <DisputeDeadlines deadlines={detail.deadlines} onExpire={reload} partyNote={deadline => deadline.responsibleParty === 'VENDOR' ? 'Your store must act before this time.' : deadline.responsibleParty === 'BUYER' ? 'Waiting for the Buyer.' : deadline.kind === 'APPEAL' ? 'Either party may appeal once until this time.' : 'Both parties may act until this time.'} />
     {detail.limitedView && <StatusMessage tone="info">You can see this case because its order is assigned to you. You can add fulfillment evidence only; the Owner, Store Manager and permitted staff handle the case.</StatusMessage>}
@@ -242,11 +230,22 @@ function useSubmission() {
   return { busy, error, setError, run }
 }
 
-function FilePicker({ id, label, files, onChange, max = 5 }: { id: string; label: string; files: File[]; onChange: (files: File[]) => void; max?: number }) {
-  return <div className="grid gap-2">
+function FilePicker({ id, label, files, onChange, max = 5, disabled = false }: { id: string; label: string; files: File[]; onChange: (files: File[]) => void; max?: number; disabled?: boolean }) {
+  const input = useRef<HTMLInputElement>(null)
+  return <div className="grid min-w-0 gap-3">
     <label htmlFor={id} className="text-sm font-semibold">{label}</label>
-    <input id={id} type="file" multiple={max > 1} accept="image/png,image/jpeg,application/pdf" className="min-h-12 w-full min-w-0 text-sm" onChange={event => onChange(Array.from(event.target.files ?? []).slice(0, max))} />
-    <p className="text-xs text-text-secondary">JPG, PNG or PDF, up to {max} file{max === 1 ? '' : 's'}. Files are scanned and stored privately.{files.length ? ` ${files.length} selected.` : ''}</p>
+    <label className={`relative inline-flex min-h-11 w-fit items-center justify-center gap-2 rounded-control border border-border-default px-4 text-sm font-semibold focus-within:ring-2 focus-within:ring-focus-ring focus-within:ring-offset-2 ${disabled ? 'opacity-50' : 'cursor-pointer hover:bg-surface-canvas'}`}>
+      <Upload size={16} aria-hidden="true" />{files.length ? 'Change files' : 'Choose files'}
+      <input ref={input} id={id} type="file" multiple={max > 1} accept="image/png,image/jpeg,application/pdf" disabled={disabled} aria-describedby={`${id}-hint`} className="sr-only" onChange={event => {
+        const chosen = Array.from(event.target.files ?? [])
+        if (chosen.length) onChange(chosen.slice(0, max))
+      }} />
+    </label>
+    <p id={`${id}-hint`} className="text-xs text-text-secondary">JPG, PNG or PDF, up to {max} file{max === 1 ? '' : 's'}. Files are scanned and stored privately.</p>
+    <FileSelectionReview files={files} disabled={disabled} onRemove={index => {
+      if (input.current) input.current.value = ''
+      onChange(files.filter((_, position) => position !== index))
+    }} />
   </div>
 }
 
@@ -441,13 +440,20 @@ function EscalatePanel({ detail, onChanged }: { detail: DisputeDetail; onChanged
 // ── File a case (Vendor issues) ─────────────────────────────────────────────────────────────────────
 
 export function VendorFileDisputePage() {
-  return <DisputeAccessGate activeHref="/disputes">{() => <FileDisputeWorkspace />}</DisputeAccessGate>
+  const [params] = useSearchParams()
+  return <DisputeAccessGate activeHref="/disputes">{() => <FileDisputeWorkspace orderId={params.get('order') ?? ''} />}</DisputeAccessGate>
 }
 
-function FileDisputeWorkspace() {
-  const [params] = useSearchParams()
+export function FileDisputeDialog({ orderId, onClose }: { orderId: string; onClose: () => void }) {
+  const [busy, setBusy] = useState(false)
+  return <FormDialog open title="File a case" description="Report a Buyer issue on this order and provide supporting evidence." busy={busy} onClose={onClose} footer={null}>
+    <FileDisputeWorkspace orderId={orderId} modal onBusyChange={setBusy} />
+  </FormDialog>
+}
+
+function FileDisputeWorkspace({ orderId, modal = false, onBusyChange }: { orderId: string; modal?: boolean; onBusyChange?: (busy: boolean) => void }) {
   const navigate = useNavigate()
-  const orderId = params.get('order') ?? ''
+  const [attempt, setAttempt] = useState(0)
   const [eligibility, setEligibility] = useState<DisputeEligibility | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [issueType, setIssueType] = useState(VENDOR_ISSUES[0]!)
@@ -457,18 +463,22 @@ function FileDisputeWorkspace() {
   const [files, setFiles] = useState<File[]>([])
   const [errors, setErrors] = useState<Record<string, string>>({})
   const { busy, error, run } = useSubmission()
+  useEffect(() => { onBusyChange?.(busy) }, [busy, onBusyChange])
   useEffect(() => {
     let active = true
+    setLoadError(null)
     getEligibility(orderId).then(value => { if (active) setEligibility(value) }).catch(async cause => { const text = await readableOrderError(cause); if (active) setLoadError(text) })
     return () => { active = false }
-  }, [orderId])
-  if (loadError) return <ErrorState message={loadError} onRetry={() => window.location.reload()} />
+  }, [orderId, attempt])
+  if (loadError) return <ErrorState message={loadError} onRetry={() => setAttempt(value => value + 1)} />
   if (!eligibility) return <LoadingState label="Checking the order…" />
-  return <div className="grid min-w-0 max-w-3xl gap-6">
-    <Link to={`/orders/${orderId}`} className="inline-flex min-h-11 w-fit items-center gap-2 text-sm font-semibold text-text-secondary hover:text-text-strong"><ArrowLeft size={16} aria-hidden="true" />Back to the order</Link>
-    <PageHeader eyebrow="Disputes & Appeals" title="File a case" description="For a Buyer issue on this order such as an unpaid cash balance, a pickup no-show, abusive communication, false evidence or an inaccessible delivery site. The Buyer has 48 hours to respond." />
+  return <div className={`grid min-w-0 gap-6 ${modal ? '' : 'max-w-3xl'}`}>
+    {!modal && <><Link to={`/orders/${orderId}`} className="inline-flex min-h-11 w-fit items-center gap-2 text-sm font-semibold text-text-secondary hover:text-text-strong"><ArrowLeft size={16} aria-hidden="true" />Back to the order</Link>
+    <PageHeader eyebrow="Disputes & Appeals" title="File a case" description="Report a Buyer issue on this order and provide supporting evidence." /></>}
+    <InfoNote>For a Buyer issue on this order such as an unpaid cash balance, a pickup no-show, abusive communication, false evidence or an inaccessible delivery site. The Buyer has 48 hours to respond.</InfoNote>
     {!eligibility.available ? <StatusMessage tone="error">{eligibility.reason}{eligibility.activeCaseId && <> <Link className="font-semibold underline" to={`/disputes/${eligibility.activeCaseId}`}>Open the active case</Link></>}</StatusMessage>
-      : <form className="grid gap-5 rounded-surface border border-border-default bg-surface-primary p-4 sm:p-6" noValidate onSubmit={event => { event.preventDefault()
+      : <form aria-label="File a case" className={modal ? 'grid min-w-0 gap-5' : 'grid gap-5 rounded-surface border border-border-default bg-surface-primary p-4 sm:p-6'} noValidate onSubmit={event => { event.preventDefault()
+        if (busy) return
         const local: Record<string, string> = {}
         if (description.trim().length < 20) local.description = 'Describe the issue in at least 20 characters.'
         setErrors(local)
@@ -484,7 +494,7 @@ function FileDisputeWorkspace() {
           <span>{line.displayName}{line.variantLabel ? ` · ${line.variantLabel}` : ''}</span></label>)}</fieldset>}
         <label className="grid gap-2 text-sm font-semibold">What happened<textarea className={`${control} min-h-28 py-2`} maxLength={4000} value={description} aria-invalid={Boolean(errors.description)} aria-describedby={errors.description ? 'description-error' : undefined} onChange={event => setDescription(event.target.value)} /></label>
         {errors.description && <p id="description-error" role="alert" className="text-sm text-status-error">{errors.description}</p>}
-        <FilePicker id="file-case-files" label="Evidence" files={files} onChange={setFiles} />
+        <FilePicker id="file-case-files" label="Evidence" files={files} onChange={setFiles} disabled={busy} />
         <OriginalPaymentMethodNotice label={eligibility.originalPaymentMethod.label} notice={eligibility.refundDestinationNotice} />
         <p className="flex items-start gap-2 text-sm text-text-secondary"><Info size={16} className="mt-0.5 shrink-0" aria-hidden="true" />Filing creates a Case ID only. It never creates or changes a refund.</p>
         {error && <StatusMessage tone="error">{error}</StatusMessage>}

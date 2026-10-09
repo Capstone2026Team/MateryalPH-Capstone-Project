@@ -18,6 +18,7 @@ Name | Type
 `lockedReference` | { [key: string]: any; }
 `updatedAt` | string
 `canTransfer` | boolean
+`canListFulfillmentConversations` | boolean
 `fulfillmentEntryEnabled` | boolean
 `readOnly` | boolean
 `readOnlyReason` | string
@@ -49,6 +50,7 @@ const example = {
   "lockedReference": null,
   "updatedAt": null,
   "canTransfer": null,
+  "canListFulfillmentConversations": null,
   "fulfillmentEntryEnabled": null,
   "readOnly": null,
   "readOnlyReason": null,

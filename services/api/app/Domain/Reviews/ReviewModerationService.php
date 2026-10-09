@@ -61,7 +61,7 @@ final class ReviewModerationService
             }
             $update = ['moderation_state' => $rule['to'], 'lock_version' => (int) $review->lock_version + 1, 'updated_at' => now()];
             if ($input['action'] === 'REQUEST_CORRECTION') {
-                $update += ['correction_due_at' => now()->addDays(ReviewRules::CORRECTION_DAYS), 'corrected_at' => null];
+                $update += ['correction_due_at' => now()->addDays(ReviewRules::correctionDays()), 'corrected_at' => null];
             }
             DB::table('reviews')->where('id', $review->id)->update($update);
             DB::table('review_flags')->where('review_id', $review->id)->where('state', 'OPEN')

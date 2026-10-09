@@ -94,6 +94,21 @@ final class PhaseFiveInventoryDeliveryTest extends TestCase
         }
     }
 
+    public function test_inventory_category_filter_scopes_rows_and_summary_without_changing_stock_rules(): void
+    {
+        [, $owner] = $this->activeStore();
+        $this->signInVendor($owner);
+        $listing = $this->publishableListing('CATEGORY-FILTER', variants: 2);
+        $category = DB::table('vendor_listings')->where('id', $listing)->value('material_category_id');
+        $this->getJson('/api/v1/vendor/inventory/items?category_id='.$category)->assertOk()
+            ->assertJsonCount(2, 'data')->assertJsonPath('meta.summary.variants', 2);
+        $this->getJson('/api/v1/vendor/inventory/items?category_id='.$category.'&stock=OUT_OF_STOCK')->assertOk()
+            ->assertJsonCount(0, 'data')->assertJsonPath('meta.summary.variants', 2);
+        $this->getJson('/api/v1/vendor/inventory/items?category_id='.Str::uuid())->assertOk()
+            ->assertJsonCount(0, 'data')->assertJsonPath('meta.summary.variants', 0);
+        $this->getJson('/api/v1/vendor/inventory/items?category_id=invalid')->assertUnprocessable();
+    }
+
     public function test_manual_edits_use_optimistic_versions_and_record_append_only_movements(): void
     {
         [, $owner] = $this->activeStore();

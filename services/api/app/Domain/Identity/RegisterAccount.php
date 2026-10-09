@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Identity;
 
 use App\Domain\Agreements\BuyerRegistrationTerms;
+use App\Domain\Geography\RadiusPolicy;
 use App\Models\User;
 use App\Models\UserProfile;
 use App\Models\VendorMembership;
@@ -50,6 +51,7 @@ final class RegisterAccount
                     'user_id' => $user->getKey(),
                     'buyer_type' => $input['buyer_type'],
                     'company_name' => $input['company_name'] ?? null,
+                    'discovery_radius_km' => RadiusPolicy::buyerDefault(),
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);

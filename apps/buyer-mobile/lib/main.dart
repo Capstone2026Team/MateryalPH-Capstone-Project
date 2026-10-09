@@ -58,7 +58,9 @@ enum _AppStage {
 
 class _BuyerAppState extends State<BuyerApp> {
   final _messengerKey = GlobalKey<ScaffoldMessengerState>();
+  final _navigatorKey = GlobalKey<NavigatorState>();
   late final AuthRepository _authRepository;
+  late final NotificationsRepository _notifications;
   late final OnboardingRepository _onboardingRepository;
   late final DeepLinkSource _deepLinkSource;
   StreamSubscription<Uri>? _linkSubscription;
@@ -80,6 +82,17 @@ class _BuyerAppState extends State<BuyerApp> {
     super.initState();
     _authRepository =
         widget.authRepository ?? AuthRepository(tokenStore: SecureTokenStore());
+    _notifications = NotificationsRepository(
+      _authRepository.apiClient,
+      () async {
+        _notifications.inbox.setActive(false, clear: true);
+        await _authRepository.clearAccountSession();
+        if (mounted) {
+          _navigatorKey.currentState?.popUntil((route) => route.isFirst);
+          setState(() => _stage = _AppStage.welcome);
+        }
+      },
+    );
     _onboardingRepository =
         widget.onboardingRepository ?? SharedPreferencesOnboardingRepository();
     _deepLinkSource = widget.deepLinkSource ?? AppLinksDeepLinkSource();
@@ -90,6 +103,7 @@ class _BuyerAppState extends State<BuyerApp> {
   @override
   void dispose() {
     _linkSubscription?.cancel();
+    _notifications.inbox.dispose();
     super.dispose();
   }
 
@@ -122,6 +136,7 @@ class _BuyerAppState extends State<BuyerApp> {
   }
 
   Future<void> _signOut() async {
+    _notifications.inbox.setActive(false, clear: true);
     await _authRepository.logout();
     if (mounted) setState(() => _stage = _AppStage.welcome);
   }
@@ -195,13 +210,18 @@ class _BuyerAppState extends State<BuyerApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: _navigatorKey,
       scaffoldMessengerKey: _messengerKey,
       title: 'MateryalPH Buyer',
       debugShowCheckedModeBanner: false,
       theme: BuyerTheme.light,
       builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
         value: BuyerTheme.systemUi,
-        child: NotificationScope(repository: NotificationsRepository(_authRepository.apiClient, () async { await _authRepository.clearAccountSession(); if (mounted) setState(() => _stage = _AppStage.welcome); }), child: child ?? const SizedBox.shrink()),
+        child: NotificationScope(
+          repository: _notifications,
+          active: _stage == _AppStage.home,
+          child: child ?? const SizedBox.shrink(),
+        ),
       ),
       home: Builder(
         builder: (context) {
@@ -301,4 +321,3 @@ class _BuyerAppState extends State<BuyerApp> {
     }
   }
 }
-

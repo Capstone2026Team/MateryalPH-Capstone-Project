@@ -7,6 +7,7 @@ namespace App\Domain\Projects;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Orders\OrderNotifier;
 use App\Domain\Orders\OrderStates;
+use App\Domain\Settings\PlatformSettings;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -29,6 +30,12 @@ final class ProjectBudget
         return ['pending' => $accepted ? max(0, $cost - $recovered) : 0, 'actual' => 0, 'recovery' => 0];
     }
 
+    /** The versioned Platform Setting projects.budget_warning_percent (approved default 90%). */
+    public static function warningPercent(): int
+    {
+        return PlatformSettings::current()->int('projects.budget_warning_percent');
+    }
+
     /** @return array<string, int|string|bool> */
     public static function buckets(int $budget, int $pending, int $actual, int $recovery): array
     {
@@ -37,7 +44,7 @@ final class ProjectBudget
         return ['budget_centavos' => $budget, 'pending_centavos' => $pending, 'actual_centavos' => $actual, 'awaiting_recovery_centavos' => $recovery,
             'committed_centavos' => $committed, 'remaining_centavos' => $budget - $committed,
             'utilization_percent' => $budget === 0 ? ($committed > 0 ? '100.01' : '0.00') : bcdiv(bcmul((string) $committed, '100'), (string) $budget, 2),
-            'warning' => $committed * 100 >= $budget * 90 && ($budget > 0 || $committed > 0),
+            'warning' => $committed * 100 >= $budget * self::warningPercent() && ($budget > 0 || $committed > 0),
             'label' => $committed > $budget ? 'OVER_BUDGET' : ($committed === $budget ? 'WITHIN_BUDGET' : 'UNDER_BUDGET')];
     }
 
@@ -94,8 +101,8 @@ final class ProjectBudget
         $p = $this->metrics($project, excludeOrder: $orderId);
         $w = $this->metrics($project, $package, $orderId);
         $over = max(0, $p['committed_centavos'] + $amount - $project->budget_centavos, $w['committed_centavos'] + $amount - $package->budget_centavos);
-        if ($orderId !== null && (($p['committed_centavos'] + $amount) * 100 >= (int) $project->budget_centavos * 90 || ($w['committed_centavos'] + $amount) * 100 >= (int) $package->budget_centavos * 90)) {
-            app(OrderNotifier::class)->buyer(DB::table('orders')->where('id', $orderId)->first(), 'Project budget warning', 'This purchase reaches at least 90% of the Project or Work Package budget. Review the disjoint committed-spend breakdown.');
+        if ($orderId !== null && (($p['committed_centavos'] + $amount) * 100 >= (int) $project->budget_centavos * self::warningPercent() || ($w['committed_centavos'] + $amount) * 100 >= (int) $package->budget_centavos * self::warningPercent())) {
+            app(OrderNotifier::class)->buyer(DB::table('orders')->where('id', $orderId)->first(), 'Project budget warning', 'This purchase reaches at least '.self::warningPercent().'% of the Project or Work Package budget. Review the disjoint committed-spend breakdown.');
         }
         if ($over === 0) {
             return;

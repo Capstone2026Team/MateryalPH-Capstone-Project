@@ -26,6 +26,13 @@ final class ExportAccess
             return ($user->account_type === 'VENDOR' && in_array('materials_analytics.view_competitors', $scope['permissions'], true))
                 || ($user->account_type === 'ADMIN' && in_array('analytics.view_aggregates', $scope['permissions'], true) && in_array('analytics.export', $scope['permissions'], true));
         }
+        if ($type === 'AUDIT_LOG') {
+            return $user->account_type === 'ADMIN' && in_array('audit.view', $scope['permissions'], true) && in_array('audit.export', $scope['permissions'], true);
+        }
+        if ($type === 'GEO_ANALYTICS') {
+            // Aggregate export needs both the aggregate view and the separate export permission (Admin Workflow §2).
+            return $user->account_type === 'ADMIN' && in_array('analytics.view_aggregates', $scope['permissions'], true) && in_array('analytics.export', $scope['permissions'], true);
+        }
         if (in_array($type, ['PURCHASE_ORDER', 'PAYMENT_CONFIRMATION', 'OPERATIONAL_ORDER'], true)) {
             return $resourceId !== null && app(NotificationPolicy::class)->allows($user, (object) ['user_id' => $user->getKey(), 'category' => 'ORDERS', 'resource_type' => 'ORDER', 'resource_id' => $resourceId]);
         }

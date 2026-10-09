@@ -6,7 +6,7 @@ import { AdminShell } from './PhaseThreeAdminPages'
 import { readableVerificationError } from '../lib/vendor-verification-api'
 
 const adminPlaceholders: Record<string, string> = {
-  'marketplace-analytics': 'Marketplace Analytics', 'buyer-management': 'Buyer Management', taxonomy: 'Taxonomy Management', 'product-compliance': 'Product Compliance Queue', disputes: 'Dispute and Appeal Queue', enforcement: 'Flag, Restriction, and Suspension Management', scores: 'Score and Badge Monitoring', transactions: 'Transaction Log', invoices: 'Invoice Request Log', 'budget-overrides': 'Budget Override Audit Log', settings: 'Platform Settings', moderation: 'Product Review Moderation Queue', privacy: 'Privacy Request Management', integrations: 'Integration and Job Health',
+  'marketplace-analytics': 'Marketplace Analytics', 'buyer-management': 'Buyer Management', 'product-compliance': 'Product Compliance Queue', disputes: 'Dispute and Appeal Queue', enforcement: 'Flag, Restriction, and Suspension Management', scores: 'Score and Badge Monitoring', transactions: 'Transaction Log', invoices: 'Invoice Request Log', 'budget-overrides': 'Budget Override Audit Log', settings: 'Platform Settings', moderation: 'Product Review Moderation Queue', privacy: 'Privacy Request Management', integrations: 'Integration and Job Health',
 }
 
 export function AdminPlaceholderPage() {

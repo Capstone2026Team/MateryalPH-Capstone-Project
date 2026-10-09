@@ -4,8 +4,8 @@
 
 // ignore_for_file: unused_element
 import 'package:materyalph_api_client/src/model/vendor_team_invitation_record.dart';
-import 'package:materyalph_api_client/src/model/vendor_team_activity_envelope_meta.dart';
 import 'package:built_collection/built_collection.dart';
+import 'package:materyalph_api_client/src/model/vendor_team_invitation_list_envelope_meta.dart';
 import 'package:built_value/json_object.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
@@ -24,7 +24,7 @@ abstract class VendorTeamInvitationListEnvelope implements Built<VendorTeamInvit
   BuiltList<VendorTeamInvitationRecord> get data;
 
   @BuiltValueField(wireName: r'meta')
-  VendorTeamActivityEnvelopeMeta get meta;
+  VendorTeamInvitationListEnvelopeMeta get meta;
 
   @BuiltValueField(wireName: r'errors')
   BuiltList<BuiltMap<String, JsonObject?>> get errors;
@@ -60,7 +60,7 @@ class _$VendorTeamInvitationListEnvelopeSerializer implements PrimitiveSerialize
     yield r'meta';
     yield serializers.serialize(
       object.meta,
-      specifiedType: const FullType(VendorTeamActivityEnvelopeMeta),
+      specifiedType: const FullType(VendorTeamInvitationListEnvelopeMeta),
     );
     yield r'errors';
     yield serializers.serialize(
@@ -100,8 +100,8 @@ class _$VendorTeamInvitationListEnvelopeSerializer implements PrimitiveSerialize
         case r'meta':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(VendorTeamActivityEnvelopeMeta),
-          ) as VendorTeamActivityEnvelopeMeta;
+            specifiedType: const FullType(VendorTeamInvitationListEnvelopeMeta),
+          ) as VendorTeamInvitationListEnvelopeMeta;
           result.meta.replace(valueDes);
           break;
         case r'errors':

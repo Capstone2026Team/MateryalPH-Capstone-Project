@@ -478,7 +478,7 @@ This endpoint does not need any parameter.
 
 ## listFeeStatements
 
-> FeeStatementListEnvelope listFeeStatements(page, state)
+> FeeStatementListEnvelope listFeeStatements(overdue, page, state)
 
 
 
@@ -504,6 +504,8 @@ async function example() {
   const api = new AdminFinanceApi(config);
 
   const body = {
+    // boolean | Issued balances past their due date. (optional)
+    overdue: true,
     // number (optional)
     page: 56,
     // 'DRAFT' | 'ISSUED' | 'PARTIALLY_PAID' | 'PAID' | 'VOIDED' (optional)
@@ -527,6 +529,7 @@ example().catch(console.error);
 
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
+| **overdue** | `boolean` | Issued balances past their due date. | [Optional] [Defaults to `undefined`] |
 | **page** | `number` |  | [Optional] [Defaults to `undefined`] |
 | **state** | `DRAFT`, `ISSUED`, `PARTIALLY_PAID`, `PAID`, `VOIDED` |  | [Optional] [Defaults to `undefined`] [Enum: DRAFT, ISSUED, PARTIALLY_PAID, PAID, VOIDED] |
 

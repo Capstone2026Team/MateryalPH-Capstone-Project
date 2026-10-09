@@ -2,6 +2,65 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import 'procurement_components.dart';
+import '../theme.dart';
+
+/// Plain outlined header action with an accessible target and optional count.
+class BuyerHeaderIconButton extends StatelessWidget {
+  const BuyerHeaderIconButton({
+    super.key,
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+    this.badgeCount = 0,
+    this.badgeColor,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback? onPressed;
+  final int badgeCount;
+  final Color? badgeColor;
+
+  @override
+  Widget build(BuildContext context) => IconButton(
+    tooltip: tooltip,
+    onPressed: onPressed,
+    style: IconButton.styleFrom(
+      minimumSize: const Size(48, 48),
+      foregroundColor: BuyerTheme.ink,
+    ),
+    icon: Badge(
+      isLabelVisible: badgeCount > 0,
+      label: Text(badgeCount > 99 ? '99+' : '$badgeCount'),
+      backgroundColor: badgeColor ?? BuyerTheme.ink,
+      child: Icon(icon, size: 24),
+    ),
+  );
+}
+
+/// Primary tab headers share title alignment, gutters and trailing actions.
+/// Reserve two title lines so long names remain readable on narrow screens.
+PreferredSizeWidget buyerTabAppBar(
+  BuildContext context,
+  String title, {
+  List<Widget> actions = const [],
+}) => buyerAppBar(
+  context,
+  title,
+  centerTitle: false,
+  toolbarHeight: 12 + MediaQuery.textScalerOf(context).scale(18) * 26 / 18 * 2,
+  titleWidget: Text(
+    title,
+    maxLines: 2,
+    overflow: TextOverflow.ellipsis,
+    style: const TextStyle(
+      fontSize: 18,
+      height: 26 / 18,
+      fontWeight: FontWeight.w800,
+    ),
+  ),
+  actions: [...actions, const SizedBox(width: 8)],
+);
 
 /// The one Buyer page header: an orange round back button at the start, a centred bold title, and
 /// optional trailing [actions]. Every pushed Buyer page uses it so the back control and title sit in

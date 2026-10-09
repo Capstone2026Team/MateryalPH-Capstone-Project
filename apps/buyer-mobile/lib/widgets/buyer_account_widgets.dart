@@ -3,6 +3,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:materyalph_api_client/materyalph_api_client.dart';
 import '../design_system/components/buyer_app_bar.dart';
 import '../design_system/theme.dart';
+import '../features/notifications/buyer_notification_button.dart';
 
 PreferredSizeWidget buyerAccountBar(BuildContext context, String title) =>
     buyerAppBar(context, title);
@@ -177,11 +178,7 @@ class BuyerIdentity extends StatelessWidget {
               onPressed: onSearch,
               icon: const Icon(LucideIcons.search, color: BuyerTheme.ink),
             ),
-            IconButton(
-              tooltip: 'Notifications',
-              onPressed: onNotifications,
-              icon: const Icon(LucideIcons.bell, color: BuyerTheme.ink),
-            ),
+            BuyerNotificationButton(onPressed: onNotifications),
           ],
         ),
         const SizedBox(height: 16),

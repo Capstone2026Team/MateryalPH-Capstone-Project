@@ -125,7 +125,7 @@ test('fulfillment staff see only the assigned-vehicle view and roles without Veh
   vi.mocked(onboarding.getVendorOnboarding).mockResolvedValue(snapshot(['portal.vehicles', 'vehicles.view_assigned']))
   vi.mocked(inventory.listFleet).mockResolvedValue({ items: [], meta: { scope: 'ASSIGNED_ONLY', delivery: null, permissions: { canManage: false } } })
   const first = open()
-  expect(await screen.findByRole('heading', { name: 'No assigned vehicle yet.' })).toBeInTheDocument()
+  expect(await screen.findByText('No vehicle assigned to your orders yet.')).toBeInTheDocument()
   expect(screen.queryByRole('region', { name: 'Fleet overview' })).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Save vehicles' })).not.toBeInTheDocument()
   first.unmount()

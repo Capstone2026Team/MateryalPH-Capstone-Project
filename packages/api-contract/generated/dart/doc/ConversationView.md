@@ -20,6 +20,7 @@ Name | Type | Description | Notes
 **lockedReference** | [**BuiltMap&lt;String, JsonObject&gt;**](JsonObject.md) |  |
 **updatedAt** | **String** |  |
 **canTransfer** | **bool** |  |
+**canListFulfillmentConversations** | **bool** | Current vendor Owner or Store Manager may list this sales inquiry buyer's fulfillment conversations. False for other roles and fulfillment threads. | [optional]
 **fulfillmentEntryEnabled** | **bool** |  |
 **readOnly** | **bool** |  |
 **readOnlyReason** | **String** |  | [optional]

@@ -1,4 +1,4 @@
-import { Configuration, ResponseError } from '@materyalph/api-client-ts'
+import { AuthenticationApi, Configuration, ResponseError } from '@materyalph/api-client-ts'
 
 type WebApiOptions = {
   refreshSession?: boolean
@@ -89,6 +89,18 @@ export function createWebApiConfiguration(basePath: string, options: WebApiOptio
     apiKey: () => getWebCsrfToken(key),
     fetchApi: (input, init) => coordinatedFetch(key, Boolean(options.refreshSession), input, init, options.readOnlyPostPaths),
   })
+}
+
+export async function signOutWebSession(basePath: string): Promise<void> {
+  // Acquire CSRF separately: a bootstrap failure is not proof of an expired session.
+  await getWebCsrfToken(basePath)
+  try {
+    await new AuthenticationApi(createWebApiConfiguration(basePath, { refreshSession: true })).logout()
+  } catch (error) {
+    if (!(error instanceof ResponseError) || error.response.status !== 401) throw error
+    // Logout also attempts refresh. A final 401 means the session is already invalid.
+  }
+  clearWebSessionTransport(basePath)
 }
 
 async function coordinatedFetch(basePath: string, refreshSession: boolean, input: RequestInfo | URL, init?: RequestInit, readOnlyPostPaths: readonly string[] = []): Promise<Response> {
@@ -190,7 +202,7 @@ function isSafeMethod(method: string | undefined): boolean {
 
 function isAuthenticationLifecycleRequest(input: RequestInfo | URL, basePath: string): boolean {
   const url = String(input)
-  return url.startsWith(`${basePath}/auth/`) && !url.startsWith(`${basePath}/auth/session`)
+  return url.startsWith(`${basePath}/auth/`) && !url.startsWith(`${basePath}/auth/session`) && url !== `${basePath}/auth/logout`
 }
 
 function csrfTokenFrom(payload: unknown): string | null {

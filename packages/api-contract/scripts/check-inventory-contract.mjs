@@ -88,3 +88,5 @@ for (const publicSchema of ['CatalogListingSummary', 'StaleListing', 'PriceHisto
 }
 
 console.log(`Phase 5 inventory contract passed: ${expected.size} inventory, auto-accept and fleet operations match Laravel routes and guards.`)
+
+assert.ok(spec.paths['/vendor/inventory/items'].get.parameters.some(parameter => parameter.name === 'category_id'), 'Monitoring filter category_id must be documented')

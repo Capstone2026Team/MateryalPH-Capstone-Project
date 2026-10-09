@@ -1,11 +1,19 @@
 /* tslint:disable */
 /* eslint-disable */
 export * from './AccountsApi';
+export * from './AdminAuditLogApi';
+export * from './AdminBudgetOverridesApi';
 export * from './AdminDisputesApi';
+export * from './AdminEnforcementApi';
 export * from './AdminFinanceApi';
+export * from './AdminFinanceOperationsApi';
+export * from './AdminGeographicAnalyticsApi';
+export * from './AdminIntegrationHealthApi';
 export * from './AdminInvoicesApi';
 export * from './AdminMaterialsAnalyticsApi';
 export * from './AdminOrderOperationsApi';
+export * from './AdminPlatformSettingsApi';
+export * from './AdminPrivacyRequestsApi';
 export * from './AdminProductComplianceApi';
 export * from './AdminReviewModerationApi';
 export * from './AdminScoreMonitoringApi';
@@ -34,6 +42,7 @@ export * from './VendorAutoAcceptApi';
 export * from './VendorCatalogApi';
 export * from './VendorDisputesApi';
 export * from './VendorFinanceApi';
+export * from './VendorFinanceReviewsApi';
 export * from './VendorFleetApi';
 export * from './VendorFulfillmentApi';
 export * from './VendorInventoryApi';

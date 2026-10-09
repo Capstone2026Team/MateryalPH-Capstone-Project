@@ -26,12 +26,12 @@ class BuyerReviewsApi {
   const BuyerReviewsApi(this._dio, this._serializers);
 
   /// addBuyerReviewMedia
-  /// Up to three photos on your Product Review while it can still be edited.
+  /// Up to three photos or videos on your Product Review while it can still be edited. JPG/PNG up to 10 MB; MP4/MOV up to 100 MB. Content validated and scanned before private storage.
   ///
   /// Parameters:
   /// * [reviewId]
   /// * [idempotencyKey]
-  /// * [files] - JPG or PNG, content-validated and scanned fail-closed.
+  /// * [files] - JPG/PNG up to 10 MB or MP4/MOV up to 100 MB, content-validated and scanned fail-closed.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -77,7 +77,7 @@ class BuyerReviewsApi {
 
     try {
       _bodyData = FormData.fromMap(<String, dynamic>{
-        r'files': files.toList(),
+        r'files[]': files.toList(),
       });
 
     } catch(error, stackTrace) {

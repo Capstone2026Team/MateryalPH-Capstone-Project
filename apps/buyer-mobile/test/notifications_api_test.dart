@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:dio/dio.dart';
@@ -7,6 +8,130 @@ import 'package:materyalph/features/map_discovery/discovery_models.dart';
 import 'package:materyalph_api_client/materyalph_api_client.dart';
 
 void main() {
+  test(
+    'a late unauthorized response cannot expire a replaced notification session',
+    () async {
+      final requested = Completer<void>(), release = Completer<void>();
+      final dio = Dio();
+      dio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) async {
+            requested.complete();
+            await release.future;
+            handler.reject(
+              DioException(
+                requestOptions: options,
+                response: Response<Object?>(
+                  requestOptions: options,
+                  statusCode: 401,
+                ),
+                type: DioExceptionType.badResponse,
+              ),
+            );
+          },
+        ),
+      );
+      var expired = false;
+      final repository = NotificationsRepository(
+        MateryalphApiClient(dio: dio),
+        () async {
+          expired = true;
+        },
+      );
+      final response = repository.list();
+      final check = expectLater(response, throwsA(isA<DiscoveryFailure>()));
+      await requested.future;
+      repository.inbox.setActive(false, clear: true);
+      release.complete();
+      await check;
+      expect(expired, isFalse);
+      repository.inbox.dispose();
+      dio.close(force: true);
+    },
+  );
+
+  test(
+    'session expiry uses the mounted private-store cleanup and detaches safely',
+    () async {
+      final dio = Dio();
+      dio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            handler.reject(
+              DioException(
+                requestOptions: options,
+                response: Response<Object?>(
+                  requestOptions: options,
+                  statusCode: 401,
+                ),
+                type: DioExceptionType.badResponse,
+              ),
+            );
+          },
+        ),
+      );
+      var fallbackCalls = 0, shellCalls = 0;
+      final repository = NotificationsRepository(
+        MateryalphApiClient(dio: dio),
+        () async {
+          fallbackCalls++;
+        },
+      );
+      final detach = repository.attachSessionExpiry(() async {
+        shellCalls++;
+      });
+      await expectLater(repository.list(), throwsA(isA<DiscoveryFailure>()));
+      expect(shellCalls, 1);
+      expect(fallbackCalls, 0);
+      detach();
+      await expectLater(repository.list(), throwsA(isA<DiscoveryFailure>()));
+      expect(fallbackCalls, 1);
+      dio.close(force: true);
+    },
+  );
+
+  test(
+    'bulk read sends a captured category cutoff and decodes authoritative read time',
+    () async {
+      final client = MateryalphApiClient(
+        dio: Dio(BaseOptions(baseUrl: 'https://api.example.test/api/v1')),
+        interceptors: [
+          InterceptorsWrapper(
+            onRequest: (options, handler) {
+              expect(options.path, '/buyers/notifications/read-all');
+              expect(options.data, {
+                'through_id': 'captured-notice',
+                'category': 'ORDERS',
+              });
+              handler.resolve(
+                Response(
+                  requestOptions: options,
+                  statusCode: 200,
+                  data: {
+                    'data': {
+                      'read': true,
+                      'read_count': 2,
+                      'read_at': '2026-10-09T01:00:00Z',
+                    },
+                    'meta': <String, Object?>{},
+                    'errors': <Object?>[],
+                  },
+                ),
+              );
+            },
+          ),
+        ],
+      );
+      final repository = NotificationsRepository(
+        client,
+        () async => fail('Session must remain active'),
+      );
+      final result = await repository.readAll('captured-notice', 'ORDERS');
+      expect(result.readCount, 2);
+      expect(result.readAt, '2026-10-09T01:00:00Z');
+    },
+  );
+
   test(
     'export download decodes bytes and explains revoked or expired access',
     () async {

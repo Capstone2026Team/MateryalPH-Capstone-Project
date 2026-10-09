@@ -35,6 +35,7 @@ final class AccountRequest extends FormRequest
             'confirmEmailChange', 'confirmFactor' => ['id' => ['required', 'uuid'], 'code' => ['required', 'digits:6']],
             'revokeSessions' => ['scope' => ['required', Rule::in(['OTHERS', 'ALL'])]],
             'acceptAgreements' => ['version_ids' => ['required', 'array', 'min:1', 'max:20'], 'version_ids.*' => ['required', 'uuid', 'distinct']],
+            'deleteStaff', 'deleteVendorInvitation' => ['lock_version' => ['required', 'integer', 'min:1']],
             'delegate' => ['can_manage_staff' => ['required', 'boolean']],
             'staffDisputes' => ['enabled' => ['required', 'boolean'], 'lock_version' => ['required', 'integer', 'min:1']],
             'updateStaff' => ['full_name' => ['required', 'string', 'max:160'], 'role' => ['required', Rule::in(IssueVendorInvitation::ROLES)], 'lock_version' => ['required', 'integer', 'min:1']],

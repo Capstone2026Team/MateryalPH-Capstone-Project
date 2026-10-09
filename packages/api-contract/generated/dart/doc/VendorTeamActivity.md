@@ -11,6 +11,8 @@ Name | Type | Description | Notes
 **id** | **String** |  |
 **actorName** | **String** |  | [optional]
 **actorRole** | **String** |  |
+**category** | **String** |  |
+**correlationId** | **String** |  |
 **action** | **String** |  |
 **resourceType** | **String** |  |
 **resourceId** | **String** |  | [optional]

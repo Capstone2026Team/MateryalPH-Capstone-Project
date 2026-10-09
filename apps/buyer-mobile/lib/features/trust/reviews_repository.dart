@@ -1,3 +1,6 @@
+import 'dart:typed_data';
+import 'package:dio/dio.dart' show MultipartFile;
+
 import 'package:built_collection/built_collection.dart';
 import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 
@@ -25,6 +28,20 @@ abstract interface class ReviewsRepository {
     int? productQuality,
     String? comment,
   });
+
+  Future<OrderReviewsView> addMedia({
+    required String reviewId,
+    required String path,
+    required String filename,
+    required String idempotencyKey,
+  });
+
+  Future<OrderReviewsView> removeMedia({
+    required String reviewId,
+    required String mediaId,
+  });
+
+  Future<Uint8List> media(String reviewId, ReviewMediaView media);
 
   Future<ListingReviewsView> listingReviews(String listingId);
 
@@ -117,6 +134,51 @@ final class ApiReviewsRepository implements ReviewsRepository {
   });
 
   @override
+  Future<OrderReviewsView> addMedia({
+    required String reviewId,
+    required String path,
+    required String filename,
+    required String idempotencyKey,
+  }) => _api(() async {
+    final response = await _reviews.addBuyerReviewMedia(
+      reviewId: reviewId,
+      idempotencyKey: idempotencyKey,
+      files: BuiltList([
+        await MultipartFile.fromFile(path, filename: filename),
+      ]),
+    );
+    return _order(_api.required(response.data?.data));
+  });
+
+  @override
+  Future<OrderReviewsView> removeMedia({
+    required String reviewId,
+    required String mediaId,
+  }) => _api(() async {
+    final response = await _reviews.removeBuyerReviewMedia(
+      reviewId: reviewId,
+      mediaId: mediaId,
+    );
+    return _order(_api.required(response.data?.data));
+  });
+
+  @override
+  Future<Uint8List> media(
+    String reviewId,
+    ReviewMediaView media,
+  ) => _api(() async {
+    // Only the signature/expiry are used. The generated route always targets our configured API.
+    final link = Uri.parse(media.url);
+    final response = await _reviews.getBuyerReviewPhoto(
+      reviewId: reviewId,
+      mediaId: media.id,
+      expires: int.parse(link.queryParameters['expires']!),
+      signature: link.queryParameters['signature']!,
+    );
+    return _api.required(response.data);
+  });
+
+  @override
   Future<ListingReviewsView> listingReviews(String listingId) => _api(() async {
     final response = await _reviews.listListingReviews(listingId: listingId);
     final envelope = _api.required(response.data);
@@ -128,6 +190,7 @@ final class ApiReviewsRepository implements ReviewsRepository {
           .map(
             (review) => PublicReviewView(
               id: review.id,
+              media: _media(review.media),
               ratings: _ratings(review.ratings),
               comment: review.comment,
               displayName: review.displayName,
@@ -169,10 +232,29 @@ final class ApiReviewsRepository implements ReviewsRepository {
         paymentReliability: ratings.paymentReliability,
       );
 
+  static List<ReviewMediaView> _media(BuiltList<api.ReviewMediaLink> media) =>
+      media
+          .map(
+            (item) => ReviewMediaView(
+              id: item.id,
+              url: item.url,
+              contentType: switch (item.contentType) {
+                api.ReviewMediaLinkContentTypeEnum.videoSlashMp4 => 'video/mp4',
+                api.ReviewMediaLinkContentTypeEnum.videoSlashQuicktime =>
+                  'video/quicktime',
+                api.ReviewMediaLinkContentTypeEnum.imageSlashPng => 'image/png',
+                _ => 'image/jpeg',
+              },
+              byteSize: item.byteSize,
+            ),
+          )
+          .toList(growable: false);
+
   static OwnReviewView? _own(api.OwnReview? review) => review == null
       ? null
       : OwnReviewView(
           id: review.id,
+          media: _media(review.media),
           ratings: _ratings(review.ratings),
           comment: review.comment,
           displayName: review.displayName,
@@ -186,6 +268,9 @@ final class ApiReviewsRepository implements ReviewsRepository {
   static OrderReviewsView _order(api.BuyerOrderReviews data) =>
       OrderReviewsView(
         orderId: data.orderId,
+        mediaMax: data.rules.mediaMax,
+        photoMaxBytes: data.rules.photoMaxBytes ?? 10 * 1024 * 1024,
+        videoMaxBytes: data.rules.videoMaxBytes ?? 100 * 1024 * 1024,
         orderReference: data.orderReference,
         state: data.state.name,
         closesAtLabel: data.closesAtLabel,

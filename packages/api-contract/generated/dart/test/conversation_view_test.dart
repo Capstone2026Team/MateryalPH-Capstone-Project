@@ -67,6 +67,12 @@ void main() {
       // TODO
     });
 
+    // Current vendor Owner or Store Manager may list this sales inquiry buyer's fulfillment conversations. False for other roles and fulfillment threads.
+    // bool canListFulfillmentConversations
+    test('to test the property `canListFulfillmentConversations`', () async {
+      // TODO
+    });
+
     // bool fulfillmentEntryEnabled
     test('to test the property `fulfillmentEntryEnabled`', () async {
       // TODO

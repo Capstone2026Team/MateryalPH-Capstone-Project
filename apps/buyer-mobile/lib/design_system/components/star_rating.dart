@@ -11,19 +11,23 @@ class StarRatingField extends StatelessWidget {
     required this.value,
     required this.onChanged,
     this.errorText,
+    this.compact = false,
   });
 
   final String label;
   final int? value;
   final ValueChanged<int>? onChanged;
   final String? errorText;
+  final bool compact;
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
-      Wrap(
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final labelWidget = Text(
+        label,
+        style: const TextStyle(fontWeight: FontWeight.w600),
+      );
+      final stars = Wrap(
         children: [
           for (var star = 1; star <= 5; star++)
             Semantics(
@@ -44,13 +48,47 @@ class StarRatingField extends StatelessWidget {
               ),
             ),
         ],
-      ),
-      if (errorText != null)
-        Text(
-          errorText!,
-          style: const TextStyle(color: Color(0xFFB91C1C), fontSize: 12),
-        ),
-    ],
+      );
+      final inline =
+          compact &&
+          constraints.maxWidth >= 352 &&
+          MediaQuery.textScalerOf(context).scale(14) <= 17;
+      final content = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (inline)
+            Row(
+              children: [
+                Expanded(child: labelWidget),
+                stars,
+              ],
+            )
+          else ...[
+            labelWidget,
+            stars,
+          ],
+          if (errorText != null)
+            Text(
+              errorText!,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.error,
+                fontSize: 12,
+              ),
+            ),
+        ],
+      );
+      return compact
+          ? Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                border: Border.all(color: BuyerTheme.border),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: content,
+            )
+          : content;
+    },
   );
 }
 

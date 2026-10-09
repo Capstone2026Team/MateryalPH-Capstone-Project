@@ -481,6 +481,13 @@ class AdminVendorVerificationApi {
   /// * [submittedFrom] - Inclusive Asia/Manila submission date.
   /// * [submittedTo] - Inclusive Asia/Manila submission date.
   /// * [sort]
+  /// * [setupStatus]
+  /// * [activation]
+  /// * [discoverability]
+  /// * [blocker]
+  /// * [requirementKey] - A requirement awaiting review.
+  /// * [ageDays] - Oldest pending requirement at least this many days old.
+  /// * [expiryDays] - An approved document expires within this many days.
   /// * [page]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
@@ -498,6 +505,13 @@ class AdminVendorVerificationApi {
     Date? submittedFrom,
     Date? submittedTo,
     String? sort = 'submitted_desc',
+    String? setupStatus,
+    String? activation,
+    String? discoverability,
+    String? blocker,
+    String? requirementKey,
+    int? ageDays,
+    int? expiryDays,
     int? page,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -533,6 +547,13 @@ class AdminVendorVerificationApi {
       if (submittedFrom != null) r'submitted_from': encodeQueryParameter(_serializers, submittedFrom, const FullType(Date)),
       if (submittedTo != null) r'submitted_to': encodeQueryParameter(_serializers, submittedTo, const FullType(Date)),
       if (sort != null) r'sort': encodeQueryParameter(_serializers, sort, const FullType(String)),
+      if (setupStatus != null) r'setup_status': encodeQueryParameter(_serializers, setupStatus, const FullType(String)),
+      if (activation != null) r'activation': encodeQueryParameter(_serializers, activation, const FullType(String)),
+      if (discoverability != null) r'discoverability': encodeQueryParameter(_serializers, discoverability, const FullType(String)),
+      if (blocker != null) r'blocker': encodeQueryParameter(_serializers, blocker, const FullType(String)),
+      if (requirementKey != null) r'requirement_key': encodeQueryParameter(_serializers, requirementKey, const FullType(String)),
+      if (ageDays != null) r'age_days': encodeQueryParameter(_serializers, ageDays, const FullType(int)),
+      if (expiryDays != null) r'expiry_days': encodeQueryParameter(_serializers, expiryDays, const FullType(int)),
       if (page != null) r'page': encodeQueryParameter(_serializers, page, const FullType(int)),
     };
 

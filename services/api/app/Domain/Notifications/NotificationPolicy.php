@@ -15,7 +15,7 @@ final class NotificationPolicy
 {
     public const OPTIONAL = ['INVENTORY', 'MARKETING', 'PROJECTS'];
 
-    public const CATEGORIES = ['SECURITY', 'LEGAL', 'SUSPENSION', 'PAYMENT', 'REFUND', 'DISPUTES', 'FINANCE_MANDATORY', 'ORDERS', 'VENDOR_VERIFICATION', 'INVENTORY', 'MARKETING', 'PROJECTS'];
+    public const CATEGORIES = ['SECURITY', 'LEGAL', 'SUSPENSION', 'PAYMENT', 'REFUND', 'DISPUTES', 'FINANCE_MANDATORY', 'ORDERS', 'INVOICES', 'VENDOR_VERIFICATION', 'INVENTORY', 'MARKETING', 'PROJECTS'];
 
     public static function mandatory(string $category): bool
     {
@@ -25,7 +25,14 @@ final class NotificationPolicy
 
     public function allows(User $user, object $notice): bool
     {
-        if ((int) $notice->user_id !== (int) $user->getKey() || $user->account_status !== 'ACTIVE') {
+        if ((int) $notice->user_id !== (int) $user->getKey()) {
+            return false;
+        }
+        // An enforcement notice must reach its own subject even after the account was suspended or banned.
+        if ($notice->category === 'SUSPENSION' && $notice->resource_type === 'ACCOUNT') {
+            return true;
+        }
+        if ($user->account_status !== 'ACTIVE') {
             return false;
         }
         if ($notice->category === 'SECURITY' && $notice->resource_type === 'ACCOUNT') {
@@ -90,6 +97,14 @@ final class NotificationPolicy
 
             return $scope['role'] === 'OWNER';
         }
+        if ($user->account_type === 'ADMIN' && in_array($type, ['PLATFORM_SETTING', 'ENFORCEMENT_ACTION', 'PRIVACY_REQUEST'], true)) {
+            return match ($type) {
+                'PLATFORM_SETTING' => in_array('platform_settings.view', $scope['permissions'], true),
+                'ENFORCEMENT_ACTION' => in_array('enforcement.view', $scope['permissions'], true),
+                default => in_array('privacy.manage', $scope['permissions'], true)
+                    || (in_array('privacy.handle', $scope['permissions'], true) && DB::table('privacy_requests')->where('id', $id)->where('handler_user_id', $user->getKey())->exists()),
+            };
+        }
         if ($type === 'PROJECT') {
             return $user->account_type === 'BUYER' && DB::table('projects as p')->join('buyer_profiles as b', 'b.id', '=', 'p.buyer_profile_id')->where('p.id', $id)->where('b.user_id', $user->getKey())->exists();
         }
@@ -110,6 +125,9 @@ final class NotificationPolicy
             'PROJECT' => '/projects/'.$notice->resource_id,
             'FEE_STATEMENT' => $user->account_type === 'ADMIN' ? '/finance' : '/finance/statements/'.$notice->resource_id,
             'TAX_REPORT_PACKAGE' => '/reports/tax/'.$notice->resource_id,
+            'PLATFORM_SETTING' => '/settings',
+            'ENFORCEMENT_ACTION' => '/enforcement/'.$notice->resource_id,
+            'PRIVACY_REQUEST' => '/privacy/'.$notice->resource_id,
             'VENDOR_ORGANIZATION' => match ($notice->category) {
                 'TEAM' => '/team',
                 'VENDOR_PAYMENT_CONNECTION' => '/onboarding/setup?step=S3',
@@ -118,6 +136,7 @@ final class NotificationPolicy
                     'fulfillment_method', 'delivery_configuration' => 'S2', 'store_operation' => 'S5', default => 'S6',
                 },
                 'VENDOR_ACTIVATION' => '/onboarding/setup?step=S6',
+                'SUSPENSION' => '/dashboard',
                 'INVENTORY', 'AUTO_ACCEPT', 'STOCK_CONFIRMATION' => '/products/inventory',
                 'PRODUCT_COMPLIANCE' => '/products',
                 default => '/onboarding/verification'.($notice->resume_key === null ? '' : '?requirement='.rawurlencode($notice->resume_key)),

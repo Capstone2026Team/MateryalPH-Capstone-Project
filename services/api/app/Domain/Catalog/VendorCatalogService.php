@@ -9,6 +9,7 @@ use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Inventory\InventoryLedgerWriter;
 use App\Domain\Inventory\StockAvailability;
+use App\Domain\Settings\PlatformSettings;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -115,6 +116,13 @@ final class VendorCatalogService
             ->leftJoin('materials as m', 'm.id', '=', 'p.material_id')->leftJoin('material_categories as c', 'c.id', '=', 'l.material_category_id');
         if (! empty($filters['status'])) {
             $query->where('l.status', $filters['status']);
+        }
+        if (($filters['group'] ?? null) === 'NEEDS_ATTENTION') {
+            $query->whereIn('l.status', ['PENDING_COMPLIANCE', 'PENDING_ADMIN_REVIEW', 'TEMPORARILY_HIDDEN_STOCK_NOT_CONFIRMED', 'REJECTED']);
+        }
+        if (($filters['group'] ?? null) === 'OUT_OF_STOCK') {
+            $query->where('l.status', 'ACTIVE')->whereNotExists(fn ($stock) => $stock->selectRaw('1')->from('listing_variants as v')->join('inventory_items as i', 'i.listing_variant_id', '=', 'v.id')
+                ->whereColumn('v.vendor_listing_id', 'l.id')->where('v.active', true)->whereRaw('i.quantity_on_hand - i.hard_reserved_quantity > 0'));
         }
         $page = $query->orderByDesc('l.updated_at')->orderBy('l.id')->paginate(20, ['l.id', 'l.display_name', 'l.vendor_sku', 'l.status', 'l.compliance_status', 'l.regulated', 'l.other_label', 'l.lock_version', 'l.updated_at', 'l.publication_version', 'l.published_at', 'c.name as category_name', 'm.name as material_name'], 'page', (int) ($filters['page'] ?? 1));
         $ids = collect($page->items())->pluck('id')->all();
@@ -882,6 +890,6 @@ final class VendorCatalogService
 
     private function maxImageKb(): int
     {
-        return (int) config('materyalph.catalog.max_listing_image_kb', 5120);
+        return min((int) config('materyalph.catalog.max_listing_image_kb', 5120), PlatformSettings::current()->uploadKb('listing_image'));
     }
 }

@@ -205,6 +205,21 @@ class ReviewRatingsView {
 }
 
 @immutable
+class ReviewMediaView {
+  const ReviewMediaView({
+    required this.id,
+    required this.url,
+    required this.contentType,
+    this.byteSize,
+  });
+  final String id;
+  final String url;
+  final String contentType;
+  final int? byteSize;
+  bool get video => contentType.startsWith('video/');
+}
+
+@immutable
 class OwnReviewView {
   const OwnReviewView({
     required this.id,
@@ -216,6 +231,7 @@ class OwnReviewView {
     required this.visibility,
     required this.lockVersion,
     this.editableUntilLabel,
+    this.media = const [],
   });
 
   final String id;
@@ -227,6 +243,7 @@ class OwnReviewView {
   final String visibility;
   final int lockVersion;
   final String? editableUntilLabel;
+  final List<ReviewMediaView> media;
 }
 
 @immutable
@@ -264,6 +281,9 @@ class OrderReviewsView {
     required this.canSubmitVendorRating,
     required this.lines,
     this.counterpartRating,
+    this.mediaMax = 3,
+    this.photoMaxBytes = 10 * 1024 * 1024,
+    this.videoMaxBytes = 100 * 1024 * 1024,
   });
 
   final String orderId;
@@ -279,6 +299,9 @@ class OrderReviewsView {
   final bool canSubmitVendorRating;
   final List<ReviewLineView> lines;
   final ReviewRatingsView? counterpartRating;
+  final int mediaMax;
+  final int photoMaxBytes;
+  final int videoMaxBytes;
 
   bool get open => state == 'OPEN';
 }
@@ -293,6 +316,7 @@ class PublicReviewView {
     required this.edited,
     this.variantLabel,
     this.submittedAt,
+    this.media = const [],
   });
 
   final String id;
@@ -302,6 +326,7 @@ class PublicReviewView {
   final bool edited;
   final String? variantLabel;
   final DateTime? submittedAt;
+  final List<ReviewMediaView> media;
 }
 
 @immutable

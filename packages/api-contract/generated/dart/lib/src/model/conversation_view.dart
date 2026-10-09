@@ -27,6 +27,7 @@ part 'conversation_view.g.dart';
 /// * [lockedReference]
 /// * [updatedAt]
 /// * [canTransfer]
+/// * [canListFulfillmentConversations] - Current vendor Owner or Store Manager may list this sales inquiry buyer's fulfillment conversations. False for other roles and fulfillment threads.
 /// * [fulfillmentEntryEnabled]
 /// * [readOnly]
 /// * [readOnlyReason]
@@ -77,6 +78,10 @@ abstract class ConversationView implements Built<ConversationView, ConversationV
 
   @BuiltValueField(wireName: r'can_transfer')
   bool get canTransfer;
+
+  /// Current vendor Owner or Store Manager may list this sales inquiry buyer's fulfillment conversations. False for other roles and fulfillment threads.
+  @BuiltValueField(wireName: r'can_list_fulfillment_conversations')
+  bool? get canListFulfillmentConversations;
 
   @BuiltValueField(wireName: r'fulfillment_entry_enabled')
   bool get fulfillmentEntryEnabled;
@@ -198,6 +203,13 @@ class _$ConversationViewSerializer implements PrimitiveSerializer<ConversationVi
       object.canTransfer,
       specifiedType: const FullType(bool),
     );
+    if (object.canListFulfillmentConversations != null) {
+      yield r'can_list_fulfillment_conversations';
+      yield serializers.serialize(
+        object.canListFulfillmentConversations,
+        specifiedType: const FullType(bool),
+      );
+    }
     yield r'fulfillment_entry_enabled';
     yield serializers.serialize(
       object.fulfillmentEntryEnabled,
@@ -379,6 +391,14 @@ class _$ConversationViewSerializer implements PrimitiveSerializer<ConversationVi
             specifiedType: const FullType(bool),
           ) as bool;
           result.canTransfer = valueDes;
+          break;
+        case r'can_list_fulfillment_conversations':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.canListFulfillmentConversations = valueDes;
           break;
         case r'fulfillment_entry_enabled':
           final valueDes = serializers.deserialize(

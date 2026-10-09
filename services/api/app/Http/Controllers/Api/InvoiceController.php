@@ -8,6 +8,7 @@ use App\Domain\Disputes\DisputeFilingService;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Invoices\InvoiceQueries;
 use App\Domain\Invoices\InvoiceService;
+use App\Domain\Settings\PlatformSettings;
 use App\Http\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Models\User;
@@ -76,7 +77,7 @@ final class InvoiceController extends Controller
             'vat_exempt_centavos' => ['sometimes', 'nullable', 'integer', 'min:0'], 'zero_rated_centavos' => ['sometimes', 'nullable', 'integer', 'min:0'],
             'related_line_ids' => ['sometimes', 'array', 'max:200'], 'related_line_ids.*' => ['uuid'],
             'source_system' => ['required', Rule::in(InvoiceService::SOURCE_SYSTEMS)], 'invoicing_method' => ['required', Rule::in(InvoiceService::INVOICING_METHODS)],
-            'amends_invoice_record_id' => ['sometimes', 'nullable', 'uuid'], 'invoice_request_id' => ['sometimes', 'nullable', 'uuid'], 'file' => ['required', 'file', 'max:10240'],
+            'amends_invoice_record_id' => ['sometimes', 'nullable', 'uuid'], 'invoice_request_id' => ['sometimes', 'nullable', 'uuid'], 'file' => ['required', 'file', 'max:'.PlatformSettings::current()->uploadKb('case_evidence')],
         ]);
         $file = $request->file('file');
         if (! $file instanceof UploadedFile) {

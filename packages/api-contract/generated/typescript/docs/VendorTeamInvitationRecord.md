@@ -7,6 +7,8 @@
 Name | Type
 ------------ | -------------
 `id` | string
+`lockVersion` | number
+`canDelete` | boolean
 `inviteeName` | string
 `email` | string
 `inviteeMobile` | string
@@ -28,6 +30,8 @@ import type { VendorTeamInvitationRecord } from '@materyalph/api-client-ts'
 // TODO: Update the object below with actual values
 const example = {
   "id": null,
+  "lockVersion": null,
+  "canDelete": null,
   "inviteeName": null,
   "email": null,
   "inviteeMobile": null,

@@ -8,6 +8,11 @@ Name | Type
 ------------ | -------------
 `currentPage` | number
 `lastPage` | number
+`total` | number
+`totalEvents` | number
+`succeededEvents` | number
+`failedEvents` | number
+`categories` | [Array&lt;VendorTeamActivityEnvelopeMetaCategoriesInner&gt;](VendorTeamActivityEnvelopeMetaCategoriesInner.md)
 
 ## Example
 
@@ -18,6 +23,11 @@ import type { VendorTeamActivityEnvelopeMeta } from '@materyalph/api-client-ts'
 const example = {
   "currentPage": null,
   "lastPage": null,
+  "total": null,
+  "totalEvents": null,
+  "succeededEvents": null,
+  "failedEvents": null,
+  "categories": null,
 } satisfies VendorTeamActivityEnvelopeMeta
 
 console.log(example)

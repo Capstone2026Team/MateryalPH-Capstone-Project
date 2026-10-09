@@ -79,5 +79,13 @@ assert.equal(s.BuyerMaterialsAnalyticsRequest.additionalProperties, false, 'Undo
 assert.deepEqual(s.AnalyticsWindow.properties.max_days, { type: 'integer' })
 assert.ok(JSON.stringify(s.AnalyticsTrend.properties.reason).includes('INSUFFICIENT_COMPETITOR_DATA'), 'Null trends carry their reason')
 assert.ok(s.PublicBadge && s.ListingVendorCard.properties.badges && s.PublicStoreProfile.properties.badges, 'Badges are published on vendor cards and store profiles')
+assert.equal(s.ReviewMediaForm.properties.files.maxItems, 3);
+assert.deepEqual(s.ReviewMediaLink.properties.content_type.enum, ['image/jpeg', 'image/png', 'video/mp4', 'video/quicktime']);
+for (const audience of ['buyers', 'vendor', 'admin']) {
+  const content = spec.paths[`/${audience}/reviews/{reviewId}/media/{mediaId}/content`].get.responses['200'].content;
+  assert.ok(content['video/mp4'] && content['video/quicktime'], 'Every authorized audience can inspect review videos');
+}
+assert.match(readFileSync(new URL('../generated/dart/lib/src/api/buyer_reviews_api.dart', import.meta.url), 'utf8'), /r'files\[\]': files.toList\(\)/, 'Dart uploads a PHP multipart array');
+assert.match(readFileSync(new URL('../generated/typescript/src/apis/BuyerReviewsApi.ts', import.meta.url), 'utf8'), /append\('files\[\]'/, 'TypeScript uploads a PHP multipart array');
 assert.match(spec.info.version, /phase\.(1[4-9]|20)$/)
 console.log(`Trust and analytics contract passed: ${expected.size} operations, transports, signed links, idempotency, no delete/award path and aggregate-only Vendor analytics`)

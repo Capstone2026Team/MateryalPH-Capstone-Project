@@ -8,6 +8,7 @@ RUN apk upgrade --no-cache \
         icu-dev \
         clamav \
         clamav-libunrar \
+        ffmpeg \
         libpng-dev \
         libjpeg-turbo-dev \
         libwebp-dev \

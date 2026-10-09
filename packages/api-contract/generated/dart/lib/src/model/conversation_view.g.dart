@@ -147,6 +147,8 @@ class _$ConversationView extends ConversationView {
   @override
   final bool canTransfer;
   @override
+  final bool? canListFulfillmentConversations;
+  @override
   final bool fulfillmentEntryEnabled;
   @override
   final bool readOnly;
@@ -186,6 +188,7 @@ class _$ConversationView extends ConversationView {
       required this.lockedReference,
       required this.updatedAt,
       required this.canTransfer,
+      this.canListFulfillmentConversations,
       required this.fulfillmentEntryEnabled,
       required this.readOnly,
       this.readOnlyReason,
@@ -222,6 +225,8 @@ class _$ConversationView extends ConversationView {
         lockedReference == other.lockedReference &&
         updatedAt == other.updatedAt &&
         canTransfer == other.canTransfer &&
+        canListFulfillmentConversations ==
+            other.canListFulfillmentConversations &&
         fulfillmentEntryEnabled == other.fulfillmentEntryEnabled &&
         readOnly == other.readOnly &&
         readOnlyReason == other.readOnlyReason &&
@@ -250,6 +255,7 @@ class _$ConversationView extends ConversationView {
     _$hash = $jc(_$hash, lockedReference.hashCode);
     _$hash = $jc(_$hash, updatedAt.hashCode);
     _$hash = $jc(_$hash, canTransfer.hashCode);
+    _$hash = $jc(_$hash, canListFulfillmentConversations.hashCode);
     _$hash = $jc(_$hash, fulfillmentEntryEnabled.hashCode);
     _$hash = $jc(_$hash, readOnly.hashCode);
     _$hash = $jc(_$hash, readOnlyReason.hashCode);
@@ -280,6 +286,8 @@ class _$ConversationView extends ConversationView {
           ..add('lockedReference', lockedReference)
           ..add('updatedAt', updatedAt)
           ..add('canTransfer', canTransfer)
+          ..add('canListFulfillmentConversations',
+              canListFulfillmentConversations)
           ..add('fulfillmentEntryEnabled', fulfillmentEntryEnabled)
           ..add('readOnly', readOnly)
           ..add('readOnlyReason', readOnlyReason)
@@ -350,6 +358,12 @@ class ConversationViewBuilder
   bool? _canTransfer;
   bool? get canTransfer => _$this._canTransfer;
   set canTransfer(bool? canTransfer) => _$this._canTransfer = canTransfer;
+
+  bool? _canListFulfillmentConversations;
+  bool? get canListFulfillmentConversations =>
+      _$this._canListFulfillmentConversations;
+  set canListFulfillmentConversations(bool? canListFulfillmentConversations) =>
+      _$this._canListFulfillmentConversations = canListFulfillmentConversations;
 
   bool? _fulfillmentEntryEnabled;
   bool? get fulfillmentEntryEnabled => _$this._fulfillmentEntryEnabled;
@@ -423,6 +437,7 @@ class ConversationViewBuilder
       _lockedReference = $v.lockedReference.toBuilder();
       _updatedAt = $v.updatedAt;
       _canTransfer = $v.canTransfer;
+      _canListFulfillmentConversations = $v.canListFulfillmentConversations;
       _fulfillmentEntryEnabled = $v.fulfillmentEntryEnabled;
       _readOnly = $v.readOnly;
       _readOnlyReason = $v.readOnlyReason;
@@ -477,6 +492,7 @@ class ConversationViewBuilder
                 updatedAt, r'ConversationView', 'updatedAt'),
             canTransfer: BuiltValueNullFieldError.checkNotNull(
                 canTransfer, r'ConversationView', 'canTransfer'),
+            canListFulfillmentConversations: canListFulfillmentConversations,
             fulfillmentEntryEnabled: BuiltValueNullFieldError.checkNotNull(
                 fulfillmentEntryEnabled,
                 r'ConversationView',

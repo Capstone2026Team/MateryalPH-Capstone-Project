@@ -12,6 +12,8 @@ All URIs are relative to */api/v1*
 | [**changeAccountPassword**](AccountsApi.md#changeaccountpassword) | **POST** /{accountPortal}/account/password |  |
 | [**confirmAccountEmailChange**](AccountsApi.md#confirmaccountemailchange) | **POST** /{accountPortal}/account/email/confirm |  |
 | [**confirmAccountFactorReplacement**](AccountsApi.md#confirmaccountfactorreplacement) | **POST** /{accountPortal}/account/factor/confirm |  |
+| [**deleteVendorTeamInvitation**](AccountsApi.md#deletevendorteaminvitation) | **DELETE** /vendors/account/invitations/{invitationId} |  |
+| [**deleteVendorTeamMember**](AccountsApi.md#deletevendorteammember) | **DELETE** /vendors/account/memberships/{membershipId} |  |
 | [**getAccountPhoto**](AccountsApi.md#getaccountphoto) | **GET** /{webAccountPortal}/account/photo |  |
 | [**getAccountProfile**](AccountsApi.md#getaccountprofile) | **GET** /{accountPortal}/account/profile |  |
 | [**getAccountSecurity**](AccountsApi.md#getaccountsecurity) | **GET** /{accountPortal}/account/security |  |
@@ -711,6 +713,168 @@ example().catch(console.error);
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
+## deleteVendorTeamInvitation
+
+> AccountMutationResultEnvelope deleteVendorTeamInvitation(invitationId, vendorTeamDeletion)
+
+
+
+Owner only. Allowed for unaccepted expired invitations or accepted invitations linked to a deleted membership. Otherwise returns TEAM_INVITATION_NOT_DELETABLE. Stale lock_version returns RESOURCE_VERSION_CONFLICT. Requires recent authentication and current agreements. Repeated deletion succeeds without duplicating audit events.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  AccountsApi,
+} from '@materyalph/api-client-ts';
+import type { DeleteVendorTeamInvitationRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // To configure API key authorization: accessCookie
+    apiKey: "YOUR API KEY",
+    // To configure API key authorization: webCsrf
+    apiKey: "YOUR API KEY",
+  });
+  const api = new AccountsApi(config);
+
+  const body = {
+    // string
+    invitationId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // VendorTeamDeletion
+    vendorTeamDeletion: ...,
+  } satisfies DeleteVendorTeamInvitationRequest;
+
+  try {
+    const data = await api.deleteVendorTeamInvitation(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **invitationId** | `string` |  | [Defaults to `undefined`] |
+| **vendorTeamDeletion** | [VendorTeamDeletion](VendorTeamDeletion.md) |  | |
+
+### Return type
+
+[**AccountMutationResultEnvelope**](AccountMutationResultEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Team record removed from management lists; historical attribution retained. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **404** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **409** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## deleteVendorTeamMember
+
+> AccountMutationResultEnvelope deleteVendorTeamMember(membershipId, vendorTeamDeletion)
+
+
+
+Owner only, scoped to the current organization. Only DEACTIVATED non-Owner memberships can be deleted; otherwise TEAM_ACCOUNT_NOT_DEACTIVATED. Deleted memberships cannot be edited or reactivated. Stale lock_version returns RESOURCE_VERSION_CONFLICT. Requires recent authentication and current agreements. Repeated deletion succeeds without duplicating audit events.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  AccountsApi,
+} from '@materyalph/api-client-ts';
+import type { DeleteVendorTeamMemberRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // To configure API key authorization: accessCookie
+    apiKey: "YOUR API KEY",
+    // To configure API key authorization: webCsrf
+    apiKey: "YOUR API KEY",
+  });
+  const api = new AccountsApi(config);
+
+  const body = {
+    // string
+    membershipId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // VendorTeamDeletion
+    vendorTeamDeletion: ...,
+  } satisfies DeleteVendorTeamMemberRequest;
+
+  try {
+    const data = await api.deleteVendorTeamMember(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **membershipId** | `string` |  | [Defaults to `undefined`] |
+| **vendorTeamDeletion** | [VendorTeamDeletion](VendorTeamDeletion.md) |  | |
+
+### Return type
+
+[**AccountMutationResultEnvelope**](AccountMutationResultEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Team record removed from management lists; historical attribution retained. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **404** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **409** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
 ## getAccountPhoto
 
 > Blob getAccountPhoto(expires, signature, version, owner, webAccountPortal)
@@ -1290,7 +1454,7 @@ example().catch(console.error);
 
 ## listAccountMemberships
 
-> AccountMembershipListEnvelope listAccountMemberships(accountPortal, page)
+> AccountMembershipListEnvelope listAccountMemberships(accountPortal, page, search, role)
 
 
 
@@ -1320,6 +1484,10 @@ async function example() {
     accountPortal: accountPortal_example,
     // number (optional)
     page: 56,
+    // string (optional)
+    search: search_example,
+    // 'OWNER' | 'STORE_MANAGER' | 'STORE_STAFF' | 'CUSTOMER_SERVICE' | 'INVENTORY' | 'FULFILLMENT' (optional)
+    role: role_example,
   } satisfies ListAccountMembershipsRequest;
 
   try {
@@ -1341,6 +1509,8 @@ example().catch(console.error);
 |------------- | ------------- | ------------- | -------------|
 | **accountPortal** | `vendors` |  | [Defaults to `undefined`] [Enum: vendors] |
 | **page** | `number` |  | [Optional] [Defaults to `undefined`] |
+| **search** | `string` |  | [Optional] [Defaults to `undefined`] |
+| **role** | `OWNER`, `STORE_MANAGER`, `STORE_STAFF`, `CUSTOMER_SERVICE`, `INVENTORY`, `FULFILLMENT` |  | [Optional] [Defaults to `undefined`] [Enum: OWNER, STORE_MANAGER, STORE_STAFF, CUSTOMER_SERVICE, INVENTORY, FULFILLMENT] |
 
 ### Return type
 

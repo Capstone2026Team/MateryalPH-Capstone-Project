@@ -1,8 +1,8 @@
 import { cloneElement, useCallback, useEffect, useId, useRef, useState, type ReactElement } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { FileText, Info, ReceiptText, Upload } from 'lucide-react'
+import { FileText, ReceiptText, Upload } from 'lucide-react'
 import {
-  Button, ConfirmDialog, DeadlineCountdown, FilterChips, InvoiceRecordList, PlatformDocumentNotice, ResponsiveRecordList, StatusBadge, StatusMessage, formatManilaDateTime, formatPesoCentavos, type RecordColumn,
+  Button, ConfirmDialog, DeadlineCountdown, FilterTabs, InfoNote, EmptyState, InvoiceRecordList, PlatformDocumentNotice, ResponsiveRecordList, StatusBadge, StatusMessage, formatManilaDateTime, formatPesoCentavos, type RecordColumn,
 } from '@materyalph/web-ui'
 import {
   disputeApiBasePath, explainDifference, getOrderInvoices, listInvoices, uploadInvoice,
@@ -62,12 +62,11 @@ function InvoicesWorkspace() {
     { key: 'recon', header: 'Reconciliation', cell: row => row.reconciliationState === 'INVOICE_RECONCILIATION_REQUIRED' ? <StatusBadge label={`Differs by ${formatPesoCentavos(row.reconciliationDifferenceCentavos ?? 0)}`} tone="warning" /> : <span className="text-sm">{(row.reconciliationState ?? '').replaceAll('_', ' ').toLowerCase()}</span> },
   ]
   return <div className="grid min-w-0 gap-6">
-    <PageHeader eyebrow="Store Operations" title="E-Invoices" description="Copies of the invoices you issue through your own registered process, and Buyer copy or correction requests. MateryalPH never assigns an official invoice number and an uploaded PDF is not proof of BIR compliance." />
-    {meta?.issuanceNotice && <p className="flex items-start gap-2 rounded-control border border-border-default bg-surface-primary px-3 py-2 text-sm"><Info size={16} className="mt-0.5 shrink-0 text-blue-900" aria-hidden="true" />{meta.issuanceNotice}</p>}
-    <FilterChips label="Invoice view" value={view} onChange={value => setParams({ view: value })} chips={VIEWS.map(item => ({ value: item.value, label: item.label, count: meta?.counts?.[item.value] }))} />
+    <PageHeader eyebrow="Store Operations" title="E-Invoices" description="Manage invoice copies and Buyer copy or correction requests." />
+    <InfoNote>MateryalPH never assigns an official invoice number; an uploaded PDF is not proof of BIR compliance. {meta?.issuanceNotice}</InfoNote>
+    <FilterTabs label="Invoice view" value={view} onChange={value => setParams({ view: value })} chips={VIEWS.map(item => ({ value: item.value, label: item.label, count: meta?.counts?.[item.value] }))} />
     {error ? <ErrorState message={error} onRetry={() => setAttempt(value => value + 1)} /> : rows === null ? <LoadingState label="Loading invoices…" />
-      : rows.length === 0 ? <div className="grid justify-items-center gap-2 rounded-surface border border-dashed border-border-default bg-surface-primary px-6 py-12 text-center"><ReceiptText size={22} aria-hidden="true" /><p className="font-semibold">Nothing here.</p>
-        <p className="max-w-md text-sm text-text-secondary">{view === 'REQUESTS' ? 'Buyer copy and correction requests appear here with a three-business-day service target.' : view === 'DUE' ? 'Every confirmed sale has an uploaded invoice copy.' : 'Uploaded invoice copies appear here.'}</p></div>
+      : rows.length === 0 ? <EmptyState icon={<ReceiptText size={24} aria-hidden="true" />} message={view === 'REQUESTS' ? 'No Buyer copy or correction requests.' : view === 'DUE' ? 'Every confirmed sale has an uploaded invoice copy.' : 'No invoice copies in this view.'} action={<Button variant="secondary" onClick={() => setAttempt(value => value + 1)}>Retry</Button>} />
         : <ResponsiveRecordList caption={VIEWS.find(item => item.value === view)?.label ?? 'Invoices'} rows={rows} columns={columns} rowKey={row => row.id ?? row.orderId ?? ''} cardTitle={orderLink} />}
   </div>
 }

@@ -8,7 +8,7 @@ import 'package:materyalph_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**data** | [**BuiltMap&lt;String, JsonObject&gt;**](JsonObject.md) |  |
+**data** | [**BuiltMap&lt;String, JsonObject&gt;**](JsonObject.md) | Sectioned case. Includes workstreams and activation_restrictions as documented by AdminVendorVerificationDetail. |
 **meta** | [**BuiltMap&lt;String, JsonObject&gt;**](JsonObject.md) |  |
 **errors** | [**BuiltList&lt;BuiltMap&lt;String, JsonObject&gt;&gt;**](BuiltMap.md) |  |
 

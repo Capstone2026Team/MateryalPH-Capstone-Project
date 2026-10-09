@@ -72,7 +72,7 @@ void main() {
 
     // Paginated organization listings. Customer Service Staff receive the sales stock view; Fulfillment Staff receive only assigned products (meta.scope ASSIGNED_ONLY).
     //
-    //Future<CatalogListingSummaryListEnvelope> listVendorCatalogListings({ ListingStatus status, ListingComplianceStatus complianceStatus, String categoryId, String q, int page }) async
+    //Future<CatalogListingSummaryListEnvelope> listVendorCatalogListings({ String group, ListingStatus status, ListingComplianceStatus complianceStatus, String categoryId, String q, int page }) async
     test('test listVendorCatalogListings', () async {
       // TODO
     });

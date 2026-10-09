@@ -1,19 +1,41 @@
 import 'dart:typed_data';
 import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 import '../../core/api_guard.dart';
+import '../../core/private_realtime.dart';
 import '../map_discovery/discovery_repository.dart' show newIdempotencyKey;
+import 'notification_inbox_controller.dart';
 
-class NotificationsRepository {
+class NotificationsRepository implements NotificationInboxTransport {
   NotificationsRepository(
     api.MateryalphApiClient client,
     Future<void> Function() onExpired,
   ) : _api = client.getNotificationsApi(),
       _reports = client.getReportingApi(),
-      _guard = ApiGuard(onExpired);
+      _onExpired = onExpired;
   final api.NotificationsApi _api;
   final api.ReportingApi _reports;
-  final ApiGuard _guard;
+  final Future<void> Function() _onExpired;
+  Future<void> Function()? _sessionExpiry;
+  ApiGuard get _guard {
+    final version = inbox.accessVersion;
+    return ApiGuard(() async {
+      // A late 401 from the previous session must not end a newly signed-in account.
+      if (version != inbox.accessVersion) return;
+      await (_sessionExpiry?.call() ?? _onExpired());
+    });
+  }
 
+  late final inbox = NotificationInboxController(this);
+
+  /// The mounted Buyer shell also clears its configured private discovery store.
+  void Function() attachSessionExpiry(Future<void> Function() callback) {
+    _sessionExpiry = callback;
+    return () {
+      if (_sessionExpiry == callback) _sessionExpiry = null;
+    };
+  }
+
+  @override
   Future<api.ListNotifications200Response> list([String? cursor]) =>
       _guard.call(
         () async => _guard.required(
@@ -21,6 +43,54 @@ class NotificationsRepository {
             audience: 'buyers',
             cursor: cursor,
           )).data,
+        ),
+      );
+  @override
+  Future<api.NotificationBulkReadAction> readAll(
+    String throughId,
+    String? category,
+  ) => _guard.call(
+    () async => _guard
+        .required(
+          (await _api.markNotificationsRead(
+            audience: 'buyers',
+            notificationReadFilter: api.NotificationReadFilter(
+              (b) => b
+                ..throughId = throughId
+                ..category = category,
+            ),
+          )).data,
+        )
+        .data,
+  );
+
+  @override
+  Future<void Function()> watch(void Function() refresh) =>
+      watchPrivateRealtime(
+        null,
+        refresh,
+        events: const {'notifications.changed'},
+        configuration: () => _guard.call(
+          () async => _guard
+              .required(
+                (await _api.getNotificationRealtime(audience: 'buyers')).data,
+              )
+              .data,
+        ),
+        authorize: (socketId, channelName) => _guard.call(
+          () async => _guard
+              .required(
+                (await _api.authorizeNotificationChannel(
+                  audience: 'buyers',
+                  chatChannelAuth: api.ChatChannelAuth(
+                    (b) => b
+                      ..socketId = socketId
+                      ..channelName = channelName,
+                  ),
+                )).data,
+              )
+              .data
+              .auth,
         ),
       );
   Future<List<api.NotificationPreference>> preferences() => _guard.call(
@@ -47,6 +117,7 @@ class NotificationsRepository {
       ),
     );
   });
+  @override
   Future<String> resolve(String id) => _guard.call(() async {
     final result = _guard
         .required(

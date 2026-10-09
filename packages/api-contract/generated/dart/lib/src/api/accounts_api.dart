@@ -33,6 +33,7 @@ import 'package:materyalph_api_client/src/model/account_session_list_envelope.da
 import 'package:materyalph_api_client/src/model/account_session_revocation.dart';
 import 'package:materyalph_api_client/src/model/vendor_invitation_acceptance.dart';
 import 'package:materyalph_api_client/src/model/vendor_staff_update.dart';
+import 'package:materyalph_api_client/src/model/vendor_team_deletion.dart';
 
 class AccountsApi {
 
@@ -941,6 +942,224 @@ class AccountsApi {
     );
   }
 
+  /// deleteVendorTeamInvitation
+  /// Owner only. Allowed for unaccepted expired invitations or accepted invitations linked to a deleted membership. Otherwise returns TEAM_INVITATION_NOT_DELETABLE. Stale lock_version returns RESOURCE_VERSION_CONFLICT. Requires recent authentication and current agreements. Repeated deletion succeeds without duplicating audit events.
+  ///
+  /// Parameters:
+  /// * [invitationId]
+  /// * [vendorTeamDeletion]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [AccountMutationResultEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<AccountMutationResultEnvelope>> deleteVendorTeamInvitation({
+    required String invitationId,
+    required VendorTeamDeletion vendorTeamDeletion,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/vendors/account/invitations/{invitationId}'.replaceAll('{' r'invitationId' '}', encodeQueryParameter(_serializers, invitationId, const FullType(String)).toString());
+    final _options = Options(
+      method: r'DELETE',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'accessCookie',
+            'keyName': 'mp_access',
+            'where': '',
+          },{
+            'type': 'apiKey',
+            'name': 'webCsrf',
+            'keyName': 'X-CSRF-Token',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(VendorTeamDeletion);
+      _bodyData = _serializers.serialize(vendorTeamDeletion, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    AccountMutationResultEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(AccountMutationResultEnvelope),
+      ) as AccountMutationResultEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<AccountMutationResultEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// deleteVendorTeamMember
+  /// Owner only, scoped to the current organization. Only DEACTIVATED non-Owner memberships can be deleted; otherwise TEAM_ACCOUNT_NOT_DEACTIVATED. Deleted memberships cannot be edited or reactivated. Stale lock_version returns RESOURCE_VERSION_CONFLICT. Requires recent authentication and current agreements. Repeated deletion succeeds without duplicating audit events.
+  ///
+  /// Parameters:
+  /// * [membershipId]
+  /// * [vendorTeamDeletion]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [AccountMutationResultEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<AccountMutationResultEnvelope>> deleteVendorTeamMember({
+    required String membershipId,
+    required VendorTeamDeletion vendorTeamDeletion,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/vendors/account/memberships/{membershipId}'.replaceAll('{' r'membershipId' '}', encodeQueryParameter(_serializers, membershipId, const FullType(String)).toString());
+    final _options = Options(
+      method: r'DELETE',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'accessCookie',
+            'keyName': 'mp_access',
+            'where': '',
+          },{
+            'type': 'apiKey',
+            'name': 'webCsrf',
+            'keyName': 'X-CSRF-Token',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(VendorTeamDeletion);
+      _bodyData = _serializers.serialize(vendorTeamDeletion, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    AccountMutationResultEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(AccountMutationResultEnvelope),
+      ) as AccountMutationResultEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<AccountMutationResultEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
   /// getAccountPhoto
   /// Use the five-minute signed avatar_url from the profile. Authenticated owner only; private no-store response. No user identifier is accepted.
   ///
@@ -1596,6 +1815,8 @@ class AccountsApi {
   /// Parameters:
   /// * [accountPortal]
   /// * [page]
+  /// * [search]
+  /// * [role]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -1608,6 +1829,8 @@ class AccountsApi {
   Future<Response<AccountMembershipListEnvelope>> listAccountMemberships({
     required String accountPortal,
     int? page,
+    String? search,
+    String? role,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -1641,6 +1864,8 @@ class AccountsApi {
 
     final _queryParameters = <String, dynamic>{
       if (page != null) r'page': encodeQueryParameter(_serializers, page, const FullType(int)),
+      if (search != null) r'search': encodeQueryParameter(_serializers, search, const FullType(String)),
+      if (role != null) r'role': encodeQueryParameter(_serializers, role, const FullType(String)),
     };
 
     final _response = await _dio.request<Object>(

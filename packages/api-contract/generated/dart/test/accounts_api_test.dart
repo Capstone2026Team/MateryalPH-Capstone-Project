@@ -61,6 +61,20 @@ void main() {
       // TODO
     });
 
+    // Owner only. Allowed for unaccepted expired invitations or accepted invitations linked to a deleted membership. Otherwise returns TEAM_INVITATION_NOT_DELETABLE. Stale lock_version returns RESOURCE_VERSION_CONFLICT. Requires recent authentication and current agreements. Repeated deletion succeeds without duplicating audit events.
+    //
+    //Future<AccountMutationResultEnvelope> deleteVendorTeamInvitation(String invitationId, VendorTeamDeletion vendorTeamDeletion) async
+    test('test deleteVendorTeamInvitation', () async {
+      // TODO
+    });
+
+    // Owner only, scoped to the current organization. Only DEACTIVATED non-Owner memberships can be deleted; otherwise TEAM_ACCOUNT_NOT_DEACTIVATED. Deleted memberships cannot be edited or reactivated. Stale lock_version returns RESOURCE_VERSION_CONFLICT. Requires recent authentication and current agreements. Repeated deletion succeeds without duplicating audit events.
+    //
+    //Future<AccountMutationResultEnvelope> deleteVendorTeamMember(String membershipId, VendorTeamDeletion vendorTeamDeletion) async
+    test('test deleteVendorTeamMember', () async {
+      // TODO
+    });
+
     // Use the five-minute signed avatar_url from the profile. Authenticated owner only; private no-store response. No user identifier is accepted.
     //
     //Future<Uint8List> getAccountPhoto(int expires, String signature, int version, String owner, String webAccountPortal) async
@@ -112,7 +126,7 @@ void main() {
 
     // Server enforces the route audience, active account and membership, resource ownership, Passport scope and session transport. buyers uses MOBILE bearer; vendors/admin use WEB cookies and CSRF on mutations. Privileged security changes require session-bound recent authentication. No client header can select or bypass transport security.
     //
-    //Future<AccountMembershipListEnvelope> listAccountMemberships(String accountPortal, { int page }) async
+    //Future<AccountMembershipListEnvelope> listAccountMemberships(String accountPortal, { int page, String search, String role }) async
     test('test listAccountMemberships', () async {
       // TODO
     });

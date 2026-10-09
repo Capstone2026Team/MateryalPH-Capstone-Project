@@ -227,7 +227,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **listVendorOrders**
-> OrderListEnvelope listVendorOrders(group, q, page)
+> OrderListEnvelope listVendorOrders(group, closedState, q, page)
 
 
 
@@ -243,11 +243,12 @@ import 'package:materyalph_api_client/api.dart';
 
 final api = MateryalphApiClient().getVendorOrdersApi();
 final String group = group_example; // String |
+final String closedState = closedState_example; // String | Only valid with group CLOSED. Filters before pagination; group counts remain unfiltered.
 final String q = q_example; // String |
 final int page = 56; // int |
 
 try {
-    final response = api.listVendorOrders(group, q, page);
+    final response = api.listVendorOrders(group, closedState, q, page);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling VendorOrdersApi->listVendorOrders: $e\n');
@@ -259,6 +260,7 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **group** | **String**|  | [optional]
+ **closedState** | **String**| Only valid with group CLOSED. Filters before pagination; group counts remain unfiltered. | [optional]
  **q** | **String**|  | [optional]
  **page** | **int**|  | [optional]
 

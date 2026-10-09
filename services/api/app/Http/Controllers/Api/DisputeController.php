@@ -15,6 +15,7 @@ use App\Domain\Disputes\DisputeQueries;
 use App\Domain\Disputes\DisputeRules;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Orders\OrderAccess;
+use App\Domain\Settings\PlatformSettings;
 use App\Http\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Models\User;
@@ -80,7 +81,7 @@ final class DisputeController extends Controller
             'description' => ['required', 'string', 'min:20', 'max:4000'],
             'affected_line_ids' => ['sometimes', 'array', 'max:200'], 'affected_line_ids.*' => ['uuid'],
             'preferred_contact_channel' => ['sometimes', 'nullable', Rule::in(['IN_APP', 'EMAIL'])],
-            'files' => ['sometimes', 'array', 'max:'.DisputeFiles::MAX_FILES], 'files.*' => ['file', 'max:10240'],
+            'files' => ['sometimes', 'array', 'max:'.DisputeFiles::MAX_FILES], 'files.*' => ['file', 'max:'.PlatformSettings::current()->uploadKb('case_evidence')],
         ]);
         /** @var array{order_id: string, issue_type: string, requested_remedy: string, requested_amount_centavos?: int|null, description: string, affected_line_ids?: list<string>, preferred_contact_channel?: string|null} $input */
         $input['requested_amount_centavos'] = isset($input['requested_amount_centavos']) ? (int) $input['requested_amount_centavos'] : null;
@@ -94,7 +95,7 @@ final class DisputeController extends Controller
     {
         DisputeFilingService::rejectDestination($request);
         $input = $request->validate(['position' => ['required', Rule::in(DisputeRules::RESPONSE_POSITIONS)], 'body' => ['required', 'string', 'min:10', 'max:4000'],
-            'amount_centavos' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:100000000000'], 'files' => ['sometimes', 'array', 'max:'.DisputeFiles::MAX_FILES], 'files.*' => ['file', 'max:10240']]);
+            'amount_centavos' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:100000000000'], 'files' => ['sometimes', 'array', 'max:'.DisputeFiles::MAX_FILES], 'files.*' => ['file', 'max:'.PlatformSettings::current()->uploadKb('case_evidence')]]);
         $this->cases->respond($request, self::party($request), $caseId, ['position' => (string) $input['position'], 'body' => (string) $input['body'],
             'amount_centavos' => isset($input['amount_centavos']) ? (int) $input['amount_centavos'] : null], self::uploads($request));
 
@@ -134,7 +135,7 @@ final class DisputeController extends Controller
 
     public function evidence(Request $request, string $caseId): JsonResponse
     {
-        $input = $request->validate(['description' => ['sometimes', 'nullable', 'string', 'max:500'], 'files' => ['required', 'array', 'min:1', 'max:'.DisputeFiles::MAX_FILES], 'files.*' => ['file', 'max:10240']]);
+        $input = $request->validate(['description' => ['sometimes', 'nullable', 'string', 'max:500'], 'files' => ['required', 'array', 'min:1', 'max:'.DisputeFiles::MAX_FILES], 'files.*' => ['file', 'max:'.PlatformSettings::current()->uploadKb('case_evidence')]]);
         $this->cases->addEvidence($request, self::party($request), $caseId, isset($input['description']) ? (string) $input['description'] : null, self::uploads($request));
 
         return ApiResponse::success($this->detail($request, $caseId), [], 201);
@@ -152,7 +153,7 @@ final class DisputeController extends Controller
     public function answerClarification(Request $request, string $caseId, string $clarificationId): JsonResponse
     {
         DisputeFilingService::rejectDestination($request);
-        $input = $request->validate(['response' => ['required', 'string', 'min:5', 'max:4000'], 'files' => ['sometimes', 'array', 'max:'.DisputeFiles::MAX_FILES], 'files.*' => ['file', 'max:10240']]);
+        $input = $request->validate(['response' => ['required', 'string', 'min:5', 'max:4000'], 'files' => ['sometimes', 'array', 'max:'.DisputeFiles::MAX_FILES], 'files.*' => ['file', 'max:'.PlatformSettings::current()->uploadKb('case_evidence')]]);
         $this->cases->answerClarification($request, self::party($request), $caseId, $clarificationId, (string) $input['response'], self::uploads($request));
 
         return ApiResponse::success($this->detail($request, $caseId));
@@ -162,7 +163,7 @@ final class DisputeController extends Controller
     {
         DisputeFilingService::rejectDestination($request);
         $input = $request->validate(['grounds' => ['required', Rule::in(DisputeRules::APPEAL_GROUNDS)], 'statement' => ['required', 'string', 'min:20', 'max:4000'],
-            'files' => ['sometimes', 'array', 'max:'.DisputeFiles::MAX_FILES], 'files.*' => ['file', 'max:10240']]);
+            'files' => ['sometimes', 'array', 'max:'.DisputeFiles::MAX_FILES], 'files.*' => ['file', 'max:'.PlatformSettings::current()->uploadKb('case_evidence')]]);
         $this->cases->appeal($request, self::party($request), $caseId, (string) $input['grounds'], (string) $input['statement'], self::uploads($request));
 
         return ApiResponse::success($this->detail($request, $caseId), [], 201);
@@ -170,7 +171,7 @@ final class DisputeController extends Controller
 
     public function recordReplacement(Request $request, string $caseId, string $remedyId): JsonResponse
     {
-        $input = $request->validate(['note' => ['required', 'string', 'min:10', 'max:500'], 'files' => ['sometimes', 'array', 'max:1'], 'files.*' => ['file', 'max:10240']]);
+        $input = $request->validate(['note' => ['required', 'string', 'min:10', 'max:500'], 'files' => ['sometimes', 'array', 'max:1'], 'files.*' => ['file', 'max:'.PlatformSettings::current()->uploadKb('case_evidence')]]);
         $this->cases->recordReplacement($request, $caseId, $remedyId, (string) $input['note'], self::uploads($request));
 
         return ApiResponse::success($this->detail($request, $caseId));

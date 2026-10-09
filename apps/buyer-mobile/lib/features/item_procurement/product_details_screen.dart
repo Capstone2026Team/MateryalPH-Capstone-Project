@@ -14,6 +14,8 @@ import 'procurement_navigation.dart';
 import '../trust/listing_reviews_section.dart';
 import 'procurement_repository.dart';
 import 'product_finalization_sheet.dart';
+import 'related_products_controller.dart';
+import 'search_results_screen.dart' show ListingCard;
 
 /// Product Details for one Tier 2 listing. Add to Cart records the price version shown here; the
 /// server rejects a changed price instead of silently accepting it. Nothing here reserves stock.
@@ -54,12 +56,21 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
 
   /// One key per add attempt, reused for its retries so a retry never adds twice.
   String? _pendingAddKey;
+  late final RelatedProductsController _relatedProducts;
 
   @override
   void initState() {
     super.initState();
+    _relatedProducts = RelatedProductsController(
+      repository: widget.repository,
+      explore: widget.explore,
+    )..addListener(_syncRelated);
     _load();
     widget.explore.addListener(_syncFavorite);
+  }
+
+  void _syncRelated() {
+    if (mounted) setState(() {});
   }
 
   void _syncFavorite() {
@@ -75,6 +86,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   @override
   void dispose() {
     widget.explore.removeListener(_syncFavorite);
+    _relatedProducts.dispose();
     super.dispose();
   }
 
@@ -93,6 +105,12 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
         quantity: _quantity,
         fulfillment: _fulfillment,
         buy: buy,
+        repository: widget.repository,
+        cart: widget.cart,
+        savedLocations: () => widget.explore.savedLocations,
+        chooseDropOff: widget.navigation.discovery == null
+            ? null
+            : widget.navigation.chooseDropOff,
         onConfirm: (variantId, quantity, fulfillment) async {
           setState(() {
             _variantId = variantId;
@@ -172,6 +190,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
             : null;
         _loading = false;
       });
+      if (_tab == 1) await _relatedProducts.show(detail, refresh: true);
     } on DiscoveryFailure catch (error) {
       if (!mounted) return;
       setState(() {
@@ -387,7 +406,10 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
             child: SegmentedTabs(
               labels: const ['Overview', 'Related', 'Reviews'],
               selected: _tab,
-              onChanged: (index) => setState(() => _tab = index),
+              onChanged: (index) {
+                setState(() => _tab = index);
+                if (index == 1) _relatedProducts.show(detail);
+              },
             ),
           ),
           Padding(
@@ -636,30 +658,115 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     ];
   }
 
-  List<Widget> _related(ListingDetailView detail) => [
-    const SizedBox(height: 16),
-    _vendor(detail),
-    const SizedBox(height: 16),
-    Text(
-      'More from ${detail.vendorName}',
-      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-    ),
-    const SizedBox(height: 4),
-    Text(
-      'See this store’s other products within your ${widget.explore.radiusKm} km radius.',
-      style: const TextStyle(color: BuyerTheme.muted),
-    ),
-    const SizedBox(height: 12),
-    OutlinedButton.icon(
-      onPressed: () => widget.navigation.browseStore(
-        context,
-        vendorId: detail.vendorId,
-        vendorName: detail.vendorName,
+  List<Widget> _related(ListingDetailView detail) {
+    final sameVendor = _relatedProducts.items
+        .where((item) => item.vendorId == detail.vendorId)
+        .toList();
+    final otherVendors = _relatedProducts.items
+        .where((item) => item.vendorId != detail.vendorId)
+        .toList();
+    final failure = _relatedProducts.failure;
+    return [
+      const SizedBox(height: 16),
+      Text(
+        'Products in ${detail.categoryName ?? 'the same category'} within your ${widget.explore.radiusKm} km radius.',
+        style: const TextStyle(color: BuyerTheme.muted),
       ),
-      icon: const Icon(LucideIcons.store),
-      label: const Text('Browse store products'),
-    ),
-  ];
+      const SizedBox(height: 12),
+      if (_relatedProducts.loading)
+        const SkeletonBox(height: 250)
+      else ...[
+        if (failure != null)
+          StateMessage(
+            kind: failure.kind == DiscoveryFailureKind.offline
+                ? StateKind.offline
+                : failure.kind == DiscoveryFailureKind.forbidden ||
+                      failure.kind == DiscoveryFailureKind.sessionExpired
+                ? StateKind.forbidden
+                : StateKind.error,
+            title: 'Related products could not load',
+            message: failure.message,
+            actionLabel: 'Retry',
+            onAction: _relatedProducts.items.isEmpty
+                ? _relatedProducts.reload
+                : _relatedProducts.loadMore,
+          ),
+        if (failure == null && _relatedProducts.items.isEmpty)
+          StateMessage(
+            kind: StateKind.empty,
+            title: 'This product has no related products',
+            message:
+                'No other products in the same category are available within your ${widget.explore.radiusKm} km radius.',
+          ),
+        if (sameVendor.isNotEmpty) ...[
+          _Label('Related products from ${detail.vendorName}'),
+          _relatedCards(sameVendor),
+        ],
+        if (otherVendors.isNotEmpty) ...[
+          const _Label('Related products from other vendors'),
+          _relatedCards(otherVendors),
+        ],
+        if (_relatedProducts.loadingMore)
+          const Padding(
+            padding: EdgeInsets.all(16),
+            child: Center(child: CircularProgressIndicator()),
+          )
+        else if (_relatedProducts.hasMore && failure == null)
+          OutlinedButton(
+            onPressed: _relatedProducts.loadMore,
+            child: const Text('Load more related products'),
+          ),
+      ],
+      const SizedBox(height: 12),
+      OutlinedButton.icon(
+        onPressed: () => widget.navigation.browseStore(
+          context,
+          vendorId: detail.vendorId,
+          vendorName: detail.vendorName,
+        ),
+        icon: const Icon(LucideIcons.store),
+        label: const Text('Browse store products'),
+      ),
+    ];
+  }
+
+  Widget _relatedCards(List<ListingCardView> products) => LayoutBuilder(
+    builder: (context, constraints) {
+      final scale = MediaQuery.textScalerOf(context).scale(1);
+      final minimum = scale > 1.3 ? 300.0 : 160.0;
+      final columns = (constraints.maxWidth / minimum).floor().clamp(1, 3);
+      return Column(
+        children: [
+          for (var row = 0; row < (products.length / columns).ceil(); row++)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (var column = 0; column < columns; column++) ...[
+                      if (column > 0) const SizedBox(width: 12),
+                      Expanded(
+                        child: row * columns + column < products.length
+                            ? ListingCard(
+                                card: products[row * columns + column],
+                                showFavorite: false,
+                                onOpen: () => widget.navigation.openListing(
+                                  context,
+                                  products[row * columns + column].listingId,
+                                ),
+                              )
+                            : const SizedBox.shrink(),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+        ],
+      );
+    },
+  );
 
   List<Widget> _reviews(ListingDetailView detail) {
     final sold = formatQuantity(detail.unitsSold);

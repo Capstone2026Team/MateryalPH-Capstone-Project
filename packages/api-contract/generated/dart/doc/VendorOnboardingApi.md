@@ -617,9 +617,11 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **listVendorTeamActivity**
-> VendorTeamActivityEnvelope listVendorTeamActivity(page)
+> VendorTeamActivityEnvelope listVendorTeamActivity(page, memberId, role, days, category)
 
 
+
+Team Tracking synchronizes through payload-free team.activity.changed events on the existing viewer-bound Vendor inbox channel after audit, Vendor message or quotation activity commits. Delivery rechecks current organization, membership and staff-management authority; delegated Managers receive only non-manager activity invalidations. Re-fetch this endpoint for authoritative data. Clients poll automatically while realtime is unavailable and after reconnect.
 
 ### Example
 ```dart
@@ -631,9 +633,13 @@ import 'package:materyalph_api_client/api.dart';
 
 final api = MateryalphApiClient().getVendorOnboardingApi();
 final int page = 56; // int |
+final String memberId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String role = role_example; // String | Role recorded at the time of the action.
+final int days = 56; // int |
+final String category = category_example; // String |
 
 try {
-    final response = api.listVendorTeamActivity(page);
+    final response = api.listVendorTeamActivity(page, memberId, role, days, category);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling VendorOnboardingApi->listVendorTeamActivity: $e\n');
@@ -645,6 +651,10 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **page** | **int**|  | [optional]
+ **memberId** | **String**|  | [optional]
+ **role** | **String**| Role recorded at the time of the action. | [optional]
+ **days** | **int**|  | [optional] [default to 30]
+ **category** | **String**|  | [optional]
 
 ### Return type
 

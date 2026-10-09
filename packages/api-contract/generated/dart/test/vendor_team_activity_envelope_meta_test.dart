@@ -17,5 +17,30 @@ void main() {
       // TODO
     });
 
+    // int total
+    test('to test the property `total`', () async {
+      // TODO
+    });
+
+    // int totalEvents
+    test('to test the property `totalEvents`', () async {
+      // TODO
+    });
+
+    // int succeededEvents
+    test('to test the property `succeededEvents`', () async {
+      // TODO
+    });
+
+    // int failedEvents
+    test('to test the property `failedEvents`', () async {
+      // TODO
+    });
+
+    // BuiltList<VendorTeamActivityEnvelopeMetaCategoriesInner> categories
+    test('to test the property `categories`', () async {
+      // TODO
+    });
+
   });
 }

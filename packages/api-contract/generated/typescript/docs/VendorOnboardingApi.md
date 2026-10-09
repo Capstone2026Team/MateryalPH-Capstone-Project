@@ -915,9 +915,11 @@ example().catch(console.error);
 
 ## listVendorTeamActivity
 
-> VendorTeamActivityEnvelope listVendorTeamActivity(page)
+> VendorTeamActivityEnvelope listVendorTeamActivity(page, memberId, role, days, category)
 
 
+
+Team Tracking synchronizes through payload-free team.activity.changed events on the existing viewer-bound Vendor inbox channel after audit, Vendor message or quotation activity commits. Delivery rechecks current organization, membership and staff-management authority; delegated Managers receive only non-manager activity invalidations. Re-fetch this endpoint for authoritative data. Clients poll automatically while realtime is unavailable and after reconnect.
 
 ### Example
 
@@ -939,6 +941,14 @@ async function example() {
   const body = {
     // number (optional)
     page: 56,
+    // string (optional)
+    memberId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // 'OWNER' | 'STORE_MANAGER' | 'STORE_STAFF' | 'CUSTOMER_SERVICE' | 'INVENTORY' | 'FULFILLMENT' | Role recorded at the time of the action. (optional)
+    role: role_example,
+    // 7 | 30 | 90 (optional)
+    days: 56,
+    // 'SALES' | 'INVENTORY' | 'FULFILLMENT' | 'DISPUTES' | 'TEAM' | 'OTHER' (optional)
+    category: category_example,
   } satisfies ListVendorTeamActivityRequest;
 
   try {
@@ -959,6 +969,10 @@ example().catch(console.error);
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
 | **page** | `number` |  | [Optional] [Defaults to `undefined`] |
+| **memberId** | `string` |  | [Optional] [Defaults to `undefined`] |
+| **role** | `OWNER`, `STORE_MANAGER`, `STORE_STAFF`, `CUSTOMER_SERVICE`, `INVENTORY`, `FULFILLMENT` | Role recorded at the time of the action. | [Optional] [Defaults to `undefined`] [Enum: OWNER, STORE_MANAGER, STORE_STAFF, CUSTOMER_SERVICE, INVENTORY, FULFILLMENT] |
+| **days** | `7`, `30`, `90` |  | [Optional] [Defaults to `30`] [Enum: 7, 30, 90] |
+| **category** | `SALES`, `INVENTORY`, `FULFILLMENT`, `DISPUTES`, `TEAM`, `OTHER` |  | [Optional] [Defaults to `undefined`] [Enum: SALES, INVENTORY, FULFILLMENT, DISPUTES, TEAM, OTHER] |
 
 ### Return type
 
@@ -977,8 +991,10 @@ example().catch(console.error);
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **200** | Organization-scoped immutable audit history. Delegated Managers see only non-manager employee activity. Before and after values are restricted to safe role and status fields. |  -  |
+| **200** | Organization-scoped immutable audit history. Delegated Managers see only non-manager employee activity. Before and after values are restricted to safe role, status and fulfillment milestone fields. Summary counts cover all matching events across pages before the category filter; these are audit-event counts, not sales or productivity metrics. The default window is the last 30 days. |  -  |
 | **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **404** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 

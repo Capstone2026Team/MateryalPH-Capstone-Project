@@ -12,11 +12,13 @@ class BuyerPush {
   final void Function(String id) open;
   StreamSubscription<String>? _tokens;
   StreamSubscription<RemoteMessage>? _opens;
+  StreamSubscription<RemoteMessage>? _messages;
+  bool _disposed = false;
   final _storage = const FlutterSecureStorage();
   static const enabled = bool.fromEnvironment('FIREBASE_PUSH_ENABLED');
 
   Future<void> start() async {
-    if (!enabled || kIsWeb) return;
+    if (!enabled || kIsWeb || _disposed) return;
     if (Firebase.apps.isEmpty) {
       await Firebase.initializeApp(
         options: const FirebaseOptions(
@@ -30,8 +32,13 @@ class BuyerPush {
         ),
       );
     }
+    if (_disposed) return;
     _opens ??= FirebaseMessaging.onMessageOpenedApp.listen(_open);
+    _messages ??= FirebaseMessaging.onMessage.listen((_) {
+      unawaited(repository.inbox.refresh());
+    });
     final initial = await FirebaseMessaging.instance.getInitialMessage();
+    if (_disposed) return;
     if (initial != null) _open(initial);
     _tokens ??= FirebaseMessaging.instance.onTokenRefresh.listen((token) {
       unawaited(_register(token).catchError((Object _) {}));
@@ -40,10 +47,12 @@ class BuyerPush {
 
   Future<void> enable() async {
     await start();
+    if (_disposed) return;
     if (!enabled) {
       throw StateError('Push is not configured for this environment.');
     }
     final permission = await FirebaseMessaging.instance.requestPermission();
+    if (_disposed) return;
     if (permission.authorizationStatus != AuthorizationStatus.authorized &&
         permission.authorizationStatus != AuthorizationStatus.provisional) {
       throw StateError(
@@ -51,6 +60,7 @@ class BuyerPush {
       );
     }
     final token = await FirebaseMessaging.instance.getToken();
+    if (_disposed) return;
     if (token == null) {
       throw StateError('Push registration is temporarily unavailable.');
     }
@@ -58,7 +68,9 @@ class BuyerPush {
   }
 
   Future<void> _register(String token) async {
+    if (_disposed) return;
     final previous = await _storage.read(key: 'notification_device_id');
+    if (_disposed) return;
     if (previous != null) await repository.revoke(previous);
     final id = await repository.register(
       token,
@@ -68,6 +80,7 @@ class BuyerPush {
   }
 
   void _open(RemoteMessage message) {
+    if (_disposed) return;
     final id = message.data['notification_id'];
     if (id is String &&
         RegExp(r'^[0-9a-f-]{36}$', caseSensitive: false).hasMatch(id)) {
@@ -86,7 +99,9 @@ class BuyerPush {
   }
 
   void dispose() {
+    _disposed = true;
     unawaited(_tokens?.cancel());
     unawaited(_opens?.cancel());
+    unawaited(_messages?.cancel());
   }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Orders;
 
+use App\Domain\Settings\PlatformSettings;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -20,7 +21,7 @@ final class OrderPaymentReminders
 
     public function send(int $limit = 500): int
     {
-        $points = collect((array) config('payments.order_reminder_hours', [12, 1]))->map(static fn (mixed $hours): int => (int) $hours)->filter(static fn (int $hours): bool => $hours > 0)->sort()->values()->all();
+        $points = collect((array) PlatformSettings::current()->value('reminders.payment_hours_before'))->map(static fn (mixed $hours): int => (int) $hours)->filter(static fn (int $hours): bool => $hours > 0)->sort()->values()->all();
         if ($points === []) {
             return 0;
         }

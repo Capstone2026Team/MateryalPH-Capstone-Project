@@ -105,6 +105,8 @@ final class DeliveryPreviewService
                 }
             }
             $message = match (true) {
+                in_array('WEIGHT_UNKNOWN', $reasons, true) || in_array('UNIT_DIMENSIONS_UNKNOWN', $reasons, true) => 'An automatic delivery estimate needs the product weight and cargo dimensions. The Vendor must complete the missing measurements or review this delivery manually.',
+                in_array('VOLUME_UNKNOWN', $reasons, true) => 'An automatic mixer delivery estimate needs the ready-mixed concrete volume. The Vendor must complete the missing volume or review this delivery manually.',
                 $result['status'] === 'NO_ELIGIBLE_VEHICLE' && in_array('DIMENSIONS_INSUFFICIENT', $excluded, true) => 'An item in this order is larger than the cargo space of every vehicle this store has configured, so the Vendor must arrange the delivery and fee manually.',
                 $result['status'] === 'NO_ELIGIBLE_VEHICLE' && $excluded === [] => 'This store has no delivery vehicle available right now, so the Vendor must arrange the delivery and fee manually.',
                 default => 'The Vendor must review this load manually. Vehicles, trips and the delivery fee will be shown after the Vendor confirms.',

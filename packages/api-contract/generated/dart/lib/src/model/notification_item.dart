@@ -16,7 +16,7 @@ part 'notification_item.g.dart';
 /// * [title]
 /// * [body]
 /// * [mandatory]
-/// * [readAt]
+/// * [readAt] - A non-null timestamp identifies a read notice retained in the recipient's Archived view. Required notices remain stored and authorized deep links remain available.
 /// * [createdAt]
 @BuiltValue()
 abstract class NotificationItem implements Built<NotificationItem, NotificationItemBuilder> {
@@ -35,6 +35,7 @@ abstract class NotificationItem implements Built<NotificationItem, NotificationI
   @BuiltValueField(wireName: r'mandatory')
   bool get mandatory;
 
+  /// A non-null timestamp identifies a read notice retained in the recipient's Archived view. Required notices remain stored and authorized deep links remain available.
   @BuiltValueField(wireName: r'read_at')
   String? get readAt;
 

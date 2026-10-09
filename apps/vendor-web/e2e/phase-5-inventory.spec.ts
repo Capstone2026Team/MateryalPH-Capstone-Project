@@ -90,7 +90,7 @@ test('the inventory ledger keeps its header and identifiers fixed and scrolls on
   await page.goto('/products/inventory')
   const ledger = page.getByRole('table', { name: 'Inventory ledger' })
   await expect(ledger).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Inventory' })).toHaveAttribute('aria-current', 'page')
+  await expect(page.getByRole('tab', { name: 'Inventory' })).toHaveAttribute('aria-selected', 'true')
   const band = page.getByRole('region', { name: /need a stock confirmation/ })
   await expect(band.getByText('Hidden from Buyers', { exact: true })).toBeVisible()
   await expect(band.getByText(/\(Asia\/Manila\)/).first()).toBeVisible()

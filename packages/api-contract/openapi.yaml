@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: MateryalPH API
-  version: 1.0.0-phase.14
+  version: 1.0.0-phase.16
   description: >-
     Versioned Phase 1–4 contract. Vendor onboarding, verification, activation readiness, private evidence, team invitations, the Vendor catalog and product
     PS/ICC compliance are server-authorized. Browser credentials are isolated by configured frontend origin using _vendor and _admin suffixes on access,
@@ -11,6 +11,15 @@ info:
 servers:
   - url: /api/v1
 tags:
+  - name: Vendor Finance Reviews
+  - name: Admin Finance Operations
+  - name: Admin Geographic Analytics
+  - name: Admin Budget Overrides
+  - name: Admin Integration Health
+  - name: Admin Audit Log
+  - name: Admin Privacy Requests
+  - name: Admin Enforcement
+  - name: Admin Platform Settings
   - name: Admin Materials Analytics
   - name: Vendor Materials Analytics
   - name: Buyer Materials Analytics
@@ -50,6 +59,22 @@ tags:
   - name: Buyer Orders
   - name: Vendor Orders
 paths:
+  /vendor/conversations/{conversationId}/fulfillment-conversations:
+    get:
+      tags: [ Messaging ]
+      operationId: listVendorFulfillmentConversations
+      description: Owner and Store Manager only. Lists existing fulfillment threads for the authorized sales inquiry's buyer and vendor, across procurement types. Writable threads first, then read-only history, newest activity and ID first within each group. Never creates a thread.
+      security: [ { accessCookie: [] } ]
+      parameters:
+        - { name: conversationId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, maximum: 10000, default: 1 } }
+      responses:
+        "200": { description: Authorized fulfillment conversations, content: { application/json: { schema: { $ref: "#/components/schemas/FulfillmentConversationPageResponse" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
   /vendor/orders/{orderId}/conversation:
     post:
       tags: [ Messaging ]
@@ -2426,7 +2451,9 @@ paths:
           "parameters":
             [
               { "name": "accountPortal", "in": "path", "required": true, "schema": { "type": "string", "enum": [ "vendors" ] } },
-              { "name": "page", "in": "query", "schema": { "type": "integer", "minimum": 1 } }
+              { "name": "page", "in": "query", "schema": { "type": "integer", "minimum": 1 } },
+              { "name": "search", "in": "query", "schema": { "type": "string", "maxLength": 160 } },
+              { "name": "role", "in": "query", "schema": { "type": "string", "enum": [ "OWNER", "STORE_MANAGER", "STORE_STAFF", "CUSTOMER_SERVICE", "INVENTORY", "FULFILLMENT" ] } }
             ],
           "security": [ { "passportBearer": [] }, { "accessCookie": [] } ],
           "responses":
@@ -3280,22 +3307,67 @@ paths:
         "403": { $ref: "#/components/responses/ErrorResponse" }
         "409": { $ref: "#/components/responses/ErrorResponse" }
         "422": { $ref: "#/components/responses/ErrorResponse" }
+  /vendors/account/invitations/{invitationId}:
+    delete:
+      operationId: deleteVendorTeamInvitation
+      tags: [ Accounts ]
+      description: Owner only. Allowed for unaccepted expired invitations or accepted invitations linked to a deleted membership. Otherwise returns TEAM_INVITATION_NOT_DELETABLE. Stale lock_version returns RESOURCE_VERSION_CONFLICT. Requires recent authentication and current agreements. Repeated deletion succeeds without duplicating audit events.
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      parameters:
+        - { name: invitationId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/VendorTeamDeletion" } } }
+      responses:
+        "200":
+          description: Team record removed from management lists; historical attribution retained.
+          content: { application/json: { schema: { $ref: "#/components/schemas/AccountMutationResultEnvelope" } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
   /vendors/account/activity:
     get:
       operationId: listVendorTeamActivity
       tags: [ Vendor Onboarding ]
+      description: Team Tracking synchronizes through payload-free team.activity.changed events on the existing viewer-bound Vendor inbox channel after audit, Vendor message or quotation activity commits. Delivery rechecks current organization, membership and staff-management authority; delegated Managers receive only non-manager activity invalidations. Re-fetch this endpoint for authoritative data. Clients poll automatically while realtime is unavailable and after reconnect.
       security: [ { accessCookie: [] } ]
       parameters:
         - { name: page, in: query, schema: { type: integer, minimum: 1 } }
+        - { name: member_id, in: query, schema: { type: string, format: uuid } }
+        - { name: role, in: query, description: Role recorded at the time of the action., schema: { type: string, enum: [ OWNER, STORE_MANAGER, STORE_STAFF, CUSTOMER_SERVICE, INVENTORY, FULFILLMENT ] } }
+        - { name: days, in: query, schema: { type: integer, enum: [ 7, 30, 90 ], default: 30 } }
+        - { name: category, in: query, schema: { type: string, enum: [ SALES, INVENTORY, FULFILLMENT, DISPUTES, TEAM, OTHER ] } }
       responses:
         "200":
           {
-            description: Organization-scoped immutable audit history. Delegated Managers see only non-manager employee activity. Before and after values are restricted to
-              safe role and status fields.,
+            description: "Organization-scoped immutable audit history. Delegated Managers see only non-manager employee activity. Before and after values are restricted to safe role, status and fulfillment milestone fields. Summary counts cover all matching events across pages before the category filter; these are audit-event counts, not sales or productivity metrics. The default window is the last 30 days.",
             content: { application/json: { schema: { $ref: "#/components/schemas/VendorTeamActivityEnvelope" } } }
           }
         "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
   /vendors/account/memberships/{membershipId}:
+    delete:
+      operationId: deleteVendorTeamMember
+      tags: [ Accounts ]
+      description: Owner only, scoped to the current organization. Only DEACTIVATED non-Owner memberships can be deleted; otherwise TEAM_ACCOUNT_NOT_DEACTIVATED. Deleted memberships cannot be edited or reactivated. Stale lock_version returns RESOURCE_VERSION_CONFLICT. Requires recent authentication and current agreements. Repeated deletion succeeds without duplicating audit events.
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      parameters:
+        - { name: membershipId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/VendorTeamDeletion" } } }
+      responses:
+        "200":
+          description: Team record removed from management lists; historical attribution retained.
+          content: { application/json: { schema: { $ref: "#/components/schemas/AccountMutationResultEnvelope" } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
     patch:
       operationId: updateVendorStaff
       tags: [ Accounts ]
@@ -3377,7 +3449,14 @@ paths:
           }
         - { name: submitted_from, in: query, required: false, description: Inclusive Asia/Manila submission date., schema: { type: string, format: date } }
         - { name: submitted_to, in: query, required: false, description: Inclusive Asia/Manila submission date., schema: { type: string, format: date } }
-        - { name: sort, in: query, required: false, schema: { type: string, enum: [ submitted_asc, submitted_desc, location ], default: submitted_desc } }
+        - { name: sort, in: query, required: false, schema: { type: string, enum: [ submitted_asc, submitted_desc, location, oldest_pending ], default: submitted_desc } }
+        - { name: setup_status, in: query, required: false, schema: { type: string, enum: [ NOT_STARTED, IN_PROGRESS, COMPLETED, CHANGES_REQUIRED ] } }
+        - { name: activation, in: query, required: false, schema: { type: string, enum: [ ACTIVE, NOT_ACTIVE, READY, NOT_READY, RESTRICTED, SUSPENDED ] } }
+        - { name: discoverability, in: query, required: false, schema: { type: string, enum: [ DISCOVERABLE, NOT_DISCOVERABLE ] } }
+        - { name: blocker, in: query, required: false, schema: { type: string, enum: [ MEDIA, HOURS, DELIVERY, AUTHORITY, TERMS, PROVIDER ] } }
+        - { name: requirement_key, in: query, required: false, description: A requirement awaiting review., schema: { type: string, pattern: "^[a-z0-9_]+$" } }
+        - { name: age_days, in: query, required: false, description: Oldest pending requirement at least this many days old., schema: { type: integer, minimum: 1, maximum: 365 } }
+        - { name: expiry_days, in: query, required: false, description: An approved document expires within this many days., schema: { type: integer, minimum: 1, maximum: 365 } }
         - { name: page, in: query, required: false, schema: { type: integer, minimum: 1 } }
       responses:
         "200":
@@ -3570,6 +3649,7 @@ paths:
       tags: [ Vendor Catalog ]
       security: [ { accessCookie: [] } ]
       parameters:
+        - { name: group, in: query, required: false, description: "Read-only aggregate filter applied before pagination; summary counts ignore group and status. OUT_OF_STOCK means active listings with no available active variant.", schema: { type: string, enum: [ NEEDS_ATTENTION, OUT_OF_STOCK ] } }
         - { name: status, in: query, required: false, schema: { $ref: "#/components/schemas/ListingStatus" } }
         - { name: compliance_status, in: query, required: false, schema: { $ref: "#/components/schemas/ListingComplianceStatus" } }
         - { name: category_id, in: query, required: false, schema: { type: string, format: uuid } }
@@ -4013,6 +4093,7 @@ paths:
       tags: [ Vendor Inventory ]
       security: [ { accessCookie: [] } ]
       parameters:
+        - { name: category_id, in: query, required: false, description: Filters rows and summary counts by material category before pagination., schema: { type: string, format: uuid } }
         - { name: q, in: query, required: false, schema: { type: string, maxLength: 120 } }
         - { name: listing_id, in: query, required: false, schema: { type: string, format: uuid } }
         - { name: stock, in: query, required: false, schema: { $ref: "#/components/schemas/StockLabel" } }
@@ -4756,6 +4837,25 @@ paths:
         "403": { $ref: "#/components/responses/ErrorResponse" }
         "409": { $ref: "#/components/responses/ErrorResponse" }
         "422": { $ref: "#/components/responses/ErrorResponse" }
+  /buyers/cart/delivery-preview:
+    post:
+      operationId: previewBuyerProductDelivery
+      description: >-
+        Calculates an advisory delivery fee for the selected eligible product and quantity using the authenticated Buyer's saved cart destination,
+        declared vehicle endpoint, road route and Vendor vehicle rates/capacities. Recalculate after quantity, variant or destination changes.
+        Does not add or change cart lines, reserve stock or confirm a fee. Missing destination/access information, measurements, vehicles or routes
+        returns an explicit action-required, manual-review or blocked delivery preview, never a fabricated zero fee.
+      tags: [ Buyer Cart ]
+      security: [ { passportBearer: [] } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/ProductDeliveryPreviewRequest" } } }
+      responses:
+        "200": { description: Advisory delivery preview., content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryPreviewEnvelope" } } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
   /buyers/cart/checkout-preview:
     post:
       operationId: previewBuyerCheckout
@@ -4949,6 +5049,7 @@ paths:
       security: [ { accessCookie: [] } ]
       parameters:
         - { name: group, in: query, required: false, schema: { type: string, enum: [ ALL, NEW, WAITING_ON_BUYER, AWAITING_PAYMENT, CONFIRMED, CLOSED ] } }
+        - { name: closed_state, in: query, required: false, description: Only valid with group CLOSED. Filters before pagination; group counts remain unfiltered., schema: { type: string, enum: [ COMPLETED, DECLINED, EXPIRED, CANCELLED ] } }
         - { name: q, in: query, required: false, schema: { type: string, maxLength: 120 } }
         - { name: page, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 1000 } }
       responses:
@@ -5034,6 +5135,1422 @@ paths:
         "404": { $ref: "#/components/responses/ErrorResponse" }
         "409": { $ref: "#/components/responses/ErrorResponse" }
         "422": { $ref: "#/components/responses/ErrorResponse" }
+  # Phase 16 admin operations and geographic analytics operations
+  "/admin/platform-settings":
+    "get":
+      "operationId": "listPlatformSettings"
+      "tags":
+        - "Admin Platform Settings"
+      "description": "platform_settings.view. Every approved non-secret default with its current version, validation rule and previous value, plus the fixed references that have no control."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/PlatformSettingListEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/platform-settings/{key}/history":
+    "get":
+      "operationId": "listPlatformSettingHistory"
+      "tags":
+        - "Admin Platform Settings"
+      "description": "platform_settings.view. Append-only versions with previous value, reason, actor role and correlation ID."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "key"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "pattern": "^[a-z0-9_.]+$"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/PlatformSettingHistoryEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/platform-settings/{key}":
+    "put":
+      "operationId": "updatePlatformSetting"
+      "tags":
+        - "Admin Platform Settings"
+      "description": "platform_settings.manage with recent re-authentication. Writes a new version; consuming rules apply it to new records only."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "key"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "pattern": "^[a-z0-9_.]+$"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/PlatformSettingUpdateRequest"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/PlatformSettingEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/enforcement":
+    "get":
+      "operationId": "listEnforcementActions"
+      "tags":
+        - "Admin Enforcement"
+      "description": "enforcement.view (Super Admin, User Management, Order and Dispute read-only). Referred sanctions first, oldest first."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "state"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "enum":
+              - "EFFECTIVE"
+              - "REFERRED"
+              - "APPLIED"
+              - "LIFTED"
+              - "DECLINED"
+        - "name": "subject_type"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "enum":
+              - "BUYER"
+              - "VENDOR_ORGANIZATION"
+        - "name": "action"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "enum":
+              - "WARNING"
+              - "TEMPORARY_RESTRICTION"
+              - "SUSPENSION"
+              - "PERMANENT_BAN"
+        - "name": "source"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "enum":
+              - "DISPUTE_REFERRAL"
+              - "DIRECT"
+        - "name": "subject_id"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "page"
+          "in": "query"
+          "schema":
+            "type": "integer"
+            "minimum": 1
+            "maximum": 1000
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/EnforcementListEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+    "post":
+      "operationId": "recordEnforcementAction"
+      "tags":
+        - "Admin Enforcement"
+      "description": "enforcement.apply. Record a Warning or apply a restriction, suspension or (Super Admin) ban with a reason, restoration condition and continuation plan for open orders."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/EnforcementRecordRequest"
+      "responses":
+        "200":
+          "description": "Idempotent replay of the original result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/EnforcementDetailEnvelope"
+        "201":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/EnforcementDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/enforcement/subjects":
+    "get":
+      "operationId": "searchEnforcementSubjects"
+      "tags":
+        - "Admin Enforcement"
+      "description": "enforcement.view. A Vendor by store name or a Buyer by exact account email; minimal identity only."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "type"
+          "in": "query"
+          "required": true
+          "schema":
+            "type": "string"
+            "enum":
+              - "BUYER"
+              - "VENDOR_ORGANIZATION"
+        - "name": "q"
+          "in": "query"
+          "required": true
+          "schema":
+            "type": "string"
+            "minLength": 3
+            "maxLength": 120
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/EnforcementSubjectMatchListEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/enforcement/subjects/{type}/{subjectId}":
+    "get":
+      "operationId": "getEnforcementSubject"
+      "tags":
+        - "Admin Enforcement"
+      "description": "enforcement.view. Account-review facts and the sanction history of one Buyer or Vendor."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "type"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "enum":
+              - "BUYER"
+              - "VENDOR_ORGANIZATION"
+        - "name": "subjectId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/EnforcementSubjectEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/enforcement/{actionId}":
+    "get":
+      "operationId": "getEnforcementAction"
+      "tags":
+        - "Admin Enforcement"
+      "description": "enforcement.view. Sanction, subject review, append-only events and the actions your role may take."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "actionId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/EnforcementDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/enforcement/{actionId}/apply":
+    "post":
+      "operationId": "applyEnforcementAction"
+      "tags":
+        - "Admin Enforcement"
+      "description": "enforcement.apply (ban: enforcement.ban plus recent re-authentication). Apply a referred sanction; 409 on a stale lock_version."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "actionId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/EnforcementApplyRequest"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/EnforcementDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/enforcement/{actionId}/decline":
+    "post":
+      "operationId": "declineEnforcementAction"
+      "tags":
+        - "Admin Enforcement"
+      "description": "enforcement.apply. Decline a referred sanction with a reason."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "actionId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/ReasonedVersionRequest"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/EnforcementDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/enforcement/{actionId}/lift":
+    "post":
+      "operationId": "liftEnforcementAction"
+      "tags":
+        - "Admin Enforcement"
+      "description": "enforcement.apply (ban: enforcement.ban plus recent re-authentication). Lift an applied sanction; a store returns to READY or NOT_READY, never ACTIVE."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "actionId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/ReasonedVersionRequest"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/EnforcementDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/privacy-requests":
+    "get":
+      "operationId": "listPrivacyRequests"
+      "tags":
+        - "Admin Privacy Requests"
+      "description": "privacy.manage sees every request; privacy.handle sees only requests assigned to you."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "state"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "enum":
+              - "RECEIVED"
+              - "IDENTITY_VERIFIED"
+              - "IN_PROGRESS"
+              - "COMPLETED"
+              - "REJECTED"
+              - "WITHDRAWN"
+        - "name": "request_type"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "enum":
+              - "ACCESS"
+              - "CORRECTION"
+              - "OBJECTION"
+              - "DELETION"
+              - "RESTRICTION"
+              - "PORTABILITY"
+              - "OTHER"
+        - "name": "handler"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "enum":
+              - "UNASSIGNED"
+        - "name": "page"
+          "in": "query"
+          "schema":
+            "type": "integer"
+            "minimum": 1
+            "maximum": 1000
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/PrivacyRequestListEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+    "post":
+      "operationId": "recordPrivacyRequest"
+      "tags":
+        - "Admin Privacy Requests"
+      "description": "privacy.manage. Record a request received through an official channel."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/PrivacyRequestCreateRequest"
+      "responses":
+        "200":
+          "description": "Idempotent replay of the original result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/PrivacyRequestDetailEnvelope"
+        "201":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/PrivacyRequestDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/privacy-requests/{requestId}":
+    "get":
+      "operationId": "getPrivacyRequest"
+      "tags":
+        - "Admin Privacy Requests"
+      "description": "Assigned handler or privacy.manage; each opening is audited. Unassigned handlers receive 404."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "requestId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/PrivacyRequestDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/privacy-requests/{requestId}/{command}":
+    "post":
+      "operationId": "transitionPrivacyRequest"
+      "tags":
+        - "Admin Privacy Requests"
+      "description": "Assign (privacy.manage), verify identity, start, complete, reject or withdraw with the current lock_version; closed requests are final."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "requestId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "command"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "enum":
+              - "assign"
+              - "verify"
+              - "start"
+              - "complete"
+              - "reject"
+              - "withdraw"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/PrivacyTransitionRequest"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/PrivacyRequestDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/audit-log":
+    "get":
+      "operationId": "searchAuditLog"
+      "tags":
+        - "Admin Audit Log"
+      "description": "audit.view. Append-only safe projection filterable by actor, role, action, resource, organization, result, date, correlation ID and reason; cursor paginated."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "actor"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "maxLength": 120
+        - "name": "actor_role"
+          "in": "query"
+          "schema":
+            "type": "string"
+        - "name": "action"
+          "in": "query"
+          "schema":
+            "type": "string"
+        - "name": "resource_type"
+          "in": "query"
+          "schema":
+            "type": "string"
+        - "name": "resource_id"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "organization_id"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "result"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "enum":
+              - "SUCCEEDED"
+              - "FAILED"
+        - "name": "correlation_id"
+          "in": "query"
+          "schema":
+            "type": "string"
+        - "name": "reason"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "maxLength": 200
+        - "name": "from"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "format": "date"
+        - "name": "to"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "format": "date"
+        - "name": "cursor"
+          "in": "query"
+          "schema":
+            "type": "string"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/AuditEventListEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/audit-log/actions":
+    "get":
+      "operationId": "listAuditActions"
+      "tags":
+        - "Admin Audit Log"
+      "description": "audit.view. Distinct action codes for the filter control."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/AuditActionListEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/audit-log/{auditId}":
+    "get":
+      "operationId": "getAuditEvent"
+      "tags":
+        - "Admin Audit Log"
+      "description": "audit.view_sensitive. Redacted before/after; the opening is itself audited. There is no edit or delete operation."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "auditId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/AuditEventDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/integrations":
+    "get":
+      "operationId": "getIntegrationHealth"
+      "tags":
+        - "Admin Integration Health"
+      "description": "integrations.view. Provider, queue, scheduled-task, aggregation, Materials snapshot and PSGC health without secrets."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/IntegrationOverviewEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/integrations/failures":
+    "get":
+      "operationId": "listOperationFailures"
+      "tags":
+        - "Admin Integration Health"
+      "description": "integrations.view. Dead-lettered outbox deliveries or failed jobs: type and failure class only."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "kind"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "enum":
+              - "OUTBOX"
+              - "JOBS"
+        - "name": "page"
+          "in": "query"
+          "schema":
+            "type": "integer"
+            "minimum": 1
+            "maximum": 1000
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/OperationFailureListEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/integrations/retries":
+    "get":
+      "operationId": "listOperationRetries"
+      "tags":
+        - "Admin Integration Health"
+      "description": "integrations.view. Recent authorized retries with reasons."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/OperationRetryListEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+    "post":
+      "operationId": "retryOperation"
+      "tags":
+        - "Admin Integration Health"
+      "description": "jobs.retry. Retry an allowlisted idempotent failed job, outbox delivery or daily analytics run with a reason. Payment and refund work belongs to reconciliation (409 RETRY_NOT_ALLOWED)."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/OperationRetryRequest"
+      "responses":
+        "202":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/OperationRetryEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/budget-overrides":
+    "get":
+      "operationId": "listBudgetOverrides"
+      "tags":
+        - "Admin Budget Overrides"
+      "description": "budget_overrides.view. Read-only Buyer budget overrides; Buyer decisions need no Admin approval."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "page"
+          "in": "query"
+          "schema":
+            "type": "integer"
+            "minimum": 1
+            "maximum": 1000
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/BudgetOverrideListEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/geo-analytics":
+    "get":
+      "operationId": "getGeoAnalyticsDashboard"
+      "tags":
+        - "Admin Geographic Analytics"
+      "description": "analytics.view_aggregates. KPIs, trends, rates, response time, DAU/WAU/MAU and the child-area table from daily facts, after small-cell suppression. Unknown parameters return 422 ANALYTICS_FILTER_UNSUPPORTED."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "dataset"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "enum":
+              - "TEST"
+              - "DEMO"
+        - "name": "area"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "pattern": "^[0-9]{10}$"
+          "description": "Active-version PSGC code of a region, province, independent city or city/municipality; omit for the Philippines. No radius applies."
+        - "name": "from"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "format": "date"
+        - "name": "to"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "format": "date"
+        - "name": "granularity"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "enum":
+              - "DAY"
+              - "WEEK"
+              - "MONTH"
+        - "name": "procurement_type"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "enum":
+              - "ITEM_BASED"
+              - "PROJECT_BASED"
+        - "name": "category_id"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "material_id"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "fulfillment_method"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "enum":
+              - "DELIVERY"
+              - "PICKUP"
+        - "name": "payment_method"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "enum":
+              - "ONLINE"
+              - "CASH_ON_DELIVERY"
+              - "IN_STORE"
+        - "name": "order_state"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "enum":
+              - "CONFIRMED"
+              - "PROCESSING"
+              - "READY_FOR_PICKUP"
+              - "OUT_FOR_DELIVERY"
+              - "DELIVERED"
+              - "PICKED_UP"
+              - "COMPLETED"
+              - "DISPUTED"
+              - "CANCELLATION_REQUESTED"
+              - "CANCELLED"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/GeoDashboardEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+        "503":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/geo-analytics/demand":
+    "get":
+      "operationId": "getGeoDemandHeatmap"
+      "tags":
+        - "Admin Geographic Analytics"
+      "description": "analytics.view_aggregates. Category or material demand by child area; quantity needs one material (422 QUANTITY_NEEDS_MATERIAL)."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "dataset"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "enum":
+              - "TEST"
+              - "DEMO"
+        - "name": "area"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "pattern": "^[0-9]{10}$"
+          "description": "Active-version PSGC code of a region, province, independent city or city/municipality; omit for the Philippines. No radius applies."
+        - "name": "from"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "format": "date"
+        - "name": "to"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "format": "date"
+        - "name": "granularity"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "enum":
+              - "DAY"
+              - "WEEK"
+              - "MONTH"
+        - "name": "procurement_type"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "enum":
+              - "ITEM_BASED"
+              - "PROJECT_BASED"
+        - "name": "category_id"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "material_id"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "fulfillment_method"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "enum":
+              - "DELIVERY"
+              - "PICKUP"
+        - "name": "payment_method"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "enum":
+              - "ONLINE"
+              - "CASH_ON_DELIVERY"
+              - "IN_STORE"
+        - "name": "order_state"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "enum":
+              - "CONFIRMED"
+              - "PROCESSING"
+              - "READY_FOR_PICKUP"
+              - "OUT_FOR_DELIVERY"
+              - "DELIVERED"
+              - "PICKED_UP"
+              - "COMPLETED"
+              - "DISPUTED"
+              - "CANCELLATION_REQUESTED"
+              - "CANCELLED"
+        - "name": "measure"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "enum":
+              - "ORDER_COUNT"
+              - "QUANTITY"
+              - "VALUE"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/GeoDemandEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+        "503":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/geo-analytics/boundaries":
+    "get":
+      "operationId": "getGeoBoundaries"
+      "tags":
+        - "Admin Geographic Analytics"
+      "description": "analytics.view_aggregates. Simplified PSGC boundaries of the selection's children for the map."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "area"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "pattern": "^[0-9]{10}$"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/GeoBoundaryEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+        "503":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/finance/kpis":
+    "get":
+      "operationId": "getFinanceKpis"
+      "tags":
+        - "Admin Finance Operations"
+      "description": "finance.view. Gross and net GMV beside assessed CWT, commission, platform revenue, collected cash and receivables (DEMO)."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "from"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "format": "date"
+        - "name": "to"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "format": "date"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/FinanceKpiEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/finance/remittances":
+    "get":
+      "operationId": "listRemittanceQueue"
+      "tags":
+        - "Admin Finance Operations"
+      "description": "finance.view. Remittance reconciliation queue with FIN-05 components and FIN-04A threshold before/after."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "reconciliation_state"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "enum":
+              - "PENDING"
+              - "RECONCILED"
+              - "RECONCILIATION_EXCEPTION"
+        - "name": "calculation_state"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "enum":
+              - "CALCULATED"
+              - "POSTED"
+              - "BASE_REVIEW_REQUIRED"
+              - "VOIDED"
+        - "name": "deduction_evidence_state"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "enum":
+              - "UNCONFIRMED"
+              - "SIMULATED_WITHHELD"
+              - "PROVIDER_REPORTED"
+              - "PLATFORM_EVIDENCED"
+        - "name": "page"
+          "in": "query"
+          "schema":
+            "type": "integer"
+            "minimum": 1
+            "maximum": 1000
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/RemittanceQueueEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/finance/evidence":
+    "get":
+      "operationId": "listTaxEvidenceQueue"
+      "tags":
+        - "Admin Finance Operations"
+      "description": "finance.view. Tax evidence review state; decisions are made in the Vendor Verification case."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "review_state"
+          "in": "query"
+          "schema":
+            "type": "string"
+        - "name": "page"
+          "in": "query"
+          "schema":
+            "type": "integer"
+            "minimum": 1
+            "maximum": 1000
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/TaxEvidenceQueueEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/finance/tax-adjustments":
+    "get":
+      "operationId": "listTaxAdjustments"
+      "tags":
+        - "Admin Finance Operations"
+      "description": "finance.view. Tax adjustments with preparer, reviewer and the actions available to you."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "state"
+          "in": "query"
+          "schema":
+            "type": "string"
+            "enum":
+              - "ADJUSTMENT_REQUIRED"
+              - "UNDER_REVIEW"
+              - "APPROVED"
+              - "POSTED"
+              - "REJECTED"
+        - "name": "page"
+          "in": "query"
+          "schema":
+            "type": "integer"
+            "minimum": 1
+            "maximum": 1000
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/TaxAdjustmentListEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/finance/tax-adjustments/{adjustmentId}/prepare":
+    "post":
+      "operationId": "prepareTaxAdjustment"
+      "tags":
+        - "Admin Finance Operations"
+      "description": "finance.review_tax. Record the proposed correction, reason, evidence reference and certificate impact."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "adjustmentId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/TaxAdjustmentPrepareRequest"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/TaxAdjustmentEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/finance/tax-adjustments/{adjustmentId}/review":
+    "post":
+      "operationId": "reviewTaxAdjustment"
+      "tags":
+        - "Admin Finance Operations"
+      "description": "finance.review_tax by a different user than the preparer."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "adjustmentId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/TaxAdjustmentReviewRequest"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/TaxAdjustmentEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/admin/finance/tax-adjustments/{adjustmentId}/post":
+    "post":
+      "operationId": "postTaxAdjustment"
+      "tags":
+        - "Admin Finance Operations"
+      "description": "finance.review_tax. Post an approved adjustment as a linked compensating entry; posted assessments and the FIN-04A counter are never rewritten."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "adjustmentId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/TaxAdjustmentEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/finance/reviews":
+    "get":
+      "operationId": "getVendorFinanceReviews"
+      "tags":
+        - "Vendor Finance Reviews"
+      "description": "Vendor Owner only (finance.view). FIN-10 review status for this store."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/VendorFinanceReviewsEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
   # Phase 14 reviews, scores and analytics operations
   "/buyers/orders/{orderId}/reviews":
     "get":
@@ -5156,7 +6673,7 @@ paths:
       "operationId": "addBuyerReviewMedia"
       "tags":
         - "Buyer Reviews"
-      "description": "Up to three photos on your Product Review while it can still be edited."
+      "description": "Up to three photos or videos on your Product Review while it can still be edited. JPG/PNG up to 10 MB; MP4/MOV up to 100 MB. Content validated and scanned before private storage."
       "security":
         - "passportBearer": []
       "parameters":
@@ -5388,13 +6905,21 @@ paths:
             "type": "string"
       "responses":
         "200":
-          "description": "Review photo bytes for a signed, unexpired link and an authorized caller."
+          "description": "Review media bytes for a signed, unexpired link and an authorized caller."
           "content":
             "image/png":
               "schema":
                 "type": "string"
                 "format": "binary"
             "image/jpeg":
+              "schema":
+                "type": "string"
+                "format": "binary"
+            "video/mp4":
+              "schema":
+                "type": "string"
+                "format": "binary"
+            "video/quicktime":
               "schema":
                 "type": "string"
                 "format": "binary"
@@ -5649,13 +7174,21 @@ paths:
             "type": "string"
       "responses":
         "200":
-          "description": "Review photo bytes for a signed, unexpired link and an authorized caller."
+          "description": "Review media bytes for a signed, unexpired link and an authorized caller."
           "content":
             "image/png":
               "schema":
                 "type": "string"
                 "format": "binary"
             "image/jpeg":
+              "schema":
+                "type": "string"
+                "format": "binary"
+            "video/mp4":
+              "schema":
+                "type": "string"
+                "format": "binary"
+            "video/quicktime":
               "schema":
                 "type": "string"
                 "format": "binary"
@@ -5837,13 +7370,21 @@ paths:
             "type": "string"
       "responses":
         "200":
-          "description": "Review photo bytes for a signed, unexpired link and an authorized caller."
+          "description": "Review media bytes for a signed, unexpired link and an authorized caller."
           "content":
             "image/png":
               "schema":
                 "type": "string"
                 "format": "binary"
             "image/jpeg":
+              "schema":
+                "type": "string"
+                "format": "binary"
+            "video/mp4":
+              "schema":
+                "type": "string"
+                "format": "binary"
+            "video/quicktime":
               "schema":
                 "type": "string"
                 "format": "binary"
@@ -11123,6 +12664,11 @@ paths:
         - "accessCookie": []
           "webCsrf": []
       "parameters":
+        - "name": "overdue"
+          "in": "query"
+          "description": "Issued balances past their due date."
+          "schema":
+            "type": "boolean"
         - "name": "page"
           "in": "query"
           "schema":
@@ -12531,13 +14077,43 @@ paths:
           description: Conversation unavailable or access revoked
         "409":
           description: Fulfillment threads cannot be archived
+  /vendor/navigation-updates:
+    get:
+      operationId: getVendorNavigationUpdates
+      tags: [Notifications]
+      summary: Active orders and unread updates for Vendor navigation
+      description: Orders counts currently visible nonterminal orders, excluding COMPLETED, DECLINED, EXPIRED and CANCELLED, independently of notification history. Team Accounts counts manageable active non-Owner memberships whose user accounts are active; deleted memberships and unaccepted invitations are excluded, and delegated Managers count only non-manager staff. Other sections count unread in-app notifications by their authorized destination and unread messages in the current user's inbox. Store Profile has no indicator. Rechecks current membership, role, delegation, assignment and preferences. Only fixed sidebar paths and counts are returned; visiting a section does not mark updates read.
+      security:
+        - passportBearer: []
+      responses:
+        "200":
+          description: Current section counts, including zero totals for Orders, Notifications and Messages
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta, errors]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/VendorNavigationUpdates"
+                  meta:
+                    type: object
+                    additionalProperties: true
+                  errors:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ApiError"
+        "401":
+          description: Authentication required
+        "403":
+          description: Vendor account or current membership unavailable
   /{audience}/notifications:
     get:
       operationId: listNotifications
       tags:
         - Notifications
       summary: list Notifications
-      description: Cursor feed filtered by current membership, role, assignment and preferences. Authoritative records precede delivery.
+      description: Cursor feed filtered by current membership, role, assignment and preferences, newest first. Read notices are retained and available in the Archived view; no notification is deleted by reading it. Clients can assemble cursor pages for immediate local status and notification-category filters. Authoritative records precede delivery.
       security:
         - passportBearer: []
       parameters:
@@ -12622,6 +14198,103 @@ paths:
               schema:
                 type: object
                 additionalProperties: true
+  /{audience}/notifications/unread-count:
+    get:
+      operationId: getNotificationUnreadCount
+      tags: [Notifications]
+      description: Current caller's authorized unread in-app notice count across all types. Archived, foreign, revoked and disabled optional notices are excluded. Web uses HttpOnly cookies; mobile Buyer uses bearer transport.
+      security: [{ passportBearer: [] }, { accessCookie: [], webCsrf: [] }]
+      parameters:
+        - { name: audience, in: path, required: true, schema: { type: string, enum: [buyers, vendor, admin] } }
+      responses:
+        "200":
+          description: Authorized unread badge count.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta, errors]
+                properties:
+                  data: { $ref: '#/components/schemas/NotificationUnreadCount' }
+                  meta: { type: object, additionalProperties: true }
+                  errors: { type: array, items: { $ref: '#/components/schemas/ApiError' } }
+        "401": { $ref: '#/components/responses/ErrorResponse' }
+        "403": { $ref: '#/components/responses/ErrorResponse' }
+  /{audience}/notifications/realtime:
+    get:
+      operationId: getNotificationRealtime
+      tags: [Notifications]
+      description: Current Buyer, Vendor or Admin notification invalidation channel and public Reverb connection settings. The opaque channel rotates with account or membership authority. No notice contents or backend credentials are returned. Clients re-fetch on reconnect and poll while unavailable.
+      security: [{ passportBearer: [] }, { accessCookie: [], webCsrf: [] }]
+      parameters:
+        - { name: audience, in: path, required: true, schema: { type: string, enum: [buyers, vendor, admin] } }
+      responses:
+        "200":
+          description: Current authorized private channel configuration.
+          content: { application/json: { schema: { $ref: '#/components/schemas/ChatRealtimeResponse' } } }
+        "401": { $ref: '#/components/responses/ErrorResponse' }
+        "403": { $ref: '#/components/responses/ErrorResponse' }
+  /{audience}/notifications/auth:
+    post:
+      operationId: authorizeNotificationChannel
+      tags: [Notifications]
+      description: Pusher protocol signature only for the caller's current private-notifications channel. Foreign, stale and other domain channels are denied; current account, audience and membership are rechecked. Web requires HttpOnly cookies and CSRF; native Buyer uses bearer transport. Events carry only content-free notifications.changed invalidations and never authorize REST data access.
+      security: [{ passportBearer: [] }, { accessCookie: [], webCsrf: [] }]
+      parameters:
+        - { name: audience, in: path, required: true, schema: { type: string, enum: [buyers, vendor, admin] } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ChatChannelAuth' } } }
+      responses:
+        "200":
+          description: Signature for the authorized private channel.
+          content: { application/json: { schema: { $ref: '#/components/schemas/NotificationChannelAuthResponse' } } }
+        "401": { $ref: '#/components/responses/ErrorResponse' }
+        "403": { $ref: '#/components/responses/ErrorResponse' }
+        "419": { $ref: '#/components/responses/ErrorResponse' }
+        "422": { $ref: '#/components/responses/ErrorResponse' }
+        "503": { $ref: '#/components/responses/ErrorResponse' }
+  /{audience}/notifications/read-all:
+    post:
+      operationId: markNotificationsRead
+      tags: [Notifications]
+      summary: Mark the current filtered notification view read and archived
+      description: Atomically marks the caller's authorized unread notices at or before through_id as read, optionally matching a notification category or legacy exact display title. The captured upper bound leaves later arrivals unread. Rechecks current account, membership, role, resource access and in-app preferences. Notices and required security history are retained and remain accessible in Archived. Naturally idempotent; retries do not change existing read timestamps. Audits the changed count and queues a private content-free inbox invalidation after commit.
+      security:
+        - passportBearer: []
+      parameters:
+        - name: audience
+          in: path
+          required: true
+          schema: { type: string, enum: [buyers, vendor, admin] }
+          description: Authenticated surface. Web requests require the current HttpOnly session cookie and CSRF header.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NotificationReadFilter' }
+      responses:
+        "200":
+          description: Authorized matching notices marked read and retained.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta, errors]
+                properties:
+                  data: { $ref: '#/components/schemas/NotificationBulkReadAction' }
+                  meta: { type: object, additionalProperties: true }
+                  errors: { type: array, items: { type: object, additionalProperties: true } }
+        "401":
+          description: Authentication required.
+        "403":
+          description: Current account or portal access denied.
+        "419":
+          description: Missing or invalid web CSRF header.
+        "422":
+          description: Invalid captured cursor, category or legacy display-title filter.
+        "503":
+          description: Service unavailable; the transaction does not partially mark notices.
   /{audience}/notifications/preferences:
     get:
       operationId: getNotificationPreferences
@@ -14038,6 +15711,9 @@ components:
           type: string
         can_transfer:
           type: boolean
+        can_list_fulfillment_conversations:
+          type: boolean
+          description: Current vendor Owner or Store Manager may list this sales inquiry buyer's fulfillment conversations. False for other roles and fulfillment threads.
         fulfillment_entry_enabled:
           type: boolean
         read_only:
@@ -14595,7 +16271,7 @@ components:
         inbox_channel:
           type: string
           nullable: true
-          description: Viewer-bound Buyer or Vendor inbox invalidation channel. Re-fetch configuration on reconnect. No message content is broadcast.
+          description: Viewer-bound inbox invalidation channel. Notification realtime also supports Admin accounts through a dedicated notifications channel. Re-fetch configuration on reconnect. No message or notification contents are broadcast. Authorized Team Tracking viewers also receive payload-free team.activity.changed invalidations on messaging inbox channels; activity details require the separately authorized Vendor team activity endpoint.
         enabled:
           type: boolean
         key:
@@ -14657,6 +16333,33 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ApiError"
+    FulfillmentConversationSummary:
+      type: object
+      required: [ conversation_id, order_id, order_reference, order_state, fulfillment_method, unread_count, updated_at, read_only ]
+      properties:
+        conversation_id: { type: string, format: uuid }
+        order_id: { type: string, format: uuid }
+        order_reference: { type: string }
+        order_state: { type: string }
+        fulfillment_method: { type: string, enum: [ PICKUP, DELIVERY ] }
+        unread_count: { type: integer, minimum: 0 }
+        updated_at: { type: string, format: date-time }
+        read_only: { type: boolean }
+        read_only_reason: { type: string, nullable: true, enum: [ ORDER_COMPLETED, ORDER_CANCELLED, ORDER_NOT_IN_FULFILLMENT ] }
+    FulfillmentConversationPage:
+      type: object
+      required: [ items, page, has_more ]
+      properties:
+        items: { type: array, maxItems: 25, items: { $ref: "#/components/schemas/FulfillmentConversationSummary" } }
+        page: { type: integer }
+        has_more: { type: boolean }
+    FulfillmentConversationPageResponse:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { $ref: "#/components/schemas/FulfillmentConversationPage" }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { $ref: "#/components/schemas/ApiError" } }
     ChatQuotationPageResponse:
       type: object
       required:
@@ -15418,6 +17121,20 @@ components:
         heavy_vehicle_restriction: { type: string, enum: [ UNANSWERED, 'NO', 'YES' ] }
         alternate_drop_off_location_id: { type: [ string, 'null' ], format: uuid }
         access_instructions: { type: [ string, 'null' ], maxLength: 500 }
+    ProductDeliveryPreviewRequest:
+      type: object
+      additionalProperties: false
+      required: [ listing_variant_id, quantity ]
+      properties:
+        listing_variant_id: { type: string, format: uuid }
+        quantity: { type: string, pattern: '^\d{1,7}(\.\d{1,4})?$', description: Positive quantity up to 1000000, respecting the listing unit precision. }
+    DeliveryPreviewEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { $ref: "#/components/schemas/DeliveryPreview" }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
     CheckoutPreviewRequest:
       type: object
       additionalProperties: false
@@ -17601,11 +19318,13 @@ components:
         lock_version: { type: integer, minimum: 1 }
     VendorTeamActivity:
       type: object
-      required: [ id, actor_role, action, resource_type, created_at, succeeded, before, after ]
+      required: [ id, actor_role, action, resource_type, created_at, succeeded, before, after, category, correlation_id ]
       properties:
         id: { type: string, format: uuid }
         actor_name: { type: [ string, 'null' ] }
-        actor_role: { type: string }
+        actor_role: { type: [ string, 'null' ] }
+        category: { type: string, enum: [ SALES, INVENTORY, FULFILLMENT, DISPUTES, TEAM, OTHER ] }
+        correlation_id: { type: [ string, 'null' ] }
         action: { type: string }
         resource_type: { type: string }
         resource_id: { type: [ string, 'null' ] }
@@ -17620,10 +19339,22 @@ components:
         data: { type: array, items: { $ref: "#/components/schemas/VendorTeamActivity" } }
         meta:
           type: object
-          required: [ current_page, last_page ]
+          required: [ current_page, last_page, total, total_events, succeeded_events, failed_events, categories ]
           properties:
             current_page: { type: integer }
             last_page: { type: integer }
+            total: { type: integer, minimum: 0 }
+            total_events: { type: integer, minimum: 0 }
+            succeeded_events: { type: integer, minimum: 0 }
+            failed_events: { type: integer, minimum: 0 }
+            categories:
+              type: array
+              items:
+                type: object
+                required: [ category, count ]
+                properties:
+                  category: { type: string, enum: [ SALES, INVENTORY, FULFILLMENT, DISPUTES, TEAM, OTHER ] }
+                  count: { type: integer, minimum: 0 }
         errors: { type: array, items: { type: object, additionalProperties: true } }
     VendorStaffDisputeSetting:
       type: object
@@ -17632,11 +19363,19 @@ components:
       properties:
         enabled: { type: boolean }
         lock_version: { type: integer, minimum: 1 }
+    VendorTeamDeletion:
+      type: object
+      additionalProperties: false
+      required: [ lock_version ]
+      properties:
+        lock_version: { type: integer, minimum: 1 }
     VendorTeamInvitationRecord:
       type: object
-      required: [ id, email, role, status, vendor_organization_id, invited_by_id, invited_by_name, created_at, expires_at, can_manage_staff ]
+      required: [ id, email, role, status, vendor_organization_id, invited_by_id, invited_by_name, created_at, expires_at, can_manage_staff, lock_version, can_delete ]
       properties:
         id: { type: string, format: uuid }
+        lock_version: { type: integer, minimum: 1 }
+        can_delete: { type: boolean, description: Owner-only eligibility for deleting this invitation. }
         invitee_name: { type: [ string, 'null' ] }
         email: { type: string, format: email }
         invitee_mobile: { type: [ string, 'null' ] }
@@ -17694,6 +19433,7 @@ components:
         pending_document_reviews: { type: [ integer, 'null' ], minimum: 0 }
         audit_events: { type: [ integer, 'null' ], minimum: 0 }
         can_view_audit: { type: boolean }
+        queues: { type: array, items: { $ref: "#/components/schemas/OperationsQueue" }, description: "Only the queues your Admin permissions allow, with counts and the oldest pending item." }
     AdminDashboardAuditEnvelope:
       type: object
       required: [ data, meta, errors ]
@@ -17718,6 +19458,11 @@ components:
         activation_status: { type: string }
         submitted_at: { type: [ string, 'null' ], format: date-time }
         progress: { type: object, additionalProperties: true }
+        pending_requirements: { type: integer, minimum: 0 }
+        oldest_pending_at: { type: [ string, 'null' ], format: date-time }
+        provider_status: { type: string, description: "Technical TEST provider connection state; never live KYC." }
+        discoverability_status: { type: string }
+        hold_code: { type: [ string, 'null' ] }
     AdminVendorVerificationQueueEnvelope:
       type: object
       required: [ data, meta, errors ]
@@ -17729,7 +19474,7 @@ components:
       type: object
       required: [ data, meta, errors ]
       properties:
-        data: { type: object, additionalProperties: true }
+        data: { type: object, additionalProperties: true, description: "Sectioned case. Includes workstreams and activation_restrictions as documented by AdminVendorVerificationDetail." }
         meta: { type: object, additionalProperties: true }
         errors: { type: array, items: { type: object, additionalProperties: true } }
     AdminVendorVerificationDecision:
@@ -20105,6 +21850,2697 @@ components:
         meta: { type: object, additionalProperties: true }
         errors: { type: array, items: { type: object, additionalProperties: true } }
 
+    # Phase 16 admin operations and geographic analytics schemas
+    "PlatformSetting":
+      "type": "object"
+      "required":
+        - "key"
+        - "group"
+        - "label"
+        - "description"
+        - "validation_rule"
+        - "applies_to"
+        - "value"
+        - "default_value"
+        - "version"
+        - "editable"
+      "properties":
+        "key":
+          "type": "string"
+        "group":
+          "type": "string"
+        "label":
+          "type": "string"
+        "description":
+          "type": "string"
+        "validation_rule":
+          "type": "string"
+        "applies_to":
+          "type": "string"
+        "value": {}
+        "default_value": {}
+        "version":
+          "type": "integer"
+        "previous_value": {}
+        "last_reason":
+          "type":
+            - "string"
+            - "null"
+        "updated_at":
+          "type":
+            - "string"
+            - "null"
+          "format": "date-time"
+        "updated_by":
+          "type":
+            - "string"
+            - "null"
+        "editable":
+          "type": "boolean"
+      "description": "An approved non-secret default. Version 0 means the approved default has never been stored; consuming rules apply it to new records only."
+    "FixedSetting":
+      "type": "object"
+      "required":
+        - "key"
+        - "label"
+        - "reason"
+      "properties":
+        "key":
+          "type": "string"
+        "label":
+          "type": "string"
+        "value": {}
+        "reason":
+          "type": "string"
+      "description": "Shown for transparency; there is no control (radius allowlist, VPS weights, NRPC cap, LIVE commerce, statutory rates)."
+    "PlatformSettingListMeta":
+      "type": "object"
+      "properties":
+        "fixed":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/FixedSetting"
+        "can_manage":
+          "type": "boolean"
+        "correlation_id":
+          "type": "string"
+    "PlatformSettingVersion":
+      "type": "object"
+      "required":
+        - "version"
+        - "value"
+        - "source"
+        - "reason"
+        - "effective_from"
+      "properties":
+        "version":
+          "type": "integer"
+        "value": {}
+        "previous_value": {}
+        "source":
+          "type": "string"
+          "enum":
+            - "SEED"
+            - "ADMIN"
+        "reason":
+          "type": "string"
+        "changed_by":
+          "type":
+            - "string"
+            - "null"
+        "changed_role":
+          "type":
+            - "string"
+            - "null"
+        "correlation_id":
+          "type":
+            - "string"
+            - "null"
+        "effective_from":
+          "type": "string"
+          "format": "date-time"
+    "PlatformSettingUpdateRequest":
+      "type": "object"
+      "required":
+        - "value"
+        - "expected_version"
+        - "reason"
+      "properties":
+        "value":
+          "description": "The new value in the setting's shape."
+        "expected_version":
+          "type": "integer"
+          "minimum": 0
+        "reason":
+          "type": "string"
+          "minLength": 10
+          "maxLength": 500
+      "description": "Needs platform_settings.manage and recent re-authentication. 409 SETTING_VERSION_CONFLICT for a stale version; 422 SETTING_INVALID with field errors."
+    "OperationsQueue":
+      "type": "object"
+      "required":
+        - "key"
+        - "label"
+        - "group"
+        - "count"
+        - "href"
+        - "description"
+      "properties":
+        "key":
+          "type": "string"
+        "label":
+          "type": "string"
+        "group":
+          "type": "string"
+        "count":
+          "type": "integer"
+        "href":
+          "type": "string"
+        "description":
+          "type": "string"
+        "oldest_at":
+          "type":
+            - "string"
+            - "null"
+          "format": "date-time"
+    "EnforcementSummary":
+      "type": "object"
+      "required":
+        - "id"
+        - "subject_type"
+        - "subject_id"
+        - "subject_name"
+        - "action"
+        - "action_label"
+        - "state"
+        - "source"
+        - "reason"
+        - "created_at"
+        - "lock_version"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "subject_type":
+          "type": "string"
+          "enum":
+            - "BUYER"
+            - "VENDOR_ORGANIZATION"
+        "subject_id":
+          "type": "string"
+          "format": "uuid"
+        "subject_name":
+          "type": "string"
+        "action":
+          "type": "string"
+          "enum":
+            - "WARNING"
+            - "TEMPORARY_RESTRICTION"
+            - "SUSPENSION"
+            - "PERMANENT_BAN"
+        "action_label":
+          "type": "string"
+        "state":
+          "type": "string"
+          "enum":
+            - "EFFECTIVE"
+            - "REFERRED"
+            - "APPLIED"
+            - "LIFTED"
+            - "DECLINED"
+        "source":
+          "type": "string"
+          "enum":
+            - "DISPUTE_REFERRAL"
+            - "DIRECT"
+        "case_id":
+          "type":
+            - "string"
+            - "null"
+          "format": "uuid"
+        "case_reference":
+          "type":
+            - "string"
+            - "null"
+        "reason":
+          "type": "string"
+        "duration_days":
+          "type":
+            - "integer"
+            - "null"
+        "continuation_plan":
+          "type":
+            - "string"
+            - "null"
+          "enum":
+            - "CONTINUE"
+            - "MONITORED_FULFILLMENT"
+            - "CANCELLATION_REVIEW"
+            - "REPLACEMENT"
+            - "REFUND"
+            - "NO_OPEN_ORDERS"
+            - null
+        "issued_role":
+          "type":
+            - "string"
+            - "null"
+        "applied_role":
+          "type":
+            - "string"
+            - "null"
+        "created_at":
+          "type": "string"
+          "format": "date-time"
+        "applied_at":
+          "type":
+            - "string"
+            - "null"
+          "format": "date-time"
+        "expires_at":
+          "type":
+            - "string"
+            - "null"
+          "format": "date-time"
+        "lifted_at":
+          "type":
+            - "string"
+            - "null"
+          "format": "date-time"
+        "lift_reason":
+          "type":
+            - "string"
+            - "null"
+        "lock_version":
+          "type": "integer"
+    "EnforcementEvent":
+      "type": "object"
+      "required":
+        - "event"
+        - "to_state"
+        - "reason"
+        - "actor"
+        - "actor_role"
+        - "correlation_id"
+        - "occurred_at"
+      "properties":
+        "event":
+          "type": "string"
+          "enum":
+            - "RECORDED"
+            - "REFERRED"
+            - "APPLIED"
+            - "DECLINED"
+            - "LIFTED"
+            - "EXPIRED"
+            - "SUPERSEDED"
+        "from_state":
+          "type":
+            - "string"
+            - "null"
+        "to_state":
+          "type": "string"
+        "before":
+          "type":
+            - "object"
+            - "null"
+          "additionalProperties": true
+        "after":
+          "type":
+            - "object"
+            - "null"
+          "additionalProperties": true
+        "reason":
+          "type": "string"
+        "actor":
+          "type": "string"
+        "actor_role":
+          "type": "string"
+        "correlation_id":
+          "type": "string"
+        "occurred_at":
+          "type": "string"
+          "format": "date-time"
+    "SubjectReview":
+      "type": "object"
+      "properties":
+        "subject_type":
+          "type": "string"
+        "subject_id":
+          "type": "string"
+          "format": "uuid"
+        "display_name":
+          "type": "string"
+        "masked_email":
+          "type":
+            - "string"
+            - "null"
+        "account_status":
+          "type": "string"
+        "store_activation_status":
+          "type":
+            - "string"
+            - "null"
+        "open_orders":
+          "type": "integer"
+        "orders_total":
+          "type": "integer"
+        "disputes_total":
+          "type": "integer"
+        "disputes_open":
+          "type": "integer"
+        "commerce_restricted_until":
+          "type":
+            - "string"
+            - "null"
+          "format": "date-time"
+      "description": "Account-review facts only: no contact details, coordinates, documents or payment data."
+    "EnforcementDetail":
+      "allOf":
+        - "$ref": "#/components/schemas/EnforcementSummary"
+        - "type": "object"
+          "required":
+            - "scope"
+            - "subject_review"
+            - "events"
+            - "allowed_actions"
+          "properties":
+            "scope":
+              "type": "string"
+            "restoration_condition":
+              "type":
+                - "string"
+                - "null"
+            "continuation_note":
+              "type":
+                - "string"
+                - "null"
+            "prior_subject_state":
+              "type":
+                - "object"
+                - "null"
+              "additionalProperties": true
+            "subject_review":
+              "$ref": "#/components/schemas/SubjectReview"
+            "events":
+              "type": "array"
+              "items":
+                "$ref": "#/components/schemas/EnforcementEvent"
+            "allowed_actions":
+              "type": "array"
+              "items":
+                "type": "string"
+                "enum":
+                  - "APPLY"
+                  - "DECLINE"
+                  - "LIFT"
+    "EnforcementSubjectMatch":
+      "type": "object"
+      "required":
+        - "type"
+        - "id"
+        - "display_name"
+        - "status"
+      "properties":
+        "type":
+          "type": "string"
+          "enum":
+            - "BUYER"
+            - "VENDOR_ORGANIZATION"
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "display_name":
+          "type": "string"
+        "status":
+          "type": "string"
+    "EnforcementRecordRequest":
+      "type": "object"
+      "required":
+        - "subject_type"
+        - "subject_id"
+        - "action"
+        - "reason"
+      "properties":
+        "subject_type":
+          "type": "string"
+          "enum":
+            - "BUYER"
+            - "VENDOR_ORGANIZATION"
+        "subject_id":
+          "type": "string"
+          "format": "uuid"
+        "action":
+          "type": "string"
+          "enum":
+            - "WARNING"
+            - "TEMPORARY_RESTRICTION"
+            - "SUSPENSION"
+            - "PERMANENT_BAN"
+        "reason":
+          "type": "string"
+          "minLength": 10
+          "maxLength": 2000
+        "scope":
+          "type": "string"
+          "maxLength": 160
+        "duration_days":
+          "type":
+            - "integer"
+            - "null"
+          "minimum": 1
+          "maximum": 365
+        "restoration_condition":
+          "type":
+            - "string"
+            - "null"
+          "maxLength": 2000
+        "continuation_plan":
+          "type":
+            - "string"
+            - "null"
+          "enum":
+            - "CONTINUE"
+            - "MONITORED_FULFILLMENT"
+            - "CANCELLATION_REVIEW"
+            - "REPLACEMENT"
+            - "REFUND"
+            - "NO_OPEN_ORDERS"
+            - null
+        "continuation_note":
+          "type":
+            - "string"
+            - "null"
+          "maxLength": 2000
+      "description": "A Warning is effective at once; other sanctions are applied at once. Permanent Ban needs enforcement.ban and recent re-authentication."
+    "EnforcementApplyRequest":
+      "type": "object"
+      "required":
+        - "continuation_plan"
+        - "lock_version"
+        - "reason"
+      "properties":
+        "continuation_plan":
+          "type": "string"
+          "enum":
+            - "CONTINUE"
+            - "MONITORED_FULFILLMENT"
+            - "CANCELLATION_REVIEW"
+            - "REPLACEMENT"
+            - "REFUND"
+            - "NO_OPEN_ORDERS"
+        "continuation_note":
+          "type":
+            - "string"
+            - "null"
+          "maxLength": 2000
+        "lock_version":
+          "type": "integer"
+          "minimum": 1
+        "reason":
+          "type": "string"
+          "minLength": 10
+          "maxLength": 2000
+    "ReasonedVersionRequest":
+      "type": "object"
+      "required":
+        - "lock_version"
+        - "reason"
+      "properties":
+        "lock_version":
+          "type": "integer"
+          "minimum": 1
+        "reason":
+          "type": "string"
+          "minLength": 10
+          "maxLength": 2000
+    "PrivacyRequestSummary":
+      "type": "object"
+      "required":
+        - "id"
+        - "reference"
+        - "request_type"
+        - "state"
+        - "subject_account_type"
+        - "subject_display"
+        - "identity_verified"
+        - "lock_version"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "reference":
+          "type": "string"
+        "request_type":
+          "type": "string"
+          "enum":
+            - "ACCESS"
+            - "CORRECTION"
+            - "OBJECTION"
+            - "DELETION"
+            - "RESTRICTION"
+            - "PORTABILITY"
+            - "OTHER"
+        "state":
+          "type": "string"
+          "enum":
+            - "RECEIVED"
+            - "IDENTITY_VERIFIED"
+            - "IN_PROGRESS"
+            - "COMPLETED"
+            - "REJECTED"
+            - "WITHDRAWN"
+        "subject_account_type":
+          "type": "string"
+        "subject_display":
+          "type": "string"
+        "intake_channel":
+          "type":
+            - "string"
+            - "null"
+        "received_at":
+          "type":
+            - "string"
+            - "null"
+          "format": "date-time"
+        "target_date":
+          "type":
+            - "string"
+            - "null"
+          "format": "date"
+        "handler":
+          "type":
+            - "string"
+            - "null"
+        "handler_user_id":
+          "type":
+            - "integer"
+            - "null"
+        "identity_verified":
+          "type": "boolean"
+        "lock_version":
+          "type": "integer"
+        "created_at":
+          "type":
+            - "string"
+            - "null"
+          "format": "date-time"
+    "PrivacyRequestEvent":
+      "type": "object"
+      "required":
+        - "event"
+        - "to_state"
+        - "note"
+        - "actor"
+        - "actor_role"
+        - "correlation_id"
+        - "occurred_at"
+      "properties":
+        "event":
+          "type": "string"
+        "from_state":
+          "type":
+            - "string"
+            - "null"
+        "to_state":
+          "type": "string"
+        "note":
+          "type": "string"
+        "actor":
+          "type": "string"
+        "actor_role":
+          "type": "string"
+        "correlation_id":
+          "type": "string"
+        "occurred_at":
+          "type": "string"
+          "format": "date-time"
+    "PrivacyHandler":
+      "type": "object"
+      "required":
+        - "user_id"
+        - "name"
+        - "role"
+      "properties":
+        "user_id":
+          "type": "integer"
+        "name":
+          "type": "string"
+        "role":
+          "type": "string"
+    "PrivacyRequestDetail":
+      "allOf":
+        - "$ref": "#/components/schemas/PrivacyRequestSummary"
+        - "type": "object"
+          "required":
+            - "subject_masked_email"
+            - "events"
+            - "allowed_actions"
+            - "handlers"
+          "properties":
+            "scope":
+              "type":
+                - "string"
+                - "null"
+            "response_summary":
+              "type":
+                - "string"
+                - "null"
+            "legal_exception":
+              "type":
+                - "string"
+                - "null"
+            "identity_verification_method":
+              "type":
+                - "string"
+                - "null"
+            "identity_verified_at":
+              "type":
+                - "string"
+                - "null"
+              "format": "date-time"
+            "subject_masked_email":
+              "type": "string"
+            "completed_at":
+              "type":
+                - "string"
+                - "null"
+              "format": "date-time"
+            "events":
+              "type": "array"
+              "items":
+                "$ref": "#/components/schemas/PrivacyRequestEvent"
+            "allowed_actions":
+              "type": "array"
+              "items":
+                "type": "string"
+                "enum":
+                  - "ASSIGN"
+                  - "VERIFY"
+                  - "START"
+                  - "COMPLETE"
+                  - "REJECT"
+                  - "WITHDRAW"
+            "handlers":
+              "type": "array"
+              "items":
+                "$ref": "#/components/schemas/PrivacyHandler"
+    "PrivacyRequestCreateRequest":
+      "type": "object"
+      "required":
+        - "subject_email"
+        - "request_type"
+        - "intake_channel"
+        - "received_on"
+        - "scope"
+        - "note"
+      "properties":
+        "subject_email":
+          "type": "string"
+          "format": "email"
+        "request_type":
+          "type": "string"
+          "enum":
+            - "ACCESS"
+            - "CORRECTION"
+            - "OBJECTION"
+            - "DELETION"
+            - "RESTRICTION"
+            - "PORTABILITY"
+            - "OTHER"
+        "intake_channel":
+          "type": "string"
+          "enum":
+            - "DPO_EMAIL"
+            - "SUPPORT_CASE"
+            - "WRITTEN_LETTER"
+            - "IN_APP"
+        "received_on":
+          "type": "string"
+          "format": "date"
+        "scope":
+          "type": "string"
+          "minLength": 10
+          "maxLength": 4000
+        "note":
+          "type": "string"
+          "minLength": 3
+          "maxLength": 2000
+    "PrivacyTransitionRequest":
+      "type": "object"
+      "required":
+        - "lock_version"
+        - "note"
+      "properties":
+        "lock_version":
+          "type": "integer"
+          "minimum": 1
+        "note":
+          "type": "string"
+          "minLength": 3
+          "maxLength": 4000
+        "handler_user_id":
+          "type": "integer"
+        "target_date":
+          "type":
+            - "string"
+            - "null"
+          "format": "date"
+        "verification_method":
+          "type": "string"
+          "enum":
+            - "REGISTERED_EMAIL_CONFIRMATION"
+            - "SIGNED_IN_ACCOUNT_CONFIRMATION"
+            - "GOVERNMENT_ID_SIGHTED"
+            - "AUTHORIZED_REPRESENTATIVE_DOCUMENT_SIGHTED"
+        "legal_exception":
+          "type":
+            - "string"
+            - "null"
+          "maxLength": 2000
+    "AuditEvent":
+      "type": "object"
+      "required":
+        - "id"
+        - "created_at"
+        - "actor"
+        - "action"
+        - "resource_type"
+        - "succeeded"
+        - "correlation_id"
+        - "has_detail"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "created_at":
+          "type": "string"
+          "format": "date-time"
+        "actor":
+          "type": "string"
+        "actor_role":
+          "type":
+            - "string"
+            - "null"
+        "action":
+          "type": "string"
+        "resource_type":
+          "type": "string"
+        "resource_id":
+          "type":
+            - "string"
+            - "null"
+          "format": "uuid"
+        "organization":
+          "type":
+            - "string"
+            - "null"
+        "organization_id":
+          "type":
+            - "string"
+            - "null"
+          "format": "uuid"
+        "succeeded":
+          "type": "boolean"
+        "reason":
+          "type":
+            - "string"
+            - "null"
+        "correlation_id":
+          "type": "string"
+        "has_detail":
+          "type": "boolean"
+    "AuditEventDetail":
+      "allOf":
+        - "$ref": "#/components/schemas/AuditEvent"
+        - "type": "object"
+          "required":
+            - "redaction_note"
+          "properties":
+            "before": {}
+            "after": {}
+            "redaction_note":
+              "type": "string"
+    "AuditSearchMeta":
+      "type": "object"
+      "properties":
+        "next_cursor":
+          "type":
+            - "string"
+            - "null"
+        "page_size":
+          "type": "integer"
+        "can_view_detail":
+          "type": "boolean"
+        "can_export":
+          "type": "boolean"
+    "IntegrationStatus":
+      "type": "object"
+      "required":
+        - "key"
+        - "label"
+        - "status"
+        - "detail"
+      "properties":
+        "key":
+          "type": "string"
+        "label":
+          "type": "string"
+        "status":
+          "type": "string"
+          "enum":
+            - "HEALTHY"
+            - "DEGRADED"
+            - "NOT_CONFIGURED"
+            - "SIMULATED"
+        "detail":
+          "type": "string"
+        "environment":
+          "type":
+            - "string"
+            - "null"
+        "last_event_at":
+          "type":
+            - "string"
+            - "null"
+          "format": "date-time"
+    "ScheduledTaskHealth":
+      "type": "object"
+      "required":
+        - "task"
+        - "status"
+        - "expected_within_minutes"
+      "properties":
+        "task":
+          "type": "string"
+        "status":
+          "type": "string"
+          "enum":
+            - "HEALTHY"
+            - "RUNNING"
+            - "FAILED"
+            - "OVERDUE"
+            - "NO_RUN_RECORDED"
+        "last_outcome":
+          "type":
+            - "string"
+            - "null"
+        "last_started_at":
+          "type":
+            - "string"
+            - "null"
+          "format": "date-time"
+        "duration_ms":
+          "type":
+            - "integer"
+            - "null"
+        "expected_within_minutes":
+          "type": "integer"
+    "IntegrationOverview":
+      "type": "object"
+      "required":
+        - "generated_at"
+        - "environment"
+        - "integrations"
+        - "queues"
+        - "scheduled_tasks"
+        - "analytics"
+        - "can_retry"
+      "properties":
+        "generated_at":
+          "type": "string"
+          "format": "date-time"
+        "environment":
+          "type": "object"
+          "additionalProperties": true
+        "integrations":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/IntegrationStatus"
+        "queues":
+          "type": "object"
+          "additionalProperties": true
+        "scheduled_tasks":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ScheduledTaskHealth"
+        "analytics":
+          "type": "object"
+          "additionalProperties": true
+        "can_retry":
+          "type": "boolean"
+      "description": "Configuration presence and masked labels only; credentials, payloads, recipients and exception messages never appear."
+    "OperationFailure":
+      "type": "object"
+      "required":
+        - "kind"
+        - "reference"
+        - "label"
+        - "queue"
+        - "failure"
+        - "failed_at"
+        - "retryable"
+      "properties":
+        "kind":
+          "type": "string"
+          "enum":
+            - "FAILED_JOB"
+            - "OUTBOX_EVENT"
+        "reference":
+          "type": "string"
+        "label":
+          "type": "string"
+        "queue":
+          "type": "string"
+        "failure":
+          "type": "string"
+        "attempts":
+          "type":
+            - "integer"
+            - "null"
+        "failed_at":
+          "type": "string"
+          "format": "date-time"
+        "retryable":
+          "type": "boolean"
+        "retry_note":
+          "type":
+            - "string"
+            - "null"
+    "OperationRetryRequest":
+      "type": "object"
+      "required":
+        - "target_type"
+        - "reference"
+        - "reason"
+      "properties":
+        "target_type":
+          "type": "string"
+          "enum":
+            - "FAILED_JOB"
+            - "OUTBOX_EVENT"
+            - "GEO_FACTS_RUN"
+            - "MATERIAL_SNAPSHOT"
+        "reference":
+          "type": "string"
+          "maxLength": 80
+        "reason":
+          "type": "string"
+          "minLength": 10
+          "maxLength": 500
+    "OperationRetryResult":
+      "type": "object"
+      "required":
+        - "target_type"
+        - "reference"
+        - "label"
+        - "outcome"
+        - "correlation_id"
+      "properties":
+        "target_type":
+          "type": "string"
+        "reference":
+          "type": "string"
+        "label":
+          "type": "string"
+        "outcome":
+          "type": "string"
+          "enum":
+            - "QUEUED"
+        "correlation_id":
+          "type": "string"
+    "OperationRetryRecord":
+      "type": "object"
+      "required":
+        - "target_type"
+        - "label"
+        - "reason"
+        - "outcome"
+        - "actor"
+        - "actor_role"
+        - "correlation_id"
+        - "created_at"
+      "properties":
+        "target_type":
+          "type": "string"
+        "label":
+          "type": "string"
+        "reason":
+          "type": "string"
+        "outcome":
+          "type": "string"
+        "actor":
+          "type": "string"
+        "actor_role":
+          "type": "string"
+        "correlation_id":
+          "type": "string"
+        "created_at":
+          "type": "string"
+          "format": "date-time"
+    "BudgetOverrideRecord":
+      "type": "object"
+      "required":
+        - "id"
+        - "project"
+        - "work_package"
+        - "prior_budget_centavos"
+        - "order_amount_centavos"
+        - "overage_centavos"
+        - "reason"
+        - "actor"
+        - "recorded_at"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "project":
+          "type": "string"
+        "work_package":
+          "type": "string"
+        "order_reference":
+          "type":
+            - "string"
+            - "null"
+        "prior_budget_centavos":
+          "type": "integer"
+        "order_amount_centavos":
+          "type": "integer"
+        "overage_centavos":
+          "type": "integer"
+        "reason":
+          "type": "string"
+        "actor":
+          "type": "string"
+        "recorded_at":
+          "type": "string"
+          "format": "date-time"
+    "GeoCell":
+      "type": "object"
+      "required":
+        - "suppressed"
+      "properties":
+        "value":
+          "type":
+            - "integer"
+            - "null"
+        "suppressed":
+          "type": "boolean"
+        "reason":
+          "type":
+            - "string"
+            - "null"
+      "description": "A person-derived value; null with a reason when suppressed under the small-cell rule."
+    "GeoRate":
+      "type": "object"
+      "required": []
+      "properties":
+        "percent":
+          "type":
+            - "string"
+            - "null"
+          "pattern": "^\\d{1,3}\\.\\d{2}$"
+        "numerator":
+          "type":
+            - "integer"
+            - "null"
+        "denominator":
+          "type":
+            - "integer"
+            - "null"
+        "suppressed":
+          "type":
+            - "boolean"
+            - "null"
+        "reason":
+          "type":
+            - "string"
+            - "null"
+      "description": "Numerator and denominator are always shown with the percentage, or all null when suppressed."
+    "GeoBreadcrumb":
+      "type": "object"
+      "required":
+        - "name"
+      "properties":
+        "code":
+          "type":
+            - "string"
+            - "null"
+        "name":
+          "type": "string"
+        "level":
+          "type":
+            - "string"
+            - "null"
+    "GeoScope":
+      "type": "object"
+      "required":
+        - "name"
+        - "level_label"
+        - "label"
+        - "breadcrumbs"
+        - "children_label"
+        - "drillable"
+      "properties":
+        "code":
+          "type":
+            - "string"
+            - "null"
+        "name":
+          "type": "string"
+        "level":
+          "type":
+            - "string"
+            - "null"
+        "level_label":
+          "type": "string"
+        "label":
+          "type": "string"
+        "breadcrumbs":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/GeoBreadcrumb"
+        "children_label":
+          "type": "string"
+        "drillable":
+          "type": "boolean"
+        "psgc_version":
+          "type":
+            - "object"
+            - "null"
+          "required":
+            - "id"
+            - "label"
+            - "effective_on"
+          "properties":
+            "id":
+              "type": "string"
+              "format": "uuid"
+            "label":
+              "type": "string"
+            "effective_on":
+              "type": "string"
+    "GeoDataset":
+      "type": "object"
+      "required":
+        - "environment"
+        - "label"
+        - "demo"
+        - "available"
+      "properties":
+        "environment":
+          "type": "string"
+          "enum":
+            - "TEST"
+            - "DEMO"
+        "label":
+          "type": "string"
+        "demo":
+          "type": "boolean"
+        "last_aggregated_at":
+          "type":
+            - "string"
+            - "null"
+          "format": "date-time"
+        "through_date":
+          "type":
+            - "string"
+            - "null"
+        "revision":
+          "type":
+            - "integer"
+            - "null"
+        "available":
+          "type": "boolean"
+    "GeoResponseTime":
+      "type": "object"
+      "required":
+        - "suppressed"
+      "properties":
+        "suppressed":
+          "type": "boolean"
+        "reason":
+          "type":
+            - "string"
+            - "null"
+        "mean_seconds":
+          "type":
+            - "integer"
+            - "null"
+        "median_seconds":
+          "type":
+            - "integer"
+            - "null"
+        "p90_seconds":
+          "type":
+            - "integer"
+            - "null"
+        "answered":
+          "type":
+            - "integer"
+            - "null"
+        "unanswered":
+          "type":
+            - "integer"
+            - "null"
+    "GeoActiveUsers":
+      "type": "object"
+      "required":
+        - "dau"
+        - "wau"
+        - "mau"
+      "properties":
+        "dau":
+          "$ref": "#/components/schemas/GeoCell"
+        "wau":
+          "$ref": "#/components/schemas/GeoCell"
+        "mau":
+          "$ref": "#/components/schemas/GeoCell"
+    "GeoKpis":
+      "type": "object"
+      "required":
+        - "vendor_count"
+        - "registered_buyers"
+        - "gross_gmv_centavos"
+        - "net_gmv_centavos"
+        - "order_volume"
+        - "fulfillment_rate"
+        - "cancellation_rate"
+        - "dispute_rate"
+        - "response_time"
+        - "active_users"
+      "properties":
+        "vendor_count":
+          "$ref": "#/components/schemas/GeoCell"
+        "registered_buyers":
+          "$ref": "#/components/schemas/GeoCell"
+        "gross_gmv_centavos":
+          "$ref": "#/components/schemas/GeoCell"
+        "net_gmv_centavos":
+          "$ref": "#/components/schemas/GeoCell"
+        "order_volume":
+          "$ref": "#/components/schemas/GeoCell"
+        "fulfillment_rate":
+          "$ref": "#/components/schemas/GeoRate"
+        "cancellation_rate":
+          "$ref": "#/components/schemas/GeoRate"
+        "dispute_rate":
+          "$ref": "#/components/schemas/GeoRate"
+        "response_time":
+          "$ref": "#/components/schemas/GeoResponseTime"
+        "active_users":
+          "type": "object"
+          "required":
+            - "buyer"
+            - "vendor"
+          "properties":
+            "buyer":
+              "$ref": "#/components/schemas/GeoActiveUsers"
+            "vendor":
+              "$ref": "#/components/schemas/GeoActiveUsers"
+    "GeoTrendPoint":
+      "type": "object"
+      "required":
+        - "bucket"
+        - "suppressed"
+      "properties":
+        "bucket":
+          "type": "string"
+          "format": "date"
+        "gross_gmv_centavos":
+          "type":
+            - "integer"
+            - "null"
+        "net_gmv_centavos":
+          "type":
+            - "integer"
+            - "null"
+        "order_volume":
+          "type":
+            - "integer"
+            - "null"
+        "suppressed":
+          "type": "boolean"
+        "reason":
+          "type":
+            - "string"
+            - "null"
+    "GeoActivityPoint":
+      "type": "object"
+      "required":
+        - "date"
+      "properties":
+        "date":
+          "type": "string"
+          "format": "date"
+        "buyer_dau":
+          "type":
+            - "integer"
+            - "null"
+        "buyer_wau":
+          "type":
+            - "integer"
+            - "null"
+        "buyer_mau":
+          "type":
+            - "integer"
+            - "null"
+        "vendor_dau":
+          "type":
+            - "integer"
+            - "null"
+        "vendor_wau":
+          "type":
+            - "integer"
+            - "null"
+        "vendor_mau":
+          "type":
+            - "integer"
+            - "null"
+    "GeoChild":
+      "type": "object"
+      "required":
+        - "code"
+        - "name"
+        - "level"
+        - "level_label"
+        - "drillable"
+        - "vendor_count"
+        - "registered_buyers"
+        - "gross_gmv_centavos"
+        - "net_gmv_centavos"
+        - "order_volume"
+        - "fulfillment_rate"
+        - "cancellation_rate"
+        - "dispute_rate"
+        - "response_suppressed"
+        - "suppressed"
+      "properties":
+        "code":
+          "type": "string"
+        "name":
+          "type": "string"
+        "level":
+          "type": "string"
+        "level_label":
+          "type": "string"
+        "drillable":
+          "type": "boolean"
+        "vendor_count":
+          "type": "integer"
+        "registered_buyers":
+          "type": "object"
+          "required":
+            - "suppressed"
+          "properties":
+            "value":
+              "type":
+                - "integer"
+                - "null"
+            "suppressed":
+              "type": "boolean"
+        "gross_gmv_centavos":
+          "type": "object"
+          "required":
+            - "suppressed"
+          "properties":
+            "value":
+              "type":
+                - "integer"
+                - "null"
+            "suppressed":
+              "type": "boolean"
+        "net_gmv_centavos":
+          "type": "object"
+          "required":
+            - "suppressed"
+          "properties":
+            "value":
+              "type":
+                - "integer"
+                - "null"
+            "suppressed":
+              "type": "boolean"
+        "order_volume":
+          "type": "object"
+          "required":
+            - "suppressed"
+          "properties":
+            "value":
+              "type":
+                - "integer"
+                - "null"
+            "suppressed":
+              "type": "boolean"
+        "fulfillment_rate":
+          "$ref": "#/components/schemas/GeoRate"
+        "cancellation_rate":
+          "$ref": "#/components/schemas/GeoRate"
+        "dispute_rate":
+          "$ref": "#/components/schemas/GeoRate"
+        "median_response_seconds":
+          "type":
+            - "integer"
+            - "null"
+        "response_suppressed":
+          "type": "boolean"
+        "suppressed":
+          "type": "boolean"
+        "suppression_reason":
+          "type":
+            - "string"
+            - "null"
+          "enum":
+            - "SMALL_CELL"
+            - "COMPLEMENTARY"
+            - null
+        "suppression_note":
+          "type":
+            - "string"
+            - "null"
+    "GeoFilterApplicability":
+      "type": "object"
+      "required":
+        - "filter"
+        - "applies_to"
+        - "not_applicable_to"
+        - "note"
+      "properties":
+        "filter":
+          "type": "string"
+        "applies_to":
+          "type": "array"
+          "items":
+            "type": "string"
+        "not_applicable_to":
+          "type": "array"
+          "items":
+            "type": "string"
+        "note":
+          "type": "string"
+    "GeoDashboard":
+      "type": "object"
+      "required":
+        - "scope"
+        - "dataset"
+        - "period"
+        - "filters"
+        - "filter_applicability"
+        - "disclosure"
+        - "kpis"
+        - "trends"
+        - "activity_trend"
+        - "children"
+        - "unresolved"
+        - "definitions"
+      "properties":
+        "scope":
+          "$ref": "#/components/schemas/GeoScope"
+        "dataset":
+          "$ref": "#/components/schemas/GeoDataset"
+        "period":
+          "type": "object"
+          "required":
+            - "from"
+            - "to"
+            - "granularity"
+          "properties":
+            "from":
+              "type": "string"
+              "format": "date"
+            "to":
+              "type": "string"
+              "format": "date"
+            "granularity":
+              "type": "string"
+              "enum":
+                - "DAY"
+                - "WEEK"
+                - "MONTH"
+        "filters":
+          "type": "object"
+          "additionalProperties": true
+        "filter_applicability":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/GeoFilterApplicability"
+        "disclosure":
+          "type": "object"
+          "required":
+            - "minimum_persons"
+            - "method"
+            - "description"
+          "properties":
+            "minimum_persons":
+              "type": "integer"
+            "method":
+              "type": "string"
+              "enum":
+                - "ROLL_UP_TO_PARENT"
+            "description":
+              "type": "string"
+        "kpis":
+          "$ref": "#/components/schemas/GeoKpis"
+        "trends":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/GeoTrendPoint"
+        "activity_trend":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/GeoActivityPoint"
+        "children":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/GeoChild"
+        "unresolved":
+          "type": "object"
+          "required":
+            - "orders"
+            - "vendors"
+            - "registered_buyers"
+            - "responses"
+            - "activity"
+          "properties":
+            "orders":
+              "type": "integer"
+            "vendors":
+              "type": "integer"
+            "registered_buyers":
+              "type": "integer"
+            "responses":
+              "type": "integer"
+            "activity":
+              "type": "integer"
+        "definitions":
+          "type": "object"
+          "additionalProperties":
+            "type": "string"
+      "description": "Aggregate facts only: PSGC codes and counts, never coordinates, Buyer identities or private evidence. Suppressed person-derived values are null with the reason; they stay counted in the parent total."
+    "GeoDemandCell":
+      "type": "object"
+      "required":
+        - "column"
+        - "suppressed"
+      "properties":
+        "column":
+          "type": "string"
+          "format": "uuid"
+        "value":
+          "oneOf":
+            - "type": "integer"
+            - "type": "string"
+            - "type": "null"
+        "suppressed":
+          "type": "boolean"
+        "reason":
+          "type":
+            - "string"
+            - "null"
+    "GeoDemand":
+      "type": "object"
+      "required":
+        - "scope"
+        - "dataset"
+        - "measure"
+        - "dimension"
+        - "columns"
+        - "rows"
+        - "not_comparable_lines"
+        - "definition"
+      "properties":
+        "scope":
+          "$ref": "#/components/schemas/GeoScope"
+        "dataset":
+          "$ref": "#/components/schemas/GeoDataset"
+        "measure":
+          "type": "string"
+          "enum":
+            - "ORDER_COUNT"
+            - "QUANTITY"
+            - "VALUE"
+        "unit":
+          "type":
+            - "string"
+            - "null"
+        "dimension":
+          "type": "string"
+          "enum":
+            - "CATEGORY"
+            - "MATERIAL"
+        "columns":
+          "type": "array"
+          "items":
+            "type": "object"
+            "required":
+              - "id"
+              - "name"
+            "properties":
+              "id":
+                "type": "string"
+                "format": "uuid"
+              "name":
+                "type": "string"
+        "rows":
+          "type": "array"
+          "items":
+            "type": "object"
+            "required":
+              - "code"
+              - "name"
+              - "level"
+              - "cells"
+            "properties":
+              "code":
+                "type": "string"
+              "name":
+                "type": "string"
+              "level":
+                "type": "string"
+              "cells":
+                "type": "array"
+                "items":
+                  "$ref": "#/components/schemas/GeoDemandCell"
+        "not_comparable_lines":
+          "type": "integer"
+        "definition":
+          "type": "string"
+    "GeoBoundaryCollection":
+      "type": "object"
+      "required":
+        - "type"
+        - "features"
+        - "missing_codes"
+        - "psgc_version"
+      "properties":
+        "type":
+          "type": "string"
+          "enum":
+            - "FeatureCollection"
+        "features":
+          "type": "array"
+          "items":
+            "type": "object"
+            "additionalProperties": true
+        "missing_codes":
+          "type": "array"
+          "items":
+            "type": "string"
+        "psgc_version":
+          "type": "object"
+          "required":
+            - "id"
+            - "label"
+          "properties":
+            "id":
+              "type": "string"
+              "format": "uuid"
+            "label":
+              "type": "string"
+      "description": "Simplified GeoJSON per child area; properties are code, name and level only. Areas without imported geometry are listed for the tile fallback."
+    "FinanceKpi":
+      "type": "object"
+      "required":
+        - "key"
+        - "label"
+        - "value_centavos"
+        - "definition"
+      "properties":
+        "key":
+          "type": "string"
+        "label":
+          "type": "string"
+        "value_centavos":
+          "type": "integer"
+        "definition":
+          "type": "string"
+    "FinanceKpis":
+      "type": "object"
+      "required":
+        - "label"
+        - "scenario"
+        - "period"
+        - "commerce"
+        - "finance"
+        - "counts"
+      "properties":
+        "label":
+          "type": "string"
+        "scenario":
+          "type": "string"
+        "period":
+          "type": "object"
+          "required":
+            - "from"
+            - "to"
+          "properties":
+            "from":
+              "type": "string"
+              "format": "date"
+            "to":
+              "type": "string"
+              "format": "date"
+        "commerce":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/FinanceKpi"
+        "finance":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/FinanceKpi"
+        "counts":
+          "type": "object"
+          "additionalProperties":
+            "type": "integer"
+    "RemittanceQueueRow":
+      "type": "object"
+      "required":
+        - "id"
+        - "order_reference"
+        - "vendor_name"
+        - "environment"
+        - "taxpayer_key_suffix"
+        - "components"
+        - "calculation_state"
+        - "deduction_evidence_state"
+        - "reconciliation_state"
+        - "reason"
+        - "created_at"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "order_reference":
+          "type": "string"
+        "vendor_name":
+          "type": "string"
+        "environment":
+          "type": "string"
+        "taxpayer_key_suffix":
+          "type": "string"
+        "scenario":
+          "type":
+            - "string"
+            - "null"
+        "components":
+          "type": "object"
+          "additionalProperties": true
+        "threshold_status_before":
+          "type":
+            - "string"
+            - "null"
+        "threshold_status_after":
+          "type":
+            - "string"
+            - "null"
+        "g_effective_before_centavos":
+          "type":
+            - "integer"
+            - "null"
+        "g_effective_after_centavos":
+          "type":
+            - "integer"
+            - "null"
+        "calculation_state":
+          "type": "string"
+        "deduction_evidence_state":
+          "type": "string"
+        "reconciliation_state":
+          "type": "string"
+        "review_item_id":
+          "type":
+            - "string"
+            - "null"
+          "format": "uuid"
+        "reason":
+          "type": "string"
+        "created_at":
+          "type": "string"
+          "format": "date-time"
+    "TaxEvidenceRow":
+      "type": "object"
+      "required":
+        - "id"
+        - "evidence_type"
+        - "origin"
+        - "review_state"
+        - "tax_profile_version"
+        - "vendor"
+        - "decision_href"
+        - "created_at"
+        - "note"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "evidence_type":
+          "type": "string"
+        "origin":
+          "type": "string"
+        "valid_from":
+          "type":
+            - "string"
+            - "null"
+          "format": "date"
+        "valid_until":
+          "type":
+            - "string"
+            - "null"
+          "format": "date"
+        "review_state":
+          "type": "string"
+        "reviewed_at":
+          "type":
+            - "string"
+            - "null"
+          "format": "date-time"
+        "tax_profile_version":
+          "type": "integer"
+        "taxable_year":
+          "type":
+            - "integer"
+            - "null"
+        "vendor":
+          "type": "object"
+          "required":
+            - "id"
+            - "name"
+          "properties":
+            "id":
+              "type": "string"
+              "format": "uuid"
+            "name":
+              "type": "string"
+        "decision_href":
+          "type": "string"
+        "created_at":
+          "type": "string"
+          "format": "date-time"
+        "note":
+          "type": "string"
+    "TaxAdjustment":
+      "type": "object"
+      "required":
+        - "id"
+        - "kind"
+        - "state"
+        - "environment"
+        - "opened_by"
+        - "original_record_type"
+        - "original_record_id"
+        - "period_start"
+        - "period_end"
+        - "amount_centavos"
+        - "before_values"
+        - "after_values"
+        - "reason"
+        - "allowed_actions"
+      "properties":
+        "id":
+          "type": "string"
+          "format": "uuid"
+        "kind":
+          "type": "string"
+        "state":
+          "type": "string"
+          "enum":
+            - "ADJUSTMENT_REQUIRED"
+            - "UNDER_REVIEW"
+            - "APPROVED"
+            - "POSTED"
+            - "REJECTED"
+        "environment":
+          "type": "string"
+        "opened_by":
+          "type": "string"
+          "enum":
+            - "USER"
+            - "SYSTEM"
+        "order_reference":
+          "type":
+            - "string"
+            - "null"
+        "vendor_name":
+          "type":
+            - "string"
+            - "null"
+        "original_record_type":
+          "type": "string"
+        "original_record_id":
+          "type": "string"
+          "format": "uuid"
+        "period_start":
+          "type": "string"
+          "format": "date"
+        "period_end":
+          "type": "string"
+          "format": "date"
+        "amount_centavos":
+          "type": "integer"
+        "before_values":
+          "type": "object"
+          "additionalProperties": true
+        "after_values":
+          "type": "object"
+          "additionalProperties": true
+        "reason":
+          "type": "string"
+        "preparer":
+          "type":
+            - "string"
+            - "null"
+        "reviewer":
+          "type":
+            - "string"
+            - "null"
+        "reviewed_at":
+          "type":
+            - "string"
+            - "null"
+          "format": "date-time"
+        "posted_at":
+          "type":
+            - "string"
+            - "null"
+          "format": "date-time"
+        "created_at":
+          "type":
+            - "string"
+            - "null"
+          "format": "date-time"
+        "allowed_actions":
+          "type": "array"
+          "items":
+            "type": "string"
+            "enum":
+              - "PREPARE"
+              - "APPROVE"
+              - "REJECT"
+              - "POST"
+        "separation_note":
+          "type":
+            - "string"
+            - "null"
+    "TaxAdjustmentPrepareRequest":
+      "type": "object"
+      "required":
+        - "corrected_withheld_centavos"
+        - "reason"
+        - "certificate_impact"
+      "properties":
+        "corrected_withheld_centavos":
+          "type": "integer"
+          "minimum": 0
+        "reason":
+          "type": "string"
+          "minLength": 10
+          "maxLength": 2000
+        "certificate_impact":
+          "type": "string"
+          "enum":
+            - "NONE"
+            - "REISSUE_REQUIRED"
+            - "AMENDMENT_REQUIRED"
+        "evidence_reference":
+          "type":
+            - "string"
+            - "null"
+          "maxLength": 200
+    "TaxAdjustmentReviewRequest":
+      "type": "object"
+      "required":
+        - "decision"
+        - "reason"
+      "properties":
+        "decision":
+          "type": "string"
+          "enum":
+            - "APPROVED"
+            - "REJECTED"
+        "reason":
+          "type": "string"
+          "minLength": 10
+          "maxLength": 2000
+      "description": "409 PREPARER_CANNOT_REVIEW when the reviewer prepared the adjustment."
+    "VendorFinanceReviews":
+      "type": "object"
+      "required":
+        - "label"
+        - "statements"
+        - "tax_adjustments"
+        - "evidence"
+        - "open_reviews"
+      "properties":
+        "label":
+          "type": "string"
+        "statements":
+          "type": "array"
+          "items":
+            "type": "object"
+            "additionalProperties": true
+        "tax_adjustments":
+          "type": "array"
+          "items":
+            "type": "object"
+            "additionalProperties": true
+        "evidence":
+          "type": "array"
+          "items":
+            "type": "object"
+            "additionalProperties": true
+        "open_reviews":
+          "type": "array"
+          "items":
+            "type": "object"
+            "required":
+              - "id"
+              - "kind"
+              - "label"
+              - "created_at"
+            "properties":
+              "id":
+                "type": "string"
+                "format": "uuid"
+              "kind":
+                "type": "string"
+              "label":
+                "type": "string"
+              "created_at":
+                "type": "string"
+                "format": "date-time"
+      "description": "Owner only. Statement approval and payment status, tax adjustments, evidence review state and open finance reviews; no reviewer notes or taxpayer identifiers."
+    "ActivationBlockerSource":
+      "type": "object"
+      "properties":
+        "type":
+          "type": "string"
+        "label":
+          "type": "string"
+        "revision":
+          "type":
+            - "integer"
+            - "null"
+        "status":
+          "type":
+            - "string"
+            - "null"
+        "updated_at":
+          "type":
+            - "string"
+            - "null"
+          "format": "date-time"
+    "ActivationBlocker":
+      "type": "object"
+      "required":
+        - "key"
+        - "condition"
+        - "reason"
+        - "category"
+        - "source"
+      "properties":
+        "key":
+          "type": "string"
+        "condition":
+          "type": "integer"
+        "reason":
+          "type": "string"
+        "category":
+          "type": "string"
+          "enum":
+            - "ACCOUNT"
+            - "TERMS"
+            - "AUTHORITY"
+            - "TAX"
+            - "MEDIA"
+            - "HOURS"
+            - "SETUP"
+            - "DELIVERY"
+            - "PROVIDER_CAPABILITY"
+            - "HOLD"
+            - "VERIFICATION"
+        "source":
+          "$ref": "#/components/schemas/ActivationBlockerSource"
+    "ActivationRestrictions":
+      "type": "object"
+      "required":
+        - "ready"
+        - "status"
+        - "rule_version"
+        - "evaluated_at"
+        - "blockers"
+        - "categories"
+        - "not_blocking"
+        - "override_available"
+      "properties":
+        "ready":
+          "type": "boolean"
+        "status":
+          "type": "string"
+        "rule_version":
+          "type": "string"
+        "evaluated_at":
+          "type": "string"
+          "format": "date-time"
+        "blockers":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ActivationBlocker"
+        "categories":
+          "type": "array"
+          "items":
+            "type": "string"
+            "enum":
+              - "ACCOUNT"
+              - "TERMS"
+              - "AUTHORITY"
+              - "TAX"
+              - "MEDIA"
+              - "HOURS"
+              - "SETUP"
+              - "DELIVERY"
+              - "PROVIDER_CAPABILITY"
+              - "HOLD"
+              - "VERIFICATION"
+        "not_blocking":
+          "type": "array"
+          "items":
+            "type": "string"
+        "override_available":
+          "type": "boolean"
+          "enum":
+            - false
+      "description": "StoreActivationGate result explained by source revision. There is no override; teams and products never block."
+    "VendorWorkstreams":
+      "type": "object"
+      "required":
+        - "verification"
+        - "setup"
+        - "provider_readiness"
+        - "activation"
+        - "discoverability"
+      "properties":
+        "verification":
+          "type": "object"
+          "required":
+            - "status"
+          "properties":
+            "status":
+              "type": "string"
+        "setup":
+          "type": "object"
+          "required":
+            - "status"
+          "properties":
+            "status":
+              "type": "string"
+        "provider_readiness":
+          "type": "object"
+          "properties":
+            "status":
+              "type": "string"
+            "provider_status":
+              "type":
+                - "string"
+                - "null"
+            "environment":
+              "type": "string"
+            "last_error_code":
+              "type":
+                - "string"
+                - "null"
+            "last_reconciled_at":
+              "type":
+                - "string"
+                - "null"
+              "format": "date-time"
+            "note":
+              "type": "string"
+        "activation":
+          "type": "object"
+          "required":
+            - "status"
+          "properties":
+            "status":
+              "type": "string"
+            "hold_code":
+              "type":
+                - "string"
+                - "null"
+        "discoverability":
+          "type": "object"
+          "required":
+            - "status"
+          "properties":
+            "status":
+              "type": "string"
+            "reason":
+              "type":
+                - "string"
+                - "null"
+            "evaluated_at":
+              "type":
+                - "string"
+                - "null"
+              "format": "date-time"
+    "AdminVendorVerificationDetail":
+      "type": "object"
+      "properties":
+        "workstreams":
+          "$ref": "#/components/schemas/VendorWorkstreams"
+        "activation_restrictions":
+          "$ref": "#/components/schemas/ActivationRestrictions"
+        "readiness":
+          "type": "object"
+          "additionalProperties": true
+      "description": "Documents the Phase 16 keys of the free-form Phase 3E case payload (AdminVendorVerificationDetailEnvelope.data): separate workstream states and source-revision activation restrictions."
+    "PlatformSettingListEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/PlatformSetting"
+        "meta":
+          "$ref": "#/components/schemas/PlatformSettingListMeta"
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "PlatformSettingEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/PlatformSetting"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "PlatformSettingHistoryEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/PlatformSettingVersion"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "EnforcementListEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/EnforcementSummary"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "EnforcementDetailEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/EnforcementDetail"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "EnforcementSubjectMatchListEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/EnforcementSubjectMatch"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "EnforcementSubjectEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "allOf":
+            - "$ref": "#/components/schemas/SubjectReview"
+            - "type": "object"
+              "required":
+                - "sanctions"
+              "properties":
+                "sanctions":
+                  "type": "array"
+                  "items":
+                    "$ref": "#/components/schemas/EnforcementSummary"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "PrivacyRequestListEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/PrivacyRequestSummary"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "PrivacyRequestDetailEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/PrivacyRequestDetail"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "AuditEventListEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/AuditEvent"
+        "meta":
+          "$ref": "#/components/schemas/AuditSearchMeta"
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "AuditEventDetailEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/AuditEventDetail"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "AuditActionListEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "type": "array"
+          "items":
+            "type": "string"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "IntegrationOverviewEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/IntegrationOverview"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "OperationFailureListEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/OperationFailure"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "OperationRetryEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/OperationRetryResult"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "OperationRetryListEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/OperationRetryRecord"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "BudgetOverrideListEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/BudgetOverrideRecord"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "GeoDashboardEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/GeoDashboard"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "GeoDemandEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/GeoDemand"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "GeoBoundaryEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/GeoBoundaryCollection"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "FinanceKpiEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/FinanceKpis"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "RemittanceQueueEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/RemittanceQueueRow"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "TaxEvidenceQueueEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/TaxEvidenceRow"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "TaxAdjustmentListEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/TaxAdjustment"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "TaxAdjustmentEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/TaxAdjustment"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "VendorFinanceReviewsEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/VendorFinanceReviews"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
     # Phase 14 reviews, scores and analytics schemas
     "PublicBadge":
       "type": "object"
@@ -20151,6 +24587,10 @@ components:
         "comment_max":
           "type": "integer"
         "media_max":
+          "type": "integer"
+        "photo_max_bytes":
+          "type": "integer"
+        "video_max_bytes":
           "type": "integer"
         "blind_reveal":
           "type": "string"
@@ -20201,6 +24641,12 @@ components:
         "expires_at":
           "type": "string"
           "format": "date-time"
+        "content_type":
+          "type": "string"
+          "enum": ["image/jpeg", "image/png", "video/mp4", "video/quicktime"]
+        "byte_size":
+          "type": "integer"
+          "minimum": 1
       "description": "A five-minute signed link; the fetch re-authorizes the caller."
     "PublicReview":
       "type": "object"
@@ -20648,7 +25094,7 @@ components:
           "items":
             "type": "string"
             "format": "binary"
-          "description": "JPG or PNG, content-validated and scanned fail-closed."
+          "description": "JPG/PNG up to 10 MB or MP4/MOV up to 100 MB, content-validated and scanned fail-closed."
     "ReviewFlagRequest":
       "type": "object"
       "required":
@@ -28677,6 +33123,55 @@ components:
         lock_version:
           type: integer
           minimum: 1
+    VendorNavigationUpdates:
+      type: object
+      required: [sections]
+      properties:
+        sections:
+          type: object
+          description: Fixed Vendor sidebar paths mapped to section counts. Orders counts currently visible nonterminal orders; completed, declined, expired and cancelled orders are excluded. Team Accounts counts manageable active non-Owner memberships with active user accounts; deleted memberships and unaccepted invitations are excluded. Without current staff-management permission its count is zero. Notifications counts unread notices only; Messages counts received messages without a read receipt. Store Profile is omitted. Zero or missing counts have no indicator.
+          additionalProperties:
+            type: integer
+            minimum: 0
+    NotificationUnreadCount:
+      type: object
+      required: [unread_count]
+      properties:
+        unread_count: { type: integer, minimum: 0 }
+    NotificationChannelAuthResponse:
+      type: object
+      required: [data, meta, errors]
+      properties:
+        data: { $ref: '#/components/schemas/ChatChannelSignature' }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { $ref: '#/components/schemas/ApiError' } }
+    NotificationReadFilter:
+      type: object
+      additionalProperties: false
+      required: [through_id]
+      properties:
+        through_id:
+          type: string
+          format: uuid
+          description: Newest notification ID in the captured client inbox snapshot. Later arrivals remain unread.
+        category:
+          type: string
+          maxLength: 64
+          description: Exact notification category selected in the dynamic Type filter. Omit for All types. New categories are supported without a client enum change.
+        title:
+          type: string
+          maxLength: 255
+          deprecated: true
+          description: Legacy exact display-title filter retained for older clients. New clients use category. When both filters are supplied, both must match.
+    NotificationBulkReadAction:
+      type: object
+      required: [read, read_count, read_at]
+      properties:
+        read: { type: boolean }
+        read_count: { type: integer, minimum: 0 }
+        read_at:
+          type: string
+          description: Authoritative UTC RFC 3339 read timestamp for notices changed by this action.
     NotificationItem:
       type: object
       required:
@@ -28699,6 +33194,7 @@ components:
         mandatory:
           type: boolean
         read_at:
+          description: A non-null timestamp identifies a read notice retained in the recipient's Archived view. Required notices remain stored and authorized deep links remain available.
           type:
             - string
             - "null"
@@ -28823,6 +33319,8 @@ components:
             - FEE_STATEMENT
             - MATERIALS_ANALYTICS
             - TAX_PACKAGE
+            - AUDIT_LOG
+            - GEO_ANALYTICS
         format:
           type: string
           enum:

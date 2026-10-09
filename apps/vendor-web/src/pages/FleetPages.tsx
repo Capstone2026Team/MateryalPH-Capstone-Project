@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { AlertTriangle, CheckCircle2, CircleCheck, Truck, TruckElectric } from 'lucide-react'
-import { Button, ConflictBanner, DeliveryVehicles, MetricCard, StatusMessage, useAutomaticRefresh, type DeliveryVehicleDraft } from '@materyalph/web-ui'
+import { Button, ConflictBanner, DeliveryVehicles, StatCard, InfoNote, EmptyState, StatusMessage, useAutomaticRefresh, type DeliveryVehicleDraft } from '@materyalph/web-ui'
 import { apiFailure, fleetImageUrl, listFleet, readableInventoryError, saveFleet, uploadFleetImage, type FleetVehicle, type FleetVehicleListMeta } from '../lib/inventory-api'
 import { fleetFieldNames, fleetVehicleDraft, fleetVehiclePayload, vehicleErrors } from '../lib/delivery-vehicles'
 import { useOnboardingSnapshot } from '../lib/vendor-status'
@@ -23,17 +23,15 @@ function Eligibility({ vehicle }: { vehicle: FleetVehicle }) {
 function FleetSummaryPanel({ summary, dirty }: { summary: FleetVehicleListMeta['summary']; dirty: boolean }) {
   const count = (value: number | undefined) => value === undefined ? '—' : value.toLocaleString('en-PH')
   return <section aria-label="Fleet overview" className="space-y-4">
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <div><h2 className="text-lg font-semibold">Fleet overview</h2><p className="mt-1 text-sm text-text-secondary">{dirty ? 'Showing saved counts. Save your changes to update the overview.' : 'Vehicle counts from your saved fleet and current delivery orders.'}</p></div>
-    </div>
+    {dirty && <p className="text-[13px] text-text-secondary">Showing saved counts. Save your changes to update them.</p>}
     {!summary && <StatusMessage>Fleet summary is temporarily unavailable. Updates will resume automatically.</StatusMessage>}
     <dl className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <MetricCard label="Total vehicles" value={count(summary?.totalVehicles)} description={summary ? `${count(summary.configurations)} saved configurations, including disabled vehicles` : 'Saved fleet units'} icon={<Truck size={18} aria-hidden="true" />} />
-      <MetricCard label="Active vehicles" value={count(summary?.activeVehicles)} description="Enabled for future deliveries" icon={<CircleCheck size={18} aria-hidden="true" />} accent />
-      <MetricCard label="Available vehicles" value={count(summary?.availableVehicles)} description="Active vehicles marked available by your store" icon={<CheckCircle2 size={18} aria-hidden="true" />} />
-      <MetricCard label="In use" value={count(summary?.outForDeliveryVehicleAssignments)} description={summary ? `Vehicle assignments across ${count(summary.outForDeliveryOrders)} ${summary.outForDeliveryOrders === 1 ? 'order' : 'orders'} Out for Delivery` : 'Vehicle assignments on orders Out for Delivery'} icon={<TruckElectric size={18} aria-hidden="true" />} />
+      <StatCard label="Total vehicles" value={count(summary?.totalVehicles)} hint={summary ? `${count(summary.configurations)} saved configurations, including disabled vehicles` : 'Saved fleet units'} icon={<Truck size={18} aria-hidden="true" />} />
+      <StatCard label="Active vehicles" value={count(summary?.activeVehicles)} hint="Enabled for future deliveries" icon={<CircleCheck size={18} aria-hidden="true" />} />
+      <StatCard label="Available vehicles" value={count(summary?.availableVehicles)} hint="Active vehicles marked available by your store" icon={<CheckCircle2 size={18} aria-hidden="true" />} />
+      <StatCard label="In use" value={count(summary?.outForDeliveryVehicleAssignments)} hint={summary ? `Vehicle assignments across ${count(summary.outForDeliveryOrders)} ${summary.outForDeliveryOrders === 1 ? 'order' : 'orders'} Out for Delivery` : 'Vehicle assignments on orders Out for Delivery'} icon={<TruckElectric size={18} aria-hidden="true" />} />
     </dl>
-    <p className="text-xs leading-5 text-text-secondary">Availability is set by your store. In use counts each confirmed vehicle assignment; the same vehicle configuration may be assigned to more than one delivery.</p>
+    <InfoNote>You confirm vehicles, trips and the final fee before a Buyer accepts. Changes apply to future proposals; accepted orders keep their vehicle, rate and address. Availability is set by your store. In use counts each confirmed vehicle assignment; the same vehicle configuration may be assigned to more than one delivery.</InfoNote>
   </section>
 }
 
@@ -165,7 +163,7 @@ export function VendorFleetPage() {
     } finally { currentEdit.current.busy = false; setBusy(false) }
   }
 
-  const header = <PageHeader eyebrow="Store Management" title="Vehicles" description="Manage your delivery vehicles and rates. You confirm vehicles, trips and the final fee before a Buyer accepts." />
+  const header = <PageHeader eyebrow="Store Management" title="Vehicles" description="Manage your delivery vehicles, availability and rates." />
   const shell = (children: ReactNode) => <VendorShell activeHref="/vehicles" accountLabel={storeName(snapshot)} navigationData={snapshot}>{children}</VendorShell>
   if (snapshotLoading && !snapshot) return <VendorShell activeHref="/vehicles" accountLabel="Vendor" navigationData={null}><LoadingState label="Loading vehicles…" /></VendorShell>
   if (snapshotError && !snapshot) return <VendorShell activeHref="/vehicles" accountLabel="Vendor" navigationData={null}><ErrorState message={snapshotError} onRetry={() => void refresh()} /></VendorShell>
@@ -181,7 +179,7 @@ export function VendorFleetPage() {
     {header}
     {loading ? <LoadingState label="Loading vehicles…" />
       : error ? <ErrorState message={error} onRetry={() => setAttempt(value => value + 1)} />
-        : meta?.scope === 'ASSIGNED_ONLY' ? <section className="rounded-surface border border-dashed border-border-default bg-surface-primary p-8 text-center"><Truck size={32} className="mx-auto text-text-secondary" aria-hidden="true" /><h2 className="mt-3 text-xl font-semibold">No assigned vehicle yet.</h2><p className="mx-auto mt-2 max-w-md text-sm text-text-secondary">The vehicle confirmed for an order assigned to you appears here. Vehicle configuration, fees and capacity are managed by the Owner or Store Manager.</p></section>
+        : meta?.scope === 'ASSIGNED_ONLY' ? <EmptyState icon={<Truck size={24} aria-hidden="true" />} message="No vehicle assigned to your orders yet." action={<Link className="inline-flex min-h-11 items-center rounded-control border border-border-default px-4 text-sm font-semibold" to="/orders">View orders</Link>} />
           : <>
             <FleetSummaryPanel summary={meta?.summary} dirty={dirty} />
             {updateError && <StatusMessage>Automatic updates are temporarily unavailable. Showing the last saved fleet; retrying automatically.</StatusMessage>}

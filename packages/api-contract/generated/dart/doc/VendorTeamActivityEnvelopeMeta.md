@@ -10,6 +10,11 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **currentPage** | **int** |  |
 **lastPage** | **int** |  |
+**total** | **int** |  |
+**totalEvents** | **int** |  |
+**succeededEvents** | **int** |  |
+**failedEvents** | **int** |  |
+**categories** | [**BuiltList&lt;VendorTeamActivityEnvelopeMetaCategoriesInner&gt;**](VendorTeamActivityEnvelopeMetaCategoriesInner.md) |  |
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

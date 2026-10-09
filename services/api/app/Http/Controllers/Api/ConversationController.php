@@ -39,6 +39,13 @@ final class ConversationController extends Controller
         return ApiResponse::success();
     }
 
+    public function fulfillmentConversations(Request $request, string $conversationId): JsonResponse
+    {
+        $request->validate(['page' => ['sometimes', 'integer', 'between:1,10000']]);
+
+        return ApiResponse::success($this->conversations->fulfillmentConversations($request, $conversationId));
+    }
+
     public function restore(Request $request, string $conversationId): JsonResponse
     {
         $this->conversations->archive($request, $conversationId, false);

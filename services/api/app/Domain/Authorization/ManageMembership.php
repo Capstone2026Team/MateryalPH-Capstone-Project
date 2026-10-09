@@ -25,7 +25,7 @@ final class ManageMembership
         DB::transaction(function () use ($request, $id, $field, $value): void {
             $organization = $request->attributes->get('account_scope')['organization_id'];
             $this->authority->lock($request, $organization);
-            $target = VendorMembership::query()->whereKey($id)->where('vendor_organization_id', $organization)->lockForUpdate()->first();
+            $target = VendorMembership::query()->whereNull('deleted_at')->whereKey($id)->where('vendor_organization_id', $organization)->lockForUpdate()->first();
             if ($target === null) {
                 throw new AuthenticationException('RESOURCE_NOT_FOUND', 'The membership is unavailable.', 404);
             }

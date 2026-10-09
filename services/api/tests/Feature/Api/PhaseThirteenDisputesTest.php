@@ -491,6 +491,10 @@ final class PhaseThirteenDisputesTest extends TestCase
         $upload = ['invoice_type' => 'VENDOR_GOODS_INVOICE', 'issuer_name' => 'Invoice Store Trading Corp', 'invoice_number' => 'SI-0001', 'issued_on' => CarbonImmutable::now('Asia/Manila')->toDateString(),
             'amount_centavos' => '1000001', 'source_system' => 'REGISTERED_CAS', 'invoicing_method' => 'COMPUTERIZED', 'file' => UploadedFile::fake()->create('invoice.pdf', 10, 'application/pdf')];
         $this->signInStoreMember($service);
+        $this->getJson('/api/v1/vendor/navigation-updates')->assertOk()->assertJsonPath('data.sections./invoices', 1);
+        $invoiceNotice = DB::table('notifications')->where('user_id', $service->id)->where('category', 'INVOICES')->sole();
+        $this->postJson('/api/v1/vendor/notifications/'.$invoiceNotice->id.'/read')->assertOk();
+        $this->getJson('/api/v1/vendor/navigation-updates')->assertOk()->assertJsonMissingPath('data.sections./invoices');
         $this->post('/api/v1/vendor/orders/'.$orderId.'/invoices', $upload, $this->key() + ['Accept' => 'application/json'])->assertForbidden();
         $this->getJson('/api/v1/vendor/orders/'.$orderId.'/invoices')->assertOk()->assertJsonPath('data.can_upload', false)->assertJsonPath('data.billing_details.tin', null);
         $this->signInStoreMember($inventory);

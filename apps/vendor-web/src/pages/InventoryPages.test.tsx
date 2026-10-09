@@ -1,3 +1,4 @@
+import * as catalog from '../lib/catalog-api'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, expect, test, vi } from 'vitest'
@@ -8,6 +9,7 @@ import * as onboarding from '../lib/onboarding-api'
 import { VendorInventoryPage } from './InventoryPages'
 
 vi.mock('../lib/onboarding-api', async original => ({ ...await original<typeof import('../lib/onboarding-api')>(), getVendorOnboarding: vi.fn(), getVendorPrivateFileUrl: vi.fn() }))
+vi.mock('../lib/catalog-api', async original => ({ ...await original<typeof import('../lib/catalog-api')>(), getCatalogTaxonomy: vi.fn(), getListing: vi.fn(), getCatalogFileUrl: vi.fn() }))
 vi.mock('../lib/inventory-api', async original => ({
   ...await original<typeof import('../lib/inventory-api')>(),
   listInventory: vi.fn(), updateInventoryRow: vi.fn(), confirmStock: vi.fn(), listMovements: vi.fn(), listPriceHistory: vi.fn(), getInventorySettings: vi.fn(), saveInventorySettings: vi.fn(),
@@ -52,6 +54,14 @@ function conflict(body: unknown): ResponseError {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  vi.mocked(catalog.getCatalogTaxonomy).mockResolvedValue({ categories: [] } as unknown as Awaited<ReturnType<typeof catalog.getCatalogTaxonomy>>)
+  vi.mocked(catalog.getListing).mockResolvedValue({
+    id: 'listing-1', status: 'ACTIVE', lockVersion: 1, displayName: 'Portland cement', vendorSku: 'CEM-40', materialMatch: 'EXACT',
+    tagIds: [], technicalAttributes: {}, regulated: false, complianceStatus: 'NOT_REQUIRED', publicationVersion: 1,
+    variants: [], media: [], complianceSubmissions: [], statusHistory: [], blockers: [],
+    completion: { key: 'LISTING', label: 'Listing', steps: [] }, permissions: { canManage: true, canSubmitCompliance: true },
+  })
+  vi.mocked(catalog.getCatalogFileUrl).mockResolvedValue('https://example.test/product-photo')
   vi.mocked(onboarding.getVendorOnboarding).mockResolvedValue({ stepCompletion: [], lockVersion: 1, requirements: [], drafts: [], organization: { store_name: 'Test Supply' }, welcomeRequired: false, permissions: ['portal.products', 'catalog.manage', 'inventory.view', 'inventory.manage'], verification: {}, setup: { status: 'COMPLETED' }, activation: { status: 'ACTIVE', marketplaceDiscoverabilityStatus: 'DISCOVERABLE', readiness: { ready: true, blockers: [], status: 'READY', ruleVersion: 'test' } }, sections: {} })
   vi.mocked(onboarding.getVendorPrivateFileUrl).mockResolvedValue({ url: 'https://example.test/logo', expiresAt: new Date() })
   vi.mocked(inventory.listInventory).mockResolvedValue({ items: [row()], meta: meta() })
@@ -67,22 +77,32 @@ test('the ledger shows private quantities beside the public label and a stale-st
   const ledger = await screen.findByRole('table', { name: 'Inventory ledger' })
   expect(screen.getByRole('region', { name: 'Inventory ledger' })).toHaveAttribute('tabindex', '0')
   const header = within(ledger).getAllByRole('columnheader').map(cell => cell.textContent)
-  expect(header).toEqual(expect.arrayContaining(['On hand', 'Hard reserved', 'Soft-held', 'Available to sell', 'Reorder level', 'Buyers see', 'Auto-accept']))
+  expect(header).toEqual(expect.arrayContaining(['Product / variant', 'SKU', 'Stock status', 'Confirmation', 'Reorder level', 'Auto-accept']))
   const cells = within(ledger).getAllByRole('row')[1]!
-  expect(within(cells).getByText('120')).toBeInTheDocument()
+  fireEvent.click(screen.getByLabelText('View inventory details for Portland cement — 40 kg'))
+  const popup = screen.getByRole('dialog', { name: 'Portland cement — 40 kg' })
+  expect(within(popup).getByText('On hand').parentElement).toHaveTextContent('120 BAG')
+  expect(within(popup).getByText('SKU: CEM-40-1')).toBeInTheDocument()
+  fireEvent.click(within(popup).getByRole('button', { name: 'Close portland cement — 40 kg' }))
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  fireEvent.click(within(cells).getByText('CEM-40-1'))
+  expect(screen.getByRole('dialog', { name: 'Portland cement — 40 kg' })).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: 'Close portland cement — 40 kg' }))
   expect(within(cells).getByText('Limited Stock')).toBeInTheDocument()
   expect(within(cells).getByText('Off')).toBeInTheDocument()
+  fireEvent.click(screen.getByText('Stock confirmation alerts'))
   const band = screen.getByRole('region', { name: /need a stock confirmation/ })
   expect(within(band).getByText(/Oct 16, 2026/)).toHaveTextContent('(Asia/Manila)')
   expect(within(band).getByText(/Your store is not suspended/)).toBeInTheDocument()
-  expect(screen.getByRole('link', { name: 'Inventory' })).toHaveAttribute('aria-current', 'page')
+  expect(screen.getByRole('tab', { name: 'Inventory' })).toHaveAttribute('aria-selected', 'true')
 })
 
-test('a stale inline edit keeps the typed values and shows the saved row instead of overwriting it', async () => {
+test('a stale popup edit keeps the typed values and shows the saved row instead of overwriting it', async () => {
   vi.mocked(inventory.updateInventoryRow).mockRejectedValueOnce(conflict({ data: null, meta: {}, errors: [{ code: 'STALE_VERSION', message: 'Changed', details: { current: { listing_variant_id: 'variant-1', listing_id: 'listing-1', listing_name: 'Portland cement', listing_status: 'ACTIVE', variant_label: '40 kg', sku: 'CEM-40-1', unit_code: 'BAG', lock_version: 5, inventory: { quantity_on_hand: '140.0000', hard_reserved_quantity: '20.0000', soft_held_quantity: '30.0000', available_to_sell: '120.0000', reorder_level: '100.0000', confirmed_at: '2026-10-02T00:00:00Z' }, public_label: 'IN_STOCK', stock_confirmation: { state: 'CONFIRMED', confirmed_at: null, first_reminder_at: null, final_reminder_at: null, hide_at: null, days_since_confirmation: null }, listing_confirmation: { state: 'CONFIRMED', confirmed_at: null, first_reminder_at: null, final_reminder_at: null, hide_at: null, days_since_confirmation: null }, price: { price_version_id: 'price-2', version: 2, amount_centavos: 28550, tax_category: 'NON_VAT', effective_at: null }, comparability: { status: 'NOT_YET_COMPARABLE', group_version_id: null, rule_version: 'mat03' }, auto_accept: { status: 'DISABLED', enabled: false, paused: false, pause_reason: null, paused_at: null, allotment_quantity: '0', remaining_allotment_quantity: '0', max_unit_count: null, max_order_amount_centavos: null, current_version: 0, lock_version: 0, updated_at: null } } } }] }))
   vi.mocked(inventory.updateInventoryRow).mockResolvedValueOnce(row({ lockVersion: 6, inventory: { ...row().inventory!, quantityOnHand: '150.0000' } }))
   open()
-  fireEvent.click(await screen.findByRole('button', { name: 'Edit Portland cement — 40 kg' }))
+  fireEvent.click(await screen.findByLabelText('View inventory details for Portland cement — 40 kg'))
+  fireEvent.click(screen.getByRole('button', { name: 'Edit Portland cement — 40 kg' }))
   const form = screen.getByRole('form', { name: 'Edit Portland cement — 40 kg' })
   fireEvent.change(within(form).getByLabelText('Quantity on hand (BAG)'), { target: { value: '150' } })
   fireEvent.change(within(form).getByLabelText('Reason for the change'), { target: { value: 'RECEIVED' } })
@@ -103,7 +123,8 @@ test('a stale inline edit keeps the typed values and shows the saved row instead
 test('a price change sends the price version it replaces and roles without stock authority cannot edit', async () => {
   vi.mocked(inventory.updateInventoryRow).mockResolvedValueOnce(row())
   open()
-  fireEvent.click(await screen.findByRole('button', { name: 'Edit Portland cement — 40 kg' }))
+  fireEvent.click(await screen.findByLabelText('View inventory details for Portland cement — 40 kg'))
+  fireEvent.click(screen.getByRole('button', { name: 'Edit Portland cement — 40 kg' }))
   fireEvent.change(screen.getByLabelText('Ordinary price (₱)'), { target: { value: '299.00' } })
   fireEvent.click(screen.getByRole('button', { name: 'Save row' }))
   await waitFor(() => expect(inventory.updateInventoryRow).toHaveBeenCalledWith('variant-1', { lockVersion: 4, price: { expectedPriceVersionId: 'price-2', amountCentavos: 29900 } }))
@@ -115,7 +136,8 @@ test('the Customer Service sales stock view is read-only', async () => {
   expect(await screen.findByRole('table', { name: 'Inventory ledger' })).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Edit Portland cement — 40 kg' })).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Confirm counts on this page' })).not.toBeInTheDocument()
-  expect(screen.getByRole('button', { name: 'Auto-accept for Portland cement — 40 kg' })).toBeInTheDocument()
+  fireEvent.click(screen.getByLabelText('View inventory details for Portland cement — 40 kg'))
+  expect(screen.getByRole('button', { name: 'Auto-accept settings for Portland cement — 40 kg' })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'History of Portland cement — 40 kg' })).toBeInTheDocument()
 })
 
@@ -124,7 +146,8 @@ test('auto-accept is one surface with a switch, three safeguards, a text pause s
   vi.mocked(inventory.configureAutoAccept).mockResolvedValueOnce(detail({ status: 'PAUSED', enabled: true, paused: true, pauseReason: 'ALLOTMENT_EXHAUSTED', remainingAllotmentQuantity: '12', lockVersion: 3 }))
   vi.mocked(inventory.resumeAutoAccept).mockResolvedValueOnce(detail({ status: 'ACTIVE', enabled: true, remainingAllotmentQuantity: '12', lockVersion: 4 }))
   open()
-  fireEvent.click(await screen.findByRole('button', { name: 'Auto-accept for Portland cement — 40 kg' }))
+  fireEvent.click(await screen.findByLabelText('View inventory details for Portland cement — 40 kg'))
+  fireEvent.click(screen.getByRole('button', { name: 'Auto-accept settings for Portland cement — 40 kg' }))
   const panel = await screen.findByRole('region', { name: 'Item-Based auto-accept' })
   expect(within(panel).getByRole('status')).toHaveTextContent('Off — every order waits for manual confirmation (default)')
   expect(within(panel).getByText(/Project-Based procurement and any order with NRPC always wait for manual review/)).toBeInTheDocument()
@@ -148,7 +171,8 @@ test('staff limited to the allotment grant can save the allotment but not the sa
   vi.mocked(inventory.getAutoAccept).mockResolvedValueOnce(detail({ status: 'PAUSED', enabled: true, paused: true, pauseReason: 'ALLOTMENT_EXHAUSTED', lockVersion: 2 }, false))
   vi.mocked(inventory.updateAllotment).mockResolvedValueOnce(detail({ status: 'PAUSED', enabled: true, paused: true, pauseReason: 'ALLOTMENT_EXHAUSTED', remainingAllotmentQuantity: '8', lockVersion: 3 }, false))
   open()
-  fireEvent.click(await screen.findByRole('button', { name: 'Auto-accept for Portland cement — 40 kg' }))
+  fireEvent.click(await screen.findByLabelText('View inventory details for Portland cement — 40 kg'))
+  fireEvent.click(screen.getByRole('button', { name: 'Auto-accept settings for Portland cement — 40 kg' }))
   const panel = await screen.findByRole('region', { name: 'Item-Based auto-accept' })
   expect(within(panel).getByRole('switch', { name: 'Enable auto-accept' })).toBeDisabled()
   expect(within(panel).getByLabelText('Max order amount (₱)')).toBeDisabled()

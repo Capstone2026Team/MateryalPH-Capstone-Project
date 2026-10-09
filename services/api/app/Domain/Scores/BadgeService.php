@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Scores;
 
 use App\Domain\Disputes\DisputeRules;
+use App\Domain\Settings\PlatformSettings;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -29,27 +30,30 @@ final class BadgeService
         $windowEndsOn = $end->subDay()->toDateString();
         $utcEnd = $end->setTimezone('UTC');
         $definitions = DB::table('badge_definitions')->whereIn('code', self::STORED)->pluck('id', 'code');
+        // Criteria come from the versioned Platform Setting badges.thresholds; the version is kept with every award.
+        $t = (array) PlatformSettings::current()->value('badges.thresholds');
+        $thresholdVersion = PlatformSettings::current()->version('badges.thresholds');
         $snapshots = DB::table('score_snapshots')->where('window_ends_on', $windowEndsOn)->get()->keyBy('vendor_organization_id');
         $earned = [];
         foreach ($snapshots as $organizationId => $snapshot) {
             $counts = json_decode((string) $snapshot->sample_counts, true) ?: [];
             $organizationId = (string) $organizationId;
-            $add = static function (string $code, array $evidence) use (&$earned, $organizationId): void {
-                $earned[$organizationId.'|'.$code.'|'] = ['organization_id' => $organizationId, 'code' => $code, 'scope_key' => '', 'scope_label' => null, 'evidence' => $evidence];
+            $add = static function (string $code, array $evidence) use (&$earned, $organizationId, $thresholdVersion): void {
+                $earned[$organizationId.'|'.$code.'|'] = ['organization_id' => $organizationId, 'code' => $code, 'scope_key' => '', 'scope_label' => null, 'evidence' => $evidence + ['threshold_version' => $thresholdVersion]];
             };
-            if ($snapshot->crr !== null && bccomp((string) $snapshot->crr, '85.00', 2) >= 0 && ($counts['inquiries'] ?? 0) >= 10) {
+            if ($snapshot->crr !== null && bccomp((string) $snapshot->crr, (string) $t['fast_responder']['min_crr_percent'], 2) >= 0 && ($counts['inquiries'] ?? 0) >= (int) $t['fast_responder']['min_inquiries']) {
                 $add('FAST_RESPONDER', ['crr' => (string) $snapshot->crr, 'inquiries' => $counts['inquiries']]);
             }
-            if ($snapshot->frr !== null && bccomp((string) $snapshot->frr, '95.00', 2) >= 0 && ($counts['fulfilled_orders'] ?? 0) >= 10) {
+            if ($snapshot->frr !== null && bccomp((string) $snapshot->frr, (string) $t['on_time']['min_frr_percent'], 2) >= 0 && ($counts['fulfilled_orders'] ?? 0) >= (int) $t['on_time']['min_fulfilled_orders']) {
                 $add('ON_TIME', ['frr' => (string) $snapshot->frr, 'fulfilled_orders' => $counts['fulfilled_orders']]);
             }
-            if ($snapshot->vcs !== null && bccomp((string) $snapshot->vcs, '4.50', 2) >= 0 && ($counts['vendor_ratings'] ?? 0) >= 10) {
+            if ($snapshot->vcs !== null && bccomp((string) $snapshot->vcs, (string) $t['highly_rated']['min_vcs'], 2) >= 0 && ($counts['vendor_ratings'] ?? 0) >= (int) $t['highly_rated']['min_vendor_ratings']) {
                 $add('HIGHLY_RATED', ['vcs' => (string) $snapshot->vcs, 'vendor_ratings' => $counts['vendor_ratings']]);
             }
-            if ($snapshot->mqs !== null && bccomp((string) $snapshot->mqs, '4.60', 2) >= 0 && ($counts['product_ratings'] ?? 0) >= 10) {
+            if ($snapshot->mqs !== null && bccomp((string) $snapshot->mqs, (string) $t['high_quality_materials']['min_mqs'], 2) >= 0 && ($counts['product_ratings'] ?? 0) >= (int) $t['high_quality_materials']['min_product_ratings']) {
                 $add('HIGH_QUALITY_MATERIALS', ['mqs' => (string) $snapshot->mqs, 'product_ratings' => $counts['product_ratings']]);
             }
-            if ($this->trusted($organizationId, $snapshot, $counts, $utcEnd)) {
+            if ($this->trusted($organizationId, $snapshot, $counts, $utcEnd, (array) $t['trusted_supplier'])) {
                 $add('TRUSTED_SUPPLIER', ['vcs' => (string) $snapshot->vcs, 'ohs' => (string) $snapshot->ohs, 'completed_orders' => $counts['completed_orders_total'] ?? 0]);
             }
         }
@@ -81,14 +85,17 @@ final class BadgeService
         return $counts;
     }
 
-    /** @param array<string, mixed> $counts */
-    private function trusted(string $organizationId, object $snapshot, array $counts, CarbonImmutable $end): bool
+    /**
+     * @param  array<string, mixed>  $counts
+     * @param  array<string, mixed>  $rule
+     */
+    private function trusted(string $organizationId, object $snapshot, array $counts, CarbonImmutable $end, array $rule): bool
     {
-        if ($snapshot->vcs === null || $snapshot->ohs === null || bccomp((string) $snapshot->vcs, '4.50', 2) < 0 || bccomp((string) $snapshot->ohs, '4.50', 2) < 0 || ($counts['completed_orders_total'] ?? 0) < 25) {
+        if ($snapshot->vcs === null || $snapshot->ohs === null || bccomp((string) $snapshot->vcs, (string) $rule['min_vcs'], 2) < 0 || bccomp((string) $snapshot->ohs, (string) $rule['min_ohs'], 2) < 0 || ($counts['completed_orders_total'] ?? 0) < (int) $rule['min_completed_orders']) {
             return false;
         }
         $verifiedSince = DB::table('vendor_activation_history')->where('vendor_organization_id', $organizationId)->where('state_after', 'ACTIVE')->min('recorded_at');
-        if ($verifiedSince === null || CarbonImmutable::parse((string) $verifiedSince)->greaterThan($end->subDays(90))) {
+        if ($verifiedSince === null || CarbonImmutable::parse((string) $verifiedSince)->greaterThan($end->subDays((int) $rule['min_active_days']))) {
             return false;
         }
         $hold = DB::table('vendor_organizations')->where('id', $organizationId)->value('activation_hold_code');

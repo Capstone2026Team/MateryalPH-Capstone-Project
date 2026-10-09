@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Operations;
 
 use App\Domain\Authorization\AccountAccess;
+use App\Domain\Authorization\VendorTeamActivityBroadcast;
 use App\Domain\Catalog\EligibilityInvalidation;
 use App\Domain\Catalog\EligibleOfferQuery;
 use App\Domain\Disputes\DisputeAccess;
@@ -14,6 +15,7 @@ use App\Domain\Finance\RemittanceAssessmentService;
 use App\Domain\Finance\WithholdingThresholdService;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Messaging\ConversationBroadcast;
+use App\Domain\Notifications\NotificationBroadcast;
 use App\Domain\Notifications\NotificationDelivery;
 use App\Domain\Notifications\NotificationService;
 use App\Domain\Payments\PaymentGateway;
@@ -139,6 +141,11 @@ final class OutboxProcessor
     /** @param array<string, mixed> $payload */
     private function deliver(string $eventType, array $payload): void
     {
+        if ($eventType === VendorTeamActivityBroadcast::EVENT) {
+            app(VendorTeamActivityBroadcast::class)->deliver($this->requiredString($payload, 'vendor_organization_id'), $this->requiredString($payload, 'actor_role'));
+
+            return;
+        }
         if ($eventType === 'NOTIFICATION_DELIVERY') {
             app(NotificationDelivery::class)->send($this->requiredString($payload, 'delivery_id'));
 
@@ -149,9 +156,15 @@ final class OutboxProcessor
 
             return;
         }
+        if ($eventType === 'NOTIFICATIONS_CHANGED') {
+            app(NotificationBroadcast::class)->deliver($this->requiredInteger($payload, 'user_id'));
+
+            return;
+        }
         if (in_array($eventType, ['NOTIFICATION_READY', 'FINANCE_NOTICE', 'ORDER_NOTICE', 'DISPUTE_NOTICE', 'VENDOR_ONBOARDING_NOTICE', 'PRODUCT_COMPLIANCE_NOTICE', 'VENDOR_INVENTORY_NOTICE', 'ACCOUNT_SECURITY_NOTICE'], true) && is_string($payload['notification_id'] ?? null)) {
             app(NotificationService::class)->enqueue($payload['notification_id'], $eventType,
                 $eventType === 'ACCOUNT_SECURITY_NOTICE' && is_string($payload['recipient'] ?? null) ? $payload['recipient'] : null);
+            app(NotificationBroadcast::class)->created($payload['notification_id']);
 
             return;
         }

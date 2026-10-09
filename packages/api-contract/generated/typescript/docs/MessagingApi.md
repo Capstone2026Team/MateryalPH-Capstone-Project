@@ -15,6 +15,7 @@ All URIs are relative to */api/v1*
 | [**listChatHandlers**](MessagingApi.md#listchathandlers) | **GET** /{messagingPortal}/conversations/{conversationId}/handlers |  |
 | [**listChatProducts**](MessagingApi.md#listchatproducts) | **GET** /{messagingPortal}/conversations/{conversationId}/products |  |
 | [**listConversations**](MessagingApi.md#listconversations) | **GET** /{messagingPortal}/conversations |  |
+| [**listVendorFulfillmentConversations**](MessagingApi.md#listvendorfulfillmentconversations) | **GET** /vendor/conversations/{conversationId}/fulfillment-conversations |  |
 | [**openVendorOrderConversation**](MessagingApi.md#openvendororderconversation) | **POST** /vendor/orders/{orderId}/conversation |  |
 | [**publishChatQuotation**](MessagingApi.md#publishchatquotation) | **POST** /{messagingPortal}/conversations/{conversationId}/quotation/publish |  |
 | [**readChatMessages**](MessagingApi.md#readchatmessages) | **POST** /{messagingPortal}/conversations/{conversationId}/read |  |
@@ -977,6 +978,85 @@ example().catch(console.error);
 | **409** | Recoverable version, deadline, idempotency or stock conflict; re-read the current version |  -  |
 | **422** | Invalid fields or undisclosed NRPC |  -  |
 | **503** | Provider or scanner unavailable; retry safely |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## listVendorFulfillmentConversations
+
+> FulfillmentConversationPageResponse listVendorFulfillmentConversations(conversationId, page)
+
+
+
+Owner and Store Manager only. Lists existing fulfillment threads for the authorized sales inquiry\&#39;s buyer and vendor, across procurement types. Writable threads first, then read-only history, newest activity and ID first within each group. Never creates a thread.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  MessagingApi,
+} from '@materyalph/api-client-ts';
+import type { ListVendorFulfillmentConversationsRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // To configure API key authorization: accessCookie
+    apiKey: "YOUR API KEY",
+  });
+  const api = new MessagingApi(config);
+
+  const body = {
+    // string
+    conversationId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // number (optional)
+    page: 56,
+  } satisfies ListVendorFulfillmentConversationsRequest;
+
+  try {
+    const data = await api.listVendorFulfillmentConversations(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **conversationId** | `string` |  | [Defaults to `undefined`] |
+| **page** | `number` |  | [Optional] [Defaults to `1`] |
+
+### Return type
+
+[**FulfillmentConversationPageResponse**](FulfillmentConversationPageResponse.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Authorized fulfillment conversations |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **404** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **409** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 

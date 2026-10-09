@@ -28,12 +28,12 @@ final class OrderNotifier
     }
 
     /** @param list<string> $roles */
-    public function vendor(object $order, string $title, string $body, array $roles = self::VENDOR_ROLES): void
+    public function vendor(object $order, string $title, string $body, array $roles = self::VENDOR_ROLES, string $category = 'ORDERS'): void
     {
         $recipients = DB::table('vendor_memberships as m')->join('users as u', 'u.id', '=', 'm.user_id')->where('m.vendor_organization_id', $order->vendor_organization_id)
             ->where('m.status', 'ACTIVE')->whereIn('m.role', $roles)->where('u.account_status', 'ACTIVE')->orderBy('u.id')->get(['u.id', 'u.email']);
         foreach ($recipients as $recipient) {
-            $this->deliver((int) $recipient->id, $recipient->email, $order, $title, $body);
+            $this->deliver((int) $recipient->id, $recipient->email, $order, $title, $body, $category);
         }
     }
 
@@ -48,10 +48,10 @@ final class OrderNotifier
         }
     }
 
-    private function deliver(int $userId, mixed $email, object $order, string $title, string $body): void
+    private function deliver(int $userId, mixed $email, object $order, string $title, string $body, string $category = 'ORDERS'): void
     {
         $notificationId = (string) Str::uuid7();
-        DB::table('notifications')->insert(['id' => $notificationId, 'user_id' => $userId, 'category' => 'ORDERS', 'title' => mb_substr($title, 0, 255), 'body' => $body,
+        DB::table('notifications')->insert(['id' => $notificationId, 'user_id' => $userId, 'category' => $category, 'title' => mb_substr($title, 0, 255), 'body' => $body,
             'resource_type' => 'ORDER', 'resource_id' => $order->id, 'created_at' => now(), 'updated_at' => now()]);
         if (is_string($email) && $email !== '') {
             $this->outbox->publish('ORDER_NOTICE', 'ORDER', (string) $order->id, ['recipient' => $email, 'subject' => $title, 'message' => $body, 'notification_id' => $notificationId]);

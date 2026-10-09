@@ -9,6 +9,8 @@ import 'package:materyalph_api_client/api.dart';
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **id** | **String** |  |
+**lockVersion** | **int** |  |
+**canDelete** | **bool** | Owner-only eligibility for deleting this invitation. |
 **inviteeName** | **String** |  | [optional]
 **email** | **String** |  |
 **inviteeMobile** | **String** |  | [optional]

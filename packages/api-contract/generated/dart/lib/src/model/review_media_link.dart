@@ -3,6 +3,7 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:built_collection/built_collection.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -14,6 +15,8 @@ part 'review_media_link.g.dart';
 /// * [id]
 /// * [url]
 /// * [expiresAt]
+/// * [contentType]
+/// * [byteSize]
 @BuiltValue()
 abstract class ReviewMediaLink implements Built<ReviewMediaLink, ReviewMediaLinkBuilder> {
   @BuiltValueField(wireName: r'id')
@@ -24,6 +27,13 @@ abstract class ReviewMediaLink implements Built<ReviewMediaLink, ReviewMediaLink
 
   @BuiltValueField(wireName: r'expires_at')
   DateTime get expiresAt;
+
+  @BuiltValueField(wireName: r'content_type')
+  ReviewMediaLinkContentTypeEnum? get contentType;
+  // enum contentTypeEnum {  image/jpeg,  image/png,  video/mp4,  video/quicktime,  };
+
+  @BuiltValueField(wireName: r'byte_size')
+  int? get byteSize;
 
   ReviewMediaLink._();
 
@@ -63,6 +73,20 @@ class _$ReviewMediaLinkSerializer implements PrimitiveSerializer<ReviewMediaLink
       object.expiresAt,
       specifiedType: const FullType(DateTime),
     );
+    if (object.contentType != null) {
+      yield r'content_type';
+      yield serializers.serialize(
+        object.contentType,
+        specifiedType: const FullType(ReviewMediaLinkContentTypeEnum),
+      );
+    }
+    if (object.byteSize != null) {
+      yield r'byte_size';
+      yield serializers.serialize(
+        object.byteSize,
+        specifiedType: const FullType(int),
+      );
+    }
   }
 
   @override
@@ -107,6 +131,22 @@ class _$ReviewMediaLinkSerializer implements PrimitiveSerializer<ReviewMediaLink
           ) as DateTime;
           result.expiresAt = valueDes;
           break;
+        case r'content_type':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(ReviewMediaLinkContentTypeEnum),
+          ) as ReviewMediaLinkContentTypeEnum?;
+          if (valueDes == null) continue;
+          result.contentType = valueDes;
+          break;
+        case r'byte_size':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.byteSize = valueDes;
+          break;
         default:
           unhandled.add(key);
           unhandled.add(value);
@@ -136,4 +176,23 @@ class _$ReviewMediaLinkSerializer implements PrimitiveSerializer<ReviewMediaLink
   }
 }
 
+
+class ReviewMediaLinkContentTypeEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'image/jpeg')
+  static const ReviewMediaLinkContentTypeEnum imageSlashJpeg = _$reviewMediaLinkContentTypeEnum_imageSlashJpeg;
+  @BuiltValueEnumConst(wireName: r'image/png')
+  static const ReviewMediaLinkContentTypeEnum imageSlashPng = _$reviewMediaLinkContentTypeEnum_imageSlashPng;
+  @BuiltValueEnumConst(wireName: r'video/mp4')
+  static const ReviewMediaLinkContentTypeEnum videoSlashMp4 = _$reviewMediaLinkContentTypeEnum_videoSlashMp4;
+  @BuiltValueEnumConst(wireName: r'video/quicktime')
+  static const ReviewMediaLinkContentTypeEnum videoSlashQuicktime = _$reviewMediaLinkContentTypeEnum_videoSlashQuicktime;
+
+  static Serializer<ReviewMediaLinkContentTypeEnum> get serializer => _$reviewMediaLinkContentTypeEnumSerializer;
+
+  const ReviewMediaLinkContentTypeEnum._(String name): super(name);
+
+  static BuiltSet<ReviewMediaLinkContentTypeEnum> get values => _$reviewMediaLinkContentTypeEnumValues;
+  static ReviewMediaLinkContentTypeEnum valueOf(String name) => _$reviewMediaLinkContentTypeEnumValueOf(name);
+}
 

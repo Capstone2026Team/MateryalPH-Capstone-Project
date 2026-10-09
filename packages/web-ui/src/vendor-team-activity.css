@@ -1,0 +1,40 @@
+@media (min-width: 1024px) and (min-height: 720px) {
+  .portal-workspace:has(.team-tracking-workspace) {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .portal-workspace:has(.team-tracking-workspace) > header { flex-shrink: 0; }
+
+  .portal-workspace > main:has(.team-tracking-workspace),
+  .vendor-page:has(> .team-tracking-workspace),
+  .team-tracking-workspace {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .portal-workspace > main:has(.team-tracking-workspace) > [role="alert"] { flex-shrink: 0; }
+  .team-tracking-layout { flex: 1; min-height: 0; overflow: hidden; }
+  .team-tracking-sidebar, .team-tracking-panel { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+  .team-tracking-sidebar > *, .team-tracking-panel > * { flex-shrink: 0; }
+  .team-tracking-sidebar > .team-tracking-members { flex: 1; min-height: 0; overflow: hidden; }
+  .team-tracking-sidebar > .team-tracking-member-pages { margin-top: 8px; }
+  .team-tracking-panel > .team-tracking-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior-y: contain; scrollbar-gutter: stable; }
+}
+
+@media (min-width: 1024px) and (min-height: 720px) and (max-height: 840px) {
+  .team-tracking-sidebar { padding: 12px; }
+  .team-tracking-sidebar > div:first-child { margin-bottom: 8px; }
+  .team-tracking-sidebar > .grid { gap: 8px; }
+  .team-tracking-sidebar label { gap: 4px; }
+  .team-tracking-sidebar > button { min-height: 48px; margin-top: 12px; }
+  .team-tracking-sidebar > a { margin-top: 12px; }
+  .team-tracking-sidebar > p { margin-top: 8px; padding-top: 8px; font-size: 12px; line-height: 16px; }
+  .team-tracking-members li button > span > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}

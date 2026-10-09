@@ -9,7 +9,7 @@ import 'package:materyalph_api_client/api.dart';
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **data** | [**BuiltList&lt;VendorTeamInvitationRecord&gt;**](VendorTeamInvitationRecord.md) |  |
-**meta** | [**VendorTeamActivityEnvelopeMeta**](VendorTeamActivityEnvelopeMeta.md) |  |
+**meta** | [**VendorTeamInvitationListEnvelopeMeta**](VendorTeamInvitationListEnvelopeMeta.md) |  |
 **errors** | [**BuiltList&lt;BuiltMap&lt;String, JsonObject&gt;&gt;**](BuiltMap.md) |  |
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

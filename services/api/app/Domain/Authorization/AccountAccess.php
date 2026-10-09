@@ -30,7 +30,7 @@ final class AccountAccess
         $permissions = [];
         if ($user->account_type === 'VENDOR') {
             $member = DB::table('vendor_memberships as m')->join('vendor_organizations as o', 'o.id', '=', 'm.vendor_organization_id')
-                ->where('m.user_id', $user->getKey())->where('m.status', 'ACTIVE')->where('o.account_status', 'ACTIVE')
+                ->where('m.user_id', $user->getKey())->whereNull('m.deleted_at')->where('m.status', 'ACTIVE')->where('o.account_status', 'ACTIVE')
                 ->first(['m.id', 'm.role', 'm.vendor_organization_id', 'm.can_manage_staff', 'o.staff_disputes_enabled']);
             if ($member === null || ! in_array($member->role, self::VENDOR_ROLES, true)) {
                 throw new AuthenticationException('MEMBERSHIP_NOT_ACTIVE', 'Your membership does not permit access.', 403);

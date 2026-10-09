@@ -6,6 +6,7 @@ namespace Tests\Feature\Api;
 
 use App\Domain\Geography\PlacesProvider;
 use App\Domain\Geography\RouteProvider;
+use App\Domain\Identity\AuthenticationException;
 use App\Domain\Identity\TokenSessionService;
 use App\Domain\Reviews\ReviewService;
 use App\Domain\Scores\MetricEventProjector;
@@ -21,6 +22,7 @@ use Carbon\CarbonImmutable;
 use Database\Seeders\SystemFoundationSeeder;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
@@ -28,6 +30,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Laravel\Passport\AccessToken;
+use Mockery\MockInterface;
 use Tests\Support\CreatesDiscoveryFixtures;
 use Tests\Support\CreatesOrderFixtures;
 use Tests\Support\FakeAddressGeocoder;
@@ -48,6 +51,8 @@ final class PhaseFourteenReviewsScoresTest extends TestCase
     use CreatesOrderFixtures;
     use RefreshDatabase;
 
+    private MockInterface $mediaScanner;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -56,7 +61,8 @@ final class PhaseFourteenReviewsScoresTest extends TestCase
         config()->set('services.cloudinary.cloud_name', '');
         config()->set('finance.materials_analytics_enabled', true);
         Storage::fake('local');
-        $this->mock(VendorFileScanner::class)->shouldReceive('assertClean')->andReturnNull();
+        $this->mediaScanner = $this->mock(VendorFileScanner::class);
+        $this->mediaScanner->shouldReceive('assertClean')->andReturnNull()->byDefault();
         $this->withCredentials()->withUnencryptedCookie('mp_csrf', 'test-csrf')->withHeader('X-CSRF-Token', 'test-csrf');
         $this->app->instance(PlacesProvider::class, new FakePlacesProvider);
         $this->app->instance(RouteProvider::class, new FakeRouteProvider);
@@ -68,6 +74,66 @@ final class PhaseFourteenReviewsScoresTest extends TestCase
         Carbon::setTestNow();
         CarbonImmutable::setTestNow();
         parent::tearDown();
+    }
+
+    public function test_product_review_media_is_private_typed_retry_safe_and_retired_without_deleting_history(): void
+    {
+        [$store, $owner, $listing] = $this->pickupStore('Media Store');
+        [$buyer, $orderId] = $this->pickupOrder($store, $listing);
+        $completed = $this->complete($orderId);
+        $this->freeze($completed);
+        $this->signInBuyer($buyer);
+        $line = (string) DB::table('order_lines')->where('order_id', $orderId)->value('id');
+        $this->submitBuyer($orderId, ['vendor_rating' => ['service_quality' => 5, 'speed_rating' => 5], 'product_reviews' => [['order_line_id' => $line, 'rating' => 5]]])->assertCreated();
+        $reviewId = (string) DB::table('reviews')->where('order_id', $orderId)->where('review_type', 'PRODUCT')->value('id');
+        $vendorReview = (string) DB::table('reviews')->where('order_id', $orderId)->where('review_type', 'VENDOR')->value('id');
+        $this->uploadReviewMedia($vendorReview, [UploadedFile::fake()->image('photo.png')])->assertUnprocessable()->assertJsonPath('errors.0.code', 'REVIEW_MEDIA_NOT_ALLOWED');
+        $video = (string) file_get_contents(base_path('tests/Fixtures/review-video.mp4'));
+        $key = (string) Str::uuid7();
+        $result = $this->uploadReviewMedia($reviewId, [UploadedFile::fake()->image('photo.png'), UploadedFile::fake()->createWithContent('video.mp4', $video)], $key)->assertOk();
+        $media = $result->json('data.lines.0.review.media');
+        self::assertSame(['image/png', 'video/mp4'], array_column($media, 'content_type'));
+        $this->get($media[1]['url'])->assertOk()->assertHeader('Content-Type', 'video/mp4');
+        $this->uploadReviewMedia($reviewId, [UploadedFile::fake()->image('photo.png'), UploadedFile::fake()->createWithContent('video.mp4', $video)], $key)->assertOk();
+        self::assertSame(2, DB::table('files')->where('purpose', 'REVIEW_MEDIA')->count(), 'A replay must not leave unreferenced stored files.');
+        self::assertSame(2, DB::table('review_revisions')->where('review_id', $reviewId)->count());
+        $this->uploadReviewMedia($reviewId, [UploadedFile::fake()->image('third.png')])->assertOk();
+        $this->uploadReviewMedia($reviewId, [UploadedFile::fake()->image('fourth.png')])->assertUnprocessable();
+        self::assertSame(3, DB::table('files')->where('purpose', 'REVIEW_MEDIA')->count(), 'Failed attachment transaction discards only its uncommitted files.');
+        $this->signInBuyer($this->buyer());
+        $this->get($media[1]['url'])->assertNotFound();
+        $this->uploadReviewMedia($reviewId, [UploadedFile::fake()->image('intruder.png')])->assertNotFound();
+        $this->signInBuyer($buyer);
+        $this->deleteJson('/api/v1/buyers/reviews/'.$reviewId.'/media/'.$media[0]['id'])->assertOk()->assertJsonCount(2, 'data.lines.0.review.media');
+        self::assertSame(3, DB::table('files')->where('purpose', 'REVIEW_MEDIA')->count(), 'Retired files remain commercial history.');
+        $this->get($media[0]['url'])->assertNotFound();
+        $this->freeze($completed->addHours(24));
+        $this->uploadReviewMedia($reviewId, [UploadedFile::fake()->image('late.png')])->assertConflict()->assertJsonPath('errors.0.code', 'REVIEW_LOCKED');
+        $this->getJson('/api/v1/buyers/orders/'.$orderId.'/reviews')->assertOk()->assertJsonPath('data.rules.photo_max_bytes', 10 * 1024 * 1024)->assertJsonPath('data.rules.video_max_bytes', 100 * 1024 * 1024);
+    }
+
+    public function test_review_media_rejects_invalid_content_and_scanner_failure_without_changing_the_review(): void
+    {
+        [$store, , $listing] = $this->pickupStore('Media Safety');
+        [$buyer, $orderId] = $this->pickupOrder($store, $listing);
+        $this->complete($orderId);
+        $this->signInBuyer($buyer);
+        $line = (string) DB::table('order_lines')->where('order_id', $orderId)->value('id');
+        $this->submitBuyer($orderId, ['product_reviews' => [['order_line_id' => $line, 'rating' => 4]]])->assertCreated();
+        $reviewId = (string) DB::table('reviews')->where('order_id', $orderId)->value('id');
+        $this->uploadReviewMedia($reviewId, [UploadedFile::fake()->createWithContent('video.mp4', 'not a video')])->assertUnprocessable()->assertJsonPath('errors.0.code', 'FILE_VALIDATION_FAILED');
+        $this->uploadReviewMedia($reviewId, [UploadedFile::fake()->create('oversized.mp4', 102401, 'video/mp4')])->assertUnprocessable();
+        $this->mediaScanner->shouldReceive('assertClean')->andThrow(new AuthenticationException('FILE_SCANNER_UNAVAILABLE', 'File scanning is unavailable. Try again later.', 503));
+        $this->uploadReviewMedia($reviewId, [UploadedFile::fake()->createWithContent('video.mp4', (string) file_get_contents(base_path('tests/Fixtures/review-video.mp4')))])->assertStatus(503)->assertJsonPath('errors.0.code', 'FILE_SCANNER_UNAVAILABLE');
+        self::assertSame(0, DB::table('review_media')->where('review_id', $reviewId)->count());
+        self::assertSame(0, DB::table('files')->where('purpose', 'REVIEW_MEDIA')->count());
+        self::assertSame(1, DB::table('review_revisions')->where('review_id', $reviewId)->count());
+    }
+
+    /** @param list<UploadedFile> $files */
+    private function uploadReviewMedia(string $reviewId, array $files, ?string $key = null): TestResponse
+    {
+        return $this->post('/api/v1/buyers/reviews/'.$reviewId.'/media', ['files' => $files], ['Accept' => 'application/json', 'Idempotency-Key' => $key ?? (string) Str::uuid7()]);
     }
 
     public function test_blind_reveal_edit_lock_party_separation_and_no_vendor_delete(): void
@@ -140,6 +206,7 @@ final class PhaseFourteenReviewsScoresTest extends TestCase
         [$store, $owner, $listing] = $this->pickupStore('Window Store');
         [$buyer, $orderId] = $this->pickupOrder($store, $listing);
         $completed = $this->complete($orderId);
+        $this->freeze($completed);
         $this->signInBuyer($buyer);
         $this->submitBuyer($orderId, ['vendor_rating' => ['service_quality' => 4, 'speed_rating' => 4]])->assertCreated();
         $line = (string) DB::table('order_lines')->where('order_id', $orderId)->value('id');

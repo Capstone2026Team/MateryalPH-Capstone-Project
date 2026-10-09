@@ -1174,10 +1174,14 @@ class VendorOnboardingApi {
   }
 
   /// listVendorTeamActivity
-  ///
+  /// Team Tracking synchronizes through payload-free team.activity.changed events on the existing viewer-bound Vendor inbox channel after audit, Vendor message or quotation activity commits. Delivery rechecks current organization, membership and staff-management authority; delegated Managers receive only non-manager activity invalidations. Re-fetch this endpoint for authoritative data. Clients poll automatically while realtime is unavailable and after reconnect.
   ///
   /// Parameters:
   /// * [page]
+  /// * [memberId]
+  /// * [role] - Role recorded at the time of the action.
+  /// * [days]
+  /// * [category]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -1189,6 +1193,10 @@ class VendorOnboardingApi {
   /// Throws [DioException] if API call or serialization fails
   Future<Response<VendorTeamActivityEnvelope>> listVendorTeamActivity({
     int? page,
+    String? memberId,
+    String? role,
+    int? days = 30,
+    String? category,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -1218,6 +1226,10 @@ class VendorOnboardingApi {
 
     final _queryParameters = <String, dynamic>{
       if (page != null) r'page': encodeQueryParameter(_serializers, page, const FullType(int)),
+      if (memberId != null) r'member_id': encodeQueryParameter(_serializers, memberId, const FullType(String)),
+      if (role != null) r'role': encodeQueryParameter(_serializers, role, const FullType(String)),
+      if (days != null) r'days': encodeQueryParameter(_serializers, days, const FullType(int)),
+      if (category != null) r'category': encodeQueryParameter(_serializers, category, const FullType(String)),
     };
 
     final _response = await _dio.request<Object>(

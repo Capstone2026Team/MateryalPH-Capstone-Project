@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Analytics;
 
+use App\Domain\Settings\PlatformSettings;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -74,6 +75,7 @@ final class AnalyticsDataset
 
     public static function enabled(): bool
     {
-        return (bool) config('finance.materials_analytics_enabled', true);
+        // The environment kill switch and the versioned Platform Setting feature flag must both allow it.
+        return (bool) config('finance.materials_analytics_enabled', true) && PlatformSettings::current()->flag('materials_analytics');
     }
 }

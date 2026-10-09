@@ -33,6 +33,8 @@ foreach (['buyers' => ['BUYER', 'MOBILE'], 'vendors' => ['VENDOR', 'WEB'], 'admi
         }
         if ($portal === 'VENDOR') {
             Route::get('/invitations', [AccountAdministrationController::class, 'vendorInvitations']);
+            Route::delete('/invitations/{invitationId}', [AccountAdministrationController::class, 'deleteVendorInvitation'])->whereUuid('invitationId');
+            Route::delete('/memberships/{membershipId}', [AccountAdministrationController::class, 'deleteStaff'])->whereUuid('membershipId');
             Route::get('/activity', [AccountAdministrationController::class, 'vendorActivity']);
             Route::patch('/staff-disputes', [AccountAdministrationController::class, 'staffDisputes']);
             Route::patch('/memberships/{membershipId}', [AccountAdministrationController::class, 'updateStaff'])->whereUuid('membershipId');

@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../design_system/components/buyer_overlays.dart';
 import '../../design_system/components/work_package_attachment.dart';
@@ -409,38 +410,40 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     },
     child: Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: buyerAppBar(
-        context,
-        projectText(_package?['name'] ?? _project?['name'] ?? 'Projects'),
-        // Inside a Project the back control steps up the Project hierarchy, not the route stack.
-        onBack: _project == null
-            ? null
-            : () {
-                if (!_busy) _back();
-              },
-        actions: [
-          if (_project != null && NotificationScope.of(context) != null)
-            IconButton(
-              tooltip: 'Project reports',
-              icon: const Icon(Icons.description_outlined),
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute<void>(
-                  builder: (_) => BuyerReportsScreen(
-                    repository: NotificationScope.of(context)!,
-                    resourceId: projectText(_project?['id']),
-                    project: true,
+      appBar: _project == null
+          ? buyerTabAppBar(
+              context,
+              'Projects',
+              actions: [_rankingPreferencesAction()],
+            )
+          : buyerAppBar(
+              context,
+              projectText(_package?['name'] ?? _project?['name'] ?? 'Projects'),
+              // Inside a Project the back control steps up the Project hierarchy, not the route stack.
+              onBack: _project == null
+                  ? null
+                  : () {
+                      if (!_busy) _back();
+                    },
+              actions: [
+                if (_project != null && NotificationScope.of(context) != null)
+                  IconButton(
+                    tooltip: 'Project reports',
+                    icon: const Icon(Icons.description_outlined),
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute<void>(
+                        builder: (_) => BuyerReportsScreen(
+                          repository: NotificationScope.of(context)!,
+                          resourceId: projectText(_project?['id']),
+                          project: true,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-              ),
+                _rankingPreferencesAction(),
+              ],
             ),
-          IconButton(
-            onPressed: _busy ? null : _preferences,
-            icon: const Icon(Icons.tune),
-            tooltip: 'Project Ranking Preferences',
-          ),
-        ],
-      ),
       body: Column(
         children: [
           if (_busy) const LinearProgressIndicator(),
@@ -465,6 +468,12 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
       ),
     ),
   );
+  Widget _rankingPreferencesAction() => BuyerHeaderIconButton(
+    onPressed: _busy ? null : _preferences,
+    icon: LucideIcons.slidersHorizontal,
+    tooltip: 'Project Ranking Preferences',
+  );
+
   Widget _index() => _page == null
       ? (_busy
             ? ListView(

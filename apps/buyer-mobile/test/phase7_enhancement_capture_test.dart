@@ -81,6 +81,9 @@ void main() {
       ),
       'finalization': Scaffold(
         body: ProductFinalizationSheet(
+          repository: repository,
+          cart: cart,
+          savedLocations: () => [primaryLocation],
           detail: () => detail,
           variantId: detail.variants.first.variantId,
           quantity: 1,

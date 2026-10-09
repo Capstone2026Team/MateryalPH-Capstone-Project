@@ -270,11 +270,17 @@ void main() {
       final detail = listingDetail();
       final variant = detail.variants.firstWhere((item) => item.available);
       var calls = 0;
+      final repository = FakeProcurementRepository();
+      final cart = CartController(repository: repository);
+      addTearDown(cart.dispose);
       await tester.pumpWidget(
         MaterialApp(
           theme: BuyerTheme.light,
           home: Scaffold(
             body: ProductFinalizationSheet(
+              repository: repository,
+              cart: cart,
+              savedLocations: () => [],
               detail: () => detail,
               variantId: variant.variantId,
               quantity: 49,

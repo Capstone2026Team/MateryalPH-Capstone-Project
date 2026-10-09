@@ -30,7 +30,7 @@ const inventoryApi = () => new VendorInventoryApi(configuration())
 const autoAcceptApi = () => new VendorAutoAcceptApi(configuration())
 const fleetApi = () => new VendorFleetApi(configuration())
 
-export type InventoryFilters = { q?: string; listingId?: string; stock?: StockLabel; confirmation?: 'DUE' | 'STALE'; page?: number }
+export type InventoryFilters = { categoryId?: string; q?: string; listingId?: string; stock?: StockLabel; confirmation?: 'DUE' | 'STALE'; page?: number }
 
 export async function listInventory(filters: InventoryFilters): Promise<{ items: InventoryRow[]; meta: InventoryLedgerMeta }> {
   const response = await inventoryApi().listVendorInventoryItems(filters)
@@ -119,6 +119,6 @@ export function conflictRow(failure: ApiFailure | null): InventoryRow | null {
 
 /** Trims trailing zeros from a four-decimal quantity for display. */
 export function quantityDisplay(value: string | null | undefined): string {
-  if (value === null || value === undefined || value === '') return '—'
+  if (value === null || value === undefined || value === '') return 'â€”'
   return value.includes('.') ? value.replace(/\.?0+$/, '') : value
 }

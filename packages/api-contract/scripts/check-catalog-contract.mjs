@@ -78,3 +78,5 @@ assert.equal(schemas.CatalogListingSummary.properties.inventory, undefined, 'Lis
 assert.equal(schemas.ComplianceEvidenceUpload.properties.file.format, 'binary')
 
 console.log(`Phase 4 catalog contract passed: ${expected.size} catalog and product-compliance operations match Laravel routes and guards.`)
+
+assert.ok(spec.paths['/vendor/catalog/listings'].get.parameters.some(parameter => parameter.name === 'group'), 'Monitoring filter group must be documented')

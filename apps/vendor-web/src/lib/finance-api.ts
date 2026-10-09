@@ -1,5 +1,7 @@
 import {
   VendorFinanceApi,
+  VendorFinanceReviewsApi,
+  type VendorFinanceReviews,
   type FeeStatementDetail,
   type ListVendorTransactionsTabEnum,
   type PaymentAttempt,
@@ -13,7 +15,7 @@ import { createWebApiConfiguration, type PaymentChannelRow, type ThresholdPanelD
 import { newIdempotencyKey } from './onboarding-api'
 
 export { readableOnboardingError as readableFinanceError } from './onboarding-api'
-export type { FeeStatementDetail, PaymentAttempt, PaymentChannelOption, PhysicalPaymentSettings, PhysicalPaymentSummary, VendorEarnings, VendorFinanceOverview }
+export type { VendorFinanceReviews, FeeStatementDetail, PaymentAttempt, PaymentChannelOption, PhysicalPaymentSettings, PhysicalPaymentSummary, VendorEarnings, VendorFinanceOverview }
 
 const basePath = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'
 const financeApi = () => new VendorFinanceApi(createWebApiConfiguration(basePath, { refreshSession: true }))
@@ -88,3 +90,8 @@ export function channelRows(channels: unknown): PaymentChannelRow[] {
   })
 }
 
+
+/** Owner-only review status: statement approval and payment, tax adjustments, evidence and open finance reviews. */
+export async function getFinanceReviews(): Promise<VendorFinanceReviews> {
+  return (await new VendorFinanceReviewsApi(createWebApiConfiguration(basePath, { refreshSession: true })).getVendorFinanceReviews()).data
+}

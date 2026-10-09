@@ -13,6 +13,7 @@ use App\Domain\Identity\AuthenticationException;
 use App\Domain\Orders\OrderAccess;
 use App\Domain\Orders\OrderNotifier;
 use App\Domain\Orders\OrderStates;
+use App\Domain\Settings\PlatformSettings;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
@@ -170,7 +171,7 @@ final class InvoiceService
             if (DB::table('invoice_requests')->where('order_id', $order->id)->where('kind', $input['kind'])->where('state', '<>', 'CLOSED')->exists()) {
                 throw new AuthenticationException('INVOICE_REQUEST_OPEN', 'You already have an open request of this kind. Follow it on the order.', 409);
             }
-            $target = DisputeRules::addBusinessDays(CarbonImmutable::now(), self::SERVICE_TARGET_BUSINESS_DAYS);
+            $target = DisputeRules::addBusinessDays(CarbonImmutable::now(), PlatformSettings::current()->int('invoices.request_service_target_business_days'));
             $id = (string) Str::uuid7();
             DB::table('invoice_requests')->insert(['id' => $id, 'order_id' => $order->id, 'vendor_organization_id' => $order->vendor_organization_id, 'buyer_profile_id' => $order->buyer_profile_id,
                 'kind' => $input['kind'], 'state' => 'REQUESTED', 'details' => mb_substr(trim($input['details']), 0, 2000), 'invoice_record_id' => $recordId,
@@ -179,7 +180,7 @@ final class InvoiceService
             $this->audit->account($request, 'INVOICE_REQUESTED', 'ORDER', (string) $order->id, after: ['request_id' => $id, 'kind' => $input['kind']]);
             $when = $target->setTimezone(DisputeRules::TIMEZONE)->format('M j, Y g:i A');
             $this->notifier->vendor($order, 'Invoice '.strtolower($input['kind']).' requested for order '.$order->reference,
-                'The Buyer requested an invoice '.strtolower($input['kind']).'. Upload it by '.$when.' (Asia/Manila). This service target never extends your legal issuance deadline.');
+                'The Buyer requested an invoice '.strtolower($input['kind']).'. Upload it by '.$when.' (Asia/Manila). This service target never extends your legal issuance deadline.', category: 'INVOICES');
 
             return $id;
         });
@@ -202,9 +203,9 @@ final class InvoiceService
                     throw new AuthenticationException('INVOICE_REQUEST_STATE_CONFLICT', 'Return an uploaded document with the correction needed (at least 10 characters).', 409);
                 }
                 DB::table('invoice_requests')->where('id', $row->id)->update(['state' => 'RETURNED_FOR_CORRECTION', 'details' => mb_substr(trim((string) $row->details)."\n\nReturned: ".trim((string) $reason), 0, 4000),
-                    'service_target_at' => DisputeRules::addBusinessDays(CarbonImmutable::now(), self::SERVICE_TARGET_BUSINESS_DAYS), 'reminder_sent_at' => null, 'overdue_notified_at' => null,
+                    'service_target_at' => DisputeRules::addBusinessDays(CarbonImmutable::now(), PlatformSettings::current()->int('invoices.request_service_target_business_days')), 'reminder_sent_at' => null, 'overdue_notified_at' => null,
                     'lock_version' => (int) $row->lock_version + 1, 'updated_at' => now()]);
-                $this->notifier->vendor($order, 'Invoice returned for correction on order '.$order->reference, 'The Buyer returned the uploaded invoice for correction: '.trim((string) $reason));
+                $this->notifier->vendor($order, 'Invoice returned for correction on order '.$order->reference, 'The Buyer returned the uploaded invoice for correction: '.trim((string) $reason), category: 'INVOICES');
             } else {
                 if ($row->state === 'CLOSED') {
                     throw new AuthenticationException('INVOICE_REQUEST_STATE_CONFLICT', 'This request is already closed.', 409);
@@ -266,12 +267,12 @@ final class InvoiceService
             $target = CarbonImmutable::parse((string) $row->service_target_at);
             if ($row->overdue_notified_at === null && $target->lessThanOrEqualTo($now)) {
                 if (DB::table('invoice_requests')->where('id', $row->id)->whereNull('overdue_notified_at')->update(['overdue_notified_at' => now(), 'updated_at' => now()]) > 0) {
-                    $this->notifier->vendor($order, 'Invoice request overdue on order '.$order->reference, 'The three-business-day service target for the Buyer\'s invoice '.strtolower((string) $row->kind).' has passed. Upload it now.', ['OWNER', 'STORE_MANAGER', 'STORE_STAFF']);
+                    $this->notifier->vendor($order, 'Invoice request overdue on order '.$order->reference, 'The service target for the Buyer\'s invoice '.strtolower((string) $row->kind).' has passed. Upload it now.', ['OWNER', 'STORE_MANAGER', 'STORE_STAFF'], category: 'INVOICES');
                     $counts['overdue']++;
                 }
             } elseif ($row->reminder_sent_at === null && DisputeRules::addBusinessDays($now, 1)->greaterThanOrEqualTo($target)) {
                 if (DB::table('invoice_requests')->where('id', $row->id)->whereNull('reminder_sent_at')->update(['reminder_sent_at' => now(), 'updated_at' => now()]) > 0) {
-                    $this->notifier->vendor($order, 'Invoice request due soon on order '.$order->reference, 'The Buyer\'s invoice '.strtolower((string) $row->kind).' is due by '.$target->setTimezone(DisputeRules::TIMEZONE)->format('M j, Y g:i A').' (Asia/Manila).', ['OWNER', 'STORE_MANAGER', 'STORE_STAFF']);
+                    $this->notifier->vendor($order, 'Invoice request due soon on order '.$order->reference, 'The Buyer\'s invoice '.strtolower((string) $row->kind).' is due by '.$target->setTimezone(DisputeRules::TIMEZONE)->format('M j, Y g:i A').' (Asia/Manila).', ['OWNER', 'STORE_MANAGER', 'STORE_STAFF'], category: 'INVOICES');
                     $counts['reminders']++;
                 }
             }
@@ -341,7 +342,7 @@ final class InvoiceService
             'invoice_number' => mb_substr(trim((string) $input['invoice_number']), 0, 64), 'issued_on' => (string) $input['issued_on'], 'reconciliation_state' => $state, 'file_sha256' => (string) DB::table('files')->where('id', $fileId)->value('checksum_sha256')]);
         $this->notifier->buyer($order, 'Invoice copy available for order '.$order->reference, 'The Vendor uploaded a copy of its invoice. Open the order to view it. MateryalPH stores the copy; the Vendor issues the invoice through its registered process.');
         if ($state === 'INVOICE_RECONCILIATION_REQUIRED') {
-            $this->notifier->vendor($order, 'Invoice difference on order '.$order->reference, 'The uploaded invoice totals differ from the accepted order. Explain or upload a correction; the Buyer\'s agreed amount does not change.', ['OWNER', 'STORE_MANAGER', 'STORE_STAFF']);
+            $this->notifier->vendor($order, 'Invoice difference on order '.$order->reference, 'The uploaded invoice totals differ from the accepted order. Explain or upload a correction; the Buyer\'s agreed amount does not change.', ['OWNER', 'STORE_MANAGER', 'STORE_STAFF'], category: 'INVOICES');
         }
 
         return $id;

@@ -1,8 +1,9 @@
+import { CheckCircle2, CircleDashed, AlertTriangle } from 'lucide-react'
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { AlertCircle, FileSpreadsheet, LayoutGrid, Layers, Package, Plus, Rows3, Trash2 } from 'lucide-react'
+import { AlertCircle, LayoutGrid, Layers, Package, Rows3, Trash2 } from 'lucide-react'
 import { ResponseError, type CatalogListingUpdate, type ListingStatus } from '@materyalph/api-client-ts'
-import { Button, ConfirmDialog, Field, FilterChips, OnboardingFlow, ResponsiveRecordList, RowErrorTable, StatusMessage, StockLabelBadge, stockLabelText, SummaryTiles, type FilterChip, type RecordColumn, type SummaryTile } from '@materyalph/web-ui'
+import { Button, ConfirmDialog, Field, OnboardingFlow, ResponsiveRecordList, RowErrorTable, StatusMessage, StockLabelBadge, stockLabelText, StatCard, ActiveFilters, Toolbar, InfoNote, EmptyState, type RecordColumn } from '@materyalph/web-ui'
 import {
   applyImport, catalogFieldErrors, createListing, deactivateListing, deleteListing, formatCentavos, getCatalogTaxonomy, getImport,
   getImportTemplate, getListing, getMaterial, listListings, publishListing, readableCatalogError, removeListingMedia, saveVariants,
@@ -12,7 +13,7 @@ import {
 import { statusLabel } from '../lib/vendor-status'
 import { storeName, useCatalogAccess } from '../lib/catalog-access'
 import { formFromListing, listingSteps, quantityText, rowsFromListing, unitName, useMaterialSearch, usePhotoPreviews, variantClientErrors, variantInputs, type DetailsForm, type VariantRow } from '../lib/catalog-form'
-import { ListingBadge, ListingState, ProductsTabs } from './CatalogShared'
+import { ProductActions, ListingBadge, ListingState, ProductsTabs } from './CatalogShared'
 import { MaterialMatchOption, MaterialStep, PhotosComplianceStep, ProductInformationStep, PublicationGate, ReviewStep } from './CatalogListingSteps'
 import { ErrorState, LoadingState, PageHeader, VendorShell } from './PhaseThreeVendorPages'
 
@@ -71,7 +72,11 @@ export function VendorCatalogPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [taxonomy, setTaxonomy] = useState<CatalogTaxonomy | null>(null)
   const [query, setQuery] = useState(searchParams.get('q') ?? '')
+  useEffect(() => { setQuery(searchParams.get('q') ?? '') }, [searchParams])
   const status = searchParams.get('status') ?? ''
+  const group = searchParams.get('group') ?? ''
+  const selectedStatus = group || status
+  const selectStatus = (value: string) => setParams({ group: ['NEEDS_ATTENTION', 'OUT_OF_STOCK'].includes(value) ? value : '', status: ['NEEDS_ATTENTION', 'OUT_OF_STOCK'].includes(value) ? '' : value })
   const categoryId = searchParams.get('category') ?? ''
   const q = searchParams.get('q') ?? ''
   const view = searchParams.get('view') === 'table' ? 'table' : 'grid'
@@ -112,24 +117,27 @@ export function VendorCatalogPage() {
     if (!ready) return
     let active = true
     setLoading(true); setError(null)
-    listListings({ ...(q ? { q } : {}), ...(status ? { status: status as ListingStatus } : {}), ...(categoryId ? { categoryId } : {}), page })
+    listListings({ ...(['NEEDS_ATTENTION', 'OUT_OF_STOCK'].includes(group) ? { group: group as 'NEEDS_ATTENTION' | 'OUT_OF_STOCK' } : {}), ...(q ? { q } : {}), ...(status ? { status: status as ListingStatus } : {}), ...(categoryId ? { categoryId } : {}), page })
       .then(result => { if (active) { setRows(result.items); setMeta(result.meta) } })
       .catch(async cause => { const message = await readableCatalogError(cause); if (active) setError(message) })
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
-  }, [ready, q, status, categoryId, page, attempt])
+  }, [ready, q, status, group, categoryId, page, attempt])
 
   const counts = meta.statusCounts ?? {}
   const total = Object.values(counts).reduce((sum, value) => sum + value, 0)
-  const filtered = Boolean(q || categoryId)
-  const tiles: SummaryTile[] = [
-    { key: 'total', label: 'Total listings', value: total, hint: filtered ? 'Matching your search' : 'Every status' },
-    { key: 'active', label: 'Active', value: counts.ACTIVE ?? 0, hint: 'Offered to Buyers while in stock', tone: 'success' },
-    { key: 'out', label: 'Out of stock', value: meta.activeOutOfStock ?? 0, hint: 'Active but nothing to sell — record a count', tone: 'error' },
-    { key: 'attention', label: 'Needs attention', value: ATTENTION.reduce((sum, key) => sum + (counts[key] ?? 0), 0), hint: 'Pending review, hidden or rejected', tone: 'warning' },
-    { key: 'draft', label: 'Draft', value: counts.DRAFT ?? 0, hint: 'Not yet published', tone: 'info' },
+  const kpis = [
+    { label: 'Total', value: total, filter: '', icon: <Package size={18} />, hint: 'All listings matching search and category.' },
+    { label: 'Active', value: counts.ACTIVE ?? 0, filter: 'ACTIVE', icon: <CheckCircle2 size={18} />, hint: 'Published listings, including those currently out of stock.' },
+    { label: 'Draft', value: counts.DRAFT ?? 0, filter: 'DRAFT', icon: <CircleDashed size={18} />, hint: 'Saved listings that are not yet published.' },
+    { label: 'Needs attention', value: ATTENTION.reduce((sum, key) => sum + (counts[key] ?? 0), 0), filter: 'NEEDS_ATTENTION', icon: <AlertTriangle size={18} />, hint: 'Pending review, hidden or rejected listings.' },
   ]
-  const chips: FilterChip[] = [{ value: '', label: 'All', count: total }, ...LISTING_STATUSES.filter(key => key === 'ACTIVE' || key === 'DRAFT' || (counts[key] ?? 0) > 0 || key === status).map(key => ({ value: key, label: statusLabel(key), count: counts[key] ?? 0 }))]
+  const clearFilters = () => { setQuery(''); setSearchParams(view === 'table' ? { view } : {}, { replace: true }) }
+  const activeFilters = [
+    ...(q ? [{ key: 'q', label: `Search: ${q}`, onRemove: () => { setQuery(''); setParams({ q: '' }) } }] : []),
+    ...(selectedStatus ? [{ key: 'status', label: selectedStatus === 'OUT_OF_STOCK' ? 'Out of stock' : selectedStatus === 'NEEDS_ATTENTION' ? 'Needs attention' : statusLabel(selectedStatus), onRemove: () => selectStatus('') }] : []),
+    ...(categoryId ? [{ key: 'category', label: taxonomy?.categories.find(item => item.id === categoryId)?.name ?? 'Category', onRemove: () => setParams({ category: '' }) }] : []),
+  ]
   const columns: RecordColumn<CatalogListingSummary>[] = [
     { key: 'name', header: 'Product', cell: row => <Link className="font-semibold text-action-primary underline" to={`/products/${row.id}`}>{row.displayName}</Link> },
     { key: 'sku', header: 'Vendor SKU', cell: row => row.vendorSku },
@@ -147,29 +155,24 @@ export function VendorCatalogPage() {
 
   return <CatalogGate access={access} activeHref="/products">
     <div className="space-y-6">
-      <PageHeader eyebrow="Store Management" title="My Products" description="Listings, variants, photos and PS/ICC evidence. Regulated materials publish only after their compliance evidence is verified." actions={access.canManage ? <><Link className="inline-flex min-h-11 items-center gap-2 rounded-control border border-border-default bg-surface-primary px-4 font-semibold" to="/products/import"><FileSpreadsheet size={16} aria-hidden="true" /> Bulk import</Link><Link className="inline-flex min-h-11 items-center gap-2 rounded-control bg-action-primary px-4 font-semibold text-white" to="/products/new"><Plus size={16} aria-hidden="true" /> Add product</Link></> : undefined} />
+      <PageHeader eyebrow="Store Management" title="My Products" description="Manage listings, variants, photos and compliance evidence." actions={<ProductActions canManage={access.canManage} />} />
       <ProductsTabs active="listings" showInventory={access.canViewInventory} />
+      <dl aria-label="Listing summary" className="grid grid-cols-2 gap-4 xl:grid-cols-4">{kpis.map(item => <StatCard key={item.label} label={item.label} value={loading || error ? '—' : item.value} icon={<span aria-hidden="true">{item.icon}</span>} hint={item.hint} active={selectedStatus === item.filter} onClick={() => selectStatus(item.filter)} />)}</dl>
+      <Toolbar searchFirst search={{ label: 'Search name or SKU', placeholder: 'Name or SKU', value: query, onChange: setQuery, maxLength: 120, onSubmit: event => { event.preventDefault(); setParams({ q: query.trim() }) } }}
+        filters={<><select aria-label="Status" className={control} value={selectedStatus} onChange={event => selectStatus(event.target.value)}><option value="">All statuses</option>{LISTING_STATUSES.map(value => <option key={value} value={value}>{statusLabel(value)}</option>)}<option value="NEEDS_ATTENTION">Needs attention</option><option value="OUT_OF_STOCK">Out of stock</option></select><select aria-label="Category" className={control} value={categoryId} onChange={event => setParams({ category: event.target.value })}><option value="">All categories</option>{taxonomy?.categories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}</select></>}
+        viewToggle={<div role="group" aria-label="Layout" className="flex gap-2">{[{ value: 'grid', label: 'Grid', icon: <LayoutGrid size={16} /> }, { value: 'table', label: 'Table', icon: <Rows3 size={16} /> }].map(item => <Button key={item.value} variant={view === item.value ? 'primary' : 'secondary'} aria-pressed={view === item.value} onClick={() => setParams({ view: item.value === 'table' ? 'table' : '' })}><span aria-hidden="true">{item.icon}</span>{item.label}</Button>)}</div>} />
+      <ActiveFilters filters={activeFilters} onClear={clearFilters} />
+      <InfoNote dismissible>Your store stays active without products; discovery requires published stock and verified PS/ICC evidence for regulated materials.</InfoNote>
       {notice && <StatusMessage tone={notice.tone}>{notice.text}</StatusMessage>}
-      {!error && <SummaryTiles label="Listing summary" tiles={tiles} />}
-      <div className="grid gap-3 rounded-surface border border-border-default bg-surface-primary p-4">
-        <FilterChips label="Filter by listing status" chips={chips} value={status} disabled={loading} onChange={value => setParams({ status: value })} />
-        <form className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto_auto]" role="search" aria-label="Search products" onSubmit={event => { event.preventDefault(); setParams({ q: query.trim() }) }}>
-          <Field label="Search name or SKU" name="q" value={query} onChange={event => setQuery(event.target.value)} />
-          <label className="grid min-w-0 gap-2 text-sm font-semibold">Category<select className={control} value={categoryId} onChange={event => setParams({ category: event.target.value })}><option value="">All categories</option>{taxonomy?.categories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
-          <div className="flex items-end gap-2"><Button type="submit" disabled={loading}>Search</Button>{(q || categoryId || status) && <Button variant="secondary" disabled={loading} onClick={() => { setQuery(''); setSearchParams({ ...(view === 'table' ? { view } : {}) }, { replace: true }) }}>Clear</Button>}</div>
-          <div className="flex items-end"><FilterChips label="Layout" value={view} onChange={value => setParams({ view: value === 'table' ? 'table' : '' })} chips={[{ value: 'grid', label: 'Grid', icon: <LayoutGrid size={16} aria-hidden="true" /> }, { value: 'table', label: 'Table', icon: <Rows3 size={16} aria-hidden="true" /> }]} /></div>
-        </form>
-      </div>
       {loading ? <div className="grid grid-cols-1 gap-4 min-[480px]:grid-cols-2 lg:grid-cols-3" aria-busy="true" aria-label="Loading products">{[0, 1, 2].map(index => <div key={index} className="h-72 animate-pulse rounded-surface bg-surface-primary motion-reduce:animate-none" />)}</div>
         : error ? <ErrorState message={error} onRetry={() => setAttempt(value => value + 1)} />
-          : rows.length === 0 ? <section className="rounded-surface border border-dashed border-border-default bg-surface-primary p-8 text-center"><Package size={32} className="mx-auto text-text-secondary" aria-hidden="true" /><h2 className="mt-3 text-xl font-semibold">{meta.scope === 'ASSIGNED_ONLY' ? 'No assigned products.' : q || status || categoryId ? 'No products match these filters.' : 'No products yet.'}</h2><p className="mx-auto mt-2 max-w-md text-sm text-text-secondary">{meta.scope === 'ASSIGNED_ONLY' ? 'Products appear here when they are part of fulfillment work assigned to you.' : q || status || categoryId ? 'Clear the filters to see every listing.' : 'Your store stays active without products, but Buyers can discover it only after a listing is published and in stock.'}</p>{access.canManage && !(q || status || categoryId) && <Link className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-control bg-action-primary px-4 font-semibold text-white" to="/products/new"><Plus size={16} aria-hidden="true" /> Add your first product</Link>}</section>
+          : rows.length === 0 ? <EmptyState icon={<Package size={24} aria-hidden="true" />} message={meta.scope === 'ASSIGNED_ONLY' ? 'No products assigned to you.' : q || selectedStatus || categoryId ? 'No products match these filters.' : 'No products yet.'} action={q || selectedStatus || categoryId ? <Button variant="secondary" onClick={() => { setQuery(''); setSearchParams({ ...(view === 'table' ? { view } : {}) }, { replace: true }) }}>Clear filters</Button> : access.canManage ? <Link className="inline-flex min-h-11 items-center rounded-control border border-border-default px-4 text-sm font-semibold" to="/products/new">Add your first product</Link> : <Button variant="secondary" onClick={() => setAttempt(value => value + 1)}>Retry</Button>} />
             : <>
-              <p className="text-sm text-text-secondary" aria-live="polite">{meta.total ?? rows.length} products</p>
               {view === 'table'
                 ? <ResponsiveRecordList caption="Store products" rows={rows} columns={columns} rowKey={row => row.id} cardTitle={row => <Link className="text-action-primary underline" to={`/products/${row.id}`}>{row.displayName}</Link>} />
                 : <ul className="grid grid-cols-1 gap-4 min-[480px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5" aria-label="Store products">
                   {rows.map(row => <ProductCard key={row.id} row={row} taxonomy={taxonomy} onDelete={setPendingDelete} />)}
-                  {access.canManage && page >= lastPage && <li className="min-w-0"><Link to="/products/new" className="grid h-full min-h-56 place-items-center rounded-surface border-2 border-dashed border-border-default bg-brand-orange-50 p-6 text-center transition-colors hover:border-action-primary motion-reduce:transition-none"><span className="grid justify-items-center gap-2"><Plus size={28} className="text-action-primary" aria-hidden="true" /><span className="font-semibold">Add new product</span><span className="text-sm text-text-secondary">List another material for Buyers</span></span></Link></li>}
+
                 </ul>}
               {lastPage > 1 && <nav aria-label="Product pages" className="flex flex-wrap items-center gap-3"><Button variant="secondary" disabled={page <= 1} onClick={() => setParams({ page: String(page - 1) })}>Previous</Button><span>Page {page} of {lastPage}</span><Button variant="secondary" disabled={page >= lastPage} onClick={() => setParams({ page: String(page + 1) })}>Next</Button></nav>}
             </>}
@@ -295,7 +298,8 @@ function EditorContent(props: {
     : step === 1 ? <Button variant="secondary" disabled={busy} onClick={props.onSaveProductInformation}>{busy ? 'Saving…' : 'Save product information'}</Button> : null
   return <div className="space-y-5">
     <Link className="inline-flex min-h-11 items-center text-sm font-semibold text-action-primary" to="/products">← My Products</Link>
-    <PageHeader eyebrow={`Listing · ${listing.vendorSku}`} title={listing.displayName} description={listing.regulated ? `Regulated material: ${listing.regulatedRule?.productName ?? 'DTI-BPS mandatory certification'}. It publishes only after its PS/ICC evidence is verified.` : 'Complete each step. The server decides completion and publication readiness.'} actions={<><ListingBadge status={listing.status} />{listing.permissions.canDelete && <Button variant="quiet" disabled={busy} onClick={props.onDelete}><Trash2 size={16} aria-hidden="true" /> Delete draft</Button>}</>} />
+    <PageHeader eyebrow={`Listing · ${listing.vendorSku}`} title={listing.displayName} description="Edit product details, variants, prices, photos and evidence." actions={<><ListingBadge status={listing.status} />{listing.permissions.canDelete && <Button variant="quiet" disabled={busy} onClick={props.onDelete}><Trash2 size={16} aria-hidden="true" /> Delete draft</Button>}</>} />
+    <InfoNote>{listing.regulated ? `Regulated material: ${listing.regulatedRule?.productName ?? 'DTI-BPS mandatory certification'}. Publication requires verified PS/ICC evidence.` : 'Complete each step before publishing. The server checks publication readiness.'}</InfoNote>
     {props.conflict && <div className="flex flex-wrap items-center gap-3 rounded-surface border border-status-warning/40 bg-amber-50 p-4 text-sm" role="alert"><AlertCircle size={18} aria-hidden="true" /><span className="flex-1">This listing changed in another session. Reload to continue; unsaved edits on this page would be replaced.</span><Button variant="secondary" onClick={props.onReload}>Reload latest version</Button></div>}
     {props.message && <StatusMessage tone={props.message.tone}>{props.message.text}</StatusMessage>}
     {readOnly && <StatusMessage>Your role can view this listing but not change product, price, inventory or compliance data.</StatusMessage>}
@@ -339,7 +343,7 @@ function CreateListingForm({ canManage, onCreated }: { canManage: boolean; onCre
   }
   return <div className="space-y-6">
     <Link className="inline-flex min-h-11 items-center text-sm font-semibold text-action-primary" to="/products">← My Products</Link>
-    <PageHeader eyebrow="Store Management" title="Add product" description="Start with the material, the name Buyers will see and your SKU. Next you add details, prices, photos and any PS/ICC evidence. You can save the draft at any step." />
+    <PageHeader eyebrow="Store Management" title="Add product" description="Start with the material, display name and SKU; save your draft at any step." />
     <div className="grid gap-5 lg:grid-cols-[17rem_minmax(0,1fr)] lg:items-start">
       <ol className="grid gap-1 rounded-surface border border-border-default bg-surface-primary p-2 text-sm" aria-label="Listing steps after you create the draft">
         {listingSteps.map((item, index) => <li key={item.label} className="flex items-start gap-3 px-3 py-2"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border-default text-xs font-semibold">{index + 1}</span><span><span className="block font-semibold">{item.label}</span><span className="text-xs text-text-secondary">{item.description}</span></span></li>)}
@@ -399,7 +403,8 @@ export function VendorCatalogImportPage() {
   return <CatalogGate access={access} activeHref="/products">
     <div className="space-y-6">
       <Link className="inline-flex min-h-11 items-center text-sm font-semibold text-action-primary" to="/products">← My Products</Link>
-      <PageHeader eyebrow="Store Management" title="Bulk import" description="Upload a CSV to create draft listings. Every row is validated first; nothing is saved until you apply the validated rows. Imported listings are never published automatically." />
+      <PageHeader eyebrow="Store Management" title="Bulk import" description="Upload and validate a CSV to create draft listings." />
+      <InfoNote>Nothing is saved until you apply validated rows. Imported listings are never published automatically.</InfoNote>
       {!access.canManage ? <StatusMessage tone="error">Your role cannot import products.</StatusMessage> : <>
         <section className="grid gap-3 rounded-surface border border-border-default bg-surface-primary p-5">
           <h2 className="text-lg font-semibold">1. Prepare the spreadsheet</h2>

@@ -97,6 +97,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     String success, {
     String scope = 'decision',
     String Function(OrderDetailView order)? describe,
+    void Function(OrderDetailView order)? onSuccess,
   }) async {
     if (_busy) return;
     // An offline retry reuses the key of the same action only; another action gets a fresh key.
@@ -110,6 +111,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     try {
       final order = await action(key);
       _decisionKey = null;
+      onSuccess?.call(order);
       if (mounted) {
         setState(() {
           _order = order;
@@ -419,11 +421,27 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     )) {
       return;
     }
+    var completed = false;
     await _decide(
       (key) => widget.repository.confirmReceipt(order.id, idempotencyKey: key),
       'Receipt confirmed. Your order is completed.',
       scope: 'confirmReceipt',
+      onSuccess: (updated) => completed = updated.state('ORDER') == 'COMPLETED',
     );
+    if (mounted && completed) await _openReviews(_order!);
+  }
+
+  Future<void> _openReviews(OrderDetailView order) async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => OrderReviewsScreen(
+          repository: widget.repository.reviews,
+          orderId: order.id,
+          orderLines: order.lines,
+        ),
+      ),
+    );
+    if (mounted) await _load();
   }
 
   Future<void> _reportProblem(OrderDetailView order) async {
@@ -764,14 +782,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
           ),
           const SizedBox(height: 8),
           OutlinedButton.icon(
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => OrderReviewsScreen(
-                  repository: widget.repository.reviews,
-                  orderId: order.id,
-                ),
-              ),
-            ),
+            onPressed: _busy ? null : () => _openReviews(order),
             style: OutlinedButton.styleFrom(
               minimumSize: const Size.fromHeight(48),
             ),

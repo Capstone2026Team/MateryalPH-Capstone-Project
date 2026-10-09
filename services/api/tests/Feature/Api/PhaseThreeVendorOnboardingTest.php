@@ -35,6 +35,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -993,6 +994,163 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
         $this->assertDatabaseHas('audit_logs', ['resource_id' => $membership->id, 'action' => 'VENDOR_STAFF_UPDATED', 'actor_role' => 'OWNER']);
         $this->signInVendor($staff);
         $this->patchJson($url, ['full_name' => 'Elevated', 'role' => 'STORE_MANAGER', 'lock_version' => $membership->fresh()->lock_version])->assertForbidden();
+    }
+
+    public function test_owner_deletes_only_deactivated_team_members_and_retains_history(): void
+    {
+        [$organization, $owner] = $this->vendorFixture('OWNER');
+        [, $staff] = $this->vendorFixture('STORE_STAFF', $organization);
+        $member = VendorMembership::query()->where('user_id', $staff->id)->firstOrFail();
+        $url = '/api/v1/vendors/account/memberships/'.$member->id;
+        $this->acceptTeamAgreements($organization, $owner);
+        $this->signInVendor($owner);
+        $this->deleteJson($url, ['lock_version' => 1])->assertConflict()->assertJsonPath('errors.0.code', 'TEAM_ACCOUNT_NOT_DEACTIVATED');
+        $this->patchJson($url.'/status', ['status' => 'SUSPENDED'])->assertOk();
+        $this->deleteJson($url, ['lock_version' => 2])->assertConflict();
+        $this->patchJson($url.'/status', ['status' => 'DEACTIVATED'])->assertOk();
+        $this->deleteJson($url, ['lock_version' => 1])->assertConflict()->assertJsonPath('errors.0.code', 'RESOURCE_VERSION_CONFLICT');
+        $this->deleteJson($url, ['lock_version' => 3])->assertOk();
+        $this->deleteJson($url, ['lock_version' => 3])->assertOk();
+        $this->getJson('/api/v1/vendors/account/memberships')->assertOk()->assertJsonCount(0, 'data');
+        $this->patchJson($url.'/status', ['status' => 'ACTIVE'])->assertNotFound();
+        $this->patchJson($url.'/delegation', ['can_manage_staff' => true])->assertNotFound();
+        $this->patchJson($url, ['full_name' => 'Changed', 'role' => 'INVENTORY', 'lock_version' => 4])->assertNotFound();
+        self::assertNotNull($member->fresh()->deleted_at);
+        $this->assertDatabaseHas('users', ['id' => $staff->id]);
+        self::assertSame(1, DB::table('audit_logs')->where('resource_id', $member->id)->where('action', 'VENDOR_MEMBERSHIP_DELETED')->count());
+        $this->assertDatabaseHas('audit_logs', ['resource_id' => $member->id, 'action' => 'VENDOR_MEMBERSHIP_CHANGED']);
+        $ownerMembership = VendorMembership::query()->where('user_id', $owner->id)->firstOrFail();
+        $this->deleteJson('/api/v1/vendors/account/memberships/'.$ownerMembership->id, ['lock_version' => 1])->assertForbidden();
+        $this->signInVendor($staff);
+        $this->getJson('/api/v1/vendors/account/profile')->assertForbidden();
+    }
+
+    public function test_team_deletion_is_owner_only_scoped_and_requires_recent_authentication(): void
+    {
+        [$organization, $owner] = $this->vendorFixture('OWNER');
+        [, $manager] = $this->vendorFixture('STORE_MANAGER', $organization, true);
+        [, $staff] = $this->vendorFixture('STORE_STAFF', $organization);
+        $member = VendorMembership::query()->where('user_id', $staff->id)->firstOrFail();
+        $member->update(['status' => 'DEACTIVATED']);
+        $url = '/api/v1/vendors/account/memberships/'.$member->id;
+        $this->acceptTeamAgreements($organization, $manager);
+        $this->signInVendor($manager);
+        $this->deleteJson($url, ['lock_version' => 1])->assertForbidden();
+        $this->acceptTeamAgreements($organization, $owner);
+        $session = $this->signInVendor($owner);
+        $session->update(['reauthenticated_at' => now()->subMinutes(16)]);
+        $this->deleteJson($url, ['lock_version' => 1])->assertForbidden()->assertJsonPath('errors.0.code', 'RECENT_AUTHENTICATION_REQUIRED');
+        [$otherOrganization, $otherOwner] = $this->vendorFixture('OWNER');
+        $this->acceptTeamAgreements($otherOrganization, $otherOwner);
+        $this->signInVendor($otherOwner);
+        $this->deleteJson($url, ['lock_version' => 1])->assertNotFound();
+        self::assertNull($member->fresh()->deleted_at);
+    }
+
+    public function test_invitation_deletion_requires_expiry_or_its_exact_deleted_membership(): void
+    {
+        [$organization, $owner] = $this->vendorFixture('OWNER');
+        [, $manager] = $this->vendorFixture('STORE_MANAGER', $organization, true);
+        [, $staff] = $this->vendorFixture('STORE_STAFF', $organization);
+        $member = VendorMembership::query()->where('user_id', $staff->id)->firstOrFail();
+        $this->acceptTeamAgreements($organization, $owner);
+        $this->signInVendor($owner);
+        $this->postJson('/api/v1/vendors/account/invitations', ['email' => 'delete-invite@example.test', 'invitee_name' => 'Invitation Employee', 'role' => 'STORE_STAFF'], ['Idempotency-Key' => (string) Str::uuid7()])->assertStatus(202);
+        $invitation = DB::table('vendor_invitations')->where('normalized_email', 'delete-invite@example.test')->first();
+        $url = '/api/v1/vendors/account/invitations/'.$invitation->id;
+        $this->getJson('/api/v1/vendors/account/invitations')->assertOk()->assertJsonPath('data.0.can_delete', false)->assertJsonPath('data.0.lock_version', 1);
+        $this->deleteJson($url, ['lock_version' => 1])->assertConflict()->assertJsonPath('errors.0.code', 'TEAM_INVITATION_NOT_DELETABLE');
+        DB::table('vendor_invitations')->where('id', $invitation->id)->update(['expires_at' => now(), 'accepted_at' => now()->subMinute(), 'accepted_membership_id' => $member->id]);
+        $this->deleteJson($url, ['lock_version' => 1])->assertConflict();
+        $member->update(['status' => 'DEACTIVATED']);
+        $this->deleteJson($url, ['lock_version' => 1])->assertConflict();
+        $this->deleteJson('/api/v1/vendors/account/memberships/'.$member->id, ['lock_version' => 1])->assertOk();
+        $this->getJson('/api/v1/vendors/account/invitations')->assertOk()->assertJsonPath('data.0.can_delete', true);
+        $this->deleteJson($url, ['lock_version' => 1])->assertOk();
+        $this->deleteJson($url, ['lock_version' => 1])->assertOk();
+        self::assertSame(1, DB::table('audit_logs')->where('resource_id', $invitation->id)->where('action', 'VENDOR_INVITATION_DELETED')->count());
+        $this->getJson('/api/v1/vendors/account/invitations')->assertOk()->assertJsonCount(0, 'data');
+
+        $this->postJson('/api/v1/vendors/account/invitations', ['email' => 'expired-invite@example.test', 'invitee_name' => 'Expired Employee', 'role' => 'STORE_STAFF'], ['Idempotency-Key' => (string) Str::uuid7()])->assertStatus(202);
+        $expired = DB::table('vendor_invitations')->where('normalized_email', 'expired-invite@example.test')->first();
+        DB::table('vendor_invitations')->where('id', $expired->id)->update(['expires_at' => now()]);
+        $this->acceptTeamAgreements($organization, $manager);
+        $this->signInVendor($manager);
+        $this->getJson('/api/v1/vendors/account/invitations')->assertOk()->assertJsonPath('data.0.can_delete', false);
+        $this->deleteJson('/api/v1/vendors/account/invitations/'.$expired->id, ['lock_version' => 1])->assertForbidden();
+        [$otherOrganization, $otherOwner] = $this->vendorFixture('OWNER');
+        $this->acceptTeamAgreements($otherOrganization, $otherOwner);
+        $this->signInVendor($otherOwner);
+        $this->deleteJson('/api/v1/vendors/account/invitations/'.$expired->id, ['lock_version' => 1])->assertNotFound();
+        $this->signInVendor($owner);
+        $this->deleteJson('/api/v1/vendors/account/invitations/'.$expired->id, ['lock_version' => 2])->assertConflict();
+        $this->deleteJson('/api/v1/vendors/account/invitations/'.$expired->id, ['lock_version' => 1])->assertOk();
+        self::assertNotNull(DB::table('vendor_invitations')->where('id', $expired->id)->value('deleted_at'));
+    }
+
+    public function test_deleted_membership_can_rejoin_only_through_a_new_invitation(): void
+    {
+        [$organization, $owner] = $this->vendorFixture('OWNER');
+        [, $staff] = $this->vendorFixture('STORE_STAFF', $organization);
+        $password = 'TeamRejoinPassword123';
+        $staff->update(['password' => Hash::make($password)]);
+        $member = VendorMembership::query()->where('user_id', $staff->id)->firstOrFail();
+        $member->update(['status' => 'DEACTIVATED']);
+        $this->acceptTeamAgreements($organization, $owner);
+        $this->signInVendor($owner);
+        $this->deleteJson('/api/v1/vendors/account/memberships/'.$member->id, ['lock_version' => 1])->assertOk();
+        try {
+            DB::transaction(fn () => DB::table('vendor_memberships')->where('id', $member->id)->update(['status' => 'ACTIVE']));
+            self::fail('A deleted membership must remain inactive.');
+        } catch (QueryException $exception) {
+            self::assertSame('23514', $exception->errorInfo[0]);
+        }
+        $this->postJson('/api/v1/vendors/account/invitations', ['email' => $staff->email, 'invitee_name' => $staff->name, 'role' => 'INVENTORY'], ['Idempotency-Key' => (string) Str::uuid7()])->assertStatus(202);
+        $invitation = DB::table('vendor_invitations')->where('normalized_email', $staff->email)->first();
+        $token = bin2hex(random_bytes(32));
+        DB::table('vendor_invitations')->where('id', $invitation->id)->update(['token_hash' => hash_hmac('sha256', $token, (string) config('app.key'))]);
+        $this->postJson('/api/v1/auth/vendor-invitations/accept', ['token' => $token, 'email' => $staff->email, 'full_name' => $staff->name, 'password' => $password, 'password_confirmation' => $password])->assertCreated();
+        $current = VendorMembership::query()->where('user_id', $staff->id)->whereNull('deleted_at')->firstOrFail();
+        self::assertNotSame($member->id, $current->id);
+        self::assertSame('INVENTORY', $current->role);
+        self::assertNotNull($member->fresh()->deleted_at);
+        $this->assertDatabaseHas('vendor_invitations', ['id' => $invitation->id, 'accepted_membership_id' => $current->id, 'lock_version' => 2]);
+        $this->getJson('/api/v1/vendors/account/invitations')->assertOk()->assertJsonPath('data.0.can_delete', false);
+        $this->deleteJson('/api/v1/vendors/account/invitations/'.$invitation->id, ['lock_version' => 2])->assertConflict();
+        $this->getJson('/api/v1/vendors/account/memberships')->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $current->id);
+    }
+
+    public function test_team_deletion_migration_backfills_accepted_memberships_from_history_after_email_change(): void
+    {
+        [$organization, $owner] = $this->vendorFixture('OWNER');
+        [, $staff] = $this->vendorFixture('STORE_STAFF', $organization);
+        $member = VendorMembership::query()->where('user_id', $staff->id)->firstOrFail();
+        $invitation = (string) Str::uuid7();
+        DB::table('vendor_invitations')->insert(['id' => $invitation, 'vendor_organization_id' => $organization->id, 'invited_by_user_id' => $owner->id, 'normalized_email' => 'former-email@example.test', 'role' => 'STORE_STAFF', 'token_hash' => hash('sha256', random_bytes(32)), 'expires_at' => now()->subDay(), 'accepted_at' => now()->subDays(2), 'created_at' => now()->subDays(3), 'updated_at' => now()]);
+        DB::table('audit_logs')->insert(['id' => (string) Str::uuid7(), 'vendor_organization_id' => $organization->id, 'actor_user_id' => $staff->id, 'actor_role' => 'STORE_STAFF', 'action' => 'VENDOR_INVITATION_ACCEPTED', 'resource_type' => 'VENDOR_MEMBERSHIP', 'resource_id' => $member->id, 'correlation_id' => 'team-deletion-migration-test', 'after' => json_encode(['invitation_id' => $invitation]), 'created_at' => now(), 'updated_at' => now()]);
+
+        // Restore only the prior team schema inside the isolated test transaction.
+        Schema::table('vendor_invitations', function ($table): void {
+            $table->dropConstrainedForeignId('accepted_membership_id');
+            $table->dropColumn(['deleted_at', 'lock_version']);
+        });
+        DB::statement('ALTER TABLE vendor_memberships DROP CONSTRAINT vendor_deleted_membership_inactive');
+        DB::statement('DROP INDEX vendor_current_membership_user_unique');
+        Schema::table('vendor_memberships', function ($table): void {
+            $table->dropColumn('deleted_at');
+            $table->unique('user_id');
+        });
+        $migration = require database_path('migrations/2026_10_08_120000_add_vendor_team_deletion.php');
+        $migration->up();
+        $this->assertDatabaseHas('vendor_invitations', ['id' => $invitation, 'accepted_membership_id' => $member->id, 'lock_version' => 1]);
+        $this->assertDatabaseHas('vendor_memberships', ['id' => $member->id, 'status' => 'ACTIVE', 'deleted_at' => null]);
+    }
+
+    private function acceptTeamAgreements(VendorOrganization $organization, User $actor): void
+    {
+        foreach (DB::table('agreement_versions')->pluck('id') as $version) {
+            DB::table('agreement_acceptances')->insert(['id' => (string) Str::uuid7(), 'user_id' => $actor->id, 'vendor_organization_id' => $organization->id, 'agreement_version_id' => $version, 'source' => 'VENDOR_ONBOARDING', 'accepted_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
+        }
     }
 
     public function test_ready_setup_and_verification_can_activate_without_making_the_store_discoverable(): void

@@ -2,11 +2,16 @@
 
 use App\Domain\Analytics\AnalyticsDataset;
 use App\Domain\Analytics\DemoMaterialsMarketplace;
+use App\Domain\Analytics\Geo\BoundaryImporter;
+use App\Domain\Analytics\Geo\DemoGeoAnalytics;
+use App\Domain\Analytics\Geo\GeoFactsBuilder;
 use App\Domain\Analytics\MaterialPriceCaptureService;
 use App\Domain\Disputes\DisputeAdminService;
+use App\Domain\Enforcement\EnforcementService;
 use App\Domain\Finance\StatementService;
 use App\Domain\Finance\WithholdingThresholdService;
 use App\Domain\Fulfillment\ReceiptService;
+use App\Domain\Identity\AuthenticationException;
 use App\Domain\Invoices\InvoiceService;
 use App\Domain\Messaging\QuotationService;
 use App\Domain\Orders\CancellationService;
@@ -129,3 +134,51 @@ Artisan::command('materyalph:payments-simulate {payment} {--outcome=completed}',
 
     return 0;
 })->purpose('DEMO only: simulate a provider event for a SIMULATED payment through the verified inbox path');
+
+Artisan::command('analytics:aggregate-marketplace', function (): int {
+    $result = app(GeoFactsBuilder::class)->build('SCHEDULE');
+    $this->info('Geographic analytics facts: '.json_encode($result));
+
+    return $result['state'] === 'FAILED' ? 1 : 0;
+})->purpose('Rebuild the daily PSGC geographic analytics facts for the TEST marketplace (idempotent; a retry publishes the next revision)');
+// After the 00:10 price capture and 00:30 scores so the dashboard and snapshot health read the same day.
+Schedule::command('analytics:aggregate-marketplace')->dailyAt('01:00')->timezone('Asia/Manila')->withoutOverlapping()->onOneServer();
+
+Artisan::command('materyalph:enforcement-sweep', function (): void {
+    $this->info('Temporary restrictions lifted at the end of their duration: '.app(EnforcementService::class)->sweep());
+})->purpose('Lift applied Temporary Restrictions whose duration has ended (system rule; attributed to the scheduler)');
+Schedule::command('materyalph:enforcement-sweep')->everyFifteenMinutes()->withoutOverlapping();
+
+Artisan::command('materyalph:geo-analytics-demo {--days=90} {--seed=16}', function (): int {
+    if (app()->isProduction()) {
+        $this->error('DEMO geographic analytics cannot be seeded in production.');
+
+        return 1;
+    }
+    try {
+        $result = app(DemoGeoAnalytics::class)->seed(max(14, min(365, (int) $this->option('days'))), (int) $this->option('seed'));
+    } catch (AuthenticationException $exception) {
+        $this->error($exception->errorCode.': '.$exception->getMessage());
+
+        return 1;
+    }
+    $this->info('DEMO — Simulated Marketplace Data seeded for the geographic dashboard: '.json_encode($result).'. Choose the DEMO dataset in the Admin dashboard; TEST facts are untouched.');
+
+    return 0;
+})->purpose('DEMO only: seed labelled simulated geographic analytics facts in the isolated DEMO environment');
+
+Artisan::command('materyalph:psgc-boundaries-import {--file= : PSGC-coded GeoJSON FeatureCollection} {--reference= : Publisher, dataset and date of the boundaries} {--version= : PSGC version label; the ACTIVE version by default} {--code-property= : Feature property holding the PSGC code} {--replace : Replace existing boundaries for matched areas}', function (): int {
+    try {
+        $result = app(BoundaryImporter::class)->import((string) $this->option('file'), (string) $this->option('reference'), $this->option('version') ?: null, $this->option('code-property') ?: null, (bool) $this->option('replace'));
+    } catch (AuthenticationException $exception) {
+        $this->error($exception->errorCode.': '.$exception->getMessage());
+
+        return 1;
+    }
+    $this->info('Boundaries imported: '.$result['matched'].' of '.$result['features'].' features matched using '.$result['code_property'].'; '.$result['replaced'].' replaced; '.$result['skipped_existing'].' kept (use --replace).');
+    if ($result['unmatched'] !== []) {
+        $this->warn('Unmatched codes (first 50): '.implode(', ', $result['unmatched']));
+    }
+
+    return 0;
+})->purpose('Import versioned PSGC-coded administrative boundaries for the Admin geographic map');

@@ -15,6 +15,7 @@ use App\Domain\Catalog\VendorCatalogService;
 use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Operations\OutboxPublisher;
+use App\Domain\Settings\PlatformSettings;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -56,7 +57,7 @@ final class ProductComplianceService
         if (! in_array($path, self::PATHS, true)) {
             throw new AuthenticationException('VALIDATION_FAILED', 'Review the highlighted fields and try again.', 422, ['path' => ['Choose Photo/OCR, QR or Manual Entry.']]);
         }
-        $image = $this->images->validate($file, (int) config('materyalph.catalog.max_compliance_evidence_kb', 10240), $path === 'QR' ? 'QR image' : 'marking photo');
+        $image = $this->images->validate($file, min((int) config('materyalph.catalog.max_compliance_evidence_kb', 10240), PlatformSettings::current()->uploadKb('compliance_evidence')), $path === 'QR' ? 'QR image' : 'marking photo');
         DB::transaction(function () use ($organizationId, $listingId): void {
             $this->access->lockActiveStore($organizationId);
             $listing = $this->catalog->ownedListing($listingId, $organizationId, false);

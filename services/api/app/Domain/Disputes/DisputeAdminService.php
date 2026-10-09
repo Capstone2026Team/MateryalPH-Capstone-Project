@@ -70,7 +70,7 @@ final class DisputeAdminService
             if ($parties === []) {
                 throw new AuthenticationException('VALIDATION_FAILED', 'Choose who must answer.', 422, ['parties' => ['Choose the Buyer, the Vendor or both.']]);
             }
-            $due = now()->addHours(DisputeRules::CLARIFICATION_HOURS);
+            $due = now()->addHours(DisputeRules::deadline('clarification_hours'));
             $group = (string) Str::uuid7();
             foreach ($parties as $party) {
                 if (DB::table('dispute_clarifications')->where('dispute_case_id', $case->id)->where('requested_party', $party)->where('state', 'OPEN')->exists()) {
@@ -111,7 +111,7 @@ final class DisputeAdminService
                     ['evidence_limitation' => ['An unanswered clarification does not prove fault. Record how it limits the evidence.']]);
             }
             DB::table('dispute_clarifications')->where('dispute_case_id', $case->id)->where('state', 'OPEN')->update(['state' => 'EXPIRED', 'updated_at' => now()]);
-            $appealDue = DisputeRules::addBusinessDays(CarbonImmutable::now(), DisputeRules::APPEAL_BUSINESS_DAYS);
+            $appealDue = DisputeRules::addBusinessDays(CarbonImmutable::now(), DisputeRules::deadline('appeal_business_days'));
             $decision = $this->insertDecision($order, $case, $actor, 'ADMIN_DECISION', $input, null, null, $appealDue);
             DB::table('dispute_cases')->where('id', $case->id)->update(['status' => DisputeRules::DECIDED, 'decided_at' => now(), 'appeal_due_at' => $appealDue, 'clarification_due_at' => null,
                 'current_decision_id' => $decision->id, 'assigned_admin_user_id' => $case->assigned_admin_user_id ?? $actor->userId, 'lock_version' => (int) $case->lock_version + 1, 'updated_at' => now()]);

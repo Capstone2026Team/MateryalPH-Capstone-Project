@@ -17,6 +17,8 @@ Method | HTTP request | Description
 [**changeAccountPassword**](AccountsApi.md#changeaccountpassword) | **POST** /{accountPortal}/account/password |
 [**confirmAccountEmailChange**](AccountsApi.md#confirmaccountemailchange) | **POST** /{accountPortal}/account/email/confirm |
 [**confirmAccountFactorReplacement**](AccountsApi.md#confirmaccountfactorreplacement) | **POST** /{accountPortal}/account/factor/confirm |
+[**deleteVendorTeamInvitation**](AccountsApi.md#deletevendorteaminvitation) | **DELETE** /vendors/account/invitations/{invitationId} |
+[**deleteVendorTeamMember**](AccountsApi.md#deletevendorteammember) | **DELETE** /vendors/account/memberships/{membershipId} |
 [**getAccountPhoto**](AccountsApi.md#getaccountphoto) | **GET** /{webAccountPortal}/account/photo |
 [**getAccountProfile**](AccountsApi.md#getaccountprofile) | **GET** /{accountPortal}/account/profile |
 [**getAccountSecurity**](AccountsApi.md#getaccountsecurity) | **GET** /{accountPortal}/account/security |
@@ -460,6 +462,112 @@ Name | Type | Description  | Notes
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **deleteVendorTeamInvitation**
+> AccountMutationResultEnvelope deleteVendorTeamInvitation(invitationId, vendorTeamDeletion)
+
+
+
+Owner only. Allowed for unaccepted expired invitations or accepted invitations linked to a deleted membership. Otherwise returns TEAM_INVITATION_NOT_DELETABLE. Stale lock_version returns RESOURCE_VERSION_CONFLICT. Requires recent authentication and current agreements. Repeated deletion succeeds without duplicating audit events.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getAccountsApi();
+final String invitationId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final VendorTeamDeletion vendorTeamDeletion = ; // VendorTeamDeletion |
+
+try {
+    final response = api.deleteVendorTeamInvitation(invitationId, vendorTeamDeletion);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AccountsApi->deleteVendorTeamInvitation: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **invitationId** | **String**|  |
+ **vendorTeamDeletion** | [**VendorTeamDeletion**](VendorTeamDeletion.md)|  |
+
+### Return type
+
+[**AccountMutationResultEnvelope**](AccountMutationResultEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **deleteVendorTeamMember**
+> AccountMutationResultEnvelope deleteVendorTeamMember(membershipId, vendorTeamDeletion)
+
+
+
+Owner only, scoped to the current organization. Only DEACTIVATED non-Owner memberships can be deleted; otherwise TEAM_ACCOUNT_NOT_DEACTIVATED. Deleted memberships cannot be edited or reactivated. Stale lock_version returns RESOURCE_VERSION_CONFLICT. Requires recent authentication and current agreements. Repeated deletion succeeds without duplicating audit events.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getAccountsApi();
+final String membershipId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final VendorTeamDeletion vendorTeamDeletion = ; // VendorTeamDeletion |
+
+try {
+    final response = api.deleteVendorTeamMember(membershipId, vendorTeamDeletion);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AccountsApi->deleteVendorTeamMember: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **membershipId** | **String**|  |
+ **vendorTeamDeletion** | [**VendorTeamDeletion**](VendorTeamDeletion.md)|  |
+
+### Return type
+
+[**AccountMutationResultEnvelope**](AccountMutationResultEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **getAccountPhoto**
 > Uint8List getAccountPhoto(expires, signature, version, owner, webAccountPortal)
 
@@ -808,7 +916,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **listAccountMemberships**
-> AccountMembershipListEnvelope listAccountMemberships(accountPortal, page)
+> AccountMembershipListEnvelope listAccountMemberships(accountPortal, page, search, role)
 
 
 
@@ -825,9 +933,11 @@ import 'package:materyalph_api_client/api.dart';
 final api = MateryalphApiClient().getAccountsApi();
 final String accountPortal = accountPortal_example; // String |
 final int page = 56; // int |
+final String search = search_example; // String |
+final String role = role_example; // String |
 
 try {
-    final response = api.listAccountMemberships(accountPortal, page);
+    final response = api.listAccountMemberships(accountPortal, page, search, role);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling AccountsApi->listAccountMemberships: $e\n');
@@ -840,6 +950,8 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **accountPortal** | **String**|  |
  **page** | **int**|  | [optional]
+ **search** | **String**|  | [optional]
+ **role** | **String**|  | [optional]
 
 ### Return type
 

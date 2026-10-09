@@ -9,6 +9,7 @@ use App\Domain\Catalog\ImageContentValidator;
 use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Inventory\InventoryAccess;
+use App\Domain\Settings\PlatformSettings;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -80,7 +81,7 @@ final class VendorFleetService
     public function uploadImage(Request $request, UploadedFile $file): array
     {
         $organizationId = $this->access->organizationFor($request, [InventoryAccess::VEHICLES_MANAGE]);
-        $image = $this->images->validate($file, (int) config('materyalph.files.max_media_kb', 20480), 'vehicle image');
+        $image = $this->images->validate($file, min((int) config('materyalph.files.max_media_kb', 20480), PlatformSettings::current()->uploadKb('store_media')), 'vehicle image');
         $fileId = $this->files->store($file, 'VENDOR_ORGANIZATION', $organizationId, 'VEHICLE_IMAGE', (int) $request->user()->getKey(), $image['mime']);
         $this->audit->account($request, 'VENDOR_VEHICLE_IMAGE_UPLOADED', 'FILE', $fileId);
 

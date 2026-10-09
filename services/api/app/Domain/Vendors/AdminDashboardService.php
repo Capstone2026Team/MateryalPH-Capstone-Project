@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Vendors;
 
 use App\Domain\Identity\AuthenticationException;
+use App\Domain\Operations\OperationsQueueService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -16,6 +17,7 @@ final class AdminDashboardService
         $scope = $request->attributes->get('account_scope', []);
         $super = ($scope['role'] ?? null) === 'ADMIN_SUPERADMIN';
         $review = $super || in_array('vendor_verification.review', $scope['permissions'] ?? [], true);
+        $audit = in_array('audit.view', $scope['permissions'] ?? [], true);
         $vendors = DB::table('vendor_organizations');
 
         return [
@@ -27,8 +29,10 @@ final class AdminDashboardService
             'active_buyers' => $super ? DB::table('users')->where('account_type', 'BUYER')->where('account_status', 'ACTIVE')->count() : null,
             'pending_document_reviews' => $review ? DB::table('business_documents as d')->join('vendor_organizations as o', 'o.id', '=', 'd.vendor_organization_id')
                 ->whereIn('o.store_verification_status', ['SUBMITTED', 'PENDING_VERIFICATION'])->whereIn('d.status', ['SUBMITTED', 'PENDING_VERIFICATION'])->count() : null,
-            'audit_events' => $super ? DB::table('audit_logs')->count() : null,
-            'can_view_audit' => $super,
+            'audit_events' => $audit ? DB::table('audit_logs')->count() : null,
+            'can_view_audit' => $audit,
+            // Role-specific work queues; each appears only with its own permission (Phase 16 operations home).
+            'queues' => app(OperationsQueueService::class)->queues($scope['permissions'] ?? [], (int) $request->user()?->getKey()),
         ];
     }
 
@@ -36,7 +40,7 @@ final class AdminDashboardService
     public function audit(Request $request): array
     {
         $scope = $request->attributes->get('account_scope', []);
-        if (($scope['role'] ?? null) !== 'ADMIN_SUPERADMIN') {
+        if (! in_array('audit.view', $scope['permissions'] ?? [], true)) {
             throw new AuthenticationException('PERMISSION_DENIED', 'Your role cannot view platform audit tracking.', 403);
         }
         // Explicit safe projection: never expose before/after payloads, secrets, IPs or private evidence.

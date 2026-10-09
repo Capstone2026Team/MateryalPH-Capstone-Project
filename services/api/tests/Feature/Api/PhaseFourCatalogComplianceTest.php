@@ -563,6 +563,30 @@ final class PhaseFourCatalogComplianceTest extends TestCase
             ->assertJsonMissingPath('meta.status_counts.DRAFT')->assertJsonPath('data.0.public_availability', 'OUT_OF_STOCK');
     }
 
+    public function test_monitoring_groups_filter_before_pagination_and_keep_scoped_counts(): void
+    {
+        [, $owner] = $this->activeStore();
+        $this->signInVendor($owner);
+        $active = $this->publishableListing('CONCRETE_HOLLOW_BLOCK', 'CHB-GROUP', ['thickness_mm' => '100']);
+        $this->publish($active)->assertOk();
+        DB::table('inventory_items')->whereIn('listing_variant_id', DB::table('listing_variants')->where('vendor_listing_id', $active)->pluck('id'))->update(['quantity_on_hand' => 0]);
+        $attention = $this->createListing('Review material', 'REVIEW-GROUP');
+        DB::table('vendor_listings')->where('id', $attention)->update(['status' => 'PENDING_ADMIN_REVIEW']);
+        for ($index = 0; $index < 21; $index++) {
+            $this->createListing('Draft '.$index, 'DRAFT-GROUP-'.$index);
+        }
+        $this->getJson('/api/v1/vendor/catalog/listings?group=OUT_OF_STOCK')->assertOk()
+            ->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $active)->assertJsonPath('meta.total', 1)->assertJsonPath('meta.status_counts.DRAFT', 21);
+        $this->getJson('/api/v1/vendor/catalog/listings?group=NEEDS_ATTENTION')->assertOk()
+            ->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $attention)->assertJsonPath('meta.total', 1);
+        $this->getJson('/api/v1/vendor/catalog/listings?group=NEEDS_ATTENTION&q=missing')->assertOk()->assertJsonCount(0, 'data');
+        $this->getJson('/api/v1/vendor/catalog/listings?group=INVALID')->assertUnprocessable();
+        [, $otherOwner] = $this->activeStore('Other monitoring store');
+        $this->signInVendor($otherOwner);
+        $this->getJson('/api/v1/vendor/catalog/listings?group=OUT_OF_STOCK')->assertOk()->assertJsonCount(0, 'data');
+        $this->getJson('/api/v1/vendor/catalog/listings?group=NEEDS_ATTENTION')->assertOk()->assertJsonCount(0, 'data');
+    }
+
     public function test_only_never_published_listings_can_be_deleted_and_their_history_is_kept(): void
     {
         [$organization, $owner] = $this->activeStore();

@@ -29,7 +29,7 @@ final class ManageVendorTeam
         DB::transaction(function () use ($request, $id, $input): void {
             $organizationId = $request->attributes->get('account_scope')['organization_id'];
             $scope = $this->authority->lock($request, $organizationId);
-            $target = VendorMembership::query()->whereKey($id)->where('vendor_organization_id', $scope['organization_id'])->lockForUpdate()->first();
+            $target = VendorMembership::query()->whereNull('deleted_at')->whereKey($id)->where('vendor_organization_id', $scope['organization_id'])->lockForUpdate()->first();
             if ($target === null) {
                 throw new AuthenticationException('RESOURCE_NOT_FOUND', 'This team member is unavailable.', 404);
             }

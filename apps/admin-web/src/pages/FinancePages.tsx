@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, RefreshCw } from 'lucide-react'
 import {
@@ -6,16 +6,20 @@ import {
 } from '@materyalph/web-ui'
 import {
   approveFeeCredit, approveStatement, draftStatements, getAccumulator, listAccumulators, listChannelFees, listPayments, listReviewItems, listStatements, resolveOverlap, resolveReviewItem,
-  runReconciliation, type ChannelFeeVersion, type FinanceReviewItem, type Page, type WithholdingAccumulatorDetail, type WithholdingAccumulatorView,
+  runReconciliation, type ChannelFeeVersion, type FinanceReviewItem, type WithholdingAccumulatorDetail, type WithholdingAccumulatorView,
 } from '../lib/finance-api'
 import { readableVerificationError } from '../lib/vendor-verification-api'
 import { record, records, type JsonRecord } from '../lib/admin-format'
 import { AdminShell, ErrorState, LoadingState, PageHeader } from './PhaseThreeAdminPages'
+import { Paged, Table } from '../components/OperationsKit'
+import { FinanceKpiPanel, RemittanceQueue, TaxAdjustments, TaxEvidenceQueue } from './FinanceOperationsPanels'
+import { usePaged } from '../lib/operations-hooks'
 
-type View = 'payments' | 'queue' | 'withholding' | 'statements' | 'channels'
+type View = 'overview' | 'payments' | 'queue' | 'remittances' | 'evidence' | 'adjustments' | 'threshold' | 'overlaps' | 'withholding' | 'statements' | 'overdue' | 'channels'
 const VIEWS: { value: View; label: string }[] = [
-  { value: 'queue', label: 'Work queue' }, { value: 'payments', label: 'Payment log' }, { value: 'withholding', label: 'Withholding threshold' },
-  { value: 'statements', label: 'Commission statements' }, { value: 'channels', label: 'Channel fees' },
+  { value: 'queue', label: 'Work queue' }, { value: 'overview', label: 'Overview' }, { value: 'payments', label: 'Payment status' }, { value: 'remittances', label: 'Remittance reconciliation' },
+  { value: 'evidence', label: 'Tax evidence' }, { value: 'adjustments', label: 'Tax adjustments' }, { value: 'threshold', label: 'Threshold reviews' }, { value: 'overlaps', label: 'Overlap reviews' },
+  { value: 'withholding', label: 'Withholding threshold' }, { value: 'statements', label: 'Fee approval' }, { value: 'overdue', label: 'Overdue debt' }, { value: 'channels', label: 'Channel fees' },
 ]
 
 /**
@@ -38,43 +42,19 @@ export function AdminFinancePage() {
       actions={<><DemoLabel /><Button variant="secondary" disabled={busy} onClick={() => void reconcile()}><RefreshCw size={16} aria-hidden="true" />{busy ? 'Reconciling…' : 'Run reconciliation'}</Button></>} />
     {notice && <StatusMessage tone={notice.tone}>{notice.text}</StatusMessage>}
     <FilterChips label="Finance view" chips={VIEWS} value={view} onChange={value => setParams({ view: value })} />
+    {view === 'overview' && <FinanceKpiPanel />}
     {view === 'queue' && <ReviewQueue />}
+    {view === 'remittances' && <RemittanceQueue />}
+    {view === 'evidence' && <TaxEvidenceQueue />}
+    {view === 'adjustments' && <TaxAdjustments />}
+    {view === 'threshold' && <ReviewQueue kind="THRESHOLD_ADJUSTMENT_REQUIRED" title="FIN-04A threshold reviews" empty="No threshold reviews. A late crossing or a corrected base opens one here." />}
+    {view === 'overlaps' && <ReviewQueue kind="OVERLAP_UNRESOLVED" title="FIN-04A outside-platform overlap reviews" empty="No unresolved overlaps. Overlaps with outside-platform withholding are recorded on the accumulator." />}
     {view === 'payments' && <PaymentLog />}
     {view === 'withholding' && <Accumulators />}
     {view === 'statements' && <Statements />}
+    {view === 'overdue' && <Statements overdue />}
     {view === 'channels' && <ChannelFees />}
   </div></AdminShell>
-}
-
-function usePaged<T>(load: (page: number) => Promise<Page<T>>, deps: unknown[]) {
-  const [page, setPage] = useState(1)
-  const [data, setData] = useState<Page<T> | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [attempt, setAttempt] = useState(0)
-  const reload = useCallback(() => setAttempt(value => value + 1), [])
-  useEffect(() => {
-    let active = true
-    setData(null); setError(null)
-    load(page).then(value => { if (active) setData(value) }).catch(async cause => { const text = await readableVerificationError(cause); if (active) setError(text) })
-    return () => { active = false }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- reload on page, attempt and caller filters only.
-  }, [page, attempt, ...deps])
-  return { page, setPage, data, error, reload }
-}
-
-function Paged<T>({ state, empty, children }: { state: ReturnType<typeof usePaged<T>>; empty: string; children: (items: T[]) => ReactNode }) {
-  if (state.error) return <ErrorState message={state.error} onRetry={state.reload} />
-  if (!state.data) return <LoadingState />
-  if (state.data.items.length === 0) return <p className="rounded-surface border border-dashed border-border-default bg-surface-primary p-8 text-center text-sm text-text-secondary">{empty}</p>
-  return <div className="grid gap-4">{children(state.data.items)}
-    {(state.page > 1 || state.data.hasMore) && <div className="flex items-center justify-between gap-3"><Button variant="secondary" disabled={state.page === 1} onClick={() => state.setPage(state.page - 1)}>Previous</Button><span className="text-sm text-text-secondary">Page {state.page} · {state.data.total} total</span><Button variant="secondary" disabled={!state.data.hasMore} onClick={() => state.setPage(state.page + 1)}>Next</Button></div>}
-  </div>
-}
-
-function Table({ caption, headers, children }: { caption: string; headers: string[]; children: ReactNode }) {
-  return <div className="min-w-0 overflow-x-auto rounded-surface border border-border-default bg-surface-primary"><table className="w-full min-w-[46rem] border-collapse text-left text-sm"><caption className="sr-only">{caption}</caption>
-    <thead className="bg-surface-canvas text-xs uppercase tracking-wide text-text-secondary"><tr>{headers.map(header => <th key={header} scope="col" className="px-4 py-3 font-semibold">{header}</th>)}</tr></thead>
-    <tbody className="divide-y divide-border-default">{children}</tbody></table></div>
 }
 
 const KIND_LABELS: Record<string, string> = {
@@ -83,13 +63,13 @@ const KIND_LABELS: Record<string, string> = {
   FEE_CREDIT_PROPOSAL: 'Fee credit awaiting approval', PAID_FEE_CREDIT_PAYABLE: 'Credit on paid statement',
 }
 
-function ReviewQueue() {
+function ReviewQueue({ kind, title = 'Finance work queue', empty }: { kind?: string; title?: string; empty?: string }) {
   const [state, setStateFilter] = useState<'OPEN' | 'RESOLVED'>('OPEN')
-  const paged = usePaged(page => listReviewItems(page, state), [state])
+  const paged = usePaged(page => listReviewItems(page, state, kind), [state, kind])
   return <section className="grid gap-4" aria-labelledby="queue-heading">
-    <div className="flex flex-wrap items-center justify-between gap-3"><h2 id="queue-heading" className="text-lg font-semibold">Finance work queue</h2>
+    <div className="flex flex-wrap items-center justify-between gap-3"><h2 id="queue-heading" className="text-lg font-semibold">{title}</h2>
       <FilterChips label="Item state" chips={[{ value: 'OPEN', label: 'Open' }, { value: 'RESOLVED', label: 'Resolved' }]} value={state} onChange={value => setStateFilter(value as 'OPEN' | 'RESOLVED')} /></div>
-    <Paged state={paged} empty={state === 'OPEN' ? 'No open finance work. Mismatches, late captures, overlap reviews and overdue statements appear here.' : 'No resolved items yet.'}>
+    <Paged state={paged} empty={state === 'OPEN' ? (empty ?? 'No open finance work. Mismatches, late captures, overlap reviews and overdue statements appear here.') : 'No resolved items yet.'}>
       {items => <ul className="grid gap-3">{items.map(item => <ReviewItemRow key={item.id} item={item} onDone={paged.reload} />)}</ul>}
     </Paged>
   </section>
@@ -226,9 +206,9 @@ function OverlapForm({ detail, onSaved }: { detail: WithholdingAccumulatorDetail
   </form>
 }
 
-function Statements() {
-  const [state, setStateFilter] = useState('DRAFT')
-  const paged = usePaged(page => listStatements(page, state || undefined), [state])
+function Statements({ overdue = false }: { overdue?: boolean }) {
+  const [state, setStateFilter] = useState(overdue ? '' : 'DRAFT')
+  const paged = usePaged(page => listStatements(page, state || undefined, overdue), [state, overdue])
   const [message, setMessage] = useState<{ tone: 'success' | 'error'; text: string } | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
   async function draft() {
@@ -242,7 +222,7 @@ function Statements() {
     catch (cause) { setMessage({ tone: 'error', text: await readableVerificationError(cause) }) } finally { setBusy(null) }
   }
   return <section className="grid gap-4" aria-labelledby="statements-heading">
-    <div className="flex flex-wrap items-center justify-between gap-3"><h2 id="statements-heading" className="text-lg font-semibold">Commission statements</h2>
+    <div className="flex flex-wrap items-center justify-between gap-3"><h2 id="statements-heading" className="text-lg font-semibold">{overdue ? 'Overdue commission debt' : 'Commission statements'}</h2>
       <div className="flex flex-wrap items-center gap-3"><FilterChips label="Statement state" chips={[{ value: 'DRAFT', label: 'Draft' }, { value: 'ISSUED', label: 'Issued' }, { value: 'PARTIALLY_PAID', label: 'Partially paid' }, { value: 'PAID', label: 'Paid' }]} value={state} onChange={setStateFilter} />
         <Button variant="secondary" disabled={busy !== null} onClick={() => void draft()}>{busy === 'draft' ? 'Drafting…' : 'Draft last month'}</Button></div></div>
     <p className="text-sm text-text-secondary">Drafted automatically at 00:05 on the first (Asia/Manila); approve by the third. Due on the fifteenth, or twelve days after a late issue.</p>

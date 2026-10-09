@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Reviews;
 
+use App\Domain\Settings\PlatformSettings;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
@@ -117,14 +118,15 @@ final class ReviewPresenter
         };
     }
 
-    /** @return list<array{id: string, url: string, expires_at: string}> */
+    /** @return list<array{id: string, url: string, expires_at: string, content_type: string, byte_size: int}> */
     public function media(object $review, string $audience): array
     {
         $expires = now()->addMinutes(self::MEDIA_TTL_MINUTES);
 
-        return DB::table('review_media')->where('review_id', $review->id)->whereNull('retired_at')->whereNotNull('file_id')->orderBy('sort_order')->pluck('id')
-            ->map(static fn (mixed $id): array => ['id' => (string) $id, 'url' => URL::temporarySignedRoute(self::MEDIA_ROUTES[$audience], $expires, ['reviewId' => $review->id, 'mediaId' => (string) $id]),
-                'expires_at' => $expires->toIso8601String()])->all();
+        return DB::table('review_media as m')->join('files as f', 'f.id', '=', 'm.file_id')->where('m.review_id', $review->id)->whereNull('m.retired_at')
+            ->where('f.scan_state', 'CLEAN')->orderBy('m.sort_order')->get(['m.id', 'f.content_type', 'f.byte_size'])
+            ->map(static fn (object $media): array => ['id' => (string) $media->id, 'url' => URL::temporarySignedRoute(self::MEDIA_ROUTES[$audience], $expires, ['reviewId' => $review->id, 'mediaId' => (string) $media->id]),
+                'expires_at' => $expires->toIso8601String(), 'content_type' => (string) $media->content_type, 'byte_size' => (int) $media->byte_size])->all();
     }
 
     public function visibility(object $review): string
@@ -162,7 +164,7 @@ final class ReviewPresenter
             'revealed_at' => $window === null ? null : self::iso($window->revealed_at),
             'reveal_reason' => $window?->reveal_reason,
             'withheld_for_dispute' => ReviewService::disputeActive((string) $order->id),
-            'rules' => ['window_days' => ReviewRules::WINDOW_DAYS, 'edit_hours' => ReviewRules::EDIT_HOURS, 'comment_max' => ReviewRules::COMMENT_MAX, 'media_max' => ReviewRules::MEDIA_MAX,
+            'rules' => ['window_days' => (int) PlatformSettings::current()->field('reviews.windows', 'rating_window_days'), 'edit_hours' => (int) PlatformSettings::current()->field('reviews.windows', 'edit_hours'), 'comment_max' => ReviewRules::COMMENT_MAX, 'media_max' => ReviewRules::MEDIA_MAX, 'photo_max_bytes' => ReviewRules::photoMaxBytes(), 'video_max_bytes' => ReviewRules::videoMaxBytes(),
                 'blind_reveal' => 'Ratings stay hidden until both parties submit or the 14-day window ends.'],
         ];
     }

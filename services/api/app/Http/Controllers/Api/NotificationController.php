@@ -6,12 +6,17 @@ namespace App\Http\Controllers\Api;
 
 use App\Domain\Authorization\AccountAccess;
 use App\Domain\Identity\AuthenticationException;
+use App\Domain\Notifications\NotificationBroadcast;
+use App\Domain\Notifications\NotificationChannel;
 use App\Domain\Notifications\NotificationPolicy;
 use App\Domain\Notifications\NotificationService;
+use App\Domain\Notifications\ReadNotifications;
+use App\Domain\Notifications\VendorNavigationUpdates;
 use App\Http\ApiResponse;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -19,6 +24,11 @@ use Illuminate\Validation\Rule;
 
 final class NotificationController extends Controller
 {
+    public function navigationUpdates(Request $request, VendorNavigationUpdates $updates): JsonResponse
+    {
+        return ApiResponse::success($updates->summary($request));
+    }
+
     public function index(Request $request, NotificationService $service): JsonResponse
     {
         $input = $request->validate(['cursor' => ['nullable', 'uuid']]);
@@ -27,10 +37,47 @@ final class NotificationController extends Controller
         return ApiResponse::success($page['items'], ['next_cursor' => $page['next_cursor']]);
     }
 
-    public function read(Request $request, string $noticeId): JsonResponse
+    public function readAll(Request $request, ReadNotifications $read): JsonResponse
+    {
+        $input = $request->validate(['through_id' => ['required', 'uuid'], 'title' => ['sometimes', 'string', 'max:255'], 'category' => ['sometimes', 'string', 'max:64']]);
+
+        return ApiResponse::success($read->filtered($request, $input['through_id'], $input['title'] ?? null, $input['category'] ?? null));
+    }
+
+    public function unreadCount(Request $request, NotificationService $service): JsonResponse
+    {
+        return ApiResponse::success(['unread_count' => $service->unreadCount($request->user())]);
+    }
+
+    public function realtime(Request $request, NotificationChannel $channel): JsonResponse
+    {
+        return ApiResponse::success(['inbox_channel' => $channel->name($request->user()), 'enabled' => config('broadcasting.default') === 'reverb', 'key' => config('broadcasting.connections.reverb.key'),
+            'host' => config('reverb.public.host') ?: $request->getHost(), 'port' => config('reverb.public.port'), 'scheme' => config('reverb.public.scheme')]);
+    }
+
+    public function authorizeChannel(Request $request, NotificationChannel $channel): JsonResponse
+    {
+        $input = $request->validate(['socket_id' => ['required', 'regex:/^\d+\.\d+$/'], 'channel_name' => ['required', 'string', 'max:240']]);
+        $parts = explode('.', $input['channel_name']);
+        abort_unless(count($parts) === 2 && $parts[0] === 'private-notifications' && $channel->join($request->user(), $parts[1]), 403);
+        if (config('broadcasting.default') !== 'reverb') {
+            return ApiResponse::error('REALTIME_UNAVAILABLE', 'Notifications synchronize automatically through REST while realtime is unavailable.', 503);
+        }
+        $broadcaster = Broadcast::connection('reverb');
+        $broadcaster->channel('notifications.{epoch}', NotificationChannel::class, ['guards' => ['api']]);
+
+        return ApiResponse::success($broadcaster->auth($request));
+    }
+
+    public function read(Request $request, string $noticeId, NotificationBroadcast $broadcast): JsonResponse
     {
         $notice = $this->notice($request, $noticeId);
-        DB::table('notifications')->where('id', $notice->id)->whereNull('read_at')->update(['read_at' => now(), 'updated_at' => now()]);
+        DB::transaction(function () use ($request, $notice, $broadcast): void {
+            $changed = DB::table('notifications')->where('id', $notice->id)->whereNull('read_at')->update(['read_at' => now(), 'updated_at' => now()]);
+            if ($changed > 0) {
+                $broadcast->publish($request->user());
+            }
+        });
 
         return ApiResponse::success(['read' => true]);
     }
@@ -56,13 +103,16 @@ final class NotificationController extends Controller
         return ApiResponse::success($items, ['web_push_approved' => (bool) config('notifications.web_push_approved')]);
     }
 
-    public function updatePreference(Request $request): JsonResponse
+    public function updatePreference(Request $request, NotificationBroadcast $broadcast): JsonResponse
     {
         $input = $request->validate(['category' => ['required', Rule::in(NotificationPolicy::CATEGORIES)], 'in_app' => ['required', 'boolean'], 'email' => ['required', 'boolean'], 'push' => ['required', 'boolean']]);
         if (NotificationPolicy::mandatory($input['category']) && (! $input['in_app'] || ! $input['email'] || ! $input['push'])) {
             throw new AuthenticationException('MANDATORY_NOTIFICATION', 'Security, legal, suspension, payment, refund, dispute and threshold notices must stay enabled.', 422);
         }
-        DB::table('notification_preferences')->upsert([['id' => (string) Str::uuid7(), 'user_id' => $request->user()->getKey(), ...$input, 'created_at' => now(), 'updated_at' => now()]], ['user_id', 'category'], ['in_app', 'email', 'push', 'updated_at']);
+        DB::transaction(function () use ($request, $input, $broadcast): void {
+            DB::table('notification_preferences')->upsert([['id' => (string) Str::uuid7(), 'user_id' => $request->user()->getKey(), ...$input, 'created_at' => now(), 'updated_at' => now()]], ['user_id', 'category'], ['in_app', 'email', 'push', 'updated_at']);
+            $broadcast->publish($request->user());
+        });
 
         return $this->preferences($request);
     }

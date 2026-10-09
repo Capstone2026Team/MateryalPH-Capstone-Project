@@ -12,6 +12,7 @@ use App\Domain\Identity\TokenSessionService;
 use App\Domain\Messaging\BuyerInboxChannel;
 use App\Domain\Messaging\ConversationAccess;
 use App\Domain\Messaging\ConversationBroadcast;
+use App\Domain\Messaging\ConversationService;
 use App\Domain\Messaging\FulfillmentThreadService;
 use App\Domain\Messaging\QuotationService;
 use App\Domain\Vendors\AddressGeocoder;
@@ -64,6 +65,76 @@ final class PhaseNineMessagingTest extends TestCase
     private function inquiry(string $vendor, string $variant): string
     {
         return $this->postJson('/api/v1/buyers/conversations', ['vendor_id' => $vendor, 'listing_variant_id' => $variant], ['Idempotency-Key' => (string) Str::uuid7()])->assertCreated()->json('data.id');
+    }
+
+    public function test_vendor_fulfillment_list_is_buyer_scoped_paginated_and_preserves_closed_history(): void
+    {
+        [$store, $owner, $listing] = $this->pickupStore('Fulfillment list');
+        [$buyer, $firstOrder] = $this->pickupOrder($store, $listing);
+        $sales = $this->inquiry($store->id, $this->variantIds($listing)[0]);
+        $endpoint = '/api/v1/vendor/conversations/'.$sales.'/fulfillment-conversations';
+        $this->signInStoreMember($owner);
+        $before = DB::table('conversations')->count();
+        $this->getJson($endpoint)->assertOk()->assertJsonCount(0, 'data.items');
+        self::assertSame($before, DB::table('conversations')->count());
+        $active = [];
+        $history = [];
+        for ($i = 0; $i < 28; $i++) {
+            $order = $i === 0 ? $firstOrder : $this->pickupOrder($store, $listing, [['variant' => 0, 'quantity' => '1']], $buyer)[1];
+            DB::table('orders')->where('id', $order)->update(['order_state' => 'READY_FOR_PICKUP', 'procurement_type' => $i === 1 ? 'PROJECT_BASED' : 'ITEM_BASED']);
+            $id = app(FulfillmentThreadService::class)->ensureForMilestone($order);
+            if ($i < 26) {
+                $active[] = $id;
+                DB::table('conversations')->where('id', $id)->update(['updated_at' => now()->subDay()]);
+            } else {
+                $state = $i === 26 ? 'COMPLETED' : 'CANCELLED';
+                DB::table('orders')->where('id', $order)->update(['order_state' => $state]);
+                $history[] = $id;
+            }
+        }
+        rsort($active);
+        rsort($history);
+        // Other buyers and other vendors never enter this account-linked list.
+        [, $otherBuyerOrder] = $this->pickupOrder($store, $listing);
+        [$otherStore, $otherOwner, $otherListing] = $this->pickupStore('Other fulfillment store');
+        [, $otherStoreOrder] = $this->pickupOrder($otherStore, $otherListing, buyer: $buyer);
+        foreach ([$otherBuyerOrder, $otherStoreOrder] as $order) {
+            DB::table('orders')->where('id', $order)->update(['order_state' => 'READY_FOR_PICKUP']);
+            app(FulfillmentThreadService::class)->ensureForMilestone($order);
+        }
+        $this->signInStoreMember($owner);
+        $this->getJson('/api/v1/vendor/conversations/'.$sales)->assertOk()->assertJsonPath('data.conversation.can_list_fulfillment_conversations', true);
+        $first = $this->getJson($endpoint)->assertOk()->assertJsonCount(25, 'data.items')->assertJsonPath('data.has_more', true)->json('data.items');
+        self::assertSame(array_slice($active, 0, 25), array_column($first, 'conversation_id'));
+        $second = $this->getJson($endpoint.'?page=2')->assertOk()->assertJsonCount(3, 'data.items')->assertJsonPath('data.has_more', false)->json('data.items');
+        self::assertSame([$active[25], ...$history], array_column($second, 'conversation_id'));
+        self::assertFalse($second[0]['read_only']);
+        self::assertTrue($second[1]['read_only']);
+        self::assertTrue($second[2]['read_only']);
+        $this->getJson($endpoint.'?page=0')->assertUnprocessable();
+        $this->getJson('/api/v1/vendor/conversations/'.$active[0].'/fulfillment-conversations')->assertForbidden();
+        foreach ($history as $id) {
+            $this->getJson('/api/v1/vendor/conversations/'.$id)->assertOk()->assertJsonPath('data.conversation.read_only', true);
+            $this->postJson('/api/v1/vendor/conversations/'.$id.'/messages', ['body' => 'Closed', 'client_message_id' => (string) Str::uuid7()])->assertConflict();
+        }
+        $manager = $this->teamMember($store, 'STORE_MANAGER');
+        $this->signInStoreMember($manager);
+        $this->getJson($endpoint)->assertOk();
+        DB::table('vendor_memberships')->where('user_id', $manager->id)->update(['role' => 'STORE_STAFF']);
+        $this->getJson($endpoint)->assertNotFound();
+        $staff = $this->teamMember($store, 'STORE_STAFF');
+        DB::table('conversations')->where('id', $sales)->update(['handler_user_id' => $staff->id]);
+        app(ConversationService::class)->participant($sales, (int) $staff->id, 'STORE_STAFF');
+        $this->signInStoreMember($staff);
+        $this->getJson('/api/v1/vendor/conversations/'.$sales)->assertOk()->assertJsonPath('data.conversation.can_list_fulfillment_conversations', false);
+        $this->getJson($endpoint)->assertForbidden();
+        $this->signInStoreMember($this->teamMember($store, 'FULFILLMENT'));
+        $this->getJson($endpoint)->assertNotFound();
+        $this->signInStoreMember($otherOwner);
+        $this->getJson($endpoint)->assertNotFound();
+        $this->signInBuyer($buyer);
+        $this->getJson('/api/v1/buyers/conversations/'.$sales)->assertOk()->assertJsonPath('data.conversation.can_list_fulfillment_conversations', false);
+        $this->getJson('/api/v1/buyers/conversations/'.$sales.'/fulfillment-conversations')->assertNotFound();
     }
 
     public function test_store_chat_can_start_later_quotations_without_mutating_accepted_terms_or_replaying_into_another_order(): void

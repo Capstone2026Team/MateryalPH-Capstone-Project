@@ -12,6 +12,8 @@ Name | Type | Description | Notes
 **editHours** | **int** |  |
 **commentMax** | **int** |  |
 **mediaMax** | **int** |  |
+**photoMaxBytes** | **int** |  | [optional]
+**videoMaxBytes** | **int** |  | [optional]
 **blindReveal** | **String** |  |
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

@@ -151,18 +151,18 @@ final class ReviewQueries
         $media = $allowed ? DB::table('review_media')->where('review_id', $review->id)->where('id', ReviewAccess::uuid($mediaId))->whereNull('retired_at')->first() : null;
         $file = $media === null ? null : DB::table('files')->where('id', $media->file_id)->where('owner_type', 'ORDER')->where('owner_id', $review->order_id)->where('visibility', 'PRIVATE')->where('scan_state', 'CLEAN')->first();
         if ($file === null) {
-            throw new AuthenticationException('FILE_NOT_FOUND', 'This photo is unavailable.', 404);
+            throw new AuthenticationException('FILE_NOT_FOUND', 'This attachment is unavailable.', 404);
         }
         $metadata = json_decode((string) ($file->metadata ?? '{}'), true) ?: [];
         $stream = Storage::disk(is_string($metadata['disk'] ?? null) ? $metadata['disk'] : $this->store->privateDisk())->readStream($file->object_key);
         if (! is_resource($stream)) {
-            throw new AuthenticationException('FILE_UNAVAILABLE', 'The photo is temporarily unavailable.', 503);
+            throw new AuthenticationException('FILE_UNAVAILABLE', 'The attachment is temporarily unavailable.', 503);
         }
 
         return response()->streamDownload(static function () use ($stream): void {
             fpassthru($stream);
             fclose($stream);
-        }, 'review-photo', ['Content-Type' => $file->content_type, 'Cache-Control' => 'private, no-store', 'X-Content-Type-Options' => 'nosniff', 'Content-Disposition' => 'inline']);
+        }, 'review-media', ['Content-Type' => $file->content_type, 'Cache-Control' => 'private, no-store', 'X-Content-Type-Options' => 'nosniff', 'Content-Disposition' => 'inline']);
     }
 
     private function vendorMayView(User $user, object $review): bool

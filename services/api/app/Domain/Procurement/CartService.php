@@ -57,6 +57,36 @@ final class CartService
     }
 
     /**
+     * Preview the selected product before it is added to the cart. Use the Buyer's saved delivery
+     * destination and current eligible public offer; never mutate lines, reserve stock or confirm a fee.
+     *
+     * @param  array<string, mixed>  $input
+     * @return array<string, mixed>
+     */
+    public function previewDelivery(Request $request, array $input, DeliveryPreviewService $delivery): array
+    {
+        $buyerId = $this->profiles->idFor($request);
+        $offer = $this->offerQuery($this->offers->anywhere())->where('v.id', $input['listing_variant_id'])
+            ->addSelect(['v.weight_kg', 'v.length_cm', 'v.width_cm', 'v.height_cm'])->first();
+        if ($offer === null || $offer->vacation_mode) {
+            throw new AuthenticationException('LISTING_UNAVAILABLE', 'This product is no longer available. Refresh to see current offers.', 409);
+        }
+        if (! in_array('DELIVERY', self::fulfillmentOptions((string) $offer->fulfillment_method), true)) {
+            throw new AuthenticationException('DELIVERY_NOT_OFFERED', 'This store does not offer Site Delivery.', 422);
+        }
+        $quantity = $this->quantity($input['quantity'], (int) $offer->unit_precision);
+        $this->assertAvailable($quantity, (string) $offer->available);
+        $load = [];
+        foreach (['weight_kg', 'length_cm', 'width_cm', 'height_cm'] as $field) {
+            $load[$field] = $offer->{$field} === null ? null : (string) $offer->{$field};
+        }
+
+        return $delivery->preview((string) $offer->organization_id, $this->destination($this->cart($buyerId)), [
+            ['id' => (string) $offer->variant_id, 'quantity' => $quantity, 'load' => $load],
+        ]);
+    }
+
+    /**
      * @param  array<string, mixed>  $input
      * @return array<string, mixed>
      */

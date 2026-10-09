@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Domain\Procurement\CartService;
 use App\Domain\Procurement\CheckoutPreviewService;
+use App\Domain\Procurement\DeliveryPreviewService;
 use App\Http\ApiResponse;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
@@ -84,5 +85,15 @@ final class BuyerCartController extends Controller
         $input = $request->validate(['request_version' => ['sometimes', 'nullable', 'string', 'regex:/^[A-Za-z0-9_.:-]{1,64}$/']]);
 
         return ApiResponse::success($preview->preview($request, $input));
+    }
+
+    public function deliveryPreview(Request $request, CartService $carts, DeliveryPreviewService $delivery): JsonResponse
+    {
+        $input = $request->validate([
+            'listing_variant_id' => ['required', 'uuid'],
+            'quantity' => ['required'],
+        ]);
+
+        return ApiResponse::success($carts->previewDelivery($request, $input, $delivery));
     }
 }

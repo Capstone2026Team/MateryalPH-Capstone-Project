@@ -7,13 +7,16 @@ namespace App\Domain\Reporting;
 use App\Domain\Analytics\AnalyticsDataset;
 use App\Domain\Analytics\AnalyticsRequest;
 use App\Domain\Analytics\AnalyticsWindow;
+use App\Domain\Analytics\Geo\GeoAnalyticsService;
 use App\Domain\Analytics\MaterialsAnalyticsAssembler;
 use App\Domain\Geography\GeographyScopeResolver;
 use App\Domain\Identity\AuthenticationException;
+use App\Domain\Operations\AuditSearchService;
 use App\Domain\Orders\OrderCommercial;
 use App\Domain\Projects\ProjectBudget;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 /** Explicit projection: no provider bodies, contacts, private evidence, stock or tax identifiers. */
 final class DocumentSnapshot
@@ -121,6 +124,22 @@ final class DocumentSnapshot
                     throw new AuthenticationException('EXPORT_TOO_LARGE', 'Narrow the material or date filters and try again.', 422);
                 }
             } while ($cursor !== null);
+        } elseif ($type === 'AUDIT_LOG') {
+            // Safe audit projection only (no before/after payloads); the export itself is audited by the pipeline.
+            if (array_diff(array_keys($filters), ['actor', 'actor_role', 'action', 'resource_type', 'organization_id', 'result', 'correlation_id', 'reason', 'from', 'to']) !== []) {
+                throw new AuthenticationException('EXPORT_FILTER_UNSUPPORTED', 'This filter is not available for audit exports.', 422);
+            }
+            $rows = app(AuditSearchService::class)->exportRows($filters);
+            $versions = ['filters' => $filters, 'latest_event_at' => DB::table('audit_logs')->max('created_at')];
+        } elseif ($type === 'GEO_ANALYTICS') {
+            if (array_diff(array_keys($filters), ['dataset', 'area', 'from', 'to', 'granularity', 'procurement_type', 'category_id', 'material_id', 'fulfillment_method', 'payment_method', 'order_state']) !== []) {
+                throw new AuthenticationException('EXPORT_FILTER_UNSUPPORTED', 'This filter is not available for geographic analytics exports.', 422);
+            }
+            Validator::make($filters, GeoAnalyticsService::rules())->validate();
+            // The same suppressed aggregate the dashboard shows; dataset label and disclosure rule travel with the file.
+            $export = app(GeoAnalyticsService::class)->exportRows($request, $filters);
+            $rows = $export['rows'];
+            $versions = $export['versions'];
         }
 
         return ['rows' => $rows, 'versions' => $versions];

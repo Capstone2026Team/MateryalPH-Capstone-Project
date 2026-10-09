@@ -9,7 +9,8 @@ import { VendorEarningsPage, VendorFinancePage, VendorStatementPage, VendorTrans
 
 vi.mock('../lib/onboarding-api', async original => ({ ...await original<typeof import('../lib/onboarding-api')>(), getVendorOnboarding: vi.fn(), getVendorPrivateFileUrl: vi.fn() }))
 vi.mock('../lib/finance-api', async original => ({ ...await original<typeof import('../lib/finance-api')>(), getFinanceOverview: vi.fn(), updatePhysicalPayments: vi.fn(), listTransactions: vi.fn(),
-  getStatement: vi.fn(), payStatement: vi.fn(), refreshFeePayment: vi.fn(), getEarnings: vi.fn(), exportTransactions: vi.fn() }))
+  getStatement: vi.fn(), payStatement: vi.fn(), refreshFeePayment: vi.fn(), getEarnings: vi.fn(), exportTransactions: vi.fn(),
+  getFinanceReviews: vi.fn(async () => ({ label: 'DEMO — No real funds or BIR filing', statements: [], taxAdjustments: [], evidence: [], openReviews: [] })) }))
 
 function snapshot(permissions: string[]): Awaited<ReturnType<typeof onboarding.getVendorOnboarding>> {
   return ({ stepCompletion: [], lockVersion: 1, requirements: [], drafts: [], organization: { store_name: 'Test Supply' }, welcomeRequired: false, permissions, verification: {}, setup: { status: 'COMPLETED' }, activation: { status: 'ACTIVE', readiness: { ready: true, blockers: [], status: 'READY', ruleVersion: 'test' } }, sections: {} }) as unknown as Awaited<ReturnType<typeof onboarding.getVendorOnboarding>>
@@ -139,4 +140,21 @@ test('threshold panel floors the remaining allowance and states status in text, 
   expect(screen.getByText(/Advisory: 80% of the threshold reached/)).toBeInTheDocument()
   render(<WithholdingStatusBadge status="SUBJECT_PRIOR_YEAR" />)
   expect(screen.getByText('Subject to withholding — prior year above threshold')).toBeInTheDocument()
+})
+
+test('the Owner sees finance review status without reviewer notes or taxpayer identifiers', async () => {
+  vi.mocked(onboarding.getVendorOnboarding).mockResolvedValue(snapshot(['portal.wallet']))
+  vi.mocked(finance.getFinanceOverview).mockResolvedValue(overview())
+  vi.mocked(finance.getFinanceReviews).mockResolvedValue({ label: 'DEMO — No real funds or BIR filing',
+    statements: [{ id: 's1', reference: 'FS-2026-09-0001', period_start: '2026-09-01', period_end: '2026-09-30', due_on: '2026-10-05', state: 'ISSUED', outstanding_centavos: 12000, overdue: true, approved: true }],
+    taxAdjustments: [{ id: 'a1', kind: 'THRESHOLD_CROSSING', state: 'UNDER_REVIEW', order_reference: 'ORD-1', amount_centavos: 2500 }],
+    evidence: [{ id: 'e1', evidence_type: 'SWORN_DECLARATION', review_state: 'PENDING', taxable_year: 2026 }],
+    openReviews: [{ id: 'r1', kind: 'STATEMENT_OVERDUE', label: 'Statement overdue', createdAt: new Date() }] })
+  at('/finance', <VendorFinancePage />)
+  const section = (await screen.findByRole('heading', { name: 'Finance reviews' })).closest('section') as HTMLElement
+  expect(await within(section).findByText('FS-2026-09-0001')).toBeInTheDocument()
+  expect(within(section).getByText('Overdue since 2026-10-05')).toBeInTheDocument()
+  expect(within(section).getByText('Statement overdue')).toBeInTheDocument()
+  expect(within(section).getByText('Under Review')).toBeInTheDocument()
+  expect(within(section).queryByText(/TIN|taxpayer/i)).not.toBeInTheDocument()
 })

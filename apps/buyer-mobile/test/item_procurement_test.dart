@@ -154,45 +154,28 @@ Widget _explore(_Harness h) => ExploreScreen(
 void main() {
   group('Explore dashboard', () {
     testWidgets(
-      'loads without a false zero, then shows one snapshot with scope, time and Vendor listings',
+      'loads categories while keeping only search and radius in the header',
       (tester) async {
         final repository = FakeProcurementRepository()..manualSummary = true;
         final h = await _harness(repository);
         await _pump(tester, _explore(h));
 
-        expect(
-          find.bySemanticsLabel('Nearby Verified Vendors, loading'),
-          findsOneWidget,
-        );
-        expect(
-          find.bySemanticsLabel('Available Products, loading'),
-          findsOneWidget,
-        );
+        expect(find.byType(SkeletonBox), findsWidgets);
         expect(find.text('0'), findsNothing);
 
         repository.summaryCalls.single.complete(summaryFixture());
         await tester.pumpAndSettle();
-        expect(
-          find.bySemanticsLabel('Nearby Verified Vendors: 12'),
-          findsOneWidget,
-        );
-        expect(
-          find.bySemanticsLabel('Available Products: 48 Vendor listings'),
-          findsOneWidget,
-        );
-        expect(
-          find.text('48 Vendor listings', findRichText: true),
-          findsOneWidget,
-        );
+        expect(find.text('Verified Vendors'), findsNothing);
+        expect(find.text('Vendor listings'), findsNothing);
         expect(
           find.textContaining(' · 5 km'),
           findsOneWidget,
           reason: 'The active location and radius stay visible.',
         );
-        expect(find.text('Updated Sep 30, 9:15 AM PHT'), findsOneWidget);
+        expect(find.text('Updated Sep 30, 9:15 AM PHT'), findsNothing);
         expect(
           find.bySemanticsLabel('DEMO — Simulated Marketplace Data'),
-          findsOneWidget,
+          findsNothing,
         );
         expect(
           tester.getSemantics(
@@ -232,19 +215,13 @@ void main() {
         repository.summaryCalls[0].complete(summaryFixture(vendors: 99));
         await tester.pumpAndSettle();
 
-        expect(
-          find.bySemanticsLabel('Nearby Verified Vendors: 3'),
-          findsOneWidget,
-        );
-        expect(
-          find.bySemanticsLabel('Nearby Verified Vendors: 99'),
-          findsNothing,
-        );
+        expect(h.explore.summary?.verifiedVendors, 3);
+        expect(find.textContaining(' · 10 km'), findsOneWidget);
       },
     );
 
     testWidgets(
-      'a failed refresh keeps the earlier counts labelled as stale with a retry',
+      'a failed refresh keeps the catalog labelled as stale with a retry',
       (tester) async {
         final repository = FakeProcurementRepository();
         final h = await _harness(repository);
@@ -258,10 +235,8 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Showing the last successful update'), findsOneWidget);
-        expect(
-          find.bySemanticsLabel('Nearby Verified Vendors: 12'),
-          findsOneWidget,
-        );
+        expect(h.explore.summary?.verifiedVendors, 12);
+        expect(find.text('Roofing Materials'), findsOneWidget);
         expect(find.text('Retry'), findsOneWidget);
       },
     );

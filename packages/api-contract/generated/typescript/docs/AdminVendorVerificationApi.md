@@ -382,7 +382,7 @@ example().catch(console.error);
 
 ## listVendorVerificationQueue
 
-> AdminVendorVerificationQueueEnvelope listVendorVerificationQueue(status, businessType, regionCode, submittedFrom, submittedTo, sort, page)
+> AdminVendorVerificationQueueEnvelope listVendorVerificationQueue(status, businessType, regionCode, submittedFrom, submittedTo, sort, setupStatus, activation, discoverability, blocker, requirementKey, ageDays, expiryDays, page)
 
 
 
@@ -414,8 +414,22 @@ async function example() {
     submittedFrom: 2013-10-20,
     // Date | Inclusive Asia/Manila submission date. (optional)
     submittedTo: 2013-10-20,
-    // 'submitted_asc' | 'submitted_desc' | 'location' (optional)
+    // 'submitted_asc' | 'submitted_desc' | 'location' | 'oldest_pending' (optional)
     sort: sort_example,
+    // 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'CHANGES_REQUIRED' (optional)
+    setupStatus: setupStatus_example,
+    // 'ACTIVE' | 'NOT_ACTIVE' | 'READY' | 'NOT_READY' | 'RESTRICTED' | 'SUSPENDED' (optional)
+    activation: activation_example,
+    // 'DISCOVERABLE' | 'NOT_DISCOVERABLE' (optional)
+    discoverability: discoverability_example,
+    // 'MEDIA' | 'HOURS' | 'DELIVERY' | 'AUTHORITY' | 'TERMS' | 'PROVIDER' (optional)
+    blocker: blocker_example,
+    // string | A requirement awaiting review. (optional)
+    requirementKey: requirementKey_example,
+    // number | Oldest pending requirement at least this many days old. (optional)
+    ageDays: 56,
+    // number | An approved document expires within this many days. (optional)
+    expiryDays: 56,
     // number (optional)
     page: 56,
   } satisfies ListVendorVerificationQueueRequest;
@@ -442,7 +456,14 @@ example().catch(console.error);
 | **regionCode** | `string` | Current PSGC region code or UNASSIGNED. Region options are included in meta.regions. | [Optional] [Defaults to `undefined`] |
 | **submittedFrom** | `Date` | Inclusive Asia/Manila submission date. | [Optional] [Defaults to `undefined`] |
 | **submittedTo** | `Date` | Inclusive Asia/Manila submission date. | [Optional] [Defaults to `undefined`] |
-| **sort** | `submitted_asc`, `submitted_desc`, `location` |  | [Optional] [Defaults to `&#39;submitted_desc&#39;`] [Enum: submitted_asc, submitted_desc, location] |
+| **sort** | `submitted_asc`, `submitted_desc`, `location`, `oldest_pending` |  | [Optional] [Defaults to `&#39;submitted_desc&#39;`] [Enum: submitted_asc, submitted_desc, location, oldest_pending] |
+| **setupStatus** | `NOT_STARTED`, `IN_PROGRESS`, `COMPLETED`, `CHANGES_REQUIRED` |  | [Optional] [Defaults to `undefined`] [Enum: NOT_STARTED, IN_PROGRESS, COMPLETED, CHANGES_REQUIRED] |
+| **activation** | `ACTIVE`, `NOT_ACTIVE`, `READY`, `NOT_READY`, `RESTRICTED`, `SUSPENDED` |  | [Optional] [Defaults to `undefined`] [Enum: ACTIVE, NOT_ACTIVE, READY, NOT_READY, RESTRICTED, SUSPENDED] |
+| **discoverability** | `DISCOVERABLE`, `NOT_DISCOVERABLE` |  | [Optional] [Defaults to `undefined`] [Enum: DISCOVERABLE, NOT_DISCOVERABLE] |
+| **blocker** | `MEDIA`, `HOURS`, `DELIVERY`, `AUTHORITY`, `TERMS`, `PROVIDER` |  | [Optional] [Defaults to `undefined`] [Enum: MEDIA, HOURS, DELIVERY, AUTHORITY, TERMS, PROVIDER] |
+| **requirementKey** | `string` | A requirement awaiting review. | [Optional] [Defaults to `undefined`] |
+| **ageDays** | `number` | Oldest pending requirement at least this many days old. | [Optional] [Defaults to `undefined`] |
+| **expiryDays** | `number` | An approved document expires within this many days. | [Optional] [Defaults to `undefined`] |
 | **page** | `number` |  | [Optional] [Defaults to `undefined`] |
 
 ### Return type

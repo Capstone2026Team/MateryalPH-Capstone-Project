@@ -10,6 +10,8 @@ Name | Type
 `editHours` | number
 `commentMax` | number
 `mediaMax` | number
+`photoMaxBytes` | number
+`videoMaxBytes` | number
 `blindReveal` | string
 
 ## Example
@@ -23,6 +25,8 @@ const example = {
   "editHours": null,
   "commentMax": null,
   "mediaMax": null,
+  "photoMaxBytes": null,
+  "videoMaxBytes": null,
   "blindReveal": null,
 } satisfies ReviewWindowRules
 

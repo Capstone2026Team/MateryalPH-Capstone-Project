@@ -16,6 +16,7 @@ use App\Domain\Orders\OrderActor;
 use App\Domain\Orders\OrderNotifier;
 use App\Domain\Orders\OrderStates;
 use App\Domain\Orders\OrderTransitionService;
+use App\Domain\Settings\PlatformSettings;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -203,7 +204,9 @@ final class ReceiptService
                 report($exception);
             }
         }
-        foreach (['reminder_24h_sent_at' => 24, 'reminder_2h_sent_at' => 2] as $column => $hours) {
+        // The two reminder columns hold the first and second reminders; their offsets are the versioned Platform Setting.
+        $offsets = (array) PlatformSettings::current()->value('reminders.receipt_hours_before');
+        foreach (['reminder_24h_sent_at' => (int) $offsets['first_hours'], 'reminder_2h_sent_at' => (int) $offsets['second_hours']] as $column => $hours) {
             $rows = DB::table('fulfillments as f')->join('orders as o', 'o.id', '=', 'f.order_id')->whereIn('o.order_state', OrderStates::AWAITING_RECEIPT)
                 ->whereNotNull('f.auto_confirm_due_at')->whereNull('f.'.$column)->where('f.auto_confirm_due_at', '>', $now)->where('f.auto_confirm_due_at', '<=', $now->addHours($hours))
                 ->limit($limit)->get(['o.id']);

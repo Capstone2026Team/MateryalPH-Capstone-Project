@@ -6,6 +6,82 @@ part of 'review_media_link.dart';
 // BuiltValueGenerator
 // **************************************************************************
 
+const ReviewMediaLinkContentTypeEnum
+    _$reviewMediaLinkContentTypeEnum_imageSlashJpeg =
+    const ReviewMediaLinkContentTypeEnum._('imageSlashJpeg');
+const ReviewMediaLinkContentTypeEnum
+    _$reviewMediaLinkContentTypeEnum_imageSlashPng =
+    const ReviewMediaLinkContentTypeEnum._('imageSlashPng');
+const ReviewMediaLinkContentTypeEnum
+    _$reviewMediaLinkContentTypeEnum_videoSlashMp4 =
+    const ReviewMediaLinkContentTypeEnum._('videoSlashMp4');
+const ReviewMediaLinkContentTypeEnum
+    _$reviewMediaLinkContentTypeEnum_videoSlashQuicktime =
+    const ReviewMediaLinkContentTypeEnum._('videoSlashQuicktime');
+
+ReviewMediaLinkContentTypeEnum _$reviewMediaLinkContentTypeEnumValueOf(
+    String name) {
+  switch (name) {
+    case 'imageSlashJpeg':
+      return _$reviewMediaLinkContentTypeEnum_imageSlashJpeg;
+    case 'imageSlashPng':
+      return _$reviewMediaLinkContentTypeEnum_imageSlashPng;
+    case 'videoSlashMp4':
+      return _$reviewMediaLinkContentTypeEnum_videoSlashMp4;
+    case 'videoSlashQuicktime':
+      return _$reviewMediaLinkContentTypeEnum_videoSlashQuicktime;
+    default:
+      throw ArgumentError(name);
+  }
+}
+
+final BuiltSet<ReviewMediaLinkContentTypeEnum>
+    _$reviewMediaLinkContentTypeEnumValues = BuiltSet<
+        ReviewMediaLinkContentTypeEnum>(const <ReviewMediaLinkContentTypeEnum>[
+  _$reviewMediaLinkContentTypeEnum_imageSlashJpeg,
+  _$reviewMediaLinkContentTypeEnum_imageSlashPng,
+  _$reviewMediaLinkContentTypeEnum_videoSlashMp4,
+  _$reviewMediaLinkContentTypeEnum_videoSlashQuicktime,
+]);
+
+Serializer<ReviewMediaLinkContentTypeEnum>
+    _$reviewMediaLinkContentTypeEnumSerializer =
+    _$ReviewMediaLinkContentTypeEnumSerializer();
+
+class _$ReviewMediaLinkContentTypeEnumSerializer
+    implements PrimitiveSerializer<ReviewMediaLinkContentTypeEnum> {
+  static const Map<String, Object> _toWire = const <String, Object>{
+    'imageSlashJpeg': 'image/jpeg',
+    'imageSlashPng': 'image/png',
+    'videoSlashMp4': 'video/mp4',
+    'videoSlashQuicktime': 'video/quicktime',
+  };
+  static const Map<Object, String> _fromWire = const <Object, String>{
+    'image/jpeg': 'imageSlashJpeg',
+    'image/png': 'imageSlashPng',
+    'video/mp4': 'videoSlashMp4',
+    'video/quicktime': 'videoSlashQuicktime',
+  };
+
+  @override
+  final Iterable<Type> types = const <Type>[ReviewMediaLinkContentTypeEnum];
+  @override
+  final String wireName = 'ReviewMediaLinkContentTypeEnum';
+
+  @override
+  Object serialize(
+          Serializers serializers, ReviewMediaLinkContentTypeEnum object,
+          {FullType specifiedType = FullType.unspecified}) =>
+      _toWire[object.name] ?? object.name;
+
+  @override
+  ReviewMediaLinkContentTypeEnum deserialize(
+          Serializers serializers, Object serialized,
+          {FullType specifiedType = FullType.unspecified}) =>
+      ReviewMediaLinkContentTypeEnum.valueOf(
+          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+}
+
 class _$ReviewMediaLink extends ReviewMediaLink {
   @override
   final String id;
@@ -13,12 +89,20 @@ class _$ReviewMediaLink extends ReviewMediaLink {
   final String url;
   @override
   final DateTime expiresAt;
+  @override
+  final ReviewMediaLinkContentTypeEnum? contentType;
+  @override
+  final int? byteSize;
 
   factory _$ReviewMediaLink([void Function(ReviewMediaLinkBuilder)? updates]) =>
       (ReviewMediaLinkBuilder()..update(updates))._build();
 
   _$ReviewMediaLink._(
-      {required this.id, required this.url, required this.expiresAt})
+      {required this.id,
+      required this.url,
+      required this.expiresAt,
+      this.contentType,
+      this.byteSize})
       : super._();
   @override
   ReviewMediaLink rebuild(void Function(ReviewMediaLinkBuilder) updates) =>
@@ -33,7 +117,9 @@ class _$ReviewMediaLink extends ReviewMediaLink {
     return other is ReviewMediaLink &&
         id == other.id &&
         url == other.url &&
-        expiresAt == other.expiresAt;
+        expiresAt == other.expiresAt &&
+        contentType == other.contentType &&
+        byteSize == other.byteSize;
   }
 
   @override
@@ -42,6 +128,8 @@ class _$ReviewMediaLink extends ReviewMediaLink {
     _$hash = $jc(_$hash, id.hashCode);
     _$hash = $jc(_$hash, url.hashCode);
     _$hash = $jc(_$hash, expiresAt.hashCode);
+    _$hash = $jc(_$hash, contentType.hashCode);
+    _$hash = $jc(_$hash, byteSize.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -51,7 +139,9 @@ class _$ReviewMediaLink extends ReviewMediaLink {
     return (newBuiltValueToStringHelper(r'ReviewMediaLink')
           ..add('id', id)
           ..add('url', url)
-          ..add('expiresAt', expiresAt))
+          ..add('expiresAt', expiresAt)
+          ..add('contentType', contentType)
+          ..add('byteSize', byteSize))
         .toString();
   }
 }
@@ -72,6 +162,15 @@ class ReviewMediaLinkBuilder
   DateTime? get expiresAt => _$this._expiresAt;
   set expiresAt(DateTime? expiresAt) => _$this._expiresAt = expiresAt;
 
+  ReviewMediaLinkContentTypeEnum? _contentType;
+  ReviewMediaLinkContentTypeEnum? get contentType => _$this._contentType;
+  set contentType(ReviewMediaLinkContentTypeEnum? contentType) =>
+      _$this._contentType = contentType;
+
+  int? _byteSize;
+  int? get byteSize => _$this._byteSize;
+  set byteSize(int? byteSize) => _$this._byteSize = byteSize;
+
   ReviewMediaLinkBuilder() {
     ReviewMediaLink._defaults(this);
   }
@@ -82,6 +181,8 @@ class ReviewMediaLinkBuilder
       _id = $v.id;
       _url = $v.url;
       _expiresAt = $v.expiresAt;
+      _contentType = $v.contentType;
+      _byteSize = $v.byteSize;
       _$v = null;
     }
     return this;
@@ -109,6 +210,8 @@ class ReviewMediaLinkBuilder
               url, r'ReviewMediaLink', 'url'),
           expiresAt: BuiltValueNullFieldError.checkNotNull(
               expiresAt, r'ReviewMediaLink', 'expiresAt'),
+          contentType: contentType,
+          byteSize: byteSize,
         );
     replace(_$result);
     return _$result;

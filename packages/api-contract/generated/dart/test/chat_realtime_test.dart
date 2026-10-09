@@ -7,7 +7,7 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(ChatRealtime, () {
-    // Viewer-bound Buyer or Vendor inbox invalidation channel. Re-fetch configuration on reconnect. No message content is broadcast.
+    // Viewer-bound inbox invalidation channel. Notification realtime also supports Admin accounts through a dedicated notifications channel. Re-fetch configuration on reconnect. No message or notification contents are broadcast. Authorized Team Tracking viewers also receive payload-free team.activity.changed invalidations on messaging inbox channels; activity details require the separately authorized Vendor team activity endpoint.
     // String inboxChannel
     test('to test the property `inboxChannel`', () async {
       // TODO

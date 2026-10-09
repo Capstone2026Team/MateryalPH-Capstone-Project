@@ -20,6 +20,7 @@ Method | HTTP request | Description
 [**listChatHandlers**](MessagingApi.md#listchathandlers) | **GET** /{messagingPortal}/conversations/{conversationId}/handlers |
 [**listChatProducts**](MessagingApi.md#listchatproducts) | **GET** /{messagingPortal}/conversations/{conversationId}/products |
 [**listConversations**](MessagingApi.md#listconversations) | **GET** /{messagingPortal}/conversations |
+[**listVendorFulfillmentConversations**](MessagingApi.md#listvendorfulfillmentconversations) | **GET** /vendor/conversations/{conversationId}/fulfillment-conversations |
 [**openVendorOrderConversation**](MessagingApi.md#openvendororderconversation) | **POST** /vendor/orders/{orderId}/conversation |
 [**publishChatQuotation**](MessagingApi.md#publishchatquotation) | **POST** /{messagingPortal}/conversations/{conversationId}/quotation/publish |
 [**readChatMessages**](MessagingApi.md#readchatmessages) | **POST** /{messagingPortal}/conversations/{conversationId}/read |
@@ -618,6 +619,55 @@ Name | Type | Description  | Notes
 ### Authorization
 
 [accessCookie](../README.md#accessCookie), [passportBearer](../README.md#passportBearer), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **listVendorFulfillmentConversations**
+> FulfillmentConversationPageResponse listVendorFulfillmentConversations(conversationId, page)
+
+
+
+Owner and Store Manager only. Lists existing fulfillment threads for the authorized sales inquiry's buyer and vendor, across procurement types. Writable threads first, then read-only history, newest activity and ID first within each group. Never creates a thread.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getMessagingApi();
+final String conversationId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final int page = 56; // int |
+
+try {
+    final response = api.listVendorFulfillmentConversations(conversationId, page);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling MessagingApi->listVendorFulfillmentConversations: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **conversationId** | **String**|  |
+ **page** | **int**|  | [optional] [default to 1]
+
+### Return type
+
+[**FulfillmentConversationPageResponse**](FulfillmentConversationPageResponse.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie)
 
 ### HTTP request headers
 

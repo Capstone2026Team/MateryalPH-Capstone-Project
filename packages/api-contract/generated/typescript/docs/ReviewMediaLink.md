@@ -10,6 +10,8 @@ Name | Type
 `id` | string
 `url` | string
 `expiresAt` | Date
+`contentType` | string
+`byteSize` | number
 
 ## Example
 
@@ -21,6 +23,8 @@ const example = {
   "id": null,
   "url": null,
   "expiresAt": null,
+  "contentType": null,
+  "byteSize": null,
 } satisfies ReviewMediaLink
 
 console.log(example)

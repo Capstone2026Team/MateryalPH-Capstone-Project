@@ -40,7 +40,7 @@ export async function getMaterial(materialId: string): Promise<CatalogMaterial> 
   return (await catalogApi().getCatalogMaterial({ materialId })).data
 }
 
-export async function listListings(filters: { status?: ListingStatus; categoryId?: string; q?: string; page?: number }) {
+export async function listListings(filters: { group?: 'NEEDS_ATTENTION' | 'OUT_OF_STOCK'; status?: ListingStatus; categoryId?: string; q?: string; page?: number }) {
   const response = await catalogApi().listVendorCatalogListings(filters)
   return { items: response.data, meta: response.meta }
 }

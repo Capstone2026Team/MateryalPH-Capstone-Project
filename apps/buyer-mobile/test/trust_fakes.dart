@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:materyalph/features/map_discovery/discovery_models.dart';
 import 'package:materyalph/features/trust/analytics_repository.dart';
 import 'package:materyalph/features/trust/reviews_repository.dart';
@@ -94,6 +95,24 @@ class FakeReviewsRepository implements ReviewsRepository {
     int? productQuality,
     String? comment,
   }) async => order!;
+
+  @override
+  Future<OrderReviewsView> addMedia({
+    required String reviewId,
+    required String path,
+    required String filename,
+    required String idempotencyKey,
+  }) async => order!;
+
+  @override
+  Future<OrderReviewsView> removeMedia({
+    required String reviewId,
+    required String mediaId,
+  }) async => order!;
+
+  @override
+  Future<Uint8List> media(String reviewId, ReviewMediaView media) async =>
+      Uint8List(0);
 
   @override
   Future<ListingReviewsView> listingReviews(String listingId) async => listing;

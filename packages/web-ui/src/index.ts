@@ -1,5 +1,7 @@
 export { Button, type ButtonProps, type ButtonVariant } from './button'
 export { NotificationsWorkspace, DocumentExportWorkspace, notificationError } from './notifications-workspace'
+export { watchNotificationUpdates } from './notification-realtime'
+export { useNotificationUnreadCount } from './use-notification-unread-count'
 export { enableWebPush } from './web-push'
 export { ConfirmDialog } from './confirm-dialog'
 export { FormDialog } from './form-dialog'
@@ -11,6 +13,7 @@ export { DashboardHeader, MetricCard, DashboardPanel, DashboardEmptyState, Dashb
 export { useAutomaticRefresh } from './use-automatic-refresh'
 export { Field, FormErrors, type FieldProps } from './field'
 export { FileSelectionField } from './file-selection-field'
+export { FileSelectionReview } from './file-selection-review'
 export { StatusMessage } from './status-message'
 export { PhoneField, type PhoneFieldProps } from './phone-field'
 export { PortalBrand } from './portal-brand'
@@ -65,3 +68,14 @@ export {
 
 export { SidePanel } from './side-panel'
 export { PortalResourceProvider, usePortalResource } from './portal-resources'
+
+export { VendorTeamMembers, type TeamMemberQuery } from './vendor-team-members'
+
+export { AccountVerificationDialog, useAccountVerification, type RequestAccountVerification } from './account-verification-dialog'
+export { RowActionMenu, ActiveFilters, PortalPagePatterns, PageHeader, StatCard, StatCards, FilterTabs, Toolbar, InfoNote, EmptyState } from './page-patterns'
+export { loadGoogleMaps } from './google-maps'
+export {
+  GeoBreadcrumbs, ChoroplethLegend, GeoChoroplethMap, SortableDataTable, TrendLineChart, DemandHeatmap, choroplethThresholds, choroplethBin,
+  type GeoAreaValue, type GeoFeature, type SortableColumn, type TrendSeries, type HeatmapCell,
+} from './geo-analytics-patterns'
+export { HealthBadge, FactList, EventTimeline, ReasonedDecisionForm, type HealthState, type TimelineEvent } from './operations-patterns'

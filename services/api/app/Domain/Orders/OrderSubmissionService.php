@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Orders;
 
 use App\Domain\Catalog\CatalogAccess;
+use App\Domain\Enforcement\BuyerCommerceRestriction;
 use App\Domain\Finance\Money;
 use App\Domain\Geography\BuyerProfiles;
 use App\Domain\Identity\AuditRecorder;
@@ -15,6 +16,7 @@ use App\Domain\Payments\PaymentMethodPolicy;
 use App\Domain\Procurement\CartService;
 use App\Domain\Procurement\CheckoutPreviewService;
 use App\Domain\Procurement\ListingPublicFacts;
+use App\Domain\Settings\PlatformSettings;
 use App\Domain\Vendors\NewProcurementAvailability;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\QueryException;
@@ -60,6 +62,7 @@ final class OrderSubmissionService
     public function submit(Request $request, array $input): array
     {
         $buyerId = $this->profiles->idFor($request);
+        BuyerCommerceRestriction::assertAllowed($buyerId);
         $key = $this->idempotency->requireIdempotencyKey($request);
         $vendorIds = array_values(array_unique(array_map('strval', $input['vendor_ids'])));
         sort($vendorIds);
@@ -277,7 +280,7 @@ final class OrderSubmissionService
             'procurement_type' => 'ITEM_BASED', 'order_state' => OrderStates::AWAITING_VENDOR_CONFIRMATION, 'payment_state' => 'NOT_REQUIRED', 'refund_state' => 'NOT_REQUESTED',
             'fulfillment_state' => 'NOT_STARTED', 'dispute_state' => 'NONE', 'fulfillment_method' => $method, 'payment_method' => $paymentMethod,
             'materials_centavos' => $materials, 'vendor_discount_centavos' => 0, 'delivery_centavos' => $delivery, 'nrpc_centavos' => 0, 'commercial_total_centavos' => $materials + (int) $delivery,
-            'submitted_at' => $now, 'vendor_response_due_at' => $now->addHours(self::VENDOR_RESPONSE_HOURS), 'current_snapshot_version' => 1,
+            'submitted_at' => $now, 'vendor_response_due_at' => $now->addHours(PlatformSettings::current()->int('orders.vendor_response_hours')), 'current_snapshot_version' => 1,
             'destination' => json_encode($this->destination($method, $destination, $group), JSON_THROW_ON_ERROR),
             'access_instructions_encrypted' => $method === 'DELIVERY' ? $cart->access_instructions_encrypted : null,
             'lock_version' => 1, 'created_at' => $now, 'updated_at' => $now,

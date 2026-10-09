@@ -66,7 +66,7 @@ final class AdminFinanceController extends Controller
 
     public function statements(Request $request): JsonResponse
     {
-        $filters = $request->validate(['state' => ['sometimes', Rule::in(['DRAFT', 'ISSUED', 'PARTIALLY_PAID', 'PAID', 'VOIDED'])], 'page' => ['sometimes', 'integer', 'between:1,1000']]);
+        $filters = $request->validate(['state' => ['sometimes', Rule::in(['DRAFT', 'ISSUED', 'PARTIALLY_PAID', 'PAID', 'VOIDED'])], 'overdue' => ['sometimes', 'boolean'], 'page' => ['sometimes', 'integer', 'between:1,1000']]);
 
         return $this->paged($this->finance->statementsList($request, $filters));
     }

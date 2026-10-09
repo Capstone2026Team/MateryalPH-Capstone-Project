@@ -31,6 +31,7 @@ foreach (['buyers' => ['auth.transport:MOBILE', 'auth:api', 'account.access:BUYE
             Route::get('/attachments/{attachmentId}', [C::class, 'download'])->whereUuid('attachmentId');
             Route::get('/avatars/{userId}', [C::class, 'avatar'])->whereNumber('userId');
             if ($prefix === 'vendor') {
+                Route::get('/fulfillment-conversations', [C::class, 'fulfillmentConversations']);
                 Route::get('/handlers', [C::class, 'handlers']);
                 Route::post('/transfer', [C::class, 'transfer']);
                 Route::put('/quotation/draft', [C::class, 'draft']);

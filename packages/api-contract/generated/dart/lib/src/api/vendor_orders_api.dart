@@ -443,6 +443,7 @@ class VendorOrdersApi {
   ///
   /// Parameters:
   /// * [group]
+  /// * [closedState] - Only valid with group CLOSED. Filters before pagination; group counts remain unfiltered.
   /// * [q]
   /// * [page]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -456,6 +457,7 @@ class VendorOrdersApi {
   /// Throws [DioException] if API call or serialization fails
   Future<Response<OrderListEnvelope>> listVendorOrders({
     String? group,
+    String? closedState,
     String? q,
     int? page,
     CancelToken? cancelToken,
@@ -487,6 +489,7 @@ class VendorOrdersApi {
 
     final _queryParameters = <String, dynamic>{
       if (group != null) r'group': encodeQueryParameter(_serializers, group, const FullType(String)),
+      if (closedState != null) r'closed_state': encodeQueryParameter(_serializers, closedState, const FullType(String)),
       if (q != null) r'q': encodeQueryParameter(_serializers, q, const FullType(String)),
       if (page != null) r'page': encodeQueryParameter(_serializers, page, const FullType(int)),
     };

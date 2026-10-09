@@ -14,7 +14,9 @@ use App\Domain\Identity\PassportAccessTokenIssuer;
 use App\Domain\Identity\RecaptchaAssessmentGateway;
 use App\Domain\Identity\SecureOtpCodeGenerator;
 use App\Domain\Notifications\PushGateway;
+use App\Domain\Operations\ScheduledTaskRecorder;
 use App\Domain\Payments\PaymentGateway;
+use App\Domain\Settings\PlatformSettings;
 use App\Domain\Vendors\AddressGeocoder;
 use App\Domain\Vendors\PsgcProvider;
 use App\Domain\Vendors\PublicStoreMediaStorage;
@@ -33,7 +35,12 @@ use App\Infrastructure\Payments\FakePaymentGateway;
 use App\Infrastructure\Payments\XenditPaymentSessionGateway;
 use App\Infrastructure\Storage\CloudinaryPublicStoreMediaStorage;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Console\Events\ScheduledTaskFailed;
+use Illuminate\Console\Events\ScheduledTaskFinished;
+use Illuminate\Console\Events\ScheduledTaskSkipped;
+use Illuminate\Console\Events\ScheduledTaskStarting;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Passport\Passport;
@@ -59,6 +66,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(PlacesProvider::class, GooglePlacesProvider::class);
         $this->app->bind(RouteProvider::class, GoogleRoutesProvider::class);
         $this->app->singleton(WithholdingEvidenceAdapter::class, DemoWithholdingEvidenceAdapter::class);
+        // Effective Platform Settings are read once per request or queued job and forgotten after a change.
+        $this->app->scoped(PlatformSettings::class);
         // One adapter per process: the deterministic simulator keeps its injected failures for the whole request.
         $this->app->singleton(PaymentGateway::class, fn (): PaymentGateway => config('payments.gateway') === 'fake' ? new FakePaymentGateway : new XenditPaymentSessionGateway);
     }
@@ -69,6 +78,11 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         require base_path('routes/channels.php');
+        // Integration and Job Health: every scheduled task records its start, outcome and duration (no output or payload).
+        Event::listen(ScheduledTaskStarting::class, [ScheduledTaskRecorder::class, 'starting']);
+        Event::listen(ScheduledTaskFinished::class, [ScheduledTaskRecorder::class, 'finished']);
+        Event::listen(ScheduledTaskFailed::class, [ScheduledTaskRecorder::class, 'failed']);
+        Event::listen(ScheduledTaskSkipped::class, [ScheduledTaskRecorder::class, 'skipped']);
         // Throttle credential and verification actions, without a shared app-activity budget.
         RateLimiter::for('account-security', fn (Request $request): Limit => Limit::perMinutes(15, 5)->by((string) $request->user()?->getAuthIdentifier().'|'.$request->path()));
         $keyPath = config('passport.key_path');

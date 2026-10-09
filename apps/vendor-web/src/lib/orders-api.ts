@@ -11,6 +11,7 @@ import {
   type DeliveryPlanVehicle,
   type DeliveryVehicleSelection,
   type ListVendorOrdersGroupEnum,
+  type ListVendorOrdersClosedStateEnum,
   type OrderDetail,
   type OrderLine,
   type OrderListMeta,
@@ -31,8 +32,10 @@ const ordersApi = () => new VendorOrdersApi(createWebApiConfiguration(basePath, 
 
 export type OrderGroup = 'ALL' | 'NEW' | 'WAITING_ON_BUYER' | 'AWAITING_PAYMENT' | 'CONFIRMED' | 'CLOSED'
 
-export async function listOrders(filters: { group: OrderGroup; q?: string; page?: number }): Promise<{ items: OrderSummary[]; meta: OrderListMeta }> {
-  const response = await ordersApi().listVendorOrders({ group: filters.group as ListVendorOrdersGroupEnum, ...(filters.q ? { q: filters.q } : {}), ...(filters.page ? { page: filters.page } : {}) })
+export type ClosedOrderState = 'COMPLETED' | 'DECLINED' | 'EXPIRED' | 'CANCELLED'
+
+export async function listOrders(filters: { group: OrderGroup; closedState?: ClosedOrderState; q?: string; page?: number }): Promise<{ items: OrderSummary[]; meta: OrderListMeta }> {
+  const response = await ordersApi().listVendorOrders({ group: filters.group as ListVendorOrdersGroupEnum, ...(filters.group === 'CLOSED' && filters.closedState ? { closedState: filters.closedState as ListVendorOrdersClosedStateEnum } : {}), ...(filters.q ? { q: filters.q } : {}), ...(filters.page ? { page: filters.page } : {}) })
   return { items: response.data, meta: response.meta }
 }
 

@@ -85,7 +85,7 @@ final class DisputeCaseService
 
                 return;
             }
-            $due = now()->addHours(DisputeRules::MUTUAL_RESOLUTION_HOURS);
+            $due = now()->addHours(DisputeRules::deadline('mutual_resolution_hours'));
             DB::table('dispute_cases')->where('id', $case->id)->update(['status' => DisputeRules::MUTUAL_RESOLUTION, 'responded_at' => now(), 'mutual_resolution_due_at' => $due,
                 'lock_version' => (int) $case->lock_version + 1, 'updated_at' => now()]);
             $case = DB::table('dispute_cases')->where('id', $case->id)->first();

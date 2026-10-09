@@ -21,6 +21,7 @@ final class VendorOrderController extends Controller
     {
         $filters = $request->validate([
             'group' => ['sometimes', Rule::in(['ALL', ...array_keys(OrderQueries::VENDOR_GROUPS)])],
+            'closed_state' => ['sometimes', Rule::in(OrderQueries::VENDOR_GROUPS['CLOSED']), Rule::prohibitedIf($request->input('group') !== 'CLOSED')],
             'q' => ['sometimes', 'string', 'max:120'],
             'page' => ['sometimes', 'integer', 'between:1,1000'],
         ]);

@@ -128,22 +128,21 @@ final class OrderQueries
     }
 
     /**
-     * @param  array{group?: string, q?: string, page?: int}  $filters
+     * @param  array{group?: string, closed_state?: string, q?: string, page?: int}  $filters
      * @return array{items: list<array<string, mixed>>, meta: array<string, mixed>}
      */
     public function vendorList(Request $request, array $filters): array
     {
         $scope = $this->access->vendorScope($request);
         $this->expiry->expireDueFor('vendor_organization_id', $scope['organization_id']);
-        $base = DB::table('orders as o')->where('o.vendor_organization_id', $scope['organization_id']);
-        if ($scope['role'] === 'FULFILLMENT') {
-            $base->whereNotIn('o.order_state', [...OrderStates::PENDING_ACCEPTANCE, OrderStates::AWAITING_PAYMENT, OrderStates::DECLINED])
-                ->whereIn('o.id', DB::table('order_fulfillment_assignments')->select('order_id')->where('user_id', $request->user()->getKey())->whereNull('ended_at'));
-        }
+        $base = $this->vendorBaseQuery($scope['organization_id'], $scope['role'], (int) $request->user()->getKey());
         $query = clone $base;
         $group = $filters['group'] ?? 'ALL';
         if ($group !== 'ALL') {
             $query->whereIn('o.order_state', self::VENDOR_GROUPS[$group]);
+        }
+        if ($group === 'CLOSED' && isset($filters['closed_state'])) {
+            $query->where('o.order_state', $filters['closed_state']);
         }
         $term = trim((string) ($filters['q'] ?? ''));
         if ($term !== '') {
@@ -157,6 +156,26 @@ final class OrderQueries
             'primary_action' => $this->vendorPrimaryAction($order),
             'nrpc_indicator' => (int) $order->nrpc_centavos > 0,
         ], ['group' => $group, 'counts' => $this->counts($base, self::VENDOR_GROUPS)]);
+    }
+
+    /** Count current, nonterminal orders using the same visibility rules as the Vendor workspace. */
+    public function activeVendorCount(Request $request): int
+    {
+        $scope = $this->access->vendorScope($request);
+
+        return $this->vendorBaseQuery($scope['organization_id'], $scope['role'], (int) $request->user()->getKey())
+            ->whereNotIn('o.order_state', self::VENDOR_GROUPS['CLOSED'])->count();
+    }
+
+    private function vendorBaseQuery(string $organizationId, string $role, int $userId): Builder
+    {
+        $query = DB::table('orders as o')->where('o.vendor_organization_id', $organizationId);
+        if ($role === 'FULFILLMENT') {
+            $query->whereNotIn('o.order_state', [...OrderStates::PENDING_ACCEPTANCE, OrderStates::AWAITING_PAYMENT, OrderStates::DECLINED])
+                ->whereIn('o.id', DB::table('order_fulfillment_assignments')->select('order_id')->where('user_id', $userId)->whereNull('ended_at'));
+        }
+
+        return $query;
     }
 
     /** @return array<string, mixed> */
@@ -402,7 +421,8 @@ final class OrderQueries
         $estimate = null;
         if ($delivery['status'] === 'PENDING_VENDOR_CONFIRMATION') {
             $first = DB::table('order_snapshots')->where('order_id', $order->id)->where('version', 1)->first();
-            $range = $first === null ? null : (OrderCommercial::content($first)['delivery_estimate']['estimate'] ?? null);
+            $submitted = $first === null ? [] : OrderCommercial::content($first);
+            $range = ($submitted['delivery_estimate'] ?? $submitted['system_estimate']['delivery'] ?? [])['estimate'] ?? null;
             $estimate = is_array($range) ? ['min_centavos' => (int) $range['fee_min_centavos'], 'max_centavos' => (int) $range['fee_max_centavos']] : null;
         }
         $matrix = $commercial !== null && $commercial['commercial_total_centavos'] !== null ? FinancialCalculator::paymentMatrix($commercial, (string) $order->payment_method, null) : null;
@@ -496,7 +516,7 @@ final class OrderQueries
                 'calculation_version' => $snapshot['calculation_version'] ?? null, 'confirmed_by_role' => $snapshot['confirmed_by']['role'] ?? null, 'confirmed_at' => $snapshot['confirmed_at'] ?? null,
             ];
         }
-        $estimate = $submitted['delivery_estimate'] ?? null;
+        $estimate = $submitted['delivery_estimate'] ?? $submitted['system_estimate']['delivery'] ?? null;
 
         return [
             'status' => $confirmed !== null ? 'CONFIRMED' : (($estimate['status'] ?? null) === 'ADVISORY_ESTIMATE' ? 'ADVISORY_ESTIMATE' : 'PENDING_VENDOR_REVIEW'),

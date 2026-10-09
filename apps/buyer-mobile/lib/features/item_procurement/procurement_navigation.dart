@@ -189,13 +189,13 @@ class ProcurementNavigation {
       controller: cart,
       savedLocations: () => explore.savedLocations,
       orders: orders,
-      chooseDropOff: discovery == null ? null : _chooseDropOff,
+      chooseDropOff: discovery == null ? null : chooseDropOff,
     ),
   );
 
   /// Opens the location picker for the vehicle drop-off: either straight to the device location
   /// or to a searchable map pin. The chosen point is saved through the Buyer location API.
-  Future<DiscoveryOrigin?> _chooseDropOff(
+  Future<DiscoveryOrigin?> chooseDropOff(
     BuildContext context, {
     required bool useCurrent,
   }) => Navigator.of(context).push<DiscoveryOrigin>(

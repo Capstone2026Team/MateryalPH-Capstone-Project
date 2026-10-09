@@ -18,7 +18,7 @@ void main() {
   });
   for (final scale in [1.0, 2.0]) {
     testWidgets(
-      'notification preferences explain required delivery at 320px scale $scale',
+      'notification preferences popup groups required delivery at 320px scale $scale',
       (tester) async {
         await tester.binding.setSurfaceSize(const Size(320, 568));
         addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -75,6 +75,8 @@ void main() {
             ),
           ],
         );
+        final repository = NotificationsRepository(client, () async {});
+        addTearDown(repository.inbox.dispose);
         await tester.pumpWidget(
           MaterialApp(
             debugShowCheckedModeBanner: false,
@@ -86,7 +88,7 @@ void main() {
               child: child!,
             ),
             home: NotificationsScreen(
-              repository: NotificationsRepository(client, () async {}),
+              repository: repository,
               open: (_) async {},
             ),
           ),
@@ -94,32 +96,29 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('Account access changed'), findsOneWidget);
         expect(tester.takeException(), isNull);
-        await tester.tap(find.text('Preferences'));
+        await tester.tap(find.byTooltip('Notification preferences'));
         await tester.pumpAndSettle();
         if (scale > 1) {
           await tester.scrollUntilVisible(
             find.text(
-              'Always enabled · In-app, email and registered push devices',
+              'Account safety, legal and transaction notices stay enabled across all available channels.',
             ),
             120,
           );
         }
         expect(
           find.text(
-            'Always enabled · In-app, email and registered push devices',
+            'Account safety, legal and transaction notices stay enabled across all available channels.',
           ),
           findsOneWidget,
         );
         expect(tester.takeException(), isNull);
-        await expectLater(
-          find.byType(MaterialApp),
-          matchesGoldenFile(
-            '../../../docs/design/evidence/phase-15/buyer-320-preferences-${scale.toInt()}x.png',
-          ),
-        );
+        expect(find.byType(AlertDialog), findsOneWidget);
+        expect(find.text('Notification preferences'), findsOneWidget);
         await tester.scrollUntilVisible(find.text('In-app'), 120);
-        expect(find.byType(SwitchListTile), findsNWidgets(3));
+        expect(find.byType(Checkbox), findsNWidgets(3));
         expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
       },
     );
   }

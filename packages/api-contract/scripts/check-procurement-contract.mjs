@@ -59,6 +59,10 @@ for (const path of ['/buyers/explore/summary', '/buyers/listings/search', '/buye
 }
 
 const schemas = spec.components.schemas
+assert.deepEqual(schemas.ProductDeliveryPreviewRequest.required, ['listing_variant_id', 'quantity'])
+assert.equal(schemas.ProductDeliveryPreviewRequest.additionalProperties, false, 'The Buyer cannot supply rates or a delivery amount')
+assert.equal(schemas.DeliveryPreviewEnvelope.properties.data.$ref, '#/components/schemas/DeliveryPreview', 'Product preview reuses the checkout delivery contract')
+assert.equal(operation('/buyers/cart/delivery-preview', 'post').operationId, 'previewBuyerProductDelivery')
 assert.deepEqual(schemas.RankingWeightSet.required, ['distance', 'price', 'vps', 'stock', 'product_rating'], 'SRS has exactly five components')
 assert.equal(schemas.RankingWeightSet.additionalProperties, false, 'No hidden or sponsored ranking component can be submitted')
 assert.equal(schemas.RankingPreferences.properties.total_percent.const, 100, 'Weights always total 100%')

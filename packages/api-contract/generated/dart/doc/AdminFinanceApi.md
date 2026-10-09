@@ -333,7 +333,7 @@ This endpoint does not need any parameter.
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **listFeeStatements**
-> FeeStatementListEnvelope listFeeStatements(page, state)
+> FeeStatementListEnvelope listFeeStatements(overdue, page, state)
 
 
 
@@ -352,11 +352,12 @@ import 'package:materyalph_api_client/api.dart';
 //defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
 
 final api = MateryalphApiClient().getAdminFinanceApi();
+final bool overdue = true; // bool | Issued balances past their due date.
 final int page = 56; // int |
 final String state = state_example; // String |
 
 try {
-    final response = api.listFeeStatements(page, state);
+    final response = api.listFeeStatements(overdue, page, state);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling AdminFinanceApi->listFeeStatements: $e\n');
@@ -367,6 +368,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **overdue** | **bool**| Issued balances past their due date. | [optional]
  **page** | **int**|  | [optional]
  **state** | **String**|  | [optional]
 

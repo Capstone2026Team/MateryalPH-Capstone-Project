@@ -32,6 +32,7 @@ void main() {
       // TODO
     });
 
+    // A non-null timestamp identifies a read notice retained in the recipient's Archived view. Required notices remain stored and authorized deep links remain available.
     // String readAt
     test('to test the property `readAt`', () async {
       // TODO

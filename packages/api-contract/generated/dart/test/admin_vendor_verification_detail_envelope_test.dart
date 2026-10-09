@@ -7,6 +7,7 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(AdminVendorVerificationDetailEnvelope, () {
+    // Sectioned case. Includes workstreams and activation_restrictions as documented by AdminVendorVerificationDetail.
     // BuiltMap<String, JsonObject> data
     test('to test the property `data`', () async {
       // TODO

@@ -68,6 +68,20 @@ final class NotificationService
         return $value === null || (bool) $value;
     }
 
+    public function unreadCount(User $user): int
+    {
+        $count = 0;
+        $policy = app(NotificationPolicy::class);
+        $preferences = DB::table('notification_preferences')->where('user_id', $user->getKey())->pluck('in_app', 'category');
+        foreach (DB::table('notifications')->where('user_id', $user->getKey())->whereNull('read_at')->lazyById(200) as $notice) {
+            if ($policy->allows($user, $notice) && (NotificationPolicy::mandatory($notice->category) || ($preferences[$notice->category] ?? true))) {
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
     /** @return array<string, mixed> */
     public function feed(User $user, ?string $cursor): array
     {

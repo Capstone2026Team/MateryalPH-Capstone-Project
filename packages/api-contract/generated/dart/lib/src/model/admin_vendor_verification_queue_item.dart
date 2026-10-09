@@ -26,6 +26,11 @@ part 'admin_vendor_verification_queue_item.g.dart';
 /// * [activationStatus]
 /// * [submittedAt]
 /// * [progress]
+/// * [pendingRequirements]
+/// * [oldestPendingAt]
+/// * [providerStatus] - Technical TEST provider connection state; never live KYC.
+/// * [discoverabilityStatus]
+/// * [holdCode]
 @BuiltValue()
 abstract class AdminVendorVerificationQueueItem implements Built<AdminVendorVerificationQueueItem, AdminVendorVerificationQueueItemBuilder> {
   @BuiltValueField(wireName: r'id')
@@ -66,6 +71,22 @@ abstract class AdminVendorVerificationQueueItem implements Built<AdminVendorVeri
 
   @BuiltValueField(wireName: r'progress')
   BuiltMap<String, JsonObject?> get progress;
+
+  @BuiltValueField(wireName: r'pending_requirements')
+  int? get pendingRequirements;
+
+  @BuiltValueField(wireName: r'oldest_pending_at')
+  DateTime? get oldestPendingAt;
+
+  /// Technical TEST provider connection state; never live KYC.
+  @BuiltValueField(wireName: r'provider_status')
+  String? get providerStatus;
+
+  @BuiltValueField(wireName: r'discoverability_status')
+  String? get discoverabilityStatus;
+
+  @BuiltValueField(wireName: r'hold_code')
+  String? get holdCode;
 
   AdminVendorVerificationQueueItem._();
 
@@ -173,6 +194,41 @@ class _$AdminVendorVerificationQueueItemSerializer implements PrimitiveSerialize
       object.progress,
       specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
     );
+    if (object.pendingRequirements != null) {
+      yield r'pending_requirements';
+      yield serializers.serialize(
+        object.pendingRequirements,
+        specifiedType: const FullType(int),
+      );
+    }
+    if (object.oldestPendingAt != null) {
+      yield r'oldest_pending_at';
+      yield serializers.serialize(
+        object.oldestPendingAt,
+        specifiedType: const FullType.nullable(DateTime),
+      );
+    }
+    if (object.providerStatus != null) {
+      yield r'provider_status';
+      yield serializers.serialize(
+        object.providerStatus,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.discoverabilityStatus != null) {
+      yield r'discoverability_status';
+      yield serializers.serialize(
+        object.discoverabilityStatus,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.holdCode != null) {
+      yield r'hold_code';
+      yield serializers.serialize(
+        object.holdCode,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
   }
 
   @override
@@ -295,6 +351,46 @@ class _$AdminVendorVerificationQueueItemSerializer implements PrimitiveSerialize
             specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
           ) as BuiltMap<String, JsonObject?>;
           result.progress.replace(valueDes);
+          break;
+        case r'pending_requirements':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.pendingRequirements = valueDes;
+          break;
+        case r'oldest_pending_at':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(DateTime),
+          ) as DateTime?;
+          if (valueDes == null) continue;
+          result.oldestPendingAt = valueDes;
+          break;
+        case r'provider_status':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.providerStatus = valueDes;
+          break;
+        case r'discoverability_status':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.discoverabilityStatus = valueDes;
+          break;
+        case r'hold_code':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.holdCode = valueDes;
           break;
         default:
           unhandled.add(key);

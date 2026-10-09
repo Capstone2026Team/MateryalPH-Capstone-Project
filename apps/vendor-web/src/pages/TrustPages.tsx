@@ -1,8 +1,8 @@
 import { useEffect, useId, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { Download, Flag, LineChart, PencilLine, RefreshCw, Search, Star } from 'lucide-react'
+import { Download, Flag, LineChart, PencilLine, RefreshCw, Star } from 'lucide-react'
 import {
-  AnalyticsNullState, Button, DatasetNotice, FilterChips, PriceTrendPanel, ScoreTile, StarRatingDisplay, StarRatingInput, StatusBadge, StatusMessage, SuppressionNotice, TrendSummary,
+  AnalyticsNullState, Button, DatasetNotice, FilterTabs, Toolbar, InfoNote, EmptyState, PriceTrendPanel, StatCard, StarRatingDisplay, StarRatingInput, StatusBadge, StatusMessage, SuppressionNotice, TrendSummary,
   formatAnalyticsDate, formatManilaDateTime, formatPhpDecimal, type PricePoint,
 } from '@materyalph/web-ui'
 import type { VendorAnalyticsPoint, VendorAnalyticsRow } from '@materyalph/api-client-ts'
@@ -65,7 +65,7 @@ function AnalyticsFilterBar({ filters, onChange, busy }: { filters: VendorAnalyt
       <label className="grid gap-2 text-sm font-semibold" htmlFor={radiusId}>Radius around your store
         <select id={radiusId} className={control} value={filters.radiusKm} disabled={busy} onChange={event => onChange({ radiusKm: Number(event.target.value) })}>{RADII.map(radius => <option key={radius} value={radius}>{radius} km</option>)}</select>
       </label>
-      <FilterChips label="Comparison period" disabled={busy} value={custom ? 'custom' : String(filters.presetDays ?? 30)} chips={PRESETS}
+      <FilterTabs label="Comparison period" disabled={busy} value={custom ? 'custom' : String(filters.presetDays ?? 30)} chips={PRESETS}
         onChange={value => { if (value === 'custom') { setCustom(true); return } setCustom(false); onChange({ presetDays: Number(value), startDate: null, endDate: null }) }} />
     </div>
     {custom && <form className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end" onSubmit={applyCustom} noValidate>
@@ -109,14 +109,11 @@ function MaterialsAnalyticsWorkspace() {
   const groups = new Map<string, VendorAnalyticsRow[]>()
   data?.items.forEach(row => groups.set(row.category.name, [...(groups.get(row.category.name) ?? []), row]))
   return <div className="space-y-6">
-    <PageHeader eyebrow="Analytics" title="Materials Analytics" description="Daily average public listed prices of competing stores near you, for manual price planning. Your own store is never part of these averages."
+    <PageHeader eyebrow="Analytics" title="Materials Analytics" description="Compare nearby public listed prices for manual price planning."
       actions={<Button variant="secondary" onClick={() => void download()} disabled={exporting || !data}><Download size={16} aria-hidden="true" />{exporting ? 'Preparing…' : 'Export CSV'}</Button>} />
+    <InfoNote>Daily average public listed prices of competing stores near you, for manual price planning. Your own store is never part of these averages.</InfoNote>
     <AnalyticsFilterBar filters={filters} busy={data === null && !error} onChange={setFilters} />
-    <form className="flex max-w-xl gap-2" role="search" onSubmit={event => { event.preventDefault(); setFilters({ q: query.trim() || undefined }) }}>
-      <label className="sr-only" htmlFor="analytics-search">Search materials</label>
-      <input id="analytics-search" className={control} placeholder="Search material, variant or brand" value={query} onChange={event => setQuery(event.target.value)} />
-      <Button type="submit" variant="secondary"><Search size={16} aria-hidden="true" />Search</Button>
-    </form>
+    <Toolbar search={{ label: 'Search materials', placeholder: 'Material, variant or brand', value: query, onChange: setQuery, onSubmit: event => { event.preventDefault(); setFilters({ q: query.trim() || undefined }) } }} />
     {error ? <ErrorState message={error} onRetry={() => setAttempt(value => value + 1)} />
       : !data ? <LoadingState label="Loading competitor averages…" />
         : <>
@@ -172,7 +169,8 @@ function MaterialPriceDetails() {
   const points: PricePoint[] = detail.series.map((point: VendorAnalyticsPoint) => ({ date: String(point.date instanceof Date ? point.date.toISOString().slice(0, 10) : point.date), value: point.averagePhp ?? null, status: point.status, label: point.label ?? null, count: point.competitorCount ?? null, participantsChanged: point.participantsChanged ?? null }))
   return <div className="space-y-6">
     {back}
-    <PageHeader eyebrow={`${group.category.name} · ${group.material.name}`} title={group.displayName} description={`Competitor average public listed price per ${group.unit.name}, excluding your store. Specifications: ${[group.specification.brand, ...group.specification.attributes.map(attribute => `${attribute.key.replaceAll('_', ' ')} ${attribute.value}`)].filter(Boolean).join(' · ')}.`} />
+    <PageHeader eyebrow={`${group.category.name} · ${group.material.name}`} title={group.displayName} description={`Competitor average public listed price per ${group.unit.name}, excluding your store.`} />
+    <p className="text-[13px] text-text-secondary">Specifications: {[group.specification.brand, ...group.specification.attributes.map(attribute => `${attribute.key.replaceAll('_', ' ')} ${attribute.value}`)].filter(Boolean).join(' · ')}</p>
     <AnalyticsFilterBar filters={filters} busy={false} onChange={setFilters} />
     <DatasetNotice label={detail.dataset.label ?? 'Listed-price history'} updateSchedule={detail.updateSchedule} snapshotAt={detail.snapshot?.observedAt ? detail.snapshot.observedAt.toISOString() : null} currentAsOf={detail.currentAsOf.toISOString()} explanation={detail.explanation} />
     {detail.variants.length > 1 && <label className="grid max-w-md gap-2 text-sm font-semibold">Comparable variant
@@ -215,12 +213,13 @@ function PerformanceWorkspace() {
   if (!data) return <LoadingState label="Loading store performance…" />
   const operations = data.operations as { rates?: Record<string, string>; penalties?: Record<string, string>; numerators?: Record<string, number>; denominators?: Record<string, number>; listingViolations?: number; listing_violations?: number } | null
   return <div className="space-y-6">
-    <PageHeader eyebrow="Analytics" title="Store Performance" description="Scores from verified-purchase ratings and system-recorded order events, calculated daily at 00:30 Asia/Manila. The formulas and thresholds are the platform's published rules." />
+    <PageHeader eyebrow="Analytics" title="Store Performance" description="Track store scores and verified order performance." />
+    <InfoNote>Scores from verified-purchase ratings and system-recorded order events, calculated daily at 00:30 Asia/Manila. The formulas and thresholds are the platform's published rules.</InfoNote>
     {!data.calculated ? <AnalyticsNullState title="No daily calculation yet" reason="Your first scores appear after the next daily calculation. Until the sample minimums are met your store shows New Vendor — Building Track Record." />
       : <>
-        <section aria-label="Scores" className="grid gap-6 border-b border-border-default pb-6 sm:grid-cols-2 xl:grid-cols-4">
-          {data.scores.map(score => <ScoreTile key={score.key} name={score.key} value={score.value ?? null} published={score.published} sample={score.sampleCount} minimum={score.minimumSample} window={score.window} status={score.statusText} />)}
-        </section>
+        <dl aria-label="Scores" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {data.scores.map(score => <StatCard key={score.key} label={score.key} value={score.published && score.value ? score.value : 'Not published'} hint={`${score.window}${score.minimumSample ? ` · ${score.sampleCount ?? 0} of ${score.minimumSample} needed` : ''}${!score.published ? ` · ${score.statusText}` : ''}`} />)}
+        </dl>
         <p className="text-sm text-text-secondary">Public label: <strong className="text-text-strong">{data.label}</strong> · As of {data.asOf ? formatAnalyticsDate(String(data.asOf instanceof Date ? data.asOf.toISOString().slice(0, 10) : data.asOf), true) : '—'} · OHS recalculated weekly (next {formatAnalyticsDate(String(data.nextOhsRecalculationOn instanceof Date ? data.nextOhsRecalculationOn.toISOString().slice(0, 10) : data.nextOhsRecalculationOn), true)})</p>
         {operations?.rates && <section aria-labelledby="ohs-components" className="space-y-3">
           <h2 id="ohs-components" className="text-lg font-semibold">Operational Health components (trailing 30 days)</h2>
@@ -275,11 +274,12 @@ function ReviewsWorkspace() {
     return () => { active = false }
   }, [tab, page, attempt])
   return <div className="space-y-6">
-    <PageHeader eyebrow="Store operations" title="Ratings & Reviews" description="Verified-purchase ratings appear after both sides submit or 14 days after completion. You can report a review for moderation; reviews are never deleted by a store." />
-    <FilterChips label="Review type" value={tab} chips={TABS} onChange={value => { setTab(value as ReviewTab); setPage(1) }} />
+    <PageHeader eyebrow="Store operations" title="Ratings & Reviews" description="View verified-purchase reviews and your Buyer ratings." />
+    <InfoNote>Verified-purchase ratings appear after both sides submit or 14 days after completion. You can report a review for moderation; reviews are never deleted by a store.</InfoNote>
+    <FilterTabs appearance="tabs" label="Review type" value={tab} chips={TABS} onChange={value => { setTab(value as ReviewTab); setPage(1) }} />
     {notice && <StatusMessage tone="success">{notice}</StatusMessage>}
     {error ? <ErrorState message={error} onRetry={() => setAttempt(value => value + 1)} /> : !rows ? <LoadingState label="Loading reviews…" />
-      : rows.length === 0 ? <AnalyticsNullState title="No reviews yet" reason={tab === 'BUYER' ? 'Rate Buyers from a completed order\'s detail page within 14 days of completion.' : 'Published verified-purchase reviews of your store appear here.'} />
+      : rows.length === 0 ? <EmptyState message={tab === 'BUYER' ? 'Rate Buyers from completed orders within 14 days of completion.' : 'No published reviews yet.'} action={<Link className="inline-flex min-h-11 items-center rounded-control border border-border-default px-4 text-sm font-semibold" to="/orders?group=CLOSED">View completed orders</Link>} />
         : <ul className="divide-y divide-border-default border-y border-border-default">{rows.map(row => <li key={row.id} className="grid gap-2 py-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="font-semibold">{row.displayName} <span className="text-sm font-normal text-text-secondary">· Order <Link className="text-action-primary underline-offset-4 hover:underline" to={`/orders/${row.orderId}`}>{row.orderReference}</Link></span></p>

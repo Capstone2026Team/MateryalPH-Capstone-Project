@@ -88,6 +88,10 @@ class _$VendorTeamInvitationRecord extends VendorTeamInvitationRecord {
   @override
   final String id;
   @override
+  final int lockVersion;
+  @override
+  final bool canDelete;
+  @override
   final String? inviteeName;
   @override
   final String email;
@@ -118,6 +122,8 @@ class _$VendorTeamInvitationRecord extends VendorTeamInvitationRecord {
 
   _$VendorTeamInvitationRecord._(
       {required this.id,
+      required this.lockVersion,
+      required this.canDelete,
       this.inviteeName,
       required this.email,
       this.inviteeMobile,
@@ -145,6 +151,8 @@ class _$VendorTeamInvitationRecord extends VendorTeamInvitationRecord {
     if (identical(other, this)) return true;
     return other is VendorTeamInvitationRecord &&
         id == other.id &&
+        lockVersion == other.lockVersion &&
+        canDelete == other.canDelete &&
         inviteeName == other.inviteeName &&
         email == other.email &&
         inviteeMobile == other.inviteeMobile &&
@@ -163,6 +171,8 @@ class _$VendorTeamInvitationRecord extends VendorTeamInvitationRecord {
   int get hashCode {
     var _$hash = 0;
     _$hash = $jc(_$hash, id.hashCode);
+    _$hash = $jc(_$hash, lockVersion.hashCode);
+    _$hash = $jc(_$hash, canDelete.hashCode);
     _$hash = $jc(_$hash, inviteeName.hashCode);
     _$hash = $jc(_$hash, email.hashCode);
     _$hash = $jc(_$hash, inviteeMobile.hashCode);
@@ -183,6 +193,8 @@ class _$VendorTeamInvitationRecord extends VendorTeamInvitationRecord {
   String toString() {
     return (newBuiltValueToStringHelper(r'VendorTeamInvitationRecord')
           ..add('id', id)
+          ..add('lockVersion', lockVersion)
+          ..add('canDelete', canDelete)
           ..add('inviteeName', inviteeName)
           ..add('email', email)
           ..add('inviteeMobile', inviteeMobile)
@@ -207,6 +219,14 @@ class VendorTeamInvitationRecordBuilder
   String? _id;
   String? get id => _$this._id;
   set id(String? id) => _$this._id = id;
+
+  int? _lockVersion;
+  int? get lockVersion => _$this._lockVersion;
+  set lockVersion(int? lockVersion) => _$this._lockVersion = lockVersion;
+
+  bool? _canDelete;
+  bool? get canDelete => _$this._canDelete;
+  set canDelete(bool? canDelete) => _$this._canDelete = canDelete;
 
   String? _inviteeName;
   String? get inviteeName => _$this._inviteeName;
@@ -269,6 +289,8 @@ class VendorTeamInvitationRecordBuilder
     final $v = _$v;
     if ($v != null) {
       _id = $v.id;
+      _lockVersion = $v.lockVersion;
+      _canDelete = $v.canDelete;
       _inviteeName = $v.inviteeName;
       _email = $v.email;
       _inviteeMobile = $v.inviteeMobile;
@@ -304,6 +326,10 @@ class VendorTeamInvitationRecordBuilder
         _$VendorTeamInvitationRecord._(
           id: BuiltValueNullFieldError.checkNotNull(
               id, r'VendorTeamInvitationRecord', 'id'),
+          lockVersion: BuiltValueNullFieldError.checkNotNull(
+              lockVersion, r'VendorTeamInvitationRecord', 'lockVersion'),
+          canDelete: BuiltValueNullFieldError.checkNotNull(
+              canDelete, r'VendorTeamInvitationRecord', 'canDelete'),
           inviteeName: inviteeName,
           email: BuiltValueNullFieldError.checkNotNull(
               email, r'VendorTeamInvitationRecord', 'email'),

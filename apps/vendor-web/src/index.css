@@ -42,3 +42,16 @@
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
 }
+
+/* Vendor workspace typography; shared Admin and public pages retain their styles. */
+.vendor-page .text-base,
+.vendor-page .text-body-strong { font-size: 14px; }
+.vendor-page .text-xs { font-size: 13px; }
+.vendor-page .rounded-surface { border-radius: 12px; }
+.vendor-page:has(> .chat-workspace) {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  padding: 0;
+}

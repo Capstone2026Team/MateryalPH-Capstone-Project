@@ -23,6 +23,7 @@ final class VendorInventoryController extends Controller
     {
         $filters = $request->validate([
             'q' => ['sometimes', 'string', 'max:120'],
+            'category_id' => ['sometimes', 'uuid'],
             'listing_id' => ['sometimes', 'uuid'],
             'stock' => ['sometimes', Rule::in(StockAvailability::LABELS)],
             'confirmation' => ['sometimes', Rule::in(['DUE', 'STALE'])],

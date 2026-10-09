@@ -544,6 +544,49 @@ final class PhaseSevenItemProcurementTest extends TestCase
         self::assertNull($manual['amounts']['total_before_processing_min_centavos']);
     }
 
+    public function test_product_delivery_preview_recalculates_without_cart_lines_and_keeps_missing_data_explicit(): void
+    {
+        [$store, $owner] = $this->activeStore('Product delivery', false, true);
+        $this->signInStoreMember($owner);
+        $listing = $this->listing('PREVIEW-LOAD', [['qty' => '200']]);
+        $variant = $this->variants($listing)[0];
+        $this->vehicle();
+        DB::table('delivery_service_areas')->where('vendor_organization_id', $store->id)->update(['maximum_distance_km' => 40]);
+        $this->placeStore($store->id, 1000);
+        $buyer = $this->buyer();
+        $site = $this->savedLocation($buyer, 'Delivery site', 0, 0);
+        $gate = $this->savedLocation($buyer, 'Alternative gate', 1500, 0);
+        $preview = fn (string $quantity = '1'): TestResponse => $this->postJson('/api/v1/buyers/cart/delivery-preview', ['listing_variant_id' => $variant, 'quantity' => $quantity]);
+
+        $preview()->assertOk()->assertJsonPath('data.issues.0.code', 'DESTINATION_REQUIRED')->assertJsonPath('data.estimate', null);
+        $cart = $this->getJson('/api/v1/buyers/cart')->assertOk()->json('data');
+        $this->putJson('/api/v1/buyers/cart/destination', ['lock_version' => $cart['lock_version'], 'intended_location_id' => $site,
+            'heavy_vehicle_restriction' => 'YES', 'alternate_drop_off_location_id' => $gate, 'access_instructions' => 'Unload at the gate.'])->assertOk();
+        $version = DB::table('carts')->where('buyer_profile_id', $this->buyerProfileId($buyer))->value('lock_version');
+        $preview()->assertOk()->assertJsonPath('data.status', 'ADVISORY_ESTIMATE')->assertJsonPath('data.endpoint', 'ALTERNATE_DROP_OFF')
+            ->assertJsonPath('data.estimate.fee_min_centavos', 60500)->assertJsonPath('data.confirmed_offer', null);
+        // 100 units at 12 kg require two trips with the 1000 kg payload capacity.
+        $preview('100')->assertOk()->assertJsonPath('data.estimate.trips_min', 2)->assertJsonPath('data.estimate.fee_min_centavos', 121000);
+        $preview('0')->assertUnprocessable()->assertJsonPath('errors.0.code', 'QUANTITY_INVALID');
+        $preview('1.5')->assertUnprocessable()->assertJsonPath('errors.0.code', 'QUANTITY_INVALID');
+        $preview('201')->assertUnprocessable();
+        self::assertSame($version, DB::table('carts')->where('buyer_profile_id', $this->buyerProfileId($buyer))->value('lock_version'));
+        self::assertSame(0, DB::table('cart_items')->count());
+        self::assertSame(0, DB::table('orders')->count());
+        self::assertSame(0, DB::table('inventory_holds')->count());
+
+        DB::table('listing_variants')->where('id', $variant)->update(['weight_kg' => null]);
+        $preview()->assertOk()->assertJsonPath('data.status', 'MANUAL_REVIEW')->assertJsonPath('data.estimate', null);
+        DB::table('route_cache_entries')->delete();
+        $this->routes->failure = 'UNAVAILABLE';
+        $preview()->assertOk()->assertJsonPath('data.issues.0.code', 'ROUTE_UNAVAILABLE')->assertJsonPath('data.estimate', null);
+        // A different Buyer gets their own destination requirements, never the first Buyer's fee or endpoint.
+        $this->buyer();
+        $preview()->assertOk()->assertJsonPath('data.issues.0.code', 'DESTINATION_REQUIRED');
+        $this->signInStoreMember($owner);
+        self::assertContains($preview()->status(), [401, 403], 'A Vendor web session cannot use the Buyer delivery preview.');
+    }
+
     public function test_preview_amounts_follow_fin02_included_vat_and_exclude_commission_and_withholding(): void
     {
         [$store, $owner] = $this->activeStore('VAT Store', false);

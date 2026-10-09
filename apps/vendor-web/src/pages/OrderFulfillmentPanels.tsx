@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
-import { AlertTriangle, Camera, ClipboardCheck, MessageSquare, PauseCircle, ShieldAlert, Truck, UserRoundCheck } from 'lucide-react'
+import { AlertTriangle, Camera, ClipboardCheck, PauseCircle, ShieldAlert, Truck, UserRoundCheck } from 'lucide-react'
 import {
   Button, CancellationAvailability, ConfirmDialog, DeadlineCountdown, Field, FileSelectionField, MilestoneStepper, RefundTimeline, StatusBadge, StatusMessage,
   formatManilaDateTime, formatPesoCentavos, readOrderEvidenceFile, roleLabel,
@@ -78,7 +77,6 @@ export function FulfillmentWorkspace({ order, onChanged, onReload }: { order: Or
     {fulfillment.nextAction === 'AWAIT_RECEIPT' && <ReceiptStatus order={order} onReload={onReload} />}
     {fulfillment.acceptedArrangement && <AcceptedArrangement order={order} onChanged={onChanged} />}
     {fulfillment.issue && <ProblemPanel order={order} onChanged={onChanged} />}
-    <ThreadEntry order={order} />
     {permissions?.canAssignFulfillment && <AssignmentPanel order={order} onChanged={onChanged} />}
     {!permissions?.canAssignFulfillment && fulfillment.assignment && <p className="flex items-center gap-2 text-sm"><UserRoundCheck size={16} aria-hidden="true" />Assigned to <strong>{fulfillment.assignment.displayName}</strong> (Fulfillment Staff)</p>}
     {permissions?.canReportVehicleIssue && order.fulfillmentMethod === 'DELIVERY' && <VehicleIssueForm order={order} onChanged={onChanged} />}
@@ -223,16 +221,6 @@ function ProblemPanel({ order, onChanged }: { order: OrderDetail; onChanged: Not
         <p className="text-xs text-text-secondary">A response is communication only. A replacement, refund or other remedy follows its own authorized process.</p>
       </form>}
   </section>
-}
-
-function ThreadEntry({ order }: { order: OrderDetail }) {
-  const thread = order.fulfillment!.thread
-  return <p className="flex flex-wrap items-center gap-2 border-t border-border-default pt-4 text-sm">
-    <MessageSquare size={16} aria-hidden="true" />
-    {thread.available && thread.conversationId
-      ? <><Link to={`/messages?conversation=${thread.conversationId}`} className="font-semibold text-action-primary underline-offset-4 hover:underline">Open Fulfillment Messages</Link>{thread.readOnly && <span className="text-text-secondary">· read-only history</span>}</>
-      : <span className="text-text-secondary">{thread.notice ?? 'Fulfillment Messages are not open yet.'}</span>}
-  </p>
 }
 
 function AssignmentPanel({ order, onChanged }: { order: OrderDetail; onChanged: Notify }) {

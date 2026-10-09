@@ -590,6 +590,7 @@ class AdminFinanceApi {
   /// finance.view. Monthly commission statements.
   ///
   /// Parameters:
+  /// * [overdue] - Issued balances past their due date.
   /// * [page]
   /// * [state]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -602,6 +603,7 @@ class AdminFinanceApi {
   /// Returns a [Future] containing a [Response] with a [FeeStatementListEnvelope] as data
   /// Throws [DioException] if API call or serialization fails
   Future<Response<FeeStatementListEnvelope>> listFeeStatements({
+    bool? overdue,
     int? page,
     String? state,
     CancelToken? cancelToken,
@@ -637,6 +639,7 @@ class AdminFinanceApi {
     );
 
     final _queryParameters = <String, dynamic>{
+      if (overdue != null) r'overdue': encodeQueryParameter(_serializers, overdue, const FullType(bool)),
       if (page != null) r'page': encodeQueryParameter(_serializers, page, const FullType(int)),
       if (state != null) r'state': encodeQueryParameter(_serializers, state, const FullType(String)),
     };

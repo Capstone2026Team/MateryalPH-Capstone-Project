@@ -5,13 +5,15 @@ declare(strict_types=1);
 namespace App\Domain\Reviews;
 
 use App\Domain\Disputes\DisputeRules;
+use App\Domain\Settings\PlatformSettings;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Query\Builder;
 
 /**
  * Rating Eligibility Rules from the System Workflow. Trigger: the order reaches COMPLETED. Limit: one Vendor rating
- * per party per order and one Product Review per eligible line. Window: 14 calendar days after completion (an exact
- * instant, completion + 14 × 24 h). Correction: 24 hours after submission. Blind reveal: both parties submit or the
+ * per party per order and one Product Review per eligible line. Window: 14 calendar days after completion by default (an
+ * exact instant stored when the window opens). Correction: 24 hours after submission by default. Both windows and the
+ * moderation correction window come from the versioned Platform Setting `reviews.windows`. Blind reveal: both parties submit or the
  * window expires. Dispute: a rating stays withheld while a directly related dispute remains active. An Admin
  * "Request Correction" hides the review and gives its author one correction within 7 days (approved by the project
  * owner on 2026-10-04).
@@ -27,6 +29,10 @@ final class ReviewRules
     public const COMMENT_MAX = 1000;
 
     public const MEDIA_MAX = 3;
+
+    public const PHOTO_MAX_BYTES = 10 * 1024 * 1024;
+
+    public const VIDEO_MAX_BYTES = 100 * 1024 * 1024;
 
     /** Buyer rates the Vendor. */
     public const VENDOR = 'VENDOR';
@@ -48,12 +54,28 @@ final class ReviewRules
 
     public static function closesAt(CarbonImmutable $completedAt): CarbonImmutable
     {
-        return $completedAt->addDays(self::WINDOW_DAYS);
+        return $completedAt->addDays((int) PlatformSettings::current()->field('reviews.windows', 'rating_window_days'));
     }
 
     public static function editableUntil(CarbonImmutable $submittedAt): CarbonImmutable
     {
-        return $submittedAt->addHours(self::EDIT_HOURS);
+        return $submittedAt->addHours((int) PlatformSettings::current()->field('reviews.windows', 'edit_hours'));
+    }
+
+    public static function correctionDays(): int
+    {
+        return (int) PlatformSettings::current()->field('reviews.windows', 'correction_days');
+    }
+
+    /** Effective review media limits: the versioned upload setting, never above the approved ceilings above. */
+    public static function photoMaxBytes(): int
+    {
+        return min(self::PHOTO_MAX_BYTES, PlatformSettings::current()->uploadKb('review_photo') * 1024);
+    }
+
+    public static function videoMaxBytes(): int
+    {
+        return min(self::VIDEO_MAX_BYTES, PlatformSettings::current()->uploadKb('review_video') * 1024);
     }
 
     public static function speedKind(string $fulfillmentMethod): string

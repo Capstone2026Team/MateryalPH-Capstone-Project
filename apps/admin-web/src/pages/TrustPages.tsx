@@ -35,29 +35,38 @@ function useAdminFilters(): [AdminAnalyticsFilters, (next: Partial<AdminAnalytic
     psgcCode: params.get('psgc') ?? undefined, q: params.get('q') ?? undefined }
   return [filters, next => {
     const merged = { ...filters, ...next }
-    const query = new URLSearchParams({ days: String(merged.presetDays ?? 30) })
-    if (merged.psgcCode) query.set('psgc', merged.psgcCode)
-    if (merged.q) query.set('q', merged.q)
+    // Other query parameters (the geographic dashboard's filters) are preserved.
+    const query = new URLSearchParams(params)
+    query.set('days', String(merged.presetDays ?? 30))
+    if (merged.psgcCode) query.set('psgc', merged.psgcCode); else query.delete('psgc')
+    if (merged.q) query.set('q', merged.q); else query.delete('q')
     setParams(query, { replace: true })
   }]
 }
 
-function AdminFilters({ filters, onChange }: { filters: AdminAnalyticsFilters; onChange: (next: Partial<AdminAnalyticsFilters>) => void }) {
-  const [psgc, setPsgc] = useState(filters.psgcCode ?? '')
+const detailQuery = (filters: AdminAnalyticsFilters) => {
+  const query = new URLSearchParams({ days: String(filters.presetDays ?? 30) })
+  if (filters.psgcCode) query.set('psgc', filters.psgcCode)
+  if (filters.q) query.set('q', filters.q)
+  return `?${query.toString()}`
+}
+
+function AdminFilters({ filters, onChange, areaLabel }: { filters: AdminAnalyticsFilters; onChange: (next: Partial<AdminAnalyticsFilters>) => void; areaLabel?: string | undefined }) {
   const [q, setQ] = useState(filters.q ?? '')
   return <div className="grid gap-4 border-b border-border-default pb-5">
     <FilterChips label="Comparison period" value={String(filters.presetDays ?? 30)} chips={PRESETS} onChange={value => onChange({ presetDays: Number(value) })} />
-    <form className="grid gap-3 md:grid-cols-[minmax(0,14rem)_minmax(0,1fr)_auto] md:items-end" onSubmit={(event: FormEvent) => { event.preventDefault(); onChange({ psgcCode: psgc.trim() || undefined, q: q.trim() || undefined }) }}>
-      <label className="grid gap-2 text-sm font-semibold">PSGC area code<input className={control} value={psgc} onChange={event => setPsgc(event.target.value)} placeholder="Blank = Philippines" inputMode="numeric" /></label>
+    <form className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end" onSubmit={(event: FormEvent) => { event.preventDefault(); onChange({ q: q.trim() || undefined }) }}>
       <label className="grid gap-2 text-sm font-semibold">Search materials<input className={control} value={q} onChange={event => setQ(event.target.value)} /></label>
       <Button type="submit" variant="secondary"><Search size={16} aria-hidden="true" />Apply</Button>
     </form>
-    <p className="text-xs text-text-secondary">Payment, order-state and transaction filters do not apply to listed-price history.</p>
+    <p className="text-xs text-text-secondary">Scope: {areaLabel ?? 'Philippines'} (PSGC area; no radius applies). Payment, order-state and other transaction filters are not applicable to listed-price history.</p>
   </div>
 }
 
-export function AdminMaterialsAnalyticsPage() {
-  const [filters, setFilters] = useAdminFilters()
+/** The Materials Analytics list (MAT), embedded in the geographic dashboard; the dashboard's PSGC area is its scope. */
+export function MaterialsAnalyticsSection({ psgcCode, areaLabel }: { psgcCode: string | null; areaLabel: string }) {
+  const [stored, setFilters] = useAdminFilters()
+  const filters: AdminAnalyticsFilters = { ...stored, psgcCode: psgcCode ?? undefined }
   const list = useLoad<AdminMaterialsAnalyticsList>(() => listAdminAnalytics(filters), [JSON.stringify(filters)])
   const runs = useLoad<AnalyticsRun[]>(() => listRuns(), [])
   const [exportError, setExportError] = useState<string | null>(null)
@@ -66,11 +75,11 @@ export function AdminMaterialsAnalyticsPage() {
     try { const blob = await exportAdminAnalytics(filters); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = 'materials-analytics-aggregates.csv'; link.click(); URL.revokeObjectURL(link.href) }
     catch (cause) { setExportError(await readableApiError(cause)) }
   }
-  return <AdminShell activeHref="/analytics/materials"><div className="space-y-6">
-    <PageHeader eyebrow="Marketplace Analytics" title="Materials Analytics" description="Equal-Vendor daily averages of public Tier 2 listed prices by PSGC area, including Philippines-wide scope. Not an official price index."
-      actions={<Button variant="secondary" onClick={() => void download()}><Download size={16} aria-hidden="true" />Export CSV</Button>} />
+  return <section aria-labelledby="materials-analytics" className="space-y-5">
+    <div className="flex flex-wrap items-end justify-between gap-3"><div><h2 id="materials-analytics" className="text-xl font-semibold">Materials Analytics</h2><p className="mt-1 max-w-3xl text-sm text-text-secondary">Equal-Vendor daily averages of public Tier 2 listed prices for {areaLabel}. Not an official price index.</p></div>
+      <Button variant="secondary" onClick={() => void download()}><Download size={16} aria-hidden="true" />Export CSV</Button></div>
     {exportError && <StatusMessage tone="error">{exportError}</StatusMessage>}
-    <AdminFilters filters={filters} onChange={setFilters} />
+    <AdminFilters filters={filters} onChange={next => setFilters({ ...next, psgcCode: undefined })} areaLabel={areaLabel} />
     {list.error ? <ErrorState message={list.error} onRetry={list.retry} /> : !list.data ? <LoadingState /> : <>
       <DatasetNotice label={list.data.dataset.label ?? 'Listed-price history'} updateSchedule={list.data.updateSchedule} snapshotAt={list.data.snapshot?.observedAt ? list.data.snapshot.observedAt.toISOString() : null} currentAsOf={list.data.currentAsOf.toISOString()} explanation={list.data.explanation} />
       {list.data.items.length === 0 ? <AnalyticsNullState title="No comparable materials in this scope" reason="No published observation or current offer matches this area and period." />
@@ -83,26 +92,28 @@ export function AdminMaterialsAnalyticsPage() {
             <td className="px-4 py-3 tabular-nums">{row.endPoint.vendorCount ?? '—'}</td>
             <td className="px-4 py-3"><TrendSummary compact trend={row.trend} /></td>
             <td className="px-4 py-3 tabular-nums">{row.current.vendorCount} Vendors · {row.current.listingCount} listings</td>
-            <td className="px-4 py-3 text-right"><Link className="inline-flex min-h-11 items-center font-semibold text-action-primary" to={`/analytics/materials/${row.groupId}${window.location.search}`} aria-label={`View details for ${row.displayName}`}>View details</Link></td>
+            <td className="px-4 py-3 text-right"><Link className="inline-flex min-h-11 items-center font-semibold text-action-primary" to={`/analytics/materials/${row.groupId}${detailQuery(filters)}`} aria-label={`View details for ${row.displayName}`}>View details</Link></td>
           </tr>)}</tbody></table></div>}
     </>}
     <section aria-labelledby="runs" className="space-y-3">
-      <h2 id="runs" className="text-lg font-semibold">Daily snapshot health</h2>
+      <h3 id="runs" className="text-lg font-semibold">Daily snapshot health</h3>
       {runs.error ? <ErrorState message={runs.error} onRetry={runs.retry} /> : !runs.data ? <LoadingState /> : runs.data.length === 0 ? <p className="text-sm text-text-secondary">No capture has run yet. The job runs daily at 00:10 Asia/Manila.</p>
         : <ul className="divide-y divide-border-default border-y border-border-default">{runs.data.slice(0, 10).map(run => <li key={run.id} className="flex flex-wrap items-center gap-3 py-2 text-sm">
           <span className="font-semibold">{formatAnalyticsDate(run.snapshotDate, true)}</span><StatusBadge label={`${run.state} · rev ${run.revision}`} tone={run.state === 'PUBLISHED' ? 'success' : run.state === 'FAILED' ? 'error' : 'neutral'} />
           <span className="text-text-secondary">{run.observedAt ? `Captured ${formatManilaDateTime(run.observedAt)}` : ''}{run.delayed ? ' · delayed capture' : ''} · {run.vendors} Vendors · {run.selected} selected of {run.observations}</span>{run.errorCode && <span className="text-status-error">{run.errorCode}</span>}
         </li>)}</ul>}
     </section>
-  </div></AdminShell>
+  </section>
 }
 
 export function AdminMaterialPriceDetailsPage() {
   const { groupId = '' } = useParams()
   const [filters] = useAdminFilters()
   const detail = useLoad<AdminMaterialsAnalyticsDetail>(() => getAdminAnalyticsDetail(groupId, filters), [groupId, JSON.stringify(filters)])
-  return <AdminShell activeHref="/analytics/materials"><div className="space-y-6">
-    <Link className="inline-flex min-h-11 items-center text-sm font-semibold text-action-primary" to={`/analytics/materials${window.location.search}`}>← Materials Analytics</Link>
+  const back = new URLSearchParams({ view: 'materials', days: String(filters.presetDays ?? 30) })
+  if (filters.psgcCode) back.set('area', filters.psgcCode)
+  return <AdminShell activeHref="/analytics"><div className="space-y-6">
+    <Link className="inline-flex min-h-11 items-center text-sm font-semibold text-action-primary" to={`/analytics?${back.toString()}`}>← Marketplace Analytics</Link>
     {detail.error ? <ErrorState message={detail.error} onRetry={detail.retry} /> : !detail.data ? <LoadingState /> : <MaterialDetail detail={detail.data} />}
   </div></AdminShell>
 }

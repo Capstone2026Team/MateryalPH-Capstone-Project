@@ -71,15 +71,21 @@ class BuyerHomeScreen extends StatefulWidget {
 }
 
 class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
-  late final NotificationsRepository? _notifications = widget.repository == null
-      ? null
-      : NotificationsRepository(widget.repository!.apiClient, _expireSession);
-  late final BuyerPush? _push = _notifications == null
-      ? null
-      : BuyerPush(_notifications, (id) => _openNotifications(id));
+  NotificationsRepository? _notifications;
+  void Function()? _detachNotificationExpiry;
+  BuyerPush? _push;
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final repository = NotificationScope.of(context);
+    if (repository == _notifications) return;
+    _detachNotificationExpiry?.call();
+    _push?.dispose();
+    _notifications = repository;
+    _detachNotificationExpiry = repository?.attachSessionExpiry(_expireSession);
+    _push = repository == null
+        ? null
+        : BuyerPush(repository, (id) => _openNotifications(id));
     unawaited(_push?.start().catchError((Object _) {}));
   }
 
@@ -87,14 +93,11 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
     if (_notifications == null) return;
     Navigator.of(context).push<void>(
       MaterialPageRoute(
-        builder: (_) => NotificationScope(
-          repository: _notifications,
-          child: NotificationsScreen(
-            repository: _notifications,
-            initialNotice: notice,
-            enablePush: BuyerPush.enabled ? _push?.enable : null,
-            open: _openNoticeTarget,
-          ),
+        builder: (_) => NotificationsScreen(
+          repository: _notifications!,
+          initialNotice: notice,
+          enablePush: BuyerPush.enabled ? _push?.enable : null,
+          open: _openNoticeTarget,
         ),
       ),
     );
@@ -151,14 +154,9 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
       return;
     }
     if (mounted) {
-      await Navigator.of(context).push<void>(
-        MaterialPageRoute(
-          builder: (_) => NotificationScope(
-            repository: _notifications!,
-            child: destination!,
-          ),
-        ),
-      );
+      await Navigator.of(
+        context,
+      ).push<void>(MaterialPageRoute(builder: (_) => destination!));
     }
   }
 
@@ -310,6 +308,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
 
   @override
   void dispose() {
+    _detachNotificationExpiry?.call();
     _push?.dispose();
     _explore?.dispose();
     _cart?.dispose();
@@ -318,6 +317,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
   }
 
   Future<void> _expireSession() async {
+    _notifications?.inbox.setActive(false, clear: true);
     await _resultStore.clear();
     await widget.repository?.clearAccountSession();
     if (mounted) _sessionEnded();

@@ -1,13 +1,13 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { beforeEach, expect, test, vi } from 'vitest'
+import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import * as api from '../lib/disputes-api'
-import type { DisputeDetail, VendorOrderInvoices } from '../lib/disputes-api'
+import type { DisputeDetail, DisputeEligibility, VendorOrderInvoices } from '../lib/disputes-api'
 import { useOnboardingSnapshot } from '../lib/vendor-status'
-import { VendorDisputeDetailPage } from './DisputePages'
+import { FileDisputeDialog, VendorDisputeDetailPage } from './DisputePages'
 import { OrderInvoicePanel } from './InvoicePages'
 
-vi.mock('../lib/disputes-api', async original => ({ ...await original<typeof import('../lib/disputes-api')>(), getDispute: vi.fn(), respond: vi.fn(), getOrderInvoices: vi.fn(), uploadInvoice: vi.fn() }))
+vi.mock('../lib/disputes-api', async original => ({ ...await original<typeof import('../lib/disputes-api')>(), getDispute: vi.fn(), getEligibility: vi.fn(), fileDispute: vi.fn(), respond: vi.fn(), getOrderInvoices: vi.fn(), uploadInvoice: vi.fn() }))
 vi.mock('../lib/vendor-status', () => ({ useOnboardingSnapshot: vi.fn() }))
 vi.mock('../lib/catalog-access', async original => ({ ...await original<typeof import('../lib/catalog-access')>(), storeName: () => 'Test Supply' }))
 vi.mock('./PhaseThreeVendorPages', async original => ({ ...await original<typeof import('./PhaseThreeVendorPages')>(), VendorShell: ({ children }: { children: React.ReactNode }) => <main>{children}</main> }))
@@ -33,7 +33,93 @@ const invoices = (overrides: Partial<VendorOrderInvoices> = {}): VendorOrderInvo
   invoiceTypes: ['VENDOR_GOODS_INVOICE', 'VENDOR_ADJUSTMENT_DOCUMENT'], sourceSystems: ['REGISTERED_CAS'], invoicingMethods: ['COMPUTERIZED'], lines: [], ...overrides,
 }) as VendorOrderInvoices
 
-beforeEach(() => { vi.clearAllMocks(); window.scrollTo = vi.fn() as unknown as typeof window.scrollTo })
+const originalCreate = Object.getOwnPropertyDescriptor(URL, 'createObjectURL')
+const originalRevoke = Object.getOwnPropertyDescriptor(URL, 'revokeObjectURL')
+const createObjectURL = vi.fn<(blob: Blob) => string>()
+const revokeObjectURL = vi.fn<(url: string) => void>()
+beforeEach(() => {
+  vi.clearAllMocks(); window.scrollTo = vi.fn() as unknown as typeof window.scrollTo
+  createObjectURL.mockImplementation(() => `blob:local-${createObjectURL.mock.calls.length}`)
+  Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: createObjectURL })
+  Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: revokeObjectURL })
+})
+afterEach(() => {
+  if (originalCreate) Object.defineProperty(URL, 'createObjectURL', originalCreate); else Reflect.deleteProperty(URL, 'createObjectURL')
+  if (originalRevoke) Object.defineProperty(URL, 'revokeObjectURL', originalRevoke); else Reflect.deleteProperty(URL, 'revokeObjectURL')
+})
+
+const eligibility = (overrides: Partial<DisputeEligibility> = {}): DisputeEligibility => ({
+  available: true, reason: '', caseKind: 'TRANSACTION', issueTypes: ['PHYSICAL_PAYMENT_NOT_RECEIVED'], requestedRemedies: ['PAYMENT_OF_BALANCE'],
+  lines: [{ orderLineId: 'line-1', displayName: 'Steel bar', variantLabel: 'Standard', quantity: '10', lineTotalCentavos: 10000, refundableCentavos: 10000 }],
+  originalPaymentMethod: { label: 'GCash', physical: false }, refundDestinationNotice: 'Refunds return to the original payment method.', filingCreatesRefund: false, ...overrides,
+})
+const openFiling = (onClose = vi.fn()) => render(<MemoryRouter initialEntries={['/orders/order-1']}><Routes>
+  <Route path="/orders/:orderId" element={<FileDisputeDialog orderId="order-1" onClose={onClose} />} />
+  <Route path="/disputes/:caseId" element={<h1>Created case</h1>} />
+</Routes></MemoryRouter>)
+
+test('the filing popup reviews local evidence, removes a file, and submits only the remaining evidence', async () => {
+  vi.mocked(api.getEligibility).mockResolvedValue(eligibility())
+  vi.mocked(api.fileDispute).mockResolvedValue(detail())
+  openFiling()
+  const dialog = screen.getByRole('dialog', { name: 'File a case' })
+  const form = await within(dialog).findByRole('form', { name: 'File a case' })
+  fireEvent.click(within(form).getByRole('button', { name: 'File case' }))
+  expect(within(form).getByText('Describe the issue in at least 20 characters.')).toBeInTheDocument()
+  expect(api.fileDispute).not.toHaveBeenCalled()
+  const photo = new File(['photo'], 'handover.png', { type: 'image/png' })
+  const pdf = new File(['%PDF'], 'receipt.pdf', { type: 'application/pdf' })
+  fireEvent.change(within(form).getByLabelText('Evidence'), { target: { files: [photo, pdf] } })
+  const preview = within(form).getByRole('img', { name: 'Selected evidence preview: handover.png' })
+  const photoUrl = preview.getAttribute('src')
+  expect(within(form).getByRole('link', { name: 'Preview receipt.pdf' })).toHaveAttribute('href', expect.stringContaining('blob:local-'))
+  expect(within(form).getByText('Pending upload. Files are attached when you submit the form.')).toBeInTheDocument()
+  expect(api.fileDispute).not.toHaveBeenCalled()
+  fireEvent.click(within(form).getByRole('button', { name: 'Remove handover.png' }))
+  expect(within(form).queryByText('handover.png')).not.toBeInTheDocument()
+  expect(revokeObjectURL).toHaveBeenCalledWith(photoUrl)
+  fireEvent.change(within(form).getByRole('textbox', { name: 'What happened' }), { target: { value: 'The Buyer has not paid the outstanding balance.' } })
+  fireEvent.click(within(form).getByRole('checkbox', { name: 'Steel bar · Standard' }))
+  fireEvent.click(within(form).getByRole('button', { name: 'File case' }))
+  await screen.findByRole('heading', { name: 'Created case' })
+  expect(api.fileDispute).toHaveBeenCalledTimes(1)
+  expect(vi.mocked(api.fileDispute).mock.calls[0]).toEqual([
+    { orderId: 'order-1', issueType: 'PHYSICAL_PAYMENT_NOT_RECEIVED', requestedRemedy: 'PAYMENT_OF_BALANCE', description: 'The Buyer has not paid the outstanding balance.', affectedLineIds: ['line-1'], files: [pdf] },
+    expect.any(String),
+  ])
+  expect(revokeObjectURL).toHaveBeenCalledTimes(createObjectURL.mock.calls.length)
+})
+
+test('filing checks server eligibility inside the popup and links to an existing case', async () => {
+  vi.mocked(api.getEligibility).mockResolvedValue(eligibility({ available: false, reason: 'An active case already exists.', activeCaseId: 'case-1' }))
+  openFiling()
+  const dialog = screen.getByRole('dialog', { name: 'File a case' })
+  expect(await within(dialog).findByText('An active case already exists.')).toBeInTheDocument()
+  expect(within(dialog).getByRole('link', { name: 'Open the active case' })).toHaveAttribute('href', '/disputes/case-1')
+  expect(within(dialog).queryByRole('form')).not.toBeInTheDocument()
+  expect(api.fileDispute).not.toHaveBeenCalled()
+})
+
+test('a failed popup submission keeps evidence for retry and prevents closing while filing', async () => {
+  vi.mocked(api.getEligibility).mockResolvedValue(eligibility())
+  let rejectSubmission: (reason: Error) => void = () => {}
+  vi.mocked(api.fileDispute).mockImplementation(() => new Promise((_, reject) => { rejectSubmission = reject }))
+  const onClose = vi.fn()
+  openFiling(onClose)
+  const dialog = screen.getByRole('dialog', { name: 'File a case' })
+  const form = await within(dialog).findByRole('form', { name: 'File a case' })
+  fireEvent.change(within(form).getByLabelText('Evidence'), { target: { files: [new File(['%PDF'], 'receipt.pdf', { type: 'application/pdf' })] } })
+  fireEvent.change(within(form).getByRole('textbox', { name: 'What happened' }), { target: { value: 'The Buyer has not paid the outstanding balance.' } })
+  fireEvent.click(within(form).getByRole('button', { name: 'File case' }))
+  expect(within(dialog).getByRole('button', { name: 'Close file a case' })).toBeDisabled()
+  fireEvent(dialog, new Event('cancel', { bubbles: true, cancelable: true }))
+  expect(onClose).not.toHaveBeenCalled()
+  await act(async () => { rejectSubmission(new Error('Offline')) })
+  expect(within(form).getByText('receipt.pdf')).toBeInTheDocument()
+  expect(within(form).getByRole('button', { name: 'File case' })).toBeEnabled()
+  expect(within(dialog).getByRole('button', { name: 'Close file a case' })).toBeEnabled()
+  expect(api.fileDispute).toHaveBeenCalledTimes(1)
+})
 
 test('a role without dispute access is denied and the case is never requested', async () => {
   snapshot(['portal.orders'])

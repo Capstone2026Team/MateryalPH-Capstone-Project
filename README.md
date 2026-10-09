@@ -74,8 +74,13 @@ flutter run
 flutter run -d 110013341G000422 --dart-define-from-file=config/development.json
 ```
 
+For a USB-connected Android device, forward the API and realtime ports. Port 8081 carries instant notification and message updates.
+
+```powershell
 adb -s 110013341G000422 reverse tcp:8080 tcp:8080
+adb -s 110013341G000422 reverse tcp:8081 tcp:8081
 adb -s 110013341G000422 reverse --list
+```
 
 ## Validation
 

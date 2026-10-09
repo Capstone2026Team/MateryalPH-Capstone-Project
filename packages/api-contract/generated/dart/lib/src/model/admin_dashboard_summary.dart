@@ -3,6 +3,8 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:built_collection/built_collection.dart';
+import 'package:materyalph_api_client/src/model/operations_queue.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -18,6 +20,7 @@ part 'admin_dashboard_summary.g.dart';
 /// * [pendingDocumentReviews]
 /// * [auditEvents]
 /// * [canViewAudit]
+/// * [queues] - Only the queues your Admin permissions allow, with counts and the oldest pending item.
 @BuiltValue()
 abstract class AdminDashboardSummary implements Built<AdminDashboardSummary, AdminDashboardSummaryBuilder> {
   @BuiltValueField(wireName: r'generated_at')
@@ -40,6 +43,10 @@ abstract class AdminDashboardSummary implements Built<AdminDashboardSummary, Adm
 
   @BuiltValueField(wireName: r'can_view_audit')
   bool get canViewAudit;
+
+  /// Only the queues your Admin permissions allow, with counts and the oldest pending item.
+  @BuiltValueField(wireName: r'queues')
+  BuiltList<OperationsQueue>? get queues;
 
   AdminDashboardSummary._();
 
@@ -99,6 +106,13 @@ class _$AdminDashboardSummarySerializer implements PrimitiveSerializer<AdminDash
       object.canViewAudit,
       specifiedType: const FullType(bool),
     );
+    if (object.queues != null) {
+      yield r'queues';
+      yield serializers.serialize(
+        object.queues,
+        specifiedType: const FullType(BuiltList, [FullType(OperationsQueue)]),
+      );
+    }
   }
 
   @override
@@ -175,6 +189,14 @@ class _$AdminDashboardSummarySerializer implements PrimitiveSerializer<AdminDash
             specifiedType: const FullType(bool),
           ) as bool;
           result.canViewAudit = valueDes;
+          break;
+        case r'queues':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltList, [FullType(OperationsQueue)]),
+          ) as BuiltList<OperationsQueue>?;
+          if (valueDes == null) continue;
+          result.queues.replace(valueDes);
           break;
         default:
           unhandled.add(key);

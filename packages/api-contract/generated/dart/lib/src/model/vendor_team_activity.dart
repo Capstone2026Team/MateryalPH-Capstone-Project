@@ -16,6 +16,8 @@ part 'vendor_team_activity.g.dart';
 /// * [id]
 /// * [actorName]
 /// * [actorRole]
+/// * [category]
+/// * [correlationId]
 /// * [action]
 /// * [resourceType]
 /// * [resourceId]
@@ -32,7 +34,14 @@ abstract class VendorTeamActivity implements Built<VendorTeamActivity, VendorTea
   String? get actorName;
 
   @BuiltValueField(wireName: r'actor_role')
-  String get actorRole;
+  String? get actorRole;
+
+  @BuiltValueField(wireName: r'category')
+  VendorTeamActivityCategoryEnum get category;
+  // enum categoryEnum {  SALES,  INVENTORY,  FULFILLMENT,  DISPUTES,  TEAM,  OTHER,  };
+
+  @BuiltValueField(wireName: r'correlation_id')
+  String? get correlationId;
 
   @BuiltValueField(wireName: r'action')
   String get action;
@@ -91,9 +100,19 @@ class _$VendorTeamActivitySerializer implements PrimitiveSerializer<VendorTeamAc
       );
     }
     yield r'actor_role';
-    yield serializers.serialize(
+    yield object.actorRole == null ? null : serializers.serialize(
       object.actorRole,
-      specifiedType: const FullType(String),
+      specifiedType: const FullType.nullable(String),
+    );
+    yield r'category';
+    yield serializers.serialize(
+      object.category,
+      specifiedType: const FullType(VendorTeamActivityCategoryEnum),
+    );
+    yield r'correlation_id';
+    yield object.correlationId == null ? null : serializers.serialize(
+      object.correlationId,
+      specifiedType: const FullType.nullable(String),
     );
     yield r'action';
     yield serializers.serialize(
@@ -173,9 +192,25 @@ class _$VendorTeamActivitySerializer implements PrimitiveSerializer<VendorTeamAc
         case r'actor_role':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(String),
-          ) as String;
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
           result.actorRole = valueDes;
+          break;
+        case r'category':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(VendorTeamActivityCategoryEnum),
+          ) as VendorTeamActivityCategoryEnum;
+          result.category = valueDes;
+          break;
+        case r'correlation_id':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.correlationId = valueDes;
           break;
         case r'action':
           final valueDes = serializers.deserialize(
@@ -256,4 +291,27 @@ class _$VendorTeamActivitySerializer implements PrimitiveSerializer<VendorTeamAc
   }
 }
 
+
+class VendorTeamActivityCategoryEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'SALES')
+  static const VendorTeamActivityCategoryEnum SALES = _$vendorTeamActivityCategoryEnum_SALES;
+  @BuiltValueEnumConst(wireName: r'INVENTORY')
+  static const VendorTeamActivityCategoryEnum INVENTORY = _$vendorTeamActivityCategoryEnum_INVENTORY;
+  @BuiltValueEnumConst(wireName: r'FULFILLMENT')
+  static const VendorTeamActivityCategoryEnum FULFILLMENT = _$vendorTeamActivityCategoryEnum_FULFILLMENT;
+  @BuiltValueEnumConst(wireName: r'DISPUTES')
+  static const VendorTeamActivityCategoryEnum DISPUTES = _$vendorTeamActivityCategoryEnum_DISPUTES;
+  @BuiltValueEnumConst(wireName: r'TEAM')
+  static const VendorTeamActivityCategoryEnum TEAM = _$vendorTeamActivityCategoryEnum_TEAM;
+  @BuiltValueEnumConst(wireName: r'OTHER')
+  static const VendorTeamActivityCategoryEnum OTHER = _$vendorTeamActivityCategoryEnum_OTHER;
+
+  static Serializer<VendorTeamActivityCategoryEnum> get serializer => _$vendorTeamActivityCategoryEnumSerializer;
+
+  const VendorTeamActivityCategoryEnum._(String name): super(name);
+
+  static BuiltSet<VendorTeamActivityCategoryEnum> get values => _$vendorTeamActivityCategoryEnumValues;
+  static VendorTeamActivityCategoryEnum valueOf(String name) => _$vendorTeamActivityCategoryEnumValueOf(name);
+}
 

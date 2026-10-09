@@ -290,6 +290,39 @@ final class PhaseTenProjectsTest extends TestCase
         $this->getJson('/api/v1/buyers/projects/'.$p['id'])->assertOk()->assertJsonPath('data.sites.0.point.location_id', $site);
     }
 
+    public function test_direct_project_selection_keeps_the_delivery_estimate_in_buyer_and_vendor_order_summaries(): void
+    {
+        [$vendor, $owner] = $this->activeStore('Project estimate summary', false, true);
+        $this->bulk($vendor->id);
+        $this->signInStoreMember($owner);
+        $this->orderListing('PROJECT-DELIVERY-SUMMARY');
+        $vehicle = $this->addVehicle($vendor->id);
+        DB::table('delivery_service_areas')->where('vendor_organization_id', $vendor->id)->update(['maximum_distance_km' => 40]);
+        $this->placeStore($vendor->id, 1000);
+        $this->connectOnlinePayments($vendor->id);
+        $buyer = $this->buyer();
+        [, $package] = $this->package(extra: ['fulfillment_method' => 'DELIVERY', 'site_contact' => 'Site supervisor',
+            'access_instructions' => 'Unload at the site.', 'heavy_vehicle_restriction' => 'NO']);
+        $candidate = $this->scan($package)['items'][0];
+        $fee = $candidate['delivery']['estimate']['fee_min_centavos'];
+        self::assertSame(60500, $fee);
+        $order = $this->postJson('/api/v1/buyers/work-packages/'.$package['id'].'/selection', [
+            'lock_version' => $package['lock_version'], 'candidate_id' => $candidate['id'],
+        ], $this->key())->assertCreated()->json('data.id');
+        $assertEstimate = static fn ($response) => $response->assertOk()
+            ->assertJsonPath('data.money.delivery.estimate.min_centavos', $fee)
+            ->assertJsonPath('data.money.delivery.amount_centavos', null)
+            ->assertJsonPath('data.money.commercial_total_centavos', null)
+            ->assertJsonPath('data.delivery.status', 'ADVISORY_ESTIMATE')
+            ->assertJsonPath('data.delivery.estimate.fee_min_centavos', $fee);
+        $assertEstimate($this->getJson('/api/v1/buyers/orders/'.$order));
+        $this->signInStoreMember($owner);
+        $assertEstimate($this->getJson('/api/v1/vendor/orders/'.$order));
+        DB::table('vendor_vehicles')->where('id', $vehicle)->update(['available' => false]);
+        $this->signInBuyer($buyer);
+        $assertEstimate($this->getJson('/api/v1/buyers/orders/'.$order));
+    }
+
     public function test_database_rejects_inserting_into_a_locked_original(): void
     {
         $this->buyer();

@@ -218,6 +218,7 @@ class VendorInventoryApi {
   /// Vendor-only inventory ledger, one row per active variant. Exact quantities are private to authorized Vendor users (Owner, Store Manager, Store Staff, Inventory Staff; Customer Service Staff read-only). Fulfillment Staff are denied. Buyers only ever receive public_label.
   ///
   /// Parameters:
+  /// * [categoryId] - Filters rows and summary counts by material category before pagination.
   /// * [q]
   /// * [listingId]
   /// * [stock]
@@ -233,6 +234,7 @@ class VendorInventoryApi {
   /// Returns a [Future] containing a [Response] with a [InventoryLedgerEnvelope] as data
   /// Throws [DioException] if API call or serialization fails
   Future<Response<InventoryLedgerEnvelope>> listVendorInventoryItems({
+    String? categoryId,
     String? q,
     String? listingId,
     StockLabel? stock,
@@ -266,6 +268,7 @@ class VendorInventoryApi {
     );
 
     final _queryParameters = <String, dynamic>{
+      if (categoryId != null) r'category_id': encodeQueryParameter(_serializers, categoryId, const FullType(String)),
       if (q != null) r'q': encodeQueryParameter(_serializers, q, const FullType(String)),
       if (listingId != null) r'listing_id': encodeQueryParameter(_serializers, listingId, const FullType(String)),
       if (stock != null) r'stock': encodeQueryParameter(_serializers, stock, const FullType(StockLabel)),

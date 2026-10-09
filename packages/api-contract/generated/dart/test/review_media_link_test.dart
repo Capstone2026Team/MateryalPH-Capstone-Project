@@ -22,5 +22,15 @@ void main() {
       // TODO
     });
 
+    // String contentType
+    test('to test the property `contentType`', () async {
+      // TODO
+    });
+
+    // int byteSize
+    test('to test the property `byteSize`', () async {
+      // TODO
+    });
+
   });
 }

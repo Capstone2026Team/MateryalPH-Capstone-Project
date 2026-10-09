@@ -554,7 +554,7 @@ This endpoint does not need any parameter.
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **listVendorCatalogListings**
-> CatalogListingSummaryListEnvelope listVendorCatalogListings(status, complianceStatus, categoryId, q, page)
+> CatalogListingSummaryListEnvelope listVendorCatalogListings(group, status, complianceStatus, categoryId, q, page)
 
 
 
@@ -569,6 +569,7 @@ import 'package:materyalph_api_client/api.dart';
 //defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
 
 final api = MateryalphApiClient().getVendorCatalogApi();
+final String group = group_example; // String | Read-only aggregate filter applied before pagination; summary counts ignore group and status. OUT_OF_STOCK means active listings with no available active variant.
 final ListingStatus status = ; // ListingStatus |
 final ListingComplianceStatus complianceStatus = ; // ListingComplianceStatus |
 final String categoryId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
@@ -576,7 +577,7 @@ final String q = q_example; // String |
 final int page = 56; // int |
 
 try {
-    final response = api.listVendorCatalogListings(status, complianceStatus, categoryId, q, page);
+    final response = api.listVendorCatalogListings(group, status, complianceStatus, categoryId, q, page);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling VendorCatalogApi->listVendorCatalogListings: $e\n');
@@ -587,6 +588,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **group** | **String**| Read-only aggregate filter applied before pagination; summary counts ignore group and status. OUT_OF_STOCK means active listings with no available active variant. | [optional]
  **status** | [**ListingStatus**](.md)|  | [optional]
  **complianceStatus** | [**ListingComplianceStatus**](.md)|  | [optional]
  **categoryId** | **String**|  | [optional]

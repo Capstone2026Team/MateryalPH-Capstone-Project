@@ -84,6 +84,13 @@ void main() {
       // TODO
     });
 
+    // Owner and Store Manager only. Lists existing fulfillment threads for the authorized sales inquiry's buyer and vendor, across procurement types. Writable threads first, then read-only history, newest activity and ID first within each group. Never creates a thread.
+    //
+    //Future<FulfillmentConversationPageResponse> listVendorFulfillmentConversations(String conversationId, { int page }) async
+    test('test listVendorFulfillmentConversations', () async {
+      // TODO
+    });
+
     // Opens the authorized order's quotation conversation or permanent Item-Based store chat, creating the latter if absent. Existing handler access is preserved. Assigned Fulfillment Staff can only open their existing order fulfillment thread. Does not send a message or change commercial terms.
     //
     //Future<ChatIdResponse> openVendorOrderConversation(String orderId, String idempotencyKey) async

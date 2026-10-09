@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Disputes;
 
+use App\Domain\Settings\PlatformSettings;
 use Carbon\CarbonImmutable;
 
 /**
@@ -33,6 +34,16 @@ final class DisputeRules
     public const POST_COMPLETION_DAYS = 7;
 
     public const TIMEZONE = 'Asia/Manila';
+
+    /**
+     * The effective deadline from the versioned Platform Setting `disputes.deadlines` (response_hours,
+     * mutual_resolution_hours, clarification_hours, appeal_business_days, post_completion_filing_days). The constants
+     * above are the approved defaults; running deadlines keep the instant stored when they were opened.
+     */
+    public static function deadline(string $field): int
+    {
+        return (int) PlatformSettings::current()->field('disputes.deadlines', $field);
+    }
 
     public const OPEN_AWAITING_RESPONSE = 'OPEN_AWAITING_RESPONSE';
 

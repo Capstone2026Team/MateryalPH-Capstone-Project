@@ -519,6 +519,7 @@ class ListingDetailView {
     this.brand,
     this.manufacturer,
     this.countryOfManufacture,
+    this.categoryId,
     this.categoryName,
     this.complianceBadge,
     this.notPurchasableReason,
@@ -549,6 +550,7 @@ class ListingDetailView {
   final String? brand;
   final String? manufacturer;
   final String? countryOfManufacture;
+  final String? categoryId;
   final String? categoryName;
   final String? complianceBadge;
   final String? notPurchasableReason;

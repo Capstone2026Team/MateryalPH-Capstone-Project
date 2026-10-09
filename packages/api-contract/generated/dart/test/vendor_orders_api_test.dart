@@ -37,7 +37,7 @@ void main() {
 
     // Status-filtered order workspace for the current organization (NEW, WAITING_ON_BUYER, AWAITING_PAYMENT, CONFIRMED, CLOSED). Fulfillment Staff never see requests before confirmation and payment conditions. Search matches Order ID or Buyer name.
     //
-    //Future<OrderListEnvelope> listVendorOrders({ String group, String q, int page }) async
+    //Future<OrderListEnvelope> listVendorOrders({ String group, String closedState, String q, int page }) async
     test('test listVendorOrders', () async {
       // TODO
     });

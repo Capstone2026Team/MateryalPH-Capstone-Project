@@ -15,6 +15,8 @@ part 'review_window_rules.g.dart';
 /// * [editHours]
 /// * [commentMax]
 /// * [mediaMax]
+/// * [photoMaxBytes]
+/// * [videoMaxBytes]
 /// * [blindReveal]
 @BuiltValue()
 abstract class ReviewWindowRules implements Built<ReviewWindowRules, ReviewWindowRulesBuilder> {
@@ -29,6 +31,12 @@ abstract class ReviewWindowRules implements Built<ReviewWindowRules, ReviewWindo
 
   @BuiltValueField(wireName: r'media_max')
   int get mediaMax;
+
+  @BuiltValueField(wireName: r'photo_max_bytes')
+  int? get photoMaxBytes;
+
+  @BuiltValueField(wireName: r'video_max_bytes')
+  int? get videoMaxBytes;
 
   @BuiltValueField(wireName: r'blind_reveal')
   String get blindReveal;
@@ -76,6 +84,20 @@ class _$ReviewWindowRulesSerializer implements PrimitiveSerializer<ReviewWindowR
       object.mediaMax,
       specifiedType: const FullType(int),
     );
+    if (object.photoMaxBytes != null) {
+      yield r'photo_max_bytes';
+      yield serializers.serialize(
+        object.photoMaxBytes,
+        specifiedType: const FullType(int),
+      );
+    }
+    if (object.videoMaxBytes != null) {
+      yield r'video_max_bytes';
+      yield serializers.serialize(
+        object.videoMaxBytes,
+        specifiedType: const FullType(int),
+      );
+    }
     yield r'blind_reveal';
     yield serializers.serialize(
       object.blindReveal,
@@ -131,6 +153,22 @@ class _$ReviewWindowRulesSerializer implements PrimitiveSerializer<ReviewWindowR
             specifiedType: const FullType(int),
           ) as int;
           result.mediaMax = valueDes;
+          break;
+        case r'photo_max_bytes':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.photoMaxBytes = valueDes;
+          break;
+        case r'video_max_bytes':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.videoMaxBytes = valueDes;
           break;
         case r'blind_reveal':
           final valueDes = serializers.deserialize(

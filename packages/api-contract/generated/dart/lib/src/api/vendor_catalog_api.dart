@@ -1019,6 +1019,7 @@ class VendorCatalogApi {
   /// Paginated organization listings. Customer Service Staff receive the sales stock view; Fulfillment Staff receive only assigned products (meta.scope ASSIGNED_ONLY).
   ///
   /// Parameters:
+  /// * [group] - Read-only aggregate filter applied before pagination; summary counts ignore group and status. OUT_OF_STOCK means active listings with no available active variant.
   /// * [status]
   /// * [complianceStatus]
   /// * [categoryId]
@@ -1034,6 +1035,7 @@ class VendorCatalogApi {
   /// Returns a [Future] containing a [Response] with a [CatalogListingSummaryListEnvelope] as data
   /// Throws [DioException] if API call or serialization fails
   Future<Response<CatalogListingSummaryListEnvelope>> listVendorCatalogListings({
+    String? group,
     ListingStatus? status,
     ListingComplianceStatus? complianceStatus,
     String? categoryId,
@@ -1067,6 +1069,7 @@ class VendorCatalogApi {
     );
 
     final _queryParameters = <String, dynamic>{
+      if (group != null) r'group': encodeQueryParameter(_serializers, group, const FullType(String)),
       if (status != null) r'status': encodeQueryParameter(_serializers, status, const FullType(ListingStatus)),
       if (complianceStatus != null) r'compliance_status': encodeQueryParameter(_serializers, complianceStatus, const FullType(ListingComplianceStatus)),
       if (categoryId != null) r'category_id': encodeQueryParameter(_serializers, categoryId, const FullType(String)),

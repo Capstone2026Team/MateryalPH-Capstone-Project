@@ -15,6 +15,7 @@ use App\Domain\Orders\OrderQueries;
 use App\Domain\Orders\OrderStates;
 use App\Domain\Payments\RefundService;
 use App\Domain\Payments\ReimbursementService;
+use App\Domain\Settings\PlatformSettings;
 use App\Http\ApiResponse;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
@@ -56,8 +57,8 @@ final class VendorFulfillmentController extends Controller
             'receiver_kind' => ['sometimes', 'nullable', Rule::in(['BUYER', 'AUTHORIZED_RECEIVER'])],
             'handover_confirmed' => ['sometimes', 'boolean'],
             'note' => ['sometimes', 'nullable', 'string', 'max:500'],
-            'file' => ['sometimes', 'file', 'max:10240'],
-            'signature' => ['sometimes', 'file', 'max:10240'],
+            'file' => ['sometimes', 'file', 'max:'.PlatformSettings::current()->uploadKb('case_evidence')],
+            'signature' => ['sometimes', 'file', 'max:'.PlatformSettings::current()->uploadKb('case_evidence')],
         ]);
         $photo = $request->file('file');
         $signature = $request->file('signature');
@@ -112,7 +113,7 @@ final class VendorFulfillmentController extends Controller
     public function finalizeCancellation(Request $request, string $orderId): JsonResponse
     {
         self::multipartBoolean($request, 'retain_nrpc');
-        $input = $request->validate(['retain_nrpc' => ['required', 'boolean'], 'note' => ['sometimes', 'nullable', 'string', 'max:2000'], 'file' => ['sometimes', 'file', 'max:10240']]);
+        $input = $request->validate(['retain_nrpc' => ['required', 'boolean'], 'note' => ['sometimes', 'nullable', 'string', 'max:2000'], 'file' => ['sometimes', 'file', 'max:'.PlatformSettings::current()->uploadKb('case_evidence')]]);
         $file = $request->file('file');
         $this->cancellations->vendorFinalize($request, $orderId, (bool) $input['retain_nrpc'], isset($input['note']) ? (string) $input['note'] : null, $file instanceof UploadedFile ? $file : null);
 
@@ -135,7 +136,7 @@ final class VendorFulfillmentController extends Controller
 
     public function recordReimbursement(Request $request, string $orderId, string $reimbursementId, ReimbursementService $reimbursements): JsonResponse
     {
-        $input = $request->validate(['file' => ['required', 'file', 'max:10240'], 'reimbursed_at' => ['sometimes', 'nullable', 'date'], 'note' => ['sometimes', 'nullable', 'string', 'max:500']]);
+        $input = $request->validate(['file' => ['required', 'file', 'max:'.PlatformSettings::current()->uploadKb('case_evidence')], 'reimbursed_at' => ['sometimes', 'nullable', 'date'], 'note' => ['sometimes', 'nullable', 'string', 'max:500']]);
         $file = $request->file('file');
         if (! $file instanceof UploadedFile) {
             throw new AuthenticationException('VALIDATION_FAILED', 'Upload the reimbursement evidence.', 422, ['file' => ['Upload a photo or PDF of the reimbursement.']]);

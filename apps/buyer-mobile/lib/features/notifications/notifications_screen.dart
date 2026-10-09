@@ -1,9 +1,15 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 import 'package:share_plus/share_plus.dart';
 import '../../design_system/components/buyer_app_bar.dart';
+import '../../design_system/theme.dart';
 import '../map_discovery/discovery_models.dart';
+import 'notification_inbox_controller.dart';
+import 'notification_preferences_dialog.dart';
+import 'notification_scope.dart';
 import 'notifications_repository.dart';
 
 String notificationMessage(Object error) => error is DiscoveryFailure
@@ -27,254 +33,300 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
-  final _items = <api.NotificationItem>[];
-  List<api.NotificationPreference> _preferences = [];
-  String? _cursor, _error;
-  bool _busy = false, _loaded = false;
-  int _tab = 0;
+  NotificationInboxController get _inbox => widget.repository.inbox;
+  final _scroll = ScrollController();
+  bool _ownsInbox = false;
+
   @override
   void initState() {
     super.initState();
-    if (widget.initialNotice == null) {
-      _load();
-    } else {
-      WidgetsBinding.instance.addPostFrameCallback(
-        (_) => _open(widget.initialNotice!),
-      );
-    }
-  }
-
-  Future<void> _run(Future<void> Function() action) async {
-    if (_busy) return;
-    setState(() {
-      _busy = true;
-      _error = null;
-    });
-    try {
-      await action();
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _error = notificationMessage(e);
-          if (e is DiscoveryFailure &&
-              (e.kind == DiscoveryFailureKind.forbidden ||
-                  e.kind == DiscoveryFailureKind.sessionExpired)) {
-            _items.clear();
-          }
-        });
-      }
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  Future<void> _load([bool more = false]) => _run(() async {
-    final page = await widget.repository.list(more ? _cursor : null);
-    if (mounted) {
-      setState(() {
-        if (!more) _items.clear();
-        _items.addAll(page.data);
-        _cursor = page.meta['next_cursor']?.value as String?;
-        _loaded = true;
+    if (widget.initialNotice != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) unawaited(_open(widget.initialNotice!));
       });
     }
-  });
-  Future<void> _open(String id) async {
-    // A push is only an opaque notice ID. The server authenticates and authorizes its destination now.
-    await _run(() async {
-      final path = await widget.repository.resolve(id);
-      if (mounted) await widget.open(path);
-    });
   }
 
-  Future<void> _prefs() => _run(() async {
-    final result = await widget.repository.preferences();
-    if (mounted) setState(() => _preferences = result);
-  });
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _ownsInbox = NotificationScope.of(context) != widget.repository;
+    if (_ownsInbox) _inbox.setActive(true);
+  }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    if (_ownsInbox) _inbox.setActive(false);
+    super.dispose();
+  }
+
+  Future<void> _open(String id) async {
+    // Resolve and mark read on the server before opening the current authorized record.
+    final path = await _inbox.open(id);
+    if (mounted && path != null) await widget.open(path);
+  }
+
+  void _preferences() => showDialog<void>(
+    context: context,
+    barrierDismissible: false,
+    builder: (_) => NotificationPreferencesDialog(
+      repository: widget.repository,
+      enablePush: widget.enablePush,
+    ),
+  );
+
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: buyerAppBar(context, 'Notifications'),
+    appBar: buyerAppBar(
+      context,
+      'Notifications',
+      actions: [
+        BuyerHeaderIconButton(
+          icon: LucideIcons.fileText,
+          tooltip: 'Documents and exports',
+          onPressed: () => Navigator.push<void>(
+            context,
+            MaterialPageRoute(
+              builder: (_) => BuyerReportsScreen(repository: widget.repository),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+      ],
+    ),
     body: SafeArea(
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                ChoiceChip(
-                  label: const Text('Inbox'),
-                  selected: _tab == 0,
-                  onSelected: (_) => setState(() => _tab = 0),
+      child: ListenableBuilder(
+        listenable: _inbox,
+        builder: (context, _) {
+          final visible = _inbox.visible;
+          return ListView(
+            key: const PageStorageKey('notification-inbox'),
+            controller: _scroll,
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Your inbox',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
+                  BuyerHeaderIconButton(
+                    icon: LucideIcons.settings2,
+                    tooltip: 'Notification preferences',
+                    onPressed: _preferences,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final type = DropdownButtonFormField<String>(
+                    initialValue: _inbox.category ?? '',
+                    key: ValueKey('notification-type-${_inbox.category ?? ''}'),
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Type',
+                      isDense: true,
+                    ),
+                    items: [
+                      const DropdownMenuItem(
+                        value: '',
+                        child: Text('All types'),
+                      ),
+                      for (final category in _inbox.categories)
+                        DropdownMenuItem(
+                          value: category,
+                          child: Text(
+                            notificationCategoryLabel(category),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      if (_inbox.category != null &&
+                          !_inbox.categories.contains(_inbox.category))
+                        DropdownMenuItem(
+                          value: _inbox.category!,
+                          child: const Text('Unavailable type'),
+                        ),
+                    ],
+                    onChanged: (value) =>
+                        _inbox.filter(type: value, clearType: value == ''),
+                  );
+                  final status =
+                      DropdownButtonFormField<NotificationInboxStatus>(
+                        initialValue: _inbox.status,
+                        key: ValueKey(
+                          'notification-status-${_inbox.status.name}',
+                        ),
+                        isExpanded: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Status',
+                          isDense: true,
+                        ),
+                        items: [
+                          DropdownMenuItem(
+                            value: NotificationInboxStatus.unread,
+                            child: Text(
+                              'Unread (${_inbox.filteredUnreadCount})',
+                            ),
+                          ),
+                          DropdownMenuItem(
+                            value: NotificationInboxStatus.archived,
+                            child: Text(
+                              'Archived (${_inbox.filteredArchivedCount})',
+                            ),
+                          ),
+                        ],
+                        onChanged: (value) =>
+                            _inbox.filter(selectedStatus: value),
+                      );
+                  return constraints.maxWidth < 420 ||
+                          MediaQuery.textScalerOf(context).scale(14) > 20
+                      ? Column(
+                          children: [type, const SizedBox(height: 12), status],
+                        )
+                      : Row(
+                          children: [
+                            Expanded(flex: 3, child: type),
+                            const SizedBox(width: 12),
+                            Expanded(flex: 2, child: status),
+                          ],
+                        );
+                },
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: _inbox.canMarkAll ? _inbox.markAllRead : null,
+                    icon: const Icon(LucideIcons.checkCheck, size: 18),
+                    label: const Text('Mark all as read'),
+                  ),
+                  if (_inbox.filtersActive)
+                    TextButton(
+                      onPressed: _inbox.clearFilters,
+                      child: const Text('Clear filters'),
+                    ),
+                ],
+              ),
+              if (!_inbox.loaded && _inbox.error == null)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: LinearProgressIndicator(),
                 ),
-                ChoiceChip(
-                  label: const Text('Preferences'),
-                  selected: _tab == 1,
-                  onSelected: (_) {
-                    setState(() => _tab = 1);
-                    _prefs();
-                  },
-                ),
-                ActionChip(
-                  label: const Text('Documents'),
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute<void>(
-                      builder: (_) =>
-                          BuyerReportsScreen(repository: widget.repository),
+              if (_inbox.error != null)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Semantics(
+                    liveRegion: true,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _inbox.error!,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => unawaited(_inbox.retry()),
+                          child: const Text('Retry'),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-              ],
-            ),
-          ),
-          if (_busy) const LinearProgressIndicator(),
-          if (_error != null)
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Semantics(
-                liveRegion: true,
-                child: Column(
-                  children: [
-                    Text(_error!),
-                    TextButton(
-                      onPressed: _busy
-                          ? null
-                          : () => _tab == 0 ? _load() : _prefs(),
-                      child: const Text('Retry'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          Expanded(
-            child: _tab == 0
-                ? RefreshIndicator(
-                    onRefresh: _load,
-                    child: ListView(
-                      children: [
-                        if (_loaded && _items.isEmpty)
-                          const Padding(
-                            padding: EdgeInsets.all(24),
-                            child: Text(
-                              'You’re up to date. New account and transaction updates will appear here.',
-                            ),
-                          ),
-                        for (final item in _items)
-                          Column(
-                            children: [
-                              ListTile(
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                  vertical: 8,
-                                ),
-                                title: Text(item.title),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const SizedBox(height: 6),
-                                    Text(item.body),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      '${item.mandatory ? 'Required notice · ' : ''}${item.readAt == null ? 'Unread · ' : ''}${_manila(item.createdAt)}',
-                                    ),
-                                  ],
-                                ),
-                                onTap: _busy ? null : () => _open(item.id),
-                              ),
-                              const Divider(height: 1),
-                            ],
-                          ),
-                        if (_cursor != null)
-                          TextButton(
-                            onPressed: _busy ? null : () => _load(true),
-                            child: const Text('Load more'),
-                          ),
-                      ],
-                    ),
-                  )
-                : ListView(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
+              const SizedBox(height: 8),
+              if (_inbox.loaded && visible.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 40),
+                  child: Column(
                     children: [
+                      const Icon(
+                        LucideIcons.bell,
+                        color: BuyerTheme.muted,
+                        size: 28,
+                      ),
+                      const SizedBox(height: 12),
                       Text(
-                        'Delivery preferences',
-                        style: Theme.of(context).textTheme.titleLarge,
+                        _inbox.status == NotificationInboxStatus.unread
+                            ? "You're all caught up."
+                            : 'No notifications match your filters.',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.titleSmall,
                       ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Required notices remain in your inbox. Push also needs permission on this device.',
-                      ),
-                      if (widget.enablePush != null)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          child: OutlinedButton(
-                            onPressed: _busy
-                                ? null
-                                : () => _run(widget.enablePush!),
-                            child: const Text('Enable device notifications'),
-                          ),
-                        ),
-                      for (final p in _preferences)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                p.category.toLowerCase().replaceAll('_', ' '),
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                              Text(p.explanation),
-                              if (p.mandatory)
-                                const Padding(
-                                  padding: EdgeInsets.only(top: 8),
-                                  child: Text(
-                                    'Always enabled · In-app, email and registered push devices',
-                                  ),
-                                )
-                              else
-                                for (final channel in [
-                                  'inApp',
-                                  'email',
-                                  'push',
-                                ])
-                                  SwitchListTile(
-                                    contentPadding: EdgeInsets.zero,
-                                    title: Text(
-                                      channel == 'inApp' ? 'In-app' : channel,
-                                    ),
-                                    value: channel == 'inApp'
-                                        ? p.inApp
-                                        : channel == 'email'
-                                        ? p.email
-                                        : p.push,
-                                    onChanged: _busy
-                                        ? null
-                                        : (value) => _run(() async {
-                                            await widget.repository.preference(
-                                              p,
-                                              channel,
-                                              value,
-                                            );
-                                            final prefs = await widget
-                                                .repository
-                                                .preferences();
-                                            if (mounted) {
-                                              setState(
-                                                () => _preferences = prefs,
-                                              );
-                                            }
-                                          }),
-                                  ),
-                              const Divider(),
-                            ],
-                          ),
+                      if (_inbox.filtersActive)
+                        TextButton(
+                          onPressed: _inbox.clearFilters,
+                          child: const Text('Clear filters'),
                         ),
                     ],
                   ),
-          ),
-        ],
+                ),
+              for (final item in visible) _notice(item),
+            ],
+          );
+        },
+      ),
+    ),
+  );
+
+  Widget _notice(api.NotificationItem item) => Padding(
+    key: ValueKey(item.id),
+    padding: const EdgeInsets.only(bottom: 12),
+    child: Material(
+      color: Theme.of(context).colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: BuyerTheme.border),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(item.title, style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: [
+                if (item.readAt == null)
+                  const Text(
+                    'Unread',
+                    style: TextStyle(color: BuyerTheme.action, fontSize: 12),
+                  ),
+                if (item.mandatory)
+                  const Text(
+                    'Required notice',
+                    style: TextStyle(color: BuyerTheme.muted, fontSize: 12),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(item.body, style: Theme.of(context).textTheme.bodyMedium),
+            const SizedBox(height: 12),
+            Text(
+              _manila(item.createdAt),
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: OutlinedButton(
+                onPressed: _inbox.opening || _inbox.marking
+                    ? null
+                    : () => _open(item.id),
+                child: const Text('View details'),
+              ),
+            ),
+          ],
+        ),
       ),
     ),
   );

@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Domain\Projects;
 
 use App\Domain\Catalog\CatalogAccess;
+use App\Domain\Enforcement\BuyerCommerceRestriction;
 use App\Domain\Finance\Money;
+use App\Domain\Geography\BuyerProfiles;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Messaging\ConversationService;
 use App\Domain\Messaging\QuotationService;
@@ -14,6 +16,7 @@ use App\Domain\Orders\OrderCommercial;
 use App\Domain\Orders\OrderNotifier;
 use App\Domain\Orders\OrderTransitionService;
 use App\Domain\Payments\PaymentMethodPolicy;
+use App\Domain\Settings\PlatformSettings;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
@@ -39,12 +42,13 @@ final class ProjectInquiryService
             }
         }
 
-        return ['lines' => array_values($lines), 'fulfillment_method' => $snapshot['fulfillment_method'], 'payment_method' => $snapshot['payment_method'], 'fulfillment_date' => null, 'deadline_hours' => 24];
+        return ['lines' => array_values($lines), 'fulfillment_method' => $snapshot['fulfillment_method'], 'payment_method' => $snapshot['payment_method'], 'fulfillment_date' => null, 'deadline_hours' => (int) PlatformSettings::current()->field('quotations.deadline_limits', 'default_hours')];
     }
 
     /** @param array<string, mixed> $input */
     public function inquire(Request $request, string $id, array $input): string
     {
+        BuyerCommerceRestriction::assertAllowed(app(BuyerProfiles::class)->idFor($request));
         $key = $this->keys->requireIdempotencyKey($request);
 
         return DB::transaction(function () use ($request, $id, $input, $key): string {
@@ -85,6 +89,7 @@ final class ProjectInquiryService
     /** @param array<string, mixed> $input */
     public function select(Request $request, string $id, array $input): string
     {
+        BuyerCommerceRestriction::assertAllowed(app(BuyerProfiles::class)->idFor($request));
         $key = $this->keys->requireIdempotencyKey($request);
 
         return DB::transaction(function () use ($request, $id, $input, $key): string {
@@ -109,7 +114,7 @@ final class ProjectInquiryService
                 'vendor_organization_id' => $s['vendor_id'], 'work_package_id' => $id, 'work_package_version_id' => $w->current_version_id, 'compiled_estimate_vendor_id' => $input['candidate_id'],
                 'procurement_type' => 'PROJECT_BASED', 'order_state' => 'AWAITING_VENDOR_CONFIRMATION', 'payment_state' => 'NOT_REQUIRED', 'fulfillment_method' => $s['fulfillment_method'], 'payment_method' => $s['payment_method'],
                 'materials_centavos' => $s['materials_centavos'], 'delivery_centavos' => $s['fulfillment_method'] === 'PICKUP' ? 0 : null, 'commercial_total_centavos' => $s['materials_centavos'],
-                'project_note' => $input['note'] ?? null, 'destination' => json_encode($s['destination'], JSON_THROW_ON_ERROR), 'submitted_at' => now(), 'vendor_response_due_at' => now()->addHours(24), 'created_at' => now(), 'updated_at' => now()]);
+                'project_note' => $input['note'] ?? null, 'destination' => json_encode($s['destination'], JSON_THROW_ON_ERROR), 'submitted_at' => now(), 'vendor_response_due_at' => now()->addHours(PlatformSettings::current()->int('orders.vendor_response_hours')), 'created_at' => now(), 'updated_at' => now()]);
             if (! empty($s['destination']['access_instructions'])) {
                 DB::table('orders')->where('id', $key)->update(['access_instructions_encrypted' => Crypt::encryptString($s['destination']['access_instructions'])]);
             }

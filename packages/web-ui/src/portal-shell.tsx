@@ -5,7 +5,7 @@ import { Circle, Menu, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react'
 import type { PortalIdentity } from './portal-identity'
 import './portal-shell.css'
 
-export type PortalNavItem = { label: string; href: string; icon?: ReactNode; disabled?: boolean }
+export type PortalNavItem = { label: string; href: string; icon?: ReactNode; disabled?: boolean; updateCount?: number; updateCountLabel?: string }
 export type PortalNavSection = { label: string; items: PortalNavItem[] }
 
 export function PortalShell({
@@ -19,6 +19,7 @@ export function PortalShell({
   children,
   headerActions,
   homeHref = '/dashboard',
+  contentLayout = 'standard',
   onNavigate,
   apiBasePath,
   onSignOut,
@@ -35,6 +36,7 @@ export function PortalShell({
   accountAvatarUrl?: string | null
   children: ReactNode
   headerActions?: ReactNode
+  contentLayout?: 'standard' | 'full'
   homeHref?: string
   onNavigate?: (href: string) => void
 }) {
@@ -106,11 +108,13 @@ export function PortalShell({
               <h2 className="portal-nav-label">{section.label}</h2>
               <div>
                 {section.items.map(item => {
-                  const content = <><span className="portal-nav-icon" aria-hidden="true">{item.icon ?? <Circle />}</span><span className="portal-nav-text">{item.label}</span></>
-                  const hints = { onMouseEnter: (event: MouseEvent<HTMLElement>) => showTooltip(event.currentTarget, item.label), onMouseLeave: () => setTooltip(null), onBlur: () => setTooltip(null) }
+                  const count = !item.disabled && typeof item.updateCount === 'number' && Number.isSafeInteger(item.updateCount) && item.updateCount > 0 ? item.updateCount : 0
+                  const label = count > 0 ? `${item.label}, ${count} ${item.updateCountLabel ?? 'unread update'}${count === 1 ? '' : 's'}` : item.label
+                  const content = <><span className="portal-nav-icon" aria-hidden="true">{item.icon ?? <Circle />}</span><span className="portal-nav-text">{item.label}</span>{count > 0 && <span className="portal-nav-badge" aria-hidden="true">{count > 99 ? '99+' : count}</span>}</>
+                  const hints = { onMouseEnter: (event: MouseEvent<HTMLElement>) => showTooltip(event.currentTarget, label), onMouseLeave: () => setTooltip(null), onBlur: () => setTooltip(null) }
                   return item.disabled
                     ? <span key={item.href} role="link" tabIndex={0} aria-label={`${item.label}, unavailable`} aria-disabled="true" className="portal-nav-row" {...hints}>{content}</span>
-                    : <a key={item.href} className="portal-nav-row" href={item.href} aria-label={item.label} aria-current={item.href === activeHref ? 'page' : undefined} onClick={event => follow(event, item.href)} {...hints}>{content}</a>
+                    : <a key={item.href} className="portal-nav-row" href={item.href} aria-label={label} aria-current={item.href === activeHref ? 'page' : undefined} onClick={event => follow(event, item.href)} {...hints}>{content}</a>
                 })}
               </div>
             </section>)}
@@ -132,7 +136,7 @@ export function PortalShell({
           </div>
           <div className="flex shrink-0 items-center gap-2">{apiBasePath ? <PortalAccountMenu onProfileChange={setProfile} portal={portalLabel.startsWith('ADMIN') ? 'admin' : 'vendors'} basePath={apiBasePath} onNavigate={onNavigate} onSignOut={onSignOut} /> : headerActions}</div>
         </header>
-        <main id="main-content" className="mx-auto max-w-[96rem] px-4 py-6 sm:px-6 lg:px-8 lg:py-8"><RateLimitNotice />{children}</main>
+        <main id="main-content" className={contentLayout === 'full' ? 'min-w-0 w-full' : 'mx-auto max-w-[96rem] px-4 py-6 sm:px-6 lg:px-8 lg:py-8'}><RateLimitNotice />{children}</main>
       </div>
     </div>
   )

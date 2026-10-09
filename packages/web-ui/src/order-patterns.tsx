@@ -154,7 +154,12 @@ function MoneyRow({ label, value, note, strong = false, muted = false }: { label
 export function MoneyBreakdown({ money, title = 'Payment breakdown', compact = false }: { money: MoneyBreakdownData; title?: string; compact?: boolean }) {
   const delivery = money.delivery.status === 'NOT_APPLICABLE' ? 'Not applicable (Self-Pickup)'
     : money.delivery.amountCentavos !== null ? formatPesoCentavos(money.delivery.amountCentavos)
-      : money.delivery.estimate ? `Estimate ${formatPesoCentavos(money.delivery.estimate.minCentavos)}${money.delivery.estimate.maxCentavos !== money.delivery.estimate.minCentavos ? ` – ${formatPesoCentavos(money.delivery.estimate.maxCentavos)}` : ''}` : 'Set by the Vendor'
+      : money.delivery.estimate ? `Estimate ${formatPesoCentavos(money.delivery.estimate.minCentavos)}${money.delivery.estimate.maxCentavos !== money.delivery.estimate.minCentavos ? ` – ${formatPesoCentavos(money.delivery.estimate.maxCentavos)}` : ''}` : 'Estimate unavailable — delivery review required'
+  const estimate = money.commercialTotalCentavos === null ? money.delivery.estimate : null
+  const totalLabel = estimate ? 'Estimated total' : money.commercialTotalCentavos === null ? 'Total before delivery' : 'Order total'
+  const total = estimate
+    ? `${formatPesoCentavos(money.materialsSubtotalCentavos + estimate.minCentavos)}${estimate.maxCentavos !== estimate.minCentavos ? ` – ${formatPesoCentavos(money.materialsSubtotalCentavos + estimate.maxCentavos)}` : ''}`
+    : formatPesoCentavos(money.commercialTotalCentavos ?? money.materialsSubtotalCentavos)
   const fee = money.processingFee.status === 'NOT_APPLICABLE' ? 'None' : money.processingFee.amountCentavos === null ? 'Shown at payment' : formatPesoCentavos(money.processingFee.amountCentavos)
   const physical = money.paymentPurpose !== 'FULL_ORDER_PAYMENT' && (money.physicalBalanceCentavos ?? 0) > 0
   if (compact) return <section aria-label={title} className="min-w-0 border-t border-border-default pt-4">
@@ -167,8 +172,8 @@ export function MoneyBreakdown({ money, title = 'Payment breakdown', compact = f
       {money.nrpc.amountCentavos > 0 && <ReviewMoneyRow label="NRPC (in materials)" value={formatPesoCentavos(money.nrpc.amountCentavos)} muted />}
       <ReviewMoneyRow label="Payment processing fee" value={fee} />
       <div className="mt-1 grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4 border-t-2 border-text-strong pt-3 text-xs font-bold text-text-strong">
-        <dt className="uppercase tracking-wide">{money.commercialTotalCentavos === null ? 'Total before delivery' : 'Order total'}</dt>
-        <dd className="text-right tabular-nums">{formatPesoCentavos(money.commercialTotalCentavos ?? money.materialsSubtotalCentavos)}</dd>
+        <dt className="uppercase tracking-wide">{totalLabel}</dt>
+        <dd className="text-right tabular-nums">{total}</dd>
       </div>
       {physical && <ReviewMoneyRow label="Pay the Vendor directly" value={formatPesoCentavos(money.physicalBalanceCentavos)} />}
     </dl>
@@ -185,7 +190,7 @@ export function MoneyBreakdown({ money, title = 'Payment breakdown', compact = f
       <MoneyRow label="Delivery fee" value={delivery} note={money.delivery.status === 'PENDING_VENDOR_CONFIRMATION' ? 'Confirmed by the Vendor before you pay' : undefined} />
       {money.nrpc.amountCentavos > 0 && <MoneyRow muted label="Non-Recoverable Preparation Cost" value={formatPesoCentavos(money.nrpc.amountCentavos)} note="Part of the materials subtotal, not an extra charge" />}
       <MoneyRow label="Payment processing fee" value={fee} note={money.processingFee.status === 'PENDING_PAYMENT_CHANNEL' ? 'Disclosed when a payment channel is chosen' : undefined} />
-      <MoneyRow strong label={money.commercialTotalCentavos === null ? 'Total before delivery' : 'Order total'} value={formatPesoCentavos(money.commercialTotalCentavos ?? money.materialsSubtotalCentavos)} note={money.processingFee.status === 'PENDING_PAYMENT_CHANNEL' ? 'Before the processing fee' : undefined} />
+      <MoneyRow strong label={totalLabel} value={total} note={money.processingFee.status === 'PENDING_PAYMENT_CHANNEL' ? 'Before the processing fee' : undefined} />
       {physical && <MoneyRow label="Pay the Vendor directly" value={formatPesoCentavos(money.physicalBalanceCentavos)} />}
     </dl>
   </section>

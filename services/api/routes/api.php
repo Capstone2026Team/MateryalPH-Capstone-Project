@@ -95,3 +95,4 @@ require __DIR__.'/fulfillment.php';
 require __DIR__.'/disputes.php';
 require __DIR__.'/trust.php';
 require __DIR__.'/notifications.php';
+require __DIR__.'/admin-operations.php';

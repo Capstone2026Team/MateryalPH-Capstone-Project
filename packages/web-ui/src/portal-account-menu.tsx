@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type MouseEvent } from 'react'
-import { AccountsApi, AuthenticationApi } from '@materyalph/api-client-ts'
+import { AccountsApi } from '@materyalph/api-client-ts'
 import { usePortalIdentity, type PortalIdentity } from './portal-identity'
-import { clearWebSessionTransport, createWebApiConfiguration } from './web-api-session'
+import { signOutWebSession, createWebApiConfiguration } from './web-api-session'
 import { ChevronDown, FileCheck2, LogOut, MonitorSmartphone, Settings, ShieldCheck, UserRound } from 'lucide-react'
 
 export function PortalAccountMenu({ portal, basePath, onNavigate, onSignOut, avatarUrl, onProfileChange }: { portal: 'admin' | 'vendors'; basePath: string; onNavigate?: ((href: string) => void) | undefined; onSignOut?: (() => Promise<void>) | undefined; avatarUrl?: string; onProfileChange?: (profile: PortalIdentity | null) => void }) {
@@ -40,7 +40,7 @@ export function PortalAccountMenu({ portal, basePath, onNavigate, onSignOut, ava
     setBusy(true); setError('')
     try {
       if (onSignOut) await onSignOut()
-      else { await new AuthenticationApi(createWebApiConfiguration(basePath, { refreshSession: true })).logout(); clearWebSessionTransport(basePath); window.location.assign('/login') }
+      else { await signOutWebSession(basePath); window.location.assign('/login') }
     } catch { setError('Could not sign out. Please retry.') } finally { setBusy(false) }
   }
   useEffect(() => { setImageFailed(false) }, [avatarUrl, profile?.avatarUrl])

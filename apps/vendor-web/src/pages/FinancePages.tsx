@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Download, ExternalLink, Landmark, ReceiptText, RefreshCw, ShieldAlert, Wallet } from 'lucide-react'
 import {
-  Button, DemoLabel, FilterChips, FinanceSection, PaymentAttemptBadge, PaymentChannelList, StatusBadge, StatusMessage, SummaryTiles, ThresholdPanel,
+  Button, DemoLabel, FilterTabs, FinanceSection, PaymentAttemptBadge, PaymentChannelList, StatusBadge, StatusMessage, StatCards, InfoNote, EmptyState, ThresholdPanel,
   formatManilaDateTime, formatPesoCentavos,
 } from '@materyalph/web-ui'
 import {
-  channelRows, exportTransactions, getEarnings, getFinanceOverview, getStatement, listTransactions, payStatement, readableFinanceError, refreshFeePayment, section,
+  channelRows, exportTransactions, getEarnings, getFinanceOverview, getFinanceReviews, getStatement, listTransactions, payStatement, readableFinanceError, refreshFeePayment, section,
   thresholdData, updatePhysicalPayments, type FeeStatementDetail, type FinanceRow, type FinanceTab, type PaymentAttempt, type VendorEarnings, type VendorFinanceOverview,
 } from '../lib/finance-api'
 import { pesoInputToCentavos } from '../lib/orders-api'
@@ -33,16 +33,15 @@ function FinanceGate({ activeHref, permission, children }: { activeHref: string;
 function OwnerOnly() {
   return <div className="grid gap-3 rounded-surface border border-border-default bg-surface-primary p-6" role="alert">
     <div className="flex items-start gap-3"><ShieldAlert className="mt-0.5 shrink-0 text-action-primary" size={20} aria-hidden="true" />
-      <div><h1 className="text-xl font-semibold">Store-wide finance is Owner-only</h1>
+      <div><PageHeader eyebrow="Finance" title="Store-wide finance is Owner-only" description="Access depends on your assigned role." />
         <p className="mt-1 text-sm text-text-secondary">Earnings, Transaction History, withholding and commission statements and finance exports are available to the Vendor Owner. Order-specific payment status stays visible on each order you can work on.</p></div></div>
     <Link className="text-sm font-semibold text-action-primary underline" to="/orders">Go to Orders</Link>
   </div>
 }
 
 function FinanceTabs({ current }: { current: 'overview' | 'transactions' }) {
-  const item = (to: string, label: string, active: boolean) => <Link to={to} aria-current={active ? 'page' : undefined}
-    className={`inline-flex min-h-11 items-center border-b-2 px-3 text-sm font-semibold ${active ? 'border-action-primary text-text-strong' : 'border-transparent text-text-secondary hover:text-text-strong'}`}>{label}</Link>
-  return <nav aria-label="Finance sections" className="flex flex-wrap gap-1 border-b border-border-default">{item('/finance', 'Finance overview', current === 'overview')}{item('/finance/transactions', 'Transaction History', current === 'transactions')}</nav>
+  const navigate = useNavigate()
+  return <FilterTabs appearance="tabs" label="Finance sections" value={current} chips={[{ value: 'overview', label: 'Finance overview' }, { value: 'transactions', label: 'Transaction History' }]} onChange={value => navigate(value === 'transactions' ? '/finance/transactions' : '/finance')} />
 }
 
 function useLoader<T>(load: () => Promise<T>) {
@@ -83,7 +82,8 @@ function FinanceOverview() {
   const mandatory = data.notices.filter(notice => notice.mandatory)
 
   return <div className="grid min-w-0 gap-6">
-    <PageHeader eyebrow="Finance" title="Finance overview" description="Your Xendit TEST connection, tax profile, withholding position, commission terms and payment options. MateryalPH holds no wallet or balance for your store." actions={<DemoLabel />} />
+    <PageHeader eyebrow="Finance" title="Finance overview" description="Manage your TEST connection, tax profile, withholding and commission terms." actions={<DemoLabel />} />
+    <InfoNote>MateryalPH holds no wallet or balance for your store.</InfoNote>
     <FinanceTabs current="overview" />
     <StatusMessage tone="info">{data.demoLabel}</StatusMessage>
     {mandatory.length > 0 && <section aria-labelledby="notices-heading" className="grid gap-2">
@@ -121,10 +121,36 @@ function FinanceOverview() {
       <FinanceSection id="refunds" title="Refund capability" description={String(refund.note ?? '')} badge={<StatusBadge label={refund.status === 'AVAILABLE_TEST' ? 'Available — TEST' : 'Unavailable'} tone={refund.status === 'AVAILABLE_TEST' ? 'success' : 'warning'} />}>
         <p className="text-sm">Refund-capable channels: {(Array.isArray(refund.refund_channels) && refund.refund_channels.length > 0) ? (refund.refund_channels as string[]).join(', ') : 'none'}</p>
       </FinanceSection>
+      <FinanceReviewsSection />
     </div>
   </div>
 }
 
+// ── Finance review status (FIN-10) ─────────────────────────────────────────────────────────────
+
+function FinanceReviewsSection() {
+  const { data, error, reload } = useLoader(getFinanceReviews)
+  const text = (value: unknown) => String(value ?? '').replaceAll('_', ' ').toLowerCase().replace(/(^|\s)\S/g, letter => letter.toUpperCase())
+  return <FinanceSection id="reviews" title="Finance reviews" description="Where your statements, tax adjustments and tax evidence stand with the MateryalPH finance team. Corrections post new entries; nothing you filed is edited." badge={data ? <DemoLabel>{data.label}</DemoLabel> : undefined}>
+    {error ? <ErrorState message={error} onRetry={reload} /> : !data ? <LoadingState label="Loading finance reviews…" /> : <div className="grid gap-5">
+      {data.openReviews.length > 0 && <ul className="grid gap-2" aria-label="Open finance reviews">{data.openReviews.map(item => <li key={item.id} className="flex flex-wrap items-center justify-between gap-2 rounded-control border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900"><span className="font-semibold">{item.label}</span><span>Opened {formatManilaDateTime(item.createdAt)}</span></li>)}</ul>}
+      <div className="min-w-0 overflow-x-auto"><table className="w-full min-w-[40rem] text-left text-sm"><caption className="text-left text-sm font-semibold">Commission statements</caption>
+        <thead className="text-xs uppercase tracking-wide text-text-secondary"><tr>{['Statement', 'Period', 'Approval', 'Outstanding', 'Payment status'].map(head => <th key={head} scope="col" className="px-3 py-2">{head}</th>)}</tr></thead>
+        <tbody className="divide-y divide-border-default">{data.statements.length === 0 ? <tr><td colSpan={5} className="px-3 py-3 text-text-secondary">No issued statements yet.</td></tr> : data.statements.map(row => <tr key={String(row.id)}>
+          <td className="px-3 py-2 font-semibold">{String(row.reference ?? '—')}</td><td className="px-3 py-2">{String(row.period_start)} – {String(row.period_end)}</td>
+          <td className="px-3 py-2">{row.approved ? 'Approved and issued' : 'Awaiting approval'}</td><td className="px-3 py-2 tabular-nums">{formatPesoCentavos(Number(row.outstanding_centavos ?? 0))}</td>
+          <td className="px-3 py-2"><StatusBadge label={row.overdue ? `Overdue since ${String(row.due_on)}` : text(row.state)} tone={row.overdue ? 'error' : row.state === 'PAID' ? 'success' : 'warning'} /></td></tr>)}</tbody></table></div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <section aria-labelledby="adjustments-heading" className="grid content-start gap-2"><h3 id="adjustments-heading" className="text-sm font-semibold">Tax adjustments</h3>
+          {data.taxAdjustments.length === 0 ? <p className="text-sm text-text-secondary">No tax adjustments.</p> : <ul className="divide-y divide-border-default">{data.taxAdjustments.map(row => <li key={String(row.id)} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+            <span><span className="font-semibold">{text(row.kind)}</span> · {String(row.order_reference)} · {formatPesoCentavos(Number(row.amount_centavos ?? 0))}</span><StatusBadge label={text(row.state)} tone={row.state === 'POSTED' ? 'success' : row.state === 'REJECTED' ? 'error' : 'warning'} /></li>)}</ul>}</section>
+        <section aria-labelledby="evidence-heading" className="grid content-start gap-2"><h3 id="evidence-heading" className="text-sm font-semibold">Tax evidence</h3>
+          {data.evidence.length === 0 ? <p className="text-sm text-text-secondary">No tax evidence submitted.</p> : <ul className="divide-y divide-border-default">{data.evidence.map(row => <li key={String(row.id)} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+            <span><span className="font-semibold">{text(row.evidence_type)}</span>{row.taxable_year ? ` · ${String(row.taxable_year)}` : ''}</span><StatusBadge label={text(row.review_state)} tone={row.review_state === 'APPROVED' ? 'success' : row.review_state === 'REJECTED' ? 'error' : 'warning'} /></li>)}</ul>}</section>
+      </div>
+    </div>}
+  </FinanceSection>
+}
 function PhysicalPaymentsSection({ settings, onSaved }: { settings: Record<string, unknown>; onSaved: (saved: { codEnabled: boolean; inStoreEnabled: boolean; lockVersion: number }) => void }) {
   const [cod, setCod] = useState(Boolean(settings.cod_enabled))
   const [inStore, setInStore] = useState(Boolean(settings.in_store_enabled))
@@ -197,16 +223,16 @@ function TransactionHistory() {
     finally { setExporting(false) }
   }
   return <div className="grid min-w-0 gap-6">
-    <PageHeader eyebrow="Finance" title="Transaction History" description="A read-only record of payments, physical receipts, simulated remittances, statements, refunds and tax documents. It shows no balance and moves no money."
+    <PageHeader eyebrow="Finance" title="Transaction History" description="Review payments, receipts, simulated remittances, statements, refunds and tax documents."
       actions={<><DemoLabel /><Button variant="secondary" disabled={exporting || !rows || rows.length === 0} onClick={() => void download()}><Download size={16} aria-hidden="true" />{exporting ? 'Preparing…' : 'Export CSV'}</Button></>} />
+    <InfoNote>Read-only records; this page shows no balance and moves no money. Internal Operational Report — Not a Tax Invoice. Use your authorized Xendit dashboard for balances and withdrawals.</InfoNote>
     <FinanceTabs current="transactions" />
-    <FilterChips label="Transaction type" chips={TABS} value={tab} onChange={value => { setTab(value as FinanceTab); setPage(1) }} />
+    <FilterTabs label="Transaction type" chips={TABS} value={tab} onChange={value => { setTab(value as FinanceTab); setPage(1) }} />
     {error ? <ErrorState message={error} onRetry={() => setAttempt(value => value + 1)} />
       : rows === null ? <LoadingState label="Loading records…" />
-        : rows.length === 0 ? <div className="grid place-items-center gap-2 rounded-surface border border-dashed border-border-default bg-surface-primary p-10 text-center"><Wallet className="text-action-primary" size={28} aria-hidden="true" /><p className="max-w-md text-sm text-text-secondary">{EMPTY[tab]}</p></div>
+        : rows.length === 0 ? <EmptyState icon={<Wallet size={24} aria-hidden="true" />} message={EMPTY[tab]} action={<Button variant="secondary" onClick={() => setAttempt(value => value + 1)}>Retry</Button>} />
           : <TransactionTable tab={tab} rows={rows} />}
     {(page > 1 || hasMore) && <div className="flex items-center justify-between gap-3"><Button variant="secondary" disabled={page === 1} onClick={() => setPage(page - 1)}>Previous</Button><span className="text-sm text-text-secondary">Page {page}</span><Button variant="secondary" disabled={!hasMore} onClick={() => setPage(page + 1)}>Next</Button></div>}
-    <p className="text-xs text-text-secondary">Internal Operational Report — Not a Tax Invoice. For balances and withdrawals use your authorized Xendit dashboard.</p>
   </div>
 }
 
@@ -255,7 +281,7 @@ function StatementDetail({ statementId }: { statementId: string }) {
   return <div className="grid min-w-0 gap-6">
     <BackToStatements />
     <PageHeader eyebrow="Commission statement" title={data.reference} status={data.overdue ? 'OVERDUE' : data.state} description={`Monthly 2% commission for ${data.periodStart} to ${data.periodEnd}. Due ${data.dueOn} (end of day, Asia/Manila).`} actions={<DemoLabel>{data.sampleNotice}</DemoLabel>} />
-    <SummaryTiles label="Statement amounts" tiles={[
+    <StatCards label="Statement amounts" tiles={[
       { key: 'charges', label: 'Earned commission', value: formatPesoCentavos(data.chargesCentavos), hint: 'Completed, non-refunded materials excluding VAT × 2%' },
       { key: 'credits', label: 'Credits', value: formatPesoCentavos(data.creditsCentavos), hint: 'Approved adjustments' },
       { key: 'paid', label: 'Paid', value: formatPesoCentavos(data.paidCentavos), hint: 'Verified platform-fee payments' },
@@ -355,19 +381,20 @@ function Earnings() {
   if (error) return <ErrorState message={error} onRetry={reload} />
   if (!data) return <LoadingState label="Loading earnings…" />
   return <div className="grid min-w-0 gap-6">
-    <PageHeader eyebrow="Analytics" title="Earnings" description={data.notice} actions={<DemoLabel>TEST dataset — DEMO figures</DemoLabel>} />
-    <SummaryTiles label="Sales and collections" tiles={[
+    <PageHeader eyebrow="Analytics" title="Earnings" description="Review sales, collections, deductions and commission." actions={<DemoLabel>TEST dataset — DEMO figures</DemoLabel>} />
+    <InfoNote>{data.notice}</InfoNote>
+    <StatCards label="Sales and collections" tiles={[
       { key: 'sales', label: 'Commercial sales', value: formatPesoCentavos(data.commercialSalesCentavos), hint: `Includes ${formatPesoCentavos(data.includedVatCentavos)} VAT` },
       { key: 'online', label: 'Online collections', value: formatPesoCentavos(data.onlineCollectionsCentavos), hint: 'Verified provider payments, principal only' },
       { key: 'physical', label: 'Physical collections', value: formatPesoCentavos(data.physicalCollectionsCentavos), hint: 'Your recorded COD / In-Store receipts' },
       { key: 'cash', label: 'Estimated remittance cash', value: formatPesoCentavos(data.estimatedRemittanceCashCentavos), hint: 'C − R − P − W (simulated)' },
     ]} />
-    <SummaryTiles label="Deductions and fees" tiles={[
-      { key: 'fees', label: 'Buyer processing fees', value: formatPesoCentavos(data.buyerProcessingFeesCentavos), hint: 'Paid by Buyers, never your revenue' },
-      { key: 'charges', label: 'Provider charges', value: formatPesoCentavos(data.providerChargesCentavos), hint: 'Removed from remittances (P)' },
-      { key: 'cwt', label: 'Simulated CWT', value: formatPesoCentavos(data.simulatedCwtCentavos), hint: 'A tax credit record, not a sales reduction' },
-      { key: 'commission', label: 'Earned commission', value: formatPesoCentavos(data.earnedCommissionCentavos), hint: `${formatPesoCentavos(data.estimatedCommissionCentavos)} still estimated`, tone: 'info' },
-    ]} />
+    <section className="rounded-xl border border-border-default bg-surface-primary p-4"><h2 className="text-sm font-semibold">Deductions and fees</h2><dl className="mt-4 grid gap-4 sm:grid-cols-2">
+      <Fact label="Buyer processing fees" value={formatPesoCentavos(data.buyerProcessingFeesCentavos)} />
+      <Fact label="Provider charges" value={formatPesoCentavos(data.providerChargesCentavos)} />
+      <Fact label="Simulated CWT" value={formatPesoCentavos(data.simulatedCwtCentavos)} />
+      <Fact label="Earned commission" value={formatPesoCentavos(data.earnedCommissionCentavos)} />
+    </dl><p className="mt-4 text-[13px] text-text-secondary">Buyer fees are never store revenue. Provider charges reduce remittances (P); CWT is a tax credit. Estimated commission: {formatPesoCentavos(data.estimatedCommissionCentavos)}.</p></section>
     <div className="flex flex-wrap items-center gap-3 rounded-surface border border-border-default bg-surface-primary p-4 text-sm">
       <ReceiptText size={18} className="text-action-primary" aria-hidden="true" />
       <span>Unpaid commission statements: <strong className="tabular-nums">{formatPesoCentavos(data.unpaidStatementsCentavos)}</strong></span>

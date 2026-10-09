@@ -841,7 +841,7 @@ This endpoint does not need any parameter.
 
 ## listVendorCatalogListings
 
-> CatalogListingSummaryListEnvelope listVendorCatalogListings(status, complianceStatus, categoryId, q, page)
+> CatalogListingSummaryListEnvelope listVendorCatalogListings(group, status, complianceStatus, categoryId, q, page)
 
 
 
@@ -865,6 +865,8 @@ async function example() {
   const api = new VendorCatalogApi(config);
 
   const body = {
+    // 'NEEDS_ATTENTION' | 'OUT_OF_STOCK' | Read-only aggregate filter applied before pagination; summary counts ignore group and status. OUT_OF_STOCK means active listings with no available active variant. (optional)
+    group: group_example,
     // ListingStatus (optional)
     status: ...,
     // ListingComplianceStatus (optional)
@@ -894,6 +896,7 @@ example().catch(console.error);
 
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
+| **group** | `NEEDS_ATTENTION`, `OUT_OF_STOCK` | Read-only aggregate filter applied before pagination; summary counts ignore group and status. OUT_OF_STOCK means active listings with no available active variant. | [Optional] [Defaults to `undefined`] [Enum: NEEDS_ATTENTION, OUT_OF_STOCK] |
 | **status** | `ListingStatus` |  | [Optional] [Defaults to `undefined`] [Enum: DRAFT, PENDING_COMPLIANCE, PENDING_ADMIN_REVIEW, ACTIVE, INACTIVE, TEMPORARILY_HIDDEN_STOCK_NOT_CONFIRMED, REJECTED] |
 | **complianceStatus** | `ListingComplianceStatus` |  | [Optional] [Defaults to `undefined`] [Enum: NOT_REQUIRED, NOT_SUBMITTED, PENDING_ADMIN_REVIEW, VERIFIED, CHANGES_REQUIRED, REJECTED] |
 | **categoryId** | `string` |  | [Optional] [Defaults to `undefined`] |

@@ -396,7 +396,7 @@ class MoneyBreakdownCard extends StatelessWidget {
         money.deliveryEstimateMin == money.deliveryEstimateMax
             ? 'Est. ${formatPeso(money.deliveryEstimateMin!)}'
             : 'Est. ${formatPeso(money.deliveryEstimateMin!)} – ${formatPeso(money.deliveryEstimateMax!)}',
-      _ => 'Set by the Vendor',
+      _ => 'Estimate unavailable — delivery review required',
     };
     final fee = switch (money.processingFeeStatus) {
       'NOT_APPLICABLE' => 'None',
@@ -408,6 +408,20 @@ class MoneyBreakdownCard extends StatelessWidget {
     final physical =
         money.paymentPurpose != 'FULL_ORDER_PAYMENT' &&
         (money.physicalBalanceCentavos ?? 0) > 0;
+    final estimated =
+        money.commercialTotalCentavos == null &&
+        money.deliveryEstimateMin != null &&
+        money.deliveryEstimateMax != null;
+    final totalLabel = estimated
+        ? 'Estimated total'
+        : money.commercialTotalCentavos == null
+        ? 'Total before delivery'
+        : 'Order total';
+    final total = estimated
+        ? '${formatPeso(money.materialsSubtotalCentavos + money.deliveryEstimateMin!)}${money.deliveryEstimateMin == money.deliveryEstimateMax ? '' : ' – ${formatPeso(money.materialsSubtotalCentavos + money.deliveryEstimateMax!)}'}'
+        : formatPeso(
+            money.commercialTotalCentavos ?? money.materialsSubtotalCentavos,
+          );
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
       decoration: BoxDecoration(
@@ -469,12 +483,8 @@ class MoneyBreakdownCard extends StatelessWidget {
           ),
           const Divider(height: 12, color: BuyerTheme.border),
           _MoneyRow(
-            money.commercialTotalCentavos == null
-                ? 'Total before delivery'
-                : 'Order total',
-            formatPeso(
-              money.commercialTotalCentavos ?? money.materialsSubtotalCentavos,
-            ),
+            totalLabel,
+            total,
             note: money.processingFeeStatus == 'PENDING_PAYMENT_CHANNEL'
                 ? 'Before the processing fee'
                 : null,

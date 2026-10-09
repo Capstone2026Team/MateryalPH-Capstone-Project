@@ -27,6 +27,16 @@ void main() {
       // TODO
     });
 
+    // int photoMaxBytes
+    test('to test the property `photoMaxBytes`', () async {
+      // TODO
+    });
+
+    // int videoMaxBytes
+    test('to test the property `videoMaxBytes`', () async {
+      // TODO
+    });
+
     // String blindReveal
     test('to test the property `blindReveal`', () async {
       // TODO

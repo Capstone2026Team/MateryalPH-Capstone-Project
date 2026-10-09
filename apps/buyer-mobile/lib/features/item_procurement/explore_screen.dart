@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../design_system/components/buyer_app_bar.dart';
 import '../../design_system/components/discovery_controls.dart';
 import '../../design_system/components/procurement_components.dart';
 import '../../design_system/theme.dart';
 import '../map_discovery/discovery_models.dart';
+import '../notifications/buyer_notification_button.dart';
 import 'cart_controller.dart';
 import 'explore_controller.dart';
 import 'procurement_models.dart';
 import 'procurement_navigation.dart';
 
-/// Catalog header, active location, search, and MAT-01 counts from one server snapshot,
-/// followed by the Materials Analytics entry (enabled once installed) and category grid.
+/// Catalog search and radius, followed by Materials Analytics and categories.
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({
     super.key,
@@ -54,12 +55,12 @@ class _ExploreScreenState extends State<ExploreScreen> {
     super.dispose();
   }
 
-  void _openCategory(CategoryCountView category) {
+  void _openCategory([CategoryCountView? category]) {
     _controller.search(
       query: '',
       filters: ListingFilters(
-        categoryId: category.id,
-        categoryName: category.name,
+        categoryId: category?.id,
+        categoryName: category?.name,
       ),
       sort: () => null,
     );
@@ -69,6 +70,24 @@ class _ExploreScreenState extends State<ExploreScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: Colors.white,
+    appBar: buyerTabAppBar(
+      context,
+      'Materials Catalog',
+      actions: [
+        ListenableBuilder(
+          listenable: widget.cart,
+          builder: (context, _) => BuyerHeaderIconButton(
+            icon: LucideIcons.shoppingCart,
+            tooltip: widget.cart.lineCount > 0
+                ? 'Cart, ${widget.cart.lineCount} lines'
+                : 'Cart',
+            badgeCount: widget.cart.lineCount,
+            onPressed: () => widget.navigation.openCart(context),
+          ),
+        ),
+        BuyerNotificationButton(onPressed: widget.onOpenNotifications),
+      ],
+    ),
     body: SafeArea(
       child: ListenableBuilder(
         listenable: Listenable.merge([_controller, widget.cart]),
@@ -79,15 +98,31 @@ class _ExploreScreenState extends State<ExploreScreen> {
             controller: _scroll,
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             children: [
-              _header(),
-              const SizedBox(height: 12),
-              _location(),
-              const SizedBox(height: 12),
-              PillSearchField(
-                onTap: () => widget.navigation.openSearch(context),
+              Row(
+                children: [
+                  Expanded(
+                    child: PillSearchField(
+                      onTap: () => widget.navigation.openSearch(context),
+                    ),
+                  ),
+                  if (_controller.origin != null &&
+                      _controller.summaryPhase != LoadPhase.needsOrigin) ...[
+                    const SizedBox(width: 8),
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: MediaQuery.sizeOf(context).width * 0.35,
+                      ),
+                      child: _location(),
+                    ),
+                  ],
+                ],
               ),
-              const SizedBox(height: 12),
-              ..._scope(),
+              if (_controller.origin == null ||
+                  _controller.summaryPhase == LoadPhase.needsOrigin) ...[
+                const SizedBox(height: 12),
+                _location(),
+              ],
+              ..._summaryStatus(),
               const SizedBox(height: 16),
               _analytics(),
               const SizedBox(height: 24),
@@ -105,41 +140,6 @@ class _ExploreScreenState extends State<ExploreScreen> {
         ),
       ),
     ),
-  );
-
-  Widget _header() => Row(
-    children: [
-      Expanded(
-        child: Semantics(
-          header: true,
-          child: const Text(
-            'Materials Catalog',
-            style: TextStyle(
-              fontSize: 22,
-              height: 30 / 22,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ),
-      ),
-      IconButton(
-        tooltip: 'Notifications',
-        onPressed: widget.onOpenNotifications,
-        icon: const Icon(LucideIcons.bell, color: BuyerTheme.ink),
-      ),
-      IconButton(
-        tooltip: widget.cart.lineCount > 0
-            ? 'Cart, ${widget.cart.lineCount} lines'
-            : 'Cart',
-        onPressed: () => widget.navigation.openCart(context),
-        icon: Badge(
-          isLabelVisible: widget.cart.lineCount > 0,
-          backgroundColor: BuyerTheme.ink,
-          label: Text('${widget.cart.lineCount}'),
-          child: const Icon(LucideIcons.shoppingCart, color: BuyerTheme.ink),
-        ),
-      ),
-    ],
   );
 
   Widget _location() {
@@ -164,105 +164,32 @@ class _ExploreScreenState extends State<ExploreScreen> {
     );
   }
 
-  /// Loading never shows a false zero; a failed refresh keeps and labels the last snapshot.
-  List<Widget> _scope() {
+  List<Widget> _summaryStatus() {
     if (_controller.origin == null ||
-        _controller.summaryPhase == LoadPhase.needsOrigin) {
+        (_controller.summaryPhase != LoadPhase.failed &&
+            !_controller.summaryStale)) {
       return [];
     }
-    final summary = _controller.summary;
     final failure = _controller.summaryFailure;
-    final loading = _controller.summaryPhase == LoadPhase.loading;
-    // While loading, never show the previous scope's numbers as if they were current.
-    final shown = loading ? null : summary;
-    final muted = const TextStyle(fontSize: 12, color: BuyerTheme.muted);
     return [
-      if (_controller.summaryPhase == LoadPhase.failed && summary == null)
-        StatusBand(
+      Padding(
+        padding: const EdgeInsets.only(top: 12),
+        child: StatusBand(
           tone: BandTone.warning,
-          title: failure?.kind == DiscoveryFailureKind.offline
+          title: _controller.summaryStale
+              ? 'Showing the last successful update'
+              : failure?.kind == DiscoveryFailureKind.offline
               ? 'You are offline'
-              : 'Nearby counts are unavailable',
+              : 'Catalog is unavailable',
           message: failure?.message,
           action: TextButton(
             onPressed: _controller.loadSummary,
             child: const Text('Retry'),
           ),
-        )
-      else
-        Wrap(
-          spacing: 16,
-          runSpacing: 8,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            _Count(
-              label: shown?.vendorsLabel ?? 'Nearby Verified Vendors',
-              value: shown?.verifiedVendors,
-              unit: 'Verified Vendors',
-              announceUnit: false,
-            ),
-            _Count(
-              label: shown?.listingsLabel ?? 'Available Products',
-              value: shown?.vendorListings,
-              unit: shown?.listingsUnit ?? 'Vendor listings',
-            ),
-            if (shown != null)
-              SizedBox(
-                width: double.infinity,
-                child: Wrap(
-                  spacing: 6,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Text(
-                      'Updated ${formatManilaTimestamp(shown.currentAsOf)}',
-                      style: muted,
-                    ),
-                    if (shown.datasetLabel != null)
-                      _demoChip(shown.datasetLabel!),
-                  ],
-                ),
-              ),
-          ],
         ),
-      if (_controller.summaryStale && summary != null)
-        Padding(
-          padding: const EdgeInsets.only(top: 8),
-          child: StatusBand(
-            tone: BandTone.warning,
-            title: 'Showing the last successful update',
-            message:
-                'Counts from ${formatManilaTimestamp(summary.currentAsOf)} could not be refreshed. ${failure?.message ?? ''}',
-            action: TextButton(
-              onPressed: _controller.loadSummary,
-              child: const Text('Retry'),
-            ),
-          ),
-        ),
+      ),
     ];
   }
-
-  /// TEST data is always marked; the full label is announced to screen readers.
-  Widget _demoChip(String label) => Semantics(
-    container: true,
-    label: label,
-    excludeSemantics: true,
-    child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-      decoration: BoxDecoration(
-        color: BuyerTheme.canvas,
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: BuyerTheme.border),
-      ),
-      child: const Text(
-        'DEMO',
-        style: TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w800,
-          color: BuyerTheme.muted,
-        ),
-      ),
-    ),
-  );
 
   Widget _analytics() {
     final summary = _controller.summary;
@@ -362,11 +289,22 @@ class _ExploreScreenState extends State<ExploreScreen> {
           spacing: 10,
           runSpacing: 10,
           children: [
+            SizedBox(
+              width: width,
+              child: _CategoryTile(
+                name: 'All',
+                icon: LucideIcons.layoutGrid,
+                vendorListings: summary.vendorListings,
+                onTap: () => _openCategory(),
+              ),
+            ),
             for (final category in summary.categories)
               SizedBox(
                 width: width,
                 child: _CategoryTile(
-                  category: category,
+                  name: category.name,
+                  icon: categoryIcon(category.code),
+                  vendorListings: category.vendorListings,
                   onTap: () => _openCategory(category),
                 ),
               ),
@@ -377,49 +315,17 @@ class _ExploreScreenState extends State<ExploreScreen> {
   }
 }
 
-class _Count extends StatelessWidget {
-  const _Count({
-    required this.label,
-    required this.value,
-    required this.unit,
-    this.announceUnit = true,
+class _CategoryTile extends StatelessWidget {
+  const _CategoryTile({
+    required this.name,
+    required this.icon,
+    required this.vendorListings,
+    required this.onTap,
   });
 
-  final String label;
-  final int? value;
-  final String unit;
-
-  /// False when the unit only repeats the label (Nearby Verified Vendors: 12).
-  final bool announceUnit;
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-    container: true,
-    label: value == null
-        ? '$label, loading'
-        : '$label: $value${announceUnit ? ' $unit' : ''}',
-    excludeSemantics: true,
-    child: value == null
-        ? const SkeletonBox(height: 12, width: 90)
-        : Text.rich(
-            TextSpan(
-              children: [
-                TextSpan(
-                  text: '$value',
-                  style: const TextStyle(fontWeight: FontWeight.w800),
-                ),
-                TextSpan(text: ' $unit'),
-              ],
-            ),
-            style: const TextStyle(fontSize: 12, color: BuyerTheme.ink),
-          ),
-  );
-}
-
-class _CategoryTile extends StatelessWidget {
-  const _CategoryTile({required this.category, required this.onTap});
-
-  final CategoryCountView category;
+  final String name;
+  final IconData icon;
+  final int vendorListings;
   final VoidCallback onTap;
 
   @override
@@ -427,7 +333,7 @@ class _CategoryTile extends StatelessWidget {
     container: true,
     button: true,
     label:
-        '${category.name}, ${category.vendorListings} Vendor listing${category.vendorListings == 1 ? '' : 's'}',
+        '$name, $vendorListings Vendor listing${vendorListings == 1 ? '' : 's'}',
     excludeSemantics: true,
     child: Material(
       color: Colors.white,
@@ -451,26 +357,28 @@ class _CategoryTile extends StatelessWidget {
                     color: BuyerTheme.brandSoft,
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(
-                    categoryIcon(category.code),
-                    size: 22,
-                    color: BuyerTheme.actionPressed,
-                  ),
+                  child: Icon(icon, size: 22, color: BuyerTheme.actionPressed),
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  category.name,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    height: 1.25,
-                    fontWeight: FontWeight.w700,
+                SizedBox(
+                  height: MediaQuery.textScalerOf(context).scale(12) * 1.25 * 2,
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: Text(
+                      name,
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        height: 1.25,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
                 ),
                 Text(
-                  '${category.vendorListings} listing${category.vendorListings == 1 ? '' : 's'}',
+                  '$vendorListings listing${vendorListings == 1 ? '' : 's'}',
                   style: const TextStyle(fontSize: 11, color: BuyerTheme.muted),
                 ),
               ],

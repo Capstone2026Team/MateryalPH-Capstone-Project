@@ -24,7 +24,7 @@ final class CurrentVendorTeamAuthority
         $organization = DB::table('vendor_organizations')->where('id', $organizationId)->where('account_status', 'ACTIVE')->lockForUpdate()->first();
         $actor = User::query()->whereKey($request->user()->getKey())->lockForUpdate()->first();
         $member = DB::table('vendor_memberships')->where('vendor_organization_id', $organizationId)
-            ->where('user_id', $request->user()->getKey())->lockForUpdate()->first();
+            ->where('user_id', $request->user()->getKey())->whereNull('deleted_at')->lockForUpdate()->first();
         if ($organization === null || $actor === null || $actor->account_type !== 'VENDOR' || $actor->account_status !== 'ACTIVE'
             || $member === null || $member->status !== 'ACTIVE') {
             throw new AuthenticationException('PERMISSION_DENIED', 'This Vendor team action is unavailable.', 403);

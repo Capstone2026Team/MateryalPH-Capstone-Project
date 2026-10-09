@@ -157,7 +157,7 @@ This endpoint does not need any parameter.
 
 ## listVendorInventoryItems
 
-> InventoryLedgerEnvelope listVendorInventoryItems(q, listingId, stock, confirmation, page)
+> InventoryLedgerEnvelope listVendorInventoryItems(categoryId, q, listingId, stock, confirmation, page)
 
 
 
@@ -181,6 +181,8 @@ async function example() {
   const api = new VendorInventoryApi(config);
 
   const body = {
+    // string | Filters rows and summary counts by material category before pagination. (optional)
+    categoryId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
     // string (optional)
     q: q_example,
     // string (optional)
@@ -210,6 +212,7 @@ example().catch(console.error);
 
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
+| **categoryId** | `string` | Filters rows and summary counts by material category before pagination. | [Optional] [Defaults to `undefined`] |
 | **q** | `string` |  | [Optional] [Defaults to `undefined`] |
 | **listingId** | `string` |  | [Optional] [Defaults to `undefined`] |
 | **stock** | `StockLabel` |  | [Optional] [Defaults to `undefined`] [Enum: IN_STOCK, LIMITED_STOCK, OUT_OF_STOCK] |
