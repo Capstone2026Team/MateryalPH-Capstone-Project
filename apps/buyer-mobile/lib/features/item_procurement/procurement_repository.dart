@@ -77,6 +77,11 @@ abstract interface class ProcurementRepository {
 
   Future<CheckoutPreviewView> checkoutPreview({required String requestVersion});
 
+  Future<DeliveryPreviewView> productDeliveryPreview({
+    required String variantId,
+    required String quantity,
+  });
+
   Future<StoreHoursView> storeHours(String storeId);
 }
 
@@ -207,6 +212,7 @@ final class ApiProcurementRepository implements ProcurementRepository {
       brand: detail.brand,
       manufacturer: detail.manufacturer,
       countryOfManufacture: detail.countryOfManufacture,
+      categoryId: detail.category?.id,
       categoryName: detail.category?.name,
       images: detail.images
           .map((image) => (url: image.url, alt: image.altText))
@@ -233,9 +239,34 @@ final class ApiProcurementRepository implements ProcurementRepository {
         for (final entry in detail.technicalAttributes.entries)
           if (entry.value != null) entry.key: '${entry.value!.value}',
       },
+      attributeLabels: {
+        for (final label
+            in detail.attributeLabels ?? <api.ListingAttributeLabel>[])
+          label.code: (label: label.label, unit: label.unitCode),
+      },
       currentAsOf: detail.currentAsOf,
+      readyMixed: _readyMixed(detail.readyMixedConcrete),
     );
   });
+
+  ReadyMixedConcreteView? _readyMixed(api.ReadyMixedConcreteDetail? detail) {
+    if (detail == null) return null;
+    final open = detail.siteInspection.openRequest;
+    return ReadyMixedConcreteView(
+      quantityLabel: detail.quantityLabel,
+      strengthAttribute: detail.strengthAttribute,
+      strengthLabel: detail.strengthLabel,
+      notice: detail.notice,
+      siteInspectionAvailable: detail.siteInspection.available,
+      openInspection: open == null
+          ? null
+          : OpenSiteInspectionView(
+              id: open.id,
+              status: open.status.name,
+              conversationId: open.conversationId,
+            ),
+    );
+  }
 
   @override
   Future<RankingPreferencesView> preferences() => _api(() async {
@@ -558,6 +589,7 @@ final class ApiProcurementRepository implements ProcurementRepository {
     lineTotalCentavos: line.lineTotalCentavos,
     issues: line.issues.map(_issue).toList(),
     status: line.status.name,
+    readyMixedConcrete: line.readyMixedConcrete ?? false,
   );
 
   CartIssueView _issue(api.CartIssue issue) => CartIssueView(
@@ -589,9 +621,69 @@ final class ApiProcurementRepository implements ProcurementRepository {
           active: location.status.name == 'ACTIVE',
         );
 
-  CheckoutGroupView _checkoutGroup(api.CheckoutGroupPreview group) {
-    final delivery = group.delivery;
+  @override
+  Future<DeliveryPreviewView> productDeliveryPreview({
+    required String variantId,
+    required String quantity,
+  }) => _api(() async {
+    final response = await _cart.previewBuyerProductDelivery(
+      productDeliveryPreviewRequest: api.ProductDeliveryPreviewRequest(
+        (b) => b
+          ..listingVariantId = variantId
+          ..quantity = quantity,
+      ),
+    );
+    return _delivery(_api.required(response.data?.data));
+  });
+
+  DeliveryPreviewView _delivery(api.DeliveryPreview delivery) {
     final estimate = delivery.estimate;
+    return DeliveryPreviewView(
+      status: delivery.status.name,
+      issues: delivery.issues.map(_issue).toList(),
+      manualReviewReasons: delivery.manualReviewReasons.toList(),
+      confirmedOffer: delivery.confirmedOffer != null,
+      endpoint: delivery.endpoint?.name,
+      routeDistanceMeters: delivery.route?.distanceMeters,
+      routeBasis: delivery.route?.basis.name,
+      straightLineMeters: delivery.straightLineMeters,
+      coverageKm: delivery.coverageKm,
+      notice: delivery.notice,
+      estimate: estimate == null
+          ? null
+          : DeliveryEstimateView(
+              feeMinCentavos: estimate.feeMinCentavos,
+              feeMaxCentavos: estimate.feeMaxCentavos,
+              tripsMin: estimate.tripsMin,
+              tripsMax: estimate.tripsMax,
+              vehiclesMin: estimate.vehiclesMin,
+              vehiclesMax: estimate.vehiclesMax,
+              options: [
+                for (final option in estimate.options)
+                  DeliveryOptionView(
+                    vehicleName: option.vehicleName,
+                    vehicles: option.vehicles,
+                    trips: option.trips,
+                    feeCentavos: option.feeCentavos,
+                    vehicleType: option.vehicleType,
+                    mobilizationBasis: option.mobilizationBasis?.name,
+                    mobilizationTotalCentavos:
+                        option.mobilizationTotalCentavos ?? 0,
+                    volumePlan: option.volumePlan == null
+                        ? null
+                        : MixerVolumePlanView(
+                            totalM3: option.volumePlan!.totalM3,
+                            fullLoadM3: option.volumePlan!.fullLoadM3,
+                            fullTrips: option.volumePlan!.fullTrips,
+                            lastTripM3: option.volumePlan!.lastTripM3,
+                          ),
+                  ),
+              ],
+            ),
+    );
+  }
+
+  CheckoutGroupView _checkoutGroup(api.CheckoutGroupPreview group) {
     final amounts = group.amounts;
     return CheckoutGroupView(
       vendorId: group.vendor.id,
@@ -604,37 +696,7 @@ final class ApiProcurementRepository implements ProcurementRepository {
           .map((option) => option.name)
           .toList(),
       pickupAddress: group.pickup?.address?.formattedAddress,
-      delivery: DeliveryPreviewView(
-        status: delivery.status.name,
-        issues: delivery.issues.map(_issue).toList(),
-        manualReviewReasons: delivery.manualReviewReasons.toList(),
-        confirmedOffer: delivery.confirmedOffer != null,
-        endpoint: delivery.endpoint?.name,
-        routeDistanceMeters: delivery.route?.distanceMeters,
-        routeBasis: delivery.route?.basis.name,
-        straightLineMeters: delivery.straightLineMeters,
-        coverageKm: delivery.coverageKm,
-        notice: delivery.notice,
-        estimate: estimate == null
-            ? null
-            : DeliveryEstimateView(
-                feeMinCentavos: estimate.feeMinCentavos,
-                feeMaxCentavos: estimate.feeMaxCentavos,
-                tripsMin: estimate.tripsMin,
-                tripsMax: estimate.tripsMax,
-                vehiclesMin: estimate.vehiclesMin,
-                vehiclesMax: estimate.vehiclesMax,
-                options: [
-                  for (final option in estimate.options)
-                    DeliveryOptionView(
-                      vehicleName: option.vehicleName,
-                      vehicles: option.vehicles,
-                      trips: option.trips,
-                      feeCentavos: option.feeCentavos,
-                    ),
-                ],
-              ),
-      ),
+      delivery: _delivery(group.delivery),
       paymentMethods: group.paymentMethods
           .map(
             (method) => PaymentMethodView(

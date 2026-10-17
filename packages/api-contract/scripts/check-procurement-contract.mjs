@@ -59,10 +59,15 @@ for (const path of ['/buyers/explore/summary', '/buyers/listings/search', '/buye
 }
 
 const schemas = spec.components.schemas
+assert.match(schemas.DeliveryPreview.description, /same store address/, 'Delivery preview documents the matching-store route blocker message')
+assert.deepEqual(schemas.ProductDeliveryPreviewRequest.required, ['listing_variant_id', 'quantity'])
+assert.equal(schemas.ProductDeliveryPreviewRequest.additionalProperties, false, 'The Buyer cannot supply rates or a delivery amount')
+assert.equal(schemas.DeliveryPreviewEnvelope.properties.data.$ref, '#/components/schemas/DeliveryPreview', 'Product preview reuses the checkout delivery contract')
+assert.equal(operation('/buyers/cart/delivery-preview', 'post').operationId, 'previewBuyerProductDelivery')
 assert.deepEqual(schemas.RankingWeightSet.required, ['distance', 'price', 'vps', 'stock', 'product_rating'], 'SRS has exactly five components')
 assert.equal(schemas.RankingWeightSet.additionalProperties, false, 'No hidden or sponsored ranking component can be submitted')
 assert.equal(schemas.RankingPreferences.properties.total_percent.const, 100, 'Weights always total 100%')
-assert.deepEqual(schemas.ListingSearchSort.enum, ['BEST_DEAL', 'DISTANCE', 'PRICE', 'RATING', 'FAVORITES_FIRST', 'DISTANCE_DESC', 'PRICE_DESC', 'RATING_ASC'], 'Favorites First is a separate explicit sort')
+assert.deepEqual(schemas.ListingSearchSort.enum, ['BEST_DEAL', 'DISTANCE', 'PRICE', 'RATING', 'FAVORITES_FIRST', 'DISTANCE_DESC', 'PRICE_DESC', 'RATING_ASC', 'TOP_SELLING'], 'Favorites First is a separate explicit sort')
 assert.deepEqual(schemas.ListingSearchResult.properties.stock_label.enum, ['IN_STOCK', 'LIMITED_STOCK'], 'Out of Stock offers never appear as results')
 assert.deepEqual(schemas.ListingSearchResult.properties.badges.items.enum, ['BEST_PRICE', 'PS_ICC_VERIFIED'], 'Result badges are system-derived only; Favorite is never a badge')
 assert.deepEqual(schemas.RankingComponent.properties.key.enum, ['distance', 'price', 'vps', 'stock', 'product_rating'])
@@ -97,6 +102,14 @@ assert.ok(schemas.CartDestination.required.includes('intended') && schemas.CartD
 assert.deepEqual(schemas.PaymentMethodEligibility.properties.method.enum, ['ONLINE', 'CASH_ON_DELIVERY', 'IN_STORE'])
 for (const field of ['week', 'open_now', 'all_closed', 'hours_as_of']) assert.ok(schemas.PublicStoreProfile.required.includes(field), `Store Profile hours include ${field}`)
 assert.deepEqual(schemas.StoreHoursDay.properties.source.enum, ['WEEKLY', 'DATE_OVERRIDE'])
+// Ready-Mixed Concrete (owner decisions 2026-10-16): mixer-only Site Delivery, Vendor-chosen mobilization basis, volume plan.
+assert.deepEqual(schemas.ReadyMixedConcreteDetail.properties.delivery_vehicle.enum, ['CONCRETE_MIXER'])
+assert.ok(schemas.ListingDetails.properties.ready_mixed_concrete && schemas.CartLine.properties.ready_mixed_concrete, 'Product Details and cart lines flag ready-mixed concrete')
+for (const schema of ['DeliveryEstimateOption', 'FleetVehicleInput', 'FleetVehicle', 'OrderDeliveryVehicle']) {
+  assert.deepEqual(schemas[schema].properties.mobilization_basis.enum, ['PER_TRUCK', 'PER_TRIP', null], `${schema} carries the Vendor's mobilization basis`)
+}
+assert.deepEqual(schemas.MixerVolumePlan.required, ['total_m3', 'full_load_m3', 'full_trips', 'last_trip_m3'])
+assert.deepEqual(schemas.SiteInspection.properties.status.enum, ['REQUESTED', 'SCHEDULED', 'COMPLETED', 'DECLINED', 'CANCELLED'])
 for (const envelope of ['ExploreSummaryEnvelope', 'ListingSearchEnvelope', 'ListingDetailsEnvelope', 'RankingPreferencesEnvelope', 'CartEnvelope', 'CheckoutPreviewEnvelope']) {
   assert.deepEqual(schemas[envelope].required, ['data', 'meta', 'errors'], `${envelope} uses the canonical envelope`)
 }

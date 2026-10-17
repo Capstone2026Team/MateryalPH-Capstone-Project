@@ -12,6 +12,12 @@ void main() {
       // TODO
     });
 
+    // Must match the invited email when supplied. The server always derives the account and email-check recipient from the invitation.
+    // String email
+    test('to test the property `email`', () async {
+      // TODO
+    });
+
     // String fullName
     test('to test the property `fullName`', () async {
       // TODO
@@ -34,6 +40,12 @@ void main() {
 
     // bool privacyAccepted
     test('to test the property `privacyAccepted`', () async {
+      // TODO
+    });
+
+    // Admin invitation acceptance; required when bot protection is enabled unless a matching single-use HttpOnly proof cookie is present.
+    // VendorBotProtectionEvidence botProtection
+    test('to test the property `botProtection`', () async {
       // TODO
     });
 

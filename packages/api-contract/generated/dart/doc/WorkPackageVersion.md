@@ -9,7 +9,6 @@ import 'package:materyalph_api_client/api.dart';
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **id** | **String** |  |
-**version** | **int** |  |
 **contentHash** | **String** |  |
 **lockedAt** | **String** |  | [optional]
 **content** | [**BuiltMap&lt;String, JsonObject&gt;**](JsonObject.md) |  |

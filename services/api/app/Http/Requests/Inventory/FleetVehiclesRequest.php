@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Inventory;
 
+use App\Domain\Vendors\DeliveryRecommendationService;
 use App\Domain\Vendors\VehicleConfiguration;
 use App\Domain\Vendors\VendorFleetService;
 use Illuminate\Foundation\Http\FormRequest;
@@ -44,6 +45,8 @@ final class FleetVehiclesRequest extends FormRequest
             'vehicles.*.base_fee_centavos' => ['sometimes'],
             'vehicles.*.per_km_centavos' => ['sometimes'],
             'vehicles.*.maximum_distance_km' => ['sometimes'],
+            'vehicles.*.mobilization_fee_centavos' => ['sometimes'],
+            'vehicles.*.mobilization_basis' => ['sometimes', 'nullable', Rule::in(DeliveryRecommendationService::MOBILIZATION_BASES)],
         ];
     }
 }

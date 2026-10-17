@@ -27,12 +27,18 @@ describe('Vendor public portal', () => {
   })
 
   test('shows invitation acceptance validation beside the affected field', async () => {
+    const renderWidget = installRecaptcha()
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({ data: { csrf_token: 'test-csrf-token' }, meta: {}, errors: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
       .mockResolvedValueOnce(validationError({ password: ['The password must contain at least one uppercase and one lowercase letter.'] }).response)
     vi.stubGlobal('fetch', fetchMock)
     window.history.replaceState({}, '', '/accept-invite?token=test-token')
     render(<App />)
+
+    await waitFor(() => expect(renderWidget).toHaveBeenCalledOnce())
+    const parameters = renderWidget.mock.calls[0]?.[1] as Record<string, unknown>
+    expect(parameters.action).toBe('vendor_invitation_accept')
+    act(() => (parameters.callback as (token: string) => void)('invitation-checkbox-token'))
 
     fireEvent.change(screen.getByLabelText(/Invited email/i), { target: { value: 'employee@example.test' } })
     fireEvent.change(screen.getByLabelText(/Full name/i), { target: { value: 'Test Employee' } })
@@ -43,6 +49,56 @@ describe('Vendor public portal', () => {
     expect(await screen.findByText('The password must contain at least one uppercase and one lowercase letter.')).toBeVisible()
     expect(screen.getByLabelText(/^Password/i, { selector: 'input' })).toHaveAttribute('aria-invalid', 'true')
     expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  test('invitation success carries the email into verification and separates the actions', async () => {
+    const accept = vi.spyOn(authApi, 'acceptVendorStaffInvitation').mockResolvedValue({} as never)
+    const renderWidget = installRecaptcha()
+    window.history.replaceState({}, '', '/accept-invite?token=test-token')
+    render(<App />)
+    await completeInvitationForm(renderWidget)
+    fireEvent.click(screen.getByRole('button', { name: 'Accept invitation' }))
+
+    expect(await screen.findByRole('heading', { name: 'Your invitation is accepted' })).toBeVisible()
+    expect(accept).toHaveBeenCalledWith(expect.objectContaining({ email: 'employee@example.test' }), { recaptchaToken: 'invitation-checkbox-token' })
+    expect(screen.getByRole('link', { name: /Already verified/ })).toHaveAttribute('href', '/login')
+    fireEvent.click(screen.getByRole('link', { name: 'Verify email' }))
+    expect(await screen.findByRole('textbox', { name: 'Email address' })).toHaveValue('employee@example.test')
+    expect(window.location.search).toBe('')
+    expect(screen.getByRole('textbox', { name: 'Verification code' })).toHaveAttribute('autocomplete', 'one-time-code')
+  })
+
+  test('invitation email fallback resumes acceptance using the HttpOnly proof', async () => {
+    const stepUp = new ResponseError(new Response(JSON.stringify({ data: null, meta: {}, errors: [{ code: 'BOT_STEP_UP_REQUIRED', message: 'Confirm this request.', details: { challenge_id: 'test-challenge', expires_at: '2026-10-13T10:00:00Z', resend_after_seconds: 60 } }] }), { status: 403, headers: { 'Content-Type': 'application/json' } }))
+    const accept = vi.spyOn(authApi, 'acceptVendorStaffInvitation').mockRejectedValueOnce(stepUp).mockResolvedValueOnce({} as never)
+    const verifyRisk = vi.spyOn(authApi, 'verifyRiskChallenge').mockResolvedValue({} as never)
+    const renderWidget = installRecaptcha()
+    window.history.replaceState({}, '', '/accept-invite?token=test-token')
+    render(<App />)
+    await completeInvitationForm(renderWidget)
+    fireEvent.click(screen.getByRole('button', { name: 'Use an email security check instead' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Accept invitation' }))
+    const riskCode = await screen.findByRole('textbox', { name: 'Risk-verification code' })
+    fireEvent.paste(riskCode, { clipboardData: { getData: () => '123 456' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Verify and continue' }))
+
+    expect(await screen.findByRole('heading', { name: 'Your invitation is accepted' })).toBeVisible()
+    expect(verifyRisk).toHaveBeenCalledWith('test-challenge', 'employee@example.test', '123456')
+    expect(accept.mock.calls[0]?.[1]).toEqual({ requestEmailStepUp: true })
+    expect(accept.mock.calls[1]?.[1]).toEqual({})
+  })
+
+  test('invitation submission without a security checkbox does not call the API', async () => {
+    const accept = vi.spyOn(authApi, 'acceptVendorStaffInvitation')
+    const renderWidget = installRecaptcha()
+    window.history.replaceState({}, '', '/accept-invite?token=test-token')
+    render(<App />)
+    await completeInvitationForm(renderWidget)
+    const parameters = renderWidget.mock.calls[0]?.[1] as Record<string, unknown>
+    act(() => (parameters['expired-callback'] as () => void)())
+    fireEvent.click(screen.getByRole('button', { name: 'Accept invitation' }))
+    expect(await screen.findByText('Complete the security checkbox before continuing.')).toBeVisible()
+    expect(accept).not.toHaveBeenCalled()
   })
 
   test('renders the approved opportunity, verification, and fee disclosures', () => {
@@ -119,6 +175,30 @@ describe('Vendor public portal', () => {
     expect(password).toHaveAttribute('type', 'password')
   })
 
+  test('registration shows each password requirement and marks it met as the Owner types', () => {
+    window.history.replaceState({}, '', '/register')
+    render(<App />)
+    const requirements = screen.getByRole('list', { name: 'Requirements for this password' })
+    const status = () => Array.from(requirements.querySelectorAll('li')).map(item => item.textContent)
+    expect(status()).toEqual([
+      'Must be a minimum of 12 characters in length (not met)',
+      'Must contain at least 1 uppercase letter (not met)',
+      'Must contain at least 1 lowercase letter (not met)',
+      'Must contain at least 1 number (not met)',
+    ])
+    const password = screen.getByLabelText(/^Password/i, { selector: 'input' })
+    expect(password).toHaveAccessibleDescription(/minimum of 12 characters/)
+    fireEvent.change(password, { target: { value: 'abcdefghijkl' } })
+    expect(status()).toEqual([
+      'Must be a minimum of 12 characters in length (met)',
+      'Must contain at least 1 uppercase letter (not met)',
+      'Must contain at least 1 lowercase letter (met)',
+      'Must contain at least 1 number (not met)',
+    ])
+    fireEvent.change(password, { target: { value: 'Abcdefghijk1' } })
+    expect(status().every(item => item?.endsWith('(met)'))).toBe(true)
+  })
+
   test.each(['ACCOUNT_NOT_FOUND', 'OIDC_STATE_INVALID', 'OIDC_KEYS_UNAVAILABLE', 'access_denied', 'unknown-internal-detail'])('Google callback %s offers safe recovery actions', (code) => {
     window.history.replaceState({}, '', `/auth/callback?status=error&code=${code}`)
     render(<App />)
@@ -157,7 +237,6 @@ describe('Vendor public portal', () => {
   test('maps registration validation details to every visible control and retains unknown errors', async () => {
     vi.mocked(authApi.registerVendor).mockRejectedValue(validationError({
       full_name: ['Enter the Vendor Owner name.'],
-      business_name: ['Enter the business or store name.'],
       email: ['Enter a valid email address.'],
       mobile_e164: ['Enter a mobile number in international format.'],
       password: ['Use uppercase, lowercase, and a number.'],
@@ -176,13 +255,12 @@ describe('Vendor public portal', () => {
     fireEvent.click(screen.getByRole('button', { name: /create owner account/i }))
 
     await waitFor(() => expect(authApi.registerVendor).toHaveBeenCalledOnce())
-    const fullName = screen.getByLabelText(/Owner full name/i)
+    const fullName = screen.getByLabelText(/Account Owner Name/i)
     expect(fullName).toHaveAttribute('aria-invalid', 'true')
     expect(fullName).toHaveAttribute('aria-describedby', 'full_name-error')
     expect(screen.getByText('Enter the Vendor Owner name.')).toHaveAttribute('role', 'alert')
 
     for (const [label, message] of [
-      [/Business or store name/i, 'Enter the business or store name.'],
       [/Email address/i, 'Enter a valid email address.'],
       [/Mobile number/i, 'Enter a mobile number in international format.'],
       [/^Password/i, 'Use uppercase, lowercase, and a number.'],
@@ -226,11 +304,14 @@ describe('Vendor public portal', () => {
     expect(authApi.registerVendor).toHaveBeenCalledWith(
       expect.objectContaining({
         fullName: 'Vendor Owner',
-        businessName: 'Sample Supply',
         mobileE164: '+639171234567',
       }),
       { recaptchaToken: 'checkbox-token' },
     )
+    expect(vi.mocked(authApi.registerVendor).mock.calls[0]?.[0]).not.toHaveProperty('businessName')
+    expect(await screen.findByRole('textbox', { name: 'Email address' })).toHaveValue('vendor@example.test')
+    expect(window.location.search).toBe('')
+    expect(screen.queryByLabelText(/Business or store name/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/Review the highlighted fields/i)).not.toBeInTheDocument()
   })
 })
@@ -253,14 +334,23 @@ async function completeRegistrationForm(renderWidget: ReturnType<typeof installR
   const parameters = renderWidget.mock.calls[0]?.[1] as Record<string, unknown>
   act(() => (parameters.callback as (token: string) => void)('checkbox-token'))
 
-  fireEvent.change(screen.getByLabelText(/Owner full name/i), { target: { value: 'Vendor Owner' } })
-  fireEvent.change(screen.getByLabelText(/Business or store name/i), { target: { value: 'Sample Supply' } })
+  fireEvent.change(screen.getByLabelText(/Account Owner Name/i), { target: { value: 'Vendor Owner' } })
   fireEvent.change(screen.getByLabelText(/Email address/i), { target: { value: 'vendor@example.test' } })
   fireEvent.change(screen.getByLabelText(/Mobile number/i, { selector: 'input' }), { target: { value: '+639171234567' } })
   fireEvent.change(screen.getByLabelText(/^Password/i), { target: { value: 'SecurePassword1' } })
   fireEvent.change(screen.getByLabelText(/^Confirm password/i, { selector: 'input' }), { target: { value: 'SecurePassword1' } })
   fireEvent.click(screen.getByLabelText(/I accept the versioned/i))
   fireEvent.click(screen.getByLabelText(/I acknowledge the separate/i))
+}
+
+async function completeInvitationForm(renderWidget: ReturnType<typeof installRecaptcha>) {
+  await waitFor(() => expect(renderWidget).toHaveBeenCalledOnce())
+  const parameters = renderWidget.mock.calls[0]?.[1] as Record<string, unknown>
+  act(() => (parameters.callback as (token: string) => void)('invitation-checkbox-token'))
+  fireEvent.change(screen.getByLabelText(/Invited email/i), { target: { value: 'employee@example.test' } })
+  fireEvent.change(screen.getByLabelText(/Full name/i), { target: { value: 'Test Employee' } })
+  fireEvent.change(screen.getByLabelText(/^Password/i, { selector: 'input' }), { target: { value: 'ValidPassword123' } })
+  fireEvent.change(screen.getByLabelText(/^Confirm password/i, { selector: 'input' }), { target: { value: 'ValidPassword123' } })
 }
 
 function validationError(details: Record<string, string[]>): ResponseError {

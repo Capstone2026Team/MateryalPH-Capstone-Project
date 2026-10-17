@@ -82,6 +82,8 @@ class _$CartLine extends CartLine {
   @override
   final String? variantLabel;
   @override
+  final String? workPackageLineId;
+  @override
   final ListingImage? image;
   @override
   final String unitCode;
@@ -103,6 +105,8 @@ class _$CartLine extends CartLine {
   final BuiltList<CartIssue> issues;
   @override
   final CartLineStatusEnum status;
+  @override
+  final bool? readyMixedConcrete;
 
   factory _$CartLine([void Function(CartLineBuilder)? updates]) =>
       (CartLineBuilder()..update(updates))._build();
@@ -115,6 +119,7 @@ class _$CartLine extends CartLine {
       required this.vendorId,
       required this.displayName,
       this.variantLabel,
+      this.workPackageLineId,
       this.image,
       required this.unitCode,
       required this.unitName,
@@ -125,7 +130,8 @@ class _$CartLine extends CartLine {
       this.current,
       this.lineTotalCentavos,
       required this.issues,
-      required this.status})
+      required this.status,
+      this.readyMixedConcrete})
       : super._();
   @override
   CartLine rebuild(void Function(CartLineBuilder) updates) =>
@@ -145,6 +151,7 @@ class _$CartLine extends CartLine {
         vendorId == other.vendorId &&
         displayName == other.displayName &&
         variantLabel == other.variantLabel &&
+        workPackageLineId == other.workPackageLineId &&
         image == other.image &&
         unitCode == other.unitCode &&
         unitName == other.unitName &&
@@ -155,7 +162,8 @@ class _$CartLine extends CartLine {
         current == other.current &&
         lineTotalCentavos == other.lineTotalCentavos &&
         issues == other.issues &&
-        status == other.status;
+        status == other.status &&
+        readyMixedConcrete == other.readyMixedConcrete;
   }
 
   @override
@@ -168,6 +176,7 @@ class _$CartLine extends CartLine {
     _$hash = $jc(_$hash, vendorId.hashCode);
     _$hash = $jc(_$hash, displayName.hashCode);
     _$hash = $jc(_$hash, variantLabel.hashCode);
+    _$hash = $jc(_$hash, workPackageLineId.hashCode);
     _$hash = $jc(_$hash, image.hashCode);
     _$hash = $jc(_$hash, unitCode.hashCode);
     _$hash = $jc(_$hash, unitName.hashCode);
@@ -179,6 +188,7 @@ class _$CartLine extends CartLine {
     _$hash = $jc(_$hash, lineTotalCentavos.hashCode);
     _$hash = $jc(_$hash, issues.hashCode);
     _$hash = $jc(_$hash, status.hashCode);
+    _$hash = $jc(_$hash, readyMixedConcrete.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -193,6 +203,7 @@ class _$CartLine extends CartLine {
           ..add('vendorId', vendorId)
           ..add('displayName', displayName)
           ..add('variantLabel', variantLabel)
+          ..add('workPackageLineId', workPackageLineId)
           ..add('image', image)
           ..add('unitCode', unitCode)
           ..add('unitName', unitName)
@@ -203,7 +214,8 @@ class _$CartLine extends CartLine {
           ..add('current', current)
           ..add('lineTotalCentavos', lineTotalCentavos)
           ..add('issues', issues)
-          ..add('status', status))
+          ..add('status', status)
+          ..add('readyMixedConcrete', readyMixedConcrete))
         .toString();
   }
 }
@@ -238,6 +250,11 @@ class CartLineBuilder implements Builder<CartLine, CartLineBuilder> {
   String? _variantLabel;
   String? get variantLabel => _$this._variantLabel;
   set variantLabel(String? variantLabel) => _$this._variantLabel = variantLabel;
+
+  String? _workPackageLineId;
+  String? get workPackageLineId => _$this._workPackageLineId;
+  set workPackageLineId(String? workPackageLineId) =>
+      _$this._workPackageLineId = workPackageLineId;
 
   ListingImageBuilder? _image;
   ListingImageBuilder get image => _$this._image ??= ListingImageBuilder();
@@ -289,6 +306,11 @@ class CartLineBuilder implements Builder<CartLine, CartLineBuilder> {
   CartLineStatusEnum? get status => _$this._status;
   set status(CartLineStatusEnum? status) => _$this._status = status;
 
+  bool? _readyMixedConcrete;
+  bool? get readyMixedConcrete => _$this._readyMixedConcrete;
+  set readyMixedConcrete(bool? readyMixedConcrete) =>
+      _$this._readyMixedConcrete = readyMixedConcrete;
+
   CartLineBuilder() {
     CartLine._defaults(this);
   }
@@ -303,6 +325,7 @@ class CartLineBuilder implements Builder<CartLine, CartLineBuilder> {
       _vendorId = $v.vendorId;
       _displayName = $v.displayName;
       _variantLabel = $v.variantLabel;
+      _workPackageLineId = $v.workPackageLineId;
       _image = $v.image?.toBuilder();
       _unitCode = $v.unitCode;
       _unitName = $v.unitName;
@@ -314,6 +337,7 @@ class CartLineBuilder implements Builder<CartLine, CartLineBuilder> {
       _lineTotalCentavos = $v.lineTotalCentavos;
       _issues = $v.issues.toBuilder();
       _status = $v.status;
+      _readyMixedConcrete = $v.readyMixedConcrete;
       _$v = null;
     }
     return this;
@@ -349,6 +373,7 @@ class CartLineBuilder implements Builder<CartLine, CartLineBuilder> {
             displayName: BuiltValueNullFieldError.checkNotNull(
                 displayName, r'CartLine', 'displayName'),
             variantLabel: variantLabel,
+            workPackageLineId: workPackageLineId,
             image: _image?.build(),
             unitCode: BuiltValueNullFieldError.checkNotNull(
                 unitCode, r'CartLine', 'unitCode'),
@@ -366,6 +391,7 @@ class CartLineBuilder implements Builder<CartLine, CartLineBuilder> {
             issues: issues.build(),
             status: BuiltValueNullFieldError.checkNotNull(
                 status, r'CartLine', 'status'),
+            readyMixedConcrete: readyMixedConcrete,
           );
     } catch (_) {
       late String _$failedField;

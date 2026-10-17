@@ -21,21 +21,21 @@ void main() {
 
     // Vendor-only inventory ledger, one row per active variant. Exact quantities are private to authorized Vendor users (Owner, Store Manager, Store Staff, Inventory Staff; Customer Service Staff read-only). Fulfillment Staff are denied. Buyers only ever receive public_label.
     //
-    //Future<InventoryLedgerEnvelope> listVendorInventoryItems({ String q, String listingId, StockLabel stock, String confirmation, int page }) async
+    //Future<InventoryLedgerEnvelope> listVendorInventoryItems({ String categoryId, String q, String listingId, StockLabel stock, String confirmation, int page }) async
     test('test listVendorInventoryItems', () async {
       // TODO
     });
 
     // Append-only movement history with actor, reason and before/after quantities, newest first.
     //
-    //Future<InventoryMovementListEnvelope> listVendorInventoryMovements(String variantId, { int page }) async
+    //Future<InventoryMovementListEnvelope> listVendorInventoryMovements(String variantId, { int page, Date from, Date to }) async
     test('test listVendorInventoryMovements', () async {
       // TODO
     });
 
     // Every immutable price version of the variant, newest first, including retired ordinary and volume-tier versions. Earlier versions are never edited in place (MAT-03).
     //
-    //Future<PriceHistoryEnvelope> listVendorPriceHistory(String variantId) async
+    //Future<PriceHistoryEnvelope> listVendorPriceHistory(String variantId, { Date from, Date to }) async
     test('test listVendorPriceHistory', () async {
       // TODO
     });

@@ -19,7 +19,7 @@ for (const [path, methods] of Object.entries(spec.paths)) {
   for (const [method, operation] of Object.entries(methods)) {
     if (!operation.tags?.includes('Messaging')) continue
     assert.ok(operation.responses['401'] && operation.responses['403'] && operation.responses['409'])
-    const portals = operation.parameters.find(p => p.name === 'messagingPortal').schema.enum
+    const portals = operation.parameters.find(p => p.name === 'messagingPortal')?.schema.enum ?? ['vendor']
     for (const portal of portals) {
       const uri = `api/v1${path.replace('{messagingPortal}', portal)}`
       const route = routes.find(r => r.uri === uri && r.method.split('|').includes(method.toUpperCase()))
@@ -30,7 +30,7 @@ for (const [path, methods] of Object.entries(spec.paths)) {
       assert.match(middleware, portal === 'buyers' ? /RequireAccountAccess:BUYER|account.access:BUYER/ : /RequireAccountAccess:VENDOR|account.access:VENDOR/)
       if (portal === 'vendor' && method !== 'get') assert.match(middleware, /VerifyAccountCsrf/)
     }
-    if (['publishChatQuotation', 'startNextChatQuotation', 'decideChatQuotation', 'createConversation'].includes(operation.operationId)) {
+    if (['publishChatQuotation', 'startNextChatQuotation', 'decideChatQuotation', 'createConversation', 'openVendorOrderConversation'].includes(operation.operationId)) {
       assert.ok(operation.parameters.some(p => p.name === 'Idempotency-Key' && p.required))
     }
   }
@@ -39,11 +39,31 @@ for (const route of routes.filter(r => /api\/v1\/(buyers|vendor)\/(conversations
   for (const method of route.method.split('|').filter(m => m !== 'HEAD')) assert.ok(expected.has(`${method} ${route.uri}`), `Undocumented messaging route ${route.uri}`)
 }
 assert.deepEqual(spec.components.schemas.ConversationView.properties.purpose.enum, ['SALES', 'FULFILLMENT'])
+assert.equal(spec.paths['/{messagingPortal}/conversations/{conversationId}/project-inquiries'].get.operationId, 'listChatProjectInquiries')
+assert.equal(spec.components.schemas.ConversationView.properties.main_conversation_id.format, 'uuid')
+assert.equal(spec.components.schemas.ConversationView.properties.project_unread_count.minimum, 0)
+assert.equal(spec.components.schemas.ConversationView.properties.can_list_fulfillment_conversations.type, 'boolean')
+assert.equal(spec.components.schemas.ConversationView.properties.fulfillment_unread_count.type, 'integer')
+assert.equal(spec.components.schemas.ConversationView.properties.fulfillment_unread_count.minimum, 0)
+assert.equal(spec.paths['/vendor/conversations/{conversationId}/fulfillment-conversations'].get.operationId, 'listVendorFulfillmentConversations')
+assert.equal(spec.components.schemas.FulfillmentConversationPage.properties.items.maxItems, 25)
+assert.ok(spec.components.schemas.FulfillmentConversationSummary.required.includes('read_only'))
 assert.equal(spec.components.schemas.ChatRealtime.properties.inbox_channel.type, 'string')
 assert.equal(spec.components.schemas.ChatRealtime.properties.inbox_channel.nullable, true)
 assert.equal(spec.components.schemas.ChatDraftContent.properties.deadline_hours.default, 24)
 assert.equal(spec.components.schemas.ChatDraftContent.properties.deadline_hours.minimum, 1)
 assert.equal(spec.components.schemas.ChatDraftContent.properties.deadline_hours.maximum, 72)
+assert.equal(spec.components.schemas.ChatDraftContent.properties.discount.$ref, '#/components/schemas/ChatQuotationDiscount')
+assert.equal(spec.components.schemas.ChatDraftContent.properties.vendor_discount_centavos.deprecated, true)
+assert.deepEqual(spec.components.schemas.ChatQuotationDiscount.properties.scope.enum, ['MATERIALS', 'DELIVERY'])
+assert.equal(spec.components.schemas.ChatQuotationDiscount.additionalProperties, false)
+assert.deepEqual(spec.components.schemas.ChatQuotationDiscount.required, ['scope', 'percent'])
+const percent = new RegExp(spec.components.schemas.ChatQuotationDiscount.properties.percent.pattern)
+for (const valid of ['0', '0.01', '20', '99.99', '100', '100.00']) assert.ok(percent.test(valid), valid)
+for (const invalid of ['-1', '100.01', '1.001', '1e1', '101', '']) assert.ok(!percent.test(invalid), invalid)
+assert.equal(spec.components.schemas.ChatQuotationContent.properties.discount.$ref, '#/components/schemas/ChatQuotationDiscountAssessment')
+assert.ok(!spec.components.schemas.ChatQuotationContent.required.includes('discount'), 'Existing immutable versions still decode without a percentage assessment')
+assert.deepEqual(spec.components.schemas.ChatQuotationDiscountAssessment.required, ['scope', 'percent', 'basis_centavos', 'deduction_centavos'])
 assert.deepEqual(spec.components.schemas.ChatQuotationContent.properties.price_source.enum, ['PRIVATE_TRANSACTION'])
 assert.deepEqual(Object.keys(spec.components.schemas.ChatIdentity.properties).sort(), ['avatar_path', 'display_name', 'role'])
 assert.ok(!Object.keys(spec.paths).some(p => p.includes('fulfillment-thread')), 'Phase 12 entry must remain disabled')

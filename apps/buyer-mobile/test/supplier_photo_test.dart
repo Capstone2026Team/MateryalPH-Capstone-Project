@@ -99,27 +99,28 @@ void main() {
     },
   );
 
-  testWidgets('a Verified Vendor row has a save icon that does not open the row', (
-    tester,
-  ) async {
-    var saved = 0;
-    var opened = 0;
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: SupplierRow(
-            item: verifiedSupplier('verified'),
-            selected: false,
-            onTap: () => opened++,
-            onToggleFavorite: () => saved++,
+  testWidgets(
+    'a Verified Vendor row has a save icon that does not open the row',
+    (tester) async {
+      var saved = 0;
+      var opened = 0;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SupplierRow(
+              item: verifiedSupplier('verified'),
+              selected: false,
+              onTap: () => opened++,
+              onToggleFavorite: () => saved++,
+            ),
           ),
         ),
-      ),
-    );
-    await tester.tap(find.byIcon(Icons.bookmark_border));
-    expect(saved, 1);
-    expect(opened, 0);
-  });
+      );
+      await tester.tap(find.byIcon(Icons.bookmark_border));
+      expect(saved, 1);
+      expect(opened, 0);
+    },
+  );
 
   testWidgets('rows removed during a fling do not fetch photos', (
     tester,

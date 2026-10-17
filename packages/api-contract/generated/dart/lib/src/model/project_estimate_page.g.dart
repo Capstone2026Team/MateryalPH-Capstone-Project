@@ -19,6 +19,10 @@ class _$ProjectEstimatePage extends ProjectEstimatePage {
   final int total;
   @override
   final int? suggestedRadiusKm;
+  @override
+  final int? unfilteredTotal;
+  @override
+  final String? sort;
 
   factory _$ProjectEstimatePage(
           [void Function(ProjectEstimatePageBuilder)? updates]) =>
@@ -30,7 +34,9 @@ class _$ProjectEstimatePage extends ProjectEstimatePage {
       required this.page,
       required this.hasMore,
       required this.total,
-      this.suggestedRadiusKm})
+      this.suggestedRadiusKm,
+      this.unfilteredTotal,
+      this.sort})
       : super._();
   @override
   ProjectEstimatePage rebuild(
@@ -50,7 +56,9 @@ class _$ProjectEstimatePage extends ProjectEstimatePage {
         page == other.page &&
         hasMore == other.hasMore &&
         total == other.total &&
-        suggestedRadiusKm == other.suggestedRadiusKm;
+        suggestedRadiusKm == other.suggestedRadiusKm &&
+        unfilteredTotal == other.unfilteredTotal &&
+        sort == other.sort;
   }
 
   @override
@@ -62,6 +70,8 @@ class _$ProjectEstimatePage extends ProjectEstimatePage {
     _$hash = $jc(_$hash, hasMore.hashCode);
     _$hash = $jc(_$hash, total.hashCode);
     _$hash = $jc(_$hash, suggestedRadiusKm.hashCode);
+    _$hash = $jc(_$hash, unfilteredTotal.hashCode);
+    _$hash = $jc(_$hash, sort.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -74,7 +84,9 @@ class _$ProjectEstimatePage extends ProjectEstimatePage {
           ..add('page', page)
           ..add('hasMore', hasMore)
           ..add('total', total)
-          ..add('suggestedRadiusKm', suggestedRadiusKm))
+          ..add('suggestedRadiusKm', suggestedRadiusKm)
+          ..add('unfilteredTotal', unfilteredTotal)
+          ..add('sort', sort))
         .toString();
   }
 }
@@ -111,6 +123,15 @@ class ProjectEstimatePageBuilder
   set suggestedRadiusKm(int? suggestedRadiusKm) =>
       _$this._suggestedRadiusKm = suggestedRadiusKm;
 
+  int? _unfilteredTotal;
+  int? get unfilteredTotal => _$this._unfilteredTotal;
+  set unfilteredTotal(int? unfilteredTotal) =>
+      _$this._unfilteredTotal = unfilteredTotal;
+
+  String? _sort;
+  String? get sort => _$this._sort;
+  set sort(String? sort) => _$this._sort = sort;
+
   ProjectEstimatePageBuilder() {
     ProjectEstimatePage._defaults(this);
   }
@@ -124,6 +145,8 @@ class ProjectEstimatePageBuilder
       _hasMore = $v.hasMore;
       _total = $v.total;
       _suggestedRadiusKm = $v.suggestedRadiusKm;
+      _unfilteredTotal = $v.unfilteredTotal;
+      _sort = $v.sort;
       _$v = null;
     }
     return this;
@@ -156,6 +179,8 @@ class ProjectEstimatePageBuilder
             total: BuiltValueNullFieldError.checkNotNull(
                 total, r'ProjectEstimatePage', 'total'),
             suggestedRadiusKm: suggestedRadiusKm,
+            unfilteredTotal: unfilteredTotal,
+            sort: sort,
           );
     } catch (_) {
       late String _$failedField;

@@ -144,6 +144,23 @@ final class TotpService
         });
     }
 
+    /** Checks without consuming; the caller revokes the whole factor, which retires every code at once. */
+    public function hasUnusedRecoveryCode(User $user, string $plainCode): bool
+    {
+        return RecoveryCode::query()
+            ->where('user_id', $user->getKey())
+            ->where('code_hash', $this->recoveryHash($plainCode))
+            ->whereNull('used_at')
+            ->exists();
+    }
+
+    /** Turns the authenticator off. The row is retained (revoked) so a later enrollment issues a fresh secret. */
+    public function revoke(User $user): void
+    {
+        TotpFactor::query()->where('user_id', $user->getKey())->whereNull('revoked_at')->update(['revoked_at' => now(), 'updated_at' => now()]);
+        RecoveryCode::query()->where('user_id', $user->getKey())->whereNull('used_at')->update(['used_at' => now(), 'updated_at' => now()]);
+    }
+
     /** @return list<string> */
     public function replaceRecoveryCodes(User $user): array
     {

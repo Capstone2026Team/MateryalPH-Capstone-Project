@@ -15,6 +15,7 @@ Name | Type | Description | Notes
 **pendingDocumentReviews** | **int** |  |
 **auditEvents** | **int** |  |
 **canViewAudit** | **bool** |  |
+**queues** | [**BuiltList&lt;OperationsQueue&gt;**](OperationsQueue.md) | Only the queues your Admin permissions allow, with counts and the oldest pending item. | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

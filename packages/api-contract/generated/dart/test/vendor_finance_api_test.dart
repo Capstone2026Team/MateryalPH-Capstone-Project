@@ -16,14 +16,14 @@ void main() {
 
     // Owner-only audited CSV export: Internal Operational Report — Not a Tax Invoice.
     //
-    //Future<String> exportVendorTransactions(String tab) async
+    //Future<String> exportVendorTransactions(String tab, { String status, Date from, Date to }) async
     test('test exportVendorTransactions', () async {
       // TODO
     });
 
-    // Owner-only FIN-11 Earnings with separate sales, collections, charges, simulated CWT and commission.
+    // Owner-only FIN-11 Earnings with separate sales, confirmed online refunds, net online collections, charges, simulated CWT and commission. Confirmed refunds adjust the original payment and assessment date buckets; pending and failed refunds leave collections unchanged. Posted provider charges, CWT and FIN-04A thresholds remain unchanged; estimated remittance cash deducts confirmed refunds without deducting refunds already included in the assessment twice.
     //
-    //Future<VendorEarningsEnvelope> getVendorEarnings() async
+    //Future<VendorEarningsEnvelope> getVendorEarnings({ Date from, Date to }) async
     test('test getVendorEarnings', () async {
       // TODO
     });
@@ -51,7 +51,7 @@ void main() {
 
     // Owner-only read-only Transaction History (former Wallet label). No balance, wallet or escrow.
     //
-    //Future<FinanceTransactionListEnvelope> listVendorTransactions({ String tab, int page }) async
+    //Future<FinanceTransactionListEnvelope> listVendorTransactions({ String tab, int page, String status, Date from, Date to }) async
     test('test listVendorTransactions', () async {
       // TODO
     });
@@ -74,6 +74,13 @@ void main() {
     //
     //Future<PaymentAttemptEnvelope> refreshVendorFeePayment(String paymentId) async
     test('test refreshVendorFeePayment', () async {
+      // TODO
+    });
+
+    // Owner-only. Returns the store's own full TIN and branch code on demand so the Owner can unmask the masked value shown in the Vendor Tax Profile summary and Tax registration. The response is never cached, each reveal is audited without recording the number, and the number is never returned to a Manager, staff member, Buyer, another Vendor or public surface.
+    //
+    //Future<VendorTinRevealEnvelope> revealVendorTin() async
+    test('test revealVendorTin', () async {
       // TODO
     });
 

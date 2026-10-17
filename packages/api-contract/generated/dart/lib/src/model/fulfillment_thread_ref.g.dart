@@ -78,6 +78,8 @@ class _$FulfillmentThreadRefReadOnlyReasonEnumSerializer
 
 class _$FulfillmentThreadRef extends FulfillmentThreadRef {
   @override
+  final int? unreadCount;
+  @override
   final bool available;
   @override
   final String? conversationId;
@@ -93,7 +95,8 @@ class _$FulfillmentThreadRef extends FulfillmentThreadRef {
       (FulfillmentThreadRefBuilder()..update(updates))._build();
 
   _$FulfillmentThreadRef._(
-      {required this.available,
+      {this.unreadCount,
+      required this.available,
       this.conversationId,
       required this.readOnly,
       this.readOnlyReason,
@@ -112,6 +115,7 @@ class _$FulfillmentThreadRef extends FulfillmentThreadRef {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is FulfillmentThreadRef &&
+        unreadCount == other.unreadCount &&
         available == other.available &&
         conversationId == other.conversationId &&
         readOnly == other.readOnly &&
@@ -122,6 +126,7 @@ class _$FulfillmentThreadRef extends FulfillmentThreadRef {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, unreadCount.hashCode);
     _$hash = $jc(_$hash, available.hashCode);
     _$hash = $jc(_$hash, conversationId.hashCode);
     _$hash = $jc(_$hash, readOnly.hashCode);
@@ -134,6 +139,7 @@ class _$FulfillmentThreadRef extends FulfillmentThreadRef {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'FulfillmentThreadRef')
+          ..add('unreadCount', unreadCount)
           ..add('available', available)
           ..add('conversationId', conversationId)
           ..add('readOnly', readOnly)
@@ -146,6 +152,10 @@ class _$FulfillmentThreadRef extends FulfillmentThreadRef {
 class FulfillmentThreadRefBuilder
     implements Builder<FulfillmentThreadRef, FulfillmentThreadRefBuilder> {
   _$FulfillmentThreadRef? _$v;
+
+  int? _unreadCount;
+  int? get unreadCount => _$this._unreadCount;
+  set unreadCount(int? unreadCount) => _$this._unreadCount = unreadCount;
 
   bool? _available;
   bool? get available => _$this._available;
@@ -177,6 +187,7 @@ class FulfillmentThreadRefBuilder
   FulfillmentThreadRefBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _unreadCount = $v.unreadCount;
       _available = $v.available;
       _conversationId = $v.conversationId;
       _readOnly = $v.readOnly;
@@ -203,6 +214,7 @@ class FulfillmentThreadRefBuilder
   _$FulfillmentThreadRef _build() {
     final _$result = _$v ??
         _$FulfillmentThreadRef._(
+          unreadCount: unreadCount,
           available: BuiltValueNullFieldError.checkNotNull(
               available, r'FulfillmentThreadRef', 'available'),
           conversationId: conversationId,

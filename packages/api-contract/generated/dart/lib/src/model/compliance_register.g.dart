@@ -61,12 +61,41 @@ final BuiltSet<ComplianceRegisterStatusEnum>
   _$complianceRegisterStatusEnum_SUPERSEDED,
 ]);
 
+const ComplianceRegisterSourceChannelEnum
+    _$complianceRegisterSourceChannelEnum_UPLOAD =
+    const ComplianceRegisterSourceChannelEnum._('UPLOAD');
+const ComplianceRegisterSourceChannelEnum
+    _$complianceRegisterSourceChannelEnum_FEED =
+    const ComplianceRegisterSourceChannelEnum._('FEED');
+
+ComplianceRegisterSourceChannelEnum
+    _$complianceRegisterSourceChannelEnumValueOf(String name) {
+  switch (name) {
+    case 'UPLOAD':
+      return _$complianceRegisterSourceChannelEnum_UPLOAD;
+    case 'FEED':
+      return _$complianceRegisterSourceChannelEnum_FEED;
+    default:
+      throw ArgumentError(name);
+  }
+}
+
+final BuiltSet<ComplianceRegisterSourceChannelEnum>
+    _$complianceRegisterSourceChannelEnumValues = BuiltSet<
+        ComplianceRegisterSourceChannelEnum>(const <ComplianceRegisterSourceChannelEnum>[
+  _$complianceRegisterSourceChannelEnum_UPLOAD,
+  _$complianceRegisterSourceChannelEnum_FEED,
+]);
+
 Serializer<ComplianceRegisterRegisterKindEnum>
     _$complianceRegisterRegisterKindEnumSerializer =
     _$ComplianceRegisterRegisterKindEnumSerializer();
 Serializer<ComplianceRegisterStatusEnum>
     _$complianceRegisterStatusEnumSerializer =
     _$ComplianceRegisterStatusEnumSerializer();
+Serializer<ComplianceRegisterSourceChannelEnum>
+    _$complianceRegisterSourceChannelEnumSerializer =
+    _$ComplianceRegisterSourceChannelEnumSerializer();
 
 class _$ComplianceRegisterRegisterKindEnumSerializer
     implements PrimitiveSerializer<ComplianceRegisterRegisterKindEnum> {
@@ -129,6 +158,38 @@ class _$ComplianceRegisterStatusEnumSerializer
           _fromWire[serialized] ?? (serialized is String ? serialized : ''));
 }
 
+class _$ComplianceRegisterSourceChannelEnumSerializer
+    implements PrimitiveSerializer<ComplianceRegisterSourceChannelEnum> {
+  static const Map<String, Object> _toWire = const <String, Object>{
+    'UPLOAD': 'UPLOAD',
+    'FEED': 'FEED',
+  };
+  static const Map<Object, String> _fromWire = const <Object, String>{
+    'UPLOAD': 'UPLOAD',
+    'FEED': 'FEED',
+  };
+
+  @override
+  final Iterable<Type> types = const <Type>[
+    ComplianceRegisterSourceChannelEnum
+  ];
+  @override
+  final String wireName = 'ComplianceRegisterSourceChannelEnum';
+
+  @override
+  Object serialize(
+          Serializers serializers, ComplianceRegisterSourceChannelEnum object,
+          {FullType specifiedType = FullType.unspecified}) =>
+      _toWire[object.name] ?? object.name;
+
+  @override
+  ComplianceRegisterSourceChannelEnum deserialize(
+          Serializers serializers, Object serialized,
+          {FullType specifiedType = FullType.unspecified}) =>
+      ComplianceRegisterSourceChannelEnum.valueOf(
+          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+}
+
 class _$ComplianceRegister extends ComplianceRegister {
   @override
   final String id;
@@ -141,9 +202,15 @@ class _$ComplianceRegister extends ComplianceRegister {
   @override
   final ComplianceRegisterStatusEnum status;
   @override
+  final ComplianceRegisterSourceChannelEnum? sourceChannel;
+  @override
+  final bool? stale;
+  @override
   final int rowCount;
   @override
   final int rejectedRowCount;
+  @override
+  final int? serialRangeCount;
   @override
   final String? activatedAt;
   @override
@@ -165,8 +232,11 @@ class _$ComplianceRegister extends ComplianceRegister {
       required this.sourceReference,
       required this.snapshotDate,
       required this.status,
+      this.sourceChannel,
+      this.stale,
       required this.rowCount,
       required this.rejectedRowCount,
+      this.serialRangeCount,
       this.activatedAt,
       this.supersededAt,
       this.createdAt,
@@ -191,8 +261,11 @@ class _$ComplianceRegister extends ComplianceRegister {
         sourceReference == other.sourceReference &&
         snapshotDate == other.snapshotDate &&
         status == other.status &&
+        sourceChannel == other.sourceChannel &&
+        stale == other.stale &&
         rowCount == other.rowCount &&
         rejectedRowCount == other.rejectedRowCount &&
+        serialRangeCount == other.serialRangeCount &&
         activatedAt == other.activatedAt &&
         supersededAt == other.supersededAt &&
         createdAt == other.createdAt &&
@@ -208,8 +281,11 @@ class _$ComplianceRegister extends ComplianceRegister {
     _$hash = $jc(_$hash, sourceReference.hashCode);
     _$hash = $jc(_$hash, snapshotDate.hashCode);
     _$hash = $jc(_$hash, status.hashCode);
+    _$hash = $jc(_$hash, sourceChannel.hashCode);
+    _$hash = $jc(_$hash, stale.hashCode);
     _$hash = $jc(_$hash, rowCount.hashCode);
     _$hash = $jc(_$hash, rejectedRowCount.hashCode);
+    _$hash = $jc(_$hash, serialRangeCount.hashCode);
     _$hash = $jc(_$hash, activatedAt.hashCode);
     _$hash = $jc(_$hash, supersededAt.hashCode);
     _$hash = $jc(_$hash, createdAt.hashCode);
@@ -227,8 +303,11 @@ class _$ComplianceRegister extends ComplianceRegister {
           ..add('sourceReference', sourceReference)
           ..add('snapshotDate', snapshotDate)
           ..add('status', status)
+          ..add('sourceChannel', sourceChannel)
+          ..add('stale', stale)
           ..add('rowCount', rowCount)
           ..add('rejectedRowCount', rejectedRowCount)
+          ..add('serialRangeCount', serialRangeCount)
           ..add('activatedAt', activatedAt)
           ..add('supersededAt', supersededAt)
           ..add('createdAt', createdAt)
@@ -264,6 +343,16 @@ class ComplianceRegisterBuilder
   ComplianceRegisterStatusEnum? get status => _$this._status;
   set status(ComplianceRegisterStatusEnum? status) => _$this._status = status;
 
+  ComplianceRegisterSourceChannelEnum? _sourceChannel;
+  ComplianceRegisterSourceChannelEnum? get sourceChannel =>
+      _$this._sourceChannel;
+  set sourceChannel(ComplianceRegisterSourceChannelEnum? sourceChannel) =>
+      _$this._sourceChannel = sourceChannel;
+
+  bool? _stale;
+  bool? get stale => _$this._stale;
+  set stale(bool? stale) => _$this._stale = stale;
+
   int? _rowCount;
   int? get rowCount => _$this._rowCount;
   set rowCount(int? rowCount) => _$this._rowCount = rowCount;
@@ -272,6 +361,11 @@ class ComplianceRegisterBuilder
   int? get rejectedRowCount => _$this._rejectedRowCount;
   set rejectedRowCount(int? rejectedRowCount) =>
       _$this._rejectedRowCount = rejectedRowCount;
+
+  int? _serialRangeCount;
+  int? get serialRangeCount => _$this._serialRangeCount;
+  set serialRangeCount(int? serialRangeCount) =>
+      _$this._serialRangeCount = serialRangeCount;
 
   String? _activatedAt;
   String? get activatedAt => _$this._activatedAt;
@@ -309,8 +403,11 @@ class ComplianceRegisterBuilder
       _sourceReference = $v.sourceReference;
       _snapshotDate = $v.snapshotDate;
       _status = $v.status;
+      _sourceChannel = $v.sourceChannel;
+      _stale = $v.stale;
       _rowCount = $v.rowCount;
       _rejectedRowCount = $v.rejectedRowCount;
+      _serialRangeCount = $v.serialRangeCount;
       _activatedAt = $v.activatedAt;
       _supersededAt = $v.supersededAt;
       _createdAt = $v.createdAt;
@@ -349,10 +446,13 @@ class ComplianceRegisterBuilder
                 snapshotDate, r'ComplianceRegister', 'snapshotDate'),
             status: BuiltValueNullFieldError.checkNotNull(
                 status, r'ComplianceRegister', 'status'),
+            sourceChannel: sourceChannel,
+            stale: stale,
             rowCount: BuiltValueNullFieldError.checkNotNull(
                 rowCount, r'ComplianceRegister', 'rowCount'),
             rejectedRowCount: BuiltValueNullFieldError.checkNotNull(
                 rejectedRowCount, r'ComplianceRegister', 'rejectedRowCount'),
+            serialRangeCount: serialRangeCount,
             activatedAt: activatedAt,
             supersededAt: supersededAt,
             createdAt: createdAt,

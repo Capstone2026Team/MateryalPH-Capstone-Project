@@ -7,6 +7,7 @@ import '../widgets/auth_content.dart';
 import '../auth/auth_repository.dart';
 import '../design_system/theme.dart';
 import 'risk_otp_screen.dart';
+import 'two_factor_sign_in_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({
@@ -58,6 +59,15 @@ class _LoginScreenState extends State<LoginScreen> {
         proof: proof,
       );
       if (mounted) widget.onAuthenticated();
+    } on BuyerTwoFactorRequired catch (challenge) {
+      if (!mounted) return;
+      _password.clear();
+      final signedIn = await completeTwoFactorSignIn(
+        context,
+        widget.authRepository,
+        challenge,
+      );
+      if (mounted && signedIn) widget.onAuthenticated();
     } on BuyerRiskChallenge catch (challenge) {
       if (!mounted) return;
       final token = await requestRiskProof(

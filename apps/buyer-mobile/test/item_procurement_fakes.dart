@@ -105,6 +105,8 @@ ListingCardView listingCard(
   int distance = 1000,
   String stock = 'IN_STOCK',
   int rank = 1,
+  String sold = '0.0000',
+  String? rating,
 }) => ListingCardView(
   listingId: id,
   variantId: '$id-v1',
@@ -115,9 +117,9 @@ ListingCardView listingCard(
   vatLabel: 'VAT inclusive',
   stockLabel: stock,
   stockConfirmedAt: DateTime.utc(2026, 9, 29, 5),
-  ratingLabel: 'New',
-  ratingAverage: null,
-  unitsSold: '0.0000',
+  ratingLabel: rating == null ? 'New' : '$rating of 5',
+  ratingAverage: rating,
+  unitsSold: sold,
   distanceMeters: distance,
   badges: badges,
   isFavorite: favorite,
@@ -156,6 +158,7 @@ ListingSearchPage searchPage(
 ListingDetailView listingDetail({
   bool purchasable = true,
   bool deliveryOffered = true,
+  String? categoryId = 'cat-roof',
 }) => ListingDetailView(
   listingId: 'listing-1',
   displayName: 'Apo Longspan Roofing - Tilespan',
@@ -212,6 +215,7 @@ ListingDetailView listingDetail({
   brand: 'Apo',
   manufacturer: 'Apo Galtek',
   countryOfManufacture: 'PH',
+  categoryId: categoryId,
   categoryName: 'Roofing Materials',
   complianceBadge: 'PS_ICC_VERIFIED',
 );
@@ -712,6 +716,12 @@ class FakeProcurementRepository implements ProcurementRepository {
     notice: preview.notice,
     currentAsOf: preview.currentAsOf,
   );
+
+  @override
+  Future<DeliveryPreviewView> productDeliveryPreview({
+    required String variantId,
+    required String quantity,
+  }) async => preview.groups.first.delivery;
 
   @override
   Future<StoreHoursView> storeHours(String storeId) async => hours!;

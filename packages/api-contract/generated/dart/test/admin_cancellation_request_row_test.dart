@@ -7,6 +7,11 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(AdminCancellationRequestRow, () {
+    // String orderId
+    test('to test the property `orderId`', () async {
+      // TODO
+    });
+
     // String id
     test('to test the property `id`', () async {
       // TODO

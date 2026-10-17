@@ -45,6 +45,7 @@ final class VendorCatalogController extends Controller
     {
         $filters = $request->validate([
             'status' => ['sometimes', Rule::in(['DRAFT', 'PENDING_COMPLIANCE', 'PENDING_ADMIN_REVIEW', 'ACTIVE', 'INACTIVE', 'TEMPORARILY_HIDDEN_STOCK_NOT_CONFIRMED', 'REJECTED'])],
+            'group' => ['sometimes', Rule::in(['NEEDS_ATTENTION', 'OUT_OF_STOCK'])],
             'compliance_status' => ['sometimes', Rule::in(['NOT_REQUIRED', 'NOT_SUBMITTED', 'PENDING_ADMIN_REVIEW', 'VERIFIED', 'CHANGES_REQUIRED', 'REJECTED'])],
             'category_id' => ['sometimes', 'uuid'],
             'q' => ['sometimes', 'string', 'max:120'],
@@ -126,9 +127,20 @@ final class VendorCatalogController extends Controller
             'path' => ['required', Rule::in(ProductComplianceService::PATHS)],
             'file' => ['required', 'file', 'max:20480'],
             'qr_payload' => ['sometimes', 'nullable', 'string', 'max:2048'],
+            'marking_type' => ['sometimes', 'nullable', Rule::in(ProductComplianceService::MARKING_TYPES)],
         ]);
 
-        return ApiResponse::success($compliance->uploadEvidence($request, $listingId, (string) $input['path'], $request->file('file'), $input['qr_payload'] ?? null), status: 201);
+        return ApiResponse::success($compliance->uploadEvidence($request, $listingId, (string) $input['path'], $request->file('file'), $input['qr_payload'] ?? null, $input['marking_type'] ?? null), status: 201);
+    }
+
+    public function lookupCompliance(Request $request, string $listingId, ProductComplianceService $compliance): JsonResponse
+    {
+        $input = $request->validate([
+            'marking_type' => ['required', Rule::in(ProductComplianceService::MARKING_TYPES)],
+            'number' => ['required', 'string', 'min:3', 'max:60', 'regex:/^[A-Za-z0-9][A-Za-z0-9 .\/-]*$/'],
+        ]);
+
+        return ApiResponse::success($compliance->lookup($request, $listingId, (string) $input['marking_type'], (string) $input['number']));
     }
 
     public function submitCompliance(ComplianceSubmitRequest $request, string $listingId, ProductComplianceService $compliance): JsonResponse

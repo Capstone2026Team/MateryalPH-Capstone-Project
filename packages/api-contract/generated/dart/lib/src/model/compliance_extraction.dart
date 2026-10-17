@@ -13,26 +13,39 @@ part 'compliance_extraction.g.dart';
 ///
 /// Properties:
 /// * [source_]
+/// * [provider] - Extraction provenance, such as TESSERACT, NONE or BROWSER_QR_DECODER. Null for manual entry.
 /// * [status]
-/// * [confidence]
-/// * [suggestions]
-/// * [assistanceOnly]
+/// * [confidence] - Mean OCR word recognition confidence; never a probability of authenticity or approval.
+/// * [suggestions] - Editable marking_type, certificate_number (the PS License No. or ICC sticker serial), icc_certificate_number, verification_reference, manufacturer_name, manufacturer_address, importer_name, importer_address, country_of_manufacture, brand and batch_number where read unambiguously. PNS standard numbers are never marking numbers.
+/// * [registerListed] - True when the suggested certificate_number exists in the active DTI-BPS register snapshot. Still a suggestion: the Vendor confirms it against the physical marking.
+/// * [assistanceOnly] - Always true. The Vendor must review and confirm values before a separate official-register comparison or Admin decision.
 @BuiltValue()
 abstract class ComplianceExtraction implements Built<ComplianceExtraction, ComplianceExtractionBuilder> {
   @BuiltValueField(wireName: r'source')
   ComplianceExtractionSource_Enum? get source_;
   // enum source_Enum {  OCR,  QR,  ,  };
 
+  /// Extraction provenance, such as TESSERACT, NONE or BROWSER_QR_DECODER. Null for manual entry.
+  @BuiltValueField(wireName: r'provider')
+  String? get provider;
+
   @BuiltValueField(wireName: r'status')
   ComplianceExtractionStatusEnum get status;
   // enum statusEnum {  EXTRACTED,  UNAVAILABLE,  FAILED,  NOT_REQUESTED,  };
 
+  /// Mean OCR word recognition confidence; never a probability of authenticity or approval.
   @BuiltValueField(wireName: r'confidence')
   num? get confidence;
 
+  /// Editable marking_type, certificate_number (the PS License No. or ICC sticker serial), icc_certificate_number, verification_reference, manufacturer_name, manufacturer_address, importer_name, importer_address, country_of_manufacture, brand and batch_number where read unambiguously. PNS standard numbers are never marking numbers.
   @BuiltValueField(wireName: r'suggestions')
   BuiltMap<String, String> get suggestions;
 
+  /// True when the suggested certificate_number exists in the active DTI-BPS register snapshot. Still a suggestion: the Vendor confirms it against the physical marking.
+  @BuiltValueField(wireName: r'register_listed')
+  bool? get registerListed;
+
+  /// Always true. The Vendor must review and confirm values before a separate official-register comparison or Admin decision.
   @BuiltValueField(wireName: r'assistance_only')
   bool? get assistanceOnly;
 
@@ -66,6 +79,13 @@ class _$ComplianceExtractionSerializer implements PrimitiveSerializer<Compliance
         specifiedType: const FullType.nullable(ComplianceExtractionSource_Enum),
       );
     }
+    if (object.provider != null) {
+      yield r'provider';
+      yield serializers.serialize(
+        object.provider,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
     yield r'status';
     yield serializers.serialize(
       object.status,
@@ -83,6 +103,13 @@ class _$ComplianceExtractionSerializer implements PrimitiveSerializer<Compliance
       object.suggestions,
       specifiedType: const FullType(BuiltMap, [FullType(String), FullType(String)]),
     );
+    if (object.registerListed != null) {
+      yield r'register_listed';
+      yield serializers.serialize(
+        object.registerListed,
+        specifiedType: const FullType(bool),
+      );
+    }
     if (object.assistanceOnly != null) {
       yield r'assistance_only';
       yield serializers.serialize(
@@ -121,6 +148,14 @@ class _$ComplianceExtractionSerializer implements PrimitiveSerializer<Compliance
           if (valueDes == null) continue;
           result.source_ = valueDes;
           break;
+        case r'provider':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.provider = valueDes;
+          break;
         case r'status':
           final valueDes = serializers.deserialize(
             value,
@@ -142,6 +177,14 @@ class _$ComplianceExtractionSerializer implements PrimitiveSerializer<Compliance
             specifiedType: const FullType(BuiltMap, [FullType(String), FullType(String)]),
           ) as BuiltMap<String, String>;
           result.suggestions.replace(valueDes);
+          break;
+        case r'register_listed':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.registerListed = valueDes;
           break;
         case r'assistance_only':
           final valueDes = serializers.deserialize(

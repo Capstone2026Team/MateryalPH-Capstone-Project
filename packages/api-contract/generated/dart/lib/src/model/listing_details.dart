@@ -8,10 +8,12 @@ import 'package:materyalph_api_client/src/model/listing_detail_vendor.dart';
 import 'package:materyalph_api_client/src/model/listing_compliance.dart';
 import 'package:built_collection/built_collection.dart';
 import 'package:materyalph_api_client/src/model/listing_image.dart';
+import 'package:materyalph_api_client/src/model/listing_attribute_label.dart';
 import 'package:materyalph_api_client/src/model/discovery_scope.dart';
 import 'package:materyalph_api_client/src/model/listing_variant_offer.dart';
 import 'package:materyalph_api_client/src/model/product_rating_summary.dart';
 import 'package:materyalph_api_client/src/model/listing_category_ref.dart';
+import 'package:materyalph_api_client/src/model/ready_mixed_concrete_detail.dart';
 import 'package:built_value/json_object.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
@@ -31,7 +33,9 @@ part 'listing_details.g.dart';
 /// * [countryOfManufacture]
 /// * [category]
 /// * [technicalAttributes]
+/// * [attributeLabels] - The category's names for listing and variant technical attributes, in category order; the same labels a Work Package quotation shows.
 /// * [images]
+/// * [readyMixedConcrete] - Present only for ready-mixed concrete; Self-Pickup is then never available.
 /// * [compliance]
 /// * [productRating]
 /// * [unitsSold]
@@ -77,8 +81,16 @@ abstract class ListingDetails implements Built<ListingDetails, ListingDetailsBui
   @BuiltValueField(wireName: r'technical_attributes')
   BuiltMap<String, JsonObject?> get technicalAttributes;
 
+  /// The category's names for listing and variant technical attributes, in category order; the same labels a Work Package quotation shows.
+  @BuiltValueField(wireName: r'attribute_labels')
+  BuiltList<ListingAttributeLabel>? get attributeLabels;
+
   @BuiltValueField(wireName: r'images')
   BuiltList<ListingImage> get images;
+
+  /// Present only for ready-mixed concrete; Self-Pickup is then never available.
+  @BuiltValueField(wireName: r'ready_mixed_concrete')
+  ReadyMixedConcreteDetail? get readyMixedConcrete;
 
   @BuiltValueField(wireName: r'compliance')
   ListingCompliance get compliance;
@@ -193,11 +205,25 @@ class _$ListingDetailsSerializer implements PrimitiveSerializer<ListingDetails> 
       object.technicalAttributes,
       specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
     );
+    if (object.attributeLabels != null) {
+      yield r'attribute_labels';
+      yield serializers.serialize(
+        object.attributeLabels,
+        specifiedType: const FullType(BuiltList, [FullType(ListingAttributeLabel)]),
+      );
+    }
     yield r'images';
     yield serializers.serialize(
       object.images,
       specifiedType: const FullType(BuiltList, [FullType(ListingImage)]),
     );
+    if (object.readyMixedConcrete != null) {
+      yield r'ready_mixed_concrete';
+      yield serializers.serialize(
+        object.readyMixedConcrete,
+        specifiedType: const FullType.nullable(ReadyMixedConcreteDetail),
+      );
+    }
     yield r'compliance';
     yield serializers.serialize(
       object.compliance,
@@ -362,12 +388,28 @@ class _$ListingDetailsSerializer implements PrimitiveSerializer<ListingDetails> 
           ) as BuiltMap<String, JsonObject?>;
           result.technicalAttributes.replace(valueDes);
           break;
+        case r'attribute_labels':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltList, [FullType(ListingAttributeLabel)]),
+          ) as BuiltList<ListingAttributeLabel>?;
+          if (valueDes == null) continue;
+          result.attributeLabels.replace(valueDes);
+          break;
         case r'images':
           final valueDes = serializers.deserialize(
             value,
             specifiedType: const FullType(BuiltList, [FullType(ListingImage)]),
           ) as BuiltList<ListingImage>;
           result.images.replace(valueDes);
+          break;
+        case r'ready_mixed_concrete':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(ReadyMixedConcreteDetail),
+          ) as ReadyMixedConcreteDetail?;
+          if (valueDes == null) continue;
+          result.readyMixedConcrete.replace(valueDes);
           break;
         case r'compliance':
           final valueDes = serializers.deserialize(

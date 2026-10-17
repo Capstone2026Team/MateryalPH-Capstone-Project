@@ -33,23 +33,26 @@ class SupplierPreviewSheet extends StatelessWidget {
       color: Colors.white,
       elevation: 8,
       shadowColor: MapFloatingSurface.shadowColor,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(cornerRadius))),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(cornerRadius)),
+      ),
       child: Column(
         children: [
-          if (showHandle) Semantics(
-            label: 'Vendor comparison sheet',
-            child: Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.symmetric(vertical: 8),
-                decoration: BoxDecoration(
-                  color: BuyerTheme.border,
-                  borderRadius: BorderRadius.circular(4),
+          if (showHandle)
+            Semantics(
+              label: 'Vendor comparison sheet',
+              child: Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.symmetric(vertical: 8),
+                  decoration: BoxDecoration(
+                    color: BuyerTheme.border,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
                 ),
               ),
             ),
-          ),
           Expanded(child: builder(context, controller)),
         ],
       ),

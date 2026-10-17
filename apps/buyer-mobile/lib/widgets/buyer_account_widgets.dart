@@ -1,8 +1,13 @@
+import '../design_system/components/count_badge.dart';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:materyalph_api_client/materyalph_api_client.dart';
 import '../design_system/components/buyer_app_bar.dart';
+import '../design_system/components/procurement_components.dart';
 import '../design_system/theme.dart';
+import '../features/notifications/buyer_notification_button.dart';
 
 PreferredSizeWidget buyerAccountBar(BuildContext context, String title) =>
     buyerAppBar(context, title);
@@ -14,11 +19,21 @@ class BuyerMenuRow extends StatelessWidget {
     required this.icon,
     required this.onTap,
     this.destructive = false,
+    this.badgeQuantity = '0',
+    this.badgeMeaning = 'active record',
+    this.status,
+    this.statusPositive = false,
   });
   final String label;
   final IconData icon;
   final VoidCallback onTap;
   final bool destructive;
+  final String badgeQuantity;
+  final String badgeMeaning;
+
+  /// A short state shown before the chevron, such as "On" or "Off".
+  final String? status;
+  final bool statusPositive;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -33,18 +48,63 @@ class BuyerMenuRow extends StatelessWidget {
               ? Theme.of(context).colorScheme.error
               : BuyerTheme.muted,
         ),
-        title: Text(
-          label,
-          style: TextStyle(
-            color: destructive
-                ? Theme.of(context).colorScheme.error
-                : BuyerTheme.ink,
+        title: Semantics(
+          label: positiveBadgeQuantity(badgeQuantity)
+              ? '$label, $badgeQuantity $badgeMeaning'
+              : status != null
+              ? '$label, $status'
+              : label,
+          child: ExcludeSemantics(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: destructive
+                    ? Theme.of(context).colorScheme.error
+                    : BuyerTheme.ink,
+              ),
+            ),
           ),
         ),
-        trailing: const Icon(
-          LucideIcons.chevronRight,
-          size: 20,
-          color: BuyerTheme.muted,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (positiveBadgeQuantity(badgeQuantity)) ...[
+              CountBadge(quantity: badgeQuantity),
+              const SizedBox(width: 8),
+            ],
+            if (status != null) ...[
+              ExcludeSemantics(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusPositive
+                        ? BuyerTheme.brandSoft
+                        : BuyerTheme.canvas,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    status!,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: statusPositive
+                          ? BuyerTheme.action
+                          : BuyerTheme.muted,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+            ],
+            const Icon(
+              LucideIcons.chevronRight,
+              size: 20,
+              color: BuyerTheme.muted,
+            ),
+          ],
         ),
         onTap: onTap,
       ),
@@ -78,13 +138,19 @@ class BuyerIdentity extends StatelessWidget {
     super.key,
     required this.profile,
     this.centered = false,
-    this.onEditPhoto,
+    this.photoBytes,
+    this.onUploadPhoto,
+    this.uploadingPhoto = false,
+    this.photoUploadEnabled = true,
     this.onNotifications,
     this.onSearch,
   });
   final AccountProfile profile;
   final bool centered;
-  final VoidCallback? onEditPhoto;
+  final Uint8List? photoBytes;
+  final VoidCallback? onUploadPhoto;
+  final bool uploadingPhoto;
+  final bool photoUploadEnabled;
   final VoidCallback? onNotifications;
   final VoidCallback? onSearch;
 
@@ -102,14 +168,15 @@ class BuyerIdentity extends StatelessWidget {
             color: BuyerTheme.brandSoft,
           ),
           clipBehavior: Clip.antiAlias,
-          child: profile.avatarUrl == null
+          child: photoBytes == null
               ? Icon(
                   LucideIcons.user,
                   color: BuyerTheme.action,
                   size: centered ? 48 : 30,
                 )
-              : Image.network(
-                  profile.avatarUrl!,
+              : Image.memory(
+                  photoBytes!,
+                  semanticLabel: 'Your profile picture',
                   fit: BoxFit.cover,
                   errorBuilder: (_, error, stack) => Icon(
                     LucideIcons.user,
@@ -118,16 +185,6 @@ class BuyerIdentity extends StatelessWidget {
                   ),
                 ),
         ),
-        if (onEditPhoto != null)
-          Positioned(
-            right: -12,
-            bottom: -8,
-            child: IconButton.filled(
-              tooltip: 'Edit profile picture',
-              onPressed: onEditPhoto,
-              icon: const Icon(LucideIcons.pencil, size: 20),
-            ),
-          ),
       ],
     );
     final information = Column(
@@ -161,7 +218,19 @@ class BuyerIdentity extends StatelessWidget {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 24),
         child: Column(
-          children: [avatar, const SizedBox(height: 28), information],
+          children: [
+            onUploadPhoto == null
+                ? avatar
+                : _EditableAvatar(
+                    avatar: avatar,
+                    size: avatarSize,
+                    uploading: uploadingPhoto,
+                    enabled: photoUploadEnabled && !uploadingPhoto,
+                    onEdit: onUploadPhoto!,
+                  ),
+            const SizedBox(height: 20),
+            information,
+          ],
         ),
       );
     }
@@ -177,11 +246,7 @@ class BuyerIdentity extends StatelessWidget {
               onPressed: onSearch,
               icon: const Icon(LucideIcons.search, color: BuyerTheme.ink),
             ),
-            IconButton(
-              tooltip: 'Notifications',
-              onPressed: onNotifications,
-              icon: const Icon(LucideIcons.bell, color: BuyerTheme.ink),
-            ),
+            BuyerNotificationButton(onPressed: onNotifications),
           ],
         ),
         const SizedBox(height: 16),
@@ -191,14 +256,137 @@ class BuyerIdentity extends StatelessWidget {
   }
 }
 
+/// The profile photo with a ring and a pencil badge. Tapping the photo or the badge changes it;
+/// while uploading, a progress ring replaces the badge action.
+class _EditableAvatar extends StatelessWidget {
+  const _EditableAvatar({
+    required this.avatar,
+    required this.size,
+    required this.uploading,
+    required this.enabled,
+    required this.onEdit,
+  });
+  final Widget avatar;
+  final double size;
+  final bool uploading;
+  final bool enabled;
+  final VoidCallback onEdit;
+
+  static const _hint = 'JPEG, PNG or WebP, up to 2 MB';
+
+  @override
+  Widget build(BuildContext context) {
+    final ring = size + 12;
+    return Semantics(
+      container: true,
+      button: true,
+      enabled: enabled,
+      label: uploading ? 'Uploading profile photo' : 'Change profile photo',
+      hint: _hint,
+      excludeSemantics: true,
+      onTap: enabled ? onEdit : null,
+      child: SizedBox(
+        width: ring + 8,
+        height: ring + 8,
+        child: Stack(
+          alignment: Alignment.center,
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              width: ring,
+              height: ring,
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white,
+                border: Border.all(color: BuyerTheme.brandSoft, width: 2),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x14000000),
+                    blurRadius: 16,
+                    offset: Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: Material(
+                type: MaterialType.circle,
+                clipBehavior: Clip.antiAlias,
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: enabled ? onEdit : null,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      FittedBox(child: avatar),
+                      if (uploading)
+                        const ColoredBox(
+                          color: Color(0x66000000),
+                          child: Center(
+                            child: SizedBox.square(
+                              dimension: 32,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 3,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: Tooltip(
+                message: 'Change photo · $_hint',
+                child: SizedBox.square(
+                  // 44×44 touch target around a 36px visual badge.
+                  dimension: 44,
+                  child: Material(
+                    type: MaterialType.transparency,
+                    child: InkResponse(
+                      onTap: enabled ? onEdit : null,
+                      radius: 24,
+                      child: Center(
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: enabled
+                                ? BuyerTheme.action
+                                : BuyerTheme.muted,
+                            border: Border.all(color: Colors.white, width: 3),
+                          ),
+                          child: const Icon(
+                            LucideIcons.pencil,
+                            size: 16,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class BuyerUnavailableScreen extends StatelessWidget {
   const BuyerUnavailableScreen({
     super.key,
     required this.title,
-    this.artwork = 'not-implemented',
+    this.artwork = StateArtwork.noResults,
   });
   final String title;
-  final String artwork;
+  final StateArtwork artwork;
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: Colors.white,
@@ -208,42 +396,18 @@ class BuyerUnavailableScreen extends StatelessWidget {
 }
 
 class BuyerUnavailableContent extends StatelessWidget {
-  const BuyerUnavailableContent({super.key, this.artwork = 'not-implemented'});
-  final String artwork;
+  const BuyerUnavailableContent({
+    super.key,
+    this.artwork = StateArtwork.noResults,
+  });
+  final StateArtwork artwork;
   @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, constraints) => SingleChildScrollView(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(minHeight: constraints.maxHeight),
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Image.asset(
-                  'assets/states/$artwork.png',
-                  width: 200,
-                  height: 200,
-                  excludeFromSemantics: true,
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  'Not yet implemented',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'This feature is not available yet.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: BuyerTheme.muted),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+  Widget build(BuildContext context) => StatePage(
+    child: StateMessage(
+      kind: StateKind.empty,
+      artwork: artwork,
+      title: 'Not yet implemented',
+      message: 'This feature is not available yet.',
     ),
   );
 }

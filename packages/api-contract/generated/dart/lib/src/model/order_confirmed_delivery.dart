@@ -6,6 +6,7 @@
 import 'package:materyalph_api_client/src/model/order_point.dart';
 import 'package:materyalph_api_client/src/model/date.dart';
 import 'package:built_collection/built_collection.dart';
+import 'package:materyalph_api_client/src/model/delivery_estimate_option.dart';
 import 'package:materyalph_api_client/src/model/order_delivery_vehicle.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
@@ -15,6 +16,9 @@ part 'order_confirmed_delivery.g.dart';
 /// The frozen Owner/Manager-confirmed arrangement. Later vehicle, rate, profile or schedule changes never alter it.
 ///
 /// Properties:
+/// * [systemRecommendation]
+/// * [recommendationChanged]
+/// * [changeReason] - Vendor explanation shown before Buyer approval and payment. Includes manual load review when no automatic fit was available.
 /// * [vehicles]
 /// * [distanceMeters]
 /// * [routeSource]
@@ -31,6 +35,16 @@ part 'order_confirmed_delivery.g.dart';
 /// * [confirmedAt]
 @BuiltValue()
 abstract class OrderConfirmedDelivery implements Built<OrderConfirmedDelivery, OrderConfirmedDeliveryBuilder> {
+  @BuiltValueField(wireName: r'system_recommendation')
+  BuiltList<DeliveryEstimateOption>? get systemRecommendation;
+
+  @BuiltValueField(wireName: r'recommendation_changed')
+  bool? get recommendationChanged;
+
+  /// Vendor explanation shown before Buyer approval and payment. Includes manual load review when no automatic fit was available.
+  @BuiltValueField(wireName: r'change_reason')
+  String? get changeReason;
+
   @BuiltValueField(wireName: r'vehicles')
   BuiltList<OrderDeliveryVehicle> get vehicles;
 
@@ -98,6 +112,27 @@ class _$OrderConfirmedDeliverySerializer implements PrimitiveSerializer<OrderCon
     OrderConfirmedDelivery object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.systemRecommendation != null) {
+      yield r'system_recommendation';
+      yield serializers.serialize(
+        object.systemRecommendation,
+        specifiedType: const FullType(BuiltList, [FullType(DeliveryEstimateOption)]),
+      );
+    }
+    if (object.recommendationChanged != null) {
+      yield r'recommendation_changed';
+      yield serializers.serialize(
+        object.recommendationChanged,
+        specifiedType: const FullType(bool),
+      );
+    }
+    if (object.changeReason != null) {
+      yield r'change_reason';
+      yield serializers.serialize(
+        object.changeReason,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
     yield r'vehicles';
     yield serializers.serialize(
       object.vehicles,
@@ -191,6 +226,30 @@ class _$OrderConfirmedDeliverySerializer implements PrimitiveSerializer<OrderCon
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'system_recommendation':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltList, [FullType(DeliveryEstimateOption)]),
+          ) as BuiltList<DeliveryEstimateOption>?;
+          if (valueDes == null) continue;
+          result.systemRecommendation.replace(valueDes);
+          break;
+        case r'recommendation_changed':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.recommendationChanged = valueDes;
+          break;
+        case r'change_reason':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.changeReason = valueDes;
+          break;
         case r'vehicles':
           final valueDes = serializers.deserialize(
             value,

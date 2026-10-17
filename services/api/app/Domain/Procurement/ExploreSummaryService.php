@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Procurement;
 
+use App\Domain\Analytics\AnalyticsDataset;
 use App\Domain\Catalog\EligibleOfferQuery;
 use App\Domain\Geography\BuyerProfiles;
 use App\Domain\Geography\GeographyScope;
@@ -49,8 +50,10 @@ final class ExploreSummaryService
             'labels' => ['verified_vendors' => 'Nearby Verified Vendors', 'vendor_listings' => 'Available Products', 'vendor_listings_unit' => 'Vendor listings'],
             'categories' => $categories->map(static fn (object $category): array => ['id' => (string) $category->id, 'code' => (string) $category->code, 'name' => (string) $category->name,
                 'vendor_listings' => $snapshot['categories'][(string) $category->id] ?? 0])->all(),
-            // Materials Analytics ships end to end in Phase 14; until then the entry point is explicitly unavailable.
-            'materials_analytics' => ['enabled' => false, 'status' => 'NOT_YET_AVAILABLE', 'message' => 'Materials Analytics is not available yet.'],
+            // Installed in Phase 14; the operational kill switch still disables the entry point explicitly.
+            'materials_analytics' => AnalyticsDataset::enabled()
+                ? ['enabled' => true, 'status' => 'AVAILABLE', 'message' => 'Daily local listed-price averages for comparable materials. '.AnalyticsDataset::active()['label'].'.']
+                : ['enabled' => false, 'status' => 'TEMPORARILY_UNAVAILABLE', 'message' => 'Materials Analytics is temporarily unavailable.'],
             'dataset' => ['kind' => $test ? 'TEST' : 'LIVE', 'label' => $test ? 'DEMO — Simulated Marketplace Data' : null],
         ];
     }

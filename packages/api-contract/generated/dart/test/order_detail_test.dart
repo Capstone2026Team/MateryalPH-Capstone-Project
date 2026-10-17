@@ -192,5 +192,15 @@ void main() {
       // TODO
     });
 
+    // OrderDisputeRef dispute
+    test('to test the property `dispute`', () async {
+      // TODO
+    });
+
+    // OrderInvoiceRef invoice
+    test('to test the property `invoice`', () async {
+      // TODO
+    });
+
   });
 }

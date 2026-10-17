@@ -8,11 +8,13 @@ use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Identity\CompleteAdminSetup;
 use App\Domain\Identity\MfaChallengeService;
+use App\Domain\Identity\PendingMfaLogin;
 use App\Domain\Identity\TokenSessionService;
 use App\Domain\Identity\TotpService;
 use App\Http\ApiResponse;
 use App\Http\AuthCookieFactory;
 use App\Http\AuthSessionResponder;
+use App\Http\AuthTransport;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\MfaCodeRequest;
 use App\Http\Requests\Auth\MfaRecoveryRequest;
@@ -24,7 +26,7 @@ final class MfaController extends Controller
 {
     public function status(Request $request, MfaChallengeService $challenges, TotpService $totp): JsonResponse
     {
-        $pending = $challenges->resolve($this->challengeToken($request));
+        $pending = $this->pending($request, $challenges, $this->challengeToken($request));
 
         return ApiResponse::success([
             'mfa_required' => true,
@@ -34,7 +36,7 @@ final class MfaController extends Controller
 
     public function enroll(Request $request, MfaChallengeService $challenges, TotpService $totp, AuditRecorder $audit): JsonResponse
     {
-        $pending = $challenges->resolve($this->challengeToken($request));
+        $pending = $this->pending($request, $challenges, $this->challengeToken($request));
         $enrollment = $totp->startEnrollment($pending->user);
         $audit->record($request, 'MFA_ENROLLMENT_STARTED', true, $pending->user);
 
@@ -52,7 +54,7 @@ final class MfaController extends Controller
         CompleteAdminSetup $setup,
     ): JsonResponse {
         $token = $this->challengeToken($request);
-        $pending = $challenges->resolve($token);
+        $pending = $this->pending($request, $challenges, $token);
         try {
             $recoveryCodes = $totp->confirm($pending->user, (string) $request->validated('code'));
         } catch (AuthenticationException $exception) {
@@ -87,7 +89,7 @@ final class MfaController extends Controller
         AuditRecorder $audit,
     ): JsonResponse {
         $token = $this->challengeToken($request);
-        $pending = $challenges->resolve($token);
+        $pending = $this->pending($request, $challenges, $token);
         if (! $totp->verify($pending->user, (string) $request->validated('code'))) {
             $audit->record($request, 'MFA_CHALLENGE_FAILED', false, $pending->user);
             $challenges->fail($token);
@@ -111,7 +113,7 @@ final class MfaController extends Controller
         AuditRecorder $audit,
     ): JsonResponse {
         $token = $this->challengeToken($request);
-        $pending = $challenges->resolve($token);
+        $pending = $this->pending($request, $challenges, $token);
         $replacementCodes = $totp->consumeRecoveryCode($pending->user, (string) $request->validated('recovery_code'));
         if ($replacementCodes === null) {
             $audit->record($request, 'MFA_RECOVERY_FAILED', false, $pending->user);
@@ -137,11 +139,25 @@ final class MfaController extends Controller
 
     private function challengeToken(Request $request): string
     {
-        $token = $request->cookie('mp_mfa_challenge');
+        // Web challenges ride an HttpOnly cookie; native Buyer challenges are returned in the login body and sent back here.
+        $token = AuthTransport::fromRequest($request) === AuthTransport::MOBILE
+            ? $request->input('challenge_token')
+            : $request->cookie('mp_mfa_challenge');
         if (! is_string($token) || $token === '') {
             throw new AuthenticationException('MFA_CHALLENGE_INVALID', 'The verification request expired. Sign in again.', 401);
         }
 
         return $token;
+    }
+
+    /** A challenge completes only on the transport that issued it, so a web challenge can never mint native tokens or vice versa. */
+    private function pending(Request $request, MfaChallengeService $challenges, string $token): PendingMfaLogin
+    {
+        $pending = $challenges->resolve($token);
+        if ($pending->clientKind !== AuthTransport::fromRequest($request)->value) {
+            throw new AuthenticationException('MFA_CHALLENGE_INVALID', 'The verification request is no longer valid.', 401);
+        }
+
+        return $pending;
     }
 }

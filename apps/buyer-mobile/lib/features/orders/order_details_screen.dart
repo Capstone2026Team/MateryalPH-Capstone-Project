@@ -1,3 +1,7 @@
+import '../notifications/notification_scope.dart';
+import '../notifications/navigation_refresh_binding.dart';
+import '../reporting/document_export_dialog.dart';
+import 'package:materyalph_api_client/materyalph_api_client.dart' as export_api;
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -6,7 +10,12 @@ import '../projects/projects_repository.dart';
 import '../projects/projects_screen.dart' show ProjectBudgetCard;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../design_system/components/buyer_overlays.dart';
+import '../../design_system/components/dispute_components.dart';
 import '../../design_system/components/fulfillment_components.dart';
+import '../disputes/dispute_models.dart' show DisputeDetailView;
+import '../disputes/dispute_screens.dart';
+import '../trust/order_reviews_screen.dart';
 import '../../design_system/components/order_components.dart';
 import '../../design_system/components/procurement_components.dart';
 import '../../design_system/theme.dart';
@@ -58,30 +67,84 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
   DiscoveryFailure? _failure;
   String? _notice;
   bool _busy = false;
+  bool _started = false;
+  bool _refreshPending = false;
+  int _sequence = 0;
+  late final _navigation = NavigationRefreshBinding(
+    _refreshForNavigation,
+    _clearPrivateOrder,
+  );
   String? _decisionKey;
   String? _decisionScope;
   final _budgetReason = TextEditingController();
   final _scroll = ScrollController();
   @override
   void dispose() {
+    _navigation.dispose();
     _budgetReason.dispose();
     _scroll.dispose();
     super.dispose();
   }
 
   @override
-  void initState() {
-    super.initState();
-    _load();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final changed = _navigation.bind(NotificationScope.of(context)?.navigation);
+    if (!_started || changed) {
+      if (_started) _clearPrivateOrder();
+      _started = true;
+      unawaited(_load());
+    }
   }
 
-  Future<void> _load() async {
-    setState(() => _failure = null);
+  void _clearPrivateOrder() {
+    if (!mounted) return;
+    setState(() {
+      _sequence++;
+      _order = null;
+      _failure = null;
+      _notice = null;
+      _busy = false;
+      _refreshPending = false;
+      _decisionKey = null;
+      _decisionScope = null;
+      _budgetReason.clear();
+    });
+  }
+
+  Future<void> _refreshForNavigation() async {
+    if (_busy) {
+      _refreshPending = true;
+      return;
+    }
+    _refreshPending = false;
+    await _load(background: true);
+  }
+
+  Future<void> _load({bool background = false}) async {
+    final sequence = ++_sequence;
+    final stamp = _navigation.stamp;
+    if (!background) setState(() => _failure = null);
     try {
       final order = await widget.repository.order(widget.orderId);
-      if (mounted) setState(() => _order = order);
+      if (mounted && sequence == _sequence && _navigation.isCurrent(stamp)) {
+        setState(() {
+          _order = order;
+          _failure = null;
+        });
+      }
     } on DiscoveryFailure catch (error) {
-      if (mounted) setState(() => _failure = error);
+      if (mounted && sequence == _sequence && _navigation.isCurrent(stamp)) {
+        final denied =
+            error.kind == DiscoveryFailureKind.sessionExpired ||
+            error.kind == DiscoveryFailureKind.forbidden;
+        if (!background || denied) {
+          setState(() {
+            _failure = error;
+            if (denied) _order = null;
+          });
+        }
+      }
     }
   }
 
@@ -90,19 +153,24 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     String success, {
     String scope = 'decision',
     String Function(OrderDetailView order)? describe,
+    void Function(OrderDetailView order)? onSuccess,
   }) async {
     if (_busy) return;
     // An offline retry reuses the key of the same action only; another action gets a fresh key.
     if (_decisionScope != scope) _decisionKey = null;
     _decisionScope = scope;
     final key = _decisionKey ??= newIdempotencyKey();
+    final stamp = _navigation.stamp;
     setState(() {
+      _sequence++;
       _busy = true;
       _notice = null;
     });
     try {
       final order = await action(key);
+      if (!mounted || !_navigation.isCurrent(stamp)) return;
       _decisionKey = null;
+      onSuccess?.call(order);
       if (mounted) {
         setState(() {
           _order = order;
@@ -120,18 +188,25 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
         }
       }
     } on DiscoveryFailure catch (error) {
+      if (!mounted || !_navigation.isCurrent(stamp)) return;
       if (error.kind != DiscoveryFailureKind.offline) _decisionKey = null;
       if (mounted) setState(() => _notice = error.message);
       if (error.kind == DiscoveryFailureKind.conflict) await _load();
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted && _navigation.isSameScope(stamp)) {
+        setState(() => _busy = false);
+        if (_refreshPending) {
+          _refreshPending = false;
+          _navigation.invalidate();
+        }
+      }
     }
   }
 
   Future<void> _confirmReject(OrderDetailView order) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => BuyerDialog(
         title: const Text('Reject this version?'),
         content: const Text(
           'The order request is cancelled and the reserved stock is released. You are not charged.',
@@ -180,7 +255,21 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     final order = _order;
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: buyerAppBar(context, 'Order details'),
+      appBar: buyerAppBar(
+        context,
+        'Order details',
+        actions: [
+          if (NotificationScope.of(context) != null)
+            BuyerDocumentExportButton(
+              repository: NotificationScope.of(context)!,
+              resourceId: widget.orderId,
+              types: [
+                export_api.DocumentExportInputTypeEnum.PURCHASE_ORDER,
+                export_api.DocumentExportInputTypeEnum.PAYMENT_CONFIRMATION,
+              ],
+            ),
+        ],
+      ),
       bottomNavigationBar: order == null ? null : _actionBar(order),
       body: SafeArea(
         child: order == null
@@ -366,7 +455,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
   }) async =>
       await showDialog<bool>(
         context: context,
-        builder: (context) => AlertDialog(
+        builder: (context) => BuyerDialog(
           title: Text(title),
           content: Text(message),
           actions: [
@@ -384,20 +473,33 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
       false;
 
   Future<void> _confirmReceipt(OrderDetailView order) async {
-    final pickup = order.fulfillment?.method == 'PICKUP';
-    if (!await _confirm(
-      title: 'Confirm you received this order?',
-      message:
-          'Confirm only after checking the ${pickup ? 'items you picked up' : 'delivered items'}. This completes the order. For a later concern, use the return, warranty or dispute process.',
-      confirmLabel: 'Confirm receipt',
+    if (!await confirmReceiptPrompt(
+      context,
+      pickup: order.fulfillment?.method == 'PICKUP',
     )) {
       return;
     }
+    var completed = false;
     await _decide(
       (key) => widget.repository.confirmReceipt(order.id, idempotencyKey: key),
       'Receipt confirmed. Your order is completed.',
       scope: 'confirmReceipt',
+      onSuccess: (updated) => completed = updated.state('ORDER') == 'COMPLETED',
     );
+    if (mounted && completed) await _openReviews(_order!);
+  }
+
+  Future<void> _openReviews(OrderDetailView order) async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => OrderReviewsScreen(
+          repository: widget.repository.reviews,
+          orderId: order.id,
+          orderLines: order.lines,
+        ),
+      ),
+    );
+    if (mounted) await _load();
   }
 
   Future<void> _reportProblem(OrderDetailView order) async {
@@ -515,6 +617,53 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     );
   }
 
+  Future<void> _fileDispute(OrderDetailView order) async {
+    final created = await Navigator.of(context).push<DisputeDetailView>(
+      MaterialPageRoute(
+        builder: (_) => FileDisputeScreen(
+          orderId: order.id,
+          repository: widget.repository.disputes,
+        ),
+      ),
+    );
+    if (!mounted) return;
+    if (created != null) {
+      setState(
+        () => _notice =
+            'Case ${created.reference} filed. The store has 48 hours to respond. Filing does not refund automatically.',
+      );
+      await _openCase(created.id);
+    } else {
+      await _load();
+    }
+  }
+
+  Future<void> _openCase(String caseId) async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => DisputeDetailScreen(
+          caseId: caseId,
+          repository: widget.repository.disputes,
+          now: widget.now,
+        ),
+      ),
+    );
+    if (mounted) await _load();
+  }
+
+  Future<void> _openInvoices(OrderDetailView order) async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => OrderInvoicesScreen(
+          orderId: order.id,
+          repository: widget.repository.disputes,
+          now: widget.now,
+        ),
+      ),
+    );
+    if (mounted) await _load();
+  }
+
   Future<void> _openThread(String conversationId) async {
     final open = widget.openConversation;
     if (open == null) return;
@@ -604,6 +753,13 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
             now: widget.now,
           ),
           const SizedBox(height: 16),
+        ] else if (order.fulfillment?.thread.available ?? false) ...[
+          // Threads open at submission, before there is any progress to track.
+          FulfillmentThreadEntry(
+            thread: order.fulfillment!.thread,
+            onOpen: widget.openConversation == null ? null : _openThread,
+          ),
+          const SizedBox(height: 16),
         ],
         if (order.refundTimeline != null && !order.refundTimeline!.isEmpty) ...[
           const _Heading('Refunds and reimbursements'),
@@ -627,7 +783,9 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
               'QUANTITY_REDUCED' =>
                 '${change.label}: ${formatQuantity(change.from)} → ${formatQuantity(change.to)}',
               _ =>
-                'Vendor discount of ${formatPeso(int.tryParse(change.to) ?? 0)}',
+                order.money.discount == null
+                    ? 'Vendor discount of ${formatPeso(int.tryParse(change.to) ?? 0)}'
+                    : 'Vendor discount ${order.money.discount!.percent}% on ${order.money.discount!.scope == 'DELIVERY' ? 'delivery fee' : 'materials'}: ${formatPeso(order.money.discount!.deductionCentavos)}',
             }),
         ],
         const SizedBox(height: 16),
@@ -668,6 +826,37 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
             now: widget.now,
           ),
         ],
+        if (order.dispute != null ||
+            order.actions.contains('FILE_DISPUTE') ||
+            order.invoice != null ||
+            order.actions.contains('REQUEST_INVOICE')) ...[
+          const SizedBox(height: 16),
+          const _Heading('Disputes and invoices'),
+          _CaseAndInvoiceEntry(
+            order: order,
+            busy: _busy,
+            onFileDispute: () => _fileDispute(order),
+            onOpenCase: _openCase,
+            onOpenInvoices: () => _openInvoices(order),
+          ),
+        ],
+        if (order.state('ORDER') == 'COMPLETED') ...[
+          const SizedBox(height: 16),
+          const _Heading('Ratings and reviews'),
+          const Text(
+            'Rate the seller and each product within 14 days of completion. Ratings stay hidden until the seller also rates you or the window ends.',
+            style: TextStyle(fontSize: 13),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: _busy ? null : () => _openReviews(order),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size.fromHeight(48),
+            ),
+            icon: const Icon(Icons.star_outline),
+            label: const Text('Rate this order'),
+          ),
+        ],
         const SizedBox(height: 16),
         const _Heading('History'),
         for (final event in order.timeline) _EventTile(event: event),
@@ -686,6 +875,88 @@ const _trackedStates = {
   'COMPLETED',
   'DISPUTED',
 };
+
+/// The order's case (or the server's filing availability) and its Vendor invoice status.
+class _CaseAndInvoiceEntry extends StatelessWidget {
+  const _CaseAndInvoiceEntry({
+    required this.order,
+    required this.busy,
+    required this.onFileDispute,
+    required this.onOpenCase,
+    required this.onOpenInvoices,
+  });
+
+  final OrderDetailView order;
+  final bool busy;
+  final VoidCallback onFileDispute;
+  final ValueChanged<String> onOpenCase;
+  final VoidCallback onOpenInvoices;
+
+  @override
+  Widget build(BuildContext context) {
+    final dispute = order.dispute;
+    final invoice = order.invoice;
+    final canFile = order.actions.contains('FILE_DISPUTE');
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (dispute != null)
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(LucideIcons.scale),
+            title: Text(dispute.reference),
+            subtitle: Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: DisputeStatusChip(status: dispute.status),
+              ),
+            ),
+            trailing: TextButton(
+              onPressed: busy ? null : () => onOpenCase(dispute.caseId),
+              child: const Text('View case'),
+            ),
+          ),
+        if (canFile) ...[
+          if (dispute?.filingNote != null)
+            Text(
+              dispute!.filingNote!,
+              style: const TextStyle(fontSize: 13, color: BuyerTheme.muted),
+            ),
+          const SizedBox(height: 6),
+          OutlinedButton.icon(
+            onPressed: busy ? null : onFileDispute,
+            icon: const Icon(LucideIcons.messageSquareWarning, size: 18),
+            label: const Text('File a dispute'),
+          ),
+          const Padding(
+            padding: EdgeInsets.only(top: 4),
+            child: Text(
+              'Filing opens a case. It does not refund automatically.',
+              style: TextStyle(fontSize: 12, color: BuyerTheme.muted),
+            ),
+          ),
+        ],
+        if (invoice != null || order.actions.contains('REQUEST_INVOICE'))
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(LucideIcons.receiptText),
+            title: const Text('Store invoice'),
+            subtitle: Text(switch (invoice?.status) {
+              'ISSUED' =>
+                'Copy uploaded${invoice!.openRequests > 0 ? ' · ${invoice.openRequests} open request' : ''}',
+              'NOT_YET_UPLOADED' => 'No copy uploaded yet',
+              _ => 'Not due yet',
+            }),
+            trailing: TextButton(
+              onPressed: busy ? null : onOpenInvoices,
+              child: const Text('Invoices'),
+            ),
+          ),
+      ],
+    );
+  }
+}
 
 bool _hasPaymentDetail(OrderPaymentView payment) =>
     payment.latestAttempt != null ||
@@ -1264,6 +1535,10 @@ class _FulfillmentSection extends StatelessWidget {
                 style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
               ),
             const Divider(height: 20, color: BuyerTheme.border),
+            if (order.deliveryRecommendation.isNotEmpty) ...[
+              BuyerDeliveryRecommendation(lines: order.deliveryRecommendation),
+              const SizedBox(height: 12),
+            ],
             if (confirmed == null)
               Text(
                 order.money.deliveryEstimateMin == null
@@ -1294,6 +1569,18 @@ class _FulfillmentSection extends StatelessWidget {
                   confirmed.arrangement!,
                   style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
                 ),
+              if (confirmed.changeReason != null) ...[
+                const SizedBox(height: 8),
+                const Text(
+                  'Vendor explanation',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+                Text(confirmed.changeReason!),
+                if (order.actions.contains('APPROVE_REVISION'))
+                  const Text(
+                    'Review this change before approving the order. Payment becomes available after your approval.',
+                  ),
+              ],
               const SizedBox(height: 4),
               Text(
                 'Delivery fee ${formatPeso(confirmed.finalFeeCentavos)}',

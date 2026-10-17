@@ -1,8 +1,13 @@
+import 'package:materyalph/core/invoice_billing_input.dart';
 import 'dart:typed_data';
 
 import 'package:materyalph/features/map_discovery/discovery_models.dart';
 import 'package:materyalph/features/orders/order_models.dart';
 import 'package:materyalph/features/orders/orders_repository.dart';
+import 'package:materyalph/features/projects/projects_repository.dart';
+
+import 'disputes_fakes.dart';
+import 'trust_fakes.dart';
 
 /// Synthetic order fixtures for widget and golden tests. Not live marketplace, payment or provider data.
 List<OrderStateRowView> orderStates(
@@ -71,6 +76,8 @@ OrderDetailView orderDetail({
   CancellationView? cancellation,
   RefundTimelineView? refundTimeline,
   int lockVersion = 3,
+  OrderDisputeRefView? dispute,
+  OrderInvoiceRefView? invoice,
 }) => OrderDetailView(
   id: 'order-1',
   reference: 'ORD-2026-ABCD1234',
@@ -152,6 +159,8 @@ OrderDetailView orderDetail({
   fulfillment: fulfillmentView,
   cancellation: cancellation,
   refundTimeline: refundTimeline,
+  dispute: dispute,
+  invoice: invoice,
 );
 
 NrpcView nrpcView({
@@ -181,13 +190,21 @@ OrderSummaryView orderSummary({
   String? nextAction = 'REVIEW_REVISION',
   OrderDeadlineView? deadline,
   bool paymentRetryable = false,
+  String fulfillmentMethod = 'PICKUP',
+  String paymentMethod = 'ONLINE',
+  String? paymentChannelName,
+  String? expectedFulfillmentDate,
+  OrderConversationRefView? conversation,
+  Set<String> cardActions = const {},
+  DateTime? returnRefundDueAt,
+  String? closureReason,
 }) => OrderSummaryView(
   id: id,
   reference: 'ORD-2026-ABCD1234',
   vendorName: 'Alpha Construction Supply',
   submittedAt: DateTime.utc(2026, 10, 5, 1),
   states: orderStates(state),
-  fulfillmentMethod: 'PICKUP',
+  fulfillmentMethod: fulfillmentMethod,
   lineCount: 2,
   firstLineName: 'Concrete Hollow Block 4"',
   firstLineImageUrl: null,
@@ -197,6 +214,13 @@ OrderSummaryView orderSummary({
   nextAction: nextAction,
   paymentRetryable: paymentRetryable,
   autoAccepted: false,
+  paymentMethod: paymentMethod,
+  paymentChannelName: paymentChannelName,
+  expectedFulfillmentDate: expectedFulfillmentDate,
+  fulfillmentConversation: conversation,
+  cardActions: cardActions,
+  returnRefundDueAt: returnRefundDueAt,
+  closureReason: closureReason,
 );
 
 class FakeOrdersRepository implements OrdersRepository {
@@ -210,6 +234,9 @@ class FakeOrdersRepository implements OrdersRepository {
   final List<String> calls = [];
   final List<String> keys = [];
   final List<Map<String, Object?>> submissions = [];
+
+  @override
+  ProjectsRepository? get projects => null;
 
   OrderDetailView Function(String action)? onDecision;
 
@@ -226,6 +253,10 @@ class FakeOrdersRepository implements OrdersRepository {
     required bool splitConfirmed,
     required String idempotencyKey,
     Map<String, String> paymentMethods = const {},
+    String? workPackageId,
+    int? workPackageLockVersion,
+    String? budgetOverrideReason,
+    InvoiceBillingInput? invoiceDetails,
   }) async {
     keys.add(idempotencyKey);
     submissions.add({
@@ -242,12 +273,42 @@ class FakeOrdersRepository implements OrdersRepository {
   }
 
   @override
-  Future<OrderListPage> orders({required String group, int page = 1}) =>
-      _answer('orders:$group:$page', list!);
+  Future<OrderListPage> orders({
+    required String group,
+    String? procurementType,
+    int page = 1,
+  }) => _answer(
+    procurementType == null
+        ? 'orders:$group:$page'
+        : 'orders:$procurementType:$group:$page',
+    list!,
+  );
 
   @override
   Future<OrderDetailView> order(String orderId) =>
       _answer('order:$orderId', detail!);
+
+  // My Orders card: the thread opened for an older order, and Buy Again's scripted result.
+  OrderConversationRefView? openedThread;
+  BuyAgainResultView? buyAgainResult;
+
+  @override
+  Future<OrderConversationRefView> openFulfillmentConversation(
+    String orderId, {
+    required String idempotencyKey,
+  }) {
+    keys.add(idempotencyKey);
+    return _answer('openFulfillmentConversation:$orderId', openedThread!);
+  }
+
+  @override
+  Future<BuyAgainResultView> buyAgain(
+    String orderId, {
+    required String idempotencyKey,
+  }) {
+    keys.add(idempotencyKey);
+    return _answer('buyAgain:$orderId', buyAgainResult!);
+  }
 
   OrderDetailView _decide(String action, String key) {
     keys.add(key);
@@ -414,4 +475,12 @@ class FakeOrdersRepository implements OrdersRepository {
   @override
   Future<Uint8List> orderFile(String orderId, String fileId) =>
       _answer('orderFile:$fileId', files[fileId] ?? Uint8List(0));
+
+  // Phase 13 disputes and invoices: a separate scripted fake reached through the orders repository.
+  @override
+  final FakeDisputesRepository disputes = FakeDisputesRepository();
+
+  // Phase 14 verified-purchase reviews.
+  @override
+  final FakeReviewsRepository reviews = FakeReviewsRepository();
 }

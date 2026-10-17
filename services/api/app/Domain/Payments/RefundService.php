@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Domain\Payments;
 
+use App\Domain\Disputes\DisputeRemedyService;
 use App\Domain\Finance\FinanceNotifier;
 use App\Domain\Finance\FinancialLedgerService;
+use App\Domain\Finance\RemittanceAssessmentService;
 use App\Domain\Finance\WithholdingThresholdService;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Operations\OutboxPublisher;
@@ -13,13 +15,14 @@ use App\Domain\Orders\OrderActor;
 use App\Domain\Orders\OrderNotifier;
 use App\Domain\Orders\OrderStates;
 use App\Domain\Orders\OrderTransitionService;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Throwable;
 
 /**
- * Provider refunds for every target and trigger (FIN-07): ORDER refunds triggered by CANCELLATION or
- * TECHNICAL_COMPENSATION (DISPUTE_CONCLUSION arrives in Phase 13) and PLATFORM_FEE refunds triggered by FEE_CREDIT.
+ * Provider refunds for every target and trigger (FIN-07): ORDER refunds triggered by CANCELLATION, DISPUTE_CONCLUSION
+ * or TECHNICAL_COMPENSATION and PLATFORM_FEE refunds triggered by FEE_CREDIT.
  *
  *   initiation  the instruction is committed REFUND_PENDING with its outbox event; the provider call runs after
  *               commit, outside every lock, to the original payment request and sub-account only
@@ -41,7 +44,21 @@ final class RefundService
         private readonly FinancialLedgerService $ledger,
         private readonly WithholdingThresholdService $review,
         private readonly OutboxPublisher $outbox,
+        private readonly RemittanceAssessmentService $assessments,
     ) {}
+
+    /** One aggregate per original capture: multiple instructions never multiply payment totals. */
+    public static function paymentTotals(?string $organizationId = null): Builder
+    {
+        return DB::table('refunds as f')->join('payments as source', 'source.id', '=', 'f.source_payment_id')
+            ->when($organizationId, fn (Builder $q, string $id) => $q->where('source.vendor_organization_id', $id))->groupBy('f.source_payment_id')
+            ->selectRaw("f.source_payment_id,
+                SUM(CASE WHEN f.state = 'REFUNDED' THEN f.amount_centavos ELSE 0 END) AS refunded_centavos,
+                SUM(CASE WHEN f.state = 'REFUNDED' THEN COALESCE(f.principal_centavos, f.amount_centavos - LEAST(f.amount_centavos, source.processing_fee_centavos)) ELSE 0 END) AS principal_refunded_centavos,
+                SUM(CASE WHEN f.state = 'REFUNDED' THEN CASE WHEN f.principal_centavos IS NULL THEN LEAST(f.amount_centavos, source.processing_fee_centavos) ELSE f.processing_fee_centavos END ELSE 0 END) AS fees_refunded_centavos,
+                COUNT(*) FILTER (WHERE f.state = 'REFUND_PENDING') AS pending_count,
+                COUNT(*) FILTER (WHERE f.state = 'REFUND_FAILED') AS failed_count");
+    }
 
     /** Publishes the post-commit provider request for a committed instruction. */
     public function queue(string $refundId, string $correlationId): void
@@ -196,8 +213,12 @@ final class RefundService
 
                 return 'REFUNDED';
             }
+            if ($refund->source_payment_id !== null) {
+                $this->assessments->voidFullyRefundedCollection((string) $refund->source_payment_id, $correlationId);
+            }
             if ($order !== null) {
                 $order = $this->syncOrder($order, OrderActor::system($correlationId), (string) $refund->trigger);
+                $order = $this->disputeRemedy($order, $refundId, $correlationId);
                 $this->notifier->buyer($order, 'Refund processed for order '.$order->reference, 'The payment provider processed your refund of ₱'.WithholdingThresholdService::pesos((int) $refund->amount_centavos)
                     .' to your original payment method (TEST — no real money moved). '.self::arrivalNote($refund));
                 $this->notifier->vendor($order, 'Refund processed for order '.$order->reference, 'The payment provider processed the Buyer refund of ₱'.WithholdingThresholdService::pesos((int) $refund->amount_centavos).'.', ['OWNER', 'STORE_MANAGER']);
@@ -233,6 +254,7 @@ final class RefundService
             }
             if ($order !== null) {
                 $order = $this->syncOrder($order, OrderActor::system($correlationId), 'REFUND_FAILED');
+                $order = $this->disputeRemedy($order, $refundId, $correlationId);
                 $this->notifier->buyer($order, 'Refund delayed for order '.$order->reference, 'Your refund of ₱'.WithholdingThresholdService::pesos((int) $refund->amount_centavos)
                     .' could not be completed yet. It stays open and will be retried to your original payment method. You do not need to pay again.');
             }
@@ -267,10 +289,22 @@ final class RefundService
             DB::table('finance_review_items')->where('kind', 'REFUND_EXCEPTION')->where('source_id', $refundId)->where('state', 'OPEN')
                 ->update(['state' => 'RESOLVED', 'resolution' => 'Retried as attempt '.$next.' by '.($actor->role ?? 'SYSTEM').'.', 'resolved_by_user_id' => $actor->userId, 'resolved_at' => now(), 'updated_at' => now()]);
             if ($order !== null) {
-                $this->syncOrder($order, $actor, 'REFUND_RETRIED');
+                $order = $this->syncOrder($order, $actor, 'REFUND_RETRIED');
+                $this->disputeRemedy($order, $refundId, $actor->correlationId);
             }
             $this->queue($refundId, $actor->correlationId);
         });
+    }
+
+    /** A DISPUTE_CONCLUSION refund's progress updates its case remedy in the same transaction (order lock held). */
+    private function disputeRemedy(object $order, string $refundId, string $correlationId): object
+    {
+        $refund = DB::table('refunds')->where('id', $refundId)->first();
+        if ($refund === null || $refund->trigger !== 'DISPUTE_CONCLUSION') {
+            return $order;
+        }
+
+        return app(DisputeRemedyService::class)->refundChanged($order, $refund, OrderActor::system($correlationId));
     }
 
     /**
@@ -305,12 +339,13 @@ final class RefundService
      *
      * @return int credit amount covered by refund instructions
      */
-    public function createFeeCreditRefunds(object $adjustment, object $assessment, string $correlationId): int
+    public function createFeeCreditRefunds(object $adjustment, object $assessment, string $correlationId, ?int $refundCentavos = null): int
     {
-        $remaining = (int) $adjustment->amount_centavos;
+        $requested = $refundCentavos ?? (int) $adjustment->amount_centavos;
+        $covered = (int) DB::table('refunds')->where('fee_adjustment_id', $adjustment->id)->where('target_type', 'PLATFORM_FEE')->sum('amount_centavos');
+        $remaining = max(0, $requested - $covered);
         $statements = DB::table('fee_statement_lines as l')->join('fee_statements as s', 's.id', '=', 'l.fee_statement_id')->where('l.fee_assessment_id', $assessment->id)
             ->where('s.state', 'PAID')->orderBy('s.id')->pluck('s.id');
-        $covered = 0;
         foreach ($statements as $statementId) {
             $allocations = DB::table('fee_payment_allocations as a')->join('payments as p', 'p.id', '=', 'a.payment_id')->where('a.fee_statement_id', $statementId)
                 ->where('p.state', 'PAID')->where('p.purpose', 'PLATFORM_FEE_PAYMENT')->orderByDesc('a.allocated_at')->orderByDesc('p.id')->get(['p.id', 'a.amount_centavos']);
@@ -377,6 +412,7 @@ final class RefundService
     {
         return match ($trigger) {
             'CANCELLATION' => 'Cancellation refund for a cancelled order',
+            'DISPUTE_CONCLUSION' => 'Dispute-Conclusion Refund awarded by a concluded case',
             'TECHNICAL_COMPENSATION' => 'Technical compensation: capture after the payment attempt closed',
             'FEE_CREDIT' => 'Approved platform fee credit',
             default => 'Refund',

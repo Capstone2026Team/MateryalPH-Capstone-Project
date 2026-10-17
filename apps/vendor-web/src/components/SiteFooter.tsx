@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 
 export function SiteFooter() {
   return (
-    <footer>
+    <footer className="site-footer">
       <div>
         <Link className="brand-link" to="/">
           <img src="/brand/materyalph-mark.png" alt="MateryalPH" />

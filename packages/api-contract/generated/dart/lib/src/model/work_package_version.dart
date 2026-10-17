@@ -14,7 +14,6 @@ part 'work_package_version.g.dart';
 ///
 /// Properties:
 /// * [id]
-/// * [version]
 /// * [contentHash]
 /// * [lockedAt]
 /// * [content]
@@ -22,9 +21,6 @@ part 'work_package_version.g.dart';
 abstract class WorkPackageVersion implements Built<WorkPackageVersion, WorkPackageVersionBuilder> {
   @BuiltValueField(wireName: r'id')
   String get id;
-
-  @BuiltValueField(wireName: r'version')
-  int get version;
 
   @BuiltValueField(wireName: r'content_hash')
   String get contentHash;
@@ -62,11 +58,6 @@ class _$WorkPackageVersionSerializer implements PrimitiveSerializer<WorkPackageV
     yield serializers.serialize(
       object.id,
       specifiedType: const FullType(String),
-    );
-    yield r'version';
-    yield serializers.serialize(
-      object.version,
-      specifiedType: const FullType(int),
     );
     yield r'content_hash';
     yield serializers.serialize(
@@ -114,13 +105,6 @@ class _$WorkPackageVersionSerializer implements PrimitiveSerializer<WorkPackageV
             specifiedType: const FullType(String),
           ) as String;
           result.id = valueDes;
-          break;
-        case r'version':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(int),
-          ) as int;
-          result.version = valueDes;
           break;
         case r'content_hash':
           final valueDes = serializers.deserialize(

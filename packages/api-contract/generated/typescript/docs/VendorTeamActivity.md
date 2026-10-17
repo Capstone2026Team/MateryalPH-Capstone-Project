@@ -9,6 +9,8 @@ Name | Type
 `id` | string
 `actorName` | string
 `actorRole` | string
+`category` | string
+`correlationId` | string
 `action` | string
 `resourceType` | string
 `resourceId` | string
@@ -27,6 +29,8 @@ const example = {
   "id": null,
   "actorName": null,
   "actorRole": null,
+  "category": null,
+  "correlationId": null,
   "action": null,
   "resourceType": null,
   "resourceId": null,

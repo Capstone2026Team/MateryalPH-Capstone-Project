@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Fulfillment;
 
 use App\Domain\Catalog\CatalogAccess;
+use App\Domain\Disputes\DisputeFeeCredits;
 use App\Domain\Finance\FeeAssessmentService;
 use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
@@ -15,6 +16,7 @@ use App\Domain\Orders\OrderActor;
 use App\Domain\Orders\OrderNotifier;
 use App\Domain\Orders\OrderStates;
 use App\Domain\Orders\OrderTransitionService;
+use App\Domain\Settings\PlatformSettings;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -154,23 +156,35 @@ final class ReceiptService
         });
     }
 
-    /** Completes a locked order awaiting receipt. Idempotent at the state machine and the fee contract. */
-    private function complete(object $order, object $fulfillment, OrderActor $actor, string $source): object
+    /**
+     * Completes a locked order awaiting receipt, or a DISPUTED order whose case has concluded (source
+     * DISPUTE_CONCLUSION). Idempotent at the state machine and the fee contract.
+     */
+    public function complete(object $order, object $fulfillment, OrderActor $actor, string $source): object
     {
-        $order = $this->transitions->apply($order, [OrderStates::ORDER => OrderStates::COMPLETED], $actor, $source === 'BUYER' ? 'BUYER_CONFIRMED_RECEIPT' : 'AUTO_CONFIRMED_RECEIPT');
+        $reason = match ($source) {
+            'BUYER' => 'BUYER_CONFIRMED_RECEIPT', 'DISPUTE_CONCLUSION' => 'DISPUTE_CONCLUDED', default => 'AUTO_CONFIRMED_RECEIPT'
+        };
+        $order = $this->transitions->apply($order, [OrderStates::ORDER => OrderStates::COMPLETED], $actor, $reason);
         $this->records->update($fulfillment, ['state' => OrderStates::COMPLETED, 'completed_at' => now(), 'receipt_confirmed_at' => now(), 'receipt_confirmation_source' => $source,
             'auto_confirm_due_at' => null, 'auto_confirm_paused_at' => null, 'auto_confirm_remaining_seconds' => null]);
         $this->records->event($fulfillment, 'COMPLETED', $actor, ['source' => $source], 'MILESTONE:COMPLETED');
         // FIN-03: EARNED only at COMPLETED, once per order and policy version; a replay returns the earned amount.
         if (DB::table('fee_assessments')->where('order_id', $order->id)->exists()) {
             $this->fees->earnOnCompletion((string) $order->id, $actor->correlationId);
+            // A dispute award on this order credits the earned commission through its own reviewed proposal.
+            app(DisputeFeeCredits::class)->proposePending((string) $order->id, $actor);
         }
         $this->threads->close($order, $actor->userId, OrderStates::COMPLETED);
         $this->outbox->publish('ORDER_COMPLETED', 'ORDER', (string) $order->id, ['order_id' => (string) $order->id, 'source' => $source]);
-        $this->notifier->buyer($order, 'Order '.$order->reference.' completed', $source === 'BUYER'
-            ? 'Thank you for confirming receipt. For a wrong, defective or incomplete item you can still use the return or dispute process within its deadline.'
-            : 'Receipt was confirmed automatically 48 hours after delivery or pickup. For a wrong, defective or incomplete item you can still use the return or dispute process within its deadline.');
-        $this->notifier->vendor($order, 'Order '.$order->reference.' completed', $source === 'BUYER' ? 'The Buyer confirmed receipt.' : 'Receipt was confirmed automatically after 48 hours.', ['OWNER', 'STORE_MANAGER']);
+        $this->notifier->buyer($order, 'Order '.$order->reference.' completed', match ($source) {
+            'BUYER' => 'Thank you for confirming receipt. For a wrong, defective or incomplete item you can still use the return or dispute process within its deadline.',
+            'DISPUTE_CONCLUSION' => 'Your case on this order concluded and the order is now complete. Any awarded refund keeps its own status on the order.',
+            default => 'Receipt was confirmed automatically 48 hours after delivery or pickup. For a wrong, defective or incomplete item you can still use the return or dispute process within its deadline.',
+        });
+        $this->notifier->vendor($order, 'Order '.$order->reference.' completed', match ($source) {
+            'BUYER' => 'The Buyer confirmed receipt.', 'DISPUTE_CONCLUSION' => 'The case on this order concluded and the order is complete.', default => 'Receipt was confirmed automatically after 48 hours.',
+        }, ['OWNER', 'STORE_MANAGER']);
 
         return $order;
     }
@@ -190,7 +204,9 @@ final class ReceiptService
                 report($exception);
             }
         }
-        foreach (['reminder_24h_sent_at' => 24, 'reminder_2h_sent_at' => 2] as $column => $hours) {
+        // The two reminder columns hold the first and second reminders; their offsets are the versioned Platform Setting.
+        $offsets = (array) PlatformSettings::current()->value('reminders.receipt_hours_before');
+        foreach (['reminder_24h_sent_at' => (int) $offsets['first_hours'], 'reminder_2h_sent_at' => (int) $offsets['second_hours']] as $column => $hours) {
             $rows = DB::table('fulfillments as f')->join('orders as o', 'o.id', '=', 'f.order_id')->whereIn('o.order_state', OrderStates::AWAITING_RECEIPT)
                 ->whereNotNull('f.auto_confirm_due_at')->whereNull('f.'.$column)->where('f.auto_confirm_due_at', '>', $now)->where('f.auto_confirm_due_at', '<=', $now->addHours($hours))
                 ->limit($limit)->get(['o.id']);

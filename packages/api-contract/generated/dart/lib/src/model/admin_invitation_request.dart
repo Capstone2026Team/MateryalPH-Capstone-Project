@@ -4,6 +4,7 @@
 
 // ignore_for_file: unused_element
 import 'package:built_collection/built_collection.dart';
+import 'package:materyalph_api_client/src/model/vendor_bot_protection_evidence.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -13,15 +14,21 @@ part 'admin_invitation_request.g.dart';
 ///
 /// Properties:
 /// * [token]
+/// * [email] - Must match the invited email when supplied. The server always derives the account and email-check recipient from the invitation.
 /// * [fullName]
 /// * [password]
 /// * [passwordConfirmation]
 /// * [termsAccepted]
 /// * [privacyAccepted]
+/// * [botProtection] - Admin invitation acceptance; required when bot protection is enabled unless a matching single-use HttpOnly proof cookie is present.
 @BuiltValue()
 abstract class AdminInvitationRequest implements Built<AdminInvitationRequest, AdminInvitationRequestBuilder> {
   @BuiltValueField(wireName: r'token')
   String get token;
+
+  /// Must match the invited email when supplied. The server always derives the account and email-check recipient from the invitation.
+  @BuiltValueField(wireName: r'email')
+  String? get email;
 
   @BuiltValueField(wireName: r'full_name')
   String get fullName;
@@ -39,6 +46,10 @@ abstract class AdminInvitationRequest implements Built<AdminInvitationRequest, A
   @BuiltValueField(wireName: r'privacy_accepted')
   AdminInvitationRequestPrivacyAcceptedEnum get privacyAccepted;
   // enum privacyAcceptedEnum {  true,  };
+
+  /// Admin invitation acceptance; required when bot protection is enabled unless a matching single-use HttpOnly proof cookie is present.
+  @BuiltValueField(wireName: r'bot_protection')
+  VendorBotProtectionEvidence? get botProtection;
 
   AdminInvitationRequest._();
 
@@ -68,6 +79,13 @@ class _$AdminInvitationRequestSerializer implements PrimitiveSerializer<AdminInv
       object.token,
       specifiedType: const FullType(String),
     );
+    if (object.email != null) {
+      yield r'email';
+      yield serializers.serialize(
+        object.email,
+        specifiedType: const FullType(String),
+      );
+    }
     yield r'full_name';
     yield serializers.serialize(
       object.fullName,
@@ -93,6 +111,13 @@ class _$AdminInvitationRequestSerializer implements PrimitiveSerializer<AdminInv
       object.privacyAccepted,
       specifiedType: const FullType(AdminInvitationRequestPrivacyAcceptedEnum),
     );
+    if (object.botProtection != null) {
+      yield r'bot_protection';
+      yield serializers.serialize(
+        object.botProtection,
+        specifiedType: const FullType.nullable(VendorBotProtectionEvidence),
+      );
+    }
   }
 
   @override
@@ -122,6 +147,14 @@ class _$AdminInvitationRequestSerializer implements PrimitiveSerializer<AdminInv
             specifiedType: const FullType(String),
           ) as String;
           result.token = valueDes;
+          break;
+        case r'email':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.email = valueDes;
           break;
         case r'full_name':
           final valueDes = serializers.deserialize(
@@ -157,6 +190,14 @@ class _$AdminInvitationRequestSerializer implements PrimitiveSerializer<AdminInv
             specifiedType: const FullType(AdminInvitationRequestPrivacyAcceptedEnum),
           ) as AdminInvitationRequestPrivacyAcceptedEnum;
           result.privacyAccepted = valueDes;
+          break;
+        case r'bot_protection':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(VendorBotProtectionEvidence),
+          ) as VendorBotProtectionEvidence?;
+          if (valueDes == null) continue;
+          result.botProtection.replace(valueDes);
           break;
         default:
           unhandled.add(key);

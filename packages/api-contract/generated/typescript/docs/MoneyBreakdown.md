@@ -7,6 +7,7 @@ FIN-02 Buyer amounts in integer centavos. Prices include any Vendor VAT; E = M â
 
 Name | Type
 ------------ | -------------
+`discount` | [ChatQuotationDiscountAssessment](ChatQuotationDiscountAssessment.md)
 `currency` | string
 `calculationVersion` | string
 `status` | string
@@ -33,6 +34,7 @@ import type { MoneyBreakdown } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "discount": null,
   "currency": null,
   "calculationVersion": null,
   "status": null,

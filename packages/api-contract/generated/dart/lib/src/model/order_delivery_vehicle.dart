@@ -3,6 +3,7 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:built_collection/built_collection.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -24,6 +25,9 @@ part 'order_delivery_vehicle.g.dart';
 /// * [totalVehicleTrips]
 /// * [perTripCentavos]
 /// * [tripTotalCentavos]
+/// * [mobilizationBasis]
+/// * [mobilizationFeeCentavos]
+/// * [mobilizationTotalCentavos] - Zero for snapshots before mobilization existed.
 @BuiltValue()
 abstract class OrderDeliveryVehicle implements Built<OrderDeliveryVehicle, OrderDeliveryVehicleBuilder> {
   @BuiltValueField(wireName: r'name')
@@ -64,6 +68,17 @@ abstract class OrderDeliveryVehicle implements Built<OrderDeliveryVehicle, Order
 
   @BuiltValueField(wireName: r'trip_total_centavos')
   int get tripTotalCentavos;
+
+  @BuiltValueField(wireName: r'mobilization_basis')
+  OrderDeliveryVehicleMobilizationBasisEnum? get mobilizationBasis;
+  // enum mobilizationBasisEnum {  PER_TRUCK,  PER_TRIP,  ,  };
+
+  @BuiltValueField(wireName: r'mobilization_fee_centavos')
+  int? get mobilizationFeeCentavos;
+
+  /// Zero for snapshots before mobilization existed.
+  @BuiltValueField(wireName: r'mobilization_total_centavos')
+  int? get mobilizationTotalCentavos;
 
   OrderDeliveryVehicle._();
 
@@ -153,6 +168,27 @@ class _$OrderDeliveryVehicleSerializer implements PrimitiveSerializer<OrderDeliv
       object.tripTotalCentavos,
       specifiedType: const FullType(int),
     );
+    if (object.mobilizationBasis != null) {
+      yield r'mobilization_basis';
+      yield serializers.serialize(
+        object.mobilizationBasis,
+        specifiedType: const FullType.nullable(OrderDeliveryVehicleMobilizationBasisEnum),
+      );
+    }
+    if (object.mobilizationFeeCentavos != null) {
+      yield r'mobilization_fee_centavos';
+      yield serializers.serialize(
+        object.mobilizationFeeCentavos,
+        specifiedType: const FullType(int),
+      );
+    }
+    if (object.mobilizationTotalCentavos != null) {
+      yield r'mobilization_total_centavos';
+      yield serializers.serialize(
+        object.mobilizationTotalCentavos,
+        specifiedType: const FullType(int),
+      );
+    }
   }
 
   @override
@@ -276,6 +312,30 @@ class _$OrderDeliveryVehicleSerializer implements PrimitiveSerializer<OrderDeliv
           ) as int;
           result.tripTotalCentavos = valueDes;
           break;
+        case r'mobilization_basis':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(OrderDeliveryVehicleMobilizationBasisEnum),
+          ) as OrderDeliveryVehicleMobilizationBasisEnum?;
+          if (valueDes == null) continue;
+          result.mobilizationBasis = valueDes;
+          break;
+        case r'mobilization_fee_centavos':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.mobilizationFeeCentavos = valueDes;
+          break;
+        case r'mobilization_total_centavos':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.mobilizationTotalCentavos = valueDes;
+          break;
         default:
           unhandled.add(key);
           unhandled.add(value);
@@ -305,4 +365,19 @@ class _$OrderDeliveryVehicleSerializer implements PrimitiveSerializer<OrderDeliv
   }
 }
 
+
+class OrderDeliveryVehicleMobilizationBasisEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'PER_TRUCK')
+  static const OrderDeliveryVehicleMobilizationBasisEnum PER_TRUCK = _$orderDeliveryVehicleMobilizationBasisEnum_PER_TRUCK;
+  @BuiltValueEnumConst(wireName: r'PER_TRIP')
+  static const OrderDeliveryVehicleMobilizationBasisEnum PER_TRIP = _$orderDeliveryVehicleMobilizationBasisEnum_PER_TRIP;
+
+  static Serializer<OrderDeliveryVehicleMobilizationBasisEnum> get serializer => _$orderDeliveryVehicleMobilizationBasisEnumSerializer;
+
+  const OrderDeliveryVehicleMobilizationBasisEnum._(String name): super(name);
+
+  static BuiltSet<OrderDeliveryVehicleMobilizationBasisEnum> get values => _$orderDeliveryVehicleMobilizationBasisEnumValues;
+  static OrderDeliveryVehicleMobilizationBasisEnum valueOf(String name) => _$orderDeliveryVehicleMobilizationBasisEnumValueOf(name);
+}
 

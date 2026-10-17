@@ -1,6 +1,11 @@
-import { rateLimitMessage } from '@materyalph/web-ui'
+import { rateLimitMessage, webRequestErrorMessage } from '@materyalph/web-ui'
 import {
   ResponseError,
+  AccountsApi,
+  type ListVendorTeamActivityRequest,
+  type GetVendorTeamPerformanceRequest,
+  type ListAccountMembershipsRequest,
+  type VendorStaffUpdate,
   VendorOnboardingApi,
   type VendorAddressGeocode,
   type VendorCommissionAcceptance,
@@ -129,8 +134,32 @@ export async function listVendorTeamInvitations(page = 1) {
   return onboardingApi().listVendorTeamInvitations({ page })
 }
 
-export async function listVendorTeamActivity(page = 1) {
-  return onboardingApi().listVendorTeamActivity({ page })
+export async function listVendorTeamActivity(query: ListVendorTeamActivityRequest = {}) {
+  return onboardingApi().listVendorTeamActivity(query)
+}
+
+export async function getVendorTeamPerformance(query: GetVendorTeamPerformanceRequest) {
+  return onboardingApi().getVendorTeamPerformance(query)
+}
+
+export function teamAccountsApi() { return new AccountsApi(createWebApiConfiguration(basePath, { refreshSession: true })) }
+export async function listVendorTeamMembers(query: Omit<ListAccountMembershipsRequest, 'accountPortal'>) {
+  return teamAccountsApi().listAccountMemberships({ accountPortal: 'vendors', ...query })
+}
+export async function updateVendorTeamMember(id: string, input: VendorStaffUpdate) {
+  return teamAccountsApi().updateVendorStaff({ membershipId: id, vendorStaffUpdate: input })
+}
+export async function deleteVendorTeamMember(id: string, lockVersion: number) {
+  return teamAccountsApi().deleteVendorTeamMember({ membershipId: id, vendorTeamDeletion: { lockVersion } })
+}
+export async function deleteVendorTeamInvitation(id: string, lockVersion: number) {
+  return teamAccountsApi().deleteVendorTeamInvitation({ invitationId: id, vendorTeamDeletion: { lockVersion } })
+}
+export async function changeVendorTeamMemberStatus(id: string, status: 'ACTIVE' | 'SUSPENDED' | 'DEACTIVATED') {
+  return teamAccountsApi().changeAccountMembershipStatus({ accountPortal: 'vendors', membershipId: id, accountMembershipStatus: { status } })
+}
+export async function changeVendorTeamMemberDelegation(id: string, enabled: boolean) {
+  return teamAccountsApi().changeAccountDelegation({ accountPortal: 'vendors', membershipId: id, accountDelegation: { canManageStaff: enabled } })
 }
 
 export async function changeVendorStaffDisputes(enabled: boolean, lockVersion: number) {
@@ -138,6 +167,8 @@ export async function changeVendorStaffDisputes(enabled: boolean, lockVersion: n
 }
 
 export async function readableOnboardingError(error: unknown): Promise<string> {
+  const transportMessage = webRequestErrorMessage(error)
+  if (transportMessage) return transportMessage
   if (error instanceof ResponseError) {
     if (error.response.status === 429 && error.response.headers.has('Retry-After')) return rateLimitMessage(error.response)
     const payload: unknown = await error.response.clone().json().catch(() => null)

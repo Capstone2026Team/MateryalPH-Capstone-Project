@@ -37,5 +37,16 @@ void main() {
       // TODO
     });
 
+    // Candidates in this estimate before filters.
+    // int unfilteredTotal
+    test('to test the property `unfilteredTotal`', () async {
+      // TODO
+    });
+
+    // String sort
+    test('to test the property `sort`', () async {
+      // TODO
+    });
+
   });
 }

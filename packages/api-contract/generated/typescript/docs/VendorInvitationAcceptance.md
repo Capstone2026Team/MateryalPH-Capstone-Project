@@ -11,6 +11,7 @@ Name | Type
 `fullName` | string
 `password` | string
 `passwordConfirmation` | string
+`botProtection` | [VendorBotProtectionEvidence](VendorBotProtectionEvidence.md)
 
 ## Example
 
@@ -24,6 +25,7 @@ const example = {
   "fullName": null,
   "password": null,
   "passwordConfirmation": null,
+  "botProtection": null,
 } satisfies VendorInvitationAcceptance
 
 console.log(example)

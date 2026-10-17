@@ -7,7 +7,7 @@
 Name | Type
 ------------ | -------------
 `data` | [Array&lt;VendorTeamInvitationRecord&gt;](VendorTeamInvitationRecord.md)
-`meta` | [VendorTeamActivityEnvelopeMeta](VendorTeamActivityEnvelopeMeta.md)
+`meta` | [VendorTeamInvitationListEnvelopeMeta](VendorTeamInvitationListEnvelopeMeta.md)
 `errors` | Array&lt;{ [key: string]: any; }&gt;
 
 ## Example

@@ -1,3 +1,4 @@
+import { parseDate } from '@materyalph/api-client-ts'
 import {
   AdminProductComplianceApi,
   ResponseError,
@@ -19,7 +20,7 @@ function complianceApi(): AdminProductComplianceApi {
   return new AdminProductComplianceApi(createWebApiConfiguration(basePath, { refreshSession: true }))
 }
 
-export async function listComplianceQueue(filters: { status?: ListProductComplianceQueueStatusEnum; path?: CompliancePath; referenceResult?: ComplianceReferenceResult; sort?: 'oldest' | 'newest'; page?: number }) {
+export async function listComplianceQueue(filters: { status?: ListProductComplianceQueueStatusEnum; path?: CompliancePath; referenceResult?: ComplianceReferenceResult; sort?: 'oldest' | 'newest'; page?: number; from?: Date; to?: Date }) {
   const response = await complianceApi().listProductComplianceQueue(filters)
   return { items: response.data, meta: response.meta as { current_page?: number; last_page?: number; total?: number } }
 }
@@ -42,7 +43,7 @@ export async function listRegisters(page = 1) {
 }
 
 export async function importRegister(registerKind: 'PS_LICENSE' | 'ICC_CERTIFICATE', sourceReference: string, snapshotDate: string, file: Blob): Promise<ComplianceRegister> {
-  return (await complianceApi().importComplianceRegister({ registerKind, sourceReference, snapshotDate: new Date(`${snapshotDate}T00:00:00Z`), file })).data
+  return (await complianceApi().importComplianceRegister({ registerKind, sourceReference, snapshotDate: parseDate(snapshotDate), file })).data
 }
 
 export async function activateRegister(registerId: string): Promise<ComplianceRegister> {

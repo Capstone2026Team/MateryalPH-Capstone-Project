@@ -6,6 +6,7 @@
 
 Name | Type
 ------------ | -------------
+`recommended` | boolean
 `vehicleId` | string
 `name` | string
 `vehicleCategory` | string
@@ -20,6 +21,10 @@ Name | Type
 `baseFeeCentavos` | number
 `perKmCentavos` | number
 `perTripCentavos` | number
+`mobilizationFeeCentavos` | number
+`mobilizationBasis` | string
+`mobilizationTotalCentavos` | number
+`volumePlan` | [MixerVolumePlan](MixerVolumePlan.md)
 `withinRange` | boolean
 `rateVersion` | number
 `configurationVersion` | number
@@ -35,6 +40,7 @@ import type { DeliveryPlanVehicle } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "recommended": null,
   "vehicleId": null,
   "name": null,
   "vehicleCategory": null,
@@ -49,6 +55,10 @@ const example = {
   "baseFeeCentavos": null,
   "perKmCentavos": null,
   "perTripCentavos": null,
+  "mobilizationFeeCentavos": null,
+  "mobilizationBasis": null,
+  "mobilizationTotalCentavos": null,
+  "volumePlan": null,
   "withinRange": null,
   "rateVersion": null,
   "configurationVersion": null,

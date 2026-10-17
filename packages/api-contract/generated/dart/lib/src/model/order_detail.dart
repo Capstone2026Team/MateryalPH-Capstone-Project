@@ -21,7 +21,9 @@ import 'package:materyalph_api_client/src/model/order_reservation.dart';
 import 'package:materyalph_api_client/src/model/auto_accept_outcome.dart';
 import 'package:materyalph_api_client/src/model/order_destination.dart';
 import 'package:materyalph_api_client/src/model/order_fulfillment.dart';
+import 'package:materyalph_api_client/src/model/order_invoice_ref.dart';
 import 'package:materyalph_api_client/src/model/order_cancellation.dart';
+import 'package:materyalph_api_client/src/model/order_dispute_ref.dart';
 import 'package:built_collection/built_collection.dart';
 import 'package:materyalph_api_client/src/model/order_nrpc.dart';
 import 'package:materyalph_api_client/src/model/vendor_order_primary_action.dart';
@@ -74,6 +76,8 @@ part 'order_detail.g.dart';
 /// * [fulfillment]
 /// * [cancellation]
 /// * [refundTimeline]
+/// * [dispute]
+/// * [invoice]
 @BuiltValue()
 abstract class OrderDetail implements Built<OrderDetail, OrderDetailBuilder> {
   @BuiltValueField(wireName: r'project_context')
@@ -157,7 +161,7 @@ abstract class OrderDetail implements Built<OrderDetail, OrderDetailBuilder> {
 
   @BuiltValueField(wireName: r'available_actions')
   BuiltList<OrderDetailAvailableActionsEnum>? get availableActions;
-  // enum availableActionsEnum {  APPROVE_REVISION,  REJECT_REVISION,  ACCEPT_NRPC,  REJECT_NRPC,  FLAG_NRPC,  PAY,  WITHDRAW,  CANCEL,  REQUEST_CANCELLATION,  WITHDRAW_CANCELLATION_REQUEST,  CONFIRM_RECEIPT,  REPORT_PROBLEM,  RESOLVE_PROBLEM,  ACKNOWLEDGE_REIMBURSEMENT,  };
+  // enum availableActionsEnum {  APPROVE_REVISION,  REJECT_REVISION,  ACCEPT_NRPC,  REJECT_NRPC,  FLAG_NRPC,  PAY,  WITHDRAW,  CANCEL,  REQUEST_CANCELLATION,  WITHDRAW_CANCELLATION_REQUEST,  CONFIRM_RECEIPT,  REPORT_PROBLEM,  RESOLVE_PROBLEM,  ACKNOWLEDGE_REIMBURSEMENT,  FILE_DISPUTE,  VIEW_DISPUTE,  REQUEST_INVOICE,  };
 
   @BuiltValueField(wireName: r'payment')
   OrderPaymentAvailability? get payment;
@@ -192,6 +196,12 @@ abstract class OrderDetail implements Built<OrderDetail, OrderDetailBuilder> {
 
   @BuiltValueField(wireName: r'refund_timeline')
   OrderRefundTimeline? get refundTimeline;
+
+  @BuiltValueField(wireName: r'dispute')
+  OrderDisputeRef? get dispute;
+
+  @BuiltValueField(wireName: r'invoice')
+  OrderInvoiceRef? get invoice;
 
   OrderDetail._();
 
@@ -425,6 +435,20 @@ class _$OrderDetailSerializer implements PrimitiveSerializer<OrderDetail> {
       yield serializers.serialize(
         object.refundTimeline,
         specifiedType: const FullType(OrderRefundTimeline),
+      );
+    }
+    if (object.dispute != null) {
+      yield r'dispute';
+      yield serializers.serialize(
+        object.dispute,
+        specifiedType: const FullType.nullable(OrderDisputeRef),
+      );
+    }
+    if (object.invoice != null) {
+      yield r'invoice';
+      yield serializers.serialize(
+        object.invoice,
+        specifiedType: const FullType.nullable(OrderInvoiceRef),
       );
     }
   }
@@ -731,6 +755,22 @@ class _$OrderDetailSerializer implements PrimitiveSerializer<OrderDetail> {
           if (valueDes == null) continue;
           result.refundTimeline.replace(valueDes);
           break;
+        case r'dispute':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(OrderDisputeRef),
+          ) as OrderDisputeRef?;
+          if (valueDes == null) continue;
+          result.dispute.replace(valueDes);
+          break;
+        case r'invoice':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(OrderInvoiceRef),
+          ) as OrderInvoiceRef?;
+          if (valueDes == null) continue;
+          result.invoice.replace(valueDes);
+          break;
         default:
           unhandled.add(key);
           unhandled.add(value);
@@ -853,6 +893,12 @@ class OrderDetailAvailableActionsEnum extends EnumClass {
   static const OrderDetailAvailableActionsEnum RESOLVE_PROBLEM = _$orderDetailAvailableActionsEnum_RESOLVE_PROBLEM;
   @BuiltValueEnumConst(wireName: r'ACKNOWLEDGE_REIMBURSEMENT')
   static const OrderDetailAvailableActionsEnum ACKNOWLEDGE_REIMBURSEMENT = _$orderDetailAvailableActionsEnum_ACKNOWLEDGE_REIMBURSEMENT;
+  @BuiltValueEnumConst(wireName: r'FILE_DISPUTE')
+  static const OrderDetailAvailableActionsEnum FILE_DISPUTE = _$orderDetailAvailableActionsEnum_FILE_DISPUTE;
+  @BuiltValueEnumConst(wireName: r'VIEW_DISPUTE')
+  static const OrderDetailAvailableActionsEnum VIEW_DISPUTE = _$orderDetailAvailableActionsEnum_VIEW_DISPUTE;
+  @BuiltValueEnumConst(wireName: r'REQUEST_INVOICE')
+  static const OrderDetailAvailableActionsEnum REQUEST_INVOICE = _$orderDetailAvailableActionsEnum_REQUEST_INVOICE;
 
   static Serializer<OrderDetailAvailableActionsEnum> get serializer => _$orderDetailAvailableActionsEnumSerializer;
 

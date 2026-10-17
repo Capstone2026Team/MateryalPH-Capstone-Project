@@ -10,6 +10,7 @@ import 'package:materyalph_api_client/src/model/store_operating_day.dart';
 import 'package:materyalph_api_client/src/model/store_open_now.dart';
 import 'package:materyalph_api_client/src/model/public_address_summary.dart';
 import 'package:materyalph_api_client/src/model/store_hours_day.dart';
+import 'package:materyalph_api_client/src/model/public_badge.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -43,6 +44,7 @@ part 'public_store_profile.g.dart';
 /// * [hoursAsOf]
 /// * [hoursNotice]
 /// * [hoursUnavailableReason]
+/// * [badges] - Active automatic badges (text plus icon); Admin-suppressed badges are omitted.
 @BuiltValue()
 abstract class PublicStoreProfile implements Built<PublicStoreProfile, PublicStoreProfileBuilder> {
   @BuiltValueField(wireName: r'id')
@@ -128,6 +130,10 @@ abstract class PublicStoreProfile implements Built<PublicStoreProfile, PublicSto
   @BuiltValueField(wireName: r'hours_unavailable_reason')
   PublicStoreProfileHoursUnavailableReasonEnum? get hoursUnavailableReason;
   // enum hoursUnavailableReasonEnum {  SCHEDULE_NOT_AVAILABLE,  };
+
+  /// Active automatic badges (text plus icon); Admin-suppressed badges are omitted.
+  @BuiltValueField(wireName: r'badges')
+  BuiltList<PublicBadge>? get badges;
 
   PublicStoreProfile._();
 
@@ -277,6 +283,13 @@ class _$PublicStoreProfileSerializer implements PrimitiveSerializer<PublicStoreP
       yield serializers.serialize(
         object.hoursUnavailableReason,
         specifiedType: const FullType(PublicStoreProfileHoursUnavailableReasonEnum),
+      );
+    }
+    if (object.badges != null) {
+      yield r'badges';
+      yield serializers.serialize(
+        object.badges,
+        specifiedType: const FullType(BuiltList, [FullType(PublicBadge)]),
       );
     }
   }
@@ -485,6 +498,14 @@ class _$PublicStoreProfileSerializer implements PrimitiveSerializer<PublicStoreP
           ) as PublicStoreProfileHoursUnavailableReasonEnum?;
           if (valueDes == null) continue;
           result.hoursUnavailableReason = valueDes;
+          break;
+        case r'badges':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltList, [FullType(PublicBadge)]),
+          ) as BuiltList<PublicBadge>?;
+          if (valueDes == null) continue;
+          result.badges.replace(valueDes);
           break;
         default:
           unhandled.add(key);

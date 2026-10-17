@@ -15,6 +15,7 @@ part 'score_label.g.dart';
 /// * [kind]
 /// * [value] - One-decimal VPS for kind VPS; null otherwise.
 /// * [text]
+/// * [detailText] - Full wording: VPS n.nn of 5, or New Vendor — Building Track Record below the sample gates.
 @BuiltValue()
 abstract class ScoreLabel implements Built<ScoreLabel, ScoreLabelBuilder> {
   @BuiltValueField(wireName: r'kind')
@@ -27,6 +28,10 @@ abstract class ScoreLabel implements Built<ScoreLabel, ScoreLabelBuilder> {
 
   @BuiltValueField(wireName: r'text')
   String get text;
+
+  /// Full wording: VPS n.nn of 5, or New Vendor — Building Track Record below the sample gates.
+  @BuiltValueField(wireName: r'detail_text')
+  String? get detailText;
 
   ScoreLabel._();
 
@@ -66,6 +71,13 @@ class _$ScoreLabelSerializer implements PrimitiveSerializer<ScoreLabel> {
       object.text,
       specifiedType: const FullType(String),
     );
+    if (object.detailText != null) {
+      yield r'detail_text';
+      yield serializers.serialize(
+        object.detailText,
+        specifiedType: const FullType(String),
+      );
+    }
   }
 
   @override
@@ -110,6 +122,14 @@ class _$ScoreLabelSerializer implements PrimitiveSerializer<ScoreLabel> {
             specifiedType: const FullType(String),
           ) as String;
           result.text = valueDes;
+          break;
+        case r'detail_text':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.detailText = valueDes;
           break;
         default:
           unhandled.add(key);

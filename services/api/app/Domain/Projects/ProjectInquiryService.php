@@ -5,15 +5,20 @@ declare(strict_types=1);
 namespace App\Domain\Projects;
 
 use App\Domain\Catalog\CatalogAccess;
+use App\Domain\Enforcement\BuyerCommerceRestriction;
 use App\Domain\Finance\Money;
+use App\Domain\Geography\BuyerProfiles;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Messaging\ConversationService;
+use App\Domain\Messaging\FulfillmentThreadService;
 use App\Domain\Messaging\QuotationService;
 use App\Domain\Orders\OrderActor;
 use App\Domain\Orders\OrderCommercial;
 use App\Domain\Orders\OrderNotifier;
 use App\Domain\Orders\OrderTransitionService;
 use App\Domain\Payments\PaymentMethodPolicy;
+use App\Domain\Settings\PlatformSettings;
+use App\Domain\Vendors\VendorDeliveryEligibility;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
@@ -39,15 +44,50 @@ final class ProjectInquiryService
             }
         }
 
-        return ['lines' => array_values($lines), 'fulfillment_method' => $snapshot['fulfillment_method'], 'payment_method' => $snapshot['payment_method'], 'fulfillment_date' => null, 'deadline_hours' => 24];
+        return ['lines' => array_values($lines), 'fulfillment_method' => $snapshot['fulfillment_method'], 'payment_method' => $snapshot['payment_method'], 'fulfillment_date' => null, 'deadline_hours' => (int) PlatformSettings::current()->field('quotations.deadline_limits', 'default_hours')];
+    }
+
+    /** @param array<string, mixed> $input
+     * @return array<string, string> Work Package line id => specification option id */
+    public static function selections(array $input): array
+    {
+        $map = [];
+        foreach ($input['selections'] ?? [] as $selection) {
+            $map[(string) $selection['line_id']] = (string) $selection['option_id'];
+        }
+
+        return $map;
+    }
+
+    /** The Buyer's choices applied before any lock (delivery is re-estimated through the route provider).
+     * @param array<string, mixed> $input
+     * @return array<string, mixed>|null */
+    private function applied(Request $request, string $id, array $input): ?array
+    {
+        $selections = self::selections($input);
+
+        return $selections === [] ? null : $this->estimates->withSelections($request, $id, $input['candidate_id'], $selections);
+    }
+
+    /** Owner request 2026-10-16: a line with several matching specifications is never ordered on a guess.
+     * @param array<string, mixed> $snapshot */
+    private static function assertChosen(array $snapshot): void
+    {
+        $open = array_values(array_filter($snapshot['lines'], static fn (array $l): bool => $l['selection_required'] ?? false));
+        if ($open !== []) {
+            throw new AuthenticationException('SPECIFICATION_SELECTION_REQUIRED', 'Choose a specification for '.$open[0]['name'].(count($open) > 1 ? ' and '.(count($open) - 1).' more' : '').' before continuing.', 422,
+                ['line_ids' => array_column($open, 'line_id')]);
+        }
     }
 
     /** @param array<string, mixed> $input */
     public function inquire(Request $request, string $id, array $input): string
     {
+        BuyerCommerceRestriction::assertAllowed(app(BuyerProfiles::class)->idFor($request));
         $key = $this->keys->requireIdempotencyKey($request);
+        $applied = $this->applied($request, $id, $input);
 
-        return DB::transaction(function () use ($request, $id, $input, $key): string {
+        return DB::transaction(function () use ($request, $id, $input, $key, $applied): string {
             $w = $this->projects->package($request, $id, true);
             if ($this->keys->replayed($request, 'PROJECT_INQUIRE', $key, $id)) {
                 $body = DB::table('idempotency_records')->where('actor_user_id', $request->user()->id)->where('endpoint', 'PROJECT_INQUIRE')->where('idempotency_key', $key)->value('response_body');
@@ -65,10 +105,12 @@ final class ProjectInquiryService
 
                 return $existing;
             }
+            $s = $applied ?? $candidate['snapshot'];
+            self::assertChosen($s);
             $v = DB::table('work_package_versions')->where('id', $w->current_version_id)->first();
             $content = json_decode($v->content, true);
-            $duplicate = self::duplicate($candidate['snapshot']);
-            $reference = ['version_id' => $v->id, 'version' => (int) $v->version, 'content_hash' => $v->content_hash, 'work_package' => $content, 'system_estimate' => $candidate['snapshot'],
+            $duplicate = self::duplicate($s);
+            $reference = ['version_id' => $v->id, 'version' => (int) $v->version, 'content_hash' => $v->content_hash, 'work_package' => $content, 'system_estimate' => $s,
                 'working_duplicate' => $duplicate, 'destination' => $content['destination'], 'lines' => $content['lines']];
             app(ConversationService::class)->createProject($request, $key, $candidate['snapshot']['vendor_id'], $id, $reference);
             DB::table('quotations')->insert(['id' => (string) Str::uuid7(), 'conversation_id' => $key, 'buyer_profile_id' => DB::table('projects')->where('id', $w->project_id)->value('buyer_profile_id'),
@@ -85,9 +127,11 @@ final class ProjectInquiryService
     /** @param array<string, mixed> $input */
     public function select(Request $request, string $id, array $input): string
     {
+        BuyerCommerceRestriction::assertAllowed(app(BuyerProfiles::class)->idFor($request));
         $key = $this->keys->requireIdempotencyKey($request);
+        $applied = $this->applied($request, $id, $input);
 
-        return DB::transaction(function () use ($request, $id, $input, $key): string {
+        return DB::transaction(function () use ($request, $id, $input, $key, $applied): string {
             $w = $this->projects->package($request, $id, true);
             if ($this->keys->replayed($request, 'PROJECT_SELECT', $key, $id)) {
                 return $key;
@@ -95,9 +139,13 @@ final class ProjectInquiryService
             ProjectService::version($w, $input['lock_version']);
             $this->unassigned($w);
             $candidate = $this->estimates->candidate($request, $id, $input['candidate_id']);
-            $s = $candidate['snapshot'];
+            $s = $applied ?? $candidate['snapshot'];
+            self::assertChosen($s);
             // Capability updates acquire the same organization lock; accepted history is never revalidated.
             DB::table('vendor_organizations')->where('id', $s['vendor_id'])->lockForUpdate()->first();
+            if ($s['fulfillment_method'] === 'DELIVERY' && ! app(VendorDeliveryEligibility::class)->available((string) $s['vendor_id'])) {
+                throw new AuthenticationException('FULFILLMENT_NOT_OFFERED', 'Vendor Delivery is currently unavailable for new orders. Refresh the Work Package candidates.', 422);
+            }
             $this->estimates->assertFresh($s);
             if ($s['delivery']['status'] === 'BLOCKED') {
                 throw new AuthenticationException('FULFILLMENT_REVIEW_REQUIRED', 'Resolve the delivery endpoint or coverage before selection.', 422);
@@ -109,7 +157,7 @@ final class ProjectInquiryService
                 'vendor_organization_id' => $s['vendor_id'], 'work_package_id' => $id, 'work_package_version_id' => $w->current_version_id, 'compiled_estimate_vendor_id' => $input['candidate_id'],
                 'procurement_type' => 'PROJECT_BASED', 'order_state' => 'AWAITING_VENDOR_CONFIRMATION', 'payment_state' => 'NOT_REQUIRED', 'fulfillment_method' => $s['fulfillment_method'], 'payment_method' => $s['payment_method'],
                 'materials_centavos' => $s['materials_centavos'], 'delivery_centavos' => $s['fulfillment_method'] === 'PICKUP' ? 0 : null, 'commercial_total_centavos' => $s['materials_centavos'],
-                'project_note' => $input['note'] ?? null, 'destination' => json_encode($s['destination'], JSON_THROW_ON_ERROR), 'submitted_at' => now(), 'vendor_response_due_at' => now()->addHours(24), 'created_at' => now(), 'updated_at' => now()]);
+                'project_note' => $input['note'] ?? null, 'destination' => json_encode($s['destination'], JSON_THROW_ON_ERROR), 'submitted_at' => now(), 'vendor_response_due_at' => now()->addHours(PlatformSettings::current()->int('orders.vendor_response_hours')), 'created_at' => now(), 'updated_at' => now()]);
             if (! empty($s['destination']['access_instructions'])) {
                 DB::table('orders')->where('id', $key)->update(['access_instructions_encrypted' => Crypt::encryptString($s['destination']['access_instructions'])]);
             }
@@ -129,6 +177,7 @@ final class ProjectInquiryService
                 'note_response_required' => false, 'fulfillment_method' => $s['fulfillment_method'], 'payment_method' => $s['payment_method']], $money, $actor);
             app(ProjectBudget::class)->guard($request, $w, $s['projected_total_centavos'] ?? $s['materials_centavos'], $input, $key);
             app(OrderTransitionService::class)->opened($order, $actor);
+            app(FulfillmentThreadService::class)->ensureForOrder($key);
             $this->missing($w, $s['missing_lines']);
             app(QuotationService::class)->expireForPackage($id);
             DB::table('work_packages')->where('id', $id)->update(['status' => 'VENDOR_SELECTED', 'selected_vendor_organization_id' => $s['vendor_id'], 'lock_version' => $w->lock_version + 1, 'updated_at' => now()]);
@@ -194,9 +243,10 @@ final class ProjectInquiryService
         foreach ($original['lines'] as $required) {
             $needed = $required['quantity'];
             foreach ($supplied as &$line) {
-                if (($line['material_id'] ?? null) !== $required['material_id'] || $line['unit_id'] !== $required['unit_id']
+                // An unlisted requirement is never machine-matched, even against another unlisted supply line.
+                if (($required['material_id'] ?? null) === null || ($line['material_id'] ?? null) !== $required['material_id'] || $line['unit_id'] !== $required['unit_id']
                     || ($required['preferred_brand'] !== null && ($line['brand'] ?? null) !== $required['preferred_brand'])
-                    || array_diff_assoc($required['specifications'], $line['specifications'] ?? []) !== []) {
+                    || ! SpecificationMatch::satisfies($required['specifications'], $line['specifications'] ?? [])) {
                     continue;
                 }
                 $take = bccomp($needed, $line['quantity'], 4) <= 0 ? $needed : $line['quantity'];

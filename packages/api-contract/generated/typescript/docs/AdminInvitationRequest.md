@@ -7,11 +7,13 @@
 Name | Type
 ------------ | -------------
 `token` | string
+`email` | string
 `fullName` | string
 `password` | string
 `passwordConfirmation` | string
 `termsAccepted` | boolean
 `privacyAccepted` | boolean
+`botProtection` | [VendorBotProtectionEvidence](VendorBotProtectionEvidence.md)
 
 ## Example
 
@@ -21,11 +23,13 @@ import type { AdminInvitationRequest } from '@materyalph/api-client-ts'
 // TODO: Update the object below with actual values
 const example = {
   "token": null,
+  "email": null,
   "fullName": null,
   "password": null,
   "passwordConfirmation": null,
   "termsAccepted": null,
   "privacyAccepted": null,
+  "botProtection": null,
 } satisfies AdminInvitationRequest
 
 console.log(example)

@@ -16,6 +16,7 @@ Name | Type | Description | Notes
 **openStatus** | [**SupplierOpenStatus**](SupplierOpenStatus.md) |  |
 **vacationMode** | **bool** |  |
 **supplierType** | **String** |  |
+**badges** | [**BuiltList&lt;PublicBadge&gt;**](PublicBadge.md) | Active automatic badges (text plus icon); Admin-suppressed badges are omitted. | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

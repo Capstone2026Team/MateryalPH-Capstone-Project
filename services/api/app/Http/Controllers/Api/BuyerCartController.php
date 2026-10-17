@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Domain\Procurement\CartService;
 use App\Domain\Procurement\CheckoutPreviewService;
+use App\Domain\Procurement\DeliveryPreviewService;
 use App\Http\ApiResponse;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
@@ -32,6 +33,7 @@ final class BuyerCartController extends Controller
             'longitude' => ['sometimes', 'required_with:latitude', 'numeric', 'between:-180,180'],
             'origin_source' => ['sometimes', Rule::in(['DEVICE', 'MAP_PIN', 'SEARCH'])],
             'radius_km' => ['sometimes', 'integer'],
+            'work_package_line_id' => ['sometimes', 'nullable', 'uuid'],
         ]);
 
         return ApiResponse::success($carts->addItem($request, array_filter($input, static fn (mixed $value): bool => $value !== null)));
@@ -84,5 +86,15 @@ final class BuyerCartController extends Controller
         $input = $request->validate(['request_version' => ['sometimes', 'nullable', 'string', 'regex:/^[A-Za-z0-9_.:-]{1,64}$/']]);
 
         return ApiResponse::success($preview->preview($request, $input));
+    }
+
+    public function deliveryPreview(Request $request, CartService $carts, DeliveryPreviewService $delivery): JsonResponse
+    {
+        $input = $request->validate([
+            'listing_variant_id' => ['required', 'uuid'],
+            'quantity' => ['required'],
+        ]);
+
+        return ApiResponse::success($carts->previewDelivery($request, $input, $delivery));
     }
 }

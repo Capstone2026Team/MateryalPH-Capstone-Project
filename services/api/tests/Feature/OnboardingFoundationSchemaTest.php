@@ -28,11 +28,12 @@ final class OnboardingFoundationSchemaTest extends TestCase
         self::assertStringContainsString('USING gist (location)', DB::table('pg_indexes')->where('indexname', 'vendor_address_location_gist')->value('indexdef'));
     }
 
-    public function test_complete_empty_database_migration_and_rollback_cycle(): void
+    public function test_complete_empty_database_migration_and_repeat_upgrade(): void
     {
         // Tests\TestCase proves the dedicated PostgreSQL 16 test database before this can run.
-        self::assertSame(0, Artisan::call('migrate:rollback', ['--force' => true]), Artisan::output());
-        self::assertFalse(Schema::hasTable('vendor_organizations'));
+        // History-bearing migrations are forward-only. Empty-schema verification is isolated;
+        // production rollback must not delete notification, export or commercial audit records.
+        self::assertSame(0, Artisan::call('migrate:fresh', ['--force' => true]), Artisan::output());
         self::assertSame(0, Artisan::call('migrate', ['--force' => true]), Artisan::output());
         self::assertTrue(Schema::hasTable('vendor_onboarding_requirements'));
         self::assertTrue(Schema::hasTable('privacy_acknowledgments'));

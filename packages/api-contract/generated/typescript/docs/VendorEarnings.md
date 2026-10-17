@@ -12,14 +12,20 @@ Name | Type
 `commercialSalesCentavos` | number
 `includedVatCentavos` | number
 `onlineCollectionsCentavos` | number
+`onlineRefundsCentavos` | number
 `buyerProcessingFeesCentavos` | number
 `physicalCollectionsCentavos` | number
 `providerChargesCentavos` | number
 `simulatedCwtCentavos` | number
 `estimatedRemittanceCashCentavos` | number
+`remittanceCollectionsCentavos` | number
+`remittanceRefundsCentavos` | number
 `earnedCommissionCentavos` | number
 `estimatedCommissionCentavos` | number
 `unpaidStatementsCentavos` | number
+`breakdown` | [VendorEarningsBreakdown](VendorEarningsBreakdown.md)
+`products` | [VendorEarningsProducts](VendorEarningsProducts.md)
+`trend` | [VendorEarningsTrend](VendorEarningsTrend.md)
 
 ## Example
 
@@ -34,14 +40,20 @@ const example = {
   "commercialSalesCentavos": null,
   "includedVatCentavos": null,
   "onlineCollectionsCentavos": null,
+  "onlineRefundsCentavos": null,
   "buyerProcessingFeesCentavos": null,
   "physicalCollectionsCentavos": null,
   "providerChargesCentavos": null,
   "simulatedCwtCentavos": null,
   "estimatedRemittanceCashCentavos": null,
+  "remittanceCollectionsCentavos": null,
+  "remittanceRefundsCentavos": null,
   "earnedCommissionCentavos": null,
   "estimatedCommissionCentavos": null,
   "unpaidStatementsCentavos": null,
+  "breakdown": null,
+  "products": null,
+  "trend": null,
 } satisfies VendorEarnings
 
 console.log(example)

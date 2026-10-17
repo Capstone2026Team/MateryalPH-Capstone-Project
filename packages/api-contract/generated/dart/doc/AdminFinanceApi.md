@@ -227,11 +227,11 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **listAdminPayments**
-> AdminPaymentListEnvelope listAdminPayments(page, state, purpose, evidenceOrigin, reconciliationState)
+> AdminPaymentListEnvelope listAdminPayments(page, state, purpose, evidenceOrigin, reconciliationState, from, to)
 
 
 
-finance.view. Payment log with evidence origin and reconciliation state.
+finance.view. Payment log with evidence origin, reconciliation state, refunded_centavos, net_collected_centavos, refund_pending_count and refund_failed_count. Refunds are aggregated per original capture; only confirmed refunds reduce net collections, and a PAID payment retains its original state even when refunded.
 
 ### Example
 ```dart
@@ -251,9 +251,11 @@ final String state = state_example; // String |
 final String purpose = purpose_example; // String |
 final String evidenceOrigin = evidenceOrigin_example; // String |
 final String reconciliationState = reconciliationState_example; // String |
+final Date from = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Payment request created_at.
+final Date to = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Payment request created_at.
 
 try {
-    final response = api.listAdminPayments(page, state, purpose, evidenceOrigin, reconciliationState);
+    final response = api.listAdminPayments(page, state, purpose, evidenceOrigin, reconciliationState, from, to);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling AdminFinanceApi->listAdminPayments: $e\n');
@@ -269,6 +271,8 @@ Name | Type | Description  | Notes
  **purpose** | **String**|  | [optional]
  **evidenceOrigin** | **String**|  | [optional]
  **reconciliationState** | **String**|  | [optional]
+ **from** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Payment request created_at. | [optional]
+ **to** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Payment request created_at. | [optional]
 
 ### Return type
 
@@ -333,11 +337,11 @@ This endpoint does not need any parameter.
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **listFeeStatements**
-> FeeStatementListEnvelope listFeeStatements(page, state)
+> FeeStatementListEnvelope listFeeStatements(overdue, page, state, from, to)
 
 
 
-finance.view. Monthly commission statements.
+finance.view. Monthly commission statements shared with Vendor Finance. Inclusive Manila dates filter issued_on. overdue=true returns only issued/partially paid positive balances past the due date; drafts, settled and voided statements are excluded. Approved credits reduce debt on the original statement and any paid excess becomes a separate original-payment refund payable.
 
 ### Example
 ```dart
@@ -352,11 +356,14 @@ import 'package:materyalph_api_client/api.dart';
 //defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
 
 final api = MateryalphApiClient().getAdminFinanceApi();
+final bool overdue = true; // bool | Issued balances past their due date.
 final int page = 56; // int |
 final String state = state_example; // String |
+final Date from = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Statement issued_on, including drafts.
+final Date to = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Statement issued_on, including drafts.
 
 try {
-    final response = api.listFeeStatements(page, state);
+    final response = api.listFeeStatements(overdue, page, state, from, to);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling AdminFinanceApi->listFeeStatements: $e\n');
@@ -367,8 +374,11 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **overdue** | **bool**| Issued balances past their due date. | [optional]
  **page** | **int**|  | [optional]
  **state** | **String**|  | [optional]
+ **from** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Statement issued_on, including drafts. | [optional]
+ **to** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Statement issued_on, including drafts. | [optional]
 
 ### Return type
 
@@ -386,7 +396,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **listFinanceReviewItems**
-> FinanceReviewItemListEnvelope listFinanceReviewItems(page, state, kind)
+> FinanceReviewItemListEnvelope listFinanceReviewItems(page, state, kind, from, to)
 
 
 
@@ -408,9 +418,11 @@ final api = MateryalphApiClient().getAdminFinanceApi();
 final int page = 56; // int |
 final String state = state_example; // String |
 final String kind = kind_example; // String |
+final Date from = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Review item created_at.
+final Date to = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Review item created_at.
 
 try {
-    final response = api.listFinanceReviewItems(page, state, kind);
+    final response = api.listFinanceReviewItems(page, state, kind, from, to);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling AdminFinanceApi->listFinanceReviewItems: $e\n');
@@ -424,6 +436,8 @@ Name | Type | Description  | Notes
  **page** | **int**|  | [optional]
  **state** | **String**|  | [optional]
  **kind** | **String**|  | [optional]
+ **from** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Review item created_at. | [optional]
+ **to** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Review item created_at. | [optional]
 
 ### Return type
 

@@ -1,11 +1,8 @@
-import 'dart:async';
-import 'dart:convert';
 import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
-import 'package:web_socket_channel/web_socket_channel.dart';
 import '../../core/api_guard.dart';
-import 'chat_socket.dart';
+import '../../core/private_realtime.dart';
 
 abstract interface class MessagingRepository {
   Future<void> updateDestination(
@@ -17,6 +14,7 @@ abstract interface class MessagingRepository {
     String? instructions,
   });
   Future<api.ConversationPage> inbox({int page = 1, bool archived = false});
+  Future<api.ConversationPage> projectInquiries(String id, {int page = 1});
   Future<void> archive(String id);
   Future<void> restore(String id);
   Future<api.ConversationDetail> conversation(
@@ -35,6 +33,22 @@ abstract interface class MessagingRepository {
     String? accessInstructions,
   });
   Future<void> send(String id, String body, String key, {String? productId});
+
+  /// Free site inspection for ready-mixed concrete; returns the store
+  /// conversation it was posted in. [key] also identifies the request on retry.
+  Future<String> requestSiteInspection({
+    required String listingId,
+    required String locationId,
+    required DateTime preferredDate,
+    required String key,
+    String? variantId,
+    String? notes,
+  });
+  Future<void> cancelSiteInspection(
+    String id,
+    String inspectionId,
+    int version,
+  );
   Future<api.ChatProductPage> products(
     String id, {
     String? query,
@@ -71,12 +85,41 @@ abstract interface class MessagingRepository {
   });
 }
 
+/// A chat upload answers only after the fail-closed malware scan, and a photo of up to 10 MB
+/// can take a while to send or fetch on mobile data. The generated client's three-second
+/// receive timeout reported these as offline even though the upload had been saved.
+final class _ChatAttachmentTimeouts extends Interceptor {
+  static final _attachments = RegExp(
+    r'/conversations/[^/]+/attachments(/[^/]+)?$',
+  );
+
+  @override
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    final match = _attachments.firstMatch(options.path);
+    if (match != null) {
+      if (options.method == 'POST' && match.group(1) == null) {
+        options.sendTimeout = const Duration(seconds: 60);
+        options.receiveTimeout = const Duration(seconds: 60);
+      } else if (options.method == 'GET') {
+        options.receiveTimeout = const Duration(seconds: 45);
+      }
+    }
+    handler.next(options);
+  }
+}
+
 final class ApiMessagingRepository implements MessagingRepository {
   ApiMessagingRepository({
     required api.MateryalphApiClient client,
     required Future<void> Function() onSessionExpired,
   }) : _client = client,
-       _guard = ApiGuard(onSessionExpired);
+       _guard = ApiGuard(onSessionExpired) {
+    if (!_client.dio.interceptors.any(
+      (item) => item is _ChatAttachmentTimeouts,
+    )) {
+      _client.dio.interceptors.add(_ChatAttachmentTimeouts());
+    }
+  }
   final api.MateryalphApiClient _client;
   final ApiGuard _guard;
   api.MessagingApi get _api => _client.getMessagingApi();
@@ -118,6 +161,18 @@ final class ApiMessagingRepository implements MessagingRepository {
           )).data?.data,
         ),
       );
+  @override
+  Future<api.ConversationPage> projectInquiries(String id, {int page = 1}) =>
+      _guard(
+        () async => _guard.required(
+          (await _api.listChatProjectInquiries(
+            messagingPortal: 'buyers',
+            conversationId: id,
+            page: page,
+          )).data?.data,
+        ),
+      );
+
   @override
   Future<void> archive(String id) => _guard(() async {
     await _api.archiveChatConversation(
@@ -191,6 +246,53 @@ final class ApiMessagingRepository implements MessagingRepository {
           ),
         );
       });
+  @override
+  Future<String> requestSiteInspection({
+    required String listingId,
+    required String locationId,
+    required DateTime preferredDate,
+    required String key,
+    String? variantId,
+    String? notes,
+  }) => _guard(
+    () async => _guard
+        .required(
+          (await _api.requestSiteInspection(
+            messagingPortal: 'buyers',
+            idempotencyKey: key,
+            siteInspectionCreate: api.SiteInspectionCreate(
+              (b) => b
+                ..listingId = listingId
+                ..listingVariantId = variantId
+                ..locationId = locationId
+                ..preferredDate = api.Date(
+                  preferredDate.year,
+                  preferredDate.month,
+                  preferredDate.day,
+                )
+                ..notes = notes,
+            ),
+          )).data?.data,
+        )
+        .conversationId,
+  );
+
+  @override
+  Future<void> cancelSiteInspection(
+    String id,
+    String inspectionId,
+    int version,
+  ) => _guard(() async {
+    await _api.cancelSiteInspection(
+      messagingPortal: 'buyers',
+      conversationId: id,
+      inspectionId: inspectionId,
+      siteInspectionVersion: api.SiteInspectionVersion(
+        (b) => b..lockVersion = version,
+      ),
+    );
+  });
+
   @override
   Future<api.ChatProductPage> products(
     String id, {
@@ -301,153 +403,21 @@ final class ApiMessagingRepository implements MessagingRepository {
     void Function() refresh, {
     void Function(bool, int)? onTyping,
     void Function(bool)? onLive,
-  }) async {
-    var stopped = false;
-    var live = false;
-    void setLive(bool value) {
-      if (live == value || stopped) return;
-      live = value;
-      onLive?.call(value);
-    }
-
-    var retrySeconds = 1;
-    Timer? retry;
-    Timer? handshake;
-    WebSocketChannel? socket;
-    StreamSubscription<dynamic>? subscription;
-    late Future<void> Function() connect;
-
-    void disconnect() {
-      handshake?.cancel();
-      final previous = subscription;
-      subscription = null;
-      if (previous != null) unawaited(previous.cancel());
-      final previousSocket = socket;
-      socket = null;
-      if (previousSocket != null) unawaited(previousSocket.sink.close());
-    }
-
-    void reconnect() {
-      if (stopped || retry?.isActive == true) return;
-      setLive(false);
-      disconnect();
-      retry = Timer(
-        Duration(seconds: retrySeconds),
-        () => unawaited(connect()),
-      );
-      retrySeconds = (retrySeconds * 2).clamp(1, 30);
-    }
-
-    connect = () async {
-      if (stopped) return;
-      try {
-        final config = (await _api.getChatRealtime(
+  }) => watchPrivateRealtime(
+    channel,
+    refresh,
+    onTyping: onTyping,
+    onLive: onLive,
+    configuration: () async =>
+        (await _api.getChatRealtime(messagingPortal: 'buyers')).data?.data,
+    authorize: (socketId, channelName) async =>
+        (await _api.authorizeChatChannel(
           messagingPortal: 'buyers',
-        )).data?.data;
-        if (stopped) return;
-        final target = channel ?? config?.inboxChannel;
-        if (config == null ||
-            !config.enabled ||
-            config.key == null ||
-            config.host == null ||
-            target == null) {
-          // REST remains available; retry configuration without a tight request loop.
-          retrySeconds = 30;
-          reconnect();
-          return;
-        }
-        final current = connectChatSocket(
-          Uri(
-            scheme: config.scheme == 'https' ? 'wss' : 'ws',
-            host: config.host,
-            port: config.port,
-            path: '/app/${config.key}',
-            queryParameters: {
-              'protocol': '7',
-              'client': 'materyalph',
-              'version': '1.0',
-            },
+          chatChannelAuth: api.ChatChannelAuth(
+            (b) => b
+              ..socketId = socketId
+              ..channelName = channelName,
           ),
-        );
-        socket = current;
-        // Bound a silent connection/auth handshake; reconnects always refetch the account epoch.
-        handshake = Timer(const Duration(seconds: 15), reconnect);
-        subscription = current.stream.listen(
-          (event) async {
-            if (stopped || socket != current) return;
-            try {
-              final message =
-                  jsonDecode(event as String) as Map<String, dynamic>;
-              if (message['event'] == 'pusher:connection_established') {
-                final data =
-                    jsonDecode(message['data'] as String)
-                        as Map<String, dynamic>;
-                final signed = await _api.authorizeChatChannel(
-                  messagingPortal: 'buyers',
-                  chatChannelAuth: api.ChatChannelAuth(
-                    (b) => b
-                      ..socketId = (data['socket_id'] as String)
-                      ..channelName = 'private-$target',
-                  ),
-                );
-                if (!stopped && socket == current) {
-                  current.sink.add(
-                    jsonEncode({
-                      'event': 'pusher:subscribe',
-                      'data': {
-                        'channel': 'private-$target',
-                        'auth': signed.data!.auth,
-                      },
-                    }),
-                  );
-                }
-              } else if (message['event'] == 'pusher:ping') {
-                current.sink.add(
-                  jsonEncode({
-                    'event': 'pusher:pong',
-                    'data': <String, Object>{},
-                  }),
-                );
-              } else if (message['event'] ==
-                  'pusher_internal:subscription_succeeded') {
-                handshake?.cancel();
-                retrySeconds = 1;
-                setLive(true);
-                refresh(); // Catch changes between the first REST fetch and subscription/reconnection.
-              } else if (message['event'] == 'conversation.typing') {
-                final data = message['data'] is String
-                    ? jsonDecode(message['data'] as String)
-                    : message['data'];
-                if (data is Map &&
-                    data['typing'] is bool &&
-                    data['at'] is int) {
-                  onTyping?.call(data['typing'] as bool, data['at'] as int);
-                }
-              } else if (message['event'] == 'conversation.changed' ||
-                  message['event'] == 'inbox.changed') {
-                refresh();
-              } else if (message['event'] == 'pusher:error') {
-                refresh();
-                reconnect();
-              }
-            } catch (_) {
-              reconnect();
-            }
-          },
-          onError: (Object _) => reconnect(),
-          onDone: reconnect,
-        );
-        await current.ready;
-      } catch (_) {
-        reconnect();
-      }
-    };
-    // Return the disposer immediately, including while configuration is loading.
-    unawaited(connect());
-    return () {
-      stopped = true;
-      retry?.cancel();
-      disconnect();
-    };
-  }
+        )).data!.auth,
+  );
 }

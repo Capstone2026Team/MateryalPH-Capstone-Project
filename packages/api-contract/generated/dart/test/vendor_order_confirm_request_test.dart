@@ -17,8 +17,14 @@ void main() {
       // TODO
     });
 
+    // Legacy fixed materials discount. Omit when discount is supplied.
     // int vendorDiscountCentavos
     test('to test the property `vendorDiscountCentavos`', () async {
+      // TODO
+    });
+
+    // ChatQuotationDiscount discount
+    test('to test the property `discount`', () async {
       // TODO
     });
 

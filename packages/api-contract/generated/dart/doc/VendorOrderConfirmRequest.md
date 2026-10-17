@@ -10,7 +10,8 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **lockVersion** | **int** |  |
 **lines** | [**BuiltList&lt;OrderLineQuantity&gt;**](OrderLineQuantity.md) |  |
-**vendorDiscountCentavos** | **int** |  | [optional]
+**vendorDiscountCentavos** | **int** | Legacy fixed materials discount. Omit when discount is supplied. | [optional]
+**discount** | [**ChatQuotationDiscount**](ChatQuotationDiscount.md) |  | [optional]
 **nrpc** | [**NrpcProposal**](NrpcProposal.md) |  | [optional]
 **pickup** | [**PickupConfirmation**](PickupConfirmation.md) |  | [optional]
 **delivery** | [**DeliveryConfirmation**](DeliveryConfirmation.md) |  | [optional]

@@ -8,6 +8,7 @@ import 'package:built_value/serializer.dart';
 import 'package:dio/dio.dart';
 
 import 'package:materyalph_api_client/src/api_util.dart';
+import 'package:materyalph_api_client/src/model/date.dart';
 import 'package:materyalph_api_client/src/model/fee_statement_detail_envelope.dart';
 import 'package:materyalph_api_client/src/model/finance_action_result_envelope.dart';
 import 'package:materyalph_api_client/src/model/finance_transaction_list_envelope.dart';
@@ -18,6 +19,7 @@ import 'package:materyalph_api_client/src/model/physical_payment_summary_envelop
 import 'package:materyalph_api_client/src/model/statement_payment_request.dart';
 import 'package:materyalph_api_client/src/model/vendor_earnings_envelope.dart';
 import 'package:materyalph_api_client/src/model/vendor_finance_overview_envelope.dart';
+import 'package:materyalph_api_client/src/model/vendor_tin_reveal_envelope.dart';
 
 class VendorFinanceApi {
 
@@ -122,6 +124,9 @@ class VendorFinanceApi {
   ///
   /// Parameters:
   /// * [tab]
+  /// * [status] - Payments tab only; ignored by every other tab. Each value matches the status badge a Payments row shows. PAID has no refund activity; LATE_CAPTURE covers every late-captured payment awaiting or after its refund; PENDING is any attempt not yet settled.
+  /// * [from] - Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Same timestamp and filters as the selected Transaction History tab; filtered before the existing 5000-row export bound.
+  /// * [to] - Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Same timestamp and filters as the selected Transaction History tab; filtered before the existing 5000-row export bound.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -133,6 +138,9 @@ class VendorFinanceApi {
   /// Throws [DioException] if API call or serialization fails
   Future<Response<String>> exportVendorTransactions({
     required String tab,
+    String? status,
+    Date? from,
+    Date? to,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -167,6 +175,9 @@ class VendorFinanceApi {
 
     final _queryParameters = <String, dynamic>{
       r'tab': encodeQueryParameter(_serializers, tab, const FullType(String)),
+      if (status != null) r'status': encodeQueryParameter(_serializers, status, const FullType(String)),
+      if (from != null) r'from': encodeQueryParameter(_serializers, from, const FullType(Date)),
+      if (to != null) r'to': encodeQueryParameter(_serializers, to, const FullType(Date)),
     };
 
     final _response = await _dio.request<Object>(
@@ -207,9 +218,11 @@ class VendorFinanceApi {
   }
 
   /// getVendorEarnings
-  /// Owner-only FIN-11 Earnings with separate sales, collections, charges, simulated CWT and commission.
+  /// Owner-only FIN-11 Earnings with separate sales, confirmed online refunds, net online collections, charges, simulated CWT and commission. Confirmed refunds adjust the original payment and assessment date buckets; pending and failed refunds leave collections unchanged. Posted provider charges, CWT and FIN-04A thresholds remain unchanged; estimated remittance cash deducts confirmed refunds without deducting refunds already included in the assessment twice.
   ///
   /// Parameters:
+  /// * [from] - Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Commercial sales use order accepted_at; online collections paid_at; physical collections recorded_at; remittances created_at; commission earned_at and approved credit approved_at; estimates created_at; unpaid statements issued_on. Taxpayer thresholds are never recalculated by this view.
+  /// * [to] - Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Commercial sales use order accepted_at; online collections paid_at; physical collections recorded_at; remittances created_at; commission earned_at and approved credit approved_at; estimates created_at; unpaid statements issued_on. Taxpayer thresholds are never recalculated by this view.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -220,6 +233,8 @@ class VendorFinanceApi {
   /// Returns a [Future] containing a [Response] with a [VendorEarningsEnvelope] as data
   /// Throws [DioException] if API call or serialization fails
   Future<Response<VendorEarningsEnvelope>> getVendorEarnings({
+    Date? from,
+    Date? to,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -252,9 +267,15 @@ class VendorFinanceApi {
       validateStatus: validateStatus,
     );
 
+    final _queryParameters = <String, dynamic>{
+      if (from != null) r'from': encodeQueryParameter(_serializers, from, const FullType(Date)),
+      if (to != null) r'to': encodeQueryParameter(_serializers, to, const FullType(Date)),
+    };
+
     final _response = await _dio.request<Object>(
       _path,
       options: _options,
+      queryParameters: _queryParameters,
       cancelToken: cancelToken,
       onSendProgress: onSendProgress,
       onReceiveProgress: onReceiveProgress,
@@ -556,6 +577,9 @@ class VendorFinanceApi {
   /// Parameters:
   /// * [tab]
   /// * [page]
+  /// * [status] - Payments tab only; ignored by every other tab. Each value matches the status badge a Payments row shows. PAID has no refund activity; LATE_CAPTURE covers every late-captured payment awaiting or after its refund; PENDING is any attempt not yet settled.
+  /// * [from] - Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. PAYMENTS paid_at with created_at fallback; PHYSICAL recorded_at; REMITTANCES created_at; STATEMENTS issued_on; REFUNDS created_at; TAX_DOCUMENTS period_end.
+  /// * [to] - Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. PAYMENTS paid_at with created_at fallback; PHYSICAL recorded_at; REMITTANCES created_at; STATEMENTS issued_on; REFUNDS created_at; TAX_DOCUMENTS period_end.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -568,6 +592,9 @@ class VendorFinanceApi {
   Future<Response<FinanceTransactionListEnvelope>> listVendorTransactions({
     String? tab,
     int? page,
+    String? status,
+    Date? from,
+    Date? to,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -603,6 +630,9 @@ class VendorFinanceApi {
     final _queryParameters = <String, dynamic>{
       if (tab != null) r'tab': encodeQueryParameter(_serializers, tab, const FullType(String)),
       if (page != null) r'page': encodeQueryParameter(_serializers, page, const FullType(int)),
+      if (status != null) r'status': encodeQueryParameter(_serializers, status, const FullType(String)),
+      if (from != null) r'from': encodeQueryParameter(_serializers, from, const FullType(Date)),
+      if (to != null) r'to': encodeQueryParameter(_serializers, to, const FullType(Date)),
     };
 
     final _response = await _dio.request<Object>(
@@ -955,6 +985,91 @@ class VendorFinanceApi {
     }
 
     return Response<PaymentAttemptEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// revealVendorTin
+  /// Owner-only. Returns the store&#39;s own full TIN and branch code on demand so the Owner can unmask the masked value shown in the Vendor Tax Profile summary and Tax registration. The response is never cached, each reveal is audited without recording the number, and the number is never returned to a Manager, staff member, Buyer, another Vendor or public surface.
+  ///
+  /// Parameters:
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [VendorTinRevealEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<VendorTinRevealEnvelope>> revealVendorTin({
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/vendor/tax-profile/tin/reveal';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'accessCookie',
+            'keyName': 'mp_access',
+            'where': '',
+          },{
+            'type': 'apiKey',
+            'name': 'webCsrf',
+            'keyName': 'X-CSRF-Token',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    VendorTinRevealEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(VendorTinRevealEnvelope),
+      ) as VendorTinRevealEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<VendorTinRevealEnvelope>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

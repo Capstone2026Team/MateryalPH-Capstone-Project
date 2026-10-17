@@ -9,6 +9,7 @@ use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Identity\ManageAccount;
 use App\Domain\Identity\TokenSessionService;
+use App\Domain\Vendors\OnboardingRequirementResolver;
 use App\Models\AuthSession;
 use App\Models\VendorMembership;
 use Illuminate\Http\Request;
@@ -25,7 +26,7 @@ final class ManageMembership
         DB::transaction(function () use ($request, $id, $field, $value): void {
             $organization = $request->attributes->get('account_scope')['organization_id'];
             $this->authority->lock($request, $organization);
-            $target = VendorMembership::query()->whereKey($id)->where('vendor_organization_id', $organization)->lockForUpdate()->first();
+            $target = VendorMembership::query()->whereNull('deleted_at')->whereKey($id)->where('vendor_organization_id', $organization)->lockForUpdate()->first();
             if ($target === null) {
                 throw new AuthenticationException('RESOURCE_NOT_FOUND', 'The membership is unavailable.', 404);
             }
@@ -43,6 +44,9 @@ final class ManageMembership
                 $this->sessions->revoke($session, 'MEMBERSHIP_CHANGED');
             }
             $this->audit->account($request, 'VENDOR_MEMBERSHIP_CHANGED', 'VENDOR_MEMBERSHIP', $id, $before, [$field => $value]);
+            if ($field === 'status' && $target->role === 'FULFILLMENT') {
+                app(OnboardingRequirementResolver::class)->synchronize($organization);
+            }
             $owner = DB::table('vendor_memberships as m')->join('users as u', 'u.id', '=', 'm.user_id')->where('m.vendor_organization_id', $organization)->where('m.role', 'OWNER')->where('m.status', 'ACTIVE')->first(['u.email', 'u.public_id']);
             if ($owner !== null) {
                 $this->accounts->notice($owner->email, $owner->public_id, 'A Vendor membership was changed. Review your account security audit.');

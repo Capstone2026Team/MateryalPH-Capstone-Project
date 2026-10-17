@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Domain\Identity;
 
+use App\Domain\Authorization\VendorTeamActivityBroadcast;
+use App\Domain\Notifications\NavigationBroadcast;
+use App\Domain\Notifications\OnboardingNotices;
 use App\Models\LoginEvent;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -19,8 +22,9 @@ final class AuditRecorder
     public function account(Request $request, string $action, string $resourceType, ?string $resourceId, array $before = [], array $after = [], bool $succeeded = true, ?string $reason = null): void
     {
         $scope = $request->attributes->get('account_scope', []);
+        $auditId = (string) Str::uuid7();
         DB::table('audit_logs')->insert([
-            'id' => (string) Str::uuid7(),
+            'id' => $auditId,
             'actor_user_id' => $request->user()?->getKey(),
             'actor_role' => $scope['role'] ?? $request->user()?->account_type,
             'vendor_organization_id' => $scope['organization_id'] ?? null,
@@ -35,6 +39,11 @@ final class AuditRecorder
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+        app(VendorTeamActivityBroadcast::class)->publish($scope['organization_id'] ?? null, $scope['role'] ?? $request->user()?->account_type);
+        app(OnboardingNotices::class)->fromAudit($auditId, $action, $resourceType, $resourceId, $scope['organization_id'] ?? null, $after);
+        if ($succeeded) {
+            app(NavigationBroadcast::class)->fromAudit($action, $resourceType, $resourceId);
+        }
     }
 
     /** @param array<string, mixed> $safeContext */

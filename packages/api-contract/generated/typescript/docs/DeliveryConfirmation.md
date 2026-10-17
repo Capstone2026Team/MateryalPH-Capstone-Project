@@ -6,6 +6,7 @@
 
 Name | Type
 ------------ | -------------
+`changeReason` | string
 `vehicles` | [Array&lt;DeliveryVehicleSelection&gt;](DeliveryVehicleSelection.md)
 `finalFeeCentavos` | number
 `fulfillmentDate` | Date
@@ -21,6 +22,7 @@ import type { DeliveryConfirmation } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "changeReason": null,
   "vehicles": null,
   "finalFeeCentavos": null,
   "fulfillmentDate": null,

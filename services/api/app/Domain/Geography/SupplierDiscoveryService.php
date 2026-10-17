@@ -71,7 +71,7 @@ final class SupplierDiscoveryService
                 : $this->directoryItem($item, $rank);
         }
         $items = array_values(array_filter($items));
-        $next = $eligibleVerifiedCount < RadiusPolicy::EXPANSION_THRESHOLD ? RadiusPolicy::next((int) $scope->radiusKm) : null;
+        $next = $eligibleVerifiedCount < RadiusPolicy::expansionThreshold() ? RadiusPolicy::next((int) $scope->radiusKm) : null;
 
         return ['items' => $items, 'meta' => [
             'scope' => $scope->summary(),

@@ -14,7 +14,9 @@ return [
     |
     */
 
-    'default' => env('MAIL_MAILER', 'log'),
+    'default' => env('MAIL_MAILER', 'smtp'),
+
+    'delivery_not_before' => env('MAIL_DELIVERY_NOT_BEFORE'),
 
     /*
     |--------------------------------------------------------------------------
@@ -38,13 +40,16 @@ return [
 
         'smtp' => [
             'transport' => 'smtp',
-            'url' => env('MAIL_URL'),
+            'scheme' => env('MAIL_SCHEME', 'smtp'),
+            'url' => env('MAIL_URL') ?: null,
             'host' => env('MAIL_HOST', '127.0.0.1'),
             'port' => env('MAIL_PORT', 2525),
-            'encryption' => env('MAIL_ENCRYPTION', 'tls'),
+            'auto_tls' => true,
+            'require_tls' => env('MAIL_REQUIRE_TLS', false),
+            'verify_peer' => true,
             'username' => env('MAIL_USERNAME'),
             'password' => env('MAIL_PASSWORD'),
-            'timeout' => null,
+            'timeout' => (int) env('MAIL_TIMEOUT_SECONDS', 10),
             'local_domain' => env('MAIL_EHLO_DOMAIN'),
         ],
 

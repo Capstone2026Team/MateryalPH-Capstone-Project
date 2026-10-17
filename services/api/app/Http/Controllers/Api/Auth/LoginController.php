@@ -61,21 +61,27 @@ final class LoginController extends Controller
             true,
             $user,
         );
+        // Provider verification can outlive an account suspension or password change.
+        $user = $authenticate->recheck($user, $portal);
         $attempts->clear($request, $email);
         $authenticate->markAuthenticated($user);
-        if ($mfa->requiredFor($user)) {
+        if ($mfa->loginChallengeRequiredFor($user)) {
             $challenge = $mfa->begin($user, $clientKind, $input['device_id'] ?? null);
             $audit->record($request, 'MFA_CHALLENGE_REQUIRED', true, $user, ['client_kind' => $clientKind]);
-
-            $response = ApiResponse::success([
+            $data = [
                 'mfa_required' => true,
                 'mfa_enrollment_required' => $challenge->enrollmentRequired,
                 'challenge_expires_in' => $challenge->expiresIn,
-            ])->withCookie($cookies->mfaChallenge($challenge));
+            ];
 
-            return $usedProof && $transport === AuthTransport::WEB
-                ? $response->withCookie($cookies->forgetBotProof())
-                : $response;
+            // Native clients have no cookie jar: the opaque, short-lived challenge travels in the body and is kept in memory only.
+            if ($transport === AuthTransport::MOBILE) {
+                return ApiResponse::success($data + ['challenge_token' => $challenge->token]);
+            }
+
+            $response = ApiResponse::success($data)->withCookie($cookies->mfaChallenge($challenge));
+
+            return $usedProof ? $response->withCookie($cookies->forgetBotProof()) : $response;
         }
 
         $tokens = $sessions->start($user, $clientKind, $input['device_id'] ?? null, $request->ip(), $request->userAgent());

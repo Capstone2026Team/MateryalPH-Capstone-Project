@@ -8,6 +8,8 @@ Name | Type
 ------------ | -------------
 `materialId` | string
 `name` | string
+`description` | string
+`color` | string
 `unitId` | string
 `quantity` | string
 `specifications` | { [key: string]: string; }
@@ -22,6 +24,8 @@ import type { WorkPackageLineInput } from '@materyalph/api-client-ts'
 const example = {
   "materialId": null,
   "name": null,
+  "description": null,
+  "color": null,
   "unitId": null,
   "quantity": null,
   "specifications": null,

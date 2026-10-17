@@ -1,9 +1,15 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { ConversationHeader, QuotationVersionCard, ChatAttachmentButton, ChatMessageBubble } from '@materyalph/web-ui'
+import { ConversationHeader, QuotationVersionCard, ChatAttachmentButton, ChatMessageBubble, ChatTypingIndicator } from '@materyalph/web-ui'
 import type { ChatQuotationVersion, ChatMessage } from '@materyalph/api-client-ts'
 
 afterEach(cleanup)
+/** jsdom has no object URLs; previews only need a stable string and a revoke record. */
+const stubObjectUrls = () => {
+  const urls = { createObjectURL: vi.fn(() => 'blob:photo'), revokeObjectURL: vi.fn() }
+  Object.assign(URL, urls)
+  return urls
+}
 const version: ChatQuotationVersion = {
   id: 'version-2', version: 2, latest: true, state: 'PUBLISHED', publishedAt: '2026-09-30T00:00:00Z', expiresAt: '2099-09-30T00:00:00Z', contentHash: 'a'.repeat(64), viewed: true, actions: ['withdraw'],
   content: { lines: [{ variantId: 'item', quantity: '4', unitPriceCentavos: 1700, description: 'Portland Cement', unitCode: 'bag', taxCategory: 'VAT_12', sourcePriceVersionId: 'price', sourceTaxVersionId: 'tax' }], commercial: { materialsPayableCentavos: 6800, materialsVatCentavos: 729, vendorDiscountCentavos: 0, deliveryCentavos: 0, nrpcCentavos: 0, commercialTotalCentavos: 6800 }, fulfillmentMethod: 'PICKUP', paymentMethod: 'ONLINE', fulfillmentDate: '2099-10-01', priceSource: 'PRIVATE_TRANSACTION', processingFeeStatus: 'PENDING_PAYMENT_CHANNEL', changes: [{ path: 'lines.0.quantity', label: 'Quantity changed', before: '5', after: '4' }], originalChanges: [] },
@@ -36,6 +42,14 @@ describe('conversation and quotation presentation', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Failed to send · Retry' }))
     expect(retry).toHaveBeenCalledOnce()
   })
+  it('announces typing through a persistent status region and hides the decorative dots', () => {
+    const { container, rerender } = render(<ChatTypingIndicator active={false} />)
+    expect(screen.getByRole('status')).toHaveTextContent('')
+    expect(container.querySelector('.chat-typing-bubble')).toBeNull()
+    rerender(<ChatTypingIndicator active />)
+    expect(screen.getByRole('status')).toHaveTextContent('Someone is typing…')
+    expect(container.querySelector('.chat-typing-bubble')).toHaveAttribute('aria-hidden', 'true')
+  })
   it('shows the Buyer instead of the store when a Buyer is given', () => {
     render(<ConversationHeader store={{ id: 'store', name: 'RJ Hardware', verified: true }} buyer={{ displayName: 'Maria Santos', role: 'BUYER' }} handler={{ displayName: 'Alex Cruz', role: 'CUSTOMER_SERVICE' }} purpose="SALES" />)
     expect(screen.getByRole('heading', { name: 'Maria Santos' })).toBeInTheDocument()
@@ -63,6 +77,34 @@ describe('conversation and quotation presentation', () => {
     render(<QuotationVersionCard version={{ ...version, latest: false, state: 'SUPERSEDED' }} onAction={vi.fn()} />)
     expect(screen.getByText('Portland Cement')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Withdraw quotation' })).not.toBeInTheDocument()
+  })
+  it('previews a clean photo with a Download button and keeps other files as rows', async () => {
+    const { revokeObjectURL } = stubObjectUrls()
+    const open = vi.fn()
+    const load = vi.fn(() => Promise.resolve(new Blob(['png'], { type: 'image/png' })))
+    const photo = { id: 'photo', displayName: 'Attachment.png', mediaType: 'image/png', sizeBytes: 49152, scanState: 'CLEAN' as const }
+    const pdf = { id: 'pdf', displayName: 'Attachment.pdf', mediaType: 'application/pdf', sizeBytes: 2048, scanState: 'CLEAN' as const }
+    const message: ChatMessage = { id: 'message', clientMessageId: 'client', body: 'Attachment', kind: 'ATTACHMENT', mine: false, sentAt: '2026-10-02T00:00:00Z', sender: { displayName: 'Buyer', role: 'BUYER' }, readByRecipient: false, attachments: [photo, pdf] }
+    const { unmount } = render(<ol><ChatMessageBubble message={message} onOpenAttachment={open} loadAttachment={load} /></ol>)
+    expect(await screen.findByRole('img', { name: 'Attachment.png' })).toHaveAttribute('src', 'blob:photo')
+    expect(load).toHaveBeenCalledOnce()
+    expect(load).toHaveBeenCalledWith('photo')
+    expect(screen.queryByText('Attachment', { exact: true })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Download' }))
+    expect(open).toHaveBeenCalledWith('photo', photo)
+    fireEvent.click(screen.getByRole('button', { name: /Attachment\.pdf/ }))
+    expect(open).toHaveBeenCalledWith('pdf', pdf)
+    unmount()
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:photo')
+  })
+  it('offers a retry when a photo cannot be loaded', async () => {
+    stubObjectUrls()
+    const load = vi.fn().mockRejectedValueOnce(new Error('offline')).mockResolvedValue(new Blob(['png'], { type: 'image/png' }))
+    const message: ChatMessage = { id: 'message', clientMessageId: 'client', body: 'Attachment', kind: 'ATTACHMENT', mine: true, sentAt: '2026-10-02T00:00:00Z', sender: { displayName: 'You', role: 'VENDOR' }, readByRecipient: false, attachments: [{ id: 'photo', displayName: 'Attachment.jpg', mediaType: 'image/jpeg', sizeBytes: 1024, scanState: 'CLEAN' }] }
+    render(<ol><ChatMessageBubble message={message} onOpenAttachment={vi.fn()} loadAttachment={load} /></ol>)
+    fireEvent.click(await screen.findByRole('button', { name: /Image unavailable · Retry/ }))
+    expect(await screen.findByRole('img', { name: 'Attachment.jpg' })).toBeInTheDocument()
+    expect(load).toHaveBeenCalledTimes(2)
   })
   it('never enables an unscanned attachment', () => {
     render(<ChatAttachmentButton attachment={{ id: 'file', displayName: 'Attachment.pdf', mediaType: 'application/pdf', sizeBytes: 2048, scanState: 'PENDING' }} onOpen={vi.fn()} />)

@@ -8,7 +8,11 @@ import 'package:built_value/serializer.dart';
 import 'package:dio/dio.dart';
 
 import 'dart:typed_data';
+import 'package:built_collection/built_collection.dart';
 import 'package:materyalph_api_client/src/api_util.dart';
+import 'package:materyalph_api_client/src/model/delivery_navigation_route_envelope.dart';
+import 'package:materyalph_api_client/src/model/delivery_vehicle_options_envelope.dart';
+import 'package:materyalph_api_client/src/model/delivery_workspace_page.dart';
 import 'package:materyalph_api_client/src/model/fulfillment_assignee_list_envelope.dart';
 import 'package:materyalph_api_client/src/model/fulfillment_assignment_request.dart';
 import 'package:materyalph_api_client/src/model/fulfillment_trip_request.dart';
@@ -26,8 +30,98 @@ class VendorFulfillmentApi {
 
   const VendorFulfillmentApi(this._dio, this._serializers);
 
+  /// acknowledgeDeliveryAssignment
+  /// Currently assigned Fulfillment Staff only. Idempotently acknowledge the current assignment with attribution and timestamp; leaves all order states unchanged.
+  ///
+  /// Parameters:
+  /// * [orderId]
+  /// * [idempotencyKey]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [OrderDetailEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<OrderDetailEnvelope>> acknowledgeDeliveryAssignment({
+    required String orderId,
+    required String idempotencyKey,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/vendor/orders/{orderId}/fulfillment/acknowledge'.replaceAll('{' r'orderId' '}', encodeQueryParameter(_serializers, orderId, const FullType(String)).toString());
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        r'Idempotency-Key': idempotencyKey,
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'accessCookie',
+            'keyName': 'mp_access',
+            'where': '',
+          },{
+            'type': 'apiKey',
+            'name': 'webCsrf',
+            'keyName': 'X-CSRF-Token',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    OrderDetailEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(OrderDetailEnvelope),
+      ) as OrderDetailEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<OrderDetailEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
   /// assignVendorFulfillmentStaff
-  /// Owner or Store Manager assign or reassign Fulfillment Staff. The former assignee loses order, thread, file and realtime access immediately; history keeps its attribution.
+  /// Owner or Store Manager assign or reassign active same-store Fulfillment Staff and an available accepted registered vehicle. With dispatch&#x3D;true, assignment and Out for Delivery commit atomically using vehicle_index and lock_version; the order appears in the assigned staff workspace. Reassignment before Delivered preserves accepted arrangements and charges, records history and notifies affected staff. The former assignee loses order, thread, file and realtime access immediately; history keeps its attribution.
   ///
   /// Parameters:
   /// * [orderId]
@@ -369,6 +463,185 @@ class VendorFulfillmentApi {
     );
   }
 
+  /// getDeliveryBuyerPhoto
+  /// Sanitized Buyer profile photo for an accepted, open Site Delivery order. Owner/Manager or current active assigned Fulfillment Staff only. Reauthorizes after private storage access; closure, reassignment or deactivation revokes access. Profile version changes invalidate an older version parameter. No storage key or private account identifier is returned. Response is private and no-store.
+  ///
+  /// Parameters:
+  /// * [orderId]
+  /// * [version]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [Uint8List] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<Uint8List>> getDeliveryBuyerPhoto({
+    required String orderId,
+    int? version,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/vendor/orders/{orderId}/fulfillment/buyer-photo'.replaceAll('{' r'orderId' '}', encodeQueryParameter(_serializers, orderId, const FullType(String)).toString());
+    final _options = Options(
+      method: r'GET',
+      responseType: ResponseType.bytes,
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'accessCookie',
+            'keyName': 'mp_access',
+            'where': '',
+          },{
+            'type': 'apiKey',
+            'name': 'webCsrf',
+            'keyName': 'X-CSRF-Token',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _queryParameters = <String, dynamic>{
+      if (version != null) r'version': encodeQueryParameter(_serializers, version, const FullType(int)),
+    };
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      queryParameters: _queryParameters,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    Uint8List? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : rawResponse as Uint8List;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<Uint8List>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// getDeliveryDirections
+  /// Owner/Manager or currently assigned Fulfillment Staff only. Registered store to confirmed delivery endpoint. Google Routes estimate and polyline; no live device tracking. Reauthorizes after provider call.
+  ///
+  /// Parameters:
+  /// * [orderId]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [DeliveryNavigationRouteEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<DeliveryNavigationRouteEnvelope>> getDeliveryDirections({
+    required String orderId,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/vendor/orders/{orderId}/fulfillment/route'.replaceAll('{' r'orderId' '}', encodeQueryParameter(_serializers, orderId, const FullType(String)).toString());
+    final _options = Options(
+      method: r'GET',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'accessCookie',
+            'keyName': 'mp_access',
+            'where': '',
+          },{
+            'type': 'apiKey',
+            'name': 'webCsrf',
+            'keyName': 'X-CSRF-Token',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    DeliveryNavigationRouteEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(DeliveryNavigationRouteEnvelope),
+      ) as DeliveryNavigationRouteEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<DeliveryNavigationRouteEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
   /// getVendorCancellationPreview
   /// Owner, Store Manager or Store Staff: FIN-07 amounts for a Vendor cancellation and for finalizing an open Buyer request.
   ///
@@ -543,6 +816,194 @@ class VendorFulfillmentApi {
     );
   }
 
+  /// listAssignedFulfillments
+  /// Fulfillment Staff only. Paginated current assignments; receipt-confirmed orders revoke staff access. Search order reference or Buyer name.
+  ///
+  /// Parameters:
+  /// * [status]
+  /// * [sort]
+  /// * [q]
+  /// * [page]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [DeliveryWorkspacePage] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<DeliveryWorkspacePage>> listAssignedFulfillments({
+    String? status,
+    String? sort,
+    String? q,
+    int? page,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/vendor/fulfillment';
+    final _options = Options(
+      method: r'GET',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'accessCookie',
+            'keyName': 'mp_access',
+            'where': '',
+          },{
+            'type': 'apiKey',
+            'name': 'webCsrf',
+            'keyName': 'X-CSRF-Token',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _queryParameters = <String, dynamic>{
+      if (status != null) r'status': encodeQueryParameter(_serializers, status, const FullType(String)),
+      if (sort != null) r'sort': encodeQueryParameter(_serializers, sort, const FullType(String)),
+      if (q != null) r'q': encodeQueryParameter(_serializers, q, const FullType(String)),
+      if (page != null) r'page': encodeQueryParameter(_serializers, page, const FullType(int)),
+    };
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      queryParameters: _queryParameters,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    DeliveryWorkspacePage? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(DeliveryWorkspacePage),
+      ) as DeliveryWorkspacePage;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<DeliveryWorkspacePage>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// listDeliveryAssignmentVehicles
+  /// Owner/Manager only. Accepted vehicles with current availability and active allocation conflicts. Does not change accepted fees or arrangements.
+  ///
+  /// Parameters:
+  /// * [orderId]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [DeliveryVehicleOptionsEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<DeliveryVehicleOptionsEnvelope>> listDeliveryAssignmentVehicles({
+    required String orderId,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/vendor/orders/{orderId}/fulfillment/vehicles'.replaceAll('{' r'orderId' '}', encodeQueryParameter(_serializers, orderId, const FullType(String)).toString());
+    final _options = Options(
+      method: r'GET',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'accessCookie',
+            'keyName': 'mp_access',
+            'where': '',
+          },{
+            'type': 'apiKey',
+            'name': 'webCsrf',
+            'keyName': 'X-CSRF-Token',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    DeliveryVehicleOptionsEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(DeliveryVehicleOptionsEnvelope),
+      ) as DeliveryVehicleOptionsEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<DeliveryVehicleOptionsEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
   /// listVendorFulfillmentAssignees
   /// Owner or Store Manager: active Fulfillment Staff that can be assigned.
   ///
@@ -631,7 +1092,7 @@ class VendorFulfillmentApi {
   }
 
   /// recordVendorFulfillmentMilestone
-  /// Owner, Store Manager or the assigned Fulfillment Staff record the next milestone through the shared state machine. Duplicate → replay or 409 MILESTONE_ALREADY_RECORDED; out of order → 409 ORDER_STATE_CONFLICT; open cancellation request → 409 CANCELLATION_PENDING; missing proof → 422 PROOF_REQUIRED. READY_FOR_PICKUP or OUT_FOR_DELIVERY opens the one fulfillment thread in the same transaction.
+  /// Owner, Store Manager or the assigned Fulfillment Staff record authorized milestones through the shared state machine. DELIVERED is restricted to the currently assigned active Fulfillment Staff; Owner or Store Manager attempts return 403 PERMISSION_DENIED before proof storage. Staff must submit receiver_name and a validated private delivery photo; signature and up to three additional photos are optional within the configured evidence limit. OUT_FOR_DELIVERY requires an active same-store staff assignment (422 FULFILLMENT_STAFF_REQUIRED) and an available accepted registered vehicle (422 DELIVERY_VEHICLE_REQUIRED). New-delivery settings do not block existing orders. Self-Pickup handover rules are unchanged. Duplicate → replay or 409 MILESTONE_ALREADY_RECORDED; out of order → 409 ORDER_STATE_CONFLICT; open cancellation request → 409 CANCELLATION_PENDING; missing proof → 422 PROOF_REQUIRED. READY_FOR_PICKUP or OUT_FOR_DELIVERY ensures the one fulfillment thread in the same transaction. Private invalidations and authoritative REST refresh synchronize the recorded status and proof for the Buyer, store and assigned staff.
   ///
   /// Parameters:
   /// * [orderId]
@@ -646,6 +1107,7 @@ class VendorFulfillmentApi {
   /// * [note]
   /// * [file] - Delivery photo (required for DELIVERED): JPG or PNG up to 10 MB, scanned fail-closed, stored privately.
   /// * [signature] - Optional receiver signature image.
+  /// * [additionalPhotos]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -668,6 +1130,7 @@ class VendorFulfillmentApi {
     String? note,
     MultipartFile? file,
     MultipartFile? signature,
+    BuiltList<MultipartFile>? additionalPhotos,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -716,6 +1179,7 @@ class VendorFulfillmentApi {
         if (note != null) r'note': encodeFormParameter(_serializers, note, const FullType(String)),
         if (file != null) r'file': file,
         if (signature != null) r'signature': signature,
+        if (additionalPhotos != null) r'additional_photos[]': additionalPhotos.toList(),
       });
 
     } catch(error, stackTrace) {

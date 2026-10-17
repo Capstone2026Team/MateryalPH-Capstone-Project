@@ -4,6 +4,7 @@
 
 // ignore_for_file: unused_element
 import 'package:materyalph_api_client/src/model/money_nrpc.dart';
+import 'package:materyalph_api_client/src/model/chat_quotation_discount_assessment.dart';
 import 'package:materyalph_api_client/src/model/money_delivery.dart';
 import 'package:built_collection/built_collection.dart';
 import 'package:materyalph_api_client/src/model/processing_fee.dart';
@@ -15,6 +16,7 @@ part 'money_breakdown.g.dart';
 /// FIN-02 Buyer amounts in integer centavos. Prices include any Vendor VAT; E = M − V. Online pays M + D + F; COD/In-Store without NRPC pays M + D directly; with NRPC pays N + F online and M + D − N directly. Vendor commission and merchant withholding are never Buyer charges.
 ///
 /// Properties:
+/// * [discount]
 /// * [currency]
 /// * [calculationVersion]
 /// * [status]
@@ -35,6 +37,9 @@ part 'money_breakdown.g.dart';
 /// * [excludes]
 @BuiltValue()
 abstract class MoneyBreakdown implements Built<MoneyBreakdown, MoneyBreakdownBuilder> {
+  @BuiltValueField(wireName: r'discount')
+  ChatQuotationDiscountAssessment? get discount;
+
   @BuiltValueField(wireName: r'currency')
   MoneyBreakdownCurrencyEnum get currency;
   // enum currencyEnum {  PHP,  };
@@ -117,6 +122,13 @@ class _$MoneyBreakdownSerializer implements PrimitiveSerializer<MoneyBreakdown> 
     MoneyBreakdown object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.discount != null) {
+      yield r'discount';
+      yield serializers.serialize(
+        object.discount,
+        specifiedType: const FullType.nullable(ChatQuotationDiscountAssessment),
+      );
+    }
     yield r'currency';
     yield serializers.serialize(
       object.currency,
@@ -230,6 +242,14 @@ class _$MoneyBreakdownSerializer implements PrimitiveSerializer<MoneyBreakdown> 
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'discount':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(ChatQuotationDiscountAssessment),
+          ) as ChatQuotationDiscountAssessment?;
+          if (valueDes == null) continue;
+          result.discount.replace(valueDes);
+          break;
         case r'currency':
           final valueDes = serializers.deserialize(
             value,

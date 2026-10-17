@@ -6,6 +6,7 @@
 import 'package:built_collection/built_collection.dart';
 import 'package:materyalph_api_client/src/model/pickup_confirmation.dart';
 import 'package:materyalph_api_client/src/model/nrpc_proposal.dart';
+import 'package:materyalph_api_client/src/model/chat_quotation_discount.dart';
 import 'package:materyalph_api_client/src/model/delivery_confirmation.dart';
 import 'package:materyalph_api_client/src/model/order_line_quantity.dart';
 import 'package:built_value/built_value.dart';
@@ -18,7 +19,8 @@ part 'vendor_order_confirm_request.g.dart';
 /// Properties:
 /// * [lockVersion]
 /// * [lines]
-/// * [vendorDiscountCentavos]
+/// * [vendorDiscountCentavos] - Legacy fixed materials discount. Omit when discount is supplied.
+/// * [discount]
 /// * [nrpc]
 /// * [pickup]
 /// * [delivery]
@@ -30,8 +32,13 @@ abstract class VendorOrderConfirmRequest implements Built<VendorOrderConfirmRequ
   @BuiltValueField(wireName: r'lines')
   BuiltList<OrderLineQuantity> get lines;
 
+  /// Legacy fixed materials discount. Omit when discount is supplied.
+  @Deprecated('vendorDiscountCentavos has been deprecated')
   @BuiltValueField(wireName: r'vendor_discount_centavos')
   int? get vendorDiscountCentavos;
+
+  @BuiltValueField(wireName: r'discount')
+  ChatQuotationDiscount? get discount;
 
   @BuiltValueField(wireName: r'nrpc')
   NrpcProposal? get nrpc;
@@ -80,6 +87,13 @@ class _$VendorOrderConfirmRequestSerializer implements PrimitiveSerializer<Vendo
       yield serializers.serialize(
         object.vendorDiscountCentavos,
         specifiedType: const FullType(int),
+      );
+    }
+    if (object.discount != null) {
+      yield r'discount';
+      yield serializers.serialize(
+        object.discount,
+        specifiedType: const FullType(ChatQuotationDiscount),
       );
     }
     if (object.nrpc != null) {
@@ -147,6 +161,14 @@ class _$VendorOrderConfirmRequestSerializer implements PrimitiveSerializer<Vendo
           ) as int?;
           if (valueDes == null) continue;
           result.vendorDiscountCentavos = valueDes;
+          break;
+        case r'discount':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(ChatQuotationDiscount),
+          ) as ChatQuotationDiscount?;
+          if (valueDes == null) continue;
+          result.discount.replace(valueDes);
           break;
         case r'nrpc':
           final valueDes = serializers.deserialize(

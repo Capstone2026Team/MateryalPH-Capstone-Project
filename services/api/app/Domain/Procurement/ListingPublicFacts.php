@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Procurement;
 
 use App\Domain\Catalog\VolumePricing;
+use App\Domain\Reviews\ReviewRules;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -14,7 +15,7 @@ use Illuminate\Support\Facades\DB;
  */
 final class ListingPublicFacts
 {
-    /** Product Review ratings count only after reveal; Phase 14 owns review eligibility and moderation. */
+    /** Product Review ratings count only while visible: revealed, not moderated away, no active dispute, not excluded. */
     public const PRODUCT_REVIEW = 'PRODUCT';
 
     /**
@@ -26,12 +27,12 @@ final class ListingPublicFacts
         if ($listingIds === []) {
             return [];
         }
-        $rows = DB::table('reviews as r')->join('order_lines as ol', 'ol.id', '=', 'r.order_line_id')->join('listing_variants as v', 'v.id', '=', 'ol.listing_variant_id')
-            ->whereIn('v.vendor_listing_id', $listingIds)->where('r.review_type', self::PRODUCT_REVIEW)->whereNotNull('r.revealed_at')->whereNotNull('r.rating')
-            ->groupBy('v.vendor_listing_id')->selectRaw('v.vendor_listing_id, round(avg(r.rating)::numeric, 2) AS average, count(*) AS total')->get();
+        $rows = ReviewRules::constrainVisible(DB::table('reviews as r')->whereIn('r.vendor_listing_id', $listingIds)->where('r.review_type', self::PRODUCT_REVIEW)->whereNotNull('r.rating'))
+            ->groupBy('r.vendor_listing_id')->selectRaw('r.vendor_listing_id, round(avg(r.rating)::numeric, 2) AS average, count(*) AS total')->get();
         $ratings = [];
         foreach ($rows as $row) {
             $ratings[(string) $row->vendor_listing_id] = ['average' => (string) $row->average, 'count' => (int) $row->total];
+            // The listing keeps its own product average, separate from the Vendor-level MQS.
         }
 
         return $ratings;

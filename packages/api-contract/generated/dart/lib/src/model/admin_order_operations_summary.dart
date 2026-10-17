@@ -11,18 +11,28 @@ part 'admin_order_operations_summary.g.dart';
 /// AdminOrderOperationsSummary
 ///
 /// Properties:
+/// * [refundsTotal] - All refund records, including processed refunds, independent of list filters and pagination.
 /// * [refundsFailed]
 /// * [refundsPending]
+/// * [reimbursementsTotal] - All order-linked cash reimbursements, including confirmed reimbursements, independent of list filters.
 /// * [reimbursementsPending]
 /// * [cancellationRequestsOpen]
 /// * [nfrEvents30Days]
 @BuiltValue()
 abstract class AdminOrderOperationsSummary implements Built<AdminOrderOperationsSummary, AdminOrderOperationsSummaryBuilder> {
+  /// All refund records, including processed refunds, independent of list filters and pagination.
+  @BuiltValueField(wireName: r'refunds_total')
+  int get refundsTotal;
+
   @BuiltValueField(wireName: r'refunds_failed')
   int get refundsFailed;
 
   @BuiltValueField(wireName: r'refunds_pending')
   int get refundsPending;
+
+  /// All order-linked cash reimbursements, including confirmed reimbursements, independent of list filters.
+  @BuiltValueField(wireName: r'reimbursements_total')
+  int get reimbursementsTotal;
 
   @BuiltValueField(wireName: r'reimbursements_pending')
   int get reimbursementsPending;
@@ -56,6 +66,11 @@ class _$AdminOrderOperationsSummarySerializer implements PrimitiveSerializer<Adm
     AdminOrderOperationsSummary object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    yield r'refunds_total';
+    yield serializers.serialize(
+      object.refundsTotal,
+      specifiedType: const FullType(int),
+    );
     yield r'refunds_failed';
     yield serializers.serialize(
       object.refundsFailed,
@@ -64,6 +79,11 @@ class _$AdminOrderOperationsSummarySerializer implements PrimitiveSerializer<Adm
     yield r'refunds_pending';
     yield serializers.serialize(
       object.refundsPending,
+      specifiedType: const FullType(int),
+    );
+    yield r'reimbursements_total';
+    yield serializers.serialize(
+      object.reimbursementsTotal,
       specifiedType: const FullType(int),
     );
     yield r'reimbursements_pending';
@@ -104,6 +124,13 @@ class _$AdminOrderOperationsSummarySerializer implements PrimitiveSerializer<Adm
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'refunds_total':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.refundsTotal = valueDes;
+          break;
         case r'refunds_failed':
           final valueDes = serializers.deserialize(
             value,
@@ -117,6 +144,13 @@ class _$AdminOrderOperationsSummarySerializer implements PrimitiveSerializer<Adm
             specifiedType: const FullType(int),
           ) as int;
           result.refundsPending = valueDes;
+          break;
+        case r'reimbursements_total':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.reimbursementsTotal = valueDes;
           break;
         case r'reimbursements_pending':
           final valueDes = serializers.deserialize(

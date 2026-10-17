@@ -17,10 +17,11 @@ Name | Type
 `selectedVendorId` | string
 `orderId` | string
 `version` | [WorkPackageVersion](WorkPackageVersion.md)
-`versions` | [WorkPackageVersionPage](WorkPackageVersionPage.md)
 `budget` | [ProjectBudget](ProjectBudget.md)
 `missingLines` | Array&lt;{ [key: string]: any; }&gt;
 `document` | { [key: string]: any; }
+`hasOrder` | boolean
+`canDelete` | boolean
 
 ## Example
 
@@ -40,10 +41,11 @@ const example = {
   "selectedVendorId": null,
   "orderId": null,
   "version": null,
-  "versions": null,
   "budget": null,
   "missingLines": null,
   "document": null,
+  "hasOrder": null,
+  "canDelete": null,
 } satisfies WorkPackageView
 
 console.log(example)

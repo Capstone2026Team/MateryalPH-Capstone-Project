@@ -44,6 +44,8 @@ Name | Type
 `fulfillment` | [OrderFulfillment](OrderFulfillment.md)
 `cancellation` | [OrderCancellation](OrderCancellation.md)
 `refundTimeline` | [OrderRefundTimeline](OrderRefundTimeline.md)
+`dispute` | [OrderDisputeRef](OrderDisputeRef.md)
+`invoice` | [OrderInvoiceRef](OrderInvoiceRef.md)
 
 ## Example
 
@@ -89,6 +91,8 @@ const example = {
   "fulfillment": null,
   "cancellation": null,
   "refundTimeline": null,
+  "dispute": null,
+  "invoice": null,
 } satisfies OrderDetail
 
 console.log(example)

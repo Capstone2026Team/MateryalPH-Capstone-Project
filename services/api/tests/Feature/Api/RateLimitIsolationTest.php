@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Route;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\TestCase;
 
@@ -20,7 +21,7 @@ final class RateLimitIsolationTest extends TestCase
         Cache::flush();
         $request = Request::create('/api/v1/stores', 'GET', server: ['REMOTE_ADDR' => '192.0.2.10']);
         $middleware = app(ThrottleRequests::class);
-        foreach (['public-store', 'auth-csrf', 'provider-webhook'] as $name) {
+        foreach (['auth-csrf', 'provider-webhook'] as $name) {
             for ($attempt = 0; $attempt < 10; $attempt++) {
                 self::assertSame(200, $middleware->handle($request, fn (): Response => new Response, $name)->getStatusCode());
             }
@@ -39,25 +40,55 @@ final class RateLimitIsolationTest extends TestCase
         self::assertSame(200, $middleware->handle($request, fn (): Response => new Response, 'auth-public')->getStatusCode());
     }
 
-    public function test_authenticated_limits_use_user_identity_and_keep_existing_budgets(): void
+    public function test_credential_limits_remain_scoped_to_user_and_action(): void
     {
         Cache::flush();
-        $first = Request::create('/api/v1/vendors/onboarding/address/pin');
-        $second = Request::create('/api/v1/vendors/onboarding/address/pin');
+        $first = Request::create('/api/v1/vendors/account/reauthentication');
+        $second = Request::create('/api/v1/vendors/account/reauthentication');
         $first->setUserResolver(fn (): User => (new User)->forceFill(['id' => 1]));
         $second->setUserResolver(fn (): User => (new User)->forceFill(['id' => 2]));
-        foreach (['account' => 60, 'vendor-address' => 10] as $name => $budget) {
-            $limiter = RateLimiter::limiter($name);
-            self::assertNotNull($limiter);
-            self::assertSame($budget, $limiter($first)->maxAttempts);
-            self::assertNotSame($limiter($first)->key, $limiter($second)->key);
-        }
+        $limiter = RateLimiter::limiter('account-security');
+        self::assertNotNull($limiter);
+        self::assertSame(5, $limiter($first)->maxAttempts);
+        self::assertNotSame($limiter($first)->key, $limiter($second)->key);
+        $differentAction = Request::create('/api/v1/vendors/account/password');
+        $differentAction->setUserResolver($first->getUserResolver());
+        self::assertNotSame($limiter($first)->key, $limiter($differentAction)->key);
         $middleware = app(ThrottleRequests::class);
-        for ($attempt = 0; $attempt < 10; $attempt++) {
-            $middleware->handle($first, fn (): Response => new Response, 'vendor-address');
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            $middleware->handle($first, fn (): Response => new Response, 'account-security');
         }
-        self::assertSame(200, $middleware->handle($second, fn (): Response => new Response, 'vendor-address')->getStatusCode());
+        self::assertSame(200, $middleware->handle($second, fn (): Response => new Response, 'account-security')->getStatusCode());
         $this->expectException(ThrottleRequestsException::class);
-        $middleware->handle($first, fn (): Response => new Response, 'vendor-address');
+        $middleware->handle($first, fn (): Response => new Response, 'account-security');
+    }
+
+    public function test_everyday_routes_have_no_throttles_and_keep_authorization(): void
+    {
+        $count = 0;
+        foreach (Route::getRoutes() as $route) {
+            if (! str_starts_with($route->uri(), 'api/v1/')) {
+                continue;
+            }
+            $middleware = $route->gatherMiddleware();
+            $throttles = array_values(array_filter($middleware, fn (string $name): bool => str_starts_with($name, 'throttle:')));
+            if (str_starts_with($route->uri(), 'api/v1/auth/')
+                || str_starts_with($route->uri(), 'api/v1/mobile/auth/')
+                || str_starts_with($route->uri(), 'api/v1/webhooks/')) {
+                continue;
+            }
+            $credentialAction = in_array('POST', $route->methods(), true)
+                && preg_match('~/(?:account/(?:reauthentication(?:/email)?|password|email(?:/confirm)?|factor(?:/confirm)?|recovery-codes|two-factor(?:/confirm|/disable)?|deletion)|vendors/account/invitations|vendors/onboarding/store-email(?:/confirm)?)$~', $route->uri()) === 1;
+            self::assertSame($credentialAction ? ['throttle:account-security'] : [], $throttles, $route->uri());
+            if (preg_match('~^api/v1/(buyers|vendors|vendor|admin)/~', $route->uri()) === 1) {
+                self::assertContains('auth:api', $middleware, $route->uri());
+                self::assertNotEmpty(array_filter($middleware, fn (string $name): bool => str_starts_with($name, 'account.access')), $route->uri());
+                $count++;
+            }
+        }
+        self::assertGreaterThan(100, $count);
+        foreach (['account', 'account-upload', 'profile-photo', 'public-store', 'payment-create', 'vendor-payment-status', 'vendor-address', 'buyer-discovery', 'buyer-geocode', 'buyer-places', 'buyer-route'] as $name) {
+            self::assertNull(RateLimiter::limiter($name), $name);
+        }
     }
 }

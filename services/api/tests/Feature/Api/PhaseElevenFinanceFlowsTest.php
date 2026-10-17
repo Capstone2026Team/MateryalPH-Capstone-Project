@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace Tests\Feature\Api;
 
 use App\Domain\Finance\FeeAssessmentService;
+use App\Domain\Finance\FinancialLedgerService;
 use App\Domain\Finance\StatementService;
 use App\Domain\Geography\PlacesProvider;
 use App\Domain\Geography\RouteProvider;
 use App\Domain\Identity\TokenSessionService;
+use App\Domain\Payments\RefundService;
+use App\Domain\Reporting\DocumentExportService;
 use App\Domain\Vendors\AddressGeocoder;
 use App\Domain\Vendors\VendorFileScanner;
 use App\Models\AuthSession;
@@ -95,6 +98,30 @@ final class PhaseElevenFinanceFlowsTest extends TestCase
         self::assertSame(1, DB::table('audit_logs')->where('action', 'FINANCE_EXPORT_DOWNLOADED')->count());
     }
 
+    public function test_the_owner_can_reveal_the_full_tin_on_demand_and_every_reveal_is_audited_without_the_number(): void
+    {
+        [$store, $owner] = $this->pickupStore('Owner Tin Hardware');
+        $manager = $this->teamMember($store, 'STORE_MANAGER');
+        $versionId = (string) DB::table('vendor_tax_profiles')->where('vendor_organization_id', $store->id)->value('current_version_id');
+        DB::table('vendor_tax_profile_versions')->where('id', $versionId)->update(['tin_encrypted' => null]);
+
+        $this->signInStoreMember($owner);
+        $this->postJson('/api/v1/vendor/tax-profile/tin/reveal')->assertNotFound()->assertJsonPath('errors.0.code', 'TIN_NOT_RECORDED');
+        self::assertSame(0, DB::table('audit_logs')->where('action', 'VENDOR_TIN_REVEALED')->count());
+
+        DB::table('vendor_tax_profile_versions')->where('id', $versionId)->update(['tin_encrypted' => Crypt::encryptString('123456789000')]);
+        $this->postJson('/api/v1/vendor/tax-profile/tin/reveal')->assertOk()->assertJsonPath('data.tin', '123-456-789-000')->assertHeader('Cache-Control', 'no-store, private');
+        $audit = DB::table('audit_logs')->where('action', 'VENDOR_TIN_REVEALED')->first();
+        self::assertNotNull($audit);
+        self::assertSame((string) $store->id, $audit->resource_id);
+        self::assertStringNotContainsString('123456789', json_encode($audit, JSON_THROW_ON_ERROR));
+        self::assertStringNotContainsString('123-456-789', json_encode($audit, JSON_THROW_ON_ERROR));
+
+        $this->signInStoreMember($manager);
+        $this->postJson('/api/v1/vendor/tax-profile/tin/reveal')->assertForbidden()->assertJsonPath('errors.0.code', 'FINANCE_OWNER_ONLY');
+        self::assertSame(1, DB::table('audit_logs')->where('action', 'VENDOR_TIN_REVEALED')->count());
+    }
+
     public function test_in_store_payment_opens_an_obligation_recorded_with_evidence_and_creates_no_online_or_cwt_event(): void
     {
         [$store, $owner, $listing] = $this->pickupStore('Cash Hardware', [['price' => 100000, 'qty' => '50']]);
@@ -140,6 +167,11 @@ final class PhaseElevenFinanceFlowsTest extends TestCase
         self::assertNotNull(DB::table('physical_payment_records')->where('id', $record['id'])->value('buyer_acknowledged_at'));
         self::assertSame([0, 0, 'NOT_REQUIRED'], [DB::table('payments')->count(), DB::table('remittance_assessments')->count(), (string) DB::table('orders')->where('id', $orderId)->value('payment_state')],
             'Direct cash never creates an online success or a platform CWT event.');
+        $export = $this->postJson('/api/v1/buyers/reports', ['type' => 'PAYMENT_CONFIRMATION', 'resource_id' => $orderId, 'format' => 'CSV', 'purpose' => 'Review recorded physical payment'], ['Idempotency-Key' => (string) Str::uuid7()])->assertAccepted()->json('data');
+        app(DocumentExportService::class)->process($export['id']);
+        $document = $this->get('/api/v1/buyers/reports/'.$export['id'].'/download')->assertOk()->streamedContent();
+        self::assertStringContainsString('Vendor-recorded physical payment', $document);
+        self::assertStringNotContainsString('receipt.png', $document);
     }
 
     public function test_nrpc_assurance_and_online_balance_are_counted_once_and_assessed_separately(): void
@@ -217,6 +249,12 @@ final class PhaseElevenFinanceFlowsTest extends TestCase
 
         $this->signInStoreMember($owner);
         $view = $this->getJson('/api/v1/vendor/finance/statements/'.$statement->id)->assertOk()->json('data');
+        $export = $this->postJson('/api/v1/vendor/reports', ['type' => 'FEE_STATEMENT', 'resource_id' => $statement->id, 'format' => 'PDF', 'purpose' => 'Review monthly platform fee statement'], ['Idempotency-Key' => (string) Str::uuid7()])->assertAccepted()->json('data');
+        app(DocumentExportService::class)->process($export['id']);
+        self::assertStringStartsWith('%PDF-', $this->get('/api/v1/vendor/reports/'.$export['id'].'/download')->assertOk()->streamedContent());
+        $this->signInStoreMember($manager);
+        $this->getJson('/api/v1/vendor/reports/'.$export['id'].'/download')->assertForbidden();
+        $this->signInStoreMember($owner);
         self::assertSame(0, collect($view['channels'])->firstWhere('code', 'GCASH')['fee_centavos'], 'The platform absorbs its own bill processing charge.');
         $first = $this->postJson('/api/v1/vendor/finance/statements/'.$statement->id.'/payments', ['channel_code' => 'GCASH', 'amount_centavos' => 5000], ['Idempotency-Key' => (string) Str::uuid7()])->assertCreated()->json('data');
         $payment = DB::table('payments')->where('id', $first['id'])->first();
@@ -270,6 +308,162 @@ final class PhaseElevenFinanceFlowsTest extends TestCase
         self::assertSame([4000, 20000, 16000], [(int) $row->amount_centavos, (int) $row->target_fee_before_centavos, (int) $row->target_fee_after_centavos]);
         self::assertSame('PARTIALLY_CREDITED', DB::table('fee_assessments')->where('id', $assessmentId)->value('credited_state'));
         self::assertSame(20000, (int) DB::table('fee_assessments')->where('id', $assessmentId)->value('earned_centavos'), 'A credit never rewrites the earned source amount.');
+    }
+
+    public function test_partial_and_full_credits_reduce_original_overdue_debt_and_refund_only_the_collected_excess(): void
+    {
+        [$owner, $assessmentId, $statement, $preparer, $approver] = $this->issuedCommission();
+        $this->signInStoreMember($owner);
+        $payment = $this->postJson('/api/v1/vendor/finance/statements/'.$statement->id.'/payments', ['channel_code' => 'GCASH', 'amount_centavos' => 5000], ['Idempotency-Key' => (string) Str::uuid7()])->assertCreated()->json('data');
+        $this->completePayment($payment['id'])->assertOk();
+        $this->completePayment($payment['id'])->assertOk();
+        self::assertSame(1, DB::table('fee_payment_allocations')->where('payment_id', $payment['id'])->count());
+        CarbonImmutable::setTestNow(CarbonImmutable::create(2026, 11, 16, 10, 0, 0, 'Asia/Manila'));
+        Carbon::setTestNow(CarbonImmutable::now());
+        $this->signInAdmin($approver);
+        $this->getJson('/api/v1/admin/finance/statements?overdue=true')->assertOk()->assertJsonPath('data.0.outstanding_centavos', 15000);
+        $this->getJson('/api/v1/admin/finance/statements?overdue=true&state=DRAFT')->assertOk()->assertJsonCount(0, 'data');
+        $this->getJson('/api/v1/admin/finance/statements?overdue=invalid')->assertStatus(422);
+
+        $this->approveReturn($assessmentId, 200000, $preparer, $approver);
+        $this->getJson('/api/v1/admin/finance/statements?overdue=true')->assertOk()->assertJsonPath('data.0.outstanding_centavos', 11000)->assertJsonPath('data.0.credits_centavos', 4000)->assertJsonPath('data.0.paid_centavos', 5000);
+        $all = $this->getJson('/api/v1/admin/finance/kpis')->assertOk()->json('data');
+        $values = collect($all['finance'])->pluck('value_centavos', 'key');
+        self::assertSame([20000, 4000, 16000, 5000, 11000, 11000, 0], [$values['earned_commission'], $values['fee_credits'], $values['net_commission'], $values['collected'], $values['pending_commissions'], $values['overdue'], $values['refunded_commissions']]);
+        self::assertSame(20000, array_sum(array_column($all['trend'], 'earned_centavos')));
+        self::assertSame($values['net_platform_earnings'], array_sum(array_column($all['trend'], 'net_earnings_centavos')));
+        $november = $this->getJson('/api/v1/admin/finance/kpis?from=2026-11-01&to=2026-11-30')->assertOk()->json('data');
+        self::assertSame(-4000, collect($november['finance'])->firstWhere('key', 'net_commission')['value_centavos']);
+        self::assertSame(['DAY', 30, -4000], [$november['trend_granularity'], count($november['trend']), array_sum(array_map(static fn (array $day): int => $day['earned_centavos'] - $day['credits_centavos'], $november['trend']))],
+            'A short range is charted by day, with every day present so the axis stays even.');
+        self::assertSame('DAY', $all['trend_granularity']);
+        $year = $this->getJson('/api/v1/admin/finance/kpis?from=2026-01-01&to=2026-11-30')->assertOk()->json('data');
+        self::assertSame('MONTH', $year['trend_granularity']);
+        self::assertSame(20000, array_sum(array_column($year['trend'], 'earned_centavos')));
+        $this->signInStoreMember($owner);
+        $this->getJson('/api/v1/vendor/finance/statements/'.$statement->id)->assertOk()->assertJsonPath('data.outstanding_centavos', 11000)->assertJsonPath('data.due_on', '2026-11-15');
+        $this->getJson('/api/v1/vendor/finance/earnings')->assertOk()->assertJsonPath('data.earned_commission_centavos', 16000);
+        $this->getJson('/api/v1/vendor/finance/earnings?from=2026-11-01&to=2026-11-30')->assertOk()->assertJsonPath('data.earned_commission_centavos', -4000);
+
+        $adjustmentId = $this->approveReturn($assessmentId, 1000000, $preparer, $approver);
+        $this->getJson('/api/v1/admin/finance/statements?overdue=true')->assertOk()->assertJsonCount(0, 'data');
+        $refund = DB::table('refunds')->where('fee_adjustment_id', $adjustmentId)->first();
+        self::assertSame(['PLATFORM_FEE', 5000, $payment['id']], [$refund->target_type, (int) $refund->amount_centavos, $refund->source_payment_id]);
+        $this->getJson('/api/v1/admin/finance/kpis')->assertOk()->assertJsonPath('data.label', 'Recorded transactions');
+        $this->confirmFeeRefund($refund);
+        $this->signInAdmin($approver);
+        $values = collect($this->getJson('/api/v1/admin/finance/kpis')->assertOk()->json('data.finance'))->pluck('value_centavos', 'key');
+        self::assertSame([0, 0, 5000, 0, 0], [$values['net_commission'], $values['platform_revenue'], $values['refunded_commissions'], $values['net_collected'], $values['pending_commissions']]);
+        self::assertLessThan(0, $values['net_platform_earnings'], 'Recorded nonreturnable platform processing costs remain expenses after a full reversal.');
+        $this->getJson('/api/v1/admin/finance/payments?purpose=PLATFORM_FEE_PAYMENT')->assertOk()->assertJsonPath('data.0.status', 'PAID')->assertJsonPath('data.0.refunded_centavos', 5000)->assertJsonPath('data.0.net_collected_centavos', 0);
+        self::assertSame(0, app(StatementService::class)->draftMonthly(CarbonImmutable::create(2026, 12, 1, 0, 5, 0, 'Asia/Manila')), 'A credited original bill is never credited again on another statement.');
+    }
+
+    public function test_credit_on_a_fully_paid_statement_preserves_payments_and_counts_confirmed_refunds_once(): void
+    {
+        [$owner, $assessmentId, $statement, $preparer, $approver] = $this->issuedCommission();
+        $this->signInStoreMember($owner);
+        $payment = $this->postJson('/api/v1/vendor/finance/statements/'.$statement->id.'/payments', ['channel_code' => 'GCASH'], ['Idempotency-Key' => (string) Str::uuid7()])->assertCreated()->json('data');
+        $this->completePayment($payment['id'])->assertOk();
+        $adjustment = $this->approveReturn($assessmentId, 200000, $preparer, $approver);
+        $refund = DB::table('refunds')->where('fee_adjustment_id', $adjustment)->first();
+        self::assertSame(4000, (int) $refund->amount_centavos);
+        $this->signInStoreMember($owner);
+        $this->getJson('/api/v1/vendor/finance/statements/'.$statement->id)->assertOk()->assertJsonPath('data.paid_centavos', 20000)->assertJsonPath('data.credits_centavos', 4000)->assertJsonPath('data.outstanding_centavos', 0);
+        $this->signInAdmin($approver);
+        $values = collect($this->getJson('/api/v1/admin/finance/kpis')->assertOk()->json('data.finance'))->pluck('value_centavos', 'key');
+        self::assertSame([16000, 20000, 0], [$values['platform_revenue'], $values['collected'], $values['refunded_commissions']], 'An approved credit reverses earnings before cash refund success.');
+        $this->confirmFeeRefund($refund);
+        $this->signInAdmin($approver);
+        $values = collect($this->getJson('/api/v1/admin/finance/kpis')->assertOk()->json('data.finance'))->pluck('value_centavos', 'key');
+        self::assertSame([16000, 4000, 16000], [$values['platform_revenue'], $values['refunded_commissions'], $values['net_collected']], 'Refund settlement never reverses earned revenue a second time.');
+    }
+
+    public function test_historical_unallocated_credit_repair_is_idempotent_and_keeps_the_original_records(): void
+    {
+        [, $assessmentId, $statement, $preparer, $approver] = $this->issuedCommission();
+        $id = (string) Str::uuid7();
+        DB::transaction(function () use ($id, $assessmentId, $preparer, $approver): void {
+            DB::table('fee_adjustments')->insert(['id' => $id, 'fee_assessment_id' => $assessmentId, 'kind' => 'CREDIT', 'amount_centavos' => 4000,
+                'target_fee_before_centavos' => 20000, 'target_fee_after_centavos' => 16000, 'reason' => 'Previously approved return', 'prepared_by_user_id' => $preparer->id,
+                'approved_by_user_id' => $approver->id, 'approved_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
+            DB::table('fee_assessments')->where('id', $assessmentId)->update(['credited_centavos' => 4000, 'credited_state' => 'PARTIALLY_CREDITED']);
+            app(FinancialLedgerService::class)->post('PLATFORM_FEE', 'FEE_CREDIT', 'PLATFORM_FEE:CREDIT:'.$id, [
+                FinancialLedgerService::debit('FEE_REVENUE', 4000, 'FEE_ADJUSTMENT', $id), FinancialLedgerService::credit('FEE_RECEIVABLE', 4000, 'FEE_ADJUSTMENT', $id),
+            ], (string) Str::uuid7());
+        });
+        app(StatementService::class)->synchronizeCredits((string) Str::uuid7());
+        app(StatementService::class)->synchronizeCredits((string) Str::uuid7());
+        self::assertSame(16000, (int) DB::table('fee_statements')->where('id', $statement->id)->value('outstanding_centavos'));
+        self::assertSame(1, DB::table('fee_statement_lines')->where('fee_adjustment_id', $id)->count());
+        self::assertSame(20000, (int) DB::table('fee_assessments')->where('id', $assessmentId)->value('earned_centavos'));
+        self::assertSame(1, DB::table('financial_posting_batches')->where('source_event_key', 'PLATFORM_FEE:CREDIT:'.$id)->count());
+    }
+
+    public function test_historical_credit_carried_to_another_bill_is_relocated_without_deleting_its_source_line(): void
+    {
+        [, $assessmentId, $statement, $preparer, $approver] = $this->issuedCommission();
+        $adjustmentId = (string) Str::uuid7();
+        $laterId = (string) Str::uuid7();
+        $lineId = (string) Str::uuid7();
+        $later = (array) DB::table('fee_statements')->where('id', $statement->id)->first();
+        $later = array_replace($later, ['id' => $laterId, 'period_start' => '2026-11-01', 'period_end' => '2026-11-30', 'statement_reference' => 'SAMPLE-CARRIED-CREDIT',
+            'charges_centavos' => 10000, 'credits_centavos' => 4000, 'paid_centavos' => 0, 'outstanding_centavos' => 6000, 'balance_centavos' => 6000]);
+        DB::table('fee_statements')->insert($later);
+        DB::table('fee_adjustments')->insert(['id' => $adjustmentId, 'fee_assessment_id' => $assessmentId, 'kind' => 'CREDIT', 'amount_centavos' => 4000,
+            'target_fee_before_centavos' => 20000, 'target_fee_after_centavos' => 16000, 'reason' => 'Historic return credit', 'prepared_by_user_id' => $preparer->id,
+            'approved_by_user_id' => $approver->id, 'approved_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('fee_statement_lines')->insert(['id' => $lineId, 'fee_statement_id' => $laterId, 'fee_adjustment_id' => $adjustmentId, 'line_type' => 'CREDIT', 'amount_centavos' => 4000,
+            'description' => 'Historic credit on next monthly statement', 'created_at' => now(), 'updated_at' => now()]);
+        app(StatementService::class)->synchronizeCredits((string) Str::uuid7());
+        app(StatementService::class)->synchronizeCredits((string) Str::uuid7());
+        self::assertSame(16000, (int) DB::table('fee_statements')->where('id', $statement->id)->value('outstanding_centavos'));
+        self::assertSame(10000, (int) DB::table('fee_statements')->where('id', $laterId)->value('outstanding_centavos'));
+        self::assertSame($laterId, DB::table('fee_statement_lines')->where('id', $lineId)->value('fee_statement_id'));
+        self::assertSame(2, DB::table('fee_statement_lines')->where('corrects_line_id', $lineId)->count(), 'One reversal and one transfer preserve the original line and consume the credit exactly once.');
+    }
+
+    /** @return array{User, string, object, User, User} */
+    private function issuedCommission(): array
+    {
+        CarbonImmutable::setTestNow(CarbonImmutable::create(2026, 10, 20, 10, 0, 0, 'Asia/Manila'));
+        Carbon::setTestNow(CarbonImmutable::now());
+        [$store, $owner, $buyer, $orderId] = $this->awaitingPayment('Commission Records Store');
+        $attempt = $this->startPayment($buyer, $orderId);
+        $this->completePayment($attempt['id'])->assertOk();
+        DB::table('orders')->where('id', $orderId)->update(['order_state' => 'COMPLETED', 'fulfillment_state' => 'PICKED_UP', 'closed_at' => now()]);
+        app(FeeAssessmentService::class)->earnOnCompletion($orderId, (string) Str::uuid7());
+        $assessmentId = (string) DB::table('fee_assessments')->where('order_id', $orderId)->value('id');
+        CarbonImmutable::setTestNow(CarbonImmutable::create(2026, 11, 2, 10, 0, 0, 'Asia/Manila'));
+        Carbon::setTestNow(CarbonImmutable::now());
+        app(StatementService::class)->draftMonthly(CarbonImmutable::now());
+        $statement = DB::table('fee_statements')->where('vendor_organization_id', $store->id)->first();
+        $preparer = $this->admin('ADMIN_SUPERADMIN');
+        $approver = $this->admin('ADMIN_SUPERADMIN');
+        app(StatementService::class)->approve((string) $statement->id, (int) $approver->id, 1);
+
+        return [$owner, $assessmentId, $statement, $preparer, $approver];
+    }
+
+    private function approveReturn(string $assessmentId, int $returned, User $preparer, User $approver): string
+    {
+        $this->signInAdmin($preparer);
+        $proposal = $this->postJson('/api/v1/admin/finance/fee-credits', ['fee_assessment_id' => $assessmentId, 'returned_exclusive_centavos' => $returned, 'reason' => 'Approved cumulative returned materials.'])->assertCreated()->json('data.proposal_id');
+        $this->signInAdmin($approver);
+        $id = $this->postJson('/api/v1/admin/finance/fee-credits/'.$proposal.'/approve')->assertOk()->json('data.fee_adjustment_id');
+        $this->postJson('/api/v1/admin/finance/fee-credits/'.$proposal.'/approve')->assertStatus(409);
+
+        return $id;
+    }
+
+    private function confirmFeeRefund(object $refund): void
+    {
+        app(RefundService::class)->send((string) $refund->id, (string) Str::uuid7());
+        $providerId = (string) DB::table('refunds')->where('id', $refund->id)->value('provider_reference');
+        $body = $this->gateway->settleRefund($providerId);
+        $this->deliverWebhook($body)->assertOk();
+        $this->deliverWebhook($body)->assertOk();
+        self::assertSame('REFUNDED', DB::table('refunds')->where('id', $refund->id)->value('state'));
     }
 
     private function admin(string $role): User

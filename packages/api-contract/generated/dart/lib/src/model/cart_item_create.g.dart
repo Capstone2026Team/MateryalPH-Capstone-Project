@@ -151,6 +151,8 @@ class _$CartItemCreate extends CartItemCreate {
   final CartItemCreateOriginSourceEnum? originSource;
   @override
   final int? radiusKm;
+  @override
+  final String? workPackageLineId;
 
   factory _$CartItemCreate([void Function(CartItemCreateBuilder)? updates]) =>
       (CartItemCreateBuilder()..update(updates))._build();
@@ -164,7 +166,8 @@ class _$CartItemCreate extends CartItemCreate {
       this.latitude,
       this.longitude,
       this.originSource,
-      this.radiusKm})
+      this.radiusKm,
+      this.workPackageLineId})
       : super._();
   @override
   CartItemCreate rebuild(void Function(CartItemCreateBuilder) updates) =>
@@ -185,7 +188,8 @@ class _$CartItemCreate extends CartItemCreate {
         latitude == other.latitude &&
         longitude == other.longitude &&
         originSource == other.originSource &&
-        radiusKm == other.radiusKm;
+        radiusKm == other.radiusKm &&
+        workPackageLineId == other.workPackageLineId;
   }
 
   @override
@@ -200,6 +204,7 @@ class _$CartItemCreate extends CartItemCreate {
     _$hash = $jc(_$hash, longitude.hashCode);
     _$hash = $jc(_$hash, originSource.hashCode);
     _$hash = $jc(_$hash, radiusKm.hashCode);
+    _$hash = $jc(_$hash, workPackageLineId.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -215,7 +220,8 @@ class _$CartItemCreate extends CartItemCreate {
           ..add('latitude', latitude)
           ..add('longitude', longitude)
           ..add('originSource', originSource)
-          ..add('radiusKm', radiusKm))
+          ..add('radiusKm', radiusKm)
+          ..add('workPackageLineId', workPackageLineId))
         .toString();
   }
 }
@@ -266,6 +272,11 @@ class CartItemCreateBuilder
   int? get radiusKm => _$this._radiusKm;
   set radiusKm(int? radiusKm) => _$this._radiusKm = radiusKm;
 
+  String? _workPackageLineId;
+  String? get workPackageLineId => _$this._workPackageLineId;
+  set workPackageLineId(String? workPackageLineId) =>
+      _$this._workPackageLineId = workPackageLineId;
+
   CartItemCreateBuilder() {
     CartItemCreate._defaults(this);
   }
@@ -282,6 +293,7 @@ class CartItemCreateBuilder
       _longitude = $v.longitude;
       _originSource = $v.originSource;
       _radiusKm = $v.radiusKm;
+      _workPackageLineId = $v.workPackageLineId;
       _$v = null;
     }
     return this;
@@ -317,6 +329,7 @@ class CartItemCreateBuilder
           longitude: longitude,
           originSource: originSource,
           radiusKm: radiusKm,
+          workPackageLineId: workPackageLineId,
         );
     replace(_$result);
     return _$result;

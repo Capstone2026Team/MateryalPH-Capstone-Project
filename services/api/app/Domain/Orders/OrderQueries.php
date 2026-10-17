@@ -4,15 +4,21 @@ declare(strict_types=1);
 
 namespace App\Domain\Orders;
 
+use App\Domain\Disputes\DisputeFilingService;
+use App\Domain\Disputes\DisputeRules;
 use App\Domain\Finance\FinancialCalculator;
+use App\Domain\Fulfillment\DeliveryBuyerContact;
 use App\Domain\Fulfillment\FulfillmentView;
 use App\Domain\Inventory\InventoryAccess;
 use App\Domain\Inventory\StockAvailability;
+use App\Domain\Messaging\ConversationService;
+use App\Domain\Messaging\FulfillmentThreadService;
 use App\Domain\Payments\PayableAmounts;
 use App\Domain\Payments\PaymentPresenter;
 use App\Domain\Payments\PhysicalPaymentService;
 use App\Domain\Procurement\ListingPublicFacts;
 use App\Domain\Projects\ProjectBudget;
+use App\Support\PortalDateRange;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
@@ -29,13 +35,33 @@ final class OrderQueries
 {
     public const PER_PAGE = 20;
 
-    /** Buyer hub groups. */
+    /** Profile history includes actual cancellations and verified full or partial refunds. */
+    public const BUYER_HISTORY_GROUP = 'CANCELLED_REFUNDED';
+
+    /** Buyer My Orders status chips (approved by the project owner on 2026-10-10; Confirmation split out on 2026-10-14). */
     public const BUYER_GROUPS = [
-        'AWAITING_ACTION' => [OrderStates::AWAITING_BUYER_APPROVAL, OrderStates::AWAITING_NRPC_ACCEPTANCE, OrderStates::AWAITING_PAYMENT],
-        'ACTIVE' => [OrderStates::AWAITING_VENDOR_CONFIRMATION, OrderStates::CONFIRMED, 'PROCESSING', 'READY_FOR_PICKUP', 'OUT_FOR_DELIVERY', 'DELIVERED', 'PICKED_UP', 'CANCELLATION_REQUESTED'],
+        'CONFIRMATION' => [OrderStates::AWAITING_VENDOR_CONFIRMATION, OrderStates::AWAITING_BUYER_APPROVAL, OrderStates::AWAITING_NRPC_ACCEPTANCE, OrderStates::AWAITING_PAYMENT],
+        'PROCESSING' => [OrderStates::CONFIRMED, OrderStates::PROCESSING, OrderStates::CANCELLATION_REQUESTED],
+        'TO_SHIP' => OrderStates::HANDOVER_STAGE,
+        'TO_RECEIVE' => OrderStates::AWAITING_RECEIPT,
         'COMPLETED' => [OrderStates::COMPLETED],
-        'CANCELLED' => [OrderStates::DECLINED, OrderStates::EXPIRED, OrderStates::CANCELLED],
+        'CANCELLED' => OrderStates::CLOSED_BEFORE_FULFILLMENT,
         'DISPUTED' => ['DISPUTED'],
+    ];
+
+    public const PROCUREMENT_TYPES = ['ITEM_BASED', 'PROJECT_BASED'];
+
+    /** Buyer-facing wording for a closed order's reason code; unknown codes fall back to their words. */
+    private const CLOSURE_REASONS = [
+        'STOCK_UNAVAILABLE' => 'Item out of stock', 'STOCK_FAILURE' => 'Item out of stock',
+        'OPERATIONAL_INABILITY' => 'The store could not fulfill this order', 'DELIVERY_INABILITY' => 'The store could not deliver to your site',
+        'COMPLIANCE_RESTRICTION' => 'A product compliance restriction applies', 'ACCOUNT_RESTRICTION' => 'The store account is restricted',
+        'BUYER_AGREEMENT' => 'Cancelled by agreement with you', 'VENDOR_AGREEMENT' => 'Cancelled by agreement with the store',
+        'CHANGE_OF_REQUIREMENT' => 'Your requirements changed', 'DUPLICATE_ORDER' => 'Duplicate order', 'BUDGET_CHANGE' => 'Budget changed',
+        'PROJECT_DELAY' => 'Project delayed', 'SCHEDULE_CONFLICT' => 'Schedule conflict', 'OTHER' => 'Other reason',
+        'BUYER_WITHDRAWAL' => 'You withdrew the request', 'BUYER_CANCELLATION' => 'You cancelled the order', 'VENDOR_CANCELLATION' => 'Cancelled by the store',
+        'VENDOR_RESPONSE_TIMEOUT' => 'The store did not respond in time', 'BUYER_RESPONSE_TIMEOUT' => 'The confirmed version was not accepted in time',
+        'PAYMENT_WINDOW_EXPIRED' => 'Payment was not completed in time', 'DISPUTE_FULL_REFUND' => 'A case awarded a full refund',
     ];
 
     /** Vendor workspace status filters. */
@@ -54,22 +80,86 @@ final class OrderQueries
     ) {}
 
     /**
-     * @param  array{group?: string, page?: int}  $filters
+     * @param  array{group?: string, procurement_type?: string, page?: int}  $filters
      * @return array{items: list<array<string, mixed>>, meta: array<string, mixed>}
      */
     public function buyerList(Request $request, array $filters): array
     {
         $buyerId = $this->access->buyerProfileId($request);
+        $userId = (int) $request->user()->id;
         $this->expiry->expireDueFor('buyer_profile_id', $buyerId);
-        $query = DB::table('orders as o')->where('o.buyer_profile_id', $buyerId);
+        $type = $filters['procurement_type'] ?? null;
+        $scoped = static fn (Builder $query, string $column): Builder => $type === null ? $query : $query->where($column, $type);
+        $query = $scoped(DB::table('orders as o')->where('o.buyer_profile_id', $buyerId), 'o.procurement_type');
         $group = $filters['group'] ?? 'ALL';
-        if ($group !== 'ALL') {
+        if ($group === self::BUYER_HISTORY_GROUP) {
+            $query->where(static fn (Builder $history): Builder => $history->where('o.order_state', OrderStates::CANCELLED)
+                ->orWhereIn('o.refund_state', ['PARTIALLY_REFUNDED', 'REFUNDED']));
+        } elseif ($group !== 'ALL') {
             $query->whereIn('o.order_state', self::BUYER_GROUPS[$group]);
         }
 
         return $this->page($query, (int) ($filters['page'] ?? 1), fn (object $order): array => $this->summary($order) + ['next_action' => $this->buyerNextAction($order),
-            'payment_retryable' => $order->order_state === OrderStates::AWAITING_PAYMENT && in_array(DB::table('payments')->where('order_id', $order->id)->orderByDesc('created_at')->orderByDesc('id')->value('state'), ['FAILED', 'EXPIRED'], true)], ['group' => $group,
-                'counts' => $this->counts(DB::table('orders')->where('buyer_profile_id', $buyerId), self::BUYER_GROUPS)]);
+            'payment_retryable' => $order->order_state === OrderStates::AWAITING_PAYMENT && in_array(DB::table('payments')->where('order_id', $order->id)->orderByDesc('created_at')->orderByDesc('id')->value('state'), ['FAILED', 'EXPIRED'], true)]
+            + $this->buyerCard($order, $userId), ['group' => $group, 'procurement_type' => $type,
+                'counts' => $this->counts($scoped(DB::table('orders')->where('buyer_profile_id', $buyerId), 'procurement_type'), self::BUYER_GROUPS)]);
+    }
+
+    /**
+     * What a My Orders card shows without opening the order: its Fulfillment Messages thread, the actions the card
+     * offers (each one the server would also allow in Order Details), the return deadline, the paid channel and why
+     * a closed order ended.
+     *
+     * @return array<string, mixed>
+     */
+    private function buyerCard(object $order, int $buyerUserId): array
+    {
+        $state = (string) $order->order_state;
+        $thread = DB::table('conversations')->where('order_id', $order->id)->where('purpose', 'FULFILLMENT')->first();
+        $actions = [];
+        if (in_array($state, OrderStates::AWAITING_RECEIPT, true)) {
+            $actions[] = 'CONFIRM_RECEIPT';
+            if (! DB::table('fulfillment_issues')->where('order_id', $order->id)->where('state', 'OPEN')->exists()) {
+                $actions[] = 'REPORT_PROBLEM';
+            }
+        }
+        $returnDue = null;
+        $caseId = null;
+        if ($state === OrderStates::COMPLETED) {
+            $eligibility = app(DisputeFilingService::class)->eligibility($order, 'BUYER');
+            $caseId = $eligibility['active_case_id'];
+            if ($caseId !== null) {
+                $actions[] = 'VIEW_DISPUTE';
+            } elseif ($eligibility['available']) {
+                $actions[] = 'FILE_DISPUTE';
+                $returnDue = $eligibility['post_completion_deadline'];
+            }
+        }
+        if ($order->procurement_type === 'ITEM_BASED' && OrderStates::isClosed($state)) {
+            $actions[] = 'BUY_AGAIN';
+        }
+        $closure = null;
+        if (in_array($state, OrderStates::CLOSED_BEFORE_FULFILLMENT, true)) {
+            $actions[] = 'VIEW_CANCELLATION';
+            $code = DB::table('cancellation_decisions')->where('order_id', $order->id)->value('reason_code') ?? $order->terminal_reason_code;
+            $closure = $code === null ? null : ['code' => (string) $code, 'label' => self::closureLabel((string) $code)];
+        }
+        $channel = $order->payment_method !== 'ONLINE' ? null : DB::table('payments as p')->join('payment_channel_fee_versions as f', 'f.id', '=', 'p.channel_fee_version_id')
+            ->where('p.order_id', $order->id)->where('p.state', 'PAID')->orderByDesc('p.created_at')->value('f.display_name');
+
+        return [
+            'fulfillment_conversation' => $thread === null ? null : ['id' => (string) $thread->id, 'read_only' => FulfillmentThreadService::writability($thread)['read_only'],
+                'unread_count' => ConversationService::unreadFor($buyerUserId, (string) $thread->id)],
+            'card_actions' => $actions, 'return_refund_due_at' => $returnDue, 'dispute_case_id' => $caseId,
+            'payment_channel_name' => $channel === null ? null : (string) $channel, 'closure_reason' => $closure,
+        ];
+    }
+
+    private static function closureLabel(string $code): string
+    {
+        $bare = (string) preg_replace('/^(VENDOR|BUYER)_(?=[A-Z])/', '', $code);
+
+        return self::CLOSURE_REASONS[$code] ?? self::CLOSURE_REASONS[$bare] ?? ucfirst(strtolower(str_replace('_', ' ', $bare)));
     }
 
     /** @return array<string, mixed> */
@@ -86,7 +176,7 @@ final class OrderQueries
             $detail['destination']['access_instructions'] = $order->access_instructions_encrypted === null ? null : Crypt::decryptString((string) $order->access_instructions_encrypted);
         }
         $cancellation = app(CancellationService::class)->buyerAvailability($order);
-        $fulfillment = app(FulfillmentView::class)->present($order, false, '/buyers/orders/'.$order->id.'/files/');
+        $fulfillment = app(FulfillmentView::class)->present($order, false, '/buyers/orders/'.$order->id.'/files/', $request->user());
         $refunds = app(OrderRefundTimeline::class)->present($order, false, '/buyers/orders/'.$order->id.'/files/');
         $openIssue = ($fulfillment['issue']['state'] ?? null) === 'OPEN';
         $detail['available_actions'] = array_values(array_filter([
@@ -105,31 +195,43 @@ final class OrderQueries
             $openIssue ? 'RESOLVE_PROBLEM' : null,
             array_filter($refunds['reimbursements'], static fn (array $row): bool => $row['state'] === 'VENDOR_REIMBURSEMENT_PENDING' && $row['has_evidence']) !== [] ? 'ACKNOWLEDGE_REIMBURSEMENT' : null,
         ]));
+        $dispute = self::disputeSummary($order);
+        $eligibility = app(DisputeFilingService::class)->eligibility($order, 'BUYER');
+        if ($dispute !== null && in_array($dispute['status'], DisputeRules::ACTIVE, true)) {
+            $detail['available_actions'][] = 'VIEW_DISPUTE';
+        } elseif ($eligibility['available']) {
+            $detail['available_actions'][] = 'FILE_DISPUTE';
+        }
+        if (! in_array($order->order_state, [...OrderStates::PENDING_ACCEPTANCE, OrderStates::AWAITING_PAYMENT, OrderStates::DECLINED, OrderStates::EXPIRED], true)) {
+            $detail['available_actions'][] = 'REQUEST_INVOICE';
+        }
         $detail['payment'] = $this->payment($order, true);
         $detail['fulfillment'] = $fulfillment;
         $detail['cancellation'] = $cancellation;
         $detail['refund_timeline'] = $refunds;
+        $detail['dispute'] = $dispute === null ? null : $dispute + ['filing_available' => $eligibility['available'], 'filing_note' => $eligibility['reason']];
+        $detail['invoice'] = self::invoiceSummary($order);
 
         return $detail;
     }
 
     /**
-     * @param  array{group?: string, q?: string, page?: int}  $filters
+     * @param  array{group?: string, closed_state?: string, q?: string, page?: int}  $filters
      * @return array{items: list<array<string, mixed>>, meta: array<string, mixed>}
      */
     public function vendorList(Request $request, array $filters): array
     {
         $scope = $this->access->vendorScope($request);
         $this->expiry->expireDueFor('vendor_organization_id', $scope['organization_id']);
-        $base = DB::table('orders as o')->where('o.vendor_organization_id', $scope['organization_id']);
-        if ($scope['role'] === 'FULFILLMENT') {
-            $base->whereNotIn('o.order_state', [...OrderStates::PENDING_ACCEPTANCE, OrderStates::AWAITING_PAYMENT, OrderStates::DECLINED])
-                ->whereIn('o.id', DB::table('order_fulfillment_assignments')->select('order_id')->where('user_id', $request->user()->getKey())->whereNull('ended_at'));
-        }
+        $base = $this->vendorBaseQuery($scope['organization_id'], $scope['role'], (int) $request->user()->getKey());
         $query = clone $base;
+        PortalDateRange::apply($query, 'o.submitted_at', $filters);
         $group = $filters['group'] ?? 'ALL';
         if ($group !== 'ALL') {
             $query->whereIn('o.order_state', self::VENDOR_GROUPS[$group]);
+        }
+        if ($group === 'CLOSED' && isset($filters['closed_state'])) {
+            $query->where('o.order_state', $filters['closed_state']);
         }
         $term = trim((string) ($filters['q'] ?? ''));
         if ($term !== '') {
@@ -140,9 +242,43 @@ final class OrderQueries
 
         return $this->page($query, (int) ($filters['page'] ?? 1), fn (object $order): array => $this->summary($order) + [
             'buyer' => ['display_name' => $this->buyerName((string) $order->buyer_profile_id)],
-            'primary_action' => $this->vendorPrimaryAction($order),
+            'primary_action' => $this->vendorPrimaryAction($order, $scope['role'] === 'FULFILLMENT'),
             'nrpc_indicator' => (int) $order->nrpc_centavos > 0,
         ], ['group' => $group, 'counts' => $this->counts($base, self::VENDOR_GROUPS)]);
+    }
+
+    public function activeBuyerCount(Request $request): int
+    {
+        return DB::table('orders')->where('buyer_profile_id', $this->access->buyerProfileId($request))
+            ->whereNotIn('order_state', self::VENDOR_GROUPS['CLOSED'])->count();
+    }
+
+    public function pendingFulfillmentCount(Request $request): int
+    {
+        $scope = $this->access->vendorScope($request);
+
+        return $this->vendorBaseQuery($scope['organization_id'], $scope['role'], (int) $request->user()->getKey())
+            ->whereIn('o.order_state', [OrderStates::CONFIRMED, OrderStates::PROCESSING, ...OrderStates::HANDOVER_STAGE])->count();
+    }
+
+    /** Count current, nonterminal orders using the same visibility rules as the Vendor workspace. */
+    public function activeVendorCount(Request $request): int
+    {
+        $scope = $this->access->vendorScope($request);
+
+        return $this->vendorBaseQuery($scope['organization_id'], $scope['role'], (int) $request->user()->getKey())
+            ->whereNotIn('o.order_state', self::VENDOR_GROUPS['CLOSED'])->count();
+    }
+
+    private function vendorBaseQuery(string $organizationId, string $role, int $userId): Builder
+    {
+        $query = DB::table('orders as o')->where('o.vendor_organization_id', $organizationId);
+        if ($role === 'FULFILLMENT') {
+            $query->whereNotIn('o.order_state', [...OrderStates::PENDING_ACCEPTANCE, OrderStates::AWAITING_PAYMENT, OrderStates::DECLINED])
+                ->whereIn('o.id', DB::table('order_fulfillment_assignments')->select('order_id')->where('user_id', $userId)->whereNull('ended_at'));
+        }
+
+        return $query;
     }
 
     /** @return array<string, mixed> */
@@ -166,7 +302,8 @@ final class OrderQueries
         }
         $pending = $order->order_state === OrderStates::AWAITING_VENDOR_CONFIRMATION;
         $terms = $this->terms->current();
-        $detail['buyer'] = ['display_name' => $this->buyerName((string) $order->buyer_profile_id)];
+        $detail['buyer'] = ['display_name' => $this->buyerName((string) $order->buyer_profile_id)]
+            + app(DeliveryBuyerContact::class)->present($request, $order, $scope);
         $detail['auto_accept'] = json_decode((string) ($order->auto_accept_outcome ?? 'null'), true);
         $detail['reservations'] = DB::table('inventory_holds as h')->join('order_lines as l', 'l.id', '=', 'h.order_line_id')->where('h.source_type', 'ORDER')->where('h.source_id', $order->id)
             ->orderBy('l.line_number')->get(['h.order_line_id', 'h.quantity', 'h.state', 'h.release_reason', 'h.created_at', 'h.released_at'])
@@ -184,8 +321,10 @@ final class OrderQueries
         $detail['permissions']['can_approve_online_balance'] = $order->payment_method !== 'ONLINE' && $order->online_balance_approved_at === null && OrderAccess::allows($scope, OrderAccess::REVISE);
         $cancellations = app(CancellationService::class);
         $milestoneable = in_array($order->order_state, [OrderStates::CONFIRMED, OrderStates::PROCESSING, ...OrderStates::HANDOVER_STAGE], true);
-        $detail['permissions']['can_record_milestone'] = $milestoneable && OrderAccess::allows($scope, OrderAccess::RECORD_FULFILLMENT);
+        $detail['permissions']['can_record_milestone'] = $milestoneable && OrderAccess::allows($scope, OrderAccess::RECORD_FULFILLMENT)
+            && ($order->order_state !== OrderStates::OUT_FOR_DELIVERY || $scope['role'] === 'FULFILLMENT');
         $detail['permissions']['can_assign_fulfillment'] = ! OrderStates::isClosed((string) $order->order_state) && $order->accepted_at !== null
+            && ! in_array($order->fulfillment_state, ['DELIVERED', 'PICKED_UP', 'COMPLETED'], true)
             && ! in_array($order->order_state, [OrderStates::AWAITING_PAYMENT], true) && OrderAccess::allows($scope, OrderAccess::ASSIGN_FULFILLMENT);
         $detail['permissions']['can_cancel'] = OrderAccess::allows($scope, OrderAccess::CANCEL) && in_array($order->order_state, [OrderStates::AWAITING_PAYMENT, OrderStates::CONFIRMED,
             OrderStates::PROCESSING, OrderStates::CANCELLATION_REQUESTED, ...OrderStates::HANDOVER_STAGE], true);
@@ -193,7 +332,7 @@ final class OrderQueries
         $detail['permissions']['can_report_vehicle_issue'] = $milestoneable && OrderAccess::allows($scope, OrderAccess::RECORD_FULFILLMENT);
         $detail['permissions']['can_retry_refund'] = OrderAccess::allows($scope, OrderAccess::RETRY_REFUND);
         $detail['permissions']['can_respond_problem'] = OrderAccess::allows($scope, OrderAccess::RECORD_FULFILLMENT);
-        $detail['fulfillment'] = app(FulfillmentView::class)->present($order, true, '/vendor/orders/'.$order->id.'/files/');
+        $detail['fulfillment'] = app(FulfillmentView::class)->present($order, true, '/vendor/orders/'.$order->id.'/files/', $request->user());
         $open = DB::table('cancellation_requests')->where('order_id', $order->id)->where('state', 'REQUESTED')->first();
         $detail['cancellation'] = ['explanation' => $cancellations->vendorExplanation($order), 'reason_codes' => CancellationService::VENDOR_REASONS,
             'nrpc_retainable_centavos' => $open === null ? 0 : $cancellations->retainableNrpc($order),
@@ -206,11 +345,35 @@ final class OrderQueries
         $detail['refund_timeline'] = $timeline;
         // Order-specific payment status only; store-wide finance stays Owner-only in Finance.
         $detail['payment'] = $this->payment($order, false);
-        $detail['primary_action'] = $this->vendorPrimaryAction($order);
+        $detail['primary_action'] = $this->vendorPrimaryAction($order, $scope['role'] === 'FULFILLMENT');
         $detail['nrpc_terms'] = $terms === null ? null : ['id' => $terms['id'], 'version' => $terms['version'], 'title' => $terms['title'], 'available' => $terms['content'] !== null];
         $detail['decline_reasons'] = OrderConfirmationService::DECLINE_REASONS;
+        // Case and invoice links follow their own narrow permissions; neither exposes store-wide finance.
+        $dispute = self::disputeSummary($order);
+        $detail['dispute'] = $dispute === null ? null : (OrderAccess::allows($scope, 'portal.disputes') || OrderAccess::allows($scope, 'disputes.fulfillment_evidence') ? $dispute : null);
+        $detail['invoice'] = OrderAccess::allows($scope, 'invoices.view') ? self::invoiceSummary($order) : null;
+        $detail['permissions']['can_file_dispute'] = OrderAccess::allows($scope, 'disputes.respond') && app(DisputeFilingService::class)->eligibility($order, 'VENDOR')['available'];
+        $detail['permissions']['can_upload_invoice'] = OrderAccess::allows($scope, 'invoices.upload');
 
         return $detail;
+    }
+
+    /** @return array{case_id: string, reference: string, status: string, filed_by_party: string}|null */
+    private static function disputeSummary(object $order): ?array
+    {
+        $case = DB::table('dispute_cases')->where('order_id', $order->id)->orderByDesc('created_at')->first(['id', 'reference', 'status', 'filed_by_party']);
+
+        return $case === null ? null : ['case_id' => (string) $case->id, 'reference' => (string) $case->reference, 'status' => (string) $case->status, 'filed_by_party' => (string) $case->filed_by_party];
+    }
+
+    /** @return array{status: string, records: int, open_requests: int} */
+    private static function invoiceSummary(object $order): array
+    {
+        $goods = DB::table('invoice_records')->where('order_id', $order->id)->where('invoice_type', 'VENDOR_GOODS_INVOICE')->exists();
+        $sale = ! in_array($order->order_state, [...OrderStates::PENDING_ACCEPTANCE, OrderStates::AWAITING_PAYMENT, OrderStates::DECLINED, OrderStates::EXPIRED], true);
+
+        return ['status' => $goods ? 'ISSUED' : ($sale ? 'NOT_YET_UPLOADED' : 'NOT_DUE'), 'records' => DB::table('invoice_records')->where('order_id', $order->id)->count(),
+            'open_requests' => DB::table('invoice_requests')->where('order_id', $order->id)->where('state', '<>', 'CLOSED')->count()];
     }
 
     /** @return array<string, mixed> */
@@ -258,7 +421,7 @@ final class OrderQueries
         $destination = OrderDeliveryPlanner::destination($order);
         $nrpc = $this->nrpc($order, $lines);
         $projectContext = null;
-        if ($order->work_package_version_id !== null) {
+        if ($order->work_package_version_id !== null && (! $forVendor || $order->procurement_type === 'PROJECT_BASED')) {
             $version = DB::table('work_package_versions as v')->join('work_packages as w', 'w.id', '=', 'v.work_package_id')->join('projects as p', 'p.id', '=', 'w.project_id')
                 ->where('v.id', $order->work_package_version_id)->first(['v.id', 'v.version', 'v.content_hash', 'v.content', 'p.name as project_name']);
             if ($version !== null) {
@@ -290,7 +453,7 @@ final class OrderQueries
                     'alternate_drop_off' => OrderDeliveryPlanner::publicPoint($destination['alternate_drop_off'] ?? null), 'vehicle_endpoint' => $destination['vehicle_endpoint'] ?? null,
                     'access_instructions' => $forVendor && $order->access_instructions_encrypted !== null ? Crypt::decryptString((string) $order->access_instructions_encrypted) : null]),
             'delivery' => $this->delivery($order, $submitted),
-            'money' => $this->money($order, $commercial, $nrpc),
+            'money' => $this->money($order, $commercial, $nrpc, $content['discount'] ?? null),
             'nrpc' => $nrpc,
             'timeline' => DB::table('order_status_history')->where('order_id', $order->id)->orderBy('created_at')->orderBy('id')
                 ->get(['state_family', 'from_state', 'to_state', 'source', 'actor_role', 'reason_code', 'snapshot_version', 'created_at'])
@@ -355,16 +518,18 @@ final class OrderQueries
     /**
      * @param  array<string, mixed>|null  $commercial
      * @param  array<string, mixed>|null  $nrpc
+     * @param  array<string, mixed>|null  $discount
      * @return array<string, mixed>
      */
-    private function money(object $order, ?array $commercial, ?array $nrpc): array
+    private function money(object $order, ?array $commercial, ?array $nrpc, ?array $discount = null): array
     {
         $delivery = $order->fulfillment_method === 'PICKUP' ? ['status' => 'NOT_APPLICABLE', 'amount_centavos' => 0]
             : ($order->delivery_centavos === null ? ['status' => 'PENDING_VENDOR_CONFIRMATION', 'amount_centavos' => null] : ['status' => 'CONFIRMED', 'amount_centavos' => (int) $order->delivery_centavos]);
         $estimate = null;
         if ($delivery['status'] === 'PENDING_VENDOR_CONFIRMATION') {
             $first = DB::table('order_snapshots')->where('order_id', $order->id)->where('version', 1)->first();
-            $range = $first === null ? null : (OrderCommercial::content($first)['delivery_estimate']['estimate'] ?? null);
+            $submitted = $first === null ? [] : OrderCommercial::content($first);
+            $range = ($submitted['delivery_estimate'] ?? $submitted['system_estimate']['delivery'] ?? [])['estimate'] ?? null;
             $estimate = is_array($range) ? ['min_centavos' => (int) $range['fee_min_centavos'], 'max_centavos' => (int) $range['fee_max_centavos']] : null;
         }
         $matrix = $commercial !== null && $commercial['commercial_total_centavos'] !== null ? FinancialCalculator::paymentMatrix($commercial, (string) $order->payment_method, null) : null;
@@ -382,6 +547,7 @@ final class OrderQueries
             'status' => $order->accepted_at !== null ? 'ACCEPTED' : ((int) $order->current_snapshot_version > 1 ? 'AWAITING_BUYER_ACCEPTANCE' : 'ADVISORY_UNTIL_VENDOR_CONFIRMATION'),
             'materials_gross_centavos' => (int) ($commercial['materials_gross_centavos'] ?? $order->materials_centavos),
             'vendor_discount_centavos' => (int) ($commercial['vendor_discount_centavos'] ?? 0),
+            'discount' => $discount,
             'materials_subtotal_centavos' => (int) ($commercial['materials_payable_centavos'] ?? $order->materials_centavos),
             'included_vat_centavos' => $vat, 'vat_exclusive_centavos' => (int) ($commercial['materials_exclusive_centavos'] ?? $order->materials_centavos),
             'vat_treatment' => $vat > 0 ? 'PRICES_INCLUDE_VAT' : 'NO_INCLUDED_VAT',
@@ -442,6 +608,9 @@ final class OrderQueries
         if ($row !== null) {
             $snapshot = json_decode((string) $row->snapshot, true) ?: [];
             $confirmed = [
+                'system_recommendation' => $snapshot['system_recommendation'] ?? [],
+                'recommendation_changed' => (bool) ($snapshot['recommendation_changed'] ?? false),
+                'change_reason' => $snapshot['change_reason'] ?? $snapshot['manual_review_note'] ?? null,
                 'vehicles' => array_map(static fn (array $vehicle): array => [
                     'name' => $vehicle['configuration']['name'] ?? null, 'vehicle_category' => $vehicle['configuration']['vehicle_category'] ?? null,
                     'vehicle_type' => $vehicle['configuration']['vehicle_type'] ?? null, 'custom_type_name' => $vehicle['configuration']['custom_type_name'] ?? null,
@@ -449,6 +618,8 @@ final class OrderQueries
                     'heavy_classification' => $vehicle['configuration']['heavy_classification'] ?? null, 'configuration_version' => $vehicle['configuration_version'] ?? null,
                     'rate_version' => $vehicle['rate_version'] ?? null, 'number_of_vehicles' => (int) $vehicle['number_of_vehicles'], 'total_vehicle_trips' => (int) $vehicle['total_vehicle_trips'],
                     'per_trip_centavos' => (int) $vehicle['per_trip_centavos'], 'trip_total_centavos' => (int) $vehicle['trip_total_centavos'],
+                    'mobilization_basis' => $vehicle['mobilization_basis'] ?? null, 'mobilization_fee_centavos' => (int) ($vehicle['mobilization_fee_centavos'] ?? 0),
+                    'mobilization_total_centavos' => (int) ($vehicle['mobilization_total_centavos'] ?? 0),
                 ], $snapshot['vehicles'] ?? []),
                 'distance_meters' => (int) ($snapshot['distance_meters'] ?? 0), 'route_source' => $snapshot['route_source'] ?? null, 'basis' => $snapshot['basis'] ?? null,
                 // The Phase 5 advisory names the alternate endpoint ALTERNATIVE_DROP_OFF; clients use the cart vocabulary.
@@ -458,12 +629,13 @@ final class OrderQueries
                 'calculation_version' => $snapshot['calculation_version'] ?? null, 'confirmed_by_role' => $snapshot['confirmed_by']['role'] ?? null, 'confirmed_at' => $snapshot['confirmed_at'] ?? null,
             ];
         }
-        $estimate = $submitted['delivery_estimate'] ?? null;
+        $estimate = $submitted['delivery_estimate'] ?? $submitted['system_estimate']['delivery'] ?? null;
 
         return [
             'status' => $confirmed !== null ? 'CONFIRMED' : (($estimate['status'] ?? null) === 'ADVISORY_ESTIMATE' ? 'ADVISORY_ESTIMATE' : 'PENDING_VENDOR_REVIEW'),
             'estimate' => is_array($estimate['estimate'] ?? null) ? ['fee_min_centavos' => (int) $estimate['estimate']['fee_min_centavos'], 'fee_max_centavos' => (int) $estimate['estimate']['fee_max_centavos'],
-                'trips_min' => (int) $estimate['estimate']['trips_min'], 'trips_max' => (int) $estimate['estimate']['trips_max']] : null,
+                'trips_min' => (int) $estimate['estimate']['trips_min'], 'trips_max' => (int) $estimate['estimate']['trips_max'],
+                'options' => array_values(array_filter($estimate['estimate']['options'] ?? [], static fn (array $option): bool => isset($option['vehicle_id'])))] : null,
             'confirmed' => $confirmed,
         ];
     }
@@ -520,13 +692,13 @@ final class OrderQueries
         };
     }
 
-    private function vendorPrimaryAction(object $order): string
+    private function vendorPrimaryAction(object $order, bool $canRecordDelivery): string
     {
         return match ($order->order_state) {
             OrderStates::AWAITING_VENDOR_CONFIRMATION => 'CONFIRM',
             OrderStates::AWAITING_BUYER_APPROVAL, OrderStates::AWAITING_NRPC_ACCEPTANCE => 'WAITING_FOR_BUYER',
             OrderStates::AWAITING_PAYMENT => 'WAITING_FOR_PAYMENT',
-            default => FulfillmentView::vendorNext($order),
+            default => FulfillmentView::vendorNext($order, $canRecordDelivery),
         };
     }
 

@@ -5,6 +5,11 @@ import 'package:dio/dio.dart' show MultipartFile;
 import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 
 import '../../core/api_guard.dart';
+import '../../core/invoice_billing_input.dart';
+import '../disputes/disputes_repository.dart';
+import '../projects/projects_repository.dart';
+import '../trust/reviews_repository.dart';
+import '../item_procurement/procurement_models.dart' show formatPeso;
 import 'order_models.dart';
 
 /// Buyer order submission and decisions through `/api/v1` only. Every mutation carries an
@@ -16,11 +21,33 @@ abstract interface class OrdersRepository {
     required bool splitConfirmed,
     required String idempotencyKey,
     Map<String, String> paymentMethods = const {},
+    String? workPackageId,
+    int? workPackageLockVersion,
+    String? budgetOverrideReason,
+    InvoiceBillingInput? invoiceDetails,
   });
 
-  Future<OrderListPage> orders({required String group, int page = 1});
+  /// [group] is a My Orders chip; [procurementType] is the Item (ITEM_BASED) or Project
+  /// (PROJECT_BASED) tab, or null for both.
+  Future<OrderListPage> orders({
+    required String group,
+    String? procurementType,
+    int page = 1,
+  });
 
   Future<OrderDetailView> order(String orderId);
+
+  /// The order's Fulfillment Messages thread, opened for an older open order that has none yet.
+  Future<OrderConversationRefView> openFulfillmentConversation(
+    String orderId, {
+    required String idempotencyKey,
+  });
+
+  /// Re-adds a closed Item-Based order's lines to the cart at today's prices. Nothing is reserved.
+  Future<BuyAgainResultView> buyAgain(
+    String orderId, {
+    required String idempotencyKey,
+  });
 
   Future<OrderDetailView> approveRevision(
     String orderId, {
@@ -127,6 +154,15 @@ abstract interface class OrdersRepository {
 
   /// Reads an order-scoped evidence file (`/buyers/orders/{id}/files/{fileId}`) through the API.
   Future<Uint8List> orderFile(String orderId, String fileId);
+
+  /// Transaction disputes and Vendor invoice copies for this Buyer's orders.
+  DisputesRepository get disputes;
+
+  /// Verified-purchase ratings and reviews of this Buyer's completed orders and public listings.
+  ReviewsRepository get reviews;
+
+  /// Project linking uses the same authenticated client and session handling as checkout.
+  ProjectsRepository? get projects;
 }
 
 final class ApiOrdersRepository implements OrdersRepository {
@@ -142,12 +178,34 @@ final class ApiOrdersRepository implements OrdersRepository {
   api.BuyerOrdersApi get _orders => _client.getBuyerOrdersApi();
 
   @override
+  late final ProjectsRepository projects = ProjectsRepository.withGuard(
+    client: _client,
+    guard: _api,
+  );
+
+  @override
+  late final DisputesRepository disputes = ApiDisputesRepository(
+    client: _client,
+    guard: _api,
+  );
+
+  @override
+  late final ReviewsRepository reviews = ApiReviewsRepository(
+    client: _client,
+    guard: _api,
+  );
+
+  @override
   Future<CheckoutView> submitCheckout({
     required int cartLockVersion,
     required List<String> vendorIds,
     required bool splitConfirmed,
     required String idempotencyKey,
     Map<String, String> paymentMethods = const {},
+    String? workPackageId,
+    int? workPackageLockVersion,
+    String? budgetOverrideReason,
+    InvoiceBillingInput? invoiceDetails,
   }) => _api(() async {
     final response = await _orders.submitBuyerCheckout(
       idempotencyKey: idempotencyKey,
@@ -156,6 +214,17 @@ final class ApiOrdersRepository implements OrdersRepository {
           ..cartLockVersion = cartLockVersion
           ..vendorIds = SetBuilder<String>(vendorIds)
           ..splitConfirmed = splitConfirmed
+          ..workPackageId = workPackageId
+          ..workPackageLockVersion = workPackageLockVersion
+          ..budgetOverrideReason = budgetOverrideReason
+          ..invoiceDetails = invoiceDetails == null
+              ? null
+              : api.CheckoutInvoiceDetails(
+                  (b) => b
+                    ..billingName = invoiceDetails.name
+                    ..billingAddress = invoiceDetails.address
+                    ..tin = invoiceDetails.tin,
+                ).toBuilder()
           ..paymentMethods = paymentMethods.isEmpty
               ? null
               : MapBuilder<String, api.CheckoutSubmitRequestPaymentMethodsEnum>(
@@ -173,24 +242,68 @@ final class ApiOrdersRepository implements OrdersRepository {
   });
 
   @override
-  Future<OrderListPage> orders({required String group, int page = 1}) => _api(
-    () async {
-      final response = await _orders.listBuyerOrders(group: group, page: page);
-      final envelope = _api.required(response.data);
-      return OrderListPage(
-        items: envelope.data.map(_summary).toList(),
-        counts: envelope.meta.counts.toMap(),
-        page: envelope.meta.page,
-        hasMore: envelope.meta.hasMore,
-        total: envelope.meta.total,
-      );
-    },
-  );
+  Future<OrderListPage> orders({
+    required String group,
+    String? procurementType,
+    int page = 1,
+  }) => _api(() async {
+    final response = await _orders.listBuyerOrders(
+      group: group,
+      procurementType: procurementType,
+      page: page,
+    );
+    final envelope = _api.required(response.data);
+    return OrderListPage(
+      items: envelope.data.map(_summary).toList(),
+      counts: envelope.meta.counts.toMap(),
+      page: envelope.meta.page,
+      hasMore: envelope.meta.hasMore,
+      total: envelope.meta.total,
+    );
+  });
 
   @override
   Future<OrderDetailView> order(String orderId) => _api(() async {
     final response = await _orders.getBuyerOrder(orderId: orderId);
     return _detail(_api.required(response.data?.data));
+  });
+
+  @override
+  Future<OrderConversationRefView> openFulfillmentConversation(
+    String orderId, {
+    required String idempotencyKey,
+  }) => _api(() async {
+    final response = await _orders.openBuyerFulfillmentConversation(
+      orderId: orderId,
+      idempotencyKey: idempotencyKey,
+    );
+    final thread = _api.required(response.data?.data);
+    return OrderConversationRefView(
+      id: thread.conversationId,
+      readOnly: thread.readOnly,
+    );
+  });
+
+  @override
+  Future<BuyAgainResultView> buyAgain(
+    String orderId, {
+    required String idempotencyKey,
+  }) => _api(() async {
+    final response = await _orders.buyBuyerOrderAgain(
+      orderId: orderId,
+      idempotencyKey: idempotencyKey,
+    );
+    final result = _api.required(response.data?.data);
+    return BuyAgainResultView(
+      added: [for (final line in result.added) line.displayName],
+      skipped: [
+        for (final line in result.skipped)
+          BuyAgainSkippedView(
+            displayName: line.displayName,
+            message: line.message,
+          ),
+      ],
+    );
   });
 
   @override
@@ -341,6 +454,22 @@ final class ApiOrdersRepository implements OrdersRepository {
     nextAction: order.nextAction?.name,
     paymentRetryable: order.paymentRetryable ?? false,
     autoAccepted: order.confirmationSource?.name == 'AUTO_ACCEPT',
+    procurementType: order.procurementType.name,
+    paymentMethod: order.paymentMethod.name,
+    paymentChannelName: order.paymentChannelName,
+    expectedFulfillmentDate: order.expectedFulfillmentDate?.toString(),
+    fulfillmentConversation: order.fulfillmentConversation == null
+        ? null
+        : OrderConversationRefView(
+            id: order.fulfillmentConversation!.id,
+            readOnly: order.fulfillmentConversation!.readOnly,
+            unreadCount: order.fulfillmentConversation!.unreadCount,
+          ),
+    cardActions:
+        order.cardActions?.map((action) => action.name).toSet() ?? const {},
+    returnRefundDueAt: order.returnRefundDueAt,
+    disputeCaseId: order.disputeCaseId,
+    closureReason: order.closureReason?.label,
   );
 
   static OrderPointView? _point(api.OrderPoint? point) => point == null
@@ -353,6 +482,10 @@ final class ApiOrdersRepository implements OrdersRepository {
   static OrderDetailView _detail(api.OrderDetail order) {
     final destination = order.destination;
     final confirmed = order.delivery.confirmed;
+    final submittedOptions = order.delivery.estimate?.options;
+    final recommended = submittedOptions != null && submittedOptions.isNotEmpty
+        ? submittedOptions
+        : confirmed?.systemRecommendation;
     final nrpc = order.nrpc;
     final money = order.money;
     return OrderDetailView(
@@ -397,6 +530,14 @@ final class ApiOrdersRepository implements OrdersRepository {
           )
           .toList(),
       money: MoneyView(
+        discount: money.discount == null
+            ? null
+            : VendorDiscountView(
+                scope: money.discount!.scope.name,
+                percent: money.discount!.percent,
+                basisCentavos: money.discount!.basisCentavos,
+                deductionCentavos: money.discount!.deductionCentavos,
+              ),
         status: money.status.name,
         materialsGrossCentavos: money.materialsGrossCentavos,
         vendorDiscountCentavos: money.vendorDiscountCentavos,
@@ -438,6 +579,14 @@ final class ApiOrdersRepository implements OrdersRepository {
               vehicleEndpoint: destination.vehicleEndpoint?.name,
               accessInstructions: destination.accessInstructions,
             ),
+      deliveryRecommendation:
+          recommended
+              ?.map(
+                (option) =>
+                    '${option.vehicleName} · ${option.vehicles} vehicle(s) · ${option.trips} trip(s) · ${formatPeso(option.feeCentavos)}',
+              )
+              .toList() ??
+          const [],
       confirmedDelivery: confirmed == null
           ? null
           : ConfirmedDeliveryView(
@@ -457,6 +606,7 @@ final class ApiOrdersRepository implements OrdersRepository {
               finalFeeCentavos: confirmed.finalFeeCentavos,
               fulfillmentDate: confirmed.fulfillmentDate?.toString(),
               arrangement: confirmed.arrangement,
+              changeReason: confirmed.changeReason,
               intended: _point(confirmed.intended),
               alternateDropOff: _point(confirmed.alternateDropOff),
             ),
@@ -505,6 +655,23 @@ final class ApiOrdersRepository implements OrdersRepository {
       refundTimeline: order.refundTimeline == null
           ? null
           : _refundTimeline(order.refundTimeline!),
+      dispute: order.dispute == null
+          ? null
+          : OrderDisputeRefView(
+              caseId: order.dispute!.caseId,
+              reference: order.dispute!.reference,
+              status: order.dispute!.status.name,
+              filedByParty: order.dispute!.filedByParty.name,
+              filingAvailable: order.dispute!.filingAvailable ?? false,
+              filingNote: order.dispute!.filingNote,
+            ),
+      invoice: order.invoice == null
+          ? null
+          : OrderInvoiceRefView(
+              status: order.invoice!.status.name,
+              records: order.invoice!.records,
+              openRequests: order.invoice!.openRequests,
+            ),
     );
   }
 
@@ -519,6 +686,10 @@ final class ApiOrdersRepository implements OrdersRepository {
           receiverKind: proof.receiverKind?.name,
           photoPath: proof.photoPath,
           signaturePath: proof.signaturePath,
+          note: proof.note,
+          recordedBy: proof.recordedBy,
+          additionalPhotoPaths:
+              proof.additionalPhotoPaths?.toList() ?? const [],
         );
 
   static FulfillmentView _fulfillment(api.OrderFulfillment fulfillment) {
@@ -534,6 +705,14 @@ final class ApiOrdersRepository implements OrdersRepository {
       nextAction: fulfillment.nextAction.name,
       proof: _proof(fulfillment.proof),
       assigneeName: fulfillment.assignment?.displayName,
+      vehicleName: fulfillment.assignment?.vehicle?.name,
+      assignedAt: fulfillment.assignment?.assignedAt,
+      deliveryIssues: fulfillment.vehicleIssues
+          .map(
+            (issue) =>
+                '${issue.category.name.replaceAll('_', ' ')}: ${issue.description}',
+          )
+          .toList(),
       steps: fulfillment.steps
           .map(
             (step) => FulfillmentStepView(
@@ -569,6 +748,7 @@ final class ApiOrdersRepository implements OrdersRepository {
       thread: FulfillmentThreadView(
         available: thread.available,
         readOnly: thread.readOnly,
+        unreadCount: thread.unreadCount ?? 0,
         conversationId: thread.conversationId,
         notice: thread.notice,
       ),
@@ -603,41 +783,14 @@ final class ApiOrdersRepository implements OrdersRepository {
 
   static RefundTimelineView _refundTimeline(api.OrderRefundTimeline timeline) {
     final decision = timeline.decision;
+    final items = refundTimelineFromApi(
+      refunds: timeline.refunds,
+      reimbursements: timeline.reimbursements,
+    );
     return RefundTimelineView(
       noLongerDueCentavos: timeline.noLongerDueCentavos,
-      refunds: timeline.refunds
-          .map(
-            (refund) => RefundItemView(
-              id: refund.id,
-              trigger: refund.trigger.name,
-              state: refund.state.name,
-              displayState: refund.displayState.name,
-              amountCentavos: refund.amountCentavos,
-              principalCentavos: refund.principalCentavos,
-              processingFeeCentavos: refund.processingFeeCentavos,
-              originalMethod: refund.originalMethod,
-              message: refund.message,
-              requestedAt: refund.requestedAt,
-              completedAt: refund.completedAt,
-              arrivalNote: refund.arrivalNote,
-            ),
-          )
-          .toList(),
-      reimbursements: timeline.reimbursements
-          .map(
-            (item) => ReimbursementItemView(
-              id: item.id,
-              state: item.state.name,
-              amountCentavos: item.amountCentavos,
-              method: item.method,
-              message: item.message,
-              confirmedByReview: item.confirmedByReview,
-              hasEvidence: item.hasEvidence,
-              reimbursedAt: item.reimbursedAt,
-              buyerAcknowledgedAt: item.buyerAcknowledgedAt,
-            ),
-          )
-          .toList(),
+      refunds: items.refunds,
+      reimbursements: items.reimbursements,
       decision: decision == null
           ? null
           : CancellationDecisionSummary(
@@ -931,3 +1084,45 @@ final class ApiOrdersRepository implements OrdersRepository {
     );
   }
 }
+
+/// Refund and reimbursement rows shared by the order timeline and the Dispute-Conclusion Refunds of a
+/// case: the same generated items, mapped once.
+({List<RefundItemView> refunds, List<ReimbursementItemView> reimbursements})
+refundTimelineFromApi({
+  required Iterable<api.RefundTimelineItem> refunds,
+  required Iterable<api.ReimbursementTimelineItem> reimbursements,
+}) => (
+  refunds: refunds
+      .map(
+        (refund) => RefundItemView(
+          id: refund.id,
+          trigger: refund.trigger.name,
+          state: refund.state.name,
+          displayState: refund.displayState.name,
+          amountCentavos: refund.amountCentavos,
+          principalCentavos: refund.principalCentavos,
+          processingFeeCentavos: refund.processingFeeCentavos,
+          originalMethod: refund.originalMethod,
+          message: refund.message,
+          requestedAt: refund.requestedAt,
+          completedAt: refund.completedAt,
+          arrivalNote: refund.arrivalNote,
+        ),
+      )
+      .toList(),
+  reimbursements: reimbursements
+      .map(
+        (item) => ReimbursementItemView(
+          id: item.id,
+          state: item.state.name,
+          amountCentavos: item.amountCentavos,
+          method: item.method,
+          message: item.message,
+          confirmedByReview: item.confirmedByReview,
+          hasEvidence: item.hasEvidence,
+          reimbursedAt: item.reimbursedAt,
+          buyerAcknowledgedAt: item.buyerAcknowledgedAt,
+        ),
+      )
+      .toList(),
+);

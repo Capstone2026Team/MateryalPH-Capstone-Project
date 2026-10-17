@@ -8,13 +8,15 @@ use App\Domain\Finance\FeeAssessmentService;
 use App\Domain\Finance\FinancialSnapshotService;
 use App\Domain\Operations\OutboxPublisher;
 use App\Domain\Payments\PhysicalPaymentService;
+use App\Domain\Settings\PlatformSettings;
 use Carbon\CarbonImmutable;
 
 /**
  * Finalizes the commercial version both parties accepted: freezes the FIN-02 financial snapshot, records the
  * ESTIMATED FIN-03 fee assessment and moves the order to AWAITING_PAYMENT or CONFIRMED. Online payment and any
  * NRPC assurance payment open the payment window on entering AWAITING_PAYMENT (shown to Buyers as Pending
- * Payment): 24 hours, `payments.order_window_hours`, changed from 45 minutes by the project owner on 2026-10-02.
+ * Payment): 24 hours by default (changed from 45 minutes by the project owner on 2026-10-02), read from the versioned
+ * Platform Setting `orders.pending_payment_window_hours` when the order enters the state.
  * Physical payment without NRPC confirms at once; payment stays NOT_REQUIRED.
  */
 final class OrderAcceptance
@@ -38,7 +40,7 @@ final class OrderAcceptance
         $frozen = $this->finance->freeze($order, $snapshot, $commercial, $nrpcRecordId);
         $this->fees->estimate($order, $frozen['id'], $frozen['fee_policy_version_id'], $frozen['materials_exclusive_centavos'], $actor->correlationId);
         $online = self::requiresOnlinePayment($order, (int) $commercial['nrpc_centavos']);
-        $expires = $online ? CarbonImmutable::now()->addHours((int) config('payments.order_window_hours', 24)) : null;
+        $expires = $online ? CarbonImmutable::now()->addHours(PlatformSettings::current()->int('orders.pending_payment_window_hours')) : null;
         $changes = [OrderStates::ORDER => $online ? OrderStates::AWAITING_PAYMENT : OrderStates::CONFIRMED] + ($online ? [OrderStates::PAYMENT => 'PENDING'] : []);
         $order = $this->transitions->apply($order, $changes, $actor, $reasonCode, null, [
             'accepted_at' => now(), 'accepted_snapshot_version' => (int) $snapshot->version, 'buyer_response_due_at' => null, 'payment_expires_at' => $expires,

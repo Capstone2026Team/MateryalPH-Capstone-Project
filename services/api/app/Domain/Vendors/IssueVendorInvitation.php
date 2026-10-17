@@ -83,16 +83,16 @@ final class IssueVendorInvitation
             if (DB::table('users')->whereRaw('LOWER(email) = ?', [$email])->where('account_type', '!=', 'VENDOR')->exists()) {
                 throw new AuthenticationException('INVITATION_NOT_AVAILABLE', 'This team invitation cannot be issued.', 422);
             }
-            if (DB::table('vendor_memberships')->where('vendor_organization_id', $organizationId)->whereIn('user_id', DB::table('users')->whereRaw('LOWER(email) = ?', [$email])->pluck('id'))->exists()) {
+            if (DB::table('vendor_memberships')->whereNull('deleted_at')->where('vendor_organization_id', $organizationId)->whereIn('user_id', DB::table('users')->whereRaw('LOWER(email) = ?', [$email])->pluck('id'))->exists()) {
                 throw new AuthenticationException('INVITATION_NOT_AVAILABLE', 'This person already belongs to the Vendor team.', 422);
             }
 
-            $superseded = DB::table('vendor_invitations')->where('vendor_organization_id', $organizationId)->where('normalized_email', $email)->whereNull('accepted_at')->whereNull('revoked_at')->lockForUpdate()->get();
+            $superseded = DB::table('vendor_invitations')->where('vendor_organization_id', $organizationId)->where('normalized_email', $email)->whereNull('accepted_at')->whereNull('revoked_at')->whereNull('deleted_at')->lockForUpdate()->get();
             foreach ($superseded as $previousInvitation) {
                 if ($currentScope['role'] !== 'OWNER' && $previousInvitation->role === 'STORE_MANAGER') {
                     throw new AuthenticationException('PERMISSION_DENIED', 'A delegated Manager cannot replace a Store Manager invitation.', 403);
                 }
-                DB::table('vendor_invitations')->where('id', $previousInvitation->id)->update(['revoked_at' => now(), 'updated_at' => now()]);
+                DB::table('vendor_invitations')->where('id', $previousInvitation->id)->update(['revoked_at' => now(), 'lock_version' => $previousInvitation->lock_version + 1, 'updated_at' => now()]);
                 $this->audit->account($request, 'VENDOR_INVITATION_REVOKED', 'VENDOR_INVITATION', $previousInvitation->id, after: ['reason' => 'REPLACED']);
             }
             $token = bin2hex(random_bytes(32));

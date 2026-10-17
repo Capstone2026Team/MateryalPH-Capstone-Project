@@ -11,6 +11,7 @@ part 'admin_cancellation_request_row.g.dart';
 /// AdminCancellationRequestRow
 ///
 /// Properties:
+/// * [orderId]
 /// * [id]
 /// * [orderReference]
 /// * [vendorName]
@@ -20,6 +21,9 @@ part 'admin_cancellation_request_row.g.dart';
 /// * [overdue]
 @BuiltValue()
 abstract class AdminCancellationRequestRow implements Built<AdminCancellationRequestRow, AdminCancellationRequestRowBuilder> {
+  @BuiltValueField(wireName: r'order_id')
+  String? get orderId;
+
   @BuiltValueField(wireName: r'id')
   String get id;
 
@@ -64,6 +68,13 @@ class _$AdminCancellationRequestRowSerializer implements PrimitiveSerializer<Adm
     AdminCancellationRequestRow object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.orderId != null) {
+      yield r'order_id';
+      yield serializers.serialize(
+        object.orderId,
+        specifiedType: const FullType(String),
+      );
+    }
     yield r'id';
     yield serializers.serialize(
       object.id,
@@ -128,6 +139,14 @@ class _$AdminCancellationRequestRowSerializer implements PrimitiveSerializer<Adm
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'order_id':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.orderId = valueDes;
+          break;
         case r'id':
           final valueDes = serializers.deserialize(
             value,

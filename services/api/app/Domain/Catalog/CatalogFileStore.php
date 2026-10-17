@@ -30,7 +30,8 @@ final class CatalogFileStore
 
     public function __construct(private readonly VendorFileScanner $scanner, private readonly PublicStoreMediaStorage $publicMedia) {}
 
-    public function store(UploadedFile $file, string $ownerType, string $ownerId, string $purpose, int $uploaderId, string $contentType): string
+    /** @param  ?int  $uploaderId  Null only for a register snapshot synced from a configured feed. */
+    public function store(UploadedFile $file, string $ownerType, string $ownerId, string $purpose, ?int $uploaderId, string $contentType): string
     {
         $path = $file->getRealPath();
         if ($path === false) {
@@ -39,7 +40,7 @@ final class CatalogFileStore
         $this->scanner->assertClean($path);
         $fileId = (string) Str::uuid7();
         $extension = match ($contentType) {
-            'image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'text/csv' => 'csv', default => 'bin',
+            'image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'text/csv' => 'csv', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' => 'xlsx', default => 'bin',
         };
         $visibility = 'PRIVATE';
         $disk = $this->privateDisk();

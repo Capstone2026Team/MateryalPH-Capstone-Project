@@ -79,23 +79,25 @@ async function fits(page: Page) {
 }
 
 async function capture(page: Page, name: string) {
-  const directory = resolve('../../docs/design/evidence/phase-5')
+  const directory = resolve('../../docs/design/evidence/portal-standardization')
   mkdirSync(directory, { recursive: true })
   await page.addStyleTag({ content: 'html, body, .portal-layout, .portal-workspace { height: auto !important; max-height: none !important; overflow: visible !important; } .portal-workspace > header { position: static !important; }' })
-  await page.screenshot({ path: resolve(directory, `${page.viewportSize()!.width}-${name}.png`), fullPage: true })
+  await page.screenshot({ path: resolve(directory, `inventory-${page.viewportSize()!.width}-${name}.png`), fullPage: true })
 }
 
 test('the inventory ledger keeps its header and identifiers fixed and scrolls only inside its own region', async ({ page }) => {
   await vendorFixture(page)
   await page.goto('/products/inventory')
-  const ledger = page.getByRole('table', { name: 'Inventory ledger' })
+  const ledger = page.viewportSize()!.width >= 1024 ? page.getByRole('table', { name: 'Inventory ledger' }) : page.locator('div[aria-label="Inventory ledger"]')
   await expect(ledger).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Inventory' })).toHaveAttribute('aria-current', 'page')
+  await expect(page.getByRole('tab', { name: 'Inventory' })).toHaveAttribute('aria-selected', 'true')
+  await page.getByText('Stock confirmation alerts', { exact: true }).click()
   const band = page.getByRole('region', { name: /need a stock confirmation/ })
   await expect(band.getByText('Hidden from Buyers', { exact: true })).toBeVisible()
   await expect(band.getByText(/\(Asia\/Manila\)/).first()).toBeVisible()
   await expect(ledger.getByText('Limited Stock')).toBeVisible()
   await expect(ledger.getByText('Paused')).toBeVisible()
+  if (page.viewportSize()!.width >= 1024) {
   const layout = await page.evaluate(() => {
     const region = document.querySelector<HTMLElement>('[role="region"][aria-label="Inventory ledger"]')!
     const head = region.querySelector('thead')!
@@ -104,14 +106,19 @@ test('the inventory ledger keeps its header and identifiers fixed and scrolls on
   })
   expect(layout.headPosition).toBe('sticky')
   expect(layout.firstColumnPosition).toBe('sticky')
-  if (page.viewportSize()!.width <= 1024) expect(layout.scrolls, 'narrow widths scroll the ledger inside its own region').toBe(true)
+  if (page.viewportSize()!.width === 1024) expect(layout.scrolls, 'narrow widths scroll the ledger inside its own region').toBe(true)
+  } else {
+    await expect(ledger.getByRole('article')).toHaveCount(3)
+    await expect(ledger.getByRole('button', { name: /^View inventory details for/ })).toHaveCount(3)
+  }
   await fits(page)
   await capture(page, 'inventory-ledger')
 })
 
-test('an inline edit conflict keeps typed values and shows the saved row', async ({ page }) => {
+test('an inventory edit dialog conflict keeps typed values and shows the saved row', async ({ page }) => {
   const calls = await vendorFixture(page)
   await page.goto('/products/inventory')
+  await page.getByRole('button', { name: /^View inventory details for Portland cement Type I/ }).click()
   await page.getByRole('button', { name: /^Edit Portland cement Type I/ }).click()
   const form = page.getByRole('form', { name: /^Edit Portland cement Type I/ })
   await form.getByLabel('Quantity on hand (BAG)').fill('150')
@@ -128,7 +135,7 @@ test('an inline edit conflict keeps typed values and shows the saved row', async
 test('auto-accept shows its pause state in text and asks to confirm the allotment it restores', async ({ page }) => {
   await vendorFixture(page)
   await page.goto('/products/inventory')
-  await page.getByRole('button', { name: /^Auto-accept for Portland cement Type I/ }).click()
+  await page.getByRole('switch', { name: /^Auto-accept for Portland cement Type I/ }).click()
   const panel = page.getByRole('region', { name: 'Item-Based auto-accept' })
   await expect(panel.getByText('Paused — the allotment reached zero')).toBeVisible()
   await expect(panel.getByRole('switch', { name: 'Enable auto-accept' })).toHaveAttribute('aria-checked', 'true')
@@ -148,6 +155,7 @@ test('vehicles open with an overview and retain per-vehicle editing and validati
   await expect(page.getByRole('heading', { name: 'Vehicles', exact: true })).toBeVisible()
   const summary = page.getByRole('region', { name: 'Fleet overview' })
   await expect(summary.getByText('Total vehicles', { exact: true })).toBeVisible()
+  await summary.getByRole('button', { name: 'About In use', exact: true }).focus()
   await expect(summary.getByText('Vehicle assignments across 1 order Out for Delivery')).toBeVisible()
   await expect(summary.getByText('6', { exact: true })).toHaveCount(2)
   await expect(summary.getByText('4', { exact: true })).toBeVisible()

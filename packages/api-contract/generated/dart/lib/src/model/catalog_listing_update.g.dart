@@ -96,6 +96,8 @@ class _$CatalogListingUpdate extends CatalogListingUpdate {
   @override
   final BuiltList<String>? tagIds;
   @override
+  final BuiltList<String>? customTags;
+  @override
   final String? brand;
   @override
   final String? model;
@@ -122,6 +124,7 @@ class _$CatalogListingUpdate extends CatalogListingUpdate {
       this.otherLabel,
       this.materialCategoryId,
       this.tagIds,
+      this.customTags,
       this.brand,
       this.model,
       this.manufacturer,
@@ -151,6 +154,7 @@ class _$CatalogListingUpdate extends CatalogListingUpdate {
         otherLabel == other.otherLabel &&
         materialCategoryId == other.materialCategoryId &&
         tagIds == other.tagIds &&
+        customTags == other.customTags &&
         brand == other.brand &&
         model == other.model &&
         manufacturer == other.manufacturer &&
@@ -171,6 +175,7 @@ class _$CatalogListingUpdate extends CatalogListingUpdate {
     _$hash = $jc(_$hash, otherLabel.hashCode);
     _$hash = $jc(_$hash, materialCategoryId.hashCode);
     _$hash = $jc(_$hash, tagIds.hashCode);
+    _$hash = $jc(_$hash, customTags.hashCode);
     _$hash = $jc(_$hash, brand.hashCode);
     _$hash = $jc(_$hash, model.hashCode);
     _$hash = $jc(_$hash, manufacturer.hashCode);
@@ -193,6 +198,7 @@ class _$CatalogListingUpdate extends CatalogListingUpdate {
           ..add('otherLabel', otherLabel)
           ..add('materialCategoryId', materialCategoryId)
           ..add('tagIds', tagIds)
+          ..add('customTags', customTags)
           ..add('brand', brand)
           ..add('model', model)
           ..add('manufacturer', manufacturer)
@@ -246,6 +252,12 @@ class CatalogListingUpdateBuilder
   ListBuilder<String> get tagIds => _$this._tagIds ??= ListBuilder<String>();
   set tagIds(ListBuilder<String>? tagIds) => _$this._tagIds = tagIds;
 
+  ListBuilder<String>? _customTags;
+  ListBuilder<String> get customTags =>
+      _$this._customTags ??= ListBuilder<String>();
+  set customTags(ListBuilder<String>? customTags) =>
+      _$this._customTags = customTags;
+
   String? _brand;
   String? get brand => _$this._brand;
   set brand(String? brand) => _$this._brand = brand;
@@ -290,6 +302,7 @@ class CatalogListingUpdateBuilder
       _otherLabel = $v.otherLabel;
       _materialCategoryId = $v.materialCategoryId;
       _tagIds = $v.tagIds?.toBuilder();
+      _customTags = $v.customTags?.toBuilder();
       _brand = $v.brand;
       _model = $v.model;
       _manufacturer = $v.manufacturer;
@@ -329,6 +342,7 @@ class CatalogListingUpdateBuilder
             otherLabel: otherLabel,
             materialCategoryId: materialCategoryId,
             tagIds: _tagIds?.build(),
+            customTags: _customTags?.build(),
             brand: brand,
             model: model,
             manufacturer: manufacturer,
@@ -341,6 +355,8 @@ class CatalogListingUpdateBuilder
       try {
         _$failedField = 'tagIds';
         _tagIds?.build();
+        _$failedField = 'customTags';
+        _customTags?.build();
 
         _$failedField = 'technicalAttributes';
         _technicalAttributes?.build();

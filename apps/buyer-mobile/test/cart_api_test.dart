@@ -7,6 +7,114 @@ import 'package:materyalph/features/item_procurement/procurement_repository.dart
 import 'package:materyalph_api_client/materyalph_api_client.dart';
 
 void main() {
+  test(
+    'product delivery preview uses the generated API and preserves the fee range and blockers',
+    () async {
+      var manual = false;
+      var requests = 0;
+      final client = MateryalphApiClient(
+        dio: Dio(BaseOptions(baseUrl: 'https://api.example.test')),
+        interceptors: [
+          InterceptorsWrapper(
+            onRequest: (options, handler) {
+              requests++;
+              expect(options.path, '/buyers/cart/delivery-preview');
+              expect(options.data, {
+                'listing_variant_id': '01995000-0000-7000-8000-000000000001',
+                'quantity': '100',
+              });
+              handler.resolve(
+                Response<Object?>(
+                  requestOptions: options,
+                  statusCode: 200,
+                  data: {
+                    'data': {
+                      'status': manual ? 'MANUAL_REVIEW' : 'ADVISORY_ESTIMATE',
+                      'issues': manual
+                          ? [
+                              {
+                                'code': 'DELIVERY_MANUAL_REVIEW',
+                                'severity': 'INFO',
+                                'message': 'Product weight is missing.',
+                              },
+                            ]
+                          : [],
+                      'endpoint': 'ALTERNATE_DROP_OFF',
+                      'route': {
+                        'distance_meters': 4200,
+                        'duration_seconds': 600,
+                        'basis': 'ROAD_ROUTE_STORE_TO_VEHICLE_DROP_OFF',
+                        'source': 'GOOGLE_ROUTES',
+                        'computed_at': '2026-10-07T06:00:00Z',
+                        'cached': false,
+                      },
+                      'straight_line_meters': 3000,
+                      'coverage_km': 40,
+                      'estimate': manual
+                          ? null
+                          : {
+                              'fee_min_centavos': 121000,
+                              'fee_max_centavos': 140000,
+                              'trips_min': 2,
+                              'trips_max': 2,
+                              'vehicles_min': 1,
+                              'vehicles_max': 2,
+                              'options': [
+                                {
+                                  'load_key': 'selected-product',
+                                  'vehicle_name': 'Box truck',
+                                  'vehicle_type': 'BOX_TRUCK',
+                                  'vehicles': 2,
+                                  'trips': 2,
+                                  'fee_centavos': 121000,
+                                  'fee_per_trip_centavos': 60500,
+                                },
+                              ],
+                            },
+                      'manual_review_reasons': manual ? ['WEIGHT_UNKNOWN'] : [],
+                      'confirmed_offer': null,
+                      'calculation_version': 'delivery-v1',
+                      'notice':
+                          'Estimate only. The Vendor confirms the final fee.',
+                    },
+                    'meta': {},
+                    'errors': [],
+                  },
+                ),
+              );
+            },
+          ),
+        ],
+      );
+      final repository = ApiProcurementRepository(
+        client: client,
+        onSessionExpired: () async => fail('Session remains active'),
+      );
+      final estimate = await repository.productDeliveryPreview(
+        variantId: '01995000-0000-7000-8000-000000000001',
+        quantity: '100',
+      );
+      expect(estimate.estimate!.feeMinCentavos, 121000);
+      expect(estimate.estimate!.feeMaxCentavos, 140000);
+      expect(estimate.estimate!.options.single.trips, 2);
+      expect(estimate.endpoint, 'ALTERNATE_DROP_OFF');
+      expect(estimate.confirmedOffer, false);
+      manual = true;
+      final unavailable = await repository.productDeliveryPreview(
+        variantId: '01995000-0000-7000-8000-000000000001',
+        quantity: '100',
+      );
+      expect(unavailable.estimate, isNull);
+      expect(unavailable.manualReviewReasons, ['WEIGHT_UNKNOWN']);
+      expect(unavailable.issues.single.message, 'Product weight is missing.');
+      expect(
+        requests,
+        2,
+        reason: 'Preview never adds a cart line or places an order.',
+      );
+    },
+  );
+
   test('generated client decodes an empty cart response', () async {
     final client = MateryalphApiClient(
       dio: Dio(BaseOptions(baseUrl: 'https://api.example.test')),

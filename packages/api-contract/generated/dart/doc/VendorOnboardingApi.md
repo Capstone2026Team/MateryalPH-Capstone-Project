@@ -20,6 +20,7 @@ Method | HTTP request | Description
 [**getAuthoritativeVendorOnboarding**](VendorOnboardingApi.md#getauthoritativevendoronboarding) | **GET** /vendor/onboarding |
 [**getVendorOnboarding**](VendorOnboardingApi.md#getvendoronboarding) | **GET** /vendors/onboarding |
 [**getVendorPrivateFileUrl**](VendorOnboardingApi.md#getvendorprivatefileurl) | **GET** /vendors/onboarding/files/{fileId} |
+[**getVendorTeamPerformance**](VendorOnboardingApi.md#getvendorteamperformance) | **GET** /vendors/account/activity/performance |
 [**inviteVendorTeamMember**](VendorOnboardingApi.md#invitevendorteammember) | **POST** /vendors/account/invitations |
 [**listVendorTeamActivity**](VendorOnboardingApi.md#listvendorteamactivity) | **GET** /vendors/account/activity |
 [**listVendorTeamInvitations**](VendorOnboardingApi.md#listvendorteaminvitations) | **GET** /vendors/account/invitations |
@@ -565,6 +566,57 @@ Name | Type | Description  | Notes
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **getVendorTeamPerformance**
+> VendorTeamPerformanceEnvelope getVendorTeamPerformance(memberId, from, to)
+
+
+
+Team Tracking statistics for one team member, chosen by the member's current fixed role. Store Manager and Owner members report every work area; Store Staff sales, quotations, order confirmations, disputes and inventory; Customer Service Staff sales, quotation drafts, order confirmations and disputes; Inventory Staff inventory; Fulfillment Staff fulfillment. Same authority as Team Tracking history; refresh on team.activity.changed.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getVendorOnboardingApi();
+final String memberId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final Date from = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit both dates for All dates.
+final Date to = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit both dates for All dates.
+
+try {
+    final response = api.getVendorTeamPerformance(memberId, from, to);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling VendorOnboardingApi->getVendorTeamPerformance: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **memberId** | **String**|  |
+ **from** | **Date**| Inclusive Asia/Manila calendar date; omit both dates for All dates. | [optional]
+ **to** | **Date**| Inclusive Asia/Manila calendar date; omit both dates for All dates. | [optional]
+
+### Return type
+
+[**VendorTeamPerformanceEnvelope**](VendorTeamPerformanceEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **inviteVendorTeamMember**
 > VendorInvitationEnvelope inviteVendorTeamMember(idempotencyKey, vendorInvitationRequest)
 
@@ -617,9 +669,11 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **listVendorTeamActivity**
-> VendorTeamActivityEnvelope listVendorTeamActivity(page)
+> VendorTeamActivityEnvelope listVendorTeamActivity(page, memberId, role, days, category, from, to)
 
 
+
+Team Tracking synchronizes through payload-free team.activity.changed events on the existing viewer-bound Vendor inbox channel after audit, Vendor message or quotation activity commits. Delivery rechecks current organization, membership and staff-management authority; delegated Managers receive only non-manager activity invalidations. Re-fetch this endpoint for authoritative data. Clients poll automatically while realtime is unavailable and after reconnect.
 
 ### Example
 ```dart
@@ -631,9 +685,15 @@ import 'package:materyalph_api_client/api.dart';
 
 final api = MateryalphApiClient().getVendorOnboardingApi();
 final int page = 56; // int |
+final String memberId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String role = role_example; // String | Role recorded at the time of the action.
+final int days = 56; // int |
+final String category = category_example; // String |
+final Date from = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Immutable operation timestamp; messages use sent_at. Omitted days and dates mean All dates.
+final Date to = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Immutable operation timestamp; messages use sent_at. Omitted days and dates mean All dates.
 
 try {
-    final response = api.listVendorTeamActivity(page);
+    final response = api.listVendorTeamActivity(page, memberId, role, days, category, from, to);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling VendorOnboardingApi->listVendorTeamActivity: $e\n');
@@ -645,6 +705,12 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **page** | **int**|  | [optional]
+ **memberId** | **String**|  | [optional]
+ **role** | **String**| Role recorded at the time of the action. | [optional]
+ **days** | **int**|  | [optional] [default to 30]
+ **category** | **String**|  | [optional]
+ **from** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Immutable operation timestamp; messages use sent_at. Omitted days and dates mean All dates. | [optional]
+ **to** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Immutable operation timestamp; messages use sent_at. Omitted days and dates mean All dates. | [optional]
 
 ### Return type
 

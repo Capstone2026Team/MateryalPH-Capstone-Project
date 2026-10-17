@@ -11,6 +11,7 @@ Name | Type
 `path` | [CompliancePath](CompliancePath.md)
 `status` | string
 `markingType` | string
+`reviewMode` | string
 `submittedAt` | string
 `listingId` | string
 `displayName` | string
@@ -33,6 +34,7 @@ const example = {
   "path": null,
   "status": null,
   "markingType": null,
+  "reviewMode": null,
   "submittedAt": null,
   "listingId": null,
   "displayName": null,

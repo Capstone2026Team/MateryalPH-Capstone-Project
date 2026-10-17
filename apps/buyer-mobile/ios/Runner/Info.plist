@@ -2,6 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Take a photo or video to attach to your product review.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Record sound when you capture a video for your product review.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Choose a profile photo or photos and videos for your product review.</string>
 	<key>GMSApiKey</key>
 	<string>$(MAPS_IOS_API_KEY)</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
@@ -62,6 +68,10 @@
 			</array>
 		</dict>
 	</dict>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>

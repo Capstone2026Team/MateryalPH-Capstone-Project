@@ -34,7 +34,11 @@ final class CatalogAccess
         if (! is_array($scope) || ! is_string($scope['organization_id'] ?? null)) {
             throw new AuthenticationException('PORTAL_ACCESS_DENIED', 'This account cannot access the Vendor catalog.', 403);
         }
-        if (! in_array($permission, $this->access->resolve($request->user())['permissions'], true)) {
+        $currentScope = $this->access->resolve($request->user());
+        if ($currentScope['organization_id'] !== $scope['organization_id']) {
+            throw new AuthenticationException('PORTAL_ACCESS_DENIED', 'Your Vendor organization access changed. Reload before continuing.', 403);
+        }
+        if (! in_array($permission, $currentScope['permissions'], true)) {
             throw new AuthenticationException('PERMISSION_DENIED', 'This catalog action is not available to your role.', 403);
         }
 

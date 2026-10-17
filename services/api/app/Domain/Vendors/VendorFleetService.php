@@ -9,6 +9,7 @@ use App\Domain\Catalog\ImageContentValidator;
 use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Inventory\InventoryAccess;
+use App\Domain\Settings\PlatformSettings;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -80,7 +81,7 @@ final class VendorFleetService
     public function uploadImage(Request $request, UploadedFile $file): array
     {
         $organizationId = $this->access->organizationFor($request, [InventoryAccess::VEHICLES_MANAGE]);
-        $image = $this->images->validate($file, (int) config('materyalph.files.max_media_kb', 20480), 'vehicle image');
+        $image = $this->images->validate($file, min((int) config('materyalph.files.max_media_kb', 20480), PlatformSettings::current()->uploadKb('store_media')), 'vehicle image');
         $fileId = $this->files->store($file, 'VENDOR_ORGANIZATION', $organizationId, 'VEHICLE_IMAGE', (int) $request->user()->getKey(), $image['mime']);
         $this->audit->account($request, 'VENDOR_VEHICLE_IMAGE_UPLOADED', 'FILE', $fileId);
 
@@ -112,7 +113,8 @@ final class VendorFleetService
     {
         $area = DB::table('delivery_service_areas')->where('vendor_organization_id', $organizationId)->first(['maximum_distance_km', 'active']);
         $method = DB::table('store_profiles')->where('vendor_organization_id', $organizationId)->value('fulfillment_method');
-        $deliveryEnabled = in_array($method, ['VENDOR_DELIVERY', 'BOTH'], true) && $area !== null && (bool) $area->active;
+        $setup = app(VendorDeliveryEligibility::class)->snapshot($organizationId);
+        $deliveryEnabled = $setup['available'];
         $vehicles = DB::table('vendor_vehicles')->where('vendor_organization_id', $organizationId)->whereNull('removed_at')->orderBy('created_at')->orderBy('id')->limit(self::MAX_VEHICLES)->get();
         $rates = DB::table('vehicle_rate_versions')->whereIn('vendor_vehicle_id', $vehicles->pluck('id')->all())->orderByDesc('version')->get()->groupBy('vendor_vehicle_id');
         $eligible = array_column($this->recommendations->eligibleVehicles($organizationId), 'id');
@@ -148,15 +150,18 @@ final class VendorFleetService
                 'rate_version' => $rate === null ? null : (int) $rate->version,
                 'base_fee_centavos' => $rate === null ? null : (int) $rate->base_fee_centavos, 'per_km_centavos' => $rate === null ? null : (int) $rate->per_km_centavos,
                 'maximum_distance_km' => $rate === null ? null : (int) $rate->maximum_distance_km,
-                'eligibility' => ['eligible' => in_array($vehicle->id, $eligible, true), 'reasons' => array_values(array_unique($reasons))],
+                'mobilization_fee_centavos' => $rate === null ? null : (int) $rate->mobilization_fee_centavos, 'mobilization_basis' => $rate?->mobilization_basis,
+                'eligibility' => ['eligible' => $deliveryEnabled && in_array($vehicle->id, $eligible, true), 'reasons' => array_values(array_unique($reasons))],
                 'updated_at' => $vehicle->updated_at,
             ];
         })->all(), 'meta' => [
             'scope' => 'ORGANIZATION',
+            'delivery_setup' => $setup,
             'summary' => $this->summary($organizationId),
             'delivery' => ['fulfillment_method' => $method, 'delivery_enabled' => $deliveryEnabled, 'service_radius_km' => $area?->maximum_distance_km === null ? null : (int) $area->maximum_distance_km],
             'permissions' => ['can_manage' => true], 'limits' => ['max_vehicles' => self::MAX_VEHICLES],
-            'advisory' => ['calculation_version' => DeliveryRecommendationService::CALCULATION_VERSION, 'fee_rounding' => DeliveryRecommendationService::FEE_ROUNDING, 'dimensional_formulas' => DeliveryRecommendationService::DIMENSIONAL_FORMULAS],
+            'advisory' => ['calculation_version' => DeliveryRecommendationService::CALCULATION_VERSION, 'fee_rounding' => DeliveryRecommendationService::FEE_ROUNDING, 'dimensional_formulas' => DeliveryRecommendationService::DIMENSIONAL_FORMULAS,
+                'fee_rule' => DeliveryRecommendationService::FEE_RULE, 'mobilization_bases' => DeliveryRecommendationService::MOBILIZATION_BASES],
         ]];
     }
 

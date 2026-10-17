@@ -11,6 +11,7 @@ Name | Type
 `status` | string
 `manualReviewReasons` | Array&lt;string&gt;
 `candidates` | [Array&lt;DeliveryPlanVehicle&gt;](DeliveryPlanVehicle.md)
+`manualReviewVehicles` | [Array&lt;DeliveryPlanVehicle&gt;](DeliveryPlanVehicle.md)
 
 ## Example
 
@@ -24,6 +25,7 @@ const example = {
   "status": null,
   "manualReviewReasons": null,
   "candidates": null,
+  "manualReviewVehicles": null,
 } satisfies DeliveryPlanGroup
 
 console.log(example)

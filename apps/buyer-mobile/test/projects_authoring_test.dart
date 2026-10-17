@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:materyalph/design_system/components/form_dialog.dart';
+import 'package:materyalph/design_system/components/procurement_components.dart';
 import 'package:materyalph/design_system/components/work_package_attachment.dart';
 import 'package:materyalph/design_system/ranking_weights.dart';
 import 'package:materyalph/design_system/theme.dart';
@@ -11,11 +12,13 @@ import 'package:materyalph/features/map_discovery/discovery_models.dart';
 import 'package:materyalph/features/projects/project_editor.dart';
 import 'package:materyalph/features/projects/project_ranking_preferences_screen.dart';
 import 'package:materyalph/features/projects/projects_repository.dart';
-import 'package:materyalph/features/projects/projects_screen.dart';
+import 'package:materyalph/features/projects/work_package_editor.dart';
 import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 
 const projectId = '01995000-0000-7000-8000-000000000001';
 const locationId = '01995000-0000-7000-8000-000000000002';
+const bagUnit = '01995000-0000-7000-8000-000000000003';
+const cumUnit = '01995000-0000-7000-8000-000000000004';
 const defaults = {
   'material_match': 40,
   'budget_fit': 25,
@@ -78,6 +81,117 @@ Finder field(String label) => find.byWidgetPredicate(
 );
 
 void main() {
+  testWidgets(
+    'editing an Active package saves in place with the current package lock',
+    (tester) async {
+      const packageId = '01995000-0000-7000-8000-000000000011';
+      var saved = false;
+      final repo = repository((options, handler) {
+        expect(options.method, 'PUT');
+        expect(options.path, '/buyers/work-packages/$packageId');
+        final input = projectObject(options.data);
+        expect(input.containsKey('source_version_id'), isFalse);
+        expect(input['lock_version'], 9);
+        expect(input['name'], 'Original foundation');
+        expect(projectRows(input['lines']).single['quantity'], '50');
+        saved = true;
+        handler.reject(
+          DioException(
+            requestOptions: options,
+            type: DioExceptionType.connectionError,
+          ),
+        );
+      });
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: BuyerTheme.light,
+          home: WorkPackageEditor(
+            repository: repo,
+            project: {
+              ...projectFixture(),
+              'sites': [
+                {
+                  'id': locationId,
+                  'name': 'Home',
+                  'point': <String, Object?>{},
+                },
+              ],
+            },
+            package: const {
+              'id': packageId,
+              'status': 'ACTIVE',
+              'lock_version': 9,
+              'budget_centavos': 100000,
+              'version': {
+                'content': {
+                  'name': 'Original foundation',
+                  'budget_centavos': 100000,
+                  'site_id': locationId,
+                  'fulfillment_method': 'PICKUP',
+                  'radius_km': 5,
+                  'lines': [
+                    {
+                      'name': 'Steel bar',
+                      'unit_id': bagUnit,
+                      'unit_code': 'PC',
+                      'quantity': '50',
+                      'specifications': <String, Object?>{},
+                    },
+                  ],
+                },
+              },
+            },
+            chooseLocation: () async => null,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<TextField>(field('Work Package name')).controller!.text,
+        'Original foundation',
+      );
+      await tester.tap(find.text('Save changes'));
+      await tester.pumpAndSettle();
+      expect(saved, isTrue);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('End date cannot be picked before the start date', (
+    tester,
+  ) async {
+    final repo = repository(
+      (options, handler) => respond(options, handler, {}),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: BuyerTheme.light,
+        home: ProjectEditor(repository: repo, chooseLocation: () async => null),
+      ),
+    );
+    final start = tester.widget<TextField>(field('Start date')).controller!;
+    final end = tester.widget<TextField>(field('End date')).controller!;
+    start.text = '2026-10-15';
+    await tester.tap(field('End date'));
+    await tester.pumpAndSettle();
+    expect(find.text('Oct 14'), findsNothing);
+    await tester.tap(find.text('14').first);
+    await tester.pump();
+    expect(end.text, isEmpty);
+    await tester.tap(find.text('20'));
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+    expect(end.text, '2026-10-20');
+    // Moving the start past the end clears the stale end date.
+    await tester.tap(field('Start date'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('25'));
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+    expect(start.text, '2026-10-25');
+    expect(end.text, isEmpty);
+  });
+
   testWidgets('editable Work Package originals are not labelled locked', (
     tester,
   ) async {
@@ -152,6 +266,16 @@ void main() {
             ),
           );
           await tester.pumpAndSettle();
+          if (find.byType(StateMessage).evaluate().isNotEmpty) {
+            // Asset images decode asynchronously; precache so the illustration is in the capture.
+            await tester.runAsync(
+              () => precacheImage(
+                AssetImage(StateArtwork.cart.asset),
+                tester.element(find.byType(StateMessage)),
+              ),
+            );
+            await tester.pumpAndSettle();
+          }
           expect(tester.takeException(), isNull);
           if (viewport.$1 == 390) {
             await expectLater(
@@ -290,7 +414,7 @@ void main() {
         await tester.pumpAndSettle();
         if (!editing) {
           await tester.enterText(field('Project name'), 'Renovation');
-          await tester.enterText(field('Overall budget (₱)'), '1234.50');
+          await tester.enterText(field('Overall budget'), '1234.50');
           // Date picker writes ISO dates to these read-only display controllers.
           tester.widget<TextField>(field('Start date')).controller!.text =
               '2026-10-01';
@@ -446,22 +570,45 @@ void main() {
     },
   );
 
+  Map<String, Object?> materialsResponse() => {
+    'items': [
+      {
+        'id': projectId,
+        'code': 'PORTLAND_CEMENT',
+        'name': 'Portland cement',
+        'category_id': locationId,
+        'category_name': 'Cement and Concrete',
+        'regulated': true,
+        'match_type': 'EXACT',
+        'matched_text': 'portland cement',
+        'similarity': 1,
+        'compatible_units': [
+          {'id': bagUnit, 'code': 'BAG', 'name': 'Bag', 'precision': 0},
+        ],
+        'attributes': [
+          {
+            'code': 'bag_weight_kg',
+            'label': 'Mass per bag',
+            'value_type': 'NUMBER',
+            'allowed_values': null,
+            'unit_code': 'kg',
+          },
+        ],
+      },
+    ],
+    'units': [
+      {'id': bagUnit, 'code': 'BAG', 'name': 'Bag', 'precision': 0},
+      {'id': cumUnit, 'code': 'CUM', 'name': 'Cubic meter', 'precision': 3},
+    ],
+  };
+
   testWidgets(
-    'Work Package material dialog validates quantity and cancels with keyboard safely',
+    'Add Material validates quantity against the unit and closes safely',
     (tester) async {
+      await tester.binding.setSurfaceSize(const Size(420, 1600));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
       final repo = repository(
-        (options, handler) => respond(options, handler, {
-          'items': [
-            {
-              'id': projectId,
-              'name': 'Cement',
-              'code': 'CEMENT',
-              'compatible_units': [
-                {'id': locationId, 'code': 'BAG'},
-              ],
-            },
-          ],
-        }),
+        (options, handler) => respond(options, handler, materialsResponse()),
       );
       await tester.pumpWidget(
         MaterialApp(
@@ -473,24 +620,132 @@ void main() {
           ),
         ),
       );
-      await tester.tap(find.text('Materials'));
+      await tester.tap(find.text('Add Item'));
       await tester.pumpAndSettle();
-      await tester.enterText(field('Search materials'), 'cement');
+      await tester.enterText(field('Material name'), 'cement');
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Cement'));
+      expect(find.text('Exact name'), findsOneWidget);
+      await tester.tap(find.text('Portland cement'));
       await tester.pumpAndSettle();
+      // The choice collapses to one row; technical details start closed.
+      expect(find.text('Change'), findsOneWidget);
+      expect(field('Mass per bag (kg)'), findsNothing);
+      await tester.tap(find.text('Technical details'));
+      await tester.pumpAndSettle();
+      expect(field('Mass per bag (kg)'), findsOneWidget);
       await tester.enterText(field('Quantity'), '0');
-      await tester.tap(find.text('Add material'));
+      await tester.ensureVisible(find.widgetWithText(FilledButton, 'Add Item'));
+      await tester.tap(find.widgetWithText(FilledButton, 'Add Item'));
       await tester.pumpAndSettle();
       expect(find.textContaining('Use a quantity above zero'), findsOneWidget);
+      await tester.enterText(field('Quantity'), '2.5');
+      await tester.tap(find.widgetWithText(FilledButton, 'Add Item'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('This unit is counted in whole numbers.'),
+        findsOneWidget,
+      );
       await tester.tap(find.text('Cancel'));
       await tester.pumpAndSettle();
+      expect(field('Material name'), findsNothing);
       expect(tester.takeException(), isNull);
     },
   );
+
   testWidgets(
-    'CSV import remains scrollable with large text and an open keyboard',
+    'unlisted materials keep their name, unit and details; budget stays within the Project',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(420, 1600));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      Map<String, Object?>? saved;
+      final repo = repository((options, handler) {
+        if (options.path.contains('/work-packages')) {
+          saved = projectObject(options.data);
+          // A malformed reply keeps the editor open without a fixture view.
+          respond(options, handler, {});
+          return;
+        }
+        respond(options, handler, materialsResponse());
+      });
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: BuyerTheme.light,
+          home: WorkPackageEditor(
+            repository: repo,
+            project: {
+              ...projectFixture(),
+              'sites': [
+                {
+                  'id': locationId,
+                  'name': 'Main site',
+                  'discovery_origin': 'SAVED',
+                  'point': <String, Object?>{},
+                },
+              ],
+            },
+            chooseLocation: () async => null,
+          ),
+        ),
+      );
+      await tester.enterText(field('Work Package name'), 'MASONRY');
+      await tester.tap(find.text('Add Item'));
+      await tester.pumpAndSettle();
+      await tester.enterText(field('Material name'), 'Washed sand');
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Not listed — use “Washed sand”'));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find
+            .byWidgetPredicate(
+              (w) =>
+                  w is DropdownButtonFormField<String> &&
+                  w.initialValue == null,
+            )
+            .first,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Cubic meter (CUM)').last);
+      await tester.pumpAndSettle();
+      await tester.enterText(field('Quantity'), '2.5');
+      await tester.tap(find.text('Technical details'));
+      await tester.pumpAndSettle();
+      await tester.enterText(field('Size'), 'S-1');
+      await tester.enterText(field('Color (optional)'), 'Grey');
+      await tester.tap(find.widgetWithText(FilledButton, 'Add Item'));
+      await tester.pumpAndSettle();
+      expect(find.text('Unlisted'), findsOneWidget);
+      expect(find.textContaining('2.5 CUM'), findsOneWidget);
+      expect(find.text('1 item'), findsOneWidget);
+
+      await tester.enterText(field('Budget'), '2000');
+      await tester.tap(find.text('Finalize'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text(
+          'This budget is more than the ₱1,234.50 still available from the Project budget.',
+        ),
+        findsOneWidget,
+      );
+      expect(saved, isNull);
+
+      await tester.enterText(field('Budget'), '1000');
+      await tester.tap(find.text('Finalize'));
+      await tester.pumpAndSettle();
+      final line = projectRows(saved?['lines']).single;
+      expect(line['material_id'], isNull);
+      expect(line['name'], 'Washed sand');
+      expect(line['unit_id'], cumUnit);
+      expect(line['color'], 'Grey');
+      expect(line['specifications'], {'size': 'S-1'});
+      expect(saved?['budget_centavos'], 100000);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'editor has no CSV import and renders with large text and an open keyboard',
     (tester) async {
       await tester.binding.setSurfaceSize(const Size(320, 568));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -514,19 +769,11 @@ void main() {
           ),
         ),
       );
-      await tester.tap(find.text('Materials'));
-      await tester.pumpAndSettle();
-      await tester.scrollUntilVisible(
-        find.text('Import CSV'),
-        180,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await tester.tap(find.text('Import CSV'));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
-      await tester.tap(find.text('Cancel'));
-      await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull);
+      expect(find.text('Import from CSV'), findsNothing);
+      expect(find.text('Add Item'), findsOneWidget);
+      expect(find.text('Name of Work Package'), findsNothing);
     },
   );
 }

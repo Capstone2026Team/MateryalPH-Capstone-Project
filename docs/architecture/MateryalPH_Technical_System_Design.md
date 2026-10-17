@@ -647,6 +647,8 @@ Profile completion requires valid saved Logo AND Banner AND all required fields.
 
 For conventional goods evaluate actual weight and feasible cargo dimensions; optional dimensional weight retains its formula/version and cannot replace physical checks. Ready-mixed concrete uses m³, mixer capacity and payload/access checks, while bagged cement uses normal cargo. Unknown measurements produce manual review. Do not claim exact packing or dispatch optimization. Heavy-restriction Yes requires and preserves an alternative drop-off alongside the intended site; route/fee calculations use the confirmed applicable endpoint. Coverage radius is not a road-access guarantee. Owner/Manager confirms vehicles, counts/trips and final fee before Buyer acceptance/payment. Freeze the accepted delivery snapshot; later vehicle/rate changes only affect future offers.
 
+The owner decision of 2026-10-12 also permits a failed automatic cargo-dimension check to enter the existing manual load-review path. `DeliveryRecommendationService` retains the failed fit reason and exposes only configured vehicles compatible with the material, known per-unit payload, range and access. `ConfirmedDeliverySnapshot` requires the Owner/Store Manager review note, sufficient trips for known payload or mixer volume and the disclosed formula fee. Original product measurements remain frozen; the confirmed snapshot records the manual basis, reason, note and actor for Buyer approval. This does not produce a guaranteed fit or an automatic Buyer estimate.
+
 **ONB-07 — Provider and tax isolation.** Connect Xendit is an explicit Owner action using backend TEST credentials and verified Store Email or verified Owner email fallback. No pasted URL/ID field and no frontend-provided successful status. Create under the configured master account, bind the provider ID to the organization/environment and reconcile through the selected supported API contract. Keep technical connection, raw provider status, KYC and payment/refund capability separate. Timeouts remain unresolved until reconciliation prevents duplicate provisioning. Mandatory TEST connection never grants live-business/tax approval. The requested v2 adapter must respect its legacy readiness contract; a new v3 adapter uses its documented TEST contract and cannot reuse v2 assumptions. See the Technical System Design integration boundary.
 
 Verification collects tax identity once; Payment Configuration consumes its effective version. Optional relief evidence Yes/No controls review, never automatic exemption or a new formula. Preserve FIN-01–FIN-12, 0.5% qualifying-remittance computation, 2% monthly Vendor-paid commission, physical-payment separation and distinct cancellation/dispute refunds. Authority, commission terms and Privacy Notice acknowledgment retain separate versioned records. No wallet/escrow is introduced.
@@ -978,7 +980,7 @@ GitHub describes encrypted repository/environment secrets in its [Actions secret
 - Strict CORS allowlist.
 - Content Security Policy and secure headers.
 - Server-side validation and output encoding.
-- Rate limits by route, account, IP, device, and organization where appropriate.
+- Rate limits remain for authentication, credentials, verification and provider webhooks. Everyday Buyer, Vendor and Admin API operations have no application request-rate limit. Platform-wide billable-provider daily budgets remain separate.
 - File validation and malware scanning.
 - Webhook verification and replay protection.
 - Database parameter binding.
@@ -986,6 +988,10 @@ GitHub describes encrypted repository/environment secrets in its [Actions secret
 - Backups, restore drills, dependency scanning, static analysis, and audit trails.
 
 ## 16. Reliability and Consistency
+
+Navigation reuses display state within the mounted signed-in client. Vendor onboarding navigation and Admin dashboard/verification-list snapshots may be shown while a fresh authorized request runs; reuse on return is limited to 30 seconds and keyed by the complete filter/page selection. Snapshots stay in memory, are bounded, and are cleared on session termination or denied access. They never authorize a command. Dashboard sections retain visited UI state with inactive effects stopped; Buyer tabs retain visited screens while hidden messaging subscriptions and polling are paused. Requests and mutations still use current server authorization and concurrency versions.
+
+Routine protected requests record session `last_used_at` at most once per minute to avoid contending on the same session row during navigation and polling. Session creation and token rotation also record activity. This timestamp is for the device/activity display; authentication, session expiry/revocation, MFA and account permissions are evaluated on every request and are not cached by this optimization.
 
 - PostgreSQL is authoritative for commercial state.
 - Redis is never the only store for an order, payment, refund, permission, or audit fact.

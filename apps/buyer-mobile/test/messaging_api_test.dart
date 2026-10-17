@@ -63,6 +63,13 @@ void main() {
         containsPair('heavy_vehicle_restriction', 'NO'),
       );
       expect(adapter.requests.last.data, containsPair('lock_version', 4));
+      final projects = await repository.projectInquiries('thread', page: 2);
+      expect(projects.items.single.id, 'thread');
+      expect(
+        adapter.requests.last.path,
+        '/buyers/conversations/thread/project-inquiries',
+      );
+      expect(adapter.requests.last.queryParameters, containsPair('page', 2));
     },
   );
 }

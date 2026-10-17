@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace App\Domain\Geography;
 
 use App\Domain\Catalog\EligibleOfferQuery;
+use App\Domain\Scores\PublicScores;
+use App\Domain\Scores\ScoreRules;
 use App\Domain\Vendors\PublicStoreHours;
+use App\Domain\Vendors\VendorDeliveryEligibility;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -71,10 +74,13 @@ final class PublicVendorProjection
         $scores = DB::query()->fromSub(DB::table('score_snapshots')->whereIn('vendor_organization_id', $organizationIds)->whereNotNull('vps')
             ->selectRaw('DISTINCT ON (vendor_organization_id) vendor_organization_id, vps')->orderBy('vendor_organization_id')->orderByDesc('window_ends_on'), 's')
             ->pluck('vps', 'vendor_organization_id');
+        $badges = app(PublicScores::class)->badges($organizationIds);
         $hours = $this->openStatuses($rows->pluck('profile_id')->map(static fn (mixed $id): string => (string) $id)->all());
 
         $summaries = [];
         foreach ($rows as $row) {
+            $deliveryAvailable = app(VendorDeliveryEligibility::class)->available((string) $row->id);
+            $method = $deliveryAvailable ? $row->fulfillment_method : (in_array($row->fulfillment_method, ['SELF_PICKUP', 'BOTH'], true) ? 'SELF_PICKUP' : null);
             $vps = $scores[$row->id] ?? null;
             $niches = json_decode((string) ($row->niches ?? '[]'), true);
             $summaries[(string) $row->id] = [
@@ -88,13 +94,15 @@ final class PublicVendorProjection
                 'address' => ['formatted_address' => $row->formatted_address, 'city_municipality' => $row->city_municipality, 'province' => $row->province],
                 'supplier_type' => $row->supplier_type,
                 'niches' => is_array($niches) ? array_values(array_filter($niches, 'is_string')) : [],
-                'fulfillment_method' => $row->fulfillment_method,
+                'fulfillment_method' => $method,
                 'bulk_capability' => $row->bulk_capability === null ? null : (bool) $row->bulk_capability,
                 'vacation_mode' => (bool) $row->vacation_mode,
-                'delivery_maximum_km' => in_array($row->fulfillment_method, ['VENDOR_DELIVERY', 'BOTH'], true) && $row->maximum_distance_km !== null ? (int) $row->maximum_distance_km : null,
+                'delivery_maximum_km' => $deliveryAvailable && $row->maximum_distance_km !== null ? (int) $row->maximum_distance_km : null,
+                // The compact map text stays short; detail_text carries the full published-score or sample-gate wording.
                 'score_label' => $vps === null
-                    ? ['kind' => 'NEW_VENDOR', 'value' => null, 'text' => 'New Vendor']
-                    : ['kind' => 'VPS', 'value' => number_format((float) $vps, 1, '.', ''), 'text' => 'VPS '.number_format((float) $vps, 1, '.', '')],
+                    ? ['kind' => 'NEW_VENDOR', 'value' => null, 'text' => 'New Vendor', 'detail_text' => ScoreRules::NEW_VENDOR_LABEL]
+                    : ['kind' => 'VPS', 'value' => number_format((float) $vps, 1, '.', ''), 'text' => 'VPS '.number_format((float) $vps, 1, '.', ''), 'detail_text' => 'VPS '.PublicScores::round((string) $vps).' of 5'],
+                'badges' => $badges[(string) $row->id] ?? [],
                 'open_status' => $hours[(string) $row->profile_id] ?? ['status' => 'UNAVAILABLE', 'opens_at' => null, 'closes_at' => null, 'basis' => 'SAVED_SCHEDULE'],
                 'address_version_id' => $row->address_version_id,
             ];

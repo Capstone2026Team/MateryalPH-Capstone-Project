@@ -13,6 +13,7 @@ import 'package:materyalph_api_client/src/model/fulfillment_receipt.dart';
 import 'package:materyalph_api_client/src/model/fulfillment_step.dart';
 import 'package:materyalph_api_client/src/model/fulfillment_trip.dart';
 import 'package:materyalph_api_client/src/model/fulfillment_assignment.dart';
+import 'package:materyalph_api_client/src/model/delivery_assignment_history.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -36,6 +37,8 @@ part 'order_fulfillment.g.dart';
 /// * [vehicleIssues]
 /// * [thread]
 /// * [nextAction]
+/// * [assignmentHistory]
+/// * [proofUploadLimitKb]
 @BuiltValue()
 abstract class OrderFulfillment implements Built<OrderFulfillment, OrderFulfillmentBuilder> {
   @BuiltValueField(wireName: r'method')
@@ -84,6 +87,12 @@ abstract class OrderFulfillment implements Built<OrderFulfillment, OrderFulfillm
   @BuiltValueField(wireName: r'next_action')
   OrderFulfillmentNextActionEnum get nextAction;
   // enum nextActionEnum {  START_PREPARATION,  MARK_READY,  DISPATCH,  RECORD_PICKUP,  RECORD_DELIVERY,  AWAIT_RECEIPT,  RESPOND_TO_CANCELLATION,  NONE,  CONFIRM_RECEIPT,  };
+
+  @BuiltValueField(wireName: r'assignment_history')
+  BuiltList<DeliveryAssignmentHistory>? get assignmentHistory;
+
+  @BuiltValueField(wireName: r'proof_upload_limit_kb')
+  int? get proofUploadLimitKb;
 
   OrderFulfillment._();
 
@@ -193,6 +202,20 @@ class _$OrderFulfillmentSerializer implements PrimitiveSerializer<OrderFulfillme
       object.nextAction,
       specifiedType: const FullType(OrderFulfillmentNextActionEnum),
     );
+    if (object.assignmentHistory != null) {
+      yield r'assignment_history';
+      yield serializers.serialize(
+        object.assignmentHistory,
+        specifiedType: const FullType(BuiltList, [FullType(DeliveryAssignmentHistory)]),
+      );
+    }
+    if (object.proofUploadLimitKb != null) {
+      yield r'proof_upload_limit_kb';
+      yield serializers.serialize(
+        object.proofUploadLimitKb,
+        specifiedType: const FullType(int),
+      );
+    }
   }
 
   @override
@@ -325,6 +348,22 @@ class _$OrderFulfillmentSerializer implements PrimitiveSerializer<OrderFulfillme
             specifiedType: const FullType(OrderFulfillmentNextActionEnum),
           ) as OrderFulfillmentNextActionEnum;
           result.nextAction = valueDes;
+          break;
+        case r'assignment_history':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltList, [FullType(DeliveryAssignmentHistory)]),
+          ) as BuiltList<DeliveryAssignmentHistory>?;
+          if (valueDes == null) continue;
+          result.assignmentHistory.replace(valueDes);
+          break;
+        case r'proof_upload_limit_kb':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.proofUploadLimitKb = valueDes;
           break;
         default:
           unhandled.add(key);

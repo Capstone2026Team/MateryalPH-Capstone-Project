@@ -1,4 +1,4 @@
-import { MessagingApi, type ChatDraftContent } from '@materyalph/api-client-ts'
+import { MessagingApi, type ChatDraftContent, type SiteInspectionDecision } from '@materyalph/api-client-ts'
 import { createWebApiConfiguration } from '@materyalph/web-ui'
 export { readableOnboardingError as readableChatError } from './onboarding-api'
 
@@ -6,12 +6,19 @@ const basePath = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api
 const api = () => new MessagingApi(createWebApiConfiguration(basePath, { refreshSession: true }))
 const scope = { messagingPortal: 'vendor' as const }
 export const chatApi = {
+  projectInquiries: async (conversationId: string, page = 1) => (await api().listChatProjectInquiries({ ...scope, conversationId, page })).data,
+  fulfillmentConversations: async (conversationId: string, page = 1) => (await api().listVendorFulfillmentConversations({ conversationId, page })).data,
+  forOrder: async (orderId: string, idempotencyKey: string) => (await api().openVendorOrderConversation({ orderId, idempotencyKey })).data.id,
   list: async (page = 1) => (await api().listConversations({ ...scope, page })).data,
   get: async (conversationId: string, before?: string, page = 1, legacyPage = 1) => (await api().getConversation({ ...scope, conversationId, ...(before ? { before } : {}), page, legacyPage })).data,
   send: (conversationId: string, body: string, clientMessageId: string, productId?: string) => api().sendChatMessage({ ...scope, conversationId, chatSend: { ...(body ? { body } : {}), clientMessageId, ...(productId ? { productId } : {}) } }),
   products: async (conversationId: string, q = '', page = 1) => (await api().listChatProducts({ ...scope, conversationId, q, page })).data,
   typing: (conversationId: string, typing: boolean) => api().sendChatTyping({ ...scope, conversationId, chatTyping: { typing } }),
-  read: (conversationId: string, throughMessageId: string) => api().readChatMessages({ ...scope, conversationId, chatRead: { throughMessageId } }),
+  read: async (conversationId: string, throughMessageId: string) => {
+    const result = await api().readChatMessages({ ...scope, conversationId, chatRead: { throughMessageId } })
+    window.dispatchEvent(new Event('materyalph:navigation-updates'))
+    return result
+  },
   handlers: (conversationId: string, page = 1) => api().listChatHandlers({ ...scope, conversationId, page }),
   transfer: (conversationId: string, handlerUserId: number, lockVersion: number, reason: string) => api().transferChatHandler({ ...scope, conversationId, chatTransfer: { handlerUserId, lockVersion, reason } }),
   draft: async (conversationId: string, lockVersion: number, draft: ChatDraftContent) => (await api().saveChatQuotationDraft({ ...scope, conversationId, chatDraftSave: { lockVersion, draft } })).data,
@@ -20,12 +27,20 @@ export const chatApi = {
   withdraw: (conversationId: string, versionId: string, idempotencyKey: string) => api().decideChatQuotation({ ...scope, conversationId, idempotencyKey, action: 'withdraw', chatDecision: { versionId } }),
   upload: (conversationId: string, file: Blob, clientMessageId: string) => api().uploadChatAttachment({ ...scope, conversationId, file, clientMessageId }),
   download: (conversationId: string, attachmentId: string) => api().downloadChatAttachment({ ...scope, conversationId, attachmentId }),
+  siteInspection: async (conversationId: string, inspectionId: string, action: 'schedule' | 'decline' | 'complete', siteInspectionDecision: SiteInspectionDecision) =>
+    (await api().decideSiteInspection({ ...scope, conversationId, inspectionId, action, siteInspectionDecision })).data.siteInspections,
 }
 export async function loadChatAvatar(path: string): Promise<Blob> {
   const match = /^\/conversations\/([0-9a-f-]+)\/avatars\/(\d+)$/i.exec(path)
   if (!match?.[1]) throw new Error('Avatar unavailable')
   return api().getChatAvatar({ ...scope, conversationId: match[1], userId: Number(match[2]) })
 }
+
+export const watchTeamActivity = (refresh: () => void, onLive: (live: boolean) => void) =>
+  watchConversation(null, refresh, undefined, ['team.activity.changed'], onLive)
+
+export const watchNotificationUpdates = (refresh: () => void) =>
+  watchConversation(null, refresh, undefined, ['notifications.changed'])
 
 /** Existing Reverb viewer channels; reconnect reauthorizes and synchronizes missed activity. */
 export async function watchConversation(channel: string | null, refresh: () => void, onTyping?: (typing: boolean, at: number) => void, changeEvents: readonly string[] = ['conversation.changed', 'inbox.changed'], onLive?: (live: boolean) => void): Promise<() => void> {

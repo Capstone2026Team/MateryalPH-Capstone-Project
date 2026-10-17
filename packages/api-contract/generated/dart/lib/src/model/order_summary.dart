@@ -8,15 +8,17 @@ import 'package:materyalph_api_client/src/model/date.dart';
 import 'package:built_collection/built_collection.dart';
 import 'package:materyalph_api_client/src/model/order_vendor_ref.dart';
 import 'package:materyalph_api_client/src/model/vendor_order_primary_action.dart';
+import 'package:materyalph_api_client/src/model/order_conversation_ref.dart';
 import 'package:materyalph_api_client/src/model/order_buyer_ref.dart';
 import 'package:materyalph_api_client/src/model/order_deadline.dart';
 import 'package:materyalph_api_client/src/model/order_state_row.dart';
+import 'package:materyalph_api_client/src/model/order_closure_reason.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
 part 'order_summary.g.dart';
 
-/// Buyer rows add next_action; Vendor rows add buyer, primary_action and nrpc_indicator.
+/// Buyer rows add next_action, payment_retryable and the My Orders card fields (fulfillment_conversation, card_actions, return_refund_due_at, dispute_case_id, payment_channel_name, closure_reason); Vendor rows add buyer, primary_action and nrpc_indicator.
 ///
 /// Properties:
 /// * [id]
@@ -38,6 +40,12 @@ part 'order_summary.g.dart';
 /// * [expectedFulfillmentDate]
 /// * [nextAction]
 /// * [paymentRetryable] - Buyer list only. True when the order is Pending Payment and its latest checkout attempt failed or expired. Retry uses the same order and principal.
+/// * [fulfillmentConversation] - Buyer list only. The order's Fulfillment Messages thread; null only for an order submitted before threads opened at submission.
+/// * [cardActions] - Buyer list only. Card shortcuts, each also allowed in Order Details: CONFIRM_RECEIPT and REPORT_PROBLEM while awaiting receipt, FILE_DISPUTE (Return/Refund) or VIEW_DISPUTE after completion, BUY_AGAIN for closed Item-Based orders, VIEW_CANCELLATION for cancelled, declined or expired orders.
+/// * [returnRefundDueAt] - Buyer list only. End of the post-completion return and dispute window while FILE_DISPUTE is offered.
+/// * [disputeCaseId] - Buyer list only. The active case when VIEW_DISPUTE is offered.
+/// * [paymentChannelName] - Buyer list only. Display name of the channel of the latest verified online payment.
+/// * [closureReason] - Buyer list only. Why a cancelled, declined or expired order ended, in Buyer-facing words.
 /// * [buyer]
 /// * [primaryAction]
 /// * [nrpcIndicator]
@@ -105,6 +113,31 @@ abstract class OrderSummary implements Built<OrderSummary, OrderSummaryBuilder> 
   /// Buyer list only. True when the order is Pending Payment and its latest checkout attempt failed or expired. Retry uses the same order and principal.
   @BuiltValueField(wireName: r'payment_retryable')
   bool? get paymentRetryable;
+
+  /// Buyer list only. The order's Fulfillment Messages thread; null only for an order submitted before threads opened at submission.
+  @BuiltValueField(wireName: r'fulfillment_conversation')
+  OrderConversationRef? get fulfillmentConversation;
+
+  /// Buyer list only. Card shortcuts, each also allowed in Order Details: CONFIRM_RECEIPT and REPORT_PROBLEM while awaiting receipt, FILE_DISPUTE (Return/Refund) or VIEW_DISPUTE after completion, BUY_AGAIN for closed Item-Based orders, VIEW_CANCELLATION for cancelled, declined or expired orders.
+  @BuiltValueField(wireName: r'card_actions')
+  BuiltList<OrderSummaryCardActionsEnum>? get cardActions;
+  // enum cardActionsEnum {  CONFIRM_RECEIPT,  REPORT_PROBLEM,  FILE_DISPUTE,  VIEW_DISPUTE,  BUY_AGAIN,  VIEW_CANCELLATION,  };
+
+  /// Buyer list only. End of the post-completion return and dispute window while FILE_DISPUTE is offered.
+  @BuiltValueField(wireName: r'return_refund_due_at')
+  DateTime? get returnRefundDueAt;
+
+  /// Buyer list only. The active case when VIEW_DISPUTE is offered.
+  @BuiltValueField(wireName: r'dispute_case_id')
+  String? get disputeCaseId;
+
+  /// Buyer list only. Display name of the channel of the latest verified online payment.
+  @BuiltValueField(wireName: r'payment_channel_name')
+  String? get paymentChannelName;
+
+  /// Buyer list only. Why a cancelled, declined or expired order ended, in Buyer-facing words.
+  @BuiltValueField(wireName: r'closure_reason')
+  OrderClosureReason? get closureReason;
 
   @BuiltValueField(wireName: r'buyer')
   OrderBuyerRef? get buyer;
@@ -236,6 +269,48 @@ class _$OrderSummarySerializer implements PrimitiveSerializer<OrderSummary> {
       yield serializers.serialize(
         object.paymentRetryable,
         specifiedType: const FullType(bool),
+      );
+    }
+    if (object.fulfillmentConversation != null) {
+      yield r'fulfillment_conversation';
+      yield serializers.serialize(
+        object.fulfillmentConversation,
+        specifiedType: const FullType.nullable(OrderConversationRef),
+      );
+    }
+    if (object.cardActions != null) {
+      yield r'card_actions';
+      yield serializers.serialize(
+        object.cardActions,
+        specifiedType: const FullType(BuiltList, [FullType(OrderSummaryCardActionsEnum)]),
+      );
+    }
+    if (object.returnRefundDueAt != null) {
+      yield r'return_refund_due_at';
+      yield serializers.serialize(
+        object.returnRefundDueAt,
+        specifiedType: const FullType.nullable(DateTime),
+      );
+    }
+    if (object.disputeCaseId != null) {
+      yield r'dispute_case_id';
+      yield serializers.serialize(
+        object.disputeCaseId,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
+    if (object.paymentChannelName != null) {
+      yield r'payment_channel_name';
+      yield serializers.serialize(
+        object.paymentChannelName,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
+    if (object.closureReason != null) {
+      yield r'closure_reason';
+      yield serializers.serialize(
+        object.closureReason,
+        specifiedType: const FullType.nullable(OrderClosureReason),
       );
     }
     if (object.buyer != null) {
@@ -422,6 +497,54 @@ class _$OrderSummarySerializer implements PrimitiveSerializer<OrderSummary> {
           if (valueDes == null) continue;
           result.paymentRetryable = valueDes;
           break;
+        case r'fulfillment_conversation':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(OrderConversationRef),
+          ) as OrderConversationRef?;
+          if (valueDes == null) continue;
+          result.fulfillmentConversation.replace(valueDes);
+          break;
+        case r'card_actions':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltList, [FullType(OrderSummaryCardActionsEnum)]),
+          ) as BuiltList<OrderSummaryCardActionsEnum>?;
+          if (valueDes == null) continue;
+          result.cardActions.replace(valueDes);
+          break;
+        case r'return_refund_due_at':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(DateTime),
+          ) as DateTime?;
+          if (valueDes == null) continue;
+          result.returnRefundDueAt = valueDes;
+          break;
+        case r'dispute_case_id':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.disputeCaseId = valueDes;
+          break;
+        case r'payment_channel_name':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.paymentChannelName = valueDes;
+          break;
+        case r'closure_reason':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(OrderClosureReason),
+          ) as OrderClosureReason?;
+          if (valueDes == null) continue;
+          result.closureReason.replace(valueDes);
+          break;
         case r'buyer':
           final valueDes = serializers.deserialize(
             value,
@@ -555,5 +678,28 @@ class OrderSummaryNextActionEnum extends EnumClass {
 
   static BuiltSet<OrderSummaryNextActionEnum> get values => _$orderSummaryNextActionEnumValues;
   static OrderSummaryNextActionEnum valueOf(String name) => _$orderSummaryNextActionEnumValueOf(name);
+}
+
+class OrderSummaryCardActionsEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'CONFIRM_RECEIPT')
+  static const OrderSummaryCardActionsEnum CONFIRM_RECEIPT = _$orderSummaryCardActionsEnum_CONFIRM_RECEIPT;
+  @BuiltValueEnumConst(wireName: r'REPORT_PROBLEM')
+  static const OrderSummaryCardActionsEnum REPORT_PROBLEM = _$orderSummaryCardActionsEnum_REPORT_PROBLEM;
+  @BuiltValueEnumConst(wireName: r'FILE_DISPUTE')
+  static const OrderSummaryCardActionsEnum FILE_DISPUTE = _$orderSummaryCardActionsEnum_FILE_DISPUTE;
+  @BuiltValueEnumConst(wireName: r'VIEW_DISPUTE')
+  static const OrderSummaryCardActionsEnum VIEW_DISPUTE = _$orderSummaryCardActionsEnum_VIEW_DISPUTE;
+  @BuiltValueEnumConst(wireName: r'BUY_AGAIN')
+  static const OrderSummaryCardActionsEnum BUY_AGAIN = _$orderSummaryCardActionsEnum_BUY_AGAIN;
+  @BuiltValueEnumConst(wireName: r'VIEW_CANCELLATION')
+  static const OrderSummaryCardActionsEnum VIEW_CANCELLATION = _$orderSummaryCardActionsEnum_VIEW_CANCELLATION;
+
+  static Serializer<OrderSummaryCardActionsEnum> get serializer => _$orderSummaryCardActionsEnumSerializer;
+
+  const OrderSummaryCardActionsEnum._(String name): super(name);
+
+  static BuiltSet<OrderSummaryCardActionsEnum> get values => _$orderSummaryCardActionsEnumValues;
+  static OrderSummaryCardActionsEnum valueOf(String name) => _$orderSummaryCardActionsEnumValueOf(name);
 }
 

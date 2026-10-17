@@ -4,6 +4,7 @@ import {
   ResponseError,
   type AdminVendorVerificationDecision,
   type AdminVendorVerificationQueueItem,
+  type ListVendorVerificationQueueRequest,
 } from '@materyalph/api-client-ts'
 import { createWebApiConfiguration } from '@materyalph/web-ui'
 
@@ -15,7 +16,7 @@ function verificationApi(): AdminVendorVerificationApi {
 
 export type VerificationDetail = Record<string, unknown>
 
-export async function listVendorVerificationQueue(filters: { status?: string; businessType?: string; page?: number; regionCode?: string; submittedFrom?: Date; submittedTo?: Date; sort?: 'submitted_asc' | 'submitted_desc' | 'location' } = {}): Promise<{ items: AdminVendorVerificationQueueItem[]; meta: Record<string, unknown> }> {
+export async function listVendorVerificationQueue(filters: ListVendorVerificationQueueRequest = {}): Promise<{ items: AdminVendorVerificationQueueItem[]; meta: Record<string, unknown> }> {
   const response = await verificationApi().listVendorVerificationQueue(filters)
   return { items: response.data, meta: response.meta as Record<string, unknown> }
 }

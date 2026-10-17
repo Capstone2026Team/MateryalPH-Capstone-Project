@@ -27,12 +27,23 @@ void main() {
       // TODO
     });
 
+    // The PS License No. (e.g. Q-1234) for a PS Mark
     // String certificateNumber
     test('to test the property `certificateNumber`', () async {
       // TODO
     });
 
-    // Required for a PS Mark.
+    // MANUAL_REVIEW is the Vendor's explicit request for Product Compliance review when the register cannot confirm the number.
+    // String reviewMode (default value: 'AUTOMATIC')
+    test('to test the property `reviewMode`', () async {
+      // TODO
+    });
+
+    // String reviewNote
+    test('to test the property `reviewNote`', () async {
+      // TODO
+    });
+
     // String manufacturerName
     test('to test the property `manufacturerName`', () async {
       // TODO
@@ -43,7 +54,6 @@ void main() {
       // TODO
     });
 
-    // Required for an ICC sticker.
     // String importerName
     test('to test the property `importerName`', () async {
       // TODO

@@ -499,7 +499,7 @@ class AdminProductComplianceApi {
   }
 
   /// importComplianceRegister
-  /// Imports a CSV snapshot of the DTI-BPS PS licensee or ICC certificate register as an immutable DRAFT. It is used for matching only after activation.
+  /// Imports an XLSX or CSV snapshot of the DTI-BPS List of PS Licensees or List of ICC Certificate Holders, in the official layout (title rows above the header are skipped; the ICC sticker serial from/to columns become serial ranges), as an immutable DRAFT. It is used for matching only after activation. An ICC file without sticker serial ranges is rejected with REGISTER_SERIALS_NOT_FOUND.
   ///
   /// Parameters:
   /// * [registerKind]
@@ -711,6 +711,8 @@ class AdminProductComplianceApi {
   /// * [referenceResult]
   /// * [sort]
   /// * [page]
+  /// * [from] - Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Immutable submission submitted_at.
+  /// * [to] - Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Immutable submission submitted_at.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -726,6 +728,8 @@ class AdminProductComplianceApi {
     ComplianceReferenceResult? referenceResult,
     String? sort = 'oldest',
     int? page,
+    Date? from,
+    Date? to,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -759,6 +763,8 @@ class AdminProductComplianceApi {
       if (referenceResult != null) r'reference_result': encodeQueryParameter(_serializers, referenceResult, const FullType(ComplianceReferenceResult)),
       if (sort != null) r'sort': encodeQueryParameter(_serializers, sort, const FullType(String)),
       if (page != null) r'page': encodeQueryParameter(_serializers, page, const FullType(int)),
+      if (from != null) r'from': encodeQueryParameter(_serializers, from, const FullType(Date)),
+      if (to != null) r'to': encodeQueryParameter(_serializers, to, const FullType(Date)),
     };
 
     final _response = await _dio.request<Object>(

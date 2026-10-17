@@ -10,6 +10,7 @@ Name | Type
 `kind` | string
 `value` | string
 `text` | string
+`detailText` | string
 
 ## Example
 
@@ -21,6 +22,7 @@ const example = {
   "kind": null,
   "value": null,
   "text": null,
+  "detailText": null,
 } satisfies ScoreLabel
 
 console.log(example)

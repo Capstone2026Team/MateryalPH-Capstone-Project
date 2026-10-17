@@ -8,6 +8,7 @@ import 'package:materyalph_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
+**orderId** | **String** |  | [optional]
 **id** | **String** |  |
 **orderReference** | **String** |  |
 **vendorName** | **String** |  | [optional]

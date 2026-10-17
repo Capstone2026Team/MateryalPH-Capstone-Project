@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ResponseError } from '@materyalph/api-client-ts'
+import { usePortalResource } from '@materyalph/web-ui'
 import { getVendorOnboarding, readableOnboardingError, type VendorOnboardingSnapshot } from './onboarding-api'
 
 export function statusTone(status: string): 'neutral' | 'warning' | 'success' | 'error' | 'info' {
@@ -19,29 +20,25 @@ function lockVersion(snapshot: VendorOnboardingSnapshot): number {
   return typeof snapshot.lockVersion === 'number' && Number.isFinite(snapshot.lockVersion) ? snapshot.lockVersion : 0
 }
 
-/** The authoritative Vendor onboarding snapshot; a stale response never replaces a newer one. */
+/** Reuse the last display snapshot during navigation; every mount revalidates with the API. */
 export function useOnboardingSnapshot(enabled = true) {
   const navigate = useNavigate()
-  const [snapshot, setSnapshot] = useState<VendorOnboardingSnapshot | null>(null)
-  const [loading, setLoading] = useState(true)
+  const resource = usePortalResource('vendor-onboarding', getVendorOnboarding, enabled)
+  const publishResource = resource.publish
   const [error, setError] = useState<string | null>(null)
   const publish = useCallback((updated: VendorOnboardingSnapshot) => {
-    setSnapshot(current => current && lockVersion(current) > lockVersion(updated) ? current : updated)
-  }, [])
+    publishResource(current => current && lockVersion(current) > lockVersion(updated) ? current : updated)
+  }, [publishResource])
 
-  const refresh = useCallback(async () => {
-    setLoading(true)
+  useEffect(() => {
+    let active = true
     setError(null)
-    try {
-      publish(await getVendorOnboarding())
-    } catch (cause) {
+    const cause = resource.error
+    if (cause) {
       if (cause instanceof ResponseError && cause.response.status === 401) navigate('/login', { replace: true })
-      else setError(await readableOnboardingError(cause))
-    } finally {
-      setLoading(false)
+      else void readableOnboardingError(cause).then(message => { if (active) setError(message) })
     }
-  }, [navigate, publish])
-
-  useEffect(() => { if (enabled) void refresh() }, [refresh, enabled])
-  return { snapshot, loading, error, refresh, setSnapshot: publish }
+    return () => { active = false }
+  }, [navigate, resource.error])
+  return { snapshot: resource.data, loading: !resource.data && !resource.error, error, refresh: resource.refresh, setSnapshot: publish }
 }

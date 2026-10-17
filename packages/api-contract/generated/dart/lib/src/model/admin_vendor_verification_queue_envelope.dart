@@ -15,13 +15,14 @@ part 'admin_vendor_verification_queue_envelope.g.dart';
 ///
 /// Properties:
 /// * [data]
-/// * [meta]
+/// * [meta] - Pagination, region options and status_counts: case counts per review status (PENDING_VERIFICATION, CHANGES_REQUIRED, REJECTED, APPROVED, EXPIRED) under every active filter except status.
 /// * [errors]
 @BuiltValue()
 abstract class AdminVendorVerificationQueueEnvelope implements Built<AdminVendorVerificationQueueEnvelope, AdminVendorVerificationQueueEnvelopeBuilder> {
   @BuiltValueField(wireName: r'data')
   BuiltList<AdminVendorVerificationQueueItem> get data;
 
+  /// Pagination, region options and status_counts: case counts per review status (PENDING_VERIFICATION, CHANGES_REQUIRED, REJECTED, APPROVED, EXPIRED) under every active filter except status.
   @BuiltValueField(wireName: r'meta')
   BuiltMap<String, JsonObject?> get meta;
 

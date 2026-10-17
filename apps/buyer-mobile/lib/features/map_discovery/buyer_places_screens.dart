@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../design_system/components/buyer_overlays.dart';
 import '../../design_system/components/buyer_app_bar.dart';
+import '../../design_system/components/procurement_components.dart';
+import '../../design_system/theme.dart';
 import '../../widgets/auth_content.dart';
 import 'device_location.dart';
 import 'discovery_models.dart';
@@ -90,7 +93,7 @@ class _SavedLocationsScreenState extends State<SavedLocationsScreen> {
   Future<void> _remove(SavedLocationView location) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => BuyerDialog(
         title: Text('Remove ${location.label}?'),
         content: const Text(
           'It will no longer appear in your saved locations. Past orders keep their captured address.',
@@ -122,59 +125,77 @@ class _SavedLocationsScreenState extends State<SavedLocationsScreen> {
       label: const Text('Add location'),
     ),
     body: SafeArea(
-      child: RefreshIndicator(
-        onRefresh: _load,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-          children: [
-            if (_busy) const LinearProgressIndicator(),
-            if (_error != null) ...[
-              AuthNotice(message: _error!, isError: true),
-              TextButton(onPressed: _load, child: const Text('Retry')),
-            ],
-            if (_locations != null && _locations!.isEmpty)
-              const Padding(
-                padding: EdgeInsets.all(8),
-                child: Text(
-                  'No saved locations yet. Add one to reuse it for browsing, projects and orders.',
+      child: _locations != null && _locations!.isEmpty && _error == null
+          ? Column(
+              children: [
+                if (_busy) const LinearProgressIndicator(),
+                Expanded(
+                  child: StatePage(
+                    onRefresh: _load,
+                    child: const StateMessage(
+                      kind: StateKind.empty,
+                      artwork: StateArtwork.location,
+                      title: 'No saved locations yet',
+                      message:
+                          'Add one to reuse it for browsing, projects and orders.',
+                    ),
+                  ),
                 ),
-              ),
-            for (final location
-                in _locations ?? const <SavedLocationView>[]) ...[
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                minTileHeight: 72,
-                leading: Icon(
-                  location.isPrimary ? LucideIcons.house : LucideIcons.mapPin,
-                ),
-                title: Text(
-                  '${location.label}${location.isPrimary ? ' · Primary' : ''}',
-                ),
-                subtitle: Text(
-                  '${kLocationKinds[location.kind] ?? location.kind}\n${location.formattedAddress}\n${location.psgc.description}',
-                ),
-                isThreeLine: true,
-                trailing: PopupMenuButton<String>(
-                  tooltip: 'Actions for ${location.label}',
-                  onSelected: (action) => action == 'primary'
-                      ? _run(() => widget.repository.makePrimary(location))
-                      : _remove(location),
-                  itemBuilder: (_) => [
-                    if (!location.isPrimary)
-                      const PopupMenuItem(
-                        value: 'primary',
-                        child: Text('Make primary'),
-                      ),
-                    const PopupMenuItem(value: 'remove', child: Text('Remove')),
+              ],
+            )
+          : RefreshIndicator(
+              onRefresh: _load,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+                children: [
+                  if (_busy) const LinearProgressIndicator(),
+                  if (_error != null) ...[
+                    AuthNotice(message: _error!, isError: true),
+                    TextButton(onPressed: _load, child: const Text('Retry')),
                   ],
-                ),
+                  for (final location
+                      in _locations ?? const <SavedLocationView>[]) ...[
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      minTileHeight: 72,
+                      leading: Icon(
+                        location.isPrimary
+                            ? LucideIcons.house
+                            : LucideIcons.mapPin,
+                      ),
+                      title: Text(
+                        '${location.label}${location.isPrimary ? ' · Primary' : ''}',
+                      ),
+                      subtitle: Text(
+                        '${kLocationKinds[location.kind] ?? location.kind}\n${location.formattedAddress}\n${location.psgc.description}',
+                      ),
+                      isThreeLine: true,
+                      trailing: PopupMenuButton<String>(
+                        tooltip: 'Actions for ${location.label}',
+                        onSelected: (action) => action == 'primary'
+                            ? _run(
+                                () => widget.repository.makePrimary(location),
+                              )
+                            : _remove(location),
+                        itemBuilder: (_) => [
+                          if (!location.isPrimary)
+                            const PopupMenuItem(
+                              value: 'primary',
+                              child: Text('Make primary'),
+                            ),
+                          const PopupMenuItem(
+                            value: 'remove',
+                            child: Text('Remove'),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Divider(height: 1),
+                  ],
+                ],
               ),
-              const Divider(height: 1),
-            ],
-          ],
-        ),
-      ),
+            ),
     ),
   );
 }
@@ -185,9 +206,17 @@ class FavoriteSuppliersScreen extends StatefulWidget {
     super.key,
     required this.repository,
     this.onRemove,
+    this.onOpenStore,
+    this.onMessage,
   });
   final DiscoveryRepository repository;
   final Future<void> Function(String vendorId)? onRemove;
+
+  /// Opens the supplier's public Store Profile; the row is not tappable when null.
+  final void Function(BuildContext context, String vendorId)? onOpenStore;
+
+  /// Starts or resumes the inquiry conversation with the supplier; no Message button when null.
+  final void Function(BuildContext context, String vendorId)? onMessage;
 
   @override
   State<FavoriteSuppliersScreen> createState() =>
@@ -237,45 +266,89 @@ class _FavoriteSuppliersScreenState extends State<FavoriteSuppliersScreen> {
     backgroundColor: Colors.white,
     appBar: buyerAppBar(context, 'Favorite Suppliers'),
     body: SafeArea(
-      child: RefreshIndicator(
-        onRefresh: _load,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
-          children: [
-            if (_favorites == null && _error == null)
-              const LinearProgressIndicator(),
-            if (_error != null) ...[
-              AuthNotice(message: _error!, isError: true),
-              TextButton(onPressed: _load, child: const Text('Retry')),
-            ],
-            if (_favorites != null && _favorites!.isEmpty)
-              const Text(
-                'No Favorite Suppliers yet. Save a Verified Vendor from its map preview.',
+      child: _favorites != null && _favorites!.isEmpty && _error == null
+          ? StatePage(
+              onRefresh: _load,
+              child: const StateMessage(
+                kind: StateKind.empty,
+                artwork: StateArtwork.favorites,
+                title: 'No Favorite Suppliers yet',
+                message: 'Save a Verified Vendor from its map preview.',
               ),
-            for (final favorite
-                in _favorites ?? const <FavoriteSupplierView>[]) ...[
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                minTileHeight: 64,
-                leading: const Icon(LucideIcons.star),
-                title: Text(favorite.name),
-                subtitle: Text(
-                  '${favorite.scoreText} · ${favorite.currentlyDiscoverable ? 'Currently offering products' : 'No current eligible offerings'}',
-                ),
-                trailing: IconButton(
-                  tooltip: 'Remove ${favorite.name} from favorites',
-                  onPressed: _removing.contains(favorite.vendorId)
-                      ? null
-                      : () => _remove(favorite),
-                  icon: const Icon(LucideIcons.x),
-                ),
+            )
+          : RefreshIndicator(
+              onRefresh: _load,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16),
+                children: [
+                  if (_favorites == null && _error == null)
+                    const LinearProgressIndicator(),
+                  if (_error != null) ...[
+                    AuthNotice(message: _error!, isError: true),
+                    TextButton(onPressed: _load, child: const Text('Retry')),
+                  ],
+                  for (final favorite
+                      in _favorites ?? const <FavoriteSupplierView>[]) ...[
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      minTileHeight: 64,
+                      leading: const Icon(LucideIcons.star),
+                      title: Text(favorite.name),
+                      subtitle: Text(
+                        '${favorite.scoreText} · ${favorite.currentlyDiscoverable ? 'Currently offering products' : 'No current eligible offerings'}',
+                      ),
+                      trailing: widget.onOpenStore == null
+                          ? null
+                          : const Icon(
+                              LucideIcons.chevronRight,
+                              size: 20,
+                              color: BuyerTheme.muted,
+                            ),
+                      onTap: widget.onOpenStore == null
+                          ? null
+                          : () =>
+                                widget.onOpenStore!(context, favorite.vendorId),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          if (widget.onMessage != null)
+                            OutlinedButton.icon(
+                              onPressed: () =>
+                                  widget.onMessage!(context, favorite.vendorId),
+                              icon: const Icon(
+                                LucideIcons.messageCircle,
+                                size: 18,
+                              ),
+                              label: const Text('Message'),
+                              style: OutlinedButton.styleFrom(
+                                minimumSize: const Size(0, 44),
+                              ),
+                            ),
+                          TextButton.icon(
+                            onPressed: _removing.contains(favorite.vendorId)
+                                ? null
+                                : () => _remove(favorite),
+                            icon: const Icon(LucideIcons.x, size: 18),
+                            label: Text(
+                              'Remove ${favorite.name} from favorites',
+                            ),
+                            style: TextButton.styleFrom(
+                              foregroundColor: BuyerTheme.muted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Divider(height: 1),
+                  ],
+                ],
               ),
-              const Divider(height: 1),
-            ],
-          ],
-        ),
-      ),
+            ),
     ),
   );
 }

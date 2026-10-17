@@ -32,7 +32,7 @@ final class ProjectService
 
     public function package(Request $request, string $id, bool $lock = false): object
     {
-        $row = DB::table('work_packages')->where('id', $id)->first();
+        $row = DB::table('work_packages')->where('id', $id)->whereNull('deleted_at')->first();
         if ($row === null) {
             throw new AuthenticationException('WORK_PACKAGE_NOT_FOUND', 'This Work Package is unavailable.', 404);
         }
@@ -63,7 +63,7 @@ final class ProjectService
     public function show(Request $request, string $id): array
     {
         $project = $this->project($request, $id);
-        $packages = DB::table('work_packages')->where('project_id', $id)->orderByDesc('updated_at')->orderBy('id')->paginate(25);
+        $packages = DB::table('work_packages')->where('project_id', $id)->whereNull('deleted_at')->orderByDesc('updated_at')->orderBy('id')->paginate(25);
 
         return $this->summary($project) + ['sites' => DB::table('project_sites')->where('project_id', $id)->where('active', true)->orderBy('id')->get()->map(fn (object $s): array => $this->siteView($s))->all(),
             'packages' => ['items' => array_map(fn (object $w): array => $this->packageSummary($w), $packages->items()), 'page' => $packages->currentPage(), 'has_more' => $packages->hasMorePages()]];
@@ -100,21 +100,46 @@ final class ProjectService
     {
         $w = $this->package($request, $id);
         $v = $w->current_version_id === null ? null : DB::table('work_package_versions')->where('id', $w->current_version_id)->first();
-        $versions = DB::table('work_package_versions')->where('work_package_id', $id)->orderByDesc('version')->paginate(25);
         $missing = DB::table('work_package_missing_lines as m')->join('work_package_lines as l', 'l.id', '=', 'm.work_package_line_id')->leftJoin('orders as o', 'o.id', '=', 'm.linked_order_id')->where('m.work_package_version_id', $w->current_version_id)
-            ->orderBy('l.line_number')->get(['m.*', 'l.name', 'o.order_state as linked_order_state'])->map(static fn (object $m): array => (array) $m)->all();
+            ->orderBy('l.line_number')->get(['m.*', 'l.name', 'l.material_id', 'o.order_state as linked_order_state'])->map(static fn (object $m): array => (array) $m)->all();
+        // Item-Based orders bought for a missing line (owner decision 2026-10-12); linking still verifies them.
+        $buyer = $this->buyers->idFor($request);
+        foreach ($missing as &$m) {
+            $m['tagged_orders'] = DB::table('orders as o')->join('order_lines as ol', 'ol.order_id', '=', 'o.id')->where('ol.work_package_line_id', $m['work_package_line_id'])
+                ->where('o.buyer_profile_id', $buyer)->where('o.procurement_type', 'ITEM_BASED')->whereNotIn('o.order_state', OrderStates::CLOSED_BEFORE_FULFILLMENT)
+                ->distinct()->orderBy('o.reference')->get(['o.id', 'o.reference', 'o.order_state', 'o.accepted_at'])
+                ->map(static fn (object $o): array => ['id' => $o->id, 'reference' => $o->reference, 'order_state' => $o->order_state, 'linkable' => $o->accepted_at !== null])->all();
+        }
+        unset($m);
+        $hasOrder = $this->hasOrder($w);
 
         return $this->packageSummary($w) + ['version' => $v === null ? null : $this->versionView($v),
-            'versions' => ['items' => array_map(fn (object $v): array => $this->versionView($v), $versions->items()), 'page' => $versions->currentPage(), 'has_more' => $versions->hasMorePages()],
+            'has_order' => $hasOrder,
+            'can_delete' => ! $hasOrder && $this->project($request, $w->project_id)->status === 'ACTIVE',
             'budget' => app(ProjectBudget::class)->metrics($this->project($request, $w->project_id), $w), 'missing_lines' => $missing,
             'project_status' => $this->project($request, $w->project_id)->status,
             'document' => ['status' => 'PHASE_15_PDF_PENDING', 'label' => 'Work Package PDF', 'version_id' => $v?->id, 'content_hash' => $v?->content_hash]];
     }
 
+    /**
+     * True while an open order, an open tagged purchase for a missing line or a selected Vendor is tied to the package.
+     * Declined, expired and cancelled orders are closed, so they no longer block editing, reactivating or deleting.
+     */
+    public function hasOrder(object $w): bool
+    {
+        $versions = DB::table('work_package_versions')->select('id')->where('work_package_id', $w->id);
+        $open = static fn ($query) => $query->whereNotIn('o.order_state', OrderStates::CLOSED_BEFORE_FULFILLMENT);
+
+        return $w->selected_vendor_organization_id !== null
+            || DB::table('orders as o')->where('o.work_package_id', $w->id)->where($open)->exists()
+            || DB::table('work_package_missing_lines as m')->join('orders as o', 'o.id', '=', 'm.linked_order_id')->whereIn('m.work_package_version_id', $versions)->where($open)->exists()
+            || DB::table('order_lines as ol')->join('orders as o', 'o.id', '=', 'ol.order_id')->join('work_package_lines as l', 'l.id', '=', 'ol.work_package_line_id')->whereIn('l.work_package_version_id', $versions)->where($open)->exists();
+    }
+
     /** @return array<string, mixed> */
     private function versionView(object $v): array
     {
-        return ['id' => $v->id, 'version' => (int) $v->version, 'content_hash' => $v->content_hash, 'locked_at' => $v->locked_at, 'content' => json_decode($v->content, true)];
+        return ['id' => $v->id, 'content_hash' => $v->content_hash, 'locked_at' => $v->locked_at, 'content' => json_decode($v->content, true)];
     }
 
     /** @param array<string, mixed> $input */
@@ -154,6 +179,10 @@ final class ProjectService
             $history = DB::table('orders as o')->join('work_packages as w', 'w.id', '=', 'o.work_package_id')->where('w.project_id', $id)->exists();
             if ($history && array_intersect(array_keys($input), ['name', 'starts_on', 'ends_on', 'location_id', 'budget_centavos']) !== []) {
                 throw new AuthenticationException('PROJECT_HISTORY_LOCKED', 'This Project has procurement history. Complete or archive it; retain its planning record.', 409);
+            }
+            if (isset($input['budget_centavos']) && (int) $input['budget_centavos'] < ProjectBudget::allocated($id)) {
+                throw new AuthenticationException('PROJECT_BUDGET_BELOW_ALLOCATED', 'The Project budget cannot be less than the budgets already allocated to Work Packages.', 422,
+                    ['allocated_centavos' => ProjectBudget::allocated($id)]);
             }
             $update = array_intersect_key($input, array_flip(['name', 'starts_on', 'ends_on', 'budget_centavos', 'status']));
             if (($input['status'] ?? null) === 'COMPLETED' && DB::table('work_packages')->where('project_id', $id)->get()->contains(fn (object $w): bool => ! in_array($this->packageSummary($w)['status'], ['COMPLETED', 'CANCELLED'], true))) {
@@ -208,28 +237,45 @@ final class ProjectService
         return ['id' => $s->id, 'name' => $s->name, 'discovery_origin' => $s->discovery_origin, 'point' => json_decode($s->snapshot, true)];
     }
 
-    /** @param array<string, mixed> $input */
-    public function savePackage(Request $request, string $projectId, ?string $id, array $input, bool $newVersion = false): string
+    /**
+     * Creates a Work Package, or edits an existing one in place. The Buyer sees one package: an edit never adds a list entry.
+     * Estimates and quotation requests built on the old materials are invalidated. Each saved content is kept internally
+     * (Draft saves overwrite their own copy) because estimates, Vendor quotations and the database's immutability
+     * protection refer to the exact content they were based on.
+     *
+     * @param  array<string, mixed>  $input
+     */
+    public function savePackage(Request $request, string $projectId, ?string $id, array $input): string
     {
         $key = $this->keys->requireIdempotencyKey($request);
         $packageId = $id ?? $key;
 
-        return DB::transaction(function () use ($request, $projectId, $id, $input, $newVersion, $key, $packageId): string {
+        return DB::transaction(function () use ($request, $projectId, $id, $input, $key, $packageId): string {
             $p = $this->project($request, $projectId, true);
-            $endpoint = $newVersion ? 'PACKAGE_VERSION' : 'PACKAGE_SAVE';
+            $endpoint = $id === null ? 'PACKAGE_SAVE' : 'PACKAGE_EDIT';
             if ($this->keys->replayed($request, $endpoint, $key, $packageId)) {
                 return $packageId;
             }
             if ($p->status !== 'ACTIVE') {
-                throw new AuthenticationException('PROJECT_CLOSED', 'Only an Active Project accepts new Work Packages.', 409);
+                throw new AuthenticationException('PROJECT_CLOSED', 'Only an Active Project accepts Work Package changes.', 409);
             }
             $w = $id === null ? null : $this->package($request, $id, true);
+            $previous = null;
+            $status = 'DRAFT';
             if ($w !== null) {
                 self::version($w, $input['lock_version']);
-                $status = $this->packageSummary($w)['status'];
-                if ((! $newVersion && $status !== 'DRAFT') || ($newVersion && ! in_array($status, ['ACTIVE', 'QUOTATION_INQUIRY', 'CANCELLED', 'DRAFT'], true))) {
-                    throw new AuthenticationException('WORK_PACKAGE_LOCKED', 'Use an explicit new version before selection. After selection, cancel the order before correcting the package.', 409);
+                if ($this->hasOrder($w)) {
+                    throw new AuthenticationException('WORK_PACKAGE_HAS_ORDER', 'This Work Package has an order, so it cannot be edited. Cancel the order before correcting the package.', 409);
                 }
+                if (! in_array($w->status, ['DRAFT', 'ACTIVE', 'QUOTATION_INQUIRY', 'CANCELLED'], true)) {
+                    throw new AuthenticationException('WORK_PACKAGE_LOCKED', 'This Work Package can no longer be edited.', 409);
+                }
+                // An edited Draft stays a Draft and a Cancelled package stays Cancelled; a compared or quoted package returns to Active.
+                $status = match ($w->status) {
+                    'ACTIVE', 'QUOTATION_INQUIRY' => 'ACTIVE',
+                    default => $w->status,
+                };
+                $previous = DB::table('work_package_versions')->where('id', $w->current_version_id)->first();
                 $this->invalidate($packageId);
             }
             $site = DB::table('project_sites')->where('id', $input['site_id'])->where('project_id', $projectId)->where('active', true)->first();
@@ -241,17 +287,33 @@ final class ProjectService
             if ($alternate !== null && $alternate['address_id'] === $intended['address_id']) {
                 throw new AuthenticationException('ALTERNATE_DROP_OFF_REQUIRED', 'Choose a distinct alternative vehicle drop-off.', 422);
             }
+            if ($status !== 'CANCELLED') {
+                ProjectBudget::assertAllocation($p, $id, (int) $input['budget_centavos']);
+            }
+            // Validated wildcard data can reorder lines that omit a key; restore the Buyer's order.
             $lines = $input['lines'];
-            $ids = array_column($lines, 'material_id');
+            ksort($lines);
+            $lines = array_values($lines);
+            $ids = array_values(array_filter(array_column($lines, 'material_id')));
             $units = DB::table('units')->whereIn('id', array_column($lines, 'unit_id'))->get()->keyBy('id');
-            $materials = DB::table('materials')->whereIn('id', $ids)->get()->keyBy('id');
+            $materials = DB::table('materials')->whereIn('id', $ids)->where('active', true)->get()->keyBy('id');
+            $definitions = SpecificationMatch::definitions($materials->pluck('material_category_id')->map(static fn (mixed $id): string => (string) $id)->all());
             foreach ($lines as $i => &$line) {
                 $unit = $units->get($line['unit_id']);
-                $material = $materials->get($line['material_id']);
-                if ($unit === null || $material === null || ! DB::table('material_compatible_units')->where('material_id', $line['material_id'])->where('unit_id', $line['unit_id'])->exists() || bccomp($line['quantity'], bcadd($line['quantity'], '0', (int) $unit->precision), 4) !== 0) {
-                    throw new AuthenticationException('INVALID_MATERIAL_LINE', 'Use a known material, normalized unit and supported quantity precision.', 422, ['line' => $i + 1]);
+                $unlisted = ($line['material_id'] ?? null) === null;
+                $material = $unlisted ? null : $materials->get($line['material_id']);
+                // An unlisted material may use any normalized unit; a catalog material only its compatible units.
+                $unitAllowed = $unit !== null && ($unlisted || ($material !== null && DB::table('material_compatible_units')->where('material_id', $line['material_id'])->where('unit_id', $line['unit_id'])->exists()));
+                if (! $unitAllowed || ($unlisted && trim((string) $line['name']) === '') || bccomp($line['quantity'], bcadd($line['quantity'], '0', (int) $unit->precision), 4) !== 0) {
+                    throw new AuthenticationException('INVALID_MATERIAL_LINE', 'Use a known or named material, a normalized unit and supported quantity precision.', 422, ['line' => $i + 1]);
                 }
-                $line += ['name' => $material->name, 'preferred_brand' => null, 'specifications' => []];
+                $line['material_id'] = $unlisted ? null : $line['material_id'];
+                $line['name'] = trim((string) $line['name']);
+                $line += ['preferred_brand' => null, 'specifications' => [], 'description' => null, 'color' => null];
+                if (! $unlisted) {
+                    $line['specifications'] = self::catalogSpecifications($line['specifications'], $definitions[(string) $material->material_category_id] ?? [], $i + 1);
+                }
+                $line['material_kind'] = $unlisted ? 'UNLISTED' : 'CATALOG';
                 $line['id'] = (string) Str::uuid7();
                 $line['unit_code'] = $unit->code;
             }
@@ -261,25 +323,84 @@ final class ProjectService
             $content['destination'] = ['type' => $input['fulfillment_method'], 'intended' => $intended, 'heavy_vehicle_restriction' => $input['heavy_vehicle_restriction'] ?? 'NO',
                 'alternate_drop_off' => $alternate, 'vehicle_endpoint' => $alternate === null ? 'INTENDED_LOCATION' : 'ALTERNATE_DROP_OFF', 'access_instructions' => $input['access_instructions'] ?? null];
             $content['lines'] = $lines;
-            $versionId = (string) Str::uuid7();
             if ($w === null) {
                 DB::table('work_packages')->insert(['id' => $packageId, 'project_id' => $projectId, 'name' => $input['name'], 'budget_centavos' => $input['budget_centavos'], 'created_at' => now(), 'updated_at' => now()]);
             }
             $json = json_encode($content, JSON_THROW_ON_ERROR);
-            DB::table('work_package_versions')->insert(['id' => $versionId, 'work_package_id' => $packageId, 'version' => (int) DB::table('work_package_versions')->where('work_package_id', $packageId)->max('version') + 1,
-                'content_hash' => hash('sha256', $json), 'content' => $json, 'created_by_user_id' => $request->user()->id, 'created_at' => now(), 'updated_at' => now()]);
+            if ($previous !== null && $previous->locked_at === null) {
+                // A Draft owns its single unlocked copy, so saving it again overwrites that copy.
+                $versionId = (string) $previous->id;
+                DB::table('work_package_lines')->where('work_package_version_id', $versionId)->delete();
+                DB::table('work_package_versions')->where('id', $versionId)->update(['content_hash' => hash('sha256', $json), 'content' => $json, 'updated_at' => now()]);
+            } else {
+                $versionId = (string) Str::uuid7();
+                DB::table('work_package_versions')->insert(['id' => $versionId, 'work_package_id' => $packageId, 'version' => (int) DB::table('work_package_versions')->where('work_package_id', $packageId)->max('version') + 1,
+                    'content_hash' => hash('sha256', $json), 'content' => $json, 'created_by_user_id' => $request->user()->id, 'created_at' => now(), 'updated_at' => now()]);
+            }
             foreach ($lines as $i => $line) {
                 DB::table('work_package_lines')->insert(['id' => $line['id'], 'work_package_version_id' => $versionId, 'material_id' => $line['material_id'], 'unit_id' => $line['unit_id'],
                     'quantity' => $line['quantity'], 'name' => $line['name'], 'preferred_brand' => $line['preferred_brand'], 'line_number' => $i + 1,
+                    'material_kind' => $line['material_kind'], 'description' => $line['description'], 'color' => $line['color'],
                     'specifications' => json_encode($line['specifications'], JSON_THROW_ON_ERROR), 'created_at' => now(), 'updated_at' => now()]);
             }
-            DB::table('work_packages')->where('id', $packageId)->update(['name' => $input['name'], 'budget_centavos' => $input['budget_centavos'], 'status' => 'DRAFT',
+            if ($status !== 'DRAFT') {
+                DB::table('work_package_versions')->where('id', $versionId)->update(['locked_at' => now()]);
+            }
+            DB::table('work_packages')->where('id', $packageId)->update(['name' => $input['name'], 'budget_centavos' => $input['budget_centavos'], 'status' => $status,
                 'selected_vendor_organization_id' => null, 'current_version_id' => $versionId, 'lock_version' => (int) ($w->lock_version ?? 0) + 1, 'updated_at' => now()]);
-            $this->record($request, $newVersion ? 'WORK_PACKAGE_VERSION_CREATED' : 'WORK_PACKAGE_DRAFT_SAVED', $packageId);
+            $this->record($request, $w === null ? 'WORK_PACKAGE_DRAFT_SAVED' : 'WORK_PACKAGE_UPDATED', $packageId);
+            if ($previous !== null) {
+                $this->audit->account($request, 'WORK_PACKAGE_EDITED', 'WORK_PACKAGE', $packageId,
+                    before: ['content_hash' => $previous->content_hash, 'status' => $w->status, 'budget_centavos' => (int) $w->budget_centavos],
+                    after: ['content_hash' => hash('sha256', $json), 'status' => $status, 'budget_centavos' => (int) $input['budget_centavos']]);
+            }
             $this->keys->claim($request, $endpoint, $key, $packageId, 200);
 
             return $packageId;
         });
+    }
+
+    /**
+     * A catalog line states details only by its category's attribute codes so scanning can compare them with
+     * product information: numbers are positive and stored in one canonical form ("15.0" → "15"), choices use the
+     * category's own spelling, text is trimmed. Empty values are dropped.
+     *
+     * @param  array<string, mixed>  $values
+     * @param  array<string, object>  $definitions
+     * @return array<string, string>
+     */
+    public static function catalogSpecifications(array $values, array $definitions, int $line): array
+    {
+        $clean = [];
+        foreach ($values as $code => $value) {
+            $text = trim((string) $value);
+            if ($text === '') {
+                continue;
+            }
+            $definition = $definitions[(string) $code] ?? null;
+            $normalized = SpecificationMatch::normalize($text);
+            $allowed = $definition?->allowed_values === null ? null : json_decode((string) $definition->allowed_values, true);
+            $choice = null;
+            foreach (is_array($allowed) ? $allowed : [] as $option) {
+                if (is_scalar($option) && SpecificationMatch::normalize($option) === $normalized) {
+                    $choice = (string) $option;
+                }
+            }
+            $allowed = is_array($allowed) ? $allowed : null;
+            $invalid = match (true) {
+                $definition === null => 'This detail does not apply to the material’s category.',
+                $definition->value_type === 'NUMBER' && (preg_match('/^\d+(\.\d+)?$/', $normalized) !== 1 || bccomp($normalized, '0', 6) <= 0) => $definition->label.' must be a number above zero.',
+                $allowed !== null && $choice === null => 'Choose one of the listed values for '.$definition->label.'.',
+                default => null,
+            };
+            if ($invalid !== null) {
+                throw new AuthenticationException('INVALID_SPECIFICATION', $invalid, 422, ['line' => $line, 'code' => (string) $code]);
+            }
+            $clean[(string) $code] = $definition->value_type === 'NUMBER' ? $normalized : (string) ($choice ?? $text);
+        }
+        ksort($clean);
+
+        return $clean;
     }
 
     public function activate(Request $request, string $id, int $lock): void
@@ -298,6 +419,31 @@ final class ProjectService
             DB::table('work_packages')->where('id', $id)->update(['status' => 'ACTIVE', 'lock_version' => $lock + 1, 'updated_at' => now()]);
             $this->record($request, 'WORK_PACKAGE_ACTIVATED', $id);
             $this->keys->claim($request, 'PACKAGE_ACTIVATE', $key, $id, 200);
+        });
+    }
+
+    /** A Cancelled package returns to Active in place; no copy is made. The Project budget is checked again because cancelling released it. */
+    public function reactivate(Request $request, string $id, int $lock): void
+    {
+        $key = $this->keys->requireIdempotencyKey($request);
+        DB::transaction(function () use ($request, $id, $lock, $key): void {
+            $w = $this->package($request, $id, true);
+            if ($this->keys->replayed($request, 'PACKAGE_REACTIVATE', $key, $id)) {
+                return;
+            }
+            self::version($w, $lock);
+            if ($w->status !== 'CANCELLED' || $w->current_version_id === null) {
+                throw new AuthenticationException('WORK_PACKAGE_NOT_CANCELLED', 'Only a cancelled Work Package can be reactivated.', 409);
+            }
+            if ($this->hasOrder($w)) {
+                throw new AuthenticationException('WORK_PACKAGE_HAS_ORDER', 'This Work Package has an order, so it cannot be reactivated.', 409);
+            }
+            ProjectBudget::assertAllocation($this->project($request, $w->project_id, true), $id, (int) $w->budget_centavos);
+            DB::table('work_package_versions')->where('id', $w->current_version_id)->whereNull('locked_at')->update(['locked_at' => now()]);
+            DB::table('work_packages')->where('id', $id)->update(['status' => 'ACTIVE', 'lock_version' => $lock + 1, 'updated_at' => now()]);
+            $this->audit->account($request, 'WORK_PACKAGE_REACTIVATED', 'WORK_PACKAGE', $id, before: ['status' => 'CANCELLED'], after: ['status' => 'ACTIVE']);
+            $this->record($request, 'WORK_PACKAGE_REACTIVATED', $id);
+            $this->keys->claim($request, 'PACKAGE_REACTIVATE', $key, $id, 200);
         });
     }
 
@@ -341,6 +487,9 @@ final class ProjectService
                     }
                 }
                 $required = DB::table('work_package_lines')->where('id', $m->work_package_line_id)->first();
+                if ($required->material_id === null) {
+                    throw new AuthenticationException('UNLISTED_LINE_WAIVER_ONLY', 'An unlisted material cannot be verified against an order. Record a waiver reason that names your separate purchase.', 422);
+                }
                 $supplied = '0';
                 $requiredSpecs = json_decode($required->specifications ?? '{}', true);
                 $items = DB::table('order_lines as ol')->join('vendor_listings as l', 'l.id', '=', 'ol.vendor_listing_id')->join('products as p', 'p.id', '=', 'l.product_id')
@@ -348,7 +497,7 @@ final class ProjectService
                 foreach ($items as $item) {
                     $snapshot = json_decode($item->snapshot, true);
                     $specs = $snapshot['specifications'] ?? json_decode($item->technical_attributes ?? '{}', true);
-                    if (($required->preferred_brand === null || ($snapshot['brand'] ?? $item->brand) === $required->preferred_brand) && array_diff_assoc($requiredSpecs, $specs) === []) {
+                    if (($required->preferred_brand === null || ($snapshot['brand'] ?? $item->brand) === $required->preferred_brand) && SpecificationMatch::satisfies($requiredSpecs, $specs)) {
                         $supplied = bcadd($supplied, $confirmed[$item->id] ?? $quoted[$item->listing_variant_id] ?? '0', 4);
                     }
                 }

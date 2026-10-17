@@ -84,6 +84,14 @@ class _$CheckoutSubmitRequest extends CheckoutSubmitRequest {
   @override
   final bool? splitConfirmed;
   @override
+  final String? workPackageId;
+  @override
+  final int? workPackageLockVersion;
+  @override
+  final String? budgetOverrideReason;
+  @override
+  final CheckoutInvoiceDetails? invoiceDetails;
+  @override
   final BuiltMap<String, CheckoutSubmitRequestPaymentMethodsEnum>?
       paymentMethods;
 
@@ -95,6 +103,10 @@ class _$CheckoutSubmitRequest extends CheckoutSubmitRequest {
       {required this.cartLockVersion,
       required this.vendorIds,
       this.splitConfirmed,
+      this.workPackageId,
+      this.workPackageLockVersion,
+      this.budgetOverrideReason,
+      this.invoiceDetails,
       this.paymentMethods})
       : super._();
   @override
@@ -113,6 +125,10 @@ class _$CheckoutSubmitRequest extends CheckoutSubmitRequest {
         cartLockVersion == other.cartLockVersion &&
         vendorIds == other.vendorIds &&
         splitConfirmed == other.splitConfirmed &&
+        workPackageId == other.workPackageId &&
+        workPackageLockVersion == other.workPackageLockVersion &&
+        budgetOverrideReason == other.budgetOverrideReason &&
+        invoiceDetails == other.invoiceDetails &&
         paymentMethods == other.paymentMethods;
   }
 
@@ -122,6 +138,10 @@ class _$CheckoutSubmitRequest extends CheckoutSubmitRequest {
     _$hash = $jc(_$hash, cartLockVersion.hashCode);
     _$hash = $jc(_$hash, vendorIds.hashCode);
     _$hash = $jc(_$hash, splitConfirmed.hashCode);
+    _$hash = $jc(_$hash, workPackageId.hashCode);
+    _$hash = $jc(_$hash, workPackageLockVersion.hashCode);
+    _$hash = $jc(_$hash, budgetOverrideReason.hashCode);
+    _$hash = $jc(_$hash, invoiceDetails.hashCode);
     _$hash = $jc(_$hash, paymentMethods.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
@@ -133,6 +153,10 @@ class _$CheckoutSubmitRequest extends CheckoutSubmitRequest {
           ..add('cartLockVersion', cartLockVersion)
           ..add('vendorIds', vendorIds)
           ..add('splitConfirmed', splitConfirmed)
+          ..add('workPackageId', workPackageId)
+          ..add('workPackageLockVersion', workPackageLockVersion)
+          ..add('budgetOverrideReason', budgetOverrideReason)
+          ..add('invoiceDetails', invoiceDetails)
           ..add('paymentMethods', paymentMethods))
         .toString();
   }
@@ -157,6 +181,27 @@ class CheckoutSubmitRequestBuilder
   set splitConfirmed(bool? splitConfirmed) =>
       _$this._splitConfirmed = splitConfirmed;
 
+  String? _workPackageId;
+  String? get workPackageId => _$this._workPackageId;
+  set workPackageId(String? workPackageId) =>
+      _$this._workPackageId = workPackageId;
+
+  int? _workPackageLockVersion;
+  int? get workPackageLockVersion => _$this._workPackageLockVersion;
+  set workPackageLockVersion(int? workPackageLockVersion) =>
+      _$this._workPackageLockVersion = workPackageLockVersion;
+
+  String? _budgetOverrideReason;
+  String? get budgetOverrideReason => _$this._budgetOverrideReason;
+  set budgetOverrideReason(String? budgetOverrideReason) =>
+      _$this._budgetOverrideReason = budgetOverrideReason;
+
+  CheckoutInvoiceDetailsBuilder? _invoiceDetails;
+  CheckoutInvoiceDetailsBuilder get invoiceDetails =>
+      _$this._invoiceDetails ??= CheckoutInvoiceDetailsBuilder();
+  set invoiceDetails(CheckoutInvoiceDetailsBuilder? invoiceDetails) =>
+      _$this._invoiceDetails = invoiceDetails;
+
   MapBuilder<String, CheckoutSubmitRequestPaymentMethodsEnum>? _paymentMethods;
   MapBuilder<String, CheckoutSubmitRequestPaymentMethodsEnum>
       get paymentMethods => _$this._paymentMethods ??=
@@ -176,6 +221,10 @@ class CheckoutSubmitRequestBuilder
       _cartLockVersion = $v.cartLockVersion;
       _vendorIds = $v.vendorIds.toBuilder();
       _splitConfirmed = $v.splitConfirmed;
+      _workPackageId = $v.workPackageId;
+      _workPackageLockVersion = $v.workPackageLockVersion;
+      _budgetOverrideReason = $v.budgetOverrideReason;
+      _invoiceDetails = $v.invoiceDetails?.toBuilder();
       _paymentMethods = $v.paymentMethods?.toBuilder();
       _$v = null;
     }
@@ -204,6 +253,10 @@ class CheckoutSubmitRequestBuilder
                 cartLockVersion, r'CheckoutSubmitRequest', 'cartLockVersion'),
             vendorIds: vendorIds.build(),
             splitConfirmed: splitConfirmed,
+            workPackageId: workPackageId,
+            workPackageLockVersion: workPackageLockVersion,
+            budgetOverrideReason: budgetOverrideReason,
+            invoiceDetails: _invoiceDetails?.build(),
             paymentMethods: _paymentMethods?.build(),
           );
     } catch (_) {
@@ -212,6 +265,8 @@ class CheckoutSubmitRequestBuilder
         _$failedField = 'vendorIds';
         vendorIds.build();
 
+        _$failedField = 'invoiceDetails';
+        _invoiceDetails?.build();
         _$failedField = 'paymentMethods';
         _paymentMethods?.build();
       } catch (e) {

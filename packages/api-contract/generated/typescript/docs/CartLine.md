@@ -13,6 +13,7 @@ Name | Type
 `vendorId` | string
 `displayName` | string
 `variantLabel` | string
+`workPackageLineId` | string
 `image` | [ListingImage](ListingImage.md)
 `unitCode` | string
 `unitName` | string
@@ -24,6 +25,7 @@ Name | Type
 `lineTotalCentavos` | number
 `issues` | [Array&lt;CartIssue&gt;](CartIssue.md)
 `status` | string
+`readyMixedConcrete` | boolean
 
 ## Example
 
@@ -39,6 +41,7 @@ const example = {
   "vendorId": null,
   "displayName": null,
   "variantLabel": null,
+  "workPackageLineId": null,
   "image": null,
   "unitCode": null,
   "unitName": null,
@@ -50,6 +53,7 @@ const example = {
   "lineTotalCentavos": null,
   "issues": null,
   "status": null,
+  "readyMixedConcrete": null,
 } satisfies CartLine
 
 console.log(example)

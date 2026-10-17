@@ -36,7 +36,7 @@ void main() {
       // TODO
     });
 
-    // Imports a CSV snapshot of the DTI-BPS PS licensee or ICC certificate register as an immutable DRAFT. It is used for matching only after activation.
+    // Imports an XLSX or CSV snapshot of the DTI-BPS List of PS Licensees or List of ICC Certificate Holders, in the official layout (title rows above the header are skipped; the ICC sticker serial from/to columns become serial ranges), as an immutable DRAFT. It is used for matching only after activation. An ICC file without sticker serial ranges is rejected with REGISTER_SERIALS_NOT_FOUND.
     //
     //Future<ComplianceRegisterEnvelope> importComplianceRegister(String registerKind, String sourceReference, Date snapshotDate, MultipartFile file) async
     test('test importComplianceRegister', () async {
@@ -48,7 +48,7 @@ void main() {
       // TODO
     });
 
-    //Future<ProductComplianceQueueEnvelope> listProductComplianceQueue({ String status, CompliancePath path, ComplianceReferenceResult referenceResult, String sort, int page }) async
+    //Future<ProductComplianceQueueEnvelope> listProductComplianceQueue({ String status, CompliancePath path, ComplianceReferenceResult referenceResult, String sort, int page, Date from, Date to }) async
     test('test listProductComplianceQueue', () async {
       // TODO
     });

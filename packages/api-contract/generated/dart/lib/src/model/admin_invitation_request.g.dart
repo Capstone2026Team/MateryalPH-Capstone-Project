@@ -117,6 +117,8 @@ class _$AdminInvitationRequest extends AdminInvitationRequest {
   @override
   final String token;
   @override
+  final String? email;
+  @override
   final String fullName;
   @override
   final String password;
@@ -126,6 +128,8 @@ class _$AdminInvitationRequest extends AdminInvitationRequest {
   final AdminInvitationRequestTermsAcceptedEnum termsAccepted;
   @override
   final AdminInvitationRequestPrivacyAcceptedEnum privacyAccepted;
+  @override
+  final VendorBotProtectionEvidence? botProtection;
 
   factory _$AdminInvitationRequest(
           [void Function(AdminInvitationRequestBuilder)? updates]) =>
@@ -133,11 +137,13 @@ class _$AdminInvitationRequest extends AdminInvitationRequest {
 
   _$AdminInvitationRequest._(
       {required this.token,
+      this.email,
       required this.fullName,
       required this.password,
       required this.passwordConfirmation,
       required this.termsAccepted,
-      required this.privacyAccepted})
+      required this.privacyAccepted,
+      this.botProtection})
       : super._();
   @override
   AdminInvitationRequest rebuild(
@@ -153,22 +159,26 @@ class _$AdminInvitationRequest extends AdminInvitationRequest {
     if (identical(other, this)) return true;
     return other is AdminInvitationRequest &&
         token == other.token &&
+        email == other.email &&
         fullName == other.fullName &&
         password == other.password &&
         passwordConfirmation == other.passwordConfirmation &&
         termsAccepted == other.termsAccepted &&
-        privacyAccepted == other.privacyAccepted;
+        privacyAccepted == other.privacyAccepted &&
+        botProtection == other.botProtection;
   }
 
   @override
   int get hashCode {
     var _$hash = 0;
     _$hash = $jc(_$hash, token.hashCode);
+    _$hash = $jc(_$hash, email.hashCode);
     _$hash = $jc(_$hash, fullName.hashCode);
     _$hash = $jc(_$hash, password.hashCode);
     _$hash = $jc(_$hash, passwordConfirmation.hashCode);
     _$hash = $jc(_$hash, termsAccepted.hashCode);
     _$hash = $jc(_$hash, privacyAccepted.hashCode);
+    _$hash = $jc(_$hash, botProtection.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -177,11 +187,13 @@ class _$AdminInvitationRequest extends AdminInvitationRequest {
   String toString() {
     return (newBuiltValueToStringHelper(r'AdminInvitationRequest')
           ..add('token', token)
+          ..add('email', email)
           ..add('fullName', fullName)
           ..add('password', password)
           ..add('passwordConfirmation', passwordConfirmation)
           ..add('termsAccepted', termsAccepted)
-          ..add('privacyAccepted', privacyAccepted))
+          ..add('privacyAccepted', privacyAccepted)
+          ..add('botProtection', botProtection))
         .toString();
   }
 }
@@ -193,6 +205,10 @@ class AdminInvitationRequestBuilder
   String? _token;
   String? get token => _$this._token;
   set token(String? token) => _$this._token = token;
+
+  String? _email;
+  String? get email => _$this._email;
+  set email(String? email) => _$this._email = email;
 
   String? _fullName;
   String? get fullName => _$this._fullName;
@@ -220,6 +236,12 @@ class AdminInvitationRequestBuilder
           AdminInvitationRequestPrivacyAcceptedEnum? privacyAccepted) =>
       _$this._privacyAccepted = privacyAccepted;
 
+  VendorBotProtectionEvidenceBuilder? _botProtection;
+  VendorBotProtectionEvidenceBuilder get botProtection =>
+      _$this._botProtection ??= VendorBotProtectionEvidenceBuilder();
+  set botProtection(VendorBotProtectionEvidenceBuilder? botProtection) =>
+      _$this._botProtection = botProtection;
+
   AdminInvitationRequestBuilder() {
     AdminInvitationRequest._defaults(this);
   }
@@ -228,11 +250,13 @@ class AdminInvitationRequestBuilder
     final $v = _$v;
     if ($v != null) {
       _token = $v.token;
+      _email = $v.email;
       _fullName = $v.fullName;
       _password = $v.password;
       _passwordConfirmation = $v.passwordConfirmation;
       _termsAccepted = $v.termsAccepted;
       _privacyAccepted = $v.privacyAccepted;
+      _botProtection = $v.botProtection?.toBuilder();
       _$v = null;
     }
     return this;
@@ -252,23 +276,38 @@ class AdminInvitationRequestBuilder
   AdminInvitationRequest build() => _build();
 
   _$AdminInvitationRequest _build() {
-    final _$result = _$v ??
-        _$AdminInvitationRequest._(
-          token: BuiltValueNullFieldError.checkNotNull(
-              token, r'AdminInvitationRequest', 'token'),
-          fullName: BuiltValueNullFieldError.checkNotNull(
-              fullName, r'AdminInvitationRequest', 'fullName'),
-          password: BuiltValueNullFieldError.checkNotNull(
-              password, r'AdminInvitationRequest', 'password'),
-          passwordConfirmation: BuiltValueNullFieldError.checkNotNull(
-              passwordConfirmation,
-              r'AdminInvitationRequest',
-              'passwordConfirmation'),
-          termsAccepted: BuiltValueNullFieldError.checkNotNull(
-              termsAccepted, r'AdminInvitationRequest', 'termsAccepted'),
-          privacyAccepted: BuiltValueNullFieldError.checkNotNull(
-              privacyAccepted, r'AdminInvitationRequest', 'privacyAccepted'),
-        );
+    _$AdminInvitationRequest _$result;
+    try {
+      _$result = _$v ??
+          _$AdminInvitationRequest._(
+            token: BuiltValueNullFieldError.checkNotNull(
+                token, r'AdminInvitationRequest', 'token'),
+            email: email,
+            fullName: BuiltValueNullFieldError.checkNotNull(
+                fullName, r'AdminInvitationRequest', 'fullName'),
+            password: BuiltValueNullFieldError.checkNotNull(
+                password, r'AdminInvitationRequest', 'password'),
+            passwordConfirmation: BuiltValueNullFieldError.checkNotNull(
+                passwordConfirmation,
+                r'AdminInvitationRequest',
+                'passwordConfirmation'),
+            termsAccepted: BuiltValueNullFieldError.checkNotNull(
+                termsAccepted, r'AdminInvitationRequest', 'termsAccepted'),
+            privacyAccepted: BuiltValueNullFieldError.checkNotNull(
+                privacyAccepted, r'AdminInvitationRequest', 'privacyAccepted'),
+            botProtection: _botProtection?.build(),
+          );
+    } catch (_) {
+      late String _$failedField;
+      try {
+        _$failedField = 'botProtection';
+        _botProtection?.build();
+      } catch (e) {
+        throw BuiltValueNestedFieldError(
+            r'AdminInvitationRequest', _$failedField, e.toString());
+      }
+      rethrow;
+    }
     replace(_$result);
     return _$result;
   }

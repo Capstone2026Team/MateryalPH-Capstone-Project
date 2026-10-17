@@ -10,6 +10,7 @@ use App\Domain\Orders\NrpcTerms;
 use App\Domain\Orders\OrderExpiryService;
 use App\Domain\Orders\OrderPaymentReminders;
 use App\Domain\Vendors\AddressGeocoder;
+use App\Domain\Vendors\StoreOperatingSchedule;
 use App\Domain\Vendors\VendorFileScanner;
 use Carbon\CarbonImmutable;
 use Database\Seeders\SystemFoundationSeeder;
@@ -107,7 +108,7 @@ final class PhaseElevenPendingPaymentWindowTest extends TestCase
         self::assertSame(0, app(OrderExpiryService::class)->sweep());
         $this->deliverWebhook($this->gateway->expire((string) DB::table('payments')->where('id', $first['id'])->value('provider_session_id')), 'wh-abandoned')->assertOk();
         self::assertSame(['EXPIRED', 'AWAITING_PAYMENT'], [$this->paymentState($first['id']), $this->orderState($orderId)]);
-        $this->getJson('/api/v1/buyers/orders?group=AWAITING_ACTION')->assertOk()->assertJsonPath('data.0.payment_retryable', true);
+        $this->getJson('/api/v1/buyers/orders?group=CONFIRMATION')->assertOk()->assertJsonPath('data.0.payment_retryable', true);
         self::assertSame($deadline->toIso8601String(), $this->deadline($orderId)->toIso8601String(), 'Re-paying never moves the deadline.');
 
         // Pay again: same order, same amount, a new session; the Buyer sees it as the order's second attempt.
@@ -115,7 +116,7 @@ final class PhaseElevenPendingPaymentWindowTest extends TestCase
         self::assertSame(2, (int) DB::table('payments')->where('id', $second['id'])->value('attempt_number'));
         self::assertSame($first['principal_centavos'], $second['principal_centavos']);
         self::assertSame(1, DB::table('payments')->where('order_id', $orderId)->whereIn('state', ['CREATING', 'PENDING'])->count());
-        $this->getJson('/api/v1/buyers/orders?group=AWAITING_ACTION')->assertOk()->assertJsonPath('data.0.payment_retryable', false);
+        $this->getJson('/api/v1/buyers/orders?group=CONFIRMATION')->assertOk()->assertJsonPath('data.0.payment_retryable', false);
 
         // A second open session is refused rather than charging twice; the response names the one in progress.
         $this->postJson('/api/v1/buyers/orders/'.$orderId.'/payments', ['channel_code' => 'MAYA', 'expected_total_centavos' => $second['total_centavos']], ['Idempotency-Key' => (string) Str::uuid7()])
@@ -182,7 +183,8 @@ final class PhaseElevenPendingPaymentWindowTest extends TestCase
 
     public function test_reminders_go_out_once_at_12_hours_and_once_at_1_hour(): void
     {
-        [, , $buyer, $orderId] = $this->awaitingPayment('Reminder Hardware');
+        [$store, , $buyer, $orderId] = $this->awaitingPayment('Reminder Hardware');
+        app(StoreOperatingSchedule::class)->replaceWeekly((string) DB::table('store_profiles')->where('vendor_organization_id', $store->id)->value('id'), array_map(static fn (int $day): array => ['day_of_week' => $day, 'status' => 'CLOSED', 'opens_at' => null, 'closes_at' => null], range(1, 7)));
         $deadline = $this->deadline($orderId);
         $reminders = fn (): int => DB::table('notifications')->where('resource_id', $orderId)->where('user_id', $buyer->id)->where('title', 'like', '%left to pay%')->count();
 
@@ -198,6 +200,9 @@ final class PhaseElevenPendingPaymentWindowTest extends TestCase
         self::assertSame(0, app(OrderPaymentReminders::class)->send());
         self::assertSame(2, $reminders());
         self::assertSame([12, 1], DB::table('order_payment_reminders')->where('order_id', $orderId)->orderByDesc('hours_before')->pluck('hours_before')->map(fn ($hours) => (int) $hours)->all());
+        $this->travelTo($deadline->addSecond());
+        app(OrderExpiryService::class)->sweep();
+        self::assertSame('EXPIRED', $this->orderState($orderId));
     }
 
     public function test_a_late_scheduler_sends_only_the_most_urgent_reminder_and_never_for_paid_or_closed_orders(): void
@@ -238,8 +243,9 @@ final class PhaseElevenPendingPaymentWindowTest extends TestCase
         $attempt = $this->startPayment($buyer, $paidId);
         $this->gateway->complete((string) DB::table('payments')->where('id', $attempt['id'])->value('provider_session_id'));
         $this->travelTo($this->deadline($paidId));
-        // Paid and confirmed: nothing is payable; Phase 12 offers only a reasoned cancellation before preparation.
-        $this->getJson('/api/v1/buyers/orders/'.$paidId)->assertOk()->assertJsonPath('data.available_actions', ['CANCEL']);
+        // Paid and confirmed: nothing is payable; Phase 12 offers a reasoned cancellation before preparation and Phase 13
+        // an invoice copy request once the sale is confirmed (disputes open from Processing onward).
+        $this->getJson('/api/v1/buyers/orders/'.$paidId)->assertOk()->assertJsonPath('data.available_actions', ['CANCEL', 'REQUEST_INVOICE']);
         self::assertSame('CONFIRMED', $this->orderState($paidId));
     }
 }

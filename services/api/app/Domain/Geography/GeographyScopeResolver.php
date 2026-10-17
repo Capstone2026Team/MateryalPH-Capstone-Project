@@ -23,7 +23,7 @@ final class GeographyScopeResolver
     /** @param array<string, mixed> $input */
     public function forBuyer(string $buyerProfileId, array $input): GeographyScope
     {
-        $radius = RadiusPolicy::assertAllowed($input['radius_km'] ?? DB::table('buyer_profiles')->where('id', $buyerProfileId)->value('discovery_radius_km') ?? RadiusPolicy::BUYER_DEFAULT_KM);
+        $radius = RadiusPolicy::assertAllowed($input['radius_km'] ?? DB::table('buyer_profiles')->where('id', $buyerProfileId)->value('discovery_radius_km') ?? RadiusPolicy::buyerDefault());
         $hasCoordinates = array_key_exists('latitude', $input) || array_key_exists('longitude', $input);
         $locationId = $input['location_id'] ?? null;
         if ($hasCoordinates && $locationId !== null) {
@@ -49,7 +49,7 @@ final class GeographyScopeResolver
                 throw new AuthenticationException('ORIGIN_NOT_PERMITTED', 'Vendor market scope always uses your own verified store location.', 422, ['field' => $key]);
             }
         }
-        $radius = RadiusPolicy::assertAllowed($input['radius_km'] ?? RadiusPolicy::VENDOR_DEFAULT_KM);
+        $radius = RadiusPolicy::assertAllowed($input['radius_km'] ?? RadiusPolicy::vendorDefault());
         $point = DB::table('vendor_addresses as a')->join('vendor_address_versions as v', 'v.id', '=', 'a.current_version_id')
             ->where('a.vendor_organization_id', $organizationId)->whereNotNull('v.location')
             ->first(['v.id', 'v.latitude', 'v.longitude']);

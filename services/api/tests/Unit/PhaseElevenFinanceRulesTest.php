@@ -80,6 +80,16 @@ final class PhaseElevenFinanceRulesTest extends TestCase
         self::assertSame(['fee_centavos' => 20000, 'vat_centavos' => 0, 'revenue_centavos' => 20000], CommissionService::feeVat(20000, 'DEMO_NONVAT'));
     }
 
+    public function test_successive_credits_preserve_original_vat_and_reverse_every_centavo_exactly(): void
+    {
+        $first = CommissionService::creditSplit(20000, 2143, 0, 0, 4000);
+        $last = CommissionService::creditSplit(20000, 2143, 4000, $first['vat_centavos'], 16000);
+        self::assertSame(2143, $first['vat_centavos'] + $last['vat_centavos']);
+        self::assertSame(17857, $first['revenue_centavos'] + $last['revenue_centavos']);
+        self::assertSame(['vat_centavos' => 0, 'revenue_centavos' => 4000], CommissionService::creditSplit(20000, 0, 0, 0, 4000));
+        self::assertSame(['vat_centavos' => 1, 'revenue_centavos' => 4], CommissionService::creditSplit(5, 1, 0, 0, 5));
+    }
+
     /** @return iterable<string, array{0: string, 1: int, 2: int, 3: bool, 4: int, 5: string, 6: int}> */
     public static function fin04aFixtures(): iterable
     {

@@ -8,7 +8,7 @@ use App\Domain\Compliance\ComplianceTextExtractor;
 
 /**
  * Default adapter while no OCR engine is configured. The Vendor enters the
- * marking values on Review and Confirm and the submission goes to Admin review.
+ * marking number on Review and Confirm and the register lookup still runs.
  */
 final class UnavailableComplianceTextExtractor implements ComplianceTextExtractor
 {
@@ -17,8 +17,13 @@ final class UnavailableComplianceTextExtractor implements ComplianceTextExtracto
         return 'NONE';
     }
 
-    public function extract(string $path, string $contentType): array
+    public function available(): bool
     {
-        return ['status' => 'UNAVAILABLE', 'confidence' => null, 'suggestions' => []];
+        return false;
+    }
+
+    public function extract(string $path, string $contentType, ?string $markingType = null): array
+    {
+        return ['status' => 'UNAVAILABLE', 'confidence' => null, 'suggestions' => [], 'candidates' => []];
     }
 }

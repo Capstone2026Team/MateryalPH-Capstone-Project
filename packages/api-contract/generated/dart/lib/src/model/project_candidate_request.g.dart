@@ -15,6 +15,8 @@ class _$ProjectCandidateRequest extends ProjectCandidateRequest {
   final String? note;
   @override
   final String? budgetOverrideReason;
+  @override
+  final BuiltList<ProjectSpecificationSelection>? selections;
 
   factory _$ProjectCandidateRequest(
           [void Function(ProjectCandidateRequestBuilder)? updates]) =>
@@ -24,7 +26,8 @@ class _$ProjectCandidateRequest extends ProjectCandidateRequest {
       {required this.lockVersion,
       required this.candidateId,
       this.note,
-      this.budgetOverrideReason})
+      this.budgetOverrideReason,
+      this.selections})
       : super._();
   @override
   ProjectCandidateRequest rebuild(
@@ -42,7 +45,8 @@ class _$ProjectCandidateRequest extends ProjectCandidateRequest {
         lockVersion == other.lockVersion &&
         candidateId == other.candidateId &&
         note == other.note &&
-        budgetOverrideReason == other.budgetOverrideReason;
+        budgetOverrideReason == other.budgetOverrideReason &&
+        selections == other.selections;
   }
 
   @override
@@ -52,6 +56,7 @@ class _$ProjectCandidateRequest extends ProjectCandidateRequest {
     _$hash = $jc(_$hash, candidateId.hashCode);
     _$hash = $jc(_$hash, note.hashCode);
     _$hash = $jc(_$hash, budgetOverrideReason.hashCode);
+    _$hash = $jc(_$hash, selections.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -62,7 +67,8 @@ class _$ProjectCandidateRequest extends ProjectCandidateRequest {
           ..add('lockVersion', lockVersion)
           ..add('candidateId', candidateId)
           ..add('note', note)
-          ..add('budgetOverrideReason', budgetOverrideReason))
+          ..add('budgetOverrideReason', budgetOverrideReason)
+          ..add('selections', selections))
         .toString();
   }
 }
@@ -89,6 +95,12 @@ class ProjectCandidateRequestBuilder
   set budgetOverrideReason(String? budgetOverrideReason) =>
       _$this._budgetOverrideReason = budgetOverrideReason;
 
+  ListBuilder<ProjectSpecificationSelection>? _selections;
+  ListBuilder<ProjectSpecificationSelection> get selections =>
+      _$this._selections ??= ListBuilder<ProjectSpecificationSelection>();
+  set selections(ListBuilder<ProjectSpecificationSelection>? selections) =>
+      _$this._selections = selections;
+
   ProjectCandidateRequestBuilder() {
     ProjectCandidateRequest._defaults(this);
   }
@@ -100,6 +112,7 @@ class ProjectCandidateRequestBuilder
       _candidateId = $v.candidateId;
       _note = $v.note;
       _budgetOverrideReason = $v.budgetOverrideReason;
+      _selections = $v.selections?.toBuilder();
       _$v = null;
     }
     return this;
@@ -119,15 +132,29 @@ class ProjectCandidateRequestBuilder
   ProjectCandidateRequest build() => _build();
 
   _$ProjectCandidateRequest _build() {
-    final _$result = _$v ??
-        _$ProjectCandidateRequest._(
-          lockVersion: BuiltValueNullFieldError.checkNotNull(
-              lockVersion, r'ProjectCandidateRequest', 'lockVersion'),
-          candidateId: BuiltValueNullFieldError.checkNotNull(
-              candidateId, r'ProjectCandidateRequest', 'candidateId'),
-          note: note,
-          budgetOverrideReason: budgetOverrideReason,
-        );
+    _$ProjectCandidateRequest _$result;
+    try {
+      _$result = _$v ??
+          _$ProjectCandidateRequest._(
+            lockVersion: BuiltValueNullFieldError.checkNotNull(
+                lockVersion, r'ProjectCandidateRequest', 'lockVersion'),
+            candidateId: BuiltValueNullFieldError.checkNotNull(
+                candidateId, r'ProjectCandidateRequest', 'candidateId'),
+            note: note,
+            budgetOverrideReason: budgetOverrideReason,
+            selections: _selections?.build(),
+          );
+    } catch (_) {
+      late String _$failedField;
+      try {
+        _$failedField = 'selections';
+        _selections?.build();
+      } catch (e) {
+        throw BuiltValueNestedFieldError(
+            r'ProjectCandidateRequest', _$failedField, e.toString());
+      }
+      rethrow;
+    }
     replace(_$result);
     return _$result;
   }

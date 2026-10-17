@@ -18,6 +18,7 @@ Future<void> _pumpProfile(
   VoidCallback? cart,
   VoidCallback? search,
   VoidCallback? notifications,
+  VoidCallback? notificationSettings,
 }) async {
   await tester.pumpWidget(
     _app(
@@ -29,6 +30,7 @@ Future<void> _pumpProfile(
         onOpenCart: cart,
         onOpenSearch: search,
         onOpenNotifications: notifications,
+        onOpenNotificationSettings: notificationSettings,
       ),
     ),
   );
@@ -48,6 +50,7 @@ void main() {
       cart: () => taps.add('cart'),
       search: () => taps.add('search'),
       notifications: () => taps.add('notifications'),
+      notificationSettings: () => taps.add('notification-settings'),
     );
 
     await tester.tap(find.text('Orders'));
@@ -56,20 +59,27 @@ void main() {
     await tester.tap(find.byTooltip('Notifications'));
     await tester.tap(find.text('Notification Settings'));
 
-    expect(taps, ['orders', 'cart', 'search', 'notifications', 'notifications']);
+    expect(taps, [
+      'orders',
+      'cart',
+      'search',
+      'notifications',
+      'notification-settings',
+    ]);
   });
 
-  testWidgets('Profile Orders and Cart fall back to the placeholder only when unwired', (
-    tester,
-  ) async {
-    await tester.binding.setSurfaceSize(const Size(390, 1400));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-    await _pumpProfile(tester);
+  testWidgets(
+    'Profile Orders and Cart fall back to the placeholder only when unwired',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(390, 1400));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await _pumpProfile(tester);
 
-    await tester.tap(find.text('Orders'));
-    await tester.pumpAndSettle();
-    expect(find.text('This feature is not available yet.'), findsOneWidget);
-  });
+      await tester.tap(find.text('Orders'));
+      await tester.pumpAndSettle();
+      expect(find.text('This feature is not available yet.'), findsOneWidget);
+    },
+  );
 
   testWidgets('View my orders clears the checkout trail so Back returns Home', (
     tester,
@@ -100,9 +110,8 @@ void main() {
               child: FilledButton(
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
-                    builder: (_) => const Scaffold(
-                      body: Center(child: Text('Cart page')),
-                    ),
+                    builder: (_) =>
+                        const Scaffold(body: Center(child: Text('Cart page'))),
                   ),
                 ),
                 child: const Text('Home'),

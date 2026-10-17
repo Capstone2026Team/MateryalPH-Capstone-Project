@@ -15,7 +15,7 @@ part 'account_session.g.dart';
 /// * [description]
 /// * [current]
 /// * [createdAt]
-/// * [lastActiveAt]
+/// * [lastActiveAt] - Session activity display, updated at most once per minute. Authentication, revocation and expiry are checked on every request.
 @BuiltValue()
 abstract class AccountSession implements Built<AccountSession, AccountSessionBuilder> {
   @BuiltValueField(wireName: r'id')
@@ -30,6 +30,7 @@ abstract class AccountSession implements Built<AccountSession, AccountSessionBui
   @BuiltValueField(wireName: r'created_at')
   String? get createdAt;
 
+  /// Session activity display, updated at most once per minute. Authentication, revocation and expiry are checked on every request.
   @BuiltValueField(wireName: r'last_active_at')
   String? get lastActiveAt;
 

@@ -6,6 +6,7 @@
 
 Name | Type
 ------------ | -------------
+`deliverySetup` | [VendorDeliverySetup](VendorDeliverySetup.md)
 `scope` | string
 `summary` | [FleetSummary](FleetSummary.md)
 `delivery` | [FleetVehicleListMetaDelivery](FleetVehicleListMetaDelivery.md)
@@ -19,6 +20,7 @@ import type { FleetVehicleListMeta } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "deliverySetup": null,
   "scope": null,
   "summary": null,
   "delivery": null,

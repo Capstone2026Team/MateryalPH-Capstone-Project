@@ -8,6 +8,8 @@ part of 'delivery_confirmation.dart';
 
 class _$DeliveryConfirmation extends DeliveryConfirmation {
   @override
+  final String? changeReason;
+  @override
   final BuiltList<DeliveryVehicleSelection> vehicles;
   @override
   final int finalFeeCentavos;
@@ -27,7 +29,8 @@ class _$DeliveryConfirmation extends DeliveryConfirmation {
       (DeliveryConfirmationBuilder()..update(updates))._build();
 
   _$DeliveryConfirmation._(
-      {required this.vehicles,
+      {this.changeReason,
+      required this.vehicles,
       required this.finalFeeCentavos,
       required this.fulfillmentDate,
       required this.arrangement,
@@ -48,6 +51,7 @@ class _$DeliveryConfirmation extends DeliveryConfirmation {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is DeliveryConfirmation &&
+        changeReason == other.changeReason &&
         vehicles == other.vehicles &&
         finalFeeCentavos == other.finalFeeCentavos &&
         fulfillmentDate == other.fulfillmentDate &&
@@ -60,6 +64,7 @@ class _$DeliveryConfirmation extends DeliveryConfirmation {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, changeReason.hashCode);
     _$hash = $jc(_$hash, vehicles.hashCode);
     _$hash = $jc(_$hash, finalFeeCentavos.hashCode);
     _$hash = $jc(_$hash, fulfillmentDate.hashCode);
@@ -74,6 +79,7 @@ class _$DeliveryConfirmation extends DeliveryConfirmation {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'DeliveryConfirmation')
+          ..add('changeReason', changeReason)
           ..add('vehicles', vehicles)
           ..add('finalFeeCentavos', finalFeeCentavos)
           ..add('fulfillmentDate', fulfillmentDate)
@@ -88,6 +94,10 @@ class _$DeliveryConfirmation extends DeliveryConfirmation {
 class DeliveryConfirmationBuilder
     implements Builder<DeliveryConfirmation, DeliveryConfirmationBuilder> {
   _$DeliveryConfirmation? _$v;
+
+  String? _changeReason;
+  String? get changeReason => _$this._changeReason;
+  set changeReason(String? changeReason) => _$this._changeReason = changeReason;
 
   ListBuilder<DeliveryVehicleSelection>? _vehicles;
   ListBuilder<DeliveryVehicleSelection> get vehicles =>
@@ -131,6 +141,7 @@ class DeliveryConfirmationBuilder
   DeliveryConfirmationBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _changeReason = $v.changeReason;
       _vehicles = $v.vehicles.toBuilder();
       _finalFeeCentavos = $v.finalFeeCentavos;
       _fulfillmentDate = $v.fulfillmentDate;
@@ -161,6 +172,7 @@ class DeliveryConfirmationBuilder
     try {
       _$result = _$v ??
           _$DeliveryConfirmation._(
+            changeReason: changeReason,
             vehicles: vehicles.build(),
             finalFeeCentavos: BuiltValueNullFieldError.checkNotNull(
                 finalFeeCentavos, r'DeliveryConfirmation', 'finalFeeCentavos'),

@@ -63,6 +63,12 @@ void main() {
       // TODO
     });
 
+    // Search tags the Vendor typed for this listing only
+    // BuiltList<String> customTags
+    test('to test the property `customTags`', () async {
+      // TODO
+    });
+
     // BuiltMap<String, String> technicalAttributes
     test('to test the property `technicalAttributes`', () async {
       // TODO

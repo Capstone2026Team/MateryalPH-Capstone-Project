@@ -11,6 +11,9 @@ const FeatureAvailabilityStatusEnum
     const FeatureAvailabilityStatusEnum._('NOT_YET_AVAILABLE');
 const FeatureAvailabilityStatusEnum _$featureAvailabilityStatusEnum_AVAILABLE =
     const FeatureAvailabilityStatusEnum._('AVAILABLE');
+const FeatureAvailabilityStatusEnum
+    _$featureAvailabilityStatusEnum_TEMPORARILY_UNAVAILABLE =
+    const FeatureAvailabilityStatusEnum._('TEMPORARILY_UNAVAILABLE');
 
 FeatureAvailabilityStatusEnum _$featureAvailabilityStatusEnumValueOf(
     String name) {
@@ -19,6 +22,8 @@ FeatureAvailabilityStatusEnum _$featureAvailabilityStatusEnumValueOf(
       return _$featureAvailabilityStatusEnum_NOT_YET_AVAILABLE;
     case 'AVAILABLE':
       return _$featureAvailabilityStatusEnum_AVAILABLE;
+    case 'TEMPORARILY_UNAVAILABLE':
+      return _$featureAvailabilityStatusEnum_TEMPORARILY_UNAVAILABLE;
     default:
       throw ArgumentError(name);
   }
@@ -29,6 +34,7 @@ final BuiltSet<FeatureAvailabilityStatusEnum>
         FeatureAvailabilityStatusEnum>(const <FeatureAvailabilityStatusEnum>[
   _$featureAvailabilityStatusEnum_NOT_YET_AVAILABLE,
   _$featureAvailabilityStatusEnum_AVAILABLE,
+  _$featureAvailabilityStatusEnum_TEMPORARILY_UNAVAILABLE,
 ]);
 
 Serializer<FeatureAvailabilityStatusEnum>
@@ -40,10 +46,12 @@ class _$FeatureAvailabilityStatusEnumSerializer
   static const Map<String, Object> _toWire = const <String, Object>{
     'NOT_YET_AVAILABLE': 'NOT_YET_AVAILABLE',
     'AVAILABLE': 'AVAILABLE',
+    'TEMPORARILY_UNAVAILABLE': 'TEMPORARILY_UNAVAILABLE',
   };
   static const Map<Object, String> _fromWire = const <Object, String>{
     'NOT_YET_AVAILABLE': 'NOT_YET_AVAILABLE',
     'AVAILABLE': 'AVAILABLE',
+    'TEMPORARILY_UNAVAILABLE': 'TEMPORARILY_UNAVAILABLE',
   };
 
   @override

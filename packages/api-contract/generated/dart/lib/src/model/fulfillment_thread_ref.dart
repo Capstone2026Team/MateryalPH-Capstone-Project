@@ -12,6 +12,7 @@ part 'fulfillment_thread_ref.g.dart';
 /// FulfillmentThreadRef
 ///
 /// Properties:
+/// * [unreadCount] - Received messages this viewer has not read in this order's fulfillment conversation. Zero for a missing thread or a viewer without current conversation access. Counting never marks messages read.
 /// * [available]
 /// * [conversationId]
 /// * [readOnly]
@@ -19,6 +20,10 @@ part 'fulfillment_thread_ref.g.dart';
 /// * [notice]
 @BuiltValue()
 abstract class FulfillmentThreadRef implements Built<FulfillmentThreadRef, FulfillmentThreadRefBuilder> {
+  /// Received messages this viewer has not read in this order's fulfillment conversation. Zero for a missing thread or a viewer without current conversation access. Counting never marks messages read.
+  @BuiltValueField(wireName: r'unread_count')
+  int? get unreadCount;
+
   @BuiltValueField(wireName: r'available')
   bool get available;
 
@@ -58,6 +63,13 @@ class _$FulfillmentThreadRefSerializer implements PrimitiveSerializer<Fulfillmen
     FulfillmentThreadRef object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.unreadCount != null) {
+      yield r'unread_count';
+      yield serializers.serialize(
+        object.unreadCount,
+        specifiedType: const FullType(int),
+      );
+    }
     yield r'available';
     yield serializers.serialize(
       object.available,
@@ -112,6 +124,14 @@ class _$FulfillmentThreadRefSerializer implements PrimitiveSerializer<Fulfillmen
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'unread_count':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.unreadCount = valueDes;
+          break;
         case r'available':
           final valueDes = serializers.deserialize(
             value,

@@ -72,8 +72,15 @@ void main() {
 
     // Paginated organization listings. Customer Service Staff receive the sales stock view; Fulfillment Staff receive only assigned products (meta.scope ASSIGNED_ONLY).
     //
-    //Future<CatalogListingSummaryListEnvelope> listVendorCatalogListings({ ListingStatus status, ListingComplianceStatus complianceStatus, String categoryId, String q, int page }) async
+    //Future<CatalogListingSummaryListEnvelope> listVendorCatalogListings({ String group, ListingStatus status, ListingComplianceStatus complianceStatus, String categoryId, String q, int page }) async
     test('test listVendorCatalogListings', () async {
+      // TODO
+    });
+
+    // Looks up a PS License No. or ICC sticker serial in the active DTI-BPS register snapshot for this listing's regulated product (rule compliance.register-number.v2) and returns the register record used to prefill the declaration. Read-only — nothing is submitted and nothing reaches Admin review. MATCHED means automatic verification is possible; UNCERTAIN means the number is listed for another product or an expired record; UNMATCHED means it is not listed or is not in the printed format; UNAVAILABLE means no snapshot is active.
+    //
+    //Future<ComplianceLookupEnvelope> lookupListingCompliance(String listingId, ComplianceLookupRequest complianceLookupRequest) async
+    test('test lookupListingCompliance', () async {
       // TODO
     });
 
@@ -103,7 +110,7 @@ void main() {
       // TODO
     });
 
-    // Review and Confirm for all three paths. An exact match with the active DTI-BPS register snapshot (rule compliance.register-exact.v1) is VERIFIED as an audited system decision; uncertain, unavailable or unmatched results become PENDING_ADMIN_REVIEW, never a counterfeit finding.
+    // Review and Confirm for all three paths. The Vendor supplies the PS License No. or ICC sticker serial and marking evidence. With review_mode AUTOMATIC (default) a MATCHED register lookup (rule compliance.register-number.v2) is VERIFIED as an audited system decision and the register record supplies the manufacturer or importer; any other result returns 422 COMPLIANCE_REGISTER_NOT_MATCHED with details.lookup and records nothing. With review_mode MANUAL_REVIEW, which the Vendor chooses explicitly, an unmatched declaration becomes PENDING_ADMIN_REVIEW, never a counterfeit finding.
     //
     //Future<CatalogListingEnvelope> submitListingCompliance(String listingId, String idempotencyKey, ComplianceSubmission complianceSubmission) async
     test('test submitListingCompliance', () async {
@@ -124,9 +131,9 @@ void main() {
       // TODO
     });
 
-    // Stores a private PS Mark/ICC marking photo or QR image and returns editable extraction assistance. OCR and QR values are suggestions only; UNAVAILABLE means the Vendor enters the values on Review and Confirm.
+    // Stores a private PS Mark/ICC marking photo or QR image and returns editable extraction assistance. OCR and QR values are suggestions only; PHOTO_OCR uses local Tesseract after malware scanning and returns only labelled marking fields, never raw OCR text. UNAVAILABLE (engine missing) or FAILED (unreadable image, timeout or engine failure) retains the private evidence for manual Review and Confirm. Current authorization and listing eligibility are checked again after extraction. OCR never changes compliance or publication status. With marking_type, OCR and QR read the PS License No. or ICC sticker serial by its printed shape; look-alike readings are checked against the active DTI-BPS register and the listed one is suggested (register_listed). A QR payload sent with a PHOTO_OCR photo is used instead of OCR when it holds the number.
     //
-    //Future<ComplianceEvidenceEnvelope> uploadListingComplianceEvidence(String listingId, CompliancePath path, MultipartFile file, { String qrPayload }) async
+    //Future<ComplianceEvidenceEnvelope> uploadListingComplianceEvidence(String listingId, CompliancePath path, MultipartFile file, { String qrPayload, MarkingType markingType }) async
     test('test uploadListingComplianceEvidence', () async {
       // TODO
     });

@@ -270,20 +270,26 @@ void main() {
       final detail = listingDetail();
       final variant = detail.variants.firstWhere((item) => item.available);
       var calls = 0;
+      final repository = FakeProcurementRepository();
+      final cart = CartController(repository: repository);
+      addTearDown(cart.dispose);
       await tester.pumpWidget(
         MaterialApp(
           theme: BuyerTheme.light,
           home: Scaffold(
             body: ProductFinalizationSheet(
+              repository: repository,
+              cart: cart,
+              savedLocations: () => [],
               detail: () => detail,
               variantId: variant.variantId,
-              quantity: 49,
+              quantity: '49',
               fulfillment: 'PICKUP',
               buy: false,
               onConfirm: (id, quantity, fulfillment) async {
                 calls++;
                 expect(id, variant.variantId);
-                expect(quantity, 50);
+                expect(quantity, '50');
                 expect(fulfillment, 'PICKUP');
                 return 'The requested quantity is no longer available.';
               },

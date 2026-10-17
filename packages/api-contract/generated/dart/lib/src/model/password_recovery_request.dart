@@ -15,7 +15,7 @@ part 'password_recovery_request.g.dart';
 /// Properties:
 /// * [email]
 /// * [portal]
-/// * [botProtection] - Vendor web password recovery only; prohibited for Admin recovery.
+/// * [botProtection] - Vendor and Admin web password recovery; required when bot protection is enabled unless a matching single-use HttpOnly proof cookie is present.
 @BuiltValue()
 abstract class PasswordRecoveryRequest implements Built<PasswordRecoveryRequest, PasswordRecoveryRequestBuilder> {
   @BuiltValueField(wireName: r'email')
@@ -25,7 +25,7 @@ abstract class PasswordRecoveryRequest implements Built<PasswordRecoveryRequest,
   PasswordRecoveryRequestPortalEnum get portal;
   // enum portalEnum {  VENDOR,  ADMIN,  };
 
-  /// Vendor web password recovery only; prohibited for Admin recovery.
+  /// Vendor and Admin web password recovery; required when bot protection is enabled unless a matching single-use HttpOnly proof cookie is present.
   @BuiltValueField(wireName: r'bot_protection')
   VendorBotProtectionEvidence? get botProtection;
 

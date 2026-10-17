@@ -121,7 +121,7 @@ class _$RegisterRequest extends RegisterRequest {
   @override
   final String passwordConfirmation;
   @override
-  final String businessName;
+  final String? businessName;
   @override
   final RegisterRequestTermsAcceptedEnum termsAccepted;
   @override
@@ -138,7 +138,7 @@ class _$RegisterRequest extends RegisterRequest {
       required this.mobileE164,
       required this.password,
       required this.passwordConfirmation,
-      required this.businessName,
+      this.businessName,
       required this.termsAccepted,
       required this.privacyAccepted,
       this.botProtection})
@@ -294,8 +294,7 @@ class RegisterRequestBuilder
                 passwordConfirmation,
                 r'RegisterRequest',
                 'passwordConfirmation'),
-            businessName: BuiltValueNullFieldError.checkNotNull(
-                businessName, r'RegisterRequest', 'businessName'),
+            businessName: businessName,
             termsAccepted: BuiltValueNullFieldError.checkNotNull(
                 termsAccepted, r'RegisterRequest', 'termsAccepted'),
             privacyAccepted: BuiltValueNullFieldError.checkNotNull(

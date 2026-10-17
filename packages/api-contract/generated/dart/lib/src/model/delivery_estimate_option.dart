@@ -3,6 +3,8 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:built_collection/built_collection.dart';
+import 'package:materyalph_api_client/src/model/mixer_volume_plan.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -11,15 +13,24 @@ part 'delivery_estimate_option.g.dart';
 /// DeliveryEstimateOption
 ///
 /// Properties:
+/// * [vehicleId] - Recommended registered vehicle; absent in historical estimates.
 /// * [loadKey]
 /// * [vehicleName]
 /// * [vehicleType]
 /// * [vehicles]
 /// * [trips]
-/// * [feeCentavos]
+/// * [feeCentavos] - Trip fees plus any mixer mobilization.
 /// * [feePerTripCentavos]
+/// * [mobilizationBasis] - The Vendor's chosen mixer mobilization basis.
+/// * [mobilizationFeeCentavos]
+/// * [mobilizationTotalCentavos]
+/// * [volumePlan]
 @BuiltValue()
 abstract class DeliveryEstimateOption implements Built<DeliveryEstimateOption, DeliveryEstimateOptionBuilder> {
+  /// Recommended registered vehicle; absent in historical estimates.
+  @BuiltValueField(wireName: r'vehicle_id')
+  String? get vehicleId;
+
   @BuiltValueField(wireName: r'load_key')
   String get loadKey;
 
@@ -35,11 +46,26 @@ abstract class DeliveryEstimateOption implements Built<DeliveryEstimateOption, D
   @BuiltValueField(wireName: r'trips')
   int get trips;
 
+  /// Trip fees plus any mixer mobilization.
   @BuiltValueField(wireName: r'fee_centavos')
   int get feeCentavos;
 
   @BuiltValueField(wireName: r'fee_per_trip_centavos')
   int get feePerTripCentavos;
+
+  /// The Vendor's chosen mixer mobilization basis.
+  @BuiltValueField(wireName: r'mobilization_basis')
+  DeliveryEstimateOptionMobilizationBasisEnum? get mobilizationBasis;
+  // enum mobilizationBasisEnum {  PER_TRUCK,  PER_TRIP,  ,  };
+
+  @BuiltValueField(wireName: r'mobilization_fee_centavos')
+  int? get mobilizationFeeCentavos;
+
+  @BuiltValueField(wireName: r'mobilization_total_centavos')
+  int? get mobilizationTotalCentavos;
+
+  @BuiltValueField(wireName: r'volume_plan')
+  MixerVolumePlan? get volumePlan;
 
   DeliveryEstimateOption._();
 
@@ -64,6 +90,13 @@ class _$DeliveryEstimateOptionSerializer implements PrimitiveSerializer<Delivery
     DeliveryEstimateOption object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.vehicleId != null) {
+      yield r'vehicle_id';
+      yield serializers.serialize(
+        object.vehicleId,
+        specifiedType: const FullType(String),
+      );
+    }
     yield r'load_key';
     yield serializers.serialize(
       object.loadKey,
@@ -99,6 +132,34 @@ class _$DeliveryEstimateOptionSerializer implements PrimitiveSerializer<Delivery
       object.feePerTripCentavos,
       specifiedType: const FullType(int),
     );
+    if (object.mobilizationBasis != null) {
+      yield r'mobilization_basis';
+      yield serializers.serialize(
+        object.mobilizationBasis,
+        specifiedType: const FullType.nullable(DeliveryEstimateOptionMobilizationBasisEnum),
+      );
+    }
+    if (object.mobilizationFeeCentavos != null) {
+      yield r'mobilization_fee_centavos';
+      yield serializers.serialize(
+        object.mobilizationFeeCentavos,
+        specifiedType: const FullType(int),
+      );
+    }
+    if (object.mobilizationTotalCentavos != null) {
+      yield r'mobilization_total_centavos';
+      yield serializers.serialize(
+        object.mobilizationTotalCentavos,
+        specifiedType: const FullType(int),
+      );
+    }
+    if (object.volumePlan != null) {
+      yield r'volume_plan';
+      yield serializers.serialize(
+        object.volumePlan,
+        specifiedType: const FullType.nullable(MixerVolumePlan),
+      );
+    }
   }
 
   @override
@@ -122,6 +183,14 @@ class _$DeliveryEstimateOptionSerializer implements PrimitiveSerializer<Delivery
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'vehicle_id':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.vehicleId = valueDes;
+          break;
         case r'load_key':
           final valueDes = serializers.deserialize(
             value,
@@ -171,6 +240,38 @@ class _$DeliveryEstimateOptionSerializer implements PrimitiveSerializer<Delivery
           ) as int;
           result.feePerTripCentavos = valueDes;
           break;
+        case r'mobilization_basis':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(DeliveryEstimateOptionMobilizationBasisEnum),
+          ) as DeliveryEstimateOptionMobilizationBasisEnum?;
+          if (valueDes == null) continue;
+          result.mobilizationBasis = valueDes;
+          break;
+        case r'mobilization_fee_centavos':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.mobilizationFeeCentavos = valueDes;
+          break;
+        case r'mobilization_total_centavos':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.mobilizationTotalCentavos = valueDes;
+          break;
+        case r'volume_plan':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(MixerVolumePlan),
+          ) as MixerVolumePlan?;
+          if (valueDes == null) continue;
+          result.volumePlan.replace(valueDes);
+          break;
         default:
           unhandled.add(key);
           unhandled.add(value);
@@ -200,4 +301,20 @@ class _$DeliveryEstimateOptionSerializer implements PrimitiveSerializer<Delivery
   }
 }
 
+
+/// The Vendor's chosen mixer mobilization basis.
+class DeliveryEstimateOptionMobilizationBasisEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'PER_TRUCK')
+  static const DeliveryEstimateOptionMobilizationBasisEnum PER_TRUCK = _$deliveryEstimateOptionMobilizationBasisEnum_PER_TRUCK;
+  @BuiltValueEnumConst(wireName: r'PER_TRIP')
+  static const DeliveryEstimateOptionMobilizationBasisEnum PER_TRIP = _$deliveryEstimateOptionMobilizationBasisEnum_PER_TRIP;
+
+  static Serializer<DeliveryEstimateOptionMobilizationBasisEnum> get serializer => _$deliveryEstimateOptionMobilizationBasisEnumSerializer;
+
+  const DeliveryEstimateOptionMobilizationBasisEnum._(String name): super(name);
+
+  static BuiltSet<DeliveryEstimateOptionMobilizationBasisEnum> get values => _$deliveryEstimateOptionMobilizationBasisEnumValues;
+  static DeliveryEstimateOptionMobilizationBasisEnum valueOf(String name) => _$deliveryEstimateOptionMobilizationBasisEnumValueOf(name);
+}
 

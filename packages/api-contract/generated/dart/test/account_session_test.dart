@@ -27,6 +27,7 @@ void main() {
       // TODO
     });
 
+    // Session activity display, updated at most once per minute. Authentication, revocation and expiry are checked on every request.
     // String lastActiveAt
     test('to test the property `lastActiveAt`', () async {
       // TODO

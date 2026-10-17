@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Account;
 
+use App\Domain\Identity\DeleteBuyerAccount;
 use App\Domain\Vendors\IssueVendorInvitation;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -33,8 +34,12 @@ final class AccountRequest extends FormRequest
             'changePassword' => ['password' => $password, 'password_confirmation' => ['required', 'string']],
             'startEmailChange' => ['email' => ['required', 'email:rfc', 'max:254']],
             'confirmEmailChange', 'confirmFactor' => ['id' => ['required', 'uuid'], 'code' => ['required', 'digits:6']],
+            'confirmTwoFactor' => ['code' => ['required', 'digits:6']],
+            'disableTwoFactor' => ['code' => ['nullable', 'digits:6', 'required_without:recovery_code', 'prohibits:recovery_code'], 'recovery_code' => ['nullable', 'string', 'max:32', 'required_without:code']],
+            'deleteAccount' => ['confirmation' => ['required', 'string', Rule::in([DeleteBuyerAccount::CONFIRMATION])]],
             'revokeSessions' => ['scope' => ['required', Rule::in(['OTHERS', 'ALL'])]],
             'acceptAgreements' => ['version_ids' => ['required', 'array', 'min:1', 'max:20'], 'version_ids.*' => ['required', 'uuid', 'distinct']],
+            'deleteStaff', 'deleteVendorInvitation' => ['lock_version' => ['required', 'integer', 'min:1']],
             'delegate' => ['can_manage_staff' => ['required', 'boolean']],
             'staffDisputes' => ['enabled' => ['required', 'boolean'], 'lock_version' => ['required', 'integer', 'min:1']],
             'updateStaff' => ['full_name' => ['required', 'string', 'max:160'], 'role' => ['required', Rule::in(IssueVendorInvitation::ROLES)], 'lock_version' => ['required', 'integer', 'min:1']],

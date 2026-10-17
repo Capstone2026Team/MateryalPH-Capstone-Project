@@ -4,9 +4,15 @@ declare(strict_types=1);
 
 namespace App\Domain\Fulfillment;
 
+use App\Domain\Authorization\AccountAccess;
+use App\Domain\Messaging\ConversationAccess;
+use App\Domain\Messaging\ConversationService;
 use App\Domain\Messaging\FulfillmentThreadService;
 use App\Domain\Orders\OrderStates;
+use App\Domain\Settings\PlatformSettings;
+use App\Models\User;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 
@@ -21,9 +27,10 @@ final class FulfillmentView
     public const TRACKING_NOTICE = 'There is no live GPS tracking. Status changes when the Vendor records each milestone.';
 
     /** @return array<string, mixed> */
-    public function present(object $order, bool $forVendor, string $filePrefix): array
+    public function present(object $order, bool $forVendor, string $filePrefix, User $viewer): array
     {
         $fulfillment = DB::table('fulfillments')->where('order_id', $order->id)->first();
+        /** @var Collection<int, object> $events */
         $events = $fulfillment === null ? collect() : DB::table('fulfillment_milestones')->where('fulfillment_id', $fulfillment->id)->orderBy('occurred_at')->orderBy('id')->get();
         $byType = $events->whereNotNull('dedupe_key')->keyBy('event_type');
         $delivery = $order->fulfillment_method === 'DELIVERY';
@@ -36,6 +43,9 @@ final class FulfillmentView
             'receiver_kind' => $proofRow->receiver_kind === 'RECEIVER' ? null : $proofRow->receiver_kind, 'handover_confirmed' => (bool) $proofRow->handover_confirmed,
             'photo_path' => $proofRow->photo_file_id === null ? null : $filePrefix.$proofRow->photo_file_id, 'signature_path' => $proofRow->signature_file_id === null ? null : $filePrefix.$proofRow->signature_file_id,
             'vehicle' => json_decode((string) ($proofRow->vehicle_reference ?? 'null'), true),
+            'note' => json_decode((string) $proofRow->payload, true)['note'] ?? null,
+            'recorded_by' => DB::table('user_profiles')->where('user_id', $proofRow->actor_user_id)->value('full_name') ?? 'Vendor',
+            'additional_photo_paths' => array_map(static fn (string $id): string => $filePrefix.$id, json_decode((string) $proofRow->payload, true)['additional_photo_ids'] ?? []),
         ];
         $accepted = $order->accepted_at !== null && ! in_array($order->order_state, [...OrderStates::PENDING_ACCEPTANCE, OrderStates::AWAITING_PAYMENT], true);
         $cancelled = $order->order_state === OrderStates::CANCELLED || in_array($order->order_state, OrderStates::CLOSED_BEFORE_FULFILLMENT, true);
@@ -59,8 +69,11 @@ final class FulfillmentView
             }
         }
         $issue = DB::table('fulfillment_issues')->where('order_id', $order->id)->orderByDesc('created_at')->first();
-        $assigned = DB::table('order_fulfillment_assignments as a')->leftJoin('user_profiles as p', 'p.user_id', '=', 'a.user_id')->where('a.order_id', $order->id)->whereNull('a.ended_at')
-            ->first(['a.user_id', 'a.created_at', 'p.full_name']);
+        $assigned = DB::table('order_fulfillment_assignments as a')->leftJoin('user_profiles as p', 'p.user_id', '=', 'a.user_id')->where('a.order_id', $order->id)
+            ->orderByRaw('a.ended_at NULLS FIRST')->orderByDesc('a.created_at')->orderByDesc('a.id')->first(['a.*', 'p.full_name']);
+        $arrangement = $this->arrangement($order);
+        $vehicle = $assigned?->vehicle_index === null ? null : ($arrangement['vehicles'][(int) $assigned->vehicle_index] ?? null);
+        $canAssign = $forVendor && app(AccountAccess::class)->allows($viewer, 'fulfillment.assign');
         $thread = DB::table('conversations')->where('order_id', $order->id)->where('purpose', 'FULFILLMENT')->first();
         $writability = $thread === null ? null : FulfillmentThreadService::writability($thread);
 
@@ -68,8 +81,9 @@ final class FulfillmentView
             'method' => (string) $order->fulfillment_method, 'state' => (string) $order->fulfillment_state, 'expected_date' => $order->expected_fulfillment_date === null ? null : (string) $order->expected_fulfillment_date,
             'late' => $fulfillment?->late_flagged_at !== null && ! in_array($order->order_state, [...OrderStates::AWAITING_RECEIPT, OrderStates::COMPLETED], true),
             'steps' => $steps, 'proof' => $proof, 'tracking_notice' => self::TRACKING_NOTICE,
+            'proof_upload_limit_kb' => PlatformSettings::current()->uploadKb('case_evidence'),
             'trips' => $events->where('event_type', 'TRIP_DISPATCHED')->map(static fn (object $row): array => (json_decode((string) $row->payload, true)['vehicle'] ?? []) + ['dispatched_at' => self::iso($row->occurred_at)])->values()->all(),
-            'accepted_arrangement' => $this->arrangement($order),
+            'accepted_arrangement' => $arrangement,
             'receipt' => [
                 'due_at' => self::iso($fulfillment?->auto_confirm_due_at), 'paused' => $fulfillment?->auto_confirm_paused_at !== null,
                 'remaining_seconds' => $fulfillment?->auto_confirm_remaining_seconds === null ? null : (int) $fulfillment->auto_confirm_remaining_seconds,
@@ -83,13 +97,23 @@ final class FulfillmentView
                 'photo_paths' => array_map(static fn (string $id): string => $filePrefix.$id, json_decode((string) $issue->evidence_file_ids, true) ?: []),
             ],
             'assignment' => $assigned === null ? null : ['display_name' => (string) ($assigned->full_name ?: 'Fulfillment Staff'), 'role' => 'FULFILLMENT', 'assigned_at' => self::iso($assigned->created_at),
+                'acknowledged_at' => self::iso($assigned->acknowledged_at), 'ended_at' => self::iso($assigned->ended_at), 'vehicle' => $vehicle,
                 'user_id' => $forVendor ? (int) $assigned->user_id : null],
-            'vehicle_issues' => $forVendor ? $events->where('event_type', 'VEHICLE_ISSUE_REPORTED')->map(static fn (object $row): array => (json_decode((string) $row->payload, true) ?: [])
-                + ['reported_at' => self::iso($row->occurred_at), 'actor_role' => $row->actor_role])->values()->all() : [],
+            'assignment_history' => $canAssign ? $events->whereIn('event_type', ['ASSIGNED', 'ASSIGNMENT_ACKNOWLEDGED'])->map(fn (object $row): array => $this->assignmentEvent($row))->values()->all() : [],
+            'vehicle_issues' => $events->where('event_type', 'VEHICLE_ISSUE_REPORTED')->map(static fn (object $row): array => (json_decode((string) $row->payload, true) ?: [])
+                + ['reported_at' => self::iso($row->occurred_at), 'actor_role' => $row->actor_role])->values()->all(),
             'thread' => ['available' => $thread !== null, 'conversation_id' => $thread?->id, 'read_only' => (bool) ($writability['read_only'] ?? false),
+                'unread_count' => $thread !== null && app(ConversationAccess::class)->allows($viewer, $thread)
+                    ? ConversationService::unreadFor((int) $viewer->id, (string) $thread->id) : 0,
                 'read_only_reason' => $writability['reason'] ?? null,
-                'notice' => $thread === null ? 'Fulfillment Messages open when the order is ready for pickup or out for delivery.' : null],
-            'next_action' => $forVendor ? self::vendorNext($order) : (in_array($order->order_state, OrderStates::AWAITING_RECEIPT, true) ? 'CONFIRM_RECEIPT' : 'NONE'),
+                // Threads open at submission; only orders submitted before that change can lack one.
+                'notice' => $thread === null ? match (true) {
+                    OrderStates::isClosed((string) $order->order_state) => 'This order has no Fulfillment Messages.',
+                    $forVendor => 'Fulfillment Messages start when the Buyer opens them or the order reaches Ready for Pickup or Out for Delivery.',
+                    default => 'Start Fulfillment Messages from My Orders to coordinate this order with the store.',
+                } : null],
+            'next_action' => $forVendor ? self::vendorNext($order, app(AccountAccess::class)->resolve($viewer)['role'] === 'FULFILLMENT')
+                : (in_array($order->order_state, OrderStates::AWAITING_RECEIPT, true) ? 'CONFIRM_RECEIPT' : 'NONE'),
         ];
     }
 
@@ -119,13 +143,23 @@ final class FulfillmentView
         return self::iso($at);
     }
 
-    public static function vendorNext(object $order): string
+    /** @return array<string, mixed> */
+    private function assignmentEvent(object $row): array
+    {
+        $payload = json_decode((string) $row->payload, true) ?: [];
+        $profile = isset($payload['user_id']) ? DB::table('user_profiles')->where('user_id', $payload['user_id'])->first(['full_name']) : null;
+
+        return ['event' => (string) $row->event_type, 'at' => self::iso($row->occurred_at), 'actor_role' => $row->actor_role, 'reason' => $payload['reason'] ?? null,
+            'display_name' => $profile !== null && is_string($profile->full_name) ? $profile->full_name : null, 'vehicle_name' => $payload['vehicle']['name'] ?? null];
+    }
+
+    public static function vendorNext(object $order, bool $canRecordDelivery = false): string
     {
         return match ($order->order_state) {
             OrderStates::CONFIRMED => 'START_PREPARATION',
             OrderStates::PROCESSING => $order->fulfillment_method === 'DELIVERY' ? 'DISPATCH' : 'MARK_READY',
             OrderStates::READY_FOR_PICKUP => 'RECORD_PICKUP',
-            OrderStates::OUT_FOR_DELIVERY => 'RECORD_DELIVERY',
+            OrderStates::OUT_FOR_DELIVERY => $canRecordDelivery ? 'RECORD_DELIVERY' : 'NONE',
             OrderStates::DELIVERED, OrderStates::PICKED_UP => 'AWAIT_RECEIPT',
             OrderStates::CANCELLATION_REQUESTED => 'RESPOND_TO_CANCELLATION',
             default => 'NONE',

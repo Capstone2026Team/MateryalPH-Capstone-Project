@@ -21,6 +21,9 @@ Name | Type | Description | Notes
 **totalVehicleTrips** | **int** |  |
 **perTripCentavos** | **int** |  |
 **tripTotalCentavos** | **int** |  |
+**mobilizationBasis** | **String** |  | [optional]
+**mobilizationFeeCentavos** | **int** |  | [optional]
+**mobilizationTotalCentavos** | **int** | Zero for snapshots before mobilization existed. | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

@@ -8,6 +8,7 @@ use App\Domain\Catalog\CatalogAccess;
 use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Payments\RefundService;
+use App\Support\PortalDateRange;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -33,8 +34,10 @@ final class AdminOrderOperationsService
         $this->access->requireAdmin($request, self::VIEW);
 
         return [
+            'refunds_total' => DB::table('refunds')->count(),
             'refunds_failed' => DB::table('refunds')->where('state', 'REFUND_FAILED')->count(),
             'refunds_pending' => DB::table('refunds')->where('state', 'REFUND_PENDING')->count(),
+            'reimbursements_total' => DB::table('physical_reimbursements')->whereNotNull('order_id')->count(),
             'reimbursements_pending' => DB::table('physical_reimbursements')->whereNotNull('order_id')->where('state', 'VENDOR_REIMBURSEMENT_PENDING')->count(),
             'cancellation_requests_open' => DB::table('cancellation_requests')->where('state', 'REQUESTED')->count(),
             'nfr_events_30_days' => DB::table('nfr_events')->where('occurred_at', '>=', now()->subDays(30))->count(),
@@ -53,6 +56,7 @@ final class AdminOrderOperationsService
             ->leftJoin('store_profiles as sp', 'sp.vendor_organization_id', '=', DB::raw('coalesce(o.vendor_organization_id, s.vendor_organization_id)'))
             ->when(isset($filters['state']), fn ($q) => $q->where('r.state', $filters['state']))->when(isset($filters['trigger']), fn ($q) => $q->where('r.trigger', $filters['trigger']));
         $page = max(1, (int) ($filters['page'] ?? 1));
+        PortalDateRange::apply($query, DB::raw('COALESCE(r.requested_at, r.created_at)'), $filters);
         $total = (clone $query)->count();
         $rows = $query->orderByRaw("CASE r.state WHEN 'REFUND_FAILED' THEN 0 WHEN 'REFUND_PENDING' THEN 1 ELSE 2 END")->orderByDesc('r.created_at')->orderByDesc('r.id')
             ->offset(($page - 1) * 25)->limit(25)->get(['r.*', 'o.reference as order_reference', 's.statement_reference', 'sp.public_store_name']);
@@ -79,12 +83,15 @@ final class AdminOrderOperationsService
         $this->audit->account($request, 'REFUND_RETRIED_BY_ADMIN', 'REFUND', $refundId);
     }
 
-    /** @return list<array<string, mixed>> */
-    public function reimbursements(Request $request): array
+    /**
+     * @param  array<string, mixed>  $filters
+     * @return list<array<string, mixed>>
+     */
+    public function reimbursements(Request $request, array $filters = []): array
     {
         $this->access->requireAdmin($request, self::VIEW);
 
-        return DB::table('physical_reimbursements as p')->join('orders as o', 'o.id', '=', 'p.order_id')->leftJoin('store_profiles as sp', 'sp.vendor_organization_id', '=', 'o.vendor_organization_id')
+        return PortalDateRange::apply(DB::table('physical_reimbursements as p')->join('orders as o', 'o.id', '=', 'p.order_id')->leftJoin('store_profiles as sp', 'sp.vendor_organization_id', '=', 'o.vendor_organization_id'), 'p.created_at', $filters)
             ->orderByRaw("CASE p.state WHEN 'VENDOR_REIMBURSEMENT_PENDING' THEN 0 ELSE 1 END")->orderByDesc('p.created_at')->limit(100)
             ->get(['p.*', 'o.reference as order_reference', 'sp.public_store_name'])->map(fn (object $row): array => [
                 'id' => (string) $row->id, 'order_reference' => (string) $row->order_reference, 'vendor_name' => $row->public_store_name, 'state' => (string) $row->state,
@@ -94,14 +101,17 @@ final class AdminOrderOperationsService
             ])->values()->all();
     }
 
-    /** @return list<array<string, mixed>> */
-    public function cancellationRequests(Request $request): array
+    /**
+     * @param  array<string, mixed>  $filters
+     * @return list<array<string, mixed>>
+     */
+    public function cancellationRequests(Request $request, array $filters = []): array
     {
         $this->access->requireAdmin($request, self::VIEW);
 
-        return DB::table('cancellation_requests as c')->join('orders as o', 'o.id', '=', 'c.order_id')->leftJoin('store_profiles as sp', 'sp.vendor_organization_id', '=', 'o.vendor_organization_id')
-            ->where('c.state', 'REQUESTED')->orderBy('c.response_due_at')->limit(100)->get(['c.*', 'o.reference as order_reference', 'sp.public_store_name'])
-            ->map(static fn (object $row): array => ['id' => (string) $row->id, 'order_reference' => (string) $row->order_reference, 'vendor_name' => $row->public_store_name,
+        return PortalDateRange::apply(DB::table('cancellation_requests as c')->join('orders as o', 'o.id', '=', 'c.order_id')->leftJoin('store_profiles as sp', 'sp.vendor_organization_id', '=', 'o.vendor_organization_id')
+            ->where('c.state', 'REQUESTED'), 'c.created_at', $filters)->orderBy('c.response_due_at')->limit(100)->get(['c.*', 'o.reference as order_reference', 'sp.public_store_name'])
+            ->map(static fn (object $row): array => ['id' => (string) $row->id, 'order_id' => (string) $row->order_id, 'order_reference' => (string) $row->order_reference, 'vendor_name' => $row->public_store_name,
                 'reason_code' => (string) $row->reason_code, 'requested_at' => self::iso($row->created_at), 'response_due_at' => self::iso($row->response_due_at),
                 'overdue' => $row->response_due_at !== null && CarbonImmutable::parse((string) $row->response_due_at)->isPast()])->values()->all();
     }

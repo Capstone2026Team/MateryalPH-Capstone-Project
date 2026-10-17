@@ -15,6 +15,9 @@ Name | Type
 `photoPath` | string
 `signaturePath` | string
 `vehicle` | { [key: string]: any; }
+`note` | string
+`recordedBy` | string
+`additionalPhotoPaths` | Array&lt;string&gt;
 
 ## Example
 
@@ -31,6 +34,9 @@ const example = {
   "photoPath": null,
   "signaturePath": null,
   "vehicle": null,
+  "note": null,
+  "recordedBy": null,
+  "additionalPhotoPaths": null,
 } satisfies FulfillmentProof
 
 console.log(example)

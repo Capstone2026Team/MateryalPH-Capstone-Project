@@ -3,7 +3,7 @@
 use App\Http\Controllers\Api\BuyerProjectController as P;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('buyers')->middleware(['auth.transport:MOBILE', 'auth:api', 'account.access:BUYER', 'throttle:account'])->group(function (): void {
+Route::prefix('buyers')->middleware(['auth.transport:MOBILE', 'auth:api', 'account.access:BUYER'])->group(function (): void {
     Route::get('project-ranking-preferences', [P::class, 'preferences']);
     Route::put('project-ranking-preferences', [P::class, 'savePreferences']);
     Route::post('project-ranking-preferences/reset', [P::class, 'resetPreferences']);
@@ -16,19 +16,22 @@ Route::prefix('buyers')->middleware(['auth.transport:MOBILE', 'auth:api', 'accou
         Route::patch('/', [P::class, 'update']);
         Route::delete('/', [P::class, 'deleteProject']);
         Route::post('work-packages', [P::class, 'savePackage']);
+        Route::post('work-package-estimate', [P::class, 'budgetEstimate']);
     });
     Route::prefix('work-packages/{packageId}')->whereUuid('packageId')->group(function (): void {
         Route::get('/', [P::class, 'packageShow']);
         Route::put('/', [P::class, 'editPackage']);
         Route::delete('/', [P::class, 'deletePackage']);
-        Route::post('versions', [P::class, 'newVersion']);
         Route::post('activate', [P::class, 'activate']);
+        Route::post('reactivate', [P::class, 'reactivate']);
         Route::post('close', [P::class, 'close']);
         Route::get('estimates', [P::class, 'estimates']);
         Route::post('estimates', [P::class, 'compile']);
         Route::post('inquiries', [P::class, 'inquire']);
         Route::post('selection', [P::class, 'select']);
         Route::post('candidates/{candidateId}/route', [P::class, 'route'])->whereUuid('candidateId');
+        Route::post('candidates/{candidateId}/selection-preview', [P::class, 'selectionPreview'])->whereUuid('candidateId');
         Route::put('missing-lines/{lineId}', [P::class, 'missing'])->whereUuid('lineId');
+        Route::get('lines/{lineId}/alternatives', [P::class, 'alternatives'])->whereUuid('lineId');
     });
 });

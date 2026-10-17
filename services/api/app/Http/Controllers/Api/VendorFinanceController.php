@@ -5,14 +5,17 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api;
 
 use App\Domain\Finance\FinanceAccess;
+use App\Domain\Finance\VendorFinanceReviewService;
 use App\Domain\Finance\VendorFinanceService;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Payments\PaymentAttemptService;
 use App\Domain\Payments\PaymentPresenter;
 use App\Domain\Payments\PaymentReconciliationService;
 use App\Domain\Payments\PhysicalPaymentService;
+use App\Domain\Settings\PlatformSettings;
 use App\Http\ApiResponse;
 use App\Http\Controllers\Controller;
+use App\Support\PortalDateRange;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -34,6 +37,18 @@ final class VendorFinanceController extends Controller
         return ApiResponse::success($this->finance->overview($request));
     }
 
+    /** Owner-only audited reveal of the store's own full TIN; never cached. */
+    public function revealTin(Request $request): JsonResponse
+    {
+        return ApiResponse::success($this->finance->revealTin($request))->header('Cache-Control', 'private, no-store')->header('Referrer-Policy', 'no-referrer');
+    }
+
+    /** Owner-only FIN-10 review status for this store: statements, tax adjustments, evidence and open reviews. */
+    public function reviews(Request $request, VendorFinanceReviewService $reviews): JsonResponse
+    {
+        return ApiResponse::success($reviews->reviews($request));
+    }
+
     public function updatePhysicalPayments(Request $request): JsonResponse
     {
         $input = $request->validate(['lock_version' => ['required', 'integer', 'min:0'], 'cod_enabled' => ['required', 'boolean'], 'in_store_enabled' => ['required', 'boolean']]);
@@ -44,7 +59,7 @@ final class VendorFinanceController extends Controller
 
     public function transactions(Request $request): JsonResponse
     {
-        $filters = $request->validate(['tab' => ['sometimes', Rule::in(VendorFinanceService::TABS)], 'page' => ['sometimes', 'integer', 'between:1,1000']]);
+        $filters = $request->validate(['tab' => ['sometimes', Rule::in(VendorFinanceService::TABS)], 'page' => ['sometimes', 'integer', 'between:1,1000'], 'status' => ['sometimes', Rule::in(VendorFinanceService::PAYMENT_STATUSES)]] + PortalDateRange::rules($request));
         $result = $this->finance->transactions($request, $filters);
 
         return ApiResponse::success($result['items'], $result['meta']);
@@ -52,14 +67,16 @@ final class VendorFinanceController extends Controller
 
     public function export(Request $request): StreamedResponse
     {
-        $input = $request->validate(['tab' => ['required', Rule::in(VendorFinanceService::TABS)]]);
+        $input = $request->validate(['tab' => ['required', Rule::in(VendorFinanceService::TABS)], 'status' => ['sometimes', Rule::in(VendorFinanceService::PAYMENT_STATUSES)]] + PortalDateRange::rules($request));
 
-        return $this->finance->export($request, (string) $input['tab']);
+        return $this->finance->export($request, (string) $input['tab'], $input);
     }
 
     public function earnings(Request $request): JsonResponse
     {
-        return ApiResponse::success($this->finance->earnings($request));
+        $filters = $request->validate(PortalDateRange::rules($request));
+
+        return ApiResponse::success($this->finance->earnings($request, $filters));
     }
 
     public function statement(Request $request, string $statementId): JsonResponse
@@ -95,7 +112,7 @@ final class VendorFinanceController extends Controller
     public function recordPhysical(Request $request, string $orderId, PhysicalPaymentService $physical): JsonResponse
     {
         $input = $request->validate(['amount_centavos' => ['required', 'integer', 'min:1'], 'received_at' => ['sometimes', 'date'], 'note' => ['sometimes', 'nullable', 'string', 'max:500'],
-            'file' => ['required', 'file', 'max:10240']]);
+            'file' => ['required', 'file', 'max:'.PlatformSettings::current()->uploadKb('case_evidence')]]);
         $file = $request->file('file');
         if (! $file instanceof UploadedFile) {
             throw new AuthenticationException('FILE_VALIDATION_FAILED', 'Attach the receipt evidence.', 422);

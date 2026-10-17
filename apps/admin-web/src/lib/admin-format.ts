@@ -1,4 +1,15 @@
+import { parseDate } from '@materyalph/api-client-ts'
 export type JsonRecord = Record<string, unknown>
+
+export type CalendarRange = { from: string; to: string }
+
+/** Calendar dates are serialized unchanged; the API applies inclusive Asia/Manila boundaries. */
+export function dateQuery(range?: CalendarRange): { from?: Date; to?: Date } {
+  return {
+    ...(range?.from ? { from: parseDate(range.from) } : {}),
+    ...(range?.to ? { to: parseDate(range.to) } : {}),
+  }
+}
 
 export function record(value: unknown): JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value) ? value as JsonRecord : {}

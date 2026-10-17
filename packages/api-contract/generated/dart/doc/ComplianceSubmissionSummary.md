@@ -13,6 +13,7 @@ Name | Type | Description | Notes
 **path** | [**CompliancePath**](CompliancePath.md) |  |
 **status** | **String** |  |
 **markingType** | **String** |  | [optional]
+**reviewMode** | **String** |  | [optional]
 **submittedAt** | **String** |  | [optional]
 **decidedAt** | **String** |  | [optional]
 **latestReview** | [**ComplianceReviewSummary**](ComplianceReviewSummary.md) |  | [optional]

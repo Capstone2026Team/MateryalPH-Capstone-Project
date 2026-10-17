@@ -11,6 +11,7 @@ import {
   type DeliveryPlanVehicle,
   type DeliveryVehicleSelection,
   type ListVendorOrdersGroupEnum,
+  type ListVendorOrdersClosedStateEnum,
   type OrderDetail,
   type OrderLine,
   type OrderListMeta,
@@ -20,6 +21,7 @@ import {
 } from '@materyalph/api-client-ts'
 import { createWebApiConfiguration } from '@materyalph/web-ui'
 import { newIdempotencyKey } from './onboarding-api'
+import { apiDateFilters, type DateFilters } from './date-filters'
 
 export { apiFailure, type ApiFailure } from './inventory-api'
 export { readableOnboardingError as readableOrderError, onboardingFieldErrors as orderFieldErrors } from './onboarding-api'
@@ -31,8 +33,10 @@ const ordersApi = () => new VendorOrdersApi(createWebApiConfiguration(basePath, 
 
 export type OrderGroup = 'ALL' | 'NEW' | 'WAITING_ON_BUYER' | 'AWAITING_PAYMENT' | 'CONFIRMED' | 'CLOSED'
 
-export async function listOrders(filters: { group: OrderGroup; q?: string; page?: number }): Promise<{ items: OrderSummary[]; meta: OrderListMeta }> {
-  const response = await ordersApi().listVendorOrders({ group: filters.group as ListVendorOrdersGroupEnum, ...(filters.q ? { q: filters.q } : {}), ...(filters.page ? { page: filters.page } : {}) })
+export type ClosedOrderState = 'COMPLETED' | 'DECLINED' | 'EXPIRED' | 'CANCELLED'
+
+export async function listOrders(filters: { group: OrderGroup; closedState?: ClosedOrderState; q?: string; page?: number } & DateFilters): Promise<{ items: OrderSummary[]; meta: OrderListMeta }> {
+  const response = await ordersApi().listVendorOrders({ group: filters.group as ListVendorOrdersGroupEnum, ...(filters.group === 'CLOSED' && filters.closedState ? { closedState: filters.closedState as ListVendorOrdersClosedStateEnum } : {}), ...(filters.q ? { q: filters.q } : {}), ...(filters.page ? { page: filters.page } : {}), ...apiDateFilters(filters) })
   return { items: response.data, meta: response.meta }
 }
 
@@ -55,6 +59,14 @@ export async function declineOrder(orderId: string, lockVersion: number, reasonC
 
 const fulfillmentApi = () => new VendorFulfillmentApi(createWebApiConfiguration(basePath, { refreshSession: true }))
 
+export async function readDeliveryBuyerPhoto(path: string): Promise<Blob> {
+  const match = /^\/vendor\/orders\/([0-9a-f-]{36})\/fulfillment\/buyer-photo\?version=([1-9][0-9]*)$/i.exec(path)
+  if (!match) throw new Error('The Buyer photo is unavailable. Reload the delivery information.')
+  const photo = await fulfillmentApi().getDeliveryBuyerPhoto({ orderId: match[1]!, version: Number(match[2]) }, { cache: 'no-store' })
+  if (photo.type.split(';')[0] !== 'image/png') throw new Error('The Buyer photo could not be displayed.')
+  return photo
+}
+
 export type MilestoneInput = {
   milestone: RecordVendorFulfillmentMilestoneMilestoneEnum
   lockVersion: number
@@ -66,6 +78,7 @@ export type MilestoneInput = {
   note?: string
   file?: Blob
   signature?: Blob
+  additionalPhotos?: Blob[]
 }
 
 /** Records the next milestone with the proof that milestone requires; one key per submitted click. */
@@ -77,8 +90,24 @@ export async function listAssignees(orderId: string): Promise<FulfillmentAssigne
   return (await fulfillmentApi().listVendorFulfillmentAssignees({ orderId })).data
 }
 
-export async function assignFulfillment(orderId: string, userId: number, reason: string): Promise<OrderDetail> {
-  return (await fulfillmentApi().assignVendorFulfillmentStaff({ orderId, idempotencyKey: newIdempotencyKey(), fulfillmentAssignmentRequest: { userId, reason } })).data
+export async function assignFulfillment(orderId: string, userId: number, reason: string, options: { vehicleIndex?: number; lockVersion?: number; dispatch?: boolean } = {}, idempotencyKey = newIdempotencyKey()): Promise<OrderDetail> {
+  return (await fulfillmentApi().assignVendorFulfillmentStaff({ orderId, idempotencyKey, fulfillmentAssignmentRequest: { userId, reason, ...options } })).data
+}
+
+export async function listDeliveryVehicles(orderId: string) {
+  return (await fulfillmentApi().listDeliveryAssignmentVehicles({ orderId })).data
+}
+
+export async function listAssignedFulfillments(filters: Parameters<VendorFulfillmentApi['listAssignedFulfillments']>[0]) {
+  return fulfillmentApi().listAssignedFulfillments(filters)
+}
+
+export async function acknowledgeAssignment(orderId: string, idempotencyKey = newIdempotencyKey()) {
+  return (await fulfillmentApi().acknowledgeDeliveryAssignment({ orderId, idempotencyKey })).data
+}
+
+export async function getDeliveryDirections(orderId: string) {
+  return (await fulfillmentApi().getDeliveryDirections({ orderId })).data
 }
 
 export async function recordTrip(orderId: string, vehicleIndex: number, tripNumber: number): Promise<OrderDetail> {

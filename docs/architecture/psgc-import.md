@@ -93,3 +93,31 @@ Covered by `tests/Feature/Api/PhaseSixBuyerDiscoveryTest.php`:
 - rejection of an invalid CSV
 - unresolved resolution before any import
 - ambiguous "Quezon" resolution by region alias
+
+## Administrative boundaries for the Admin map (Phase 16)
+
+The Admin geographic analytics map draws simplified PSGC boundaries with the Google Maps JavaScript data layer. Boundaries are reference geometry only: analytics facts store PSGC codes and never a Buyer or Vendor coordinate, and no point is sent to the browser.
+
+### Import
+
+```bash
+docker compose exec api php artisan materyalph:psgc-boundaries-import \
+  --file=storage/app/private/boundaries/psgc-municities.geojson \
+  --reference="<publisher>, <dataset name>, <publication date>" \
+  [--version=<PSGC version label>] [--code-property=<feature property with the 10-digit PSGC code>] [--replace]
+```
+
+- Input is a GeoJSON `FeatureCollection` of at most 150 MB whose features carry a 10-digit PSGC code. The code property is detected automatically (`psgc`, `psgc_code`, `adm1_psgc`…`adm4_psgc`, `code`, `PSGC`, `PSGC_CODE`) or named with `--code-property`.
+- Features are matched by code to the areas of the ACTIVE PSGC version (or `--version`). Unmatched codes are listed in the result and in `psgc_boundary_imports`; they are never guessed by name.
+- Geometry is repaired with `ST_MakeValid`, stored as a MultiPolygon in `psgc_boundaries.geom` (GiST-indexed, used for server-side point placement when an order address lacks a resolved code), and simplified per level for the browser in `simplified_geojson`.
+- An existing boundary is replaced only with `--replace`. Every run records its source reference, file hash, matched, replaced and skipped counts.
+- The importer reads only a local file; it never downloads from a provider. Use a source whose licence permits this use and record it in `--reference`.
+
+### Fallbacks
+
+- Areas without imported geometry appear in `missing_codes` of `GET /api/v1/admin/geo-analytics/boundaries` and are drawn as keyboard-operable tiles beside the map.
+- Without `VITE_GOOGLE_MAPS_BROWSER_KEY` (a referrer-restricted browser key, never a server secret), or when the Maps script fails, every area is drawn as a tile. The synchronized sortable table always offers the same values and drill-down.
+
+### Hierarchy used by the dashboard
+
+Philippines → Region → Province, or an independent/highly urbanized city directly under its region → City or Municipality. Barangay-level figures are not published. Facts whose address has no resolvable PSGC code are reported as **unresolved geography** and counted only in the Philippines total.

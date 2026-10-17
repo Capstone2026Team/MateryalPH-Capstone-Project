@@ -7,6 +7,22 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(OrderConfirmedDelivery, () {
+    // BuiltList<DeliveryEstimateOption> systemRecommendation
+    test('to test the property `systemRecommendation`', () async {
+      // TODO
+    });
+
+    // bool recommendationChanged
+    test('to test the property `recommendationChanged`', () async {
+      // TODO
+    });
+
+    // Vendor explanation shown before Buyer approval and payment. Includes manual load review when no automatic fit was available.
+    // String changeReason
+    test('to test the property `changeReason`', () async {
+      // TODO
+    });
+
     // BuiltList<OrderDeliveryVehicle> vehicles
     test('to test the property `vehicles`', () async {
       // TODO

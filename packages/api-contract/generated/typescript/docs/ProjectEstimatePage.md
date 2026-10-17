@@ -12,6 +12,8 @@ Name | Type
 `hasMore` | boolean
 `total` | number
 `suggestedRadiusKm` | number
+`unfilteredTotal` | number
+`sort` | string
 
 ## Example
 
@@ -26,6 +28,8 @@ const example = {
   "hasMore": null,
   "total": null,
   "suggestedRadiusKm": null,
+  "unfilteredTotal": null,
+  "sort": null,
 } satisfies ProjectEstimatePage
 
 console.log(example)

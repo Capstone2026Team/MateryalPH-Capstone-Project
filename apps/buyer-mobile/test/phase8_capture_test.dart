@@ -128,6 +128,7 @@ void main() {
       tester,
       '390-order-hub',
       OrdersScreen(
+        openConversation: (_, _) async {},
         repository: FakeOrdersRepository(
           list: OrderListPage(
             items: [
@@ -139,11 +140,19 @@ void main() {
               ),
               orderSummary(
                 id: 'order-2',
-                state: 'AWAITING_VENDOR_CONFIRMATION',
+                state: 'OUT_FOR_DELIVERY',
                 nextAction: null,
+                fulfillmentMethod: 'DELIVERY',
+                paymentChannelName: 'GCash',
+                expectedFulfillmentDate: '2026-10-07',
+                conversation: const OrderConversationRefView(
+                  id: 'thread-2',
+                  readOnly: false,
+                  unreadCount: 1,
+                ),
               ),
             ],
-            counts: const {'ALL': 2, 'AWAITING_ACTION': 1, 'ACTIVE': 1},
+            counts: const {'ALL': 2},
             page: 1,
             hasMore: false,
             total: 2,

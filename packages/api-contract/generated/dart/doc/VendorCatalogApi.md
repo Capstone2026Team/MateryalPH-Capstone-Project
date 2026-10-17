@@ -21,6 +21,7 @@ Method | HTTP request | Description
 [**getVendorCatalogListing**](VendorCatalogApi.md#getvendorcataloglisting) | **GET** /vendor/catalog/listings/{listingId} |
 [**getVendorCatalogTaxonomy**](VendorCatalogApi.md#getvendorcatalogtaxonomy) | **GET** /vendor/catalog/taxonomy |
 [**listVendorCatalogListings**](VendorCatalogApi.md#listvendorcataloglistings) | **GET** /vendor/catalog/listings |
+[**lookupListingCompliance**](VendorCatalogApi.md#lookuplistingcompliance) | **POST** /vendor/catalog/listings/{listingId}/compliance/lookup |
 [**publishVendorCatalogListing**](VendorCatalogApi.md#publishvendorcataloglisting) | **POST** /vendor/catalog/listings/{listingId}/publish |
 [**removeVendorListingMedia**](VendorCatalogApi.md#removevendorlistingmedia) | **DELETE** /vendor/catalog/listings/{listingId}/media/{mediaId} |
 [**saveVendorCatalogVariants**](VendorCatalogApi.md#savevendorcatalogvariants) | **PUT** /vendor/catalog/listings/{listingId}/variants |
@@ -554,7 +555,7 @@ This endpoint does not need any parameter.
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **listVendorCatalogListings**
-> CatalogListingSummaryListEnvelope listVendorCatalogListings(status, complianceStatus, categoryId, q, page)
+> CatalogListingSummaryListEnvelope listVendorCatalogListings(group, status, complianceStatus, categoryId, q, page)
 
 
 
@@ -569,6 +570,7 @@ import 'package:materyalph_api_client/api.dart';
 //defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
 
 final api = MateryalphApiClient().getVendorCatalogApi();
+final String group = group_example; // String | Read-only aggregate filter applied before pagination; summary counts ignore group and status. OUT_OF_STOCK means active listings with no available active variant.
 final ListingStatus status = ; // ListingStatus |
 final ListingComplianceStatus complianceStatus = ; // ListingComplianceStatus |
 final String categoryId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
@@ -576,7 +578,7 @@ final String q = q_example; // String |
 final int page = 56; // int |
 
 try {
-    final response = api.listVendorCatalogListings(status, complianceStatus, categoryId, q, page);
+    final response = api.listVendorCatalogListings(group, status, complianceStatus, categoryId, q, page);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling VendorCatalogApi->listVendorCatalogListings: $e\n');
@@ -587,6 +589,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **group** | **String**| Read-only aggregate filter applied before pagination; summary counts ignore group and status. OUT_OF_STOCK means active listings with no available active variant. | [optional]
  **status** | [**ListingStatus**](.md)|  | [optional]
  **complianceStatus** | [**ListingComplianceStatus**](.md)|  | [optional]
  **categoryId** | **String**|  | [optional]
@@ -604,6 +607,59 @@ Name | Type | Description  | Notes
 ### HTTP request headers
 
  - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **lookupListingCompliance**
+> ComplianceLookupEnvelope lookupListingCompliance(listingId, complianceLookupRequest)
+
+
+
+Looks up a PS License No. or ICC sticker serial in the active DTI-BPS register snapshot for this listing's regulated product (rule compliance.register-number.v2) and returns the register record used to prefill the declaration. Read-only — nothing is submitted and nothing reaches Admin review. MATCHED means automatic verification is possible; UNCERTAIN means the number is listed for another product or an expired record; UNMATCHED means it is not listed or is not in the printed format; UNAVAILABLE means no snapshot is active.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getVendorCatalogApi();
+final String listingId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final ComplianceLookupRequest complianceLookupRequest = ; // ComplianceLookupRequest |
+
+try {
+    final response = api.lookupListingCompliance(listingId, complianceLookupRequest);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling VendorCatalogApi->lookupListingCompliance: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **listingId** | **String**|  |
+ **complianceLookupRequest** | [**ComplianceLookupRequest**](ComplianceLookupRequest.md)|  |
+
+### Return type
+
+[**ComplianceLookupEnvelope**](ComplianceLookupEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
@@ -819,7 +875,7 @@ Name | Type | Description  | Notes
 
 
 
-Review and Confirm for all three paths. An exact match with the active DTI-BPS register snapshot (rule compliance.register-exact.v1) is VERIFIED as an audited system decision; uncertain, unavailable or unmatched results become PENDING_ADMIN_REVIEW, never a counterfeit finding.
+Review and Confirm for all three paths. The Vendor supplies the PS License No. or ICC sticker serial and marking evidence. With review_mode AUTOMATIC (default) a MATCHED register lookup (rule compliance.register-number.v2) is VERIFIED as an audited system decision and the register record supplies the manufacturer or importer; any other result returns 422 COMPLIANCE_REGISTER_NOT_MATCHED with details.lookup and records nothing. With review_mode MANUAL_REVIEW, which the Vendor chooses explicitly, an unmatched declaration becomes PENDING_ADMIN_REVIEW, never a counterfeit finding.
 
 ### Example
 ```dart
@@ -974,11 +1030,11 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **uploadListingComplianceEvidence**
-> ComplianceEvidenceEnvelope uploadListingComplianceEvidence(listingId, path, file, qrPayload)
+> ComplianceEvidenceEnvelope uploadListingComplianceEvidence(listingId, path, file, qrPayload, markingType)
 
 
 
-Stores a private PS Mark/ICC marking photo or QR image and returns editable extraction assistance. OCR and QR values are suggestions only; UNAVAILABLE means the Vendor enters the values on Review and Confirm.
+Stores a private PS Mark/ICC marking photo or QR image and returns editable extraction assistance. OCR and QR values are suggestions only; PHOTO_OCR uses local Tesseract after malware scanning and returns only labelled marking fields, never raw OCR text. UNAVAILABLE (engine missing) or FAILED (unreadable image, timeout or engine failure) retains the private evidence for manual Review and Confirm. Current authorization and listing eligibility are checked again after extraction. OCR never changes compliance or publication status. With marking_type, OCR and QR read the PS License No. or ICC sticker serial by its printed shape; look-alike readings are checked against the active DTI-BPS register and the listed one is suggested (register_listed). A QR payload sent with a PHOTO_OCR photo is used instead of OCR when it holds the number.
 
 ### Example
 ```dart
@@ -996,10 +1052,11 @@ final api = MateryalphApiClient().getVendorCatalogApi();
 final String listingId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
 final CompliancePath path = ; // CompliancePath |
 final MultipartFile file = BINARY_DATA_HERE; // MultipartFile |
-final String qrPayload = qrPayload_example; // String | Text decoded by the browser from the QR image; untrusted.
+final String qrPayload = qrPayload_example; // String | Text decoded by the browser from the QR image or from a QR code visible in a marking photo; untrusted.
+final MarkingType markingType = ; // MarkingType | The marking the Vendor selected
 
 try {
-    final response = api.uploadListingComplianceEvidence(listingId, path, file, qrPayload);
+    final response = api.uploadListingComplianceEvidence(listingId, path, file, qrPayload, markingType);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling VendorCatalogApi->uploadListingComplianceEvidence: $e\n');
@@ -1013,7 +1070,8 @@ Name | Type | Description  | Notes
  **listingId** | **String**|  |
  **path** | [**CompliancePath**](CompliancePath.md)|  |
  **file** | **MultipartFile**|  |
- **qrPayload** | **String**| Text decoded by the browser from the QR image; untrusted. | [optional]
+ **qrPayload** | **String**| Text decoded by the browser from the QR image or from a QR code visible in a marking photo; untrusted. | [optional]
+ **markingType** | [**MarkingType**](MarkingType.md)| The marking the Vendor selected | [optional]
 
 ### Return type
 

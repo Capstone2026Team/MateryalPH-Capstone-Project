@@ -22,6 +22,16 @@ void main() {
       // TODO
     });
 
+    // String category
+    test('to test the property `category`', () async {
+      // TODO
+    });
+
+    // String correlationId
+    test('to test the property `correlationId`', () async {
+      // TODO
+    });
+
     // String action
     test('to test the property `action`', () async {
       // TODO

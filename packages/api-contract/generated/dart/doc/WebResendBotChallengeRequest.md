@@ -1,0 +1,16 @@
+# materyalph_api_client.model.WebResendBotChallengeRequest
+
+## Load the model package
+```dart
+import 'package:materyalph_api_client/api.dart';
+```
+
+## Properties
+Name | Type | Description | Notes
+------------ | ------------- | ------------- | -------------
+**email** | **String** |  |
+**portal** | **String** | Must match the server-issued challenge. Omission selects VENDOR for compatibility. | [optional]
+
+[[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
+
+

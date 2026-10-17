@@ -22,7 +22,7 @@ abstract class FeatureAvailability implements Built<FeatureAvailability, Feature
 
   @BuiltValueField(wireName: r'status')
   FeatureAvailabilityStatusEnum get status;
-  // enum statusEnum {  NOT_YET_AVAILABLE,  AVAILABLE,  };
+  // enum statusEnum {  NOT_YET_AVAILABLE,  AVAILABLE,  TEMPORARILY_UNAVAILABLE,  };
 
   @BuiltValueField(wireName: r'message')
   String get message;
@@ -145,6 +145,8 @@ class FeatureAvailabilityStatusEnum extends EnumClass {
   static const FeatureAvailabilityStatusEnum NOT_YET_AVAILABLE = _$featureAvailabilityStatusEnum_NOT_YET_AVAILABLE;
   @BuiltValueEnumConst(wireName: r'AVAILABLE')
   static const FeatureAvailabilityStatusEnum AVAILABLE = _$featureAvailabilityStatusEnum_AVAILABLE;
+  @BuiltValueEnumConst(wireName: r'TEMPORARILY_UNAVAILABLE')
+  static const FeatureAvailabilityStatusEnum TEMPORARILY_UNAVAILABLE = _$featureAvailabilityStatusEnum_TEMPORARILY_UNAVAILABLE;
 
   static Serializer<FeatureAvailabilityStatusEnum> get serializer => _$featureAvailabilityStatusEnumSerializer;
 

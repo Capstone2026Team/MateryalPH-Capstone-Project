@@ -7,6 +7,11 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(MoneyBreakdown, () {
+    // ChatQuotationDiscountAssessment discount
+    test('to test the property `discount`', () async {
+      // TODO
+    });
+
     // String currency
     test('to test the property `currency`', () async {
       // TODO

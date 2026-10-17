@@ -74,7 +74,10 @@ final class XenditPaymentSessionGateway implements PaymentGateway
             'expires_at' => $request->expiresAt->utc()->format('Y-m-d\TH:i:s\Z'),
             'description' => mb_substr($request->description, 0, 1000),
             'customer' => array_filter([
-                'reference_id' => $request->customer['reference_id'],
+                // Inline customers are created by Xendit, not looked up by reference. Scope their
+                // opaque reference to this account and attempt so repeat/cross-vendor purchases
+                // cannot collide. Replaying an attempt remains deterministic; never retry POST here.
+                'reference_id' => hash('sha256', json_encode([$request->forUserId, $request->referenceId, $request->customer['reference_id']], JSON_THROW_ON_ERROR)),
                 'type' => 'INDIVIDUAL',
                 'email' => $request->customer['email'],
                 'individual_detail' => ['given_names' => mb_substr($request->customer['given_names'], 0, 50)],

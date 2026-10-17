@@ -11,7 +11,7 @@ class _$VendorTeamInvitationListEnvelope
   @override
   final BuiltList<VendorTeamInvitationRecord> data;
   @override
-  final VendorTeamActivityEnvelopeMeta meta;
+  final VendorTeamInvitationListEnvelopeMeta meta;
   @override
   final BuiltList<BuiltMap<String, JsonObject?>> errors;
 
@@ -72,10 +72,11 @@ class VendorTeamInvitationListEnvelopeBuilder
   set data(ListBuilder<VendorTeamInvitationRecord>? data) =>
       _$this._data = data;
 
-  VendorTeamActivityEnvelopeMetaBuilder? _meta;
-  VendorTeamActivityEnvelopeMetaBuilder get meta =>
-      _$this._meta ??= VendorTeamActivityEnvelopeMetaBuilder();
-  set meta(VendorTeamActivityEnvelopeMetaBuilder? meta) => _$this._meta = meta;
+  VendorTeamInvitationListEnvelopeMetaBuilder? _meta;
+  VendorTeamInvitationListEnvelopeMetaBuilder get meta =>
+      _$this._meta ??= VendorTeamInvitationListEnvelopeMetaBuilder();
+  set meta(VendorTeamInvitationListEnvelopeMetaBuilder? meta) =>
+      _$this._meta = meta;
 
   ListBuilder<BuiltMap<String, JsonObject?>>? _errors;
   ListBuilder<BuiltMap<String, JsonObject?>> get errors =>

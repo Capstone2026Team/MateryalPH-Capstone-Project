@@ -11,11 +11,20 @@ test('private content is fetched with portal credentials and no caching', async 
   expect((await readWebPrivateFile(base, url)).type).toBe('application/pdf')
   expect(fetcher).toHaveBeenCalledWith(new URL(url), expect.objectContaining({ credentials: 'include', cache: 'no-store' }))
 })
+test('signed catalog files (PS/ICC evidence) are readable like onboarding documents', async () => {
+  const catalogUrl = `${base}/catalog-files/example/content?expires=123&signature=test`
+  const fetcher = vi.fn().mockResolvedValue(new Response('synthetic image', { headers: { 'Content-Type': 'image/jpeg' } }))
+  vi.stubGlobal('fetch', fetcher)
+  expect((await readWebPrivateFile(base, catalogUrl)).type).toBe('image/jpeg')
+  expect(fetcher).toHaveBeenCalledWith(new URL(catalogUrl), expect.objectContaining({ credentials: 'include', cache: 'no-store' }))
+})
 test('foreign origins and non-evidence paths never receive credentials', async () => {
   const fetcher = vi.fn()
   vi.stubGlobal('fetch', fetcher)
   await expect(readWebPrivateFile(base, 'https://example.test/private')).rejects.toThrow('invalid')
   await expect(readWebPrivateFile(base, `${base}/auth/session`)).rejects.toThrow('invalid')
+  await expect(readWebPrivateFile(base, `${base}/catalog-files/example`)).rejects.toThrow('invalid')
+  await expect(readWebPrivateFile(base, `https://example.test/api/v1/catalog-files/example/content`)).rejects.toThrow('invalid')
   expect(fetcher).not.toHaveBeenCalled()
 })
 test('access denied and executable content are not previewed', async () => {

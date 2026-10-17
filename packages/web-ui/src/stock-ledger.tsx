@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState, type ReactNode } from 'react'
+import { Fragment, useEffect, useState, type MouseEvent, type ReactNode } from 'react'
 import { AlertTriangle, CheckCircle2, Clock, EyeOff, XCircle } from 'lucide-react'
 import { Button } from './button'
 
@@ -30,13 +30,28 @@ export type LedgerColumn<T> = { key: string; header: ReactNode; cell: (row: T) =
  * content scrolls horizontally inside the table's own labelled region, never the page. An expanded row
  * renders an inline editor directly under its row.
  */
-export function DenseLedgerTable<T>({ caption, columns, rows, rowKey, expandedKey, renderExpanded, emptyText }: {
-  caption: string; columns: LedgerColumn<T>[]; rows: T[]; rowKey: (row: T) => string
+export function DenseLedgerTable<T>({ caption, columns, rows, rowKey, expandedKey, renderExpanded, emptyText, responsive = false, onRowClick }: {
+  /** Provide a keyboard-accessible button in the identifier cell when using row clicks. */
+  onRowClick?: (row: T) => void
+  responsive?: boolean; caption: string; columns: LedgerColumn<T>[]; rows: T[]; rowKey: (row: T) => string
   expandedKey?: string | null; renderExpanded?: (row: T) => ReactNode; emptyText?: string
 }) {
+  const [desktop, setDesktop] = useState(() => typeof window === 'undefined' || !window.matchMedia ? true : window.matchMedia('(min-width: 1024px)').matches)
+  useEffect(() => {
+    if (!responsive || !window.matchMedia) return
+    const media = window.matchMedia('(min-width: 1024px)')
+    const update = () => setDesktop(media.matches)
+    update(); media.addEventListener('change', update)
+    return () => media.removeEventListener('change', update)
+  }, [responsive])
+  const openRow = (event: MouseEvent, row: T) => {
+    if ((event.target as HTMLElement).closest('button, a, input, select, textarea, summary, [role="switch"]')) return
+    onRowClick?.(row)
+  }
+  const expandedRow = responsive ? rows.find(row => rowKey(row) === expandedKey) : undefined
   const [first, ...rest] = columns
-  return <div role="region" aria-label={caption} tabIndex={0} className="max-h-[70vh] max-w-full overflow-auto rounded-surface border border-border-default bg-surface-primary focus-visible:outline-2 focus-visible:outline-focus-ring">
-    <table className="w-full min-w-[1320px] border-separate border-spacing-0 text-left text-sm">
+  return <>{responsive && !desktop && <div className="grid gap-4 lg:hidden" aria-label={caption}>{rows.map(row => <article key={rowKey(row)} onClick={onRowClick ? event => openRow(event, row) : undefined} className={`rounded-xl border border-border-default bg-surface-primary p-4 ${onRowClick ? 'cursor-pointer hover:bg-surface-canvas' : ''}`}><dl className="grid grid-cols-2 gap-4">{columns.map(column => <div key={column.key} className={column.key === first?.key ? 'col-span-2' : 'min-w-0'}><dt className="text-[13px] text-text-secondary">{column.header}</dt><dd className="mt-2 text-sm">{column.cell(row)}</dd></div>)}</dl></article>)}</div>}{(!responsive || desktop) && <div role="region" aria-label={caption} tabIndex={0} className={`${responsive ? 'hidden lg:block ' : ''}max-h-[70vh] max-w-full overflow-auto rounded-surface border border-border-default bg-surface-primary focus-visible:outline-2 focus-visible:outline-focus-ring`}>
+    <table className={`w-full ${responsive ? 'min-w-[960px]' : 'min-w-[1320px]'} border-separate border-spacing-0 text-left text-sm`}>
       <caption className="sr-only">{caption}</caption>
       <thead className="sticky top-0 z-20">
         <tr>{first && <th scope="col" className={`sticky left-0 z-30 w-40 border-b border-border-default bg-surface-canvas px-3 py-2.5 font-semibold text-text-strong sm:w-56 ${first.headerClassName ?? ''}`}>{first.header}</th>}
@@ -48,16 +63,16 @@ export function DenseLedgerTable<T>({ caption, columns, rows, rowKey, expandedKe
           const key = rowKey(row)
           const expanded = expandedKey === key
           return <Fragment key={key}>
-            <tr className={`align-top ${expanded ? 'bg-brand-orange-50' : ''}`}>
-              {first && <th scope="row" className={`sticky left-0 z-10 w-40 border-b border-border-default px-3 py-2.5 text-left font-normal sm:w-56 ${expanded ? 'bg-brand-orange-50' : 'bg-surface-primary'} ${first.className ?? ''}`}>{first.cell(row)}</th>}
+            <tr onClick={onRowClick ? event => openRow(event, row) : undefined} className={`group align-top hover:bg-surface-canvas ${onRowClick ? 'cursor-pointer' : ''} ${expanded ? 'bg-brand-orange-50' : ''}`}>
+              {first && <th scope="row" className={`sticky left-0 z-10 w-40 border-b border-border-default px-3 py-2.5 text-left font-normal sm:w-56 ${expanded ? 'bg-brand-orange-50' : 'bg-surface-primary group-hover:bg-surface-canvas'} ${first.className ?? ''}`}>{first.cell(row)}</th>}
               {rest.map(column => <td key={column.key} className={`border-b border-border-default px-3 py-2.5 ${column.className ?? ''}`}>{column.cell(row)}</td>)}
             </tr>
-            {expanded && renderExpanded && <tr><td colSpan={columns.length} className="border-b border-border-default bg-surface-canvas p-0"><div className="sticky left-0 w-[min(100%,calc(100vw-2rem))] max-w-4xl p-4">{renderExpanded(row)}</div></td></tr>}
+            {!responsive && expanded && renderExpanded && <tr><td colSpan={columns.length} className="border-b border-border-default bg-surface-canvas p-0"><div className="sticky left-0 w-[min(100%,calc(100vw-2rem))] max-w-4xl p-4">{renderExpanded(row)}</div></td></tr>}
           </Fragment>
         })}
       </tbody>
     </table>
-  </div>
+  </div>}{expandedRow && renderExpanded && <section aria-label="Selected inventory row" className="rounded-xl border border-border-default bg-surface-primary p-4">{renderExpanded(expandedRow)}</section>}</>
 }
 
 /**

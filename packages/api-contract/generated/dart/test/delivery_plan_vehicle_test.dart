@@ -7,6 +7,12 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(DeliveryPlanVehicle, () {
+    // True for the lowest eligible formula-fee plan in this group
+    // bool recommended
+    test('to test the property `recommended`', () async {
+      // TODO
+    });
+
     // String vehicleId
     test('to test the property `vehicleId`', () async {
       // TODO
@@ -74,6 +80,28 @@ void main() {
 
     // int perTripCentavos
     test('to test the property `perTripCentavos`', () async {
+      // TODO
+    });
+
+    // int mobilizationFeeCentavos
+    test('to test the property `mobilizationFeeCentavos`', () async {
+      // TODO
+    });
+
+    // String mobilizationBasis
+    test('to test the property `mobilizationBasis`', () async {
+      // TODO
+    });
+
+    // Candidates only.
+    // int mobilizationTotalCentavos
+    test('to test the property `mobilizationTotalCentavos`', () async {
+      // TODO
+    });
+
+    // Candidates only.
+    // MixerVolumePlan volumePlan
+    test('to test the property `volumePlan`', () async {
       // TODO
     });
 

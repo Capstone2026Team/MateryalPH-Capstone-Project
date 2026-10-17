@@ -14,6 +14,7 @@ Name | Type
 `openStatus` | [SupplierOpenStatus](SupplierOpenStatus.md)
 `vacationMode` | boolean
 `supplierType` | string
+`badges` | [Array&lt;PublicBadge&gt;](PublicBadge.md)
 
 ## Example
 
@@ -30,6 +31,7 @@ const example = {
   "openStatus": null,
   "vacationMode": null,
   "supplierType": null,
+  "badges": null,
 } satisfies ListingDetailVendor
 
 console.log(example)

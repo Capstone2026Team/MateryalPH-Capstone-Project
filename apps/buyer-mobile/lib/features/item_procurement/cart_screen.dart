@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../design_system/components/buyer_overlays.dart';
 import '../../design_system/components/buyer_app_bar.dart';
 import '../../design_system/components/procurement_components.dart';
 import '../../design_system/theme.dart';
@@ -72,7 +73,7 @@ class CartScreen extends StatelessWidget {
         child: SingleChildScrollView(
           child: StateMessage(
             kind: StateKind.empty,
-            artwork: 'assets/states/cart.png',
+            artwork: StateArtwork.cart,
             title: 'Your cart is empty',
             message:
                 'Add materials from Explore. Adding to the cart never reserves stock.',
@@ -166,7 +167,7 @@ class CartScreen extends StatelessWidget {
     );
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => BuyerDialog(
         title: Text('Remove $count selected item${count == 1 ? '' : 's'}?'),
         content: const Text(
           'They are removed from your cart. Items saved for later stay.',
@@ -615,6 +616,23 @@ class _LineTile extends StatelessWidget {
                     enabled: !busy,
                     onChanged: (value) =>
                         controller.changeQuantity(line, '$value'),
+                  )
+                else if (!savedForLater && line.available)
+                  DecimalQuantityField(
+                    label: line.readyMixedConcrete
+                        ? 'Order volume (m³)'
+                        : 'Quantity',
+                    value: formatQuantity(line.quantity),
+                    unitName: line.unitName,
+                    decimals: stepDecimals(line.quantityStep),
+                    enabled: !busy,
+                    commitOnSubmit: true,
+                    hint: 'Press Done to update.',
+                    onChanged: (value) {
+                      if (num.parse(value) != num.parse(line.quantity)) {
+                        controller.changeQuantity(line, value);
+                      }
+                    },
                   )
                 else if (!savedForLater)
                   Text(

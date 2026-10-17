@@ -64,8 +64,9 @@ final class VendorExpiryService
                 $owner = DB::table('vendor_memberships as m')->join('users as u', 'u.id', '=', 'm.user_id')->where('m.vendor_organization_id', $organizationId)->where('m.role', 'OWNER')->where('m.status', 'ACTIVE')->first(['u.id', 'u.email']);
                 if ($owner !== null) {
                     $message = $expired ? 'Required Vendor evidence has expired. Replace it before Store Activation can continue.' : 'Required Vendor evidence will expire on '.$review->verified_expiration_date.'. Review the document before it expires.';
-                    DB::table('notifications')->insert(['id' => (string) Str::uuid7(), 'user_id' => $owner->id, 'category' => 'VENDOR_VERIFICATION', 'title' => $expired ? 'Vendor evidence expired' : 'Vendor evidence expiration reminder', 'body' => $message, 'resource_type' => 'VENDOR_ORGANIZATION', 'resource_id' => $organizationId, 'created_at' => now(), 'updated_at' => now()]);
-                    $this->outbox->publish('VENDOR_ONBOARDING_NOTICE', 'VENDOR_ORGANIZATION', $organizationId, ['recipient' => $owner->email, 'message' => $message]);
+                    $notificationId = (string) Str::uuid7();
+                    DB::table('notifications')->insert(['id' => $notificationId, 'resume_key' => $version->requirement_key, 'user_id' => $owner->id, 'category' => 'VENDOR_VERIFICATION', 'title' => $expired ? 'Vendor evidence expired' : 'Vendor evidence expiration reminder', 'body' => $message, 'resource_type' => 'VENDOR_ORGANIZATION', 'resource_id' => $organizationId, 'created_at' => now(), 'updated_at' => now()]);
+                    $this->outbox->publish('VENDOR_ONBOARDING_NOTICE', 'VENDOR_ORGANIZATION', $organizationId, ['recipient' => $owner->email, 'message' => $message, 'notification_id' => $notificationId]);
                 }
 
                 return true;

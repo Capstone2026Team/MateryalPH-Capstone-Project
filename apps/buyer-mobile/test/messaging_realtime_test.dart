@@ -69,13 +69,21 @@ void main() {
         socket.listen((raw) {
           final event = jsonDecode(raw as String) as Map<String, dynamic>;
           if (event['event'] == 'pusher:subscribe') {
+            final channel = (event['data'] as Map)['channel'] as String;
             socket.add(
               jsonEncode({
                 'event': 'pusher_internal:subscription_succeeded',
+                'channel': channel,
                 'data': '{}',
               }),
             );
-            socket.add(jsonEncode({'event': 'inbox.changed', 'data': '{}'}));
+            socket.add(
+              jsonEncode({
+                'event': 'inbox.changed',
+                'channel': channel,
+                'data': '{}',
+              }),
+            );
             socket.add(jsonEncode({'event': 'pusher:ping', 'data': '{}'}));
           } else if (event['event'] == 'pusher:pong' && !pong.isCompleted) {
             pong.complete();

@@ -12,10 +12,12 @@ Name | Type | Description | Notes
 **path** | [**CompliancePath**](CompliancePath.md) |  |
 **evidenceIds** | **BuiltList&lt;String&gt;** |  |
 **markingType** | [**MarkingType**](MarkingType.md) |  |
-**certificateNumber** | **String** |  |
-**manufacturerName** | **String** | Required for a PS Mark. | [optional]
+**certificateNumber** | **String** | The PS License No. (e.g. Q-1234) for a PS Mark |
+**reviewMode** | **String** | MANUAL_REVIEW is the Vendor's explicit request for Product Compliance review when the register cannot confirm the number. | [optional] [default to 'AUTOMATIC']
+**reviewNote** | **String** |  | [optional]
+**manufacturerName** | **String** |  | [optional]
 **manufacturerAddress** | **String** |  | [optional]
-**importerName** | **String** | Required for an ICC sticker. | [optional]
+**importerName** | **String** |  | [optional]
 **importerAddress** | **String** |  | [optional]
 **countryOfManufacture** | **String** |  | [optional]
 **brand** | **String** |  | [optional]

@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Models\VendorMembership;
 use App\Models\VendorOrganization;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Foundation\Testing\RefreshDatabaseState;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -19,6 +20,16 @@ use Tests\TestCase;
 final class VendorTeamConcurrencyTest extends TestCase
 {
     use DatabaseMigrations;
+
+    public function runDatabaseMigrations(): void
+    {
+        // These tests fork real connections. Rebuild the guarded isolated database between tests;
+        // production migrations retain immutable notification/export history and are forward-only.
+        $this->refreshTestDatabase();
+        $this->beforeApplicationDestroyed(static function (): void {
+            RefreshDatabaseState::$migrated = false;
+        });
+    }
 
     public function test_invitation_cannot_be_issued_after_delegation_is_revoked_while_request_waits_for_organization_lock(): void
     {

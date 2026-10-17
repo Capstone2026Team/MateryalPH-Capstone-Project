@@ -47,6 +47,12 @@ void main() {
       // TODO
     });
 
+    // Null when no accumulator exists or historical assessment components do not reconcile to its on-platform gross. Never reconstructed from Earnings cash.
+    // WithholdingThresholdCalculation calculationBreakdown
+    test('to test the property `calculationBreakdown`', () async {
+      // TODO
+    });
+
     // int externalDeclaredCentavos
     test('to test the property `externalDeclaredCentavos`', () async {
       // TODO

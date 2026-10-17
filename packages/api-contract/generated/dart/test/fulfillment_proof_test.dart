@@ -47,5 +47,20 @@ void main() {
       // TODO
     });
 
+    // String note
+    test('to test the property `note`', () async {
+      // TODO
+    });
+
+    // String recordedBy
+    test('to test the property `recordedBy`', () async {
+      // TODO
+    });
+
+    // BuiltList<String> additionalPhotoPaths
+    test('to test the property `additionalPhotoPaths`', () async {
+      // TODO
+    });
+
   });
 }

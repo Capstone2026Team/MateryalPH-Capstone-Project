@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests;
 
+use Illuminate\Database\Events\MigrationStarted;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Support\Facades\DB;
@@ -16,6 +17,13 @@ abstract class TestCase extends BaseTestCase
     {
         $app = parent::createApplication();
         $this->assertIsolatedTestEnvironment($app);
+        // PostgreSQL migrate:fresh drops tables but retains standalone trigger functions.
+        // Remove detached functions immediately before the guarded test migration recreates them.
+        $app['events']->listen(MigrationStarted::class, static function (MigrationStarted $event): void {
+            if ($event->method === 'up' && $event->name === '2026_10_11_020000_protect_phase_fifteen_snapshot_history') {
+                DB::unprepared('DROP FUNCTION IF EXISTS protect_phase15_export_snapshot(); DROP FUNCTION IF EXISTS protect_phase15_tax_snapshot();');
+            }
+        });
 
         return $app;
     }

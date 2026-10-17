@@ -3,6 +3,7 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:materyalph_api_client/src/model/checkout_invoice_details.dart';
 import 'package:built_collection/built_collection.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
@@ -15,6 +16,10 @@ part 'checkout_submit_request.g.dart';
 /// * [cartLockVersion]
 /// * [vendorIds]
 /// * [splitConfirmed] - Required when fewer Vendor groups are submitted than the cart holds.
+/// * [workPackageId] - Optional owned open Work Package under an Active Project. Each submitted child remains ITEM_BASED and contributes to its budget; this does not fulfill missing lines or select the Project Vendor. Tagged cart lines must belong to this version.
+/// * [workPackageLockVersion] - Required with work_package_id; stale versions return PROJECT_VERSION_CONFLICT (409).
+/// * [budgetOverrideReason] - Explicit Buyer acknowledgement when the combined submitted amount exceeds the Project or Work Package budget. Final acceptance rechecks committed spend.
+/// * [invoiceDetails]
 /// * [paymentMethods] - Vendor id => chosen method; Online when omitted. COD pairs with Site Delivery, In-Store with Self-Pickup, each only when the Vendor enabled it.
 @BuiltValue()
 abstract class CheckoutSubmitRequest implements Built<CheckoutSubmitRequest, CheckoutSubmitRequestBuilder> {
@@ -27,6 +32,21 @@ abstract class CheckoutSubmitRequest implements Built<CheckoutSubmitRequest, Che
   /// Required when fewer Vendor groups are submitted than the cart holds.
   @BuiltValueField(wireName: r'split_confirmed')
   bool? get splitConfirmed;
+
+  /// Optional owned open Work Package under an Active Project. Each submitted child remains ITEM_BASED and contributes to its budget; this does not fulfill missing lines or select the Project Vendor. Tagged cart lines must belong to this version.
+  @BuiltValueField(wireName: r'work_package_id')
+  String? get workPackageId;
+
+  /// Required with work_package_id; stale versions return PROJECT_VERSION_CONFLICT (409).
+  @BuiltValueField(wireName: r'work_package_lock_version')
+  int? get workPackageLockVersion;
+
+  /// Explicit Buyer acknowledgement when the combined submitted amount exceeds the Project or Work Package budget. Final acceptance rechecks committed spend.
+  @BuiltValueField(wireName: r'budget_override_reason')
+  String? get budgetOverrideReason;
+
+  @BuiltValueField(wireName: r'invoice_details')
+  CheckoutInvoiceDetails? get invoiceDetails;
 
   /// Vendor id => chosen method; Online when omitted. COD pairs with Site Delivery, In-Store with Self-Pickup, each only when the Vendor enabled it.
   @BuiltValueField(wireName: r'payment_methods')
@@ -71,6 +91,34 @@ class _$CheckoutSubmitRequestSerializer implements PrimitiveSerializer<CheckoutS
       yield serializers.serialize(
         object.splitConfirmed,
         specifiedType: const FullType(bool),
+      );
+    }
+    if (object.workPackageId != null) {
+      yield r'work_package_id';
+      yield serializers.serialize(
+        object.workPackageId,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.workPackageLockVersion != null) {
+      yield r'work_package_lock_version';
+      yield serializers.serialize(
+        object.workPackageLockVersion,
+        specifiedType: const FullType(int),
+      );
+    }
+    if (object.budgetOverrideReason != null) {
+      yield r'budget_override_reason';
+      yield serializers.serialize(
+        object.budgetOverrideReason,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.invoiceDetails != null) {
+      yield r'invoice_details';
+      yield serializers.serialize(
+        object.invoiceDetails,
+        specifiedType: const FullType(CheckoutInvoiceDetails),
       );
     }
     if (object.paymentMethods != null) {
@@ -124,6 +172,38 @@ class _$CheckoutSubmitRequestSerializer implements PrimitiveSerializer<CheckoutS
           ) as bool?;
           if (valueDes == null) continue;
           result.splitConfirmed = valueDes;
+          break;
+        case r'work_package_id':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.workPackageId = valueDes;
+          break;
+        case r'work_package_lock_version':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.workPackageLockVersion = valueDes;
+          break;
+        case r'budget_override_reason':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.budgetOverrideReason = valueDes;
+          break;
+        case r'invoice_details':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(CheckoutInvoiceDetails),
+          ) as CheckoutInvoiceDetails?;
+          if (valueDes == null) continue;
+          result.invoiceDetails.replace(valueDes);
           break;
         case r'payment_methods':
           final valueDes = serializers.deserialize(

@@ -7,6 +7,7 @@ import {
   type ListAdminRefundsStateEnum,
 } from '@materyalph/api-client-ts'
 import { createWebApiConfiguration } from '@materyalph/web-ui'
+import { dateQuery, type CalendarRange } from './admin-format'
 
 export type { AdminCancellationRequestRow, AdminOrderOperationsSummary, AdminRefundRow, AdminReimbursementRow }
 
@@ -18,8 +19,8 @@ export async function getSummary(): Promise<AdminOrderOperationsSummary> {
   return (await operationsApi().getAdminOrderOperationsSummary()).data
 }
 
-export async function listRefunds(page: number, state?: ListAdminRefundsStateEnum): Promise<{ items: AdminRefundRow[]; hasMore: boolean }> {
-  const response = await operationsApi().listAdminRefunds({ page, ...(state ? { state } : {}) })
+export async function listRefunds(page: number, state?: ListAdminRefundsStateEnum, range?: CalendarRange): Promise<{ items: AdminRefundRow[]; hasMore: boolean }> {
+  const response = await operationsApi().listAdminRefunds({ page, ...(state ? { state } : {}), ...dateQuery(range) })
   return { items: response.data, hasMore: Boolean((response.meta as { has_more?: boolean } | undefined)?.has_more) }
 }
 
@@ -28,14 +29,14 @@ export async function retryRefund(refundId: string): Promise<void> {
   await operationsApi().retryAdminRefund({ refundId, idempotencyKey: newKey() })
 }
 
-export async function listReimbursements(): Promise<AdminReimbursementRow[]> {
-  return (await operationsApi().listAdminReimbursements()).data
+export async function listReimbursements(range?: CalendarRange): Promise<AdminReimbursementRow[]> {
+  return (await operationsApi().listAdminReimbursements(dateQuery(range))).data
 }
 
 export async function confirmReimbursement(reimbursementId: string, reason: string): Promise<void> {
   await operationsApi().confirmAdminReimbursement({ reimbursementId, adminReimbursementDecision: { reason } })
 }
 
-export async function listCancellationRequests(): Promise<AdminCancellationRequestRow[]> {
-  return (await operationsApi().listAdminCancellationRequests()).data
+export async function listCancellationRequests(range?: CalendarRange): Promise<AdminCancellationRequestRow[]> {
+  return (await operationsApi().listAdminCancellationRequests(dateQuery(range))).data
 }

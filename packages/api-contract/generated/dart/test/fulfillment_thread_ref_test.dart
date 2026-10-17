@@ -7,6 +7,12 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(FulfillmentThreadRef, () {
+    // Received messages this viewer has not read in this order's fulfillment conversation. Zero for a missing thread or a viewer without current conversation access. Counting never marks messages read.
+    // int unreadCount
+    test('to test the property `unreadCount`', () async {
+      // TODO
+    });
+
     // bool available
     test('to test the property `available`', () async {
       // TODO

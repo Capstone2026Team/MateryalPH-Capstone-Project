@@ -16,7 +16,7 @@ part 'login_request.g.dart';
 /// * [email]
 /// * [password]
 /// * [portal]
-/// * [botProtection] - Vendor web password login only; prohibited for Admin login.
+/// * [botProtection] - Vendor and Admin web password login; required when bot protection is enabled unless a matching single-use HttpOnly proof cookie is present.
 @BuiltValue()
 abstract class LoginRequest implements Built<LoginRequest, LoginRequestBuilder> {
   @BuiltValueField(wireName: r'email')
@@ -29,7 +29,7 @@ abstract class LoginRequest implements Built<LoginRequest, LoginRequestBuilder> 
   LoginRequestPortalEnum get portal;
   // enum portalEnum {  VENDOR,  ADMIN,  };
 
-  /// Vendor web password login only; prohibited for Admin login.
+  /// Vendor and Admin web password login; required when bot protection is enabled unless a matching single-use HttpOnly proof cookie is present.
   @BuiltValueField(wireName: r'bot_protection')
   VendorBotProtectionEvidence? get botProtection;
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Identity;
 
 use App\Domain\Agreements\BuyerRegistrationTerms;
+use App\Domain\Geography\RadiusPolicy;
 use App\Models\ExternalIdentity;
 use App\Models\User;
 use Firebase\JWT\JWK;
@@ -275,6 +276,7 @@ final class GoogleOidcService
                 'user_id' => $user->getKey(),
                 'buyer_type' => $flow['buyer_type'],
                 'company_name' => $flow['company_name'],
+                'discovery_radius_km' => RadiusPolicy::buyerDefault(),
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -285,8 +287,8 @@ final class GoogleOidcService
         $organizationId = (string) Str::uuid7();
         DB::table('vendor_organizations')->insert([
             'id' => $organizationId,
-            'legal_name' => $flow['business_name'],
-            'store_name' => $flow['business_name'],
+            'legal_name' => trim((string) ($flow['business_name'] ?? '')),
+            'store_name' => trim((string) ($flow['business_name'] ?? '')),
             'store_email' => $user->email,
             'store_email_verified_at' => now(),
             'account_status' => 'ACTIVE',

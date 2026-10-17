@@ -72,12 +72,21 @@ void main() {
       // TODO
     });
 
+    // Team Tracking statistics for one team member, chosen by the member's current fixed role. Store Manager and Owner members report every work area; Store Staff sales, quotations, order confirmations, disputes and inventory; Customer Service Staff sales, quotation drafts, order confirmations and disputes; Inventory Staff inventory; Fulfillment Staff fulfillment. Same authority as Team Tracking history; refresh on team.activity.changed.
+    //
+    //Future<VendorTeamPerformanceEnvelope> getVendorTeamPerformance(String memberId, { Date from, Date to }) async
+    test('test getVendorTeamPerformance', () async {
+      // TODO
+    });
+
     //Future<VendorInvitationEnvelope> inviteVendorTeamMember(String idempotencyKey, VendorInvitationRequest vendorInvitationRequest) async
     test('test inviteVendorTeamMember', () async {
       // TODO
     });
 
-    //Future<VendorTeamActivityEnvelope> listVendorTeamActivity({ int page }) async
+    // Team Tracking synchronizes through payload-free team.activity.changed events on the existing viewer-bound Vendor inbox channel after audit, Vendor message or quotation activity commits. Delivery rechecks current organization, membership and staff-management authority; delegated Managers receive only non-manager activity invalidations. Re-fetch this endpoint for authoritative data. Clients poll automatically while realtime is unavailable and after reconnect.
+    //
+    //Future<VendorTeamActivityEnvelope> listVendorTeamActivity({ int page, String memberId, String role, int days, String category, Date from, Date to }) async
     test('test listVendorTeamActivity', () async {
       // TODO
     });

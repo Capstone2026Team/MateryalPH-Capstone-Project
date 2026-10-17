@@ -7,6 +7,11 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(ChatQuotationContent, () {
+    // ChatQuotationDiscountAssessment discount
+    test('to test the property `discount`', () async {
+      // TODO
+    });
+
     // BuiltList<ChatQuotationLine> lines
     test('to test the property `lines`', () async {
       // TODO

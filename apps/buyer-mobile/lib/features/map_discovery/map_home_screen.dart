@@ -1,3 +1,4 @@
+import '../../design_system/components/buyer_cart_button.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -5,9 +6,11 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../design_system/components/buyer_overlays.dart';
 import '../../design_system/components/discovery_controls.dart';
 import '../../design_system/motion.dart';
 import '../../design_system/theme.dart';
+import '../notifications/buyer_notification_button.dart';
 import '../../widgets/auth_content.dart';
 import 'buyer_onboarding_screen.dart';
 import 'device_location.dart';
@@ -192,10 +195,8 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
   }
 
   Future<void> _openFilters() async {
-    final next = await showModalBottomSheet<DiscoveryFilters>(
+    final next = await showBuyerBottomSheet<DiscoveryFilters>(
       context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
       builder: (_) => DiscoveryFilterSheet(
         filters: _controller.filters,
         categories: _controller.onboarding?.categories ?? const [],
@@ -306,18 +307,14 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
                 icon: const Icon(LucideIcons.search),
               ),
 
-              IconButton(
-                tooltip: 'Notifications',
+              BuyerNotificationButton(
                 onPressed: () => widget.onUnavailable?.call('Notifications'),
-                icon: const Icon(LucideIcons.bell),
               ),
 
-              IconButton(
-                tooltip: 'Cart',
+              BuyerCartButton(
                 onPressed:
                     widget.onOpenCart ??
                     () => widget.onUnavailable?.call('Cart'),
-                icon: const Icon(LucideIcons.shoppingCart),
               ),
             ],
           ),
@@ -474,42 +471,41 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
           ],
         );
 
-  Widget _stacked(BoxConstraints constraints) =>
-      NotificationListener<DraggableScrollableNotification>(
-        onNotification: (notification) {
-          // Rebuilding the whole screen (and re-padding the Google map) on every drag frame is what
-          // made the sheet lag. Wait until the finger stops, then apply the final size once.
-          _settleTimer?.cancel();
-          final extent = notification.extent;
-          _settleTimer = Timer(const Duration(milliseconds: 120), () {
-            if (mounted && (extent - _sheetExtent).abs() > 0.002) {
-              setState(() => _sheetExtent = extent);
-            }
-          });
-          return false;
-        },
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: _mapStack(constraints.maxHeight * _sheetExtent),
+  Widget _stacked(
+    BoxConstraints constraints,
+  ) => NotificationListener<DraggableScrollableNotification>(
+    onNotification: (notification) {
+      // Rebuilding the whole screen (and re-padding the Google map) on every drag frame is what
+      // made the sheet lag. Wait until the finger stops, then apply the final size once.
+      _settleTimer?.cancel();
+      final extent = notification.extent;
+      _settleTimer = Timer(const Duration(milliseconds: 120), () {
+        if (mounted && (extent - _sheetExtent).abs() > 0.002) {
+          setState(() => _sheetExtent = extent);
+        }
+      });
+      return false;
+    },
+    child: Stack(
+      children: [
+        Positioned.fill(child: _mapStack(constraints.maxHeight * _sheetExtent)),
+        SupplierPreviewSheet(
+          cornerRadius: 16,
+          controller: _sheet,
+          initialSize: .25,
+          minSize: _peek,
+          maxSize: _expanded,
+          snapSizes: const [_peek, _half, _expanded],
+          builder: (context, scroll) => RepaintBoundary(
+            child: RefreshIndicator(
+              onRefresh: _controller.refresh,
+              child: _panel(scroll),
             ),
-            SupplierPreviewSheet(
-              cornerRadius: 16,
-              controller: _sheet,
-              initialSize: .25,
-              minSize: _peek,
-              maxSize: _expanded,
-              snapSizes: const [_peek, _half, _expanded],
-              builder: (context, scroll) => RepaintBoundary(
-                child: RefreshIndicator(
-                  onRefresh: _controller.refresh,
-                  child: _panel(scroll),
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
-      );
+      ],
+    ),
+  );
 
   Widget _split(BoxConstraints constraints) => Row(
     children: [
@@ -545,10 +541,10 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
   );
 
   Future<void> _showLayers() async {
-    final choice = await showModalBottomSheet<Object>(
+    final choice = await showBuyerBottomSheet<Object>(
       context: context,
-      showDragHandle: true,
-      builder: (_) => MapLayersSheet(selected: _baseMap),
+      builder: (_) =>
+          SingleChildScrollView(child: MapLayersSheet(selected: _baseMap)),
     );
     if (!mounted) return;
     if (choice is BaseMapStyle) setState(() => _baseMap = choice);
@@ -557,7 +553,7 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
 
   void _showLegend() => showDialog<void>(
     context: context,
-    builder: (context) => AlertDialog(
+    builder: (context) => BuyerDialog(
       title: const Text('Map legend'),
       content: const Column(
         mainAxisSize: MainAxisSize.min,

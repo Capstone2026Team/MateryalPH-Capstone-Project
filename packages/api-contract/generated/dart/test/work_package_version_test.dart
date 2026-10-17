@@ -12,11 +12,6 @@ void main() {
       // TODO
     });
 
-    // int version
-    test('to test the property `version`', () async {
-      // TODO
-    });
-
     // String contentHash
     test('to test the property `contentHash`', () async {
       // TODO

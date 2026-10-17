@@ -35,6 +35,9 @@ class FulfillmentProofView {
     this.receiverKind,
     this.photoPath,
     this.signaturePath,
+    this.note,
+    this.recordedBy,
+    this.additionalPhotoPaths = const [],
   });
 
   /// DELIVERED or PICKED_UP.
@@ -47,6 +50,9 @@ class FulfillmentProofView {
   final String? receiverKind;
   final String? photoPath;
   final String? signaturePath;
+  final String? note;
+  final String? recordedBy;
+  final List<String> additionalPhotoPaths;
 }
 
 @immutable
@@ -99,12 +105,14 @@ class FulfillmentThreadView {
     required this.available,
     required this.readOnly,
     this.conversationId,
+    this.unreadCount = 0,
     this.notice,
   });
 
   final bool available;
   final bool readOnly;
   final String? conversationId;
+  final int unreadCount;
   final String? notice;
 }
 
@@ -123,6 +131,9 @@ class FulfillmentView {
     this.proof,
     this.issue,
     this.assigneeName,
+    this.vehicleName,
+    this.assignedAt,
+    this.deliveryIssues = const [],
   });
 
   /// DELIVERY or PICKUP.
@@ -140,6 +151,9 @@ class FulfillmentView {
 
   /// Public display name of the assigned Fulfillment Staff; never a private contact.
   final String? assigneeName;
+  final String? vehicleName;
+  final DateTime? assignedAt;
+  final List<String> deliveryIssues;
 }
 
 @immutable

@@ -14,6 +14,7 @@ use App\Domain\Geography\PublicVendorProjection;
 use App\Domain\Geography\RadiusPolicy;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Inventory\StockAvailability;
+use App\Domain\Vendors\VendorDeliveryEligibility;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -38,7 +39,11 @@ final class MarketplaceSearchService
     /** Candidate variant rows scored per request; nearest first when a dense area exceeds it. */
     public const MAX_CANDIDATES = 2000;
 
-    public const SORTS = ['BEST_DEAL', 'DISTANCE', 'PRICE', 'RATING', 'FAVORITES_FIRST', 'DISTANCE_DESC', 'PRICE_DESC', 'RATING_ASC'];
+    /**
+     * TOP_SELLING (Store Profile Shop Front, Buyer request 2026-10-16) ranks by the card's public "sold" figure:
+     * quantity on COMPLETED orders in each listing's sale unit.
+     */
+    public const SORTS = ['BEST_DEAL', 'DISTANCE', 'PRICE', 'RATING', 'FAVORITES_FIRST', 'DISTANCE_DESC', 'PRICE_DESC', 'RATING_ASC', 'TOP_SELLING'];
 
     /** Best Price needs a comparison: at least two Vendors offering the same comparable group in the radius. */
     public const BEST_PRICE_MIN_VENDORS = 2;
@@ -76,6 +81,7 @@ final class MarketplaceSearchService
         $rows = array_slice($rows, 0, self::MAX_CANDIDATES);
         $ratings = $this->facts->productRatings(array_values(array_unique(array_map(static fn (object $row): string => (string) $row->listing_id, $rows))));
         $vps = $this->facts->vps(array_values(array_unique(array_map(static fn (object $row): string => (string) $row->organization_id, $rows))));
+        $sold = $sort === 'TOP_SELLING' ? $this->facts->unitsSold(array_values(array_unique(array_map(static fn (object $row): string => (string) $row->listing_id, $rows)))) : [];
 
         $listings = [];
         foreach ($rows as $row) {
@@ -83,6 +89,7 @@ final class MarketplaceSearchService
             if ($offer === null || ! $this->passesComputedFilters($offer, $input)) {
                 continue;
             }
+            $offer['sold'] = $sold[$offer['listing_id']] ?? '0';
             $offer['key'] = $this->sortKey($sort, $offer);
             $listingId = $offer['listing_id'];
             if (! isset($listings[$listingId])) {
@@ -208,6 +215,7 @@ final class MarketplaceSearchService
             'PRICE' => [$offer['price'], $offer['distance'], $offer['listing_id'], $offer['variant_id']],
             'RATING' => [$rated ? 1 : 0, $rated ? 0 : -(int) bcmul((string) $offer['rating']['average'], '100', 0), -$offer['rating']['count'], $offer['distance'], $offer['listing_id'], $offer['variant_id']],
             'FAVORITES_FIRST' => [$offer['favorite'] ? 0 : 1, $srs, $offer['distance'], $offer['price'], $offer['listing_id'], $offer['variant_id']],
+            'TOP_SELLING' => [-(int) bcmul((string) $offer['sold'], '10000', 0), $srs, $offer['distance'], $offer['price'], $offer['listing_id'], $offer['variant_id']],
             default => [$srs, $offer['distance'], $offer['price'], $offer['listing_id'], $offer['variant_id']],
         };
     }
@@ -223,6 +231,7 @@ final class MarketplaceSearchService
             'PRICE' => ['unit_price_asc', 'distance_asc', 'listing_id_asc'],
             'RATING' => ['rated_first', 'product_rating_desc', 'rating_count_desc', 'distance_asc', 'listing_id_asc'],
             'FAVORITES_FIRST' => ['favorite_first', 'srs_desc', 'distance_asc', 'unit_price_asc', 'listing_id_asc'],
+            'TOP_SELLING' => ['units_sold_desc', 'srs_desc', 'distance_asc', 'unit_price_asc', 'listing_id_asc'],
             default => ['srs_desc', 'distance_asc', 'unit_price_asc', 'listing_id_asc'],
         };
     }
@@ -271,6 +280,7 @@ final class MarketplaceSearchService
             $query->whereIn('p.fulfillment_method', ['SELF_PICKUP', 'BOTH']);
         } elseif (($input['fulfillment'] ?? null) === 'DELIVERY') {
             $query->whereIn('p.fulfillment_method', ['VENDOR_DELIVERY', 'BOTH']);
+            $query->whereIn('o.id', app(VendorDeliveryEligibility::class)->availableOrganizations());
         }
         if ((bool) ($input['favorites_only'] ?? false)) {
             $query->whereExists(fn (Builder $favorite) => $favorite->selectRaw('1')->from('favorite_vendors as fv')->whereColumn('fv.vendor_organization_id', 'o.id')->where('fv.buyer_profile_id', $buyerId));
@@ -348,10 +358,10 @@ final class MarketplaceSearchService
                 'distance_meters' => $offer['distance'],
                 'badges' => array_values(array_filter([$offer['best_price'] ? 'BEST_PRICE' : null, $row->regulated && $row->compliance_status === 'VERIFIED' ? 'PS_ICC_VERIFIED' : null])),
                 'is_favorite' => $offer['favorite'],
-                'vendor' => ['id' => $vendor['id'], 'name' => $vendor['public_store_name'], 'logo_url' => $vendor['logo_url'], 'score_label' => $vendor['score_label'], 'vacation_mode' => $vendor['vacation_mode']],
+                'vendor' => ['id' => $vendor['id'], 'name' => $vendor['public_store_name'], 'logo_url' => $vendor['logo_url'], 'score_label' => $vendor['score_label'], 'vacation_mode' => $vendor['vacation_mode'], 'badges' => $vendor['badges']],
                 'fulfillment' => [
                     'pickup_available' => in_array($row->fulfillment_method, ['SELF_PICKUP', 'BOTH'], true),
-                    'delivery' => $row->delivery_max_km === null || ! in_array($row->fulfillment_method, ['VENDOR_DELIVERY', 'BOTH'], true) ? 'NOT_OFFERED' : ($offer['distance'] <= (int) $row->delivery_max_km * 1000 ? 'WITHIN_STATED_AREA' : 'OUTSIDE_STATED_AREA'),
+                    'delivery' => ! app(VendorDeliveryEligibility::class)->available((string) $row->organization_id) || $row->delivery_max_km === null || ! in_array($row->fulfillment_method, ['VENDOR_DELIVERY', 'BOTH'], true) ? 'NOT_OFFERED' : ($offer['distance'] <= (int) $row->delivery_max_km * 1000 ? 'WITHIN_STATED_AREA' : 'OUTSIDE_STATED_AREA'),
                     'basis' => 'STRAIGHT_LINE_ADVISORY',
                 ],
                 'ranking' => ['srs' => SearchRelevanceScore::round($offer['srs'], 2), 'components' => SearchRelevanceScore::explain($offer['components'], $weights, $offer['basis'])],

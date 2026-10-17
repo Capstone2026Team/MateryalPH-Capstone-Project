@@ -1,0 +1,302 @@
+// GENERATED CODE - DO NOT MODIFY BY HAND
+
+part of 'vendor_analytics_row.dart';
+
+// **************************************************************************
+// BuiltValueGenerator
+// **************************************************************************
+
+abstract class VendorAnalyticsRowBuilder {
+  void replace(VendorAnalyticsRow other);
+  void update(void Function(VendorAnalyticsRowBuilder) updates);
+  String? get groupId;
+  set groupId(String? groupId);
+
+  String? get displayName;
+  set displayName(String? displayName);
+
+  AnalyticsMaterialRefBuilder get material;
+  set material(AnalyticsMaterialRefBuilder? material);
+
+  AnalyticsCategoryRefBuilder get category;
+  set category(AnalyticsCategoryRefBuilder? category);
+
+  ComparableSpecificationBuilder get specification;
+  set specification(ComparableSpecificationBuilder? specification);
+
+  AnalyticsUnitBuilder get unit;
+  set unit(AnalyticsUnitBuilder? unit);
+
+  VendorAnalyticsPointBuilder get startPoint;
+  set startPoint(VendorAnalyticsPointBuilder? startPoint);
+
+  VendorAnalyticsPointBuilder get endPoint;
+  set endPoint(VendorAnalyticsPointBuilder? endPoint);
+
+  AnalyticsTrendBuilder get trend;
+  set trend(AnalyticsTrendBuilder? trend);
+
+  VendorCurrentCompetitorsBuilder get currentCompetitors;
+  set currentCompetitors(VendorCurrentCompetitorsBuilder? currentCompetitors);
+
+  VendorOwnOfferBuilder get ownOffer;
+  set ownOffer(VendorOwnOfferBuilder? ownOffer);
+}
+
+class _$$VendorAnalyticsRow extends $VendorAnalyticsRow {
+  @override
+  final String groupId;
+  @override
+  final String displayName;
+  @override
+  final AnalyticsMaterialRef material;
+  @override
+  final AnalyticsCategoryRef category;
+  @override
+  final ComparableSpecification specification;
+  @override
+  final AnalyticsUnit unit;
+  @override
+  final VendorAnalyticsPoint startPoint;
+  @override
+  final VendorAnalyticsPoint endPoint;
+  @override
+  final AnalyticsTrend trend;
+  @override
+  final VendorCurrentCompetitors currentCompetitors;
+  @override
+  final VendorOwnOffer? ownOffer;
+
+  factory _$$VendorAnalyticsRow(
+          [void Function($VendorAnalyticsRowBuilder)? updates]) =>
+      ($VendorAnalyticsRowBuilder()..update(updates))._build();
+
+  _$$VendorAnalyticsRow._(
+      {required this.groupId,
+      required this.displayName,
+      required this.material,
+      required this.category,
+      required this.specification,
+      required this.unit,
+      required this.startPoint,
+      required this.endPoint,
+      required this.trend,
+      required this.currentCompetitors,
+      this.ownOffer})
+      : super._();
+  @override
+  $VendorAnalyticsRow rebuild(
+          void Function($VendorAnalyticsRowBuilder) updates) =>
+      (toBuilder()..update(updates)).build();
+
+  @override
+  $VendorAnalyticsRowBuilder toBuilder() =>
+      $VendorAnalyticsRowBuilder()..replace(this);
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(other, this)) return true;
+    return other is $VendorAnalyticsRow &&
+        groupId == other.groupId &&
+        displayName == other.displayName &&
+        material == other.material &&
+        category == other.category &&
+        specification == other.specification &&
+        unit == other.unit &&
+        startPoint == other.startPoint &&
+        endPoint == other.endPoint &&
+        trend == other.trend &&
+        currentCompetitors == other.currentCompetitors &&
+        ownOffer == other.ownOffer;
+  }
+
+  @override
+  int get hashCode {
+    var _$hash = 0;
+    _$hash = $jc(_$hash, groupId.hashCode);
+    _$hash = $jc(_$hash, displayName.hashCode);
+    _$hash = $jc(_$hash, material.hashCode);
+    _$hash = $jc(_$hash, category.hashCode);
+    _$hash = $jc(_$hash, specification.hashCode);
+    _$hash = $jc(_$hash, unit.hashCode);
+    _$hash = $jc(_$hash, startPoint.hashCode);
+    _$hash = $jc(_$hash, endPoint.hashCode);
+    _$hash = $jc(_$hash, trend.hashCode);
+    _$hash = $jc(_$hash, currentCompetitors.hashCode);
+    _$hash = $jc(_$hash, ownOffer.hashCode);
+    _$hash = $jf(_$hash);
+    return _$hash;
+  }
+
+  @override
+  String toString() {
+    return (newBuiltValueToStringHelper(r'$VendorAnalyticsRow')
+          ..add('groupId', groupId)
+          ..add('displayName', displayName)
+          ..add('material', material)
+          ..add('category', category)
+          ..add('specification', specification)
+          ..add('unit', unit)
+          ..add('startPoint', startPoint)
+          ..add('endPoint', endPoint)
+          ..add('trend', trend)
+          ..add('currentCompetitors', currentCompetitors)
+          ..add('ownOffer', ownOffer))
+        .toString();
+  }
+}
+
+class $VendorAnalyticsRowBuilder
+    implements
+        Builder<$VendorAnalyticsRow, $VendorAnalyticsRowBuilder>,
+        VendorAnalyticsRowBuilder {
+  _$$VendorAnalyticsRow? _$v;
+
+  String? _groupId;
+  String? get groupId => _$this._groupId;
+  set groupId(covariant String? groupId) => _$this._groupId = groupId;
+
+  String? _displayName;
+  String? get displayName => _$this._displayName;
+  set displayName(covariant String? displayName) =>
+      _$this._displayName = displayName;
+
+  AnalyticsMaterialRefBuilder? _material;
+  AnalyticsMaterialRefBuilder get material =>
+      _$this._material ??= AnalyticsMaterialRefBuilder();
+  set material(covariant AnalyticsMaterialRefBuilder? material) =>
+      _$this._material = material;
+
+  AnalyticsCategoryRefBuilder? _category;
+  AnalyticsCategoryRefBuilder get category =>
+      _$this._category ??= AnalyticsCategoryRefBuilder();
+  set category(covariant AnalyticsCategoryRefBuilder? category) =>
+      _$this._category = category;
+
+  ComparableSpecificationBuilder? _specification;
+  ComparableSpecificationBuilder get specification =>
+      _$this._specification ??= ComparableSpecificationBuilder();
+  set specification(covariant ComparableSpecificationBuilder? specification) =>
+      _$this._specification = specification;
+
+  AnalyticsUnitBuilder? _unit;
+  AnalyticsUnitBuilder get unit => _$this._unit ??= AnalyticsUnitBuilder();
+  set unit(covariant AnalyticsUnitBuilder? unit) => _$this._unit = unit;
+
+  VendorAnalyticsPointBuilder? _startPoint;
+  VendorAnalyticsPointBuilder get startPoint =>
+      _$this._startPoint ??= VendorAnalyticsPointBuilder();
+  set startPoint(covariant VendorAnalyticsPointBuilder? startPoint) =>
+      _$this._startPoint = startPoint;
+
+  VendorAnalyticsPointBuilder? _endPoint;
+  VendorAnalyticsPointBuilder get endPoint =>
+      _$this._endPoint ??= VendorAnalyticsPointBuilder();
+  set endPoint(covariant VendorAnalyticsPointBuilder? endPoint) =>
+      _$this._endPoint = endPoint;
+
+  AnalyticsTrendBuilder? _trend;
+  AnalyticsTrendBuilder get trend => _$this._trend ??= AnalyticsTrendBuilder();
+  set trend(covariant AnalyticsTrendBuilder? trend) => _$this._trend = trend;
+
+  VendorCurrentCompetitorsBuilder? _currentCompetitors;
+  VendorCurrentCompetitorsBuilder get currentCompetitors =>
+      _$this._currentCompetitors ??= VendorCurrentCompetitorsBuilder();
+  set currentCompetitors(
+          covariant VendorCurrentCompetitorsBuilder? currentCompetitors) =>
+      _$this._currentCompetitors = currentCompetitors;
+
+  VendorOwnOfferBuilder? _ownOffer;
+  VendorOwnOfferBuilder get ownOffer =>
+      _$this._ownOffer ??= VendorOwnOfferBuilder();
+  set ownOffer(covariant VendorOwnOfferBuilder? ownOffer) =>
+      _$this._ownOffer = ownOffer;
+
+  $VendorAnalyticsRowBuilder() {
+    $VendorAnalyticsRow._defaults(this);
+  }
+
+  $VendorAnalyticsRowBuilder get _$this {
+    final $v = _$v;
+    if ($v != null) {
+      _groupId = $v.groupId;
+      _displayName = $v.displayName;
+      _material = $v.material.toBuilder();
+      _category = $v.category.toBuilder();
+      _specification = $v.specification.toBuilder();
+      _unit = $v.unit.toBuilder();
+      _startPoint = $v.startPoint.toBuilder();
+      _endPoint = $v.endPoint.toBuilder();
+      _trend = $v.trend.toBuilder();
+      _currentCompetitors = $v.currentCompetitors.toBuilder();
+      _ownOffer = $v.ownOffer?.toBuilder();
+      _$v = null;
+    }
+    return this;
+  }
+
+  @override
+  void replace(covariant $VendorAnalyticsRow other) {
+    _$v = other as _$$VendorAnalyticsRow;
+  }
+
+  @override
+  void update(void Function($VendorAnalyticsRowBuilder)? updates) {
+    if (updates != null) updates(this);
+  }
+
+  @override
+  $VendorAnalyticsRow build() => _build();
+
+  _$$VendorAnalyticsRow _build() {
+    _$$VendorAnalyticsRow _$result;
+    try {
+      _$result = _$v ??
+          _$$VendorAnalyticsRow._(
+            groupId: BuiltValueNullFieldError.checkNotNull(
+                groupId, r'$VendorAnalyticsRow', 'groupId'),
+            displayName: BuiltValueNullFieldError.checkNotNull(
+                displayName, r'$VendorAnalyticsRow', 'displayName'),
+            material: material.build(),
+            category: category.build(),
+            specification: specification.build(),
+            unit: unit.build(),
+            startPoint: startPoint.build(),
+            endPoint: endPoint.build(),
+            trend: trend.build(),
+            currentCompetitors: currentCompetitors.build(),
+            ownOffer: _ownOffer?.build(),
+          );
+    } catch (_) {
+      late String _$failedField;
+      try {
+        _$failedField = 'material';
+        material.build();
+        _$failedField = 'category';
+        category.build();
+        _$failedField = 'specification';
+        specification.build();
+        _$failedField = 'unit';
+        unit.build();
+        _$failedField = 'startPoint';
+        startPoint.build();
+        _$failedField = 'endPoint';
+        endPoint.build();
+        _$failedField = 'trend';
+        trend.build();
+        _$failedField = 'currentCompetitors';
+        currentCompetitors.build();
+        _$failedField = 'ownOffer';
+        _ownOffer?.build();
+      } catch (e) {
+        throw BuiltValueNestedFieldError(
+            r'$VendorAnalyticsRow', _$failedField, e.toString());
+      }
+      rethrow;
+    }
+    replace(_$result);
+    return _$result;
+  }
+}
+
+// ignore_for_file: deprecated_member_use_from_same_package,type=lint

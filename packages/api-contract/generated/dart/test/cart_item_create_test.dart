@@ -53,5 +53,11 @@ void main() {
       // TODO
     });
 
+    // Work Package line this purchase covers; same material and unit only (422 MISSING_LINE_TAG_INVALID).
+    // String workPackageLineId
+    test('to test the property `workPackageLineId`', () async {
+      // TODO
+    });
+
   });
 }

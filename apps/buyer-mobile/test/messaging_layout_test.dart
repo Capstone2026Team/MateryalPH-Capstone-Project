@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -59,6 +60,22 @@ api.ChatMessage message(String id, String body, {bool mine = false}) =>
     );
 
 class LayoutMessagingRepository implements MessagingRepository {
+  final projectRows = <api.ConversationView>[];
+  final projectPages = <int>[];
+  @override
+  Future<api.ConversationPage> projectInquiries(
+    String id, {
+    int page = 1,
+  }) async {
+    projectPages.add(page);
+    return api.ConversationPage(
+      (b) => b
+        ..items.addAll(projectRows.skip((page - 1) * 25).take(25))
+        ..page = page
+        ..hasMore = projectRows.length > page * 25,
+    );
+  }
+
   final stores = [
     layoutConversation('one', 'Sampaloc Lumber Hardware', unread: 2),
     layoutConversation('two', 'L&D Hardware & Construction Supplies'),
@@ -243,6 +260,16 @@ class LayoutMessagingRepository implements MessagingRepository {
     };
   }
 
+  final attachmentCalls = <String>[];
+
+  @override
+  Future<Uint8List> attachment(String id, String attachmentId) async {
+    attachmentCalls.add(attachmentId);
+    return base64Decode(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==',
+    );
+  }
+
   @override
   Future<Uint8List> avatar(String id, int userId) async => Uint8List(0);
   @override
@@ -296,17 +323,20 @@ void main() {
       repository.conversationChanged!();
       await tester.pumpAndSettle();
       expect(repository.requestedCursors, contains('000027'));
-      expect(find.text('Before disconnect'), findsOneWidget);
-      expect(find.text('Gap message 2'), findsOneWidget);
-      await tester.scrollUntilVisible(
-        find.text('Gap message 76'),
-        600,
-        scrollable: find.byType(Scrollable).first,
-      );
+      // A reader at the bottom stays on the newest message.
       expect(find.text('Gap message 76'), findsOneWidget);
       repository.conversationChanged!();
       await tester.pumpAndSettle();
       expect(find.text('Gap message 76'), findsOneWidget);
+      // Scrolling up reaches the filled gap and the message before it.
+      for (final text in ['Gap message 2', 'Before disconnect']) {
+        await tester.scrollUntilVisible(
+          find.text(text),
+          600,
+          scrollable: find.byType(Scrollable).first,
+        );
+        expect(find.text(text), findsOneWidget);
+      }
       await tester.pumpWidget(const SizedBox());
     },
   );
@@ -352,7 +382,49 @@ void main() {
     },
   );
   testWidgets(
-    'latest attached product is not reattached and typing expires without history',
+    'product entry replaces an older draft product and keeps the draft text',
+    (tester) async {
+      final repository = LayoutMessagingRepository();
+      await mount(
+        tester,
+        repository,
+        thread: true,
+        initialProductId: 'product-one',
+      );
+      await tester.enterText(find.byType(TextField), 'Please quote');
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pumpWidget(const SizedBox());
+      await mount(
+        tester,
+        repository,
+        thread: true,
+        initialProductId: 'product-two',
+      );
+      expect(find.text('Fixture sand'), findsOneWidget);
+      expect(find.text('Fixture cement'), findsNothing);
+      expect(find.text('Please quote'), findsOneWidget);
+      expect(repository.sendKeys, isEmpty);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+  testWidgets('an ineligible product entry explains why nothing attached', (
+    tester,
+  ) async {
+    final repository = LayoutMessagingRepository();
+    await mount(
+      tester,
+      repository,
+      thread: true,
+      initialProductId: 'product-retired',
+    );
+    expect(
+      find.text('This product is no longer available to attach.'),
+      findsOneWidget,
+    );
+    await tester.pumpWidget(const SizedBox());
+  });
+  testWidgets(
+    'latest attached product is prepared again unsent and typing expires without history',
     (tester) async {
       final repository = LayoutMessagingRepository()
         ..latestProduct = 'product-one';
@@ -362,7 +434,8 @@ void main() {
         thread: true,
         initialProductId: 'product-one',
       );
-      expect(find.text('Fixture cement'), findsNothing);
+      expect(find.text('Fixture cement'), findsOneWidget);
+      expect(repository.sendKeys, isEmpty);
       repository.typingChanged!(true, 2);
       repository.typingChanged!(false, 1);
       await tester.pump();
@@ -531,6 +604,49 @@ void main() {
     expect(find.text('Newest reply'), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
   });
+
+  testWidgets(
+    'a clean photo previews inline with Download; a PDF stays a file row',
+    (tester) async {
+      api.ChatAttachment file(String id, String type, String name) =>
+          api.ChatAttachment(
+            (b) => b
+              ..id = id
+              ..displayName = name
+              ..mediaType = type
+              ..sizeBytes = 49152
+              ..scanState = api.ChatAttachmentScanStateEnum.CLEAN,
+          );
+      final repository = LayoutMessagingRepository();
+      repository.messages.addAll([
+        message('p1', 'Attachment').rebuild(
+          (b) => b
+            ..kind = api.ChatMessageKindEnum.ATTACHMENT
+            ..attachments.add(file('photo', 'image/png', 'Attachment.png')),
+        ),
+        message('p2', 'Attachment').rebuild(
+          (b) => b
+            ..kind = api.ChatMessageKindEnum.ATTACHMENT
+            ..attachments.add(file('pdf', 'application/pdf', 'Attachment.pdf')),
+        ),
+      ]);
+      await mount(tester, repository, thread: true);
+      expect(find.byType(ChatImageAttachment), findsOneWidget);
+      expect(
+        find.bySemanticsLabel(RegExp('Photo Attachment.png')),
+        findsOneWidget,
+      );
+      expect(find.text('Download'), findsOneWidget);
+      expect(find.textContaining('Attachment.pdf'), findsOneWidget);
+      // Only the photo is fetched, once, however often the thread rebuilds or polls.
+      repository.conversationChanged!();
+      await tester.pumpAndSettle();
+      expect(repository.attachmentCalls, ['photo']);
+      // The server's "Attachment" placeholder body is not repeated above the photo.
+      expect(find.text('Attachment'), findsNothing);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
 
   testWidgets('swipe left archives, Archived lists it and swipe restores', (
     tester,

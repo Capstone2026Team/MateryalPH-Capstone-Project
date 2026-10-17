@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Identity;
 
 use App\Domain\Agreements\BuyerRegistrationTerms;
+use App\Domain\Geography\RadiusPolicy;
 use App\Models\User;
 use App\Models\UserProfile;
 use App\Models\VendorMembership;
@@ -50,13 +51,15 @@ final class RegisterAccount
                     'user_id' => $user->getKey(),
                     'buyer_type' => $input['buyer_type'],
                     'company_name' => $input['company_name'] ?? null,
+                    'discovery_radius_km' => RadiusPolicy::buyerDefault(),
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
             } else {
                 $organization = VendorOrganization::query()->create([
-                    'legal_name' => trim((string) $input['business_name']),
-                    'store_name' => trim((string) $input['business_name']),
+                    // The store name is entered later in Business Information; Store Verification blocks submission while it is blank.
+                    'legal_name' => trim((string) ($input['business_name'] ?? '')),
+                    'store_name' => trim((string) ($input['business_name'] ?? '')),
                     'account_status' => 'ACTIVE',
                     'onboarding_status' => 'NOT_STARTED',
                     'marketplace_status' => 'NOT_ACTIVE',

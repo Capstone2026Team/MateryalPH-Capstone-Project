@@ -19,6 +19,7 @@
 .portal-nav-icon { display: grid; flex: 0 0 20px; width: 20px; height: 20px; place-items: center; }
 .portal-nav-icon svg { width: 18px; height: 18px; stroke-width: 1.75; }
 .portal-nav-text { min-width: 0; transition: opacity 140ms ease; }
+.portal-count-badge { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding-inline: 5px; border-radius: 999px; background: var(--mp-color-status-error); color: var(--mp-color-surface-primary); font-size: 10px; line-height: 1; font-weight: 700; font-variant-numeric: tabular-nums; }
 .portal-nav-row:not([aria-disabled]):hover { background: var(--mp-color-surface-canvas); color: var(--mp-color-text-strong); }
 .portal-nav-row[aria-current="page"], .portal-nav-row[aria-current="page"]:hover { background: var(--mp-color-brand-orange-50); color: var(--mp-color-action-primary); font-weight: 650; }
 .portal-nav-row[aria-current="page"]::before { content: ''; position: absolute; left: 0; top: 9px; bottom: 9px; width: 3px; border-radius: 3px; background: var(--mp-color-brand-orange-500); }
@@ -63,6 +64,7 @@
   .is-collapsed .portal-nav section + section::before { opacity: 1; }
   .is-collapsed .portal-nav-row { justify-content: center; padding-inline: 0; gap: 0; }
   .is-collapsed .portal-nav-text { width: 0; opacity: 0; }
+  .is-collapsed .portal-nav-badge { position: absolute; top: 2px; right: 0; min-width: 16px; height: 16px; padding-inline: 3px; font-size: 9px; box-shadow: 0 0 0 2px var(--mp-color-surface-primary); }
   .is-collapsed .portal-sidebar-footer { padding-inline: 10px; }
   .is-collapsed .portal-footer-account { justify-content: center; padding-inline: 0; gap: 0; }
   .is-collapsed .portal-footer-details { width: 0; opacity: 0; }
@@ -72,3 +74,5 @@
   .portal-layout, .portal-nav-row, .portal-nav-text, .portal-nav-label, .portal-footer-details, .portal-nav section + section, .portal-nav section + section::before { transition: none; }
   .portal-brand-full, .portal-brand-short { animation: none; }
 }
+
+.portal-nav-badge { margin-left: auto; }

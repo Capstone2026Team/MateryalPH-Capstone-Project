@@ -27,7 +27,7 @@ final class BotChallengeController extends Controller
             $challengeId,
             (string) $request->validated('email'),
             (string) $request->validated('code'),
-            $transport === AuthTransport::MOBILE ? 'BUYER' : 'VENDOR',
+            $transport === AuthTransport::MOBILE ? 'BUYER' : (string) $request->validated('portal', 'VENDOR'),
         );
         $data = [
             'verified' => true,
@@ -51,7 +51,7 @@ final class BotChallengeController extends Controller
             $request,
             $challengeId,
             (string) $request->validated('email'),
-            $transport === AuthTransport::MOBILE ? 'BUYER' : 'VENDOR',
+            $transport === AuthTransport::MOBILE ? 'BUYER' : (string) $request->validated('portal', 'VENDOR'),
         );
 
         return ApiResponse::success(['message' => 'If eligible, a new verification code is being delivered.']);

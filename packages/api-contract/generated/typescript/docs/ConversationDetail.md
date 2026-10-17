@@ -9,6 +9,7 @@ Name | Type
 `conversation` | [ConversationView](ConversationView.md)
 `messages` | [ChatMessagePage](ChatMessagePage.md)
 `quotations` | [ChatQuotationPage](ChatQuotationPage.md)
+`siteInspections` | [Array&lt;SiteInspection&gt;](SiteInspection.md)
 
 ## Example
 
@@ -20,6 +21,7 @@ const example = {
   "conversation": null,
   "messages": null,
   "quotations": null,
+  "siteInspections": null,
 } satisfies ConversationDetail
 
 console.log(example)

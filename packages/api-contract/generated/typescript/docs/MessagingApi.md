@@ -6,17 +6,23 @@ All URIs are relative to */api/v1*
 |------------- | ------------- | -------------|
 | [**archiveChatConversation**](MessagingApi.md#archivechatconversation) | **PUT** /{messagingPortal}/conversations/{conversationId}/archive |  |
 | [**authorizeChatChannel**](MessagingApi.md#authorizechatchannel) | **POST** /{messagingPortal}/messaging/auth |  |
+| [**cancelSiteInspection**](MessagingApi.md#cancelsiteinspection) | **POST** /{messagingPortal}/conversations/{conversationId}/site-inspections/{inspectionId}/cancel |  |
 | [**createConversation**](MessagingApi.md#createconversation) | **POST** /{messagingPortal}/conversations |  |
 | [**decideChatQuotation**](MessagingApi.md#decidechatquotation) | **POST** /{messagingPortal}/conversations/{conversationId}/quotation/{action} |  |
+| [**decideSiteInspection**](MessagingApi.md#decidesiteinspection) | **POST** /{messagingPortal}/conversations/{conversationId}/site-inspections/{inspectionId}/{action} |  |
 | [**downloadChatAttachment**](MessagingApi.md#downloadchatattachment) | **GET** /{messagingPortal}/conversations/{conversationId}/attachments/{attachmentId} |  |
 | [**getChatAvatar**](MessagingApi.md#getchatavatar) | **GET** /{messagingPortal}/conversations/{conversationId}/avatars/{userId} |  |
 | [**getChatRealtime**](MessagingApi.md#getchatrealtime) | **GET** /{messagingPortal}/messaging/realtime |  |
 | [**getConversation**](MessagingApi.md#getconversation) | **GET** /{messagingPortal}/conversations/{conversationId} |  |
 | [**listChatHandlers**](MessagingApi.md#listchathandlers) | **GET** /{messagingPortal}/conversations/{conversationId}/handlers |  |
 | [**listChatProducts**](MessagingApi.md#listchatproducts) | **GET** /{messagingPortal}/conversations/{conversationId}/products |  |
+| [**listChatProjectInquiries**](MessagingApi.md#listchatprojectinquiries) | **GET** /{messagingPortal}/conversations/{conversationId}/project-inquiries |  |
 | [**listConversations**](MessagingApi.md#listconversations) | **GET** /{messagingPortal}/conversations |  |
+| [**listVendorFulfillmentConversations**](MessagingApi.md#listvendorfulfillmentconversations) | **GET** /vendor/conversations/{conversationId}/fulfillment-conversations |  |
+| [**openVendorOrderConversation**](MessagingApi.md#openvendororderconversation) | **POST** /vendor/orders/{orderId}/conversation |  |
 | [**publishChatQuotation**](MessagingApi.md#publishchatquotation) | **POST** /{messagingPortal}/conversations/{conversationId}/quotation/publish |  |
 | [**readChatMessages**](MessagingApi.md#readchatmessages) | **POST** /{messagingPortal}/conversations/{conversationId}/read |  |
+| [**requestSiteInspection**](MessagingApi.md#requestsiteinspection) | **POST** /{messagingPortal}/site-inspections |  |
 | [**restoreChatConversation**](MessagingApi.md#restorechatconversation) | **DELETE** /{messagingPortal}/conversations/{conversationId}/archive |  |
 | [**saveChatQuotationDraft**](MessagingApi.md#savechatquotationdraft) | **PUT** /{messagingPortal}/conversations/{conversationId}/quotation/draft |  |
 | [**sendChatMessage**](MessagingApi.md#sendchatmessage) | **POST** /{messagingPortal}/conversations/{conversationId}/messages |  |
@@ -34,7 +40,7 @@ All URIs are relative to */api/v1*
 
 
 
-Hides one sales or quotation conversation from the Buyer\&#39;s own inbox. It is idempotent, personal and reversible; messages, quotations and orders are never changed or deleted. Fulfillment threads stay with their order (409 CONVERSATION_NOT_ARCHIVABLE). New activity returns the conversation to the inbox.
+Hides the Buyer and Store sales group, including its item and project inquiries, from this Buyer\&#39;s inbox. It is idempotent, personal and reversible; messages, quotations and orders are never changed or deleted. Fulfillment threads stay with their order (409 CONVERSATION_NOT_ARCHIVABLE). New activity in any inquiry returns the group to the inbox.
 
 ### Example
 
@@ -186,6 +192,91 @@ example().catch(console.error);
 | **409** | Recoverable version, deadline, idempotency or stock conflict; re-read the current version |  -  |
 | **422** | Invalid fields or undisclosed NRPC |  -  |
 | **503** | Provider or scanner unavailable; retry safely |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## cancelSiteInspection
+
+> SiteInspectionListResponse cancelSiteInspection(messagingPortal, conversationId, inspectionId, siteInspectionVersion)
+
+
+
+The Buyer cancels a REQUESTED or SCHEDULED inspection. A stale lock_version returns SITE_INSPECTION_VERSION_CONFLICT; a closed request returns SITE_INSPECTION_CLOSED.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  MessagingApi,
+} from '@materyalph/api-client-ts';
+import type { CancelSiteInspectionRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // Configure HTTP bearer authorization: passportBearer
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new MessagingApi(config);
+
+  const body = {
+    // 'buyers'
+    messagingPortal: messagingPortal_example,
+    // string
+    conversationId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // string
+    inspectionId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // SiteInspectionVersion
+    siteInspectionVersion: ...,
+  } satisfies CancelSiteInspectionRequest;
+
+  try {
+    const data = await api.cancelSiteInspection(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **messagingPortal** | `buyers` |  | [Defaults to `undefined`] [Enum: buyers] |
+| **conversationId** | `string` |  | [Defaults to `undefined`] |
+| **inspectionId** | `string` |  | [Defaults to `undefined`] |
+| **siteInspectionVersion** | [SiteInspectionVersion](SiteInspectionVersion.md) |  | |
+
+### Return type
+
+[**SiteInspectionListResponse**](SiteInspectionListResponse.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | The conversation\&#39;s current inspections |  -  |
+| **401** | Authentication required |  -  |
+| **403** | Only the Buyer can cancel |  -  |
+| **404** | Conversation or inspection unavailable |  -  |
+| **409** | Stale version or closed inspection |  -  |
+| **422** | Invalid fields |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -363,6 +454,96 @@ example().catch(console.error);
 | **409** | Recoverable version, deadline, idempotency or stock conflict; re-read the current version |  -  |
 | **422** | Invalid fields or undisclosed NRPC |  -  |
 | **503** | Provider or scanner unavailable; retry safely |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## decideSiteInspection
+
+> SiteInspectionListResponse decideSiteInspection(messagingPortal, conversationId, inspectionId, action, siteInspectionDecision)
+
+
+
+Store sales roles (Owner, Store Manager, Store Staff, Customer Service) schedule or reschedule (future scheduled_for), decline (reason) or complete a SCHEDULED inspection with the measured volume in m³. Each change posts a system message and notifies the Buyer. Fulfillment Staff are not sales participants and receive 404. Completing never creates a quotation; the store sends one through the existing quotation flow.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  MessagingApi,
+} from '@materyalph/api-client-ts';
+import type { DecideSiteInspectionRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // To configure API key authorization: accessCookie
+    apiKey: "YOUR API KEY",
+    // To configure API key authorization: webCsrf
+    apiKey: "YOUR API KEY",
+  });
+  const api = new MessagingApi(config);
+
+  const body = {
+    // 'vendor'
+    messagingPortal: messagingPortal_example,
+    // string
+    conversationId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // string
+    inspectionId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // 'schedule' | 'decline' | 'complete'
+    action: action_example,
+    // SiteInspectionDecision
+    siteInspectionDecision: ...,
+  } satisfies DecideSiteInspectionRequest;
+
+  try {
+    const data = await api.decideSiteInspection(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **messagingPortal** | `vendor` |  | [Defaults to `undefined`] [Enum: vendor] |
+| **conversationId** | `string` |  | [Defaults to `undefined`] |
+| **inspectionId** | `string` |  | [Defaults to `undefined`] |
+| **action** | `schedule`, `decline`, `complete` |  | [Defaults to `undefined`] [Enum: schedule, decline, complete] |
+| **siteInspectionDecision** | [SiteInspectionDecision](SiteInspectionDecision.md) |  | |
+
+### Return type
+
+[**SiteInspectionListResponse**](SiteInspectionListResponse.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | The conversation\&#39;s current inspections |  -  |
+| **401** | Authentication required |  -  |
+| **403** | Role cannot act on sales conversations |  -  |
+| **404** | Conversation or inspection unavailable |  -  |
+| **409** | Stale version (SITE_INSPECTION_VERSION_CONFLICT) or wrong state (SITE_INSPECTION_CLOSED) |  -  |
+| **422** | Invalid fields |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -893,13 +1074,97 @@ example().catch(console.error);
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
+## listChatProjectInquiries
+
+> ConversationPageResponse listChatProjectInquiries(messagingPortal, conversationId, page)
+
+
+
+Lists existing Project-Based conversations for this authorized sales conversation\&#39;s Buyer and Store. Includes only currently authorized assignments, newest activity first. Preserves each Work Package and quotation history. Never creates an inquiry. Fulfillment threads cannot use this endpoint.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  MessagingApi,
+} from '@materyalph/api-client-ts';
+import type { ListChatProjectInquiriesRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // To configure API key authorization: accessCookie
+    apiKey: "YOUR API KEY",
+    // Configure HTTP bearer authorization: passportBearer
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new MessagingApi(config);
+
+  const body = {
+    // 'buyers' | 'vendor'
+    messagingPortal: messagingPortal_example,
+    // string
+    conversationId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // number (optional)
+    page: 56,
+  } satisfies ListChatProjectInquiriesRequest;
+
+  try {
+    const data = await api.listChatProjectInquiries(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **messagingPortal** | `buyers`, `vendor` |  | [Defaults to `undefined`] [Enum: buyers, vendor] |
+| **conversationId** | `string` |  | [Defaults to `undefined`] |
+| **page** | `number` |  | [Optional] [Defaults to `1`] |
+
+### Return type
+
+[**ConversationPageResponse**](ConversationPageResponse.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Authorized project inquiries |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **404** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **409** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
 ## listConversations
 
 > ConversationPageResponse listConversations(messagingPortal, page, archived)
 
 
 
-Current purpose, participant, account and fixed-role authority are checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses native bearer transport.
+One sales inbox entry per Buyer and Store. The authorized Item-Based conversation is the main thread; when unavailable to the viewer, use their oldest authorized project inquiry. Preview, activity ordering and unread count include all currently authorized sales inquiries in that group. Detail messages and read receipts remain conversation-specific. Assigned Fulfillment Staff retain their separate order threads. Current purpose, participant, account and fixed-role authority are checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses native bearer transport.
 
 ### Example
 
@@ -927,7 +1192,7 @@ async function example() {
     messagingPortal: messagingPortal_example,
     // number (optional)
     page: 56,
-    // boolean | Buyer only. true lists the Buyer\'s archived sales conversations; omitted or false lists the active inbox. Order fulfillment threads are never listed for a Buyer; they open from Order Details. (optional)
+    // boolean | Buyer only. Archive and restore apply to the entire Buyer and Store sales group. New activity in any inquiry restores the group. true lists archived groups; omitted or false lists the active inbox. Order fulfillment threads are never listed for a Buyer; they open from Order Details. (optional)
     archived: true,
   } satisfies ListConversationsRequest;
 
@@ -950,7 +1215,7 @@ example().catch(console.error);
 |------------- | ------------- | ------------- | -------------|
 | **messagingPortal** | `buyers`, `vendor` |  | [Defaults to `undefined`] [Enum: buyers, vendor] |
 | **page** | `number` |  | [Optional] [Defaults to `undefined`] |
-| **archived** | `boolean` | Buyer only. true lists the Buyer\&#39;s archived sales conversations; omitted or false lists the active inbox. Order fulfillment threads are never listed for a Buyer; they open from Order Details. | [Optional] [Defaults to `undefined`] |
+| **archived** | `boolean` | Buyer only. Archive and restore apply to the entire Buyer and Store sales group. New activity in any inquiry restores the group. true lists archived groups; omitted or false lists the active inbox. Order fulfillment threads are never listed for a Buyer; they open from Order Details. | [Optional] [Defaults to `undefined`] |
 
 ### Return type
 
@@ -976,6 +1241,166 @@ example().catch(console.error);
 | **409** | Recoverable version, deadline, idempotency or stock conflict; re-read the current version |  -  |
 | **422** | Invalid fields or undisclosed NRPC |  -  |
 | **503** | Provider or scanner unavailable; retry safely |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## listVendorFulfillmentConversations
+
+> FulfillmentConversationPageResponse listVendorFulfillmentConversations(conversationId, page)
+
+
+
+Owner and Store Manager only. Lists existing fulfillment threads for the authorized sales inquiry\&#39;s buyer and vendor, across procurement types. Writable threads first, then read-only history, newest activity and ID first within each group. Never creates a thread.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  MessagingApi,
+} from '@materyalph/api-client-ts';
+import type { ListVendorFulfillmentConversationsRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // To configure API key authorization: accessCookie
+    apiKey: "YOUR API KEY",
+  });
+  const api = new MessagingApi(config);
+
+  const body = {
+    // string
+    conversationId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // number (optional)
+    page: 56,
+  } satisfies ListVendorFulfillmentConversationsRequest;
+
+  try {
+    const data = await api.listVendorFulfillmentConversations(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **conversationId** | `string` |  | [Defaults to `undefined`] |
+| **page** | `number` |  | [Optional] [Defaults to `1`] |
+
+### Return type
+
+[**FulfillmentConversationPageResponse**](FulfillmentConversationPageResponse.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Authorized fulfillment conversations |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **404** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **409** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## openVendorOrderConversation
+
+> ChatIdResponse openVendorOrderConversation(orderId, idempotencyKey)
+
+
+
+Opens the authorized order\&#39;s quotation conversation or permanent Item-Based store chat, creating the latter if absent. Existing handler access is preserved. Assigned Fulfillment Staff can only open their existing order fulfillment thread. Does not send a message or change commercial terms.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  MessagingApi,
+} from '@materyalph/api-client-ts';
+import type { OpenVendorOrderConversationRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // To configure API key authorization: accessCookie
+    apiKey: "YOUR API KEY",
+    // To configure API key authorization: webCsrf
+    apiKey: "YOUR API KEY",
+  });
+  const api = new MessagingApi(config);
+
+  const body = {
+    // string
+    orderId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // string
+    idempotencyKey: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+  } satisfies OpenVendorOrderConversationRequest;
+
+  try {
+    const data = await api.openVendorOrderConversation(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **orderId** | `string` |  | [Defaults to `undefined`] |
+| **idempotencyKey** | `string` |  | [Defaults to `undefined`] |
+
+### Return type
+
+[**ChatIdResponse**](ChatIdResponse.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Authorized conversation |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **404** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **409** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -1074,7 +1499,7 @@ example().catch(console.error);
 
 
 
-Current purpose, participant, account and fixed-role authority are checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses native bearer transport.
+Current purpose, participant, account and fixed-role authority are checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses native bearer transport. Reading received messages also marks that Buyer\&#39;s corresponding MESSAGES notifications through the same message cutoff as read; later arrivals remain unread and queued delivery skips already-read message notices.
 
 ### Example
 
@@ -1155,13 +1580,94 @@ example().catch(console.error);
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
+## requestSiteInspection
+
+> SiteInspectionCreatedResponse requestSiteInspection(messagingPortal, idempotencyKey, siteInspectionCreate)
+
+
+
+Free Site Inspection / Estimate for ready-mixed concrete (owner decision 2026-10-16). Instead of stating a volume, the Buyer asks the store to inspect a saved location. The request is posted in the Buyer\&#39;s Item-Based store conversation, whose delivery destination becomes the inspected site, so the store\&#39;s later quotation for the measured volume uses it. Creates no order, hold, reservation or charge. One open request per conversation (SITE_INSPECTION_ALREADY_OPEN); a non-ready-mixed or unavailable listing returns SITE_INSPECTION_UNAVAILABLE. The preferred date is today to 60 days ahead in Asia/Manila. Notes are stored encrypted and shown only to the Buyer and the store\&#39;s sales roles.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  MessagingApi,
+} from '@materyalph/api-client-ts';
+import type { RequestSiteInspectionRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // Configure HTTP bearer authorization: passportBearer
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new MessagingApi(config);
+
+  const body = {
+    // 'buyers'
+    messagingPortal: messagingPortal_example,
+    // string | Also the inspection identifier; a retry returns the same request.
+    idempotencyKey: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // SiteInspectionCreate
+    siteInspectionCreate: ...,
+  } satisfies RequestSiteInspectionRequest;
+
+  try {
+    const data = await api.requestSiteInspection(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **messagingPortal** | `buyers` |  | [Defaults to `undefined`] [Enum: buyers] |
+| **idempotencyKey** | `string` | Also the inspection identifier; a retry returns the same request. | [Defaults to `undefined`] |
+| **siteInspectionCreate** | [SiteInspectionCreate](SiteInspectionCreate.md) |  | |
+
+### Return type
+
+[**SiteInspectionCreatedResponse**](SiteInspectionCreatedResponse.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **201** | Inspection requested |  -  |
+| **401** | Authentication required |  -  |
+| **403** | Commerce restriction or account access denied |  -  |
+| **409** | An inspection is already open with this store, the destination is locked by an open quotation, or the idempotency key was reused |  -  |
+| **422** | Invalid fields, unavailable listing or location |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
 ## restoreChatConversation
 
 > ChatEmptyResponse restoreChatConversation(messagingPortal, conversationId)
 
 
 
-Returns an archived conversation to the Buyer\&#39;s inbox. Idempotent.
+Returns the archived Buyer and Store sales group to the Buyer\&#39;s inbox. Idempotent. Accepts any authorized sales inquiry in the group.
 
 ### Example
 
@@ -1324,7 +1830,7 @@ example().catch(console.error);
 
 
 
-Current purpose, participant, account and fixed-role authority are checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses native bearer transport.
+Current purpose, participant, account and fixed-role authority are checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses native bearer transport. A new non-system Vendor message atomically records one MESSAGES notification for the conversation\&#39;s Buyer and queues private realtime/push delivery. Replaying client_message_id does not duplicate the message or notification. Notice copy includes the public sender and store identity and a bounded message preview; private contacts and attachment details are excluded.
 
 ### Example
 
@@ -1412,7 +1918,7 @@ example().catch(console.error);
 
 
 
-Ephemeral authorized conversation.typing event on existing viewer channels, with typing boolean and server millisecond timestamp at. Never persisted; receivers ignore older events and clear after three seconds. Existing account rate limits apply.
+Ephemeral authorized conversation.typing event on existing viewer channels, with typing boolean and server millisecond timestamp at. Never persisted; receivers ignore older events and clear after three seconds. No account request-rate limit applies.
 
 ### Example
 
@@ -1759,7 +2265,7 @@ example().catch(console.error);
 
 
 
-Current purpose, participant, account and fixed-role authority are checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses native bearer transport.
+Current purpose, participant, account and fixed-role authority are checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses native bearer transport. A newly committed Vendor attachment message records one MESSAGES notification for the authorized Buyer without exposing attachment contents or names.
 
 ### Example
 

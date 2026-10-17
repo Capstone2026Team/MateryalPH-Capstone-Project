@@ -21,6 +21,7 @@ part 'cart_item_create.g.dart';
 /// * [longitude]
 /// * [originSource]
 /// * [radiusKm]
+/// * [workPackageLineId] - Work Package line this purchase covers; same material and unit only (422 MISSING_LINE_TAG_INVALID).
 @BuiltValue()
 abstract class CartItemCreate implements Built<CartItemCreate, CartItemCreateBuilder> {
   @BuiltValueField(wireName: r'listing_variant_id')
@@ -52,6 +53,10 @@ abstract class CartItemCreate implements Built<CartItemCreate, CartItemCreateBui
 
   @BuiltValueField(wireName: r'radius_km')
   int? get radiusKm;
+
+  /// Work Package line this purchase covers; same material and unit only (422 MISSING_LINE_TAG_INVALID).
+  @BuiltValueField(wireName: r'work_package_line_id')
+  String? get workPackageLineId;
 
   CartItemCreate._();
 
@@ -131,6 +136,13 @@ class _$CartItemCreateSerializer implements PrimitiveSerializer<CartItemCreate> 
       yield serializers.serialize(
         object.radiusKm,
         specifiedType: const FullType(int),
+      );
+    }
+    if (object.workPackageLineId != null) {
+      yield r'work_package_line_id';
+      yield serializers.serialize(
+        object.workPackageLineId,
+        specifiedType: const FullType.nullable(String),
       );
     }
   }
@@ -224,6 +236,14 @@ class _$CartItemCreateSerializer implements PrimitiveSerializer<CartItemCreate> 
           ) as int?;
           if (valueDes == null) continue;
           result.radiusKm = valueDes;
+          break;
+        case r'work_package_line_id':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.workPackageLineId = valueDes;
           break;
         default:
           unhandled.add(key);

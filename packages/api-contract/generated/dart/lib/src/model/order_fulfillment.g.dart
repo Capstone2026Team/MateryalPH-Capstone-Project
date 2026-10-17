@@ -204,6 +204,10 @@ class _$OrderFulfillment extends OrderFulfillment {
   final FulfillmentThreadRef thread;
   @override
   final OrderFulfillmentNextActionEnum nextAction;
+  @override
+  final BuiltList<DeliveryAssignmentHistory>? assignmentHistory;
+  @override
+  final int? proofUploadLimitKb;
 
   factory _$OrderFulfillment(
           [void Function(OrderFulfillmentBuilder)? updates]) =>
@@ -224,7 +228,9 @@ class _$OrderFulfillment extends OrderFulfillment {
       this.assignment,
       required this.vehicleIssues,
       required this.thread,
-      required this.nextAction})
+      required this.nextAction,
+      this.assignmentHistory,
+      this.proofUploadLimitKb})
       : super._();
   @override
   OrderFulfillment rebuild(void Function(OrderFulfillmentBuilder) updates) =>
@@ -252,7 +258,9 @@ class _$OrderFulfillment extends OrderFulfillment {
         assignment == other.assignment &&
         vehicleIssues == other.vehicleIssues &&
         thread == other.thread &&
-        nextAction == other.nextAction;
+        nextAction == other.nextAction &&
+        assignmentHistory == other.assignmentHistory &&
+        proofUploadLimitKb == other.proofUploadLimitKb;
   }
 
   @override
@@ -273,6 +281,8 @@ class _$OrderFulfillment extends OrderFulfillment {
     _$hash = $jc(_$hash, vehicleIssues.hashCode);
     _$hash = $jc(_$hash, thread.hashCode);
     _$hash = $jc(_$hash, nextAction.hashCode);
+    _$hash = $jc(_$hash, assignmentHistory.hashCode);
+    _$hash = $jc(_$hash, proofUploadLimitKb.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -294,7 +304,9 @@ class _$OrderFulfillment extends OrderFulfillment {
           ..add('assignment', assignment)
           ..add('vehicleIssues', vehicleIssues)
           ..add('thread', thread)
-          ..add('nextAction', nextAction))
+          ..add('nextAction', nextAction)
+          ..add('assignmentHistory', assignmentHistory)
+          ..add('proofUploadLimitKb', proofUploadLimitKb))
         .toString();
   }
 }
@@ -377,6 +389,18 @@ class OrderFulfillmentBuilder
   set nextAction(OrderFulfillmentNextActionEnum? nextAction) =>
       _$this._nextAction = nextAction;
 
+  ListBuilder<DeliveryAssignmentHistory>? _assignmentHistory;
+  ListBuilder<DeliveryAssignmentHistory> get assignmentHistory =>
+      _$this._assignmentHistory ??= ListBuilder<DeliveryAssignmentHistory>();
+  set assignmentHistory(
+          ListBuilder<DeliveryAssignmentHistory>? assignmentHistory) =>
+      _$this._assignmentHistory = assignmentHistory;
+
+  int? _proofUploadLimitKb;
+  int? get proofUploadLimitKb => _$this._proofUploadLimitKb;
+  set proofUploadLimitKb(int? proofUploadLimitKb) =>
+      _$this._proofUploadLimitKb = proofUploadLimitKb;
+
   OrderFulfillmentBuilder() {
     OrderFulfillment._defaults(this);
   }
@@ -399,6 +423,8 @@ class OrderFulfillmentBuilder
       _vehicleIssues = $v.vehicleIssues.toBuilder();
       _thread = $v.thread.toBuilder();
       _nextAction = $v.nextAction;
+      _assignmentHistory = $v.assignmentHistory?.toBuilder();
+      _proofUploadLimitKb = $v.proofUploadLimitKb;
       _$v = null;
     }
     return this;
@@ -442,6 +468,8 @@ class OrderFulfillmentBuilder
             thread: thread.build(),
             nextAction: BuiltValueNullFieldError.checkNotNull(
                 nextAction, r'OrderFulfillment', 'nextAction'),
+            assignmentHistory: _assignmentHistory?.build(),
+            proofUploadLimitKb: proofUploadLimitKb,
           );
     } catch (_) {
       late String _$failedField;
@@ -465,6 +493,9 @@ class OrderFulfillmentBuilder
         vehicleIssues.build();
         _$failedField = 'thread';
         thread.build();
+
+        _$failedField = 'assignmentHistory';
+        _assignmentHistory?.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
             r'OrderFulfillment', _$failedField, e.toString());

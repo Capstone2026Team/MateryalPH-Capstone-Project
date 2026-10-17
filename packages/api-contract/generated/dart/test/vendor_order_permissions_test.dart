@@ -82,5 +82,15 @@ void main() {
       // TODO
     });
 
+    // bool canFileDispute
+    test('to test the property `canFileDispute`', () async {
+      // TODO
+    });
+
+    // bool canUploadInvoice
+    test('to test the property `canUploadInvoice`', () async {
+      // TODO
+    });
+
   });
 }

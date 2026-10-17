@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../design_system/components/procurement_components.dart';
 import '../../design_system/theme.dart';
 import '../../widgets/auth_content.dart';
 import 'device_location.dart';
@@ -123,7 +124,7 @@ class _LocationWelcomeScreenState extends State<LocationWelcomeScreen> {
                           const SizedBox(height: 24),
                           Center(
                             child: Image.asset(
-                              'assets/states/location.png',
+                              StateArtwork.location.asset,
                               height: 220,
                               excludeFromSemantics: true,
                             ),

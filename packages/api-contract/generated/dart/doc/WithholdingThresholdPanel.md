@@ -16,6 +16,7 @@ Name | Type | Description | Notes
 **cumulativeGrossCentavos** | **int** |  |
 **remainingAllowanceCentavos** | **int** |  |
 **localGrossCentavos** | **int** |  |
+**calculationBreakdown** | [**WithholdingThresholdCalculation**](WithholdingThresholdCalculation.md) | Null when no accumulator exists or historical assessment components do not reconcile to its on-platform gross. Never reconstructed from Earnings cash. |
 **externalDeclaredCentavos** | **int** |  |
 **externalOverlapCentavos** | **int** |  |
 **externalOverlapState** | **String** |  |

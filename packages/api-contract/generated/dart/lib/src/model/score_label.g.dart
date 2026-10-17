@@ -73,11 +73,14 @@ class _$ScoreLabel extends ScoreLabel {
   final String? value;
   @override
   final String text;
+  @override
+  final String? detailText;
 
   factory _$ScoreLabel([void Function(ScoreLabelBuilder)? updates]) =>
       (ScoreLabelBuilder()..update(updates))._build();
 
-  _$ScoreLabel._({required this.kind, this.value, required this.text})
+  _$ScoreLabel._(
+      {required this.kind, this.value, required this.text, this.detailText})
       : super._();
   @override
   ScoreLabel rebuild(void Function(ScoreLabelBuilder) updates) =>
@@ -92,7 +95,8 @@ class _$ScoreLabel extends ScoreLabel {
     return other is ScoreLabel &&
         kind == other.kind &&
         value == other.value &&
-        text == other.text;
+        text == other.text &&
+        detailText == other.detailText;
   }
 
   @override
@@ -101,6 +105,7 @@ class _$ScoreLabel extends ScoreLabel {
     _$hash = $jc(_$hash, kind.hashCode);
     _$hash = $jc(_$hash, value.hashCode);
     _$hash = $jc(_$hash, text.hashCode);
+    _$hash = $jc(_$hash, detailText.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -110,7 +115,8 @@ class _$ScoreLabel extends ScoreLabel {
     return (newBuiltValueToStringHelper(r'ScoreLabel')
           ..add('kind', kind)
           ..add('value', value)
-          ..add('text', text))
+          ..add('text', text)
+          ..add('detailText', detailText))
         .toString();
   }
 }
@@ -130,6 +136,10 @@ class ScoreLabelBuilder implements Builder<ScoreLabel, ScoreLabelBuilder> {
   String? get text => _$this._text;
   set text(String? text) => _$this._text = text;
 
+  String? _detailText;
+  String? get detailText => _$this._detailText;
+  set detailText(String? detailText) => _$this._detailText = detailText;
+
   ScoreLabelBuilder() {
     ScoreLabel._defaults(this);
   }
@@ -140,6 +150,7 @@ class ScoreLabelBuilder implements Builder<ScoreLabel, ScoreLabelBuilder> {
       _kind = $v.kind;
       _value = $v.value;
       _text = $v.text;
+      _detailText = $v.detailText;
       _$v = null;
     }
     return this;
@@ -166,6 +177,7 @@ class ScoreLabelBuilder implements Builder<ScoreLabel, ScoreLabelBuilder> {
           value: value,
           text: BuiltValueNullFieldError.checkNotNull(
               text, r'ScoreLabel', 'text'),
+          detailText: detailText,
         );
     replace(_$result);
     return _$result;

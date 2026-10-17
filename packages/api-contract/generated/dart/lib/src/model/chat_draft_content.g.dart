@@ -149,6 +149,8 @@ class _$ChatDraftContent extends ChatDraftContent {
   @override
   final int? vendorDiscountCentavos;
   @override
+  final ChatQuotationDiscount? discount;
+  @override
   final BuiltMap<String, JsonObject?>? delivery;
   @override
   final BuiltMap<String, JsonObject?>? nrpc;
@@ -164,6 +166,7 @@ class _$ChatDraftContent extends ChatDraftContent {
       required this.fulfillmentDate,
       this.deadlineHours,
       this.vendorDiscountCentavos,
+      this.discount,
       this.delivery,
       this.nrpc})
       : super._();
@@ -185,6 +188,7 @@ class _$ChatDraftContent extends ChatDraftContent {
         fulfillmentDate == other.fulfillmentDate &&
         deadlineHours == other.deadlineHours &&
         vendorDiscountCentavos == other.vendorDiscountCentavos &&
+        discount == other.discount &&
         delivery == other.delivery &&
         nrpc == other.nrpc;
   }
@@ -198,6 +202,7 @@ class _$ChatDraftContent extends ChatDraftContent {
     _$hash = $jc(_$hash, fulfillmentDate.hashCode);
     _$hash = $jc(_$hash, deadlineHours.hashCode);
     _$hash = $jc(_$hash, vendorDiscountCentavos.hashCode);
+    _$hash = $jc(_$hash, discount.hashCode);
     _$hash = $jc(_$hash, delivery.hashCode);
     _$hash = $jc(_$hash, nrpc.hashCode);
     _$hash = $jf(_$hash);
@@ -213,6 +218,7 @@ class _$ChatDraftContent extends ChatDraftContent {
           ..add('fulfillmentDate', fulfillmentDate)
           ..add('deadlineHours', deadlineHours)
           ..add('vendorDiscountCentavos', vendorDiscountCentavos)
+          ..add('discount', discount)
           ..add('delivery', delivery)
           ..add('nrpc', nrpc))
         .toString();
@@ -255,6 +261,12 @@ class ChatDraftContentBuilder
   set vendorDiscountCentavos(int? vendorDiscountCentavos) =>
       _$this._vendorDiscountCentavos = vendorDiscountCentavos;
 
+  ChatQuotationDiscountBuilder? _discount;
+  ChatQuotationDiscountBuilder get discount =>
+      _$this._discount ??= ChatQuotationDiscountBuilder();
+  set discount(ChatQuotationDiscountBuilder? discount) =>
+      _$this._discount = discount;
+
   MapBuilder<String, JsonObject?>? _delivery;
   MapBuilder<String, JsonObject?> get delivery =>
       _$this._delivery ??= MapBuilder<String, JsonObject?>();
@@ -279,6 +291,7 @@ class ChatDraftContentBuilder
       _fulfillmentDate = $v.fulfillmentDate;
       _deadlineHours = $v.deadlineHours;
       _vendorDiscountCentavos = $v.vendorDiscountCentavos;
+      _discount = $v.discount?.toBuilder();
       _delivery = $v.delivery?.toBuilder();
       _nrpc = $v.nrpc?.toBuilder();
       _$v = null;
@@ -313,6 +326,7 @@ class ChatDraftContentBuilder
                 fulfillmentDate, r'ChatDraftContent', 'fulfillmentDate'),
             deadlineHours: deadlineHours,
             vendorDiscountCentavos: vendorDiscountCentavos,
+            discount: _discount?.build(),
             delivery: _delivery?.build(),
             nrpc: _nrpc?.build(),
           );
@@ -322,6 +336,8 @@ class ChatDraftContentBuilder
         _$failedField = 'lines';
         lines.build();
 
+        _$failedField = 'discount';
+        _discount?.build();
         _$failedField = 'delivery';
         _delivery?.build();
         _$failedField = 'nrpc';

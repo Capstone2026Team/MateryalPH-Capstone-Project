@@ -34,6 +34,7 @@ part 'catalog_listing.g.dart';
 /// * [materialCategoryId]
 /// * [otherLabel] - Listing-only text; never a shared taxonomy entry.
 /// * [tagIds]
+/// * [customTags] - Search tags the Vendor typed for this listing only
 /// * [technicalAttributes]
 /// * [brand]
 /// * [model]
@@ -91,6 +92,10 @@ abstract class CatalogListing implements Built<CatalogListing, CatalogListingBui
 
   @BuiltValueField(wireName: r'tag_ids')
   BuiltList<String> get tagIds;
+
+  /// Search tags the Vendor typed for this listing only
+  @BuiltValueField(wireName: r'custom_tags')
+  BuiltList<String> get customTags;
 
   @BuiltValueField(wireName: r'technical_attributes')
   BuiltMap<String, String> get technicalAttributes;
@@ -237,6 +242,11 @@ class _$CatalogListingSerializer implements PrimitiveSerializer<CatalogListing> 
     yield r'tag_ids';
     yield serializers.serialize(
       object.tagIds,
+      specifiedType: const FullType(BuiltList, [FullType(String)]),
+    );
+    yield r'custom_tags';
+    yield serializers.serialize(
+      object.customTags,
       specifiedType: const FullType(BuiltList, [FullType(String)]),
     );
     yield r'technical_attributes';
@@ -460,6 +470,13 @@ class _$CatalogListingSerializer implements PrimitiveSerializer<CatalogListing> 
             specifiedType: const FullType(BuiltList, [FullType(String)]),
           ) as BuiltList<String>;
           result.tagIds.replace(valueDes);
+          break;
+        case r'custom_tags':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(BuiltList, [FullType(String)]),
+          ) as BuiltList<String>;
+          result.customTags.replace(valueDes);
           break;
         case r'technical_attributes':
           final valueDes = serializers.deserialize(

@@ -16,7 +16,9 @@ Name | Type
 `countryOfManufacture` | string
 `category` | [ListingCategoryRef](ListingCategoryRef.md)
 `technicalAttributes` | { [key: string]: any; }
+`attributeLabels` | [Array&lt;ListingAttributeLabel&gt;](ListingAttributeLabel.md)
 `images` | [Array&lt;ListingImage&gt;](ListingImage.md)
+`readyMixedConcrete` | [ReadyMixedConcreteDetail](ReadyMixedConcreteDetail.md)
 `compliance` | [ListingCompliance](ListingCompliance.md)
 `productRating` | [ProductRatingSummary](ProductRatingSummary.md)
 `unitsSold` | string
@@ -48,7 +50,9 @@ const example = {
   "countryOfManufacture": null,
   "category": null,
   "technicalAttributes": null,
+  "attributeLabels": null,
   "images": null,
+  "readyMixedConcrete": null,
   "compliance": null,
   "productRating": null,
   "unitsSold": null,

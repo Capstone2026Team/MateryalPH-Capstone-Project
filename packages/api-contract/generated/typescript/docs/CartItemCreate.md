@@ -15,6 +15,7 @@ Name | Type
 `longitude` | number
 `originSource` | string
 `radiusKm` | number
+`workPackageLineId` | string
 
 ## Example
 
@@ -32,6 +33,7 @@ const example = {
   "longitude": null,
   "originSource": null,
   "radiusKm": null,
+  "workPackageLineId": null,
 } satisfies CartItemCreate
 
 console.log(example)

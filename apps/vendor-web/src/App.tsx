@@ -1,6 +1,7 @@
+import { VendorNotificationsPage } from './pages/NotificationPages'
 import { VendorPlaceholderPage } from './pages/PhaseThreeVendorPages'
 import { AcceptStaffInvitation } from './pages/AcceptStaffInvitation'
-import { Button, Field, PhoneField, StatusMessage, PortalIdentityProvider } from '@materyalph/web-ui'
+import { Button, Field, PasswordField, PhoneField, StatusMessage, PortalIdentityProvider, PortalResourceProvider } from '@materyalph/web-ui'
 import { ArrowRight } from 'lucide-react'
 import { type FormEvent, type ReactNode, useEffect, useRef, useState } from 'react'
 import { BrowserRouter, Link, Outlet, Route, Routes, useNavigate, useSearchParams } from 'react-router-dom'
@@ -30,6 +31,10 @@ import { VendorInventoryPage } from './pages/InventoryPages'
 import { VendorFleetPage } from './pages/FleetPages'
 import { VendorMessagesPage } from './pages/MessagingPage'
 import { VendorOrderDetailPage, VendorOrdersPage } from './pages/OrderPages'
+import { VendorFulfillmentPage } from './pages/FulfillmentPages'
+import { VendorDisputeDetailPage, VendorDisputesPage, VendorFileDisputePage } from './pages/DisputePages'
+import { VendorInvoicesPage } from './pages/InvoicePages'
+import { VendorMaterialPriceDetailsPage, VendorMaterialsAnalyticsPage, VendorProductAnalyticsPage, VendorReviewDetailPage, VendorReviewsPage, VendorStorePerformancePage } from './pages/TrustPages'
 import { VendorEarningsPage, VendorFinancePage, VendorStatementPage, VendorTransactionHistoryPage } from './pages/FinancePages'
 import { VendorAccountPage, VendorStoreProfilePage, VendorDashboardPage, VendorSetupPage, VendorTeamPage, VendorVerificationPage, VendorWelcomePage } from './pages/PhaseThreeVendorPages'
 
@@ -48,7 +53,7 @@ function App() {
         <Route path="/auth/mfa" element={<VendorMfaPage />} />
         <Route path="/auth/callback" element={<VendorAuthCallbackPage />} />
         <Route path="/entry" element={<VendorEntryPage />} />
-        <Route element={<PortalIdentityProvider portal="vendors" basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'}><Outlet /></PortalIdentityProvider>}>
+        <Route element={<PortalResourceProvider><PortalIdentityProvider portal="vendors" basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'}><Outlet /></PortalIdentityProvider></PortalResourceProvider>}>
           <Route path="/welcome" element={<VendorWelcomePage />} />
           <Route path="/preview/:module" element={<VendorPlaceholderPage />} />
           <Route path="/dashboard" element={<VendorDashboardPage />} />
@@ -62,8 +67,21 @@ function App() {
           <Route path="/products/inventory" element={<VendorInventoryPage />} />
           <Route path="/vehicles" element={<VendorFleetPage />} />
           <Route path="/messages" element={<VendorMessagesPage />} />
-          <Route path="/orders" element={<VendorOrdersPage />} />
+          <Route path="/notifications" element={<VendorNotificationsPage />} /><Route path="/orders" element={<VendorOrdersPage />} />
           <Route path="/orders/:orderId" element={<VendorOrderDetailPage />} />
+          <Route path="/fulfillment" element={<VendorFulfillmentPage />} />
+          <Route path="/fulfillment/:orderId" element={<VendorFulfillmentPage />} />
+          <Route path="/preview/fulfillment" element={<VendorFulfillmentPage />} />
+          <Route path="/disputes" element={<VendorDisputesPage />} />
+          <Route path="/disputes/new" element={<VendorFileDisputePage />} />
+          <Route path="/disputes/:caseId" element={<VendorDisputeDetailPage />} />
+          <Route path="/invoices" element={<VendorInvoicesPage />} />
+          <Route path="/reviews" element={<VendorReviewsPage />} />
+          <Route path="/reviews/:reviewId" element={<VendorReviewDetailPage />} />
+          <Route path="/performance" element={<VendorStorePerformancePage />} />
+          <Route path="/performance/products/:listingId" element={<VendorProductAnalyticsPage />} />
+          <Route path="/analytics/materials" element={<VendorMaterialsAnalyticsPage />} />
+          <Route path="/analytics/materials/:groupId" element={<VendorMaterialPriceDetailsPage />} />
           <Route path="/finance" element={<VendorFinancePage />} />
           <Route path="/finance/transactions" element={<VendorTransactionHistoryPage />} />
           <Route path="/finance/statements/:statementId" element={<VendorStatementPage />} />
@@ -203,7 +221,7 @@ function RegisterPage() {
       ? webCookieBotEvidence()
       : vendorBotEvidence(captchaToken, useEmailCheck)
     await registerVendor(request, evidence)
-    navigate(`/verify-email?email=${encodeURIComponent(request.email)}`)
+    navigate('/verify-email', { state: { email: request.email.trim() } })
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -217,7 +235,6 @@ function RegisterPage() {
       fullName: String(data.get('full_name')),
       email: String(data.get('email')),
       mobileE164: String(data.get('mobile')),
-      businessName: String(data.get('business_name')),
       password: String(data.get('password')),
       passwordConfirmation: String(data.get('password_confirmation')),
       termsAccepted: true,
@@ -253,11 +270,10 @@ function RegisterPage() {
             {displayedMessage && <div id="registration-form-error" tabIndex={displayedMessage.tone === 'error' ? -1 : undefined}><StatusMessage tone={displayedMessage.tone}>{displayedMessage.text}</StatusMessage></div>}
             <Link className="button button--secondary" to="/register/google">Register with Google</Link>
             <div className="auth-divider"><span>or register with email</span></div>
-            <Field error={fieldError('full_name')} label="Owner full name" name="full_name" autoComplete="name" maxLength={160} onChange={() => clearFieldErrors('full_name')} required />
-            <Field error={fieldError('business_name')} label="Business or store name" name="business_name" autoComplete="organization" maxLength={180} onChange={() => clearFieldErrors('business_name')} required />
+            <Field error={fieldError('full_name')} label="Account Owner Name" name="full_name" autoComplete="name" maxLength={160} onChange={() => clearFieldErrors('full_name')} required />
             <Field error={fieldError('email')} label="Email address" name="email" type="email" autoComplete="email" onChange={() => clearFieldErrors('email')} required />
             <PhoneField id="mobile" error={fieldError('mobile_e164')} label="Mobile number" name="mobile" onChange={() => clearFieldErrors('mobile_e164')} required />
-            <Field error={fieldError('password')} label="Password" name="password" type="password" autoComplete="new-password" minLength={12} hint="At least 12 characters with uppercase, lowercase, and a number." onChange={() => clearFieldErrors('password', 'password_confirmation')} required />
+            <PasswordField error={fieldError('password')} label="Password" name="password" autoComplete="new-password" minLength={12} onChange={() => clearFieldErrors('password', 'password_confirmation')} required />
             <Field error={fieldError('password_confirmation')} label="Confirm password" name="password_confirmation" type="password" autoComplete="new-password" minLength={12} onChange={() => clearFieldErrors('password_confirmation', 'password')} required />
             <div className="grid gap-2">
               <label className="consent"><input aria-describedby={fieldError('terms_accepted') ? 'terms_accepted-error' : undefined} aria-invalid={fieldError('terms_accepted') ? true : undefined} id="terms_accepted" name="terms_accepted" type="checkbox" onChange={() => clearFieldErrors('terms_accepted')} required /><span>I accept the versioned <Link to="/legal/terms-of-service" target="_blank" rel="noopener noreferrer" aria-label="Terms of Service (opens in a new tab)">Terms of Service</Link>.</span></label>
@@ -278,7 +294,6 @@ function RegisterPage() {
 
 const registerValidationTargets: Readonly<Record<string, string>> = {
   full_name: 'full_name',
-  business_name: 'business_name',
   email: 'email',
   mobile_e164: 'mobile',
   password: 'password',
@@ -335,3 +350,4 @@ function NotFound() {
 }
 
 export default App
+

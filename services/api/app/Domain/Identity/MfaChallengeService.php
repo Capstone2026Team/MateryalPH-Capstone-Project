@@ -30,6 +30,23 @@ final class MfaChallengeService
             ->exists();
     }
 
+    /**
+     * Privileged accounts always complete a challenge. A Buyer who voluntarily enrolled an authenticator also completes
+     * one on every sign-in, but stays a Buyer for recent-authentication purposes (password or email step-up).
+     */
+    public function loginChallengeRequiredFor(User $user): bool
+    {
+        if ($this->requiredFor($user)) {
+            return true;
+        }
+
+        return $user->account_type === 'BUYER' && TotpFactor::query()
+            ->where('user_id', $user->getKey())
+            ->whereNotNull('confirmed_at')
+            ->whereNull('revoked_at')
+            ->exists();
+    }
+
     public function begin(User $user, string $clientKind, ?string $deviceId): MfaChallenge
     {
         $token = $this->randomToken();
@@ -65,7 +82,7 @@ final class MfaChallengeService
         }
 
         $user = User::query()->whereKey($flow['user_id'] ?? null)->first();
-        if ($user === null || ($user->account_status !== 'ACTIVE' && ! $this->pendingAdminSetup($user)) || ! $this->requiredFor($user)) {
+        if ($user === null || ($user->account_status !== 'ACTIVE' && ! $this->pendingAdminSetup($user)) || ! $this->loginChallengeRequiredFor($user)) {
             Cache::forget($this->key($token));
             throw new AuthenticationException('MFA_CHALLENGE_INVALID', 'The verification request is no longer valid.', 401);
         }

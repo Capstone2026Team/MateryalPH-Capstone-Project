@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { TaxCategory } from '@materyalph/api-client-ts'
+import type { CatalogListingUpdate, TaxCategory } from '@materyalph/api-client-ts'
 import { centavosToPeso, getCatalogFileUrl, pesoToCentavos, readableCatalogError, searchMaterials, type CatalogListing, type CatalogMaterialMatch, type CatalogTaxonomy, type CatalogVariantInput } from './catalog-api'
 
 /** Listing wizard form state, client pre-validation and presentation helpers shared by the catalog pages. */
@@ -14,24 +14,38 @@ export const listingSteps = [
   { label: 'Review and publish', description: 'Confirm and publish', requirements: ['review_publish'] },
 ]
 
-export type DetailsForm = { displayName: string; vendorSku: string; description: string; materialId: string | null; materialMatch: 'EXACT' | 'ALIAS' | 'FUZZY_CONFIRMED'; otherLabel: string; categoryId: string; tagIds: string[]; brand: string; model: string; manufacturer: string; manufacturerAddress: string; countryOfManufacture: string; technicalAttributes: Record<string, string> }
+export type DetailsForm = { displayName: string; vendorSku: string; description: string; materialId: string | null; materialMatch: 'EXACT' | 'ALIAS' | 'FUZZY_CONFIRMED'; otherLabel: string; categoryId: string; tagIds: string[]; customTags: string[]; brand: string; model: string; manufacturer: string; manufacturerAddress: string; countryOfManufacture: string; technicalAttributes: Record<string, string> }
 export type TierRow = { minimum: string; price: string }
-export type VariantRow = { id?: string; sku: string; label: string; unitId: string; packQuantity: string; price: string; taxCategory: string; taxBasis: string; weightKg: string; lengthCm: string; widthCm: string; heightCm: string; quantityOnHand: string; tiers: TierRow[]; publicAvailability?: string; priceVersion?: number; includedVat?: number }
+export type VariantRow = { id?: string; sku: string; label: string; unitId: string; packQuantity: string; price: string; taxCategory: string; taxBasis: string; weightKg: string; lengthCm: string; widthCm: string; heightCm: string; quantityOnHand: string; tiers: TierRow[]; attributes: Record<string, string>; publicAvailability?: string; priceVersion?: number; includedVat?: number }
 
 export const MAX_TIERS = 5
 const QUANTITY = /^\d{1,14}(\.\d{1,4})?$/
 
 export function formFromListing(listing: CatalogListing): DetailsForm {
-  return { displayName: listing.displayName, vendorSku: listing.vendorSku, description: listing.description ?? '', materialId: listing.material?.id ?? null, materialMatch: listing.materialMatch === 'UNMATCHED' ? 'EXACT' : listing.materialMatch, otherLabel: listing.otherLabel ?? '', categoryId: listing.materialCategoryId ?? '', tagIds: listing.tagIds, brand: listing.brand ?? '', model: listing.model ?? '', manufacturer: listing.manufacturer ?? '', manufacturerAddress: listing.manufacturerAddress ?? '', countryOfManufacture: listing.countryOfManufacture ?? '', technicalAttributes: { ...listing.technicalAttributes } }
+  return { displayName: listing.displayName, vendorSku: listing.vendorSku, description: listing.description ?? '', materialId: listing.material?.id ?? null, materialMatch: listing.materialMatch === 'UNMATCHED' ? 'EXACT' : listing.materialMatch, otherLabel: listing.otherLabel ?? '', categoryId: listing.materialCategoryId ?? '', tagIds: listing.tagIds, brand: listing.brand ?? '', model: listing.model ?? '', manufacturer: listing.manufacturer ?? '', manufacturerAddress: listing.manufacturerAddress ?? '', countryOfManufacture: listing.countryOfManufacture ?? '', technicalAttributes: { ...listing.technicalAttributes }, customTags: [...listing.customTags] }
+}
+
+export const CUSTOM_TAG_MIN = 2
+export const CUSTOM_TAG_MAX_LENGTH = 40
+export const CUSTOM_TAG_LIMIT = 50
+
+/** Adds a Vendor-typed search tag (same rules as the server): trims, collapses spaces, ignores repeats regardless of case. */
+export function addCustomTag(existing: string[], raw: string): { tags: string[]; error: string | null } {
+  const label = raw.trim().replace(/\s+/g, ' ')
+  if (!label) return { tags: existing, error: null }
+  if (label.length < CUSTOM_TAG_MIN || label.length > CUSTOM_TAG_MAX_LENGTH || !/^[\p{L}\p{N}][\p{L}\p{N} \-.&/+']*$/u.test(label)) return { tags: existing, error: `Use ${CUSTOM_TAG_MIN} to ${CUSTOM_TAG_MAX_LENGTH} characters: letters, numbers, spaces, hyphens, ampersands or periods.` }
+  if (existing.some(tag => tag.toLowerCase() === label.toLowerCase())) return { tags: existing, error: `“${label}” is already added.` }
+  if (existing.length >= CUSTOM_TAG_LIMIT) return { tags: existing, error: `A listing can have up to ${CUSTOM_TAG_LIMIT} custom tags.` }
+  return { tags: [...existing, label], error: null }
 }
 
 export function rowsFromListing(listing: CatalogListing): VariantRow[] {
-  const rows = listing.variants.filter(variant => variant.active).map(variant => ({ id: variant.id, sku: variant.sku, label: variant.label ?? '', unitId: variant.unitId, packQuantity: quantityText(variant.packQuantity), price: centavosToPeso(variant.price?.amountCentavos), taxCategory: variant.price?.taxCategory ?? '', taxBasis: variant.price?.taxBasis ?? '', weightKg: variant.weightKg ?? '', lengthCm: variant.lengthCm ?? '', widthCm: variant.widthCm ?? '', heightCm: variant.heightCm ?? '', quantityOnHand: quantityText(variant.inventory?.quantityOnHand), tiers: (variant.volumeTiers ?? []).map(tier => ({ minimum: quantityText(tier.minimumQuantity), price: centavosToPeso(tier.amountCentavos) })), publicAvailability: variant.publicAvailability, ...(variant.price ? { priceVersion: variant.price.version, includedVat: variant.price.includedVatCentavos } : {}) }))
+  const rows = listing.variants.filter(variant => variant.active).map(variant => ({ id: variant.id, sku: variant.sku, label: variant.label ?? '', unitId: variant.unitId, packQuantity: quantityText(variant.packQuantity), price: centavosToPeso(variant.price?.amountCentavos), taxCategory: variant.price?.taxCategory ?? '', taxBasis: variant.price?.taxBasis ?? '', weightKg: variant.weightKg ?? '', lengthCm: variant.lengthCm ?? '', widthCm: variant.widthCm ?? '', heightCm: variant.heightCm ?? '', quantityOnHand: quantityText(variant.inventory?.quantityOnHand), tiers: (variant.volumeTiers ?? []).map(tier => ({ minimum: quantityText(tier.minimumQuantity), price: centavosToPeso(tier.amountCentavos) })), attributes: { ...variant.attributes }, publicAvailability: variant.publicAvailability, ...(variant.price ? { priceVersion: variant.price.version, includedVat: variant.price.includedVatCentavos } : {}) }))
   return rows.length ? rows : [emptyVariant(listing.vendorSku)]
 }
 
 export function emptyVariant(sku: string, index = 1): VariantRow {
-  return { sku: `${sku}-${index}`, label: '', unitId: '', packQuantity: '1', price: '', taxCategory: '', taxBasis: '', weightKg: '', lengthCm: '', widthCm: '', heightCm: '', quantityOnHand: '', tiers: [] }
+  return { sku: `${sku}-${index}`, label: '', unitId: '', packQuantity: '1', price: '', taxCategory: '', taxBasis: '', weightKg: '', lengthCm: '', widthCm: '', heightCm: '', quantityOnHand: '', tiers: [], attributes: {} }
 }
 
 /** Mirrors the server rules so problems show per row before any request; the server stays authoritative. */
@@ -64,8 +78,37 @@ export function variantClientErrors(rows: VariantRow[]): Record<string, string> 
   return errors
 }
 
-export function variantInputs(rows: VariantRow[]): CatalogVariantInput[] {
-  return rows.map(row => ({ ...(row.id ? { id: row.id } : {}), sku: row.sku.trim(), label: row.label.trim() || null, unitId: row.unitId, packQuantity: row.packQuantity, priceCentavos: pesoToCentavos(row.price) ?? 0, taxCategory: row.taxCategory as TaxCategory, taxBasis: row.taxBasis.trim() || null, weightKg: row.weightKg || null, lengthCm: row.lengthCm || null, widthCm: row.widthCm || null, heightCm: row.heightCm || null, quantityOnHand: row.quantityOnHand || null, volumeTiers: row.tiers.map(tier => ({ minimumQuantity: tier.minimum.trim(), priceCentavos: pesoToCentavos(tier.price) ?? 0 })) }))
+/** The details write for the whole form; the lock version is the listing's current one. */
+export function detailsUpdate(form: DetailsForm, lockVersion: number): CatalogListingUpdate {
+  return {
+    lockVersion, displayName: form.displayName, vendorSku: form.vendorSku, description: form.description || null,
+    ...(form.materialId ? { materialId: form.materialId, materialMatch: form.materialMatch } : { materialId: null, otherLabel: form.otherLabel || null, materialCategoryId: form.categoryId || null }),
+    tagIds: form.tagIds, customTags: form.customTags, brand: form.brand || null, model: form.model || null, manufacturer: form.manufacturer || null, manufacturerAddress: form.manufacturerAddress || null,
+    countryOfManufacture: form.countryOfManufacture ? form.countryOfManufacture.toUpperCase() : null, technicalAttributes: form.technicalAttributes,
+  }
+}
+
+/**
+ * Variant writes for the rows. Every save of a stock count records a count event, so an existing row whose count
+ * is unchanged since the last save (`saved`) leaves it out instead of recording the same count again.
+ */
+export function variantInputs(rows: VariantRow[], saved: VariantRow[] = []): CatalogVariantInput[] {
+  const savedStock = new Map(saved.flatMap(row => row.id ? [[row.id, row.quantityOnHand] as const] : []))
+  return rows.map(row => ({ ...(row.id ? { id: row.id } : {}), sku: row.sku.trim(), label: row.label.trim() || null, unitId: row.unitId, packQuantity: row.packQuantity, priceCentavos: pesoToCentavos(row.price) ?? 0, taxCategory: row.taxCategory as TaxCategory, taxBasis: row.taxBasis.trim() || null, weightKg: row.weightKg || null, lengthCm: row.lengthCm || null, widthCm: row.widthCm || null, heightCm: row.heightCm || null, quantityOnHand: row.id && savedStock.get(row.id) === row.quantityOnHand ? null : row.quantityOnHand || null, attributes: Object.fromEntries(Object.entries(row.attributes).filter(([, value]) => value.trim() !== '')), volumeTiers: row.tiers.map(tier => ({ minimumQuantity: tier.minimum.trim(), priceCentavos: pesoToCentavos(tier.price) ?? 0 })) }))
+}
+
+/**
+ * After variants were saved, the rows sent (`sent`) get the server's identity and derived values from the saved
+ * listing (`saved`). `current` may already hold newer edits, which are kept: only rows still matching what was sent
+ * take the server values.
+ */
+export function mergeSavedRows(current: VariantRow[], sent: VariantRow[], saved: VariantRow[]): VariantRow[] {
+  return current.map((row, index) => {
+    const sentRow = sent[index]
+    const savedRow = saved[index]
+    if (!sentRow || !savedRow || row.sku !== sentRow.sku || row.id !== sentRow.id) return row
+    return { ...row, ...(savedRow.id ? { id: savedRow.id } : {}), ...(savedRow.priceVersion !== undefined ? { priceVersion: savedRow.priceVersion } : {}), ...(savedRow.includedVat !== undefined ? { includedVat: savedRow.includedVat } : {}), ...(savedRow.publicAvailability ? { publicAvailability: savedRow.publicAvailability } : {}) }
+  })
 }
 
 /** "50–99 bags" for whole numbers; otherwise "50.5 to under 100". */

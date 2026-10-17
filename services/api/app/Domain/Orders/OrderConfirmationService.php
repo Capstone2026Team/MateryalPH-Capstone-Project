@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace App\Domain\Orders;
 
 use App\Domain\Catalog\CatalogAccess;
+use App\Domain\Finance\VendorDiscount;
 use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Inventory\InventoryLedgerWriter;
 use App\Domain\Inventory\InventoryLocks;
 use App\Domain\Inventory\StockAvailability;
+use App\Domain\Messaging\FulfillmentThreadService;
 use App\Domain\Operations\OutboxPublisher;
+use App\Domain\Projects\ProjectBudget;
 use App\Domain\Projects\ProjectInquiryService;
 use App\Domain\Vendors\ConfirmedDeliverySnapshot;
 use Carbon\CarbonImmutable;
@@ -87,6 +90,12 @@ final class OrderConfirmationService
         $lines = $this->commercial->lines((string) $preview->id);
         $quantities = $this->quantities($lines, $input['lines']);
         $discount = (int) ($input['vendor_discount_centavos'] ?? 0);
+        if (isset($input['discount'])) {
+            $this->access->require($scope, OrderAccess::REVISE, 'Only the Owner, Store Manager or Store Staff can set a Vendor discount.');
+            if ($input['discount']['scope'] === 'DELIVERY' && $preview->fulfillment_method !== 'DELIVERY') {
+                throw new AuthenticationException('VALIDATION_FAILED', 'A delivery discount requires Site Delivery.', 422);
+            }
+        }
         $changes = OrderCommercial::changes($lines, $quantities, $discount);
         $nrpcInput = $input['nrpc'] ?? null;
         if ($changes !== []) {
@@ -148,7 +157,17 @@ final class OrderConfirmationService
                 throw new AuthenticationException('STOCK_INSUFFICIENT', 'Available stock is lower than a confirmed quantity. Nothing was reserved; lower the quantity to propose a revision.', 409, ['lines' => $short]);
             }
 
-            [$delivery, $deliverySummary, $fulfillmentDate] = $this->fulfillment($request, $order, $lines, $quantities, $input, $route);
+            $assessment = null;
+            if (isset($input['discount'])) {
+                $gross = $this->commercial->compute($lines, $quantities, 0, 0);
+                $assessment = VendorDiscount::assess($input['discount'], (int) $gross['materials_gross_centavos'], (int) ($input['delivery']['final_fee_centavos'] ?? 0), $order->fulfillment_method === 'DELIVERY');
+                $discount = $assessment['scope'] === 'MATERIALS' ? $assessment['deduction_centavos'] : 0;
+                $changes = OrderCommercial::changes($lines, $quantities, $discount);
+                if ($assessment['scope'] === 'DELIVERY' && $assessment['deduction_centavos'] > 0) {
+                    $changes[] = ['type' => 'VENDOR_DISCOUNT', 'order_line_id' => null, 'label' => 'Delivery fee discount '.$assessment['percent'].'%', 'from' => '0', 'to' => (string) $assessment['deduction_centavos']];
+                }
+            }
+            [$delivery, $deliverySummary, $fulfillmentDate] = $this->fulfillment($request, $order, $lines, $quantities, $input, $route, $assessment !== null && $assessment['scope'] === 'DELIVERY' ? $assessment : null);
             $nrpc = $nrpcInput === null ? null : ['amount_centavos' => (int) $nrpcInput['amount_centavos'], 'allocations' => $this->nrpcAllocations($nrpcInput['lines'])];
             $commercial = $this->commercial->compute($lines, $quantities, $discount, $delivery, $nrpc);
             foreach ($confirmed as $line) {
@@ -160,7 +179,7 @@ final class OrderConfirmationService
                     'confirmed_quantity' => $quantities[(string) $line->id]] + OrderCommercial::unitPriceFor($line, bccomp($quantities[(string) $line->id], '0', 4) > 0 ? $quantities[(string) $line->id] : StockAvailability::quantity($line->quantity)), $lines),
                 'changes' => $changes, 'delivery' => $deliverySummary,
                 'nrpc' => $nrpc === null ? null : ['amount_centavos' => $nrpc['amount_centavos'], 'reason' => trim((string) $nrpcInput['reason']), 'allocations' => $nrpc['allocations'], 'terms_version_id' => $terms['id']],
-            ], $commercial, $actor);
+            ] + ($assessment === null ? [] : ['discount' => $assessment]), $commercial, $actor);
             $nrpcRecordId = $nrpc === null ? null : $this->recordNrpc($order, $snapshot, $commercial, trim((string) $nrpcInput['reason']), (string) $terms['id'], $actor);
             if ($order->procurement_type === 'PROJECT_BASED' && $order->work_package_version_id !== null) {
                 $supplied = array_map(static function (object $line) use ($quantities): array {
@@ -178,13 +197,14 @@ final class OrderConfirmationService
                 'nrpc_centavos' => $commercial['nrpc_centavos'], 'commercial_total_centavos' => $commercial['commercial_total_centavos'], 'updated_at' => now(),
             ]);
             $order = DB::table('orders')->where('id', $order->id)->first();
-            $buyerDecision = $changes !== [] || $order->fulfillment_method === 'DELIVERY' || $order->procurement_type === 'PROJECT_BASED';
+            $budgetDecision = $order->work_package_id !== null && app(ProjectBudget::class)->wouldExceed(DB::table('work_packages')->where('id', $order->work_package_id)->first(), (int) $order->commercial_total_centavos, (string) $order->id);
+            $buyerDecision = $changes !== [] || $order->fulfillment_method === 'DELIVERY' || $order->procurement_type === 'PROJECT_BASED' || $budgetDecision;
             if ($buyerDecision || $nrpc !== null) {
                 $due = CarbonImmutable::now()->addHours(self::BUYER_RESPONSE_HOURS);
                 $next = $buyerDecision ? OrderStates::AWAITING_BUYER_APPROVAL : OrderStates::AWAITING_NRPC_ACCEPTANCE;
                 $order = $this->transitions->apply($order, [OrderStates::ORDER => $next], $actor, $changes !== [] ? 'VENDOR_REVISED' : 'VENDOR_CONFIRMED', null, ['buyer_response_due_at' => $due], (int) $snapshot->version);
                 $this->notifier->buyer($order, 'Review order '.$order->reference,
-                    ($next === OrderStates::AWAITING_BUYER_APPROVAL ? 'The Vendor confirmed your order with '.($changes !== [] ? 'changes' : 'the delivery arrangement').' for your approval.' : 'The Vendor proposed a Non-Recoverable Preparation Cost for your review.')
+                    ($next === OrderStates::AWAITING_BUYER_APPROVAL ? ($budgetDecision ? 'Review the confirmed amount and acknowledge the Project or Work Package budget deficit.' : 'The Vendor confirmed your order with '.($changes !== [] ? 'changes' : 'the delivery arrangement').' for your approval.') : 'The Vendor proposed a Non-Recoverable Preparation Cost for your review.')
                     .' Respond by '.$due->setTimezone('Asia/Manila')->format('M j, Y g:i A').' (Philippine time) or the reserved stock is released.');
             } else {
                 $order = $this->acceptance->accept($order, $snapshot, $commercial, null, $actor, 'VENDOR_CONFIRMED');
@@ -194,7 +214,7 @@ final class OrderConfirmationService
                 $this->outbox->publish('NRPC_PROPOSED', 'ORDER', (string) $order->id, ['order_id' => (string) $order->id, 'nrpc_record_id' => $nrpcRecordId]);
             }
             $this->audit->account($request, $changes === [] ? 'ORDER_CONFIRMED' : 'ORDER_REVISED', 'ORDER', (string) $order->id, after: ['snapshot_version' => (int) $snapshot->version,
-                'changes' => count($changes), 'nrpc_centavos' => (int) $commercial['nrpc_centavos'], 'delivery_centavos' => $commercial['delivery_centavos'], 'order_state' => $order->order_state]);
+                'changes' => count($changes), 'nrpc_centavos' => (int) $commercial['nrpc_centavos'], 'delivery_centavos' => $commercial['delivery_centavos'], 'order_state' => $order->order_state] + ($assessment === null ? [] : ['discount' => $assessment]));
             $this->idempotency->claim($request, 'ORDER_VENDOR_CONFIRM', $key, $orderId, 200);
         });
 
@@ -220,6 +240,7 @@ final class OrderConfirmationService
                 'created_at' => now(), 'updated_at' => now()]);
             // Nothing is reserved before confirmation, so a decline releases no stock.
             $order = $this->transitions->apply($order, [OrderStates::ORDER => OrderStates::DECLINED], $actor, 'VENDOR_'.$input['reason_code'], $reason, ['vendor_response_due_at' => null]);
+            app(FulfillmentThreadService::class)->close($order, $actor->userId, OrderStates::DECLINED);
             $this->notifier->buyer($order, 'Order '.$order->reference.' was declined', 'The Vendor could not fulfil this request. Reason: '.$reason.' You were not charged.');
             $this->audit->account($request, 'ORDER_DECLINED', 'ORDER', (string) $order->id, after: ['reason_code' => $input['reason_code']], reason: $reason);
             $this->idempotency->claim($request, 'ORDER_VENDOR_DECLINE', $key, $orderId, 200);
@@ -293,9 +314,10 @@ final class OrderConfirmationService
      * @param  array<string, string>  $quantities
      * @param  array<string, mixed>  $input
      * @param  array<string, mixed>|null  $route
+     * @param  array{scope: string, percent: string, basis_centavos: int, deduction_centavos: int}|null  $deliveryDiscount
      * @return array{0: int, 1: array<string, mixed>, 2: string}
      */
-    private function fulfillment(Request $request, object $order, array $lines, array $quantities, array $input, ?array $route): array
+    private function fulfillment(Request $request, object $order, array $lines, array $quantities, array $input, ?array $route, ?array $deliveryDiscount = null): array
     {
         $today = CarbonImmutable::now('Asia/Manila')->toDateString();
         if ($order->fulfillment_method === 'PICKUP') {
@@ -315,9 +337,11 @@ final class OrderConfirmationService
         }
         $load = $this->planner->load($order, $lines, $quantities, (array) $route, true, (bool) ($delivery['heavy_vehicle_access_confirmed'] ?? false));
         $snapshotId = $this->deliverySnapshots->record($request->user(), (string) $order->id, $load, $delivery['vehicles'], (int) $delivery['final_fee_centavos'], (string) $delivery['arrangement'],
-            (string) $delivery['fulfillment_date'], isset($delivery['manual_review_note']) ? (string) $delivery['manual_review_note'] : null);
+            (string) $delivery['fulfillment_date'], isset($delivery['manual_review_note']) ? (string) $delivery['manual_review_note'] : null, $deliveryDiscount, $delivery['change_reason'] ?? null);
 
-        return [(int) $delivery['final_fee_centavos'], ['type' => 'DELIVERY', 'snapshot_id' => $snapshotId, 'final_fee_centavos' => (int) $delivery['final_fee_centavos'], 'fulfillment_date' => (string) $delivery['fulfillment_date']], (string) $delivery['fulfillment_date']];
+        $net = (int) $delivery['final_fee_centavos'] - ($deliveryDiscount['deduction_centavos'] ?? 0);
+
+        return [$net, ['type' => 'DELIVERY', 'snapshot_id' => $snapshotId, 'final_fee_centavos' => $net, 'fulfillment_date' => (string) $delivery['fulfillment_date']], (string) $delivery['fulfillment_date']];
     }
 
     /**

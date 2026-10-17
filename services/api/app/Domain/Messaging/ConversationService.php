@@ -5,14 +5,22 @@ declare(strict_types=1);
 namespace App\Domain\Messaging;
 
 use App\Domain\Authorization\AccountAccess;
+use App\Domain\Authorization\VendorTeamActivityBroadcast;
+use App\Domain\Authorization\VendorTeamActivityQuery;
 use App\Domain\Catalog\CatalogAccess;
+use App\Domain\Enforcement\BuyerCommerceRestriction;
 use App\Domain\Geography\BuyerProfiles;
 use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
+use App\Domain\Notifications\NotificationBroadcast;
+use App\Domain\Notifications\NotificationService;
+use App\Domain\Notifications\PushNotification;
 use App\Domain\Operations\OutboxPublisher;
+use App\Domain\Orders\OrderAccess;
 use App\Domain\Orders\OrderEligibility;
 use App\Domain\Vendors\NewProcurementAvailability;
 use App\Models\User;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -23,11 +31,61 @@ final class ConversationService
     public function __construct(private readonly ConversationAccess $access, private readonly BuyerProfiles $buyers,
         private readonly CatalogAccess $idempotency, private readonly OutboxPublisher $outbox, private readonly AuditRecorder $audit) {}
 
+    /** Open the authorized order's existing sales context, or its permanent store chat. */
+    public function fromOrder(Request $request, string $orderId): string
+    {
+        $orders = app(OrderAccess::class);
+        $scope = $orders->vendorScope($request);
+        $order = $orders->vendorOrder($scope, $orderId);
+        $key = $this->idempotency->requireIdempotencyKey($request);
+        if (! in_array($scope['role'], [...ConversationAccess::SALES_ROLES, 'FULFILLMENT'], true)) {
+            throw new AuthenticationException('PERMISSION_DENIED', 'Your role cannot message this Buyer.', 403);
+        }
+
+        return DB::transaction(function () use ($request, $order, $scope, $key): string {
+            $buyer = DB::table('buyer_profiles')->where('id', $order->buyer_profile_id)->lockForUpdate()->first();
+            $replayed = $this->idempotency->replayed($request, 'ORDER_CONVERSATION', $key, $order->id);
+            if ($scope['role'] === 'FULFILLMENT') {
+                $id = DB::table('conversations')->where('order_id', $order->id)->where('purpose', 'FULFILLMENT')->value('id');
+            } elseif ($order->quotation_version_id !== null) {
+                $id = DB::table('quotation_versions as v')->join('quotations as q', 'q.id', '=', 'v.quotation_id')->where('v.id', $order->quotation_version_id)->value('q.conversation_id');
+            } else {
+                $id = DB::table('conversations')->where('buyer_profile_id', $order->buyer_profile_id)->where('vendor_organization_id', $order->vendor_organization_id)
+                    ->where('purpose', 'SALES')->where('context_type', 'ITEM_BASED')->whereNull('canonical_conversation_id')->value('id');
+            }
+            if ($id === null) {
+                if ($scope['role'] === 'FULFILLMENT' || $order->procurement_type !== 'ITEM_BASED' || $order->quotation_version_id !== null || $buyer === null) {
+                    throw new AuthenticationException('CONVERSATION_UNAVAILABLE', 'This order does not have an available conversation yet.', 409);
+                }
+                $id = (string) Str::uuid7();
+                DB::table('conversations')->insert(['id' => $id, 'buyer_profile_id' => $order->buyer_profile_id, 'vendor_organization_id' => $order->vendor_organization_id,
+                    'purpose' => 'SALES', 'context_type' => 'ITEM_BASED', 'context_id' => null, 'handler_user_id' => $request->user()->id,
+                    'locked_reference' => '{}', 'created_at' => now(), 'updated_at' => now()]);
+                $this->participant($id, (int) $buyer->user_id, 'BUYER');
+                $this->participant($id, (int) $request->user()->id, $scope['role']);
+                DB::table('conversation_assignments')->insert(['id' => (string) Str::uuid7(), 'conversation_id' => $id, 'assigned_user_id' => $request->user()->id,
+                    'assigned_role' => $scope['role'], 'created_at' => now(), 'updated_at' => now()]);
+                $this->audit->account($request, 'CONVERSATION_CREATED', 'CONVERSATION', $id, after: ['purpose' => 'SALES', 'order_id' => $order->id]);
+                $this->changed($id);
+            }
+            $conversation = $this->access->require($request->user(), (string) $id);
+            if ($conversation->canonical_conversation_id !== null) {
+                $id = $this->access->require($request->user(), $conversation->canonical_conversation_id)->id;
+            }
+            if (! $replayed) {
+                $this->idempotency->claim($request, 'ORDER_CONVERSATION', $key, $order->id, 200);
+            }
+
+            return (string) $id;
+        });
+    }
+
     /**
      * @param array<string, mixed> $input */
     public function create(Request $request, array $input): string
     {
         $buyer = $this->buyers->idFor($request);
+        BuyerCommerceRestriction::assertAllowed($buyer);
         $key = $this->idempotency->requireIdempotencyKey($request);
 
         return DB::transaction(function () use ($request, $input, $buyer, $key): string {
@@ -57,23 +115,48 @@ final class ConversationService
                 }
                 // Selection belongs to a local unsent draft; only sending snapshots a product.
             }
-            $reference = $this->destinationReference($input, $buyer);
-            $owner = DB::table('vendor_memberships')->where('vendor_organization_id', $input['vendor_id'])->where('role', 'OWNER')->where('status', 'ACTIVE')->value('user_id');
-            if ($owner === null) {
-                throw new AuthenticationException('STORE_UNAVAILABLE', 'This store cannot receive inquiries right now.', 409);
-            }
-            DB::table('conversations')->insert(['id' => $key, 'buyer_profile_id' => $buyer, 'vendor_organization_id' => $input['vendor_id'], 'purpose' => 'SALES',
-                'context_type' => 'ITEM_BASED', 'context_id' => null, 'handler_user_id' => $owner,
-                'locked_reference' => json_encode($reference, JSON_THROW_ON_ERROR), 'created_at' => now(), 'updated_at' => now()]);
-            $this->participant($key, (int) $request->user()->id, 'BUYER');
-            $this->participant($key, (int) $owner, 'OWNER');
-            DB::table('conversation_assignments')->insert(['id' => (string) Str::uuid7(), 'conversation_id' => $key, 'assigned_user_id' => $owner, 'assigned_role' => 'OWNER', 'created_at' => now(), 'updated_at' => now()]);
+            $this->insertItemConversation($request, $key, $buyer, (string) $input['vendor_id'], $this->destinationReference($input, $buyer));
             $this->idempotency->claim($request, 'CONVERSATION_CREATE', $key, $key, 201);
-            $this->audit->account($request, 'CONVERSATION_CREATED', 'CONVERSATION', $key, after: ['purpose' => 'SALES']);
-            $this->changed($key);
 
             return $key;
         });
+    }
+
+    /**
+     * The Buyer's Item-Based store conversation, created when missing. Callers hold the Buyer profile lock inside
+     * their transaction and have checked commerce restrictions.
+     */
+    public function itemConversation(Request $request, string $buyer, string $vendorId): string
+    {
+        $existing = DB::table('conversations')->where('buyer_profile_id', $buyer)->where('vendor_organization_id', $vendorId)
+            ->where('purpose', 'SALES')->where('context_type', 'ITEM_BASED')->whereNull('canonical_conversation_id')->value('id');
+        if ($existing !== null) {
+            $this->access->require($request->user(), (string) $existing);
+
+            return (string) $existing;
+        }
+        app(NewProcurementAvailability::class)->assertAvailable($vendorId);
+        $id = (string) Str::uuid7();
+        $this->insertItemConversation($request, $id, $buyer, $vendorId, []);
+
+        return $id;
+    }
+
+    /** @param array<string, mixed> $reference */
+    private function insertItemConversation(Request $request, string $id, string $buyer, string $vendorId, array $reference): void
+    {
+        $owner = DB::table('vendor_memberships')->where('vendor_organization_id', $vendorId)->where('role', 'OWNER')->where('status', 'ACTIVE')->value('user_id');
+        if ($owner === null) {
+            throw new AuthenticationException('STORE_UNAVAILABLE', 'This store cannot receive inquiries right now.', 409);
+        }
+        DB::table('conversations')->insert(['id' => $id, 'buyer_profile_id' => $buyer, 'vendor_organization_id' => $vendorId, 'purpose' => 'SALES',
+            'context_type' => 'ITEM_BASED', 'context_id' => null, 'handler_user_id' => $owner,
+            'locked_reference' => json_encode($reference, JSON_THROW_ON_ERROR), 'created_at' => now(), 'updated_at' => now()]);
+        $this->participant($id, (int) $request->user()->id, 'BUYER');
+        $this->participant($id, (int) $owner, 'OWNER');
+        DB::table('conversation_assignments')->insert(['id' => (string) Str::uuid7(), 'conversation_id' => $id, 'assigned_user_id' => $owner, 'assigned_role' => 'OWNER', 'created_at' => now(), 'updated_at' => now()]);
+        $this->audit->account($request, 'CONVERSATION_CREATED', 'CONVERSATION', $id, after: ['purpose' => 'SALES']);
+        $this->changed($id);
     }
 
     /** @param array<string, mixed> $input
@@ -146,6 +229,8 @@ final class ConversationService
      * @param array<string, mixed> $reference */
     public function createProject(Request $request, string $id, string $vendor, string $package, array $reference): void
     {
+        $buyer = $this->buyers->idFor($request);
+        DB::table('buyer_profiles')->where('id', $buyer)->lockForUpdate()->first();
         app(NewProcurementAvailability::class)->assertAvailable($vendor);
         $org = DB::table('vendor_organizations')->where('id', $vendor)->first();
         if (app(OrderEligibility::class)->storeBlockers($org) !== [] || ! DB::table('store_profiles')->where('vendor_organization_id', $vendor)->where('bulk_capability', true)->exists()) {
@@ -154,6 +239,18 @@ final class ConversationService
         $owner = DB::table('vendor_memberships')->where('vendor_organization_id', $vendor)->where('role', 'OWNER')->where('status', 'ACTIVE')->value('user_id');
         if ($owner === null) {
             throw new AuthenticationException('STORE_UNAVAILABLE', 'This store cannot receive inquiries right now.', 409);
+        }
+        if (! DB::table('conversations')->where('buyer_profile_id', $buyer)->where('vendor_organization_id', $vendor)
+            ->where('purpose', 'SALES')->where('context_type', 'ITEM_BASED')->whereNull('canonical_conversation_id')->exists()) {
+            $main = (string) Str::uuid7();
+            DB::table('conversations')->insert(['id' => $main, 'buyer_profile_id' => $buyer, 'vendor_organization_id' => $vendor,
+                'purpose' => 'SALES', 'context_type' => 'ITEM_BASED', 'handler_user_id' => $owner, 'locked_reference' => '{}', 'created_at' => now(), 'updated_at' => now()]);
+            $this->participant($main, (int) $request->user()->id, 'BUYER');
+            $this->participant($main, (int) $owner, 'OWNER');
+            DB::table('conversation_assignments')->insert(['id' => (string) Str::uuid7(), 'conversation_id' => $main,
+                'assigned_user_id' => $owner, 'assigned_role' => 'OWNER', 'created_at' => now(), 'updated_at' => now()]);
+            $this->audit->account($request, 'CONVERSATION_CREATED', 'CONVERSATION', $main, after: ['purpose' => 'SALES']);
+            $this->changed($main);
         }
         DB::table('conversations')->insert(['id' => $id, 'buyer_profile_id' => $this->buyers->idFor($request), 'vendor_organization_id' => $vendor, 'purpose' => 'SALES',
             'context_type' => 'PROJECT_BASED', 'context_id' => $package, 'handler_user_id' => $owner, 'locked_reference' => json_encode($reference, JSON_THROW_ON_ERROR), 'created_at' => now(), 'updated_at' => now()]);
@@ -167,12 +264,59 @@ final class ConversationService
      * @return array<string, mixed> */
     public function inbox(Request $request): array
     {
+        // Rank only currently authorized threads. Staff never gain access to a sibling's assignment.
+        $partition = "buyer_profile_id, vendor_organization_id, CASE WHEN purpose = 'FULFILLMENT' THEN id END";
+        $ranked = $this->inboxQuery($request, filterArchived: false)->select('c.*')
+            ->selectRaw("ROW_NUMBER() OVER (PARTITION BY $partition ORDER BY CASE WHEN context_type = 'ITEM_BASED' THEN 0 ELSE 1 END, created_at, id) AS inbox_rank")
+            ->selectRaw("MAX(updated_at) OVER (PARTITION BY $partition) AS inbox_updated_at");
+        $query = DB::query()->fromSub($ranked, 'c')->where('inbox_rank', 1);
+        $this->filterArchived($request, $query);
+        $page = $query->orderByDesc('inbox_updated_at')->orderByDesc('id')->paginate(25);
+
+        return ['items' => array_map(function (object $c) use ($request): array {
+            $header = $this->header($request, $c);
+            if ($c->purpose === 'SALES') {
+                $threads = $this->salesFor($request, $c);
+                $latest = DB::table('messages')->whereIn('conversation_id', (clone $threads)->select('c.id'))->orderByDesc('id')->first();
+                $product = $latest?->product_snapshot === null ? null : json_decode($latest->product_snapshot, true);
+                $header['unread_count'] = $this->unreadQueryCount($request, $threads);
+                $header['last_message_preview'] = $product === null ? ($latest->body ?? '') : 'Sent a product: '.$product['name'];
+                $header['updated_at'] = Carbon::parse($c->inbox_updated_at)->toIso8601String();
+            }
+
+            return $header;
+        }, $page->items()), 'page' => $page->currentPage(), 'has_more' => $page->hasMorePages()];
+    }
+
+    /** Uses the same current role, assignment and canonical-thread scope as the inbox, across every page. */
+    public function unreadInboxCount(Request $request): int
+    {
+        return $this->unreadQueryCount($request, $this->inboxQuery($request));
+    }
+
+    /** Vendor navigation includes authorized fulfillment threads without changing the sales inbox's contents. */
+    public function unreadNavigationCount(Request $request): int
+    {
+        return $this->unreadQueryCount($request, $this->inboxQuery($request, includeFulfillment: true));
+    }
+
+    private function unreadQueryCount(Request $request, Builder $conversations): int
+    {
+        return DB::table('messages as m')->whereIn('m.conversation_id', $conversations->select('c.id'))
+            ->where('m.sender_user_id', '<>', $request->user()->id)
+            ->whereNotExists(fn ($query) => $query->selectRaw('1')->from('message_read_receipts as r')
+                ->whereColumn('r.message_id', 'm.id')->where('r.user_id', $request->user()->id))->count();
+    }
+
+    private function inboxQuery(Request $request, bool $includeFulfillment = false, bool $filterArchived = true): Builder
+    {
         $query = DB::table('conversations as c')->whereNull('canonical_conversation_id');
         if ($request->user()->account_type === 'BUYER') {
             // Order-specific fulfillment threads live in Order Details, not in the Buyer's message inbox.
             $query->where('buyer_profile_id', $this->buyers->idFor($request))->where('purpose', 'SALES');
-            $archived = fn ($q) => $q->selectRaw('1')->from('conversation_archives as a')->whereColumn('a.conversation_id', 'c.id')->where('a.user_id', $request->user()->id);
-            $request->boolean('archived') ? $query->whereExists($archived) : $query->whereNotExists($archived);
+            if ($filterArchived) {
+                $this->filterArchived($request, $query);
+            }
         } else {
             $scope = app(AccountAccess::class)->resolve($request->user());
             $query->where('vendor_organization_id', $scope['organization_id']);
@@ -185,11 +329,37 @@ final class ConversationService
                     $query->whereRaw('1 = 0');
                 }
             } else {
-                // Owner and Store Manager supervise fulfillment threads from the order's Fulfillment Messages link, not the sales inbox.
-                $query->where('purpose', 'SALES');
+                // Owner and Store Manager use the order popup or inquiry's linked list, not the main sales inbox.
+                $query->whereIn('purpose', $includeFulfillment ? ['SALES', 'FULFILLMENT'] : ['SALES']);
             }
         }
-        $page = $query->orderByDesc('updated_at')->orderByDesc('id')->paginate(25);
+
+        return $query;
+    }
+
+    private function filterArchived(Request $request, Builder $query): void
+    {
+        if ($request->user()->account_type !== 'BUYER') {
+            return;
+        }
+        $archived = fn ($q) => $q->selectRaw('1')->from('conversation_archives as a')->whereColumn('a.conversation_id', 'c.id')->where('a.user_id', $request->user()->id);
+        $request->boolean('archived') ? $query->whereExists($archived) : $query->whereNotExists($archived);
+    }
+
+    private function salesFor(Request $request, object $source): Builder
+    {
+        return $this->inboxQuery($request, filterArchived: false)->where('c.purpose', 'SALES')
+            ->where('c.buyer_profile_id', $source->buyer_profile_id)->where('c.vendor_organization_id', $source->vendor_organization_id);
+    }
+
+    /** @return array<string, mixed> */
+    public function projectInquiries(Request $request, string $id): array
+    {
+        $source = $this->access->require($request->user(), $id);
+        if ($source->purpose !== 'SALES') {
+            throw new AuthenticationException('PERMISSION_DENIED', 'Project inquiries are available from sales conversations only.', 403);
+        }
+        $page = $this->salesFor($request, $source)->where('c.context_type', 'PROJECT_BASED')->orderByDesc('c.updated_at')->orderByDesc('c.id')->paginate(25);
 
         return ['items' => array_map(fn (object $c): array => $this->header($request, $c), $page->items()), 'page' => $page->currentPage(), 'has_more' => $page->hasMorePages()];
     }
@@ -203,13 +373,16 @@ final class ConversationService
         $logoData = is_string($logo) ? json_decode($logo, true) : [];
         $handler = $c->handler_user_id === null ? null : User::find($c->handler_user_id);
         $handlerIdentity = $handler !== null && $this->access->allows($handler, $c) ? $this->identity($handler, $c) : null;
-        $unread = DB::table('messages as m')->where('m.conversation_id', $c->id)->where('m.sender_user_id', '<>', $request->user()->id)
-            ->whereNotExists(fn ($q) => $q->selectRaw('1')->from('message_read_receipts as r')->whereColumn('r.message_id', 'm.id')->where('r.user_id', $request->user()->id))->count();
+        $unread = $this->unreadCount($request, (string) $c->id);
+        $canListFulfillment = $this->canListFulfillment($request, $c);
 
         $latest = DB::table('messages')->where('conversation_id', $c->id)->orderByDesc('id')->first();
         $product = $latest?->product_snapshot === null ? null : json_decode($latest->product_snapshot, true);
         $buyerUser = User::find(DB::table('buyer_profiles')->where('id', $c->buyer_profile_id)->value('user_id'));
         $legacy = DB::table('conversations')->where('canonical_conversation_id', $c->id)->orderBy('id')->paginate(25, ['id'], 'legacy_page');
+        $sales = $this->salesFor($request, $c);
+        $projects = (clone $sales)->where('c.context_type', 'PROJECT_BASED');
+        $reference = json_decode((string) $c->locked_reference, true);
 
         return ['id' => $c->id, 'purpose' => $c->purpose, 'context_type' => $c->context_type, 'order_id' => $c->order_id, 'lock_version' => (int) $c->lock_version,
             'buyer' => $buyerUser === null ? null : $this->identity($buyerUser, $c),
@@ -222,8 +395,70 @@ final class ConversationService
             'handler' => $handlerIdentity, 'unread_count' => $unread, 'channel' => $this->access->channel($request->user(), $c),
             'locked_reference' => (object) json_decode((string) $c->locked_reference, true), 'updated_at' => Carbon::parse($c->updated_at)->toIso8601String(),
             'can_transfer' => $request->user()->account_type === 'VENDOR' && $c->purpose === 'SALES',
+            'can_list_fulfillment_conversations' => $canListFulfillment,
+            'main_conversation_id' => $c->purpose === 'SALES' ? (clone $sales)->where('c.context_type', 'ITEM_BASED')->value('c.id') : null,
+            'project_inquiry_count' => $c->purpose === 'SALES' ? (clone $projects)->count() : 0,
+            'project_unread_count' => $c->purpose === 'SALES' ? $this->unreadQueryCount($request, $projects) : 0,
+            'inquiry_label' => $c->context_type === 'PROJECT_BASED' ? ($reference['work_package']['name'] ?? 'Project inquiry') : 'Item inquiry',
+            'fulfillment_unread_count' => $canListFulfillment ? $this->fulfillmentUnreadCount($request, $c) : 0,
             'fulfillment_entry_enabled' => $c->purpose === 'FULFILLMENT',
             'order_reference' => $c->purpose === 'FULFILLMENT' ? DB::table('orders')->where('id', $c->order_id)->value('reference') : null] + $this->writableFields($c);
+    }
+
+    public function canListFulfillment(Request $request, object $conversation): bool
+    {
+        return $request->user()->account_type === 'VENDOR' && $conversation->purpose === 'SALES'
+            && in_array($this->access->role($request->user()), ['OWNER', 'STORE_MANAGER'], true);
+    }
+
+    /** All linked fulfillment pages, including unread history; only the authorized supervising roles may count them. */
+    private function fulfillmentUnreadCount(Request $request, object $source): int
+    {
+        $userId = (int) $request->user()->id;
+
+        return DB::table('messages as m')->join('conversations as c', 'c.id', '=', 'm.conversation_id')
+            ->where('c.purpose', 'FULFILLMENT')->where('c.buyer_profile_id', $source->buyer_profile_id)
+            ->where('c.vendor_organization_id', $source->vendor_organization_id)->where('m.sender_user_id', '<>', $userId)
+            ->whereNotExists(fn ($q) => $q->selectRaw('1')->from('message_read_receipts as r')->whereColumn('r.message_id', 'm.id')->where('r.user_id', $userId))->count();
+    }
+
+    /** Existing threads for this inquiry's buyer/store pair; opening the list never creates a thread.
+     * @return array<string, mixed> */
+    public function fulfillmentConversations(Request $request, string $conversationId): array
+    {
+        $source = $this->access->require($request->user(), $conversationId);
+        if (! $this->canListFulfillment($request, $source)) {
+            throw new AuthenticationException('PERMISSION_DENIED', 'Your role cannot list fulfillment conversations from this inquiry.', 403);
+        }
+        $states = FulfillmentThreadService::WRITABLE_STATES;
+        $placeholders = implode(',', array_fill(0, count($states), '?'));
+        $page = DB::table('conversations as c')->join('orders as o', 'o.id', '=', 'c.order_id')
+            ->where('c.purpose', 'FULFILLMENT')->where('c.buyer_profile_id', $source->buyer_profile_id)
+            ->where('c.vendor_organization_id', $source->vendor_organization_id)
+            ->orderByRaw("CASE WHEN o.order_state IN ($placeholders) THEN 0 ELSE 1 END", $states)
+            ->orderByDesc('c.updated_at')->orderByDesc('c.id')
+            ->paginate(25, ['c.*', 'o.reference as order_reference', 'o.order_state', 'o.fulfillment_method']);
+
+        return ['items' => array_map(function (object $thread) use ($request): array {
+            $this->access->require($request->user(), (string) $thread->id);
+
+            return ['conversation_id' => $thread->id, 'order_id' => $thread->order_id, 'order_reference' => $thread->order_reference,
+                'order_state' => $thread->order_state, 'fulfillment_method' => $thread->fulfillment_method,
+                'unread_count' => $this->unreadCount($request, (string) $thread->id), 'updated_at' => Carbon::parse($thread->updated_at)->toIso8601String()]
+                + $this->writableFields($thread);
+        }, $page->items()), 'page' => $page->currentPage(), 'has_more' => $page->hasMorePages()];
+    }
+
+    private function unreadCount(Request $request, string $conversationId): int
+    {
+        return self::unreadFor((int) $request->user()->id, $conversationId);
+    }
+
+    /** Messages from anyone else that this user has not read. */
+    public static function unreadFor(int $userId, string $conversationId): int
+    {
+        return DB::table('messages as m')->where('m.conversation_id', $conversationId)->where('m.sender_user_id', '<>', $userId)
+            ->whereNotExists(fn ($q) => $q->selectRaw('1')->from('message_read_receipts as r')->whereColumn('r.message_id', 'm.id')->where('r.user_id', $userId))->count();
     }
 
     /** @return array{read_only: bool, read_only_reason: ?string} */
@@ -299,12 +534,33 @@ final class ConversationService
     public function append(object $c, User $actor, string $body, string $kind = 'SYSTEM', ?string $clientId = null, ?array $product = null): string
     {
         $id = (string) Str::uuid7();
+        $sender = $kind === 'SYSTEM' ? ['display_name' => 'MateryalPH', 'role' => 'SYSTEM', 'avatar_path' => null] : $this->identity($actor, $c);
         DB::table('messages')->insert(['id' => $id, 'conversation_id' => $c->id, 'sender_user_id' => $actor->id, 'body' => $body, 'kind' => $kind,
             'product_id' => $product['product_id'] ?? null, 'product_snapshot' => $product === null ? null : json_encode($product, JSON_THROW_ON_ERROR),
-            'client_message_id' => $clientId ?? (string) Str::uuid7(), 'public_sender' => json_encode($kind === 'SYSTEM' ? ['display_name' => 'MateryalPH', 'role' => 'SYSTEM', 'avatar_path' => null] : $this->identity($actor, $c), JSON_THROW_ON_ERROR), 'sent_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
+            'client_message_id' => $clientId ?? (string) Str::uuid7(), 'public_sender' => json_encode($sender, JSON_THROW_ON_ERROR), 'sent_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
+        if ($kind !== 'SYSTEM' && in_array($sender['role'], VendorTeamActivityQuery::ROLES, true)) {
+            app(VendorTeamActivityBroadcast::class)->publish((string) $c->vendor_organization_id, $sender['role']);
+        }
         DB::table('conversations')->where('id', $c->id)->update(['updated_at' => now()]);
         // New activity brings an archived thread back to the inbox so a reply is never missed.
-        DB::table('conversation_archives')->where('conversation_id', $c->id)->delete();
+        $archiveThreads = DB::table('conversations')->where('buyer_profile_id', $c->buyer_profile_id)
+            ->where('vendor_organization_id', $c->vendor_organization_id)->where('purpose', 'SALES')->select('id');
+        DB::table('conversation_archives')->whereIn('conversation_id', $c->purpose === 'SALES' ? $archiveThreads : [$c->id])->delete();
+        if ($kind !== 'SYSTEM' && $actor->account_type === 'VENDOR') {
+            $buyerId = DB::table('buyer_profiles')->where('id', $c->buyer_profile_id)->value('user_id');
+            $storeName = DB::table('store_profiles')->where('vendor_organization_id', $c->vendor_organization_id)->value('public_store_name') ?: 'a Vendor';
+            if ($buyerId !== null && (int) $buyerId !== (int) $actor->id) {
+                $title = PushNotification::preview((string) $sender['display_name'], 100).' · '.PushNotification::preview((string) $storeName, 150);
+                $preview = match ($kind) {
+                    'ATTACHMENT' => 'Sent an attachment',
+                    'PRODUCT' => 'Sent a product: '.($product['name'] ?? 'Product'),
+                    default => $body,
+                };
+                app(NotificationService::class)->record((int) $buyerId, 'MESSAGES', $title,
+                    PushNotification::preview($preview), 'CONVERSATION', (string) $c->id,
+                    'conversation-message:'.$id, (string) $c->vendor_organization_id, $id);
+            }
+        }
         $this->changed((string) $c->id);
 
         return $id;
@@ -318,11 +574,14 @@ final class ConversationService
             if ($c->purpose !== 'SALES') {
                 throw new AuthenticationException('CONVERSATION_NOT_ARCHIVABLE', 'Fulfillment messages stay with their order.', 409);
             }
+            $threads = $this->salesFor($request, $c)->pluck('c.id');
             if ($archived) {
-                DB::table('conversation_archives')->insertOrIgnore(['id' => (string) Str::uuid7(), 'conversation_id' => $id, 'user_id' => $request->user()->id,
-                    'archived_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
+                foreach ($threads as $thread) {
+                    DB::table('conversation_archives')->insertOrIgnore(['id' => (string) Str::uuid7(), 'conversation_id' => $thread, 'user_id' => $request->user()->id,
+                        'archived_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
+                }
             } else {
-                DB::table('conversation_archives')->where('conversation_id', $id)->where('user_id', $request->user()->id)->delete();
+                DB::table('conversation_archives')->whereIn('conversation_id', $threads)->where('user_id', $request->user()->id)->delete();
             }
             $this->audit->account($request, $archived ? 'CONVERSATION_ARCHIVED' : 'CONVERSATION_RESTORED', 'CONVERSATION', $id);
             $this->changed($id);
@@ -346,6 +605,12 @@ final class ConversationService
                     DB::table('message_read_receipts')->insertOrIgnore(['id' => (string) Str::uuid7(), 'message_id' => $m->id, 'user_id' => $request->user()->id, 'read_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
                 }
             });
+            $noticesRead = DB::table('notifications')->where('user_id', $request->user()->id)->where('category', 'MESSAGES')
+                ->where('resource_type', 'CONVERSATION')->where('resource_id', $id)->where('resume_key', '<=', $through)->whereNull('read_at')
+                ->update(['read_at' => now(), 'updated_at' => now()]);
+            if ($noticesRead > 0) {
+                app(NotificationBroadcast::class)->publish($request->user());
+            }
             $this->changed($id);
         });
     }

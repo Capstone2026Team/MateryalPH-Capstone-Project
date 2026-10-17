@@ -229,6 +229,18 @@ class ProofCard extends StatelessWidget {
                   'Signature on file',
                   style: TextStyle(fontSize: 12, color: BuyerTheme.muted),
                 ),
+              if (proof.recordedAt != null)
+                Text(
+                  '${proof.milestone == 'DELIVERED' ? 'Delivered' : 'Picked up'} ${formatManilaDateTime(proof.recordedAt!)}',
+                  style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
+                ),
+              if (proof.recordedBy != null)
+                Text(
+                  'Recorded by ${proof.recordedBy}',
+                  style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
+                ),
+              if (proof.note != null)
+                Text(proof.note!, style: const TextStyle(fontSize: 13)),
             ],
           ),
         ),

@@ -17,6 +17,7 @@ Name | Type
 `materialCategoryId` | string
 `otherLabel` | string
 `tagIds` | Array&lt;string&gt;
+`customTags` | Array&lt;string&gt;
 `technicalAttributes` | { [key: string]: string; }
 `brand` | string
 `model` | string
@@ -56,6 +57,7 @@ const example = {
   "materialCategoryId": null,
   "otherLabel": null,
   "tagIds": null,
+  "customTags": null,
   "technicalAttributes": null,
   "brand": null,
   "model": null,

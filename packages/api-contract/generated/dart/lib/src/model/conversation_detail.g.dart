@@ -13,6 +13,8 @@ class _$ConversationDetail extends ConversationDetail {
   final ChatMessagePage messages;
   @override
   final ChatQuotationPage quotations;
+  @override
+  final BuiltList<SiteInspection>? siteInspections;
 
   factory _$ConversationDetail(
           [void Function(ConversationDetailBuilder)? updates]) =>
@@ -21,7 +23,8 @@ class _$ConversationDetail extends ConversationDetail {
   _$ConversationDetail._(
       {required this.conversation,
       required this.messages,
-      required this.quotations})
+      required this.quotations,
+      this.siteInspections})
       : super._();
   @override
   ConversationDetail rebuild(
@@ -38,7 +41,8 @@ class _$ConversationDetail extends ConversationDetail {
     return other is ConversationDetail &&
         conversation == other.conversation &&
         messages == other.messages &&
-        quotations == other.quotations;
+        quotations == other.quotations &&
+        siteInspections == other.siteInspections;
   }
 
   @override
@@ -47,6 +51,7 @@ class _$ConversationDetail extends ConversationDetail {
     _$hash = $jc(_$hash, conversation.hashCode);
     _$hash = $jc(_$hash, messages.hashCode);
     _$hash = $jc(_$hash, quotations.hashCode);
+    _$hash = $jc(_$hash, siteInspections.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -56,7 +61,8 @@ class _$ConversationDetail extends ConversationDetail {
     return (newBuiltValueToStringHelper(r'ConversationDetail')
           ..add('conversation', conversation)
           ..add('messages', messages)
-          ..add('quotations', quotations))
+          ..add('quotations', quotations)
+          ..add('siteInspections', siteInspections))
         .toString();
   }
 }
@@ -82,6 +88,12 @@ class ConversationDetailBuilder
   set quotations(ChatQuotationPageBuilder? quotations) =>
       _$this._quotations = quotations;
 
+  ListBuilder<SiteInspection>? _siteInspections;
+  ListBuilder<SiteInspection> get siteInspections =>
+      _$this._siteInspections ??= ListBuilder<SiteInspection>();
+  set siteInspections(ListBuilder<SiteInspection>? siteInspections) =>
+      _$this._siteInspections = siteInspections;
+
   ConversationDetailBuilder() {
     ConversationDetail._defaults(this);
   }
@@ -92,6 +104,7 @@ class ConversationDetailBuilder
       _conversation = $v.conversation.toBuilder();
       _messages = $v.messages.toBuilder();
       _quotations = $v.quotations.toBuilder();
+      _siteInspections = $v.siteInspections?.toBuilder();
       _$v = null;
     }
     return this;
@@ -118,6 +131,7 @@ class ConversationDetailBuilder
             conversation: conversation.build(),
             messages: messages.build(),
             quotations: quotations.build(),
+            siteInspections: _siteInspections?.build(),
           );
     } catch (_) {
       late String _$failedField;
@@ -128,6 +142,8 @@ class ConversationDetailBuilder
         messages.build();
         _$failedField = 'quotations';
         quotations.build();
+        _$failedField = 'siteInspections';
+        _siteInspections?.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
             r'ConversationDetail', _$failedField, e.toString());

@@ -6,13 +6,105 @@ part of 'vendor_team_activity.dart';
 // BuiltValueGenerator
 // **************************************************************************
 
+const VendorTeamActivityCategoryEnum _$vendorTeamActivityCategoryEnum_SALES =
+    const VendorTeamActivityCategoryEnum._('SALES');
+const VendorTeamActivityCategoryEnum
+    _$vendorTeamActivityCategoryEnum_INVENTORY =
+    const VendorTeamActivityCategoryEnum._('INVENTORY');
+const VendorTeamActivityCategoryEnum
+    _$vendorTeamActivityCategoryEnum_FULFILLMENT =
+    const VendorTeamActivityCategoryEnum._('FULFILLMENT');
+const VendorTeamActivityCategoryEnum _$vendorTeamActivityCategoryEnum_DISPUTES =
+    const VendorTeamActivityCategoryEnum._('DISPUTES');
+const VendorTeamActivityCategoryEnum _$vendorTeamActivityCategoryEnum_TEAM =
+    const VendorTeamActivityCategoryEnum._('TEAM');
+const VendorTeamActivityCategoryEnum _$vendorTeamActivityCategoryEnum_OTHER =
+    const VendorTeamActivityCategoryEnum._('OTHER');
+
+VendorTeamActivityCategoryEnum _$vendorTeamActivityCategoryEnumValueOf(
+    String name) {
+  switch (name) {
+    case 'SALES':
+      return _$vendorTeamActivityCategoryEnum_SALES;
+    case 'INVENTORY':
+      return _$vendorTeamActivityCategoryEnum_INVENTORY;
+    case 'FULFILLMENT':
+      return _$vendorTeamActivityCategoryEnum_FULFILLMENT;
+    case 'DISPUTES':
+      return _$vendorTeamActivityCategoryEnum_DISPUTES;
+    case 'TEAM':
+      return _$vendorTeamActivityCategoryEnum_TEAM;
+    case 'OTHER':
+      return _$vendorTeamActivityCategoryEnum_OTHER;
+    default:
+      throw ArgumentError(name);
+  }
+}
+
+final BuiltSet<VendorTeamActivityCategoryEnum>
+    _$vendorTeamActivityCategoryEnumValues = BuiltSet<
+        VendorTeamActivityCategoryEnum>(const <VendorTeamActivityCategoryEnum>[
+  _$vendorTeamActivityCategoryEnum_SALES,
+  _$vendorTeamActivityCategoryEnum_INVENTORY,
+  _$vendorTeamActivityCategoryEnum_FULFILLMENT,
+  _$vendorTeamActivityCategoryEnum_DISPUTES,
+  _$vendorTeamActivityCategoryEnum_TEAM,
+  _$vendorTeamActivityCategoryEnum_OTHER,
+]);
+
+Serializer<VendorTeamActivityCategoryEnum>
+    _$vendorTeamActivityCategoryEnumSerializer =
+    _$VendorTeamActivityCategoryEnumSerializer();
+
+class _$VendorTeamActivityCategoryEnumSerializer
+    implements PrimitiveSerializer<VendorTeamActivityCategoryEnum> {
+  static const Map<String, Object> _toWire = const <String, Object>{
+    'SALES': 'SALES',
+    'INVENTORY': 'INVENTORY',
+    'FULFILLMENT': 'FULFILLMENT',
+    'DISPUTES': 'DISPUTES',
+    'TEAM': 'TEAM',
+    'OTHER': 'OTHER',
+  };
+  static const Map<Object, String> _fromWire = const <Object, String>{
+    'SALES': 'SALES',
+    'INVENTORY': 'INVENTORY',
+    'FULFILLMENT': 'FULFILLMENT',
+    'DISPUTES': 'DISPUTES',
+    'TEAM': 'TEAM',
+    'OTHER': 'OTHER',
+  };
+
+  @override
+  final Iterable<Type> types = const <Type>[VendorTeamActivityCategoryEnum];
+  @override
+  final String wireName = 'VendorTeamActivityCategoryEnum';
+
+  @override
+  Object serialize(
+          Serializers serializers, VendorTeamActivityCategoryEnum object,
+          {FullType specifiedType = FullType.unspecified}) =>
+      _toWire[object.name] ?? object.name;
+
+  @override
+  VendorTeamActivityCategoryEnum deserialize(
+          Serializers serializers, Object serialized,
+          {FullType specifiedType = FullType.unspecified}) =>
+      VendorTeamActivityCategoryEnum.valueOf(
+          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+}
+
 class _$VendorTeamActivity extends VendorTeamActivity {
   @override
   final String id;
   @override
   final String? actorName;
   @override
-  final String actorRole;
+  final String? actorRole;
+  @override
+  final VendorTeamActivityCategoryEnum category;
+  @override
+  final String? correlationId;
   @override
   final String action;
   @override
@@ -35,7 +127,9 @@ class _$VendorTeamActivity extends VendorTeamActivity {
   _$VendorTeamActivity._(
       {required this.id,
       this.actorName,
-      required this.actorRole,
+      this.actorRole,
+      required this.category,
+      this.correlationId,
       required this.action,
       required this.resourceType,
       this.resourceId,
@@ -60,6 +154,8 @@ class _$VendorTeamActivity extends VendorTeamActivity {
         id == other.id &&
         actorName == other.actorName &&
         actorRole == other.actorRole &&
+        category == other.category &&
+        correlationId == other.correlationId &&
         action == other.action &&
         resourceType == other.resourceType &&
         resourceId == other.resourceId &&
@@ -75,6 +171,8 @@ class _$VendorTeamActivity extends VendorTeamActivity {
     _$hash = $jc(_$hash, id.hashCode);
     _$hash = $jc(_$hash, actorName.hashCode);
     _$hash = $jc(_$hash, actorRole.hashCode);
+    _$hash = $jc(_$hash, category.hashCode);
+    _$hash = $jc(_$hash, correlationId.hashCode);
     _$hash = $jc(_$hash, action.hashCode);
     _$hash = $jc(_$hash, resourceType.hashCode);
     _$hash = $jc(_$hash, resourceId.hashCode);
@@ -92,6 +190,8 @@ class _$VendorTeamActivity extends VendorTeamActivity {
           ..add('id', id)
           ..add('actorName', actorName)
           ..add('actorRole', actorRole)
+          ..add('category', category)
+          ..add('correlationId', correlationId)
           ..add('action', action)
           ..add('resourceType', resourceType)
           ..add('resourceId', resourceId)
@@ -118,6 +218,16 @@ class VendorTeamActivityBuilder
   String? _actorRole;
   String? get actorRole => _$this._actorRole;
   set actorRole(String? actorRole) => _$this._actorRole = actorRole;
+
+  VendorTeamActivityCategoryEnum? _category;
+  VendorTeamActivityCategoryEnum? get category => _$this._category;
+  set category(VendorTeamActivityCategoryEnum? category) =>
+      _$this._category = category;
+
+  String? _correlationId;
+  String? get correlationId => _$this._correlationId;
+  set correlationId(String? correlationId) =>
+      _$this._correlationId = correlationId;
 
   String? _action;
   String? get action => _$this._action;
@@ -160,6 +270,8 @@ class VendorTeamActivityBuilder
       _id = $v.id;
       _actorName = $v.actorName;
       _actorRole = $v.actorRole;
+      _category = $v.category;
+      _correlationId = $v.correlationId;
       _action = $v.action;
       _resourceType = $v.resourceType;
       _resourceId = $v.resourceId;
@@ -193,8 +305,10 @@ class VendorTeamActivityBuilder
             id: BuiltValueNullFieldError.checkNotNull(
                 id, r'VendorTeamActivity', 'id'),
             actorName: actorName,
-            actorRole: BuiltValueNullFieldError.checkNotNull(
-                actorRole, r'VendorTeamActivity', 'actorRole'),
+            actorRole: actorRole,
+            category: BuiltValueNullFieldError.checkNotNull(
+                category, r'VendorTeamActivity', 'category'),
+            correlationId: correlationId,
             action: BuiltValueNullFieldError.checkNotNull(
                 action, r'VendorTeamActivity', 'action'),
             resourceType: BuiltValueNullFieldError.checkNotNull(

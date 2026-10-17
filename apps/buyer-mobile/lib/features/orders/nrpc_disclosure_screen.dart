@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../design_system/components/buyer_overlays.dart';
 import '../../design_system/components/procurement_components.dart';
 import '../../design_system/theme.dart';
 import '../item_procurement/procurement_models.dart' show formatPeso;
@@ -84,7 +85,7 @@ class _NrpcDisclosureScreenState extends State<NrpcDisclosureScreen> {
   Future<void> _reject() async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => BuyerDialog(
         title: const Text('Reject the preparation cost?'),
         content: const Text(
           'The order request is cancelled and the reserved stock is released. You are not charged.',
@@ -114,9 +115,8 @@ class _NrpcDisclosureScreenState extends State<NrpcDisclosureScreen> {
   }
 
   Future<void> _flag() async {
-    final reason = await showModalBottomSheet<String>(
+    final reason = await showBuyerBottomSheet<String>(
       context: context,
-      isScrollControlled: true,
       builder: (context) => const _FlagSheet(),
     );
     if (reason == null) return;
@@ -362,7 +362,7 @@ class _FlagSheetState extends State<_FlagSheet> {
   }
 
   @override
-  Widget build(BuildContext context) => Padding(
+  Widget build(BuildContext context) => SingleChildScrollView(
     padding: EdgeInsets.fromLTRB(
       16,
       16,

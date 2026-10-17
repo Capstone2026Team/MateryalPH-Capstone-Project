@@ -12,11 +12,13 @@ const stepStatusText = { COMPLETE: 'Completed', CURRENT: 'Current step', UPCOMIN
  * current step can host the proof capture that milestone requires. Status is text plus icon, never color alone,
  * and nothing here animates or implies a live vehicle position.
  */
-export function MilestoneStepper({ steps, label = 'Fulfillment milestones', renderProof, currentAction }: {
+export function MilestoneStepper({ steps, label = 'Fulfillment milestones', renderProof, renderStepContent, currentAction, showProofRequirements = true }: {
   steps: FulfillmentStep[]
   label?: string
   renderProof?: (step: FulfillmentStep) => ReactNode
+  renderStepContent?: (step: FulfillmentStep) => ReactNode
   currentAction?: ReactNode
+  showProofRequirements?: boolean
 }) {
   return <ol className="grid min-w-0" aria-label={label}>
     {steps.map((step, index) => {
@@ -34,8 +36,9 @@ export function MilestoneStepper({ steps, label = 'Fulfillment milestones', rend
             <span className={`text-xs font-semibold ${tone}`}>{stepStatusText[step.status]}</span>
           </div>
           {step.at && <p className="text-sm text-text-secondary"><time dateTime={step.at.toISOString()}>{formatManilaDateTime(step.at)}</time>{step.actorRole ? ` · ${roleLabel(step.actorRole)}` : ''}</p>}
-          {step.proofRequired && step.status !== 'COMPLETE' && <p className="text-xs text-text-secondary">Proof required: {step.proofRequirements.map(proofText).join(', ')}.</p>}
+          {showProofRequirements && step.proofRequired && step.status !== 'COMPLETE' && <p className="text-xs text-text-secondary">Proof required: {step.proofRequirements.map(proofText).join(', ')}.</p>}
           {step.proof && renderProof?.(step)}
+          {renderStepContent?.(step)}
           {step.status === 'CURRENT' && currentAction}
         </div>
       </li>

@@ -211,6 +211,8 @@ RECAPTCHA_GOOGLE_CLOUD_PROJECT_ID=
 RECAPTCHA_ENTERPRISE_API_KEY=
 RECAPTCHA_VENDOR_WEB_SITE_KEY=
 RECAPTCHA_VENDOR_WEB_ALLOWED_HOSTNAMES=localhost,127.0.0.1
+RECAPTCHA_ADMIN_WEB_SITE_KEY=
+RECAPTCHA_ADMIN_WEB_ALLOWED_HOSTNAMES=
 BOT_STEP_UP_TTL_MINUTES=5
 
 FILESYSTEM_DISK=s3
@@ -447,35 +449,46 @@ Generate separate random `REVERB_APP_KEY` and `REVERB_APP_SECRET` values per env
 
 ## 13. reCAPTCHA and Sentry
 
-reCAPTCHA Enterprise checkbox protection is part of Phase 1 only for Vendor web
-email registration, password login, and password-recovery requests. Buyer,
-Admin, and Google OIDC flows are excluded.
+reCAPTCHA Enterprise checkbox protection covers Vendor email registration,
+Vendor staff invitation acceptance, Vendor/Admin password login and recovery,
+and invitation-only Admin registration. Buyer-native and Google OIDC flows
+remain excluded. Admin email security checks do not replace mandatory TOTP.
 
 ### reCAPTCHA
 
 1. Enable the reCAPTCHA Enterprise API in the selected Google Cloud project.
 2. Create a Development Enterprise checkbox key and restrict it to the Vendor
-   hostname.
+   and Admin hostnames, or use a separate key for each portal.
 3. Create a separate backend API key restricted to
    `recaptchaenterprise.googleapis.com`. Development may be API-restricted only
    because Google does not support `localhost` as an IP application restriction.
 4. Put the backend API key only in `RECAPTCHA_ENTERPRISE_API_KEY`; never put it
    in a `VITE_` variable or Flutter configuration.
-5. Put only the Vendor checkbox site key in `VITE_RECAPTCHA_SITE_KEY`. Buyer
+5. Put only the public checkbox site key in each portal's `VITE_RECAPTCHA_SITE_KEY`. Buyer
    mobile has no reCAPTCHA key or plugin. Android/iOS Google OIDC client IDs are
    separate OIDC configuration and must remain separate.
-6. Set the project ID, Vendor site key, allowed web hostnames, and five-minute
-   step-up TTL through the documented variables. Retire the
+6. Set the project ID, site key, allowed web hostnames, and five-minute
+   step-up TTL through the documented variables. Optional
+   `RECAPTCHA_ADMIN_WEB_SITE_KEY` and `RECAPTCHA_ADMIN_WEB_ALLOWED_HOSTNAMES`
+   select a separate Admin configuration; blank values reuse Vendor values. Retire the
    Classic `RECAPTCHA_SECRET_KEY`; it is not used by the Enterprise adapter.
 7. Keep `RECAPTCHA_ENABLED=false` until all required values are present. Once
    enabled, missing configuration fails closed with `503`.
 8. Run `php scripts/recaptcha-preflight.php services/api/.env --probe-provider`
    from the repository root. It reports variable presence and provider
    reachability without printing keys or tokens.
-9. Run real Development checkbox-token assessments from Vendor web before
+9. Run real Development checkbox-token assessments from both web portals before
    acceptance. The checkbox resets after submission, expiration, or provider
    error; assessments occur only in Laravel.
-10. Keep the accessible email risk step-up, endpoint-specific rate limits, and
+10. A checked box without an image puzzle is valid Google behavior. Checkbox
+    challenges are non-deterministic; application code cannot force a puzzle
+    on every click. In Google Cloud, choose the checkbox key and review its
+    challenge security preference. A higher preference can increase challenge
+    frequency. Testing keys configured for NOCAPTCHA deliberately skip puzzles.
+    Use a real Development key for acceptance and keep Production separate.
+    See https://docs.cloud.google.com/recaptcha/docs/instrument-web-pages-with-checkbox
+    and https://docs.cloud.google.com/recaptcha/docs/choose-key-type.
+11. Keep the accessible email risk step-up, endpoint-specific rate limits, and
     business OTPs enabled. reCAPTCHA is not the only abuse defense.
 
 ### Sentry

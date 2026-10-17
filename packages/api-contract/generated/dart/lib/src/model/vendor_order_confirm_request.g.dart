@@ -14,6 +14,8 @@ class _$VendorOrderConfirmRequest extends VendorOrderConfirmRequest {
   @override
   final int? vendorDiscountCentavos;
   @override
+  final ChatQuotationDiscount? discount;
+  @override
   final NrpcProposal? nrpc;
   @override
   final PickupConfirmation? pickup;
@@ -28,6 +30,7 @@ class _$VendorOrderConfirmRequest extends VendorOrderConfirmRequest {
       {required this.lockVersion,
       required this.lines,
       this.vendorDiscountCentavos,
+      this.discount,
       this.nrpc,
       this.pickup,
       this.delivery})
@@ -48,6 +51,7 @@ class _$VendorOrderConfirmRequest extends VendorOrderConfirmRequest {
         lockVersion == other.lockVersion &&
         lines == other.lines &&
         vendorDiscountCentavos == other.vendorDiscountCentavos &&
+        discount == other.discount &&
         nrpc == other.nrpc &&
         pickup == other.pickup &&
         delivery == other.delivery;
@@ -59,6 +63,7 @@ class _$VendorOrderConfirmRequest extends VendorOrderConfirmRequest {
     _$hash = $jc(_$hash, lockVersion.hashCode);
     _$hash = $jc(_$hash, lines.hashCode);
     _$hash = $jc(_$hash, vendorDiscountCentavos.hashCode);
+    _$hash = $jc(_$hash, discount.hashCode);
     _$hash = $jc(_$hash, nrpc.hashCode);
     _$hash = $jc(_$hash, pickup.hashCode);
     _$hash = $jc(_$hash, delivery.hashCode);
@@ -72,6 +77,7 @@ class _$VendorOrderConfirmRequest extends VendorOrderConfirmRequest {
           ..add('lockVersion', lockVersion)
           ..add('lines', lines)
           ..add('vendorDiscountCentavos', vendorDiscountCentavos)
+          ..add('discount', discount)
           ..add('nrpc', nrpc)
           ..add('pickup', pickup)
           ..add('delivery', delivery))
@@ -98,6 +104,12 @@ class VendorOrderConfirmRequestBuilder
   set vendorDiscountCentavos(int? vendorDiscountCentavos) =>
       _$this._vendorDiscountCentavos = vendorDiscountCentavos;
 
+  ChatQuotationDiscountBuilder? _discount;
+  ChatQuotationDiscountBuilder get discount =>
+      _$this._discount ??= ChatQuotationDiscountBuilder();
+  set discount(ChatQuotationDiscountBuilder? discount) =>
+      _$this._discount = discount;
+
   NrpcProposalBuilder? _nrpc;
   NrpcProposalBuilder get nrpc => _$this._nrpc ??= NrpcProposalBuilder();
   set nrpc(NrpcProposalBuilder? nrpc) => _$this._nrpc = nrpc;
@@ -123,6 +135,7 @@ class VendorOrderConfirmRequestBuilder
       _lockVersion = $v.lockVersion;
       _lines = $v.lines.toBuilder();
       _vendorDiscountCentavos = $v.vendorDiscountCentavos;
+      _discount = $v.discount?.toBuilder();
       _nrpc = $v.nrpc?.toBuilder();
       _pickup = $v.pickup?.toBuilder();
       _delivery = $v.delivery?.toBuilder();
@@ -153,6 +166,7 @@ class VendorOrderConfirmRequestBuilder
                 lockVersion, r'VendorOrderConfirmRequest', 'lockVersion'),
             lines: lines.build(),
             vendorDiscountCentavos: vendorDiscountCentavos,
+            discount: _discount?.build(),
             nrpc: _nrpc?.build(),
             pickup: _pickup?.build(),
             delivery: _delivery?.build(),
@@ -163,6 +177,8 @@ class VendorOrderConfirmRequestBuilder
         _$failedField = 'lines';
         lines.build();
 
+        _$failedField = 'discount';
+        _discount?.build();
         _$failedField = 'nrpc';
         _nrpc?.build();
         _$failedField = 'pickup';

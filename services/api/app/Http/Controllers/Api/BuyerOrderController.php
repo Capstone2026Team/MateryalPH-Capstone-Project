@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
+use App\Domain\Messaging\FulfillmentThreadService;
+use App\Domain\Orders\BuyAgainService;
 use App\Domain\Orders\BuyerOrderDecisionService;
 use App\Domain\Orders\OrderQueries;
 use App\Domain\Orders\OrderSubmissionService;
@@ -28,8 +30,15 @@ final class BuyerOrderController extends Controller
             'split_confirmed' => ['sometimes', 'boolean'],
             'payment_methods' => ['sometimes', 'array', 'max:'.OrderSubmissionService::MAX_GROUPS],
             'payment_methods.*' => ['required', Rule::in(PaymentMethodPolicy::METHODS)],
+            'work_package_id' => ['sometimes', 'nullable', 'uuid', 'required_with:work_package_lock_version'],
+            'work_package_lock_version' => ['required_with:work_package_id', 'integer', 'min:1'],
+            'budget_override_reason' => ['sometimes', 'nullable', 'string', 'min:10', 'max:2000'],
+            'invoice_details' => ['sometimes', 'nullable', 'array:billing_name,billing_address,tin', 'min:1'],
+            'invoice_details.billing_name' => ['required_with:invoice_details', 'string', 'min:2', 'max:180'],
+            'invoice_details.billing_address' => ['required_with:invoice_details', 'string', 'min:10', 'max:500'],
+            'invoice_details.tin' => ['sometimes', 'nullable', 'string', 'max:20'],
         ]);
-        /** @var array{cart_lock_version: int, vendor_ids: list<string>, split_confirmed?: bool, payment_methods?: array<string, string>} $input */
+        /** @var array{cart_lock_version: int, vendor_ids: list<string>, split_confirmed?: bool, payment_methods?: array<string, string>, work_package_id?: string|null, work_package_lock_version?: int, budget_override_reason?: string|null, invoice_details?: array{billing_name: string, billing_address: string, tin?: string|null}|null} $input */
         $result = $submission->submit($request, $input);
 
         return ApiResponse::success($result['checkout'], ['replayed' => $result['replayed']], $result['replayed'] ? 200 : 201);
@@ -43,12 +52,25 @@ final class BuyerOrderController extends Controller
     public function index(Request $request): JsonResponse
     {
         $filters = $request->validate([
-            'group' => ['sometimes', Rule::in(['ALL', ...array_keys(OrderQueries::BUYER_GROUPS)])],
+            'group' => ['sometimes', Rule::in(['ALL', ...array_keys(OrderQueries::BUYER_GROUPS), OrderQueries::BUYER_HISTORY_GROUP])],
+            'procurement_type' => ['sometimes', Rule::in(OrderQueries::PROCUREMENT_TYPES)],
             'page' => ['sometimes', 'integer', 'between:1,1000'],
         ]);
         $result = $this->queries->buyerList($request, $filters);
 
         return ApiResponse::success($result['items'], $result['meta']);
+    }
+
+    public function buyAgain(Request $request, string $orderId, BuyAgainService $buyAgain): JsonResponse
+    {
+        $result = $buyAgain->run($request, $orderId);
+
+        return ApiResponse::success(['cart' => $result['cart'], 'added' => $result['added'], 'skipped' => $result['skipped']], ['replayed' => $result['replayed']]);
+    }
+
+    public function fulfillmentConversation(Request $request, string $orderId, FulfillmentThreadService $threads): JsonResponse
+    {
+        return ApiResponse::success($threads->openForBuyer($request, $orderId));
     }
 
     public function show(Request $request, string $orderId): JsonResponse

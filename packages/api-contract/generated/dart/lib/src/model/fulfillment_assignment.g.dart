@@ -67,6 +67,12 @@ class _$FulfillmentAssignment extends FulfillmentAssignment {
   final DateTime? assignedAt;
   @override
   final int? userId;
+  @override
+  final DateTime? acknowledgedAt;
+  @override
+  final DateTime? endedAt;
+  @override
+  final FulfillmentArrangementVehicle? vehicle;
 
   factory _$FulfillmentAssignment(
           [void Function(FulfillmentAssignmentBuilder)? updates]) =>
@@ -76,7 +82,10 @@ class _$FulfillmentAssignment extends FulfillmentAssignment {
       {required this.displayName,
       required this.role,
       this.assignedAt,
-      this.userId})
+      this.userId,
+      this.acknowledgedAt,
+      this.endedAt,
+      this.vehicle})
       : super._();
   @override
   FulfillmentAssignment rebuild(
@@ -94,7 +103,10 @@ class _$FulfillmentAssignment extends FulfillmentAssignment {
         displayName == other.displayName &&
         role == other.role &&
         assignedAt == other.assignedAt &&
-        userId == other.userId;
+        userId == other.userId &&
+        acknowledgedAt == other.acknowledgedAt &&
+        endedAt == other.endedAt &&
+        vehicle == other.vehicle;
   }
 
   @override
@@ -104,6 +116,9 @@ class _$FulfillmentAssignment extends FulfillmentAssignment {
     _$hash = $jc(_$hash, role.hashCode);
     _$hash = $jc(_$hash, assignedAt.hashCode);
     _$hash = $jc(_$hash, userId.hashCode);
+    _$hash = $jc(_$hash, acknowledgedAt.hashCode);
+    _$hash = $jc(_$hash, endedAt.hashCode);
+    _$hash = $jc(_$hash, vehicle.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -114,7 +129,10 @@ class _$FulfillmentAssignment extends FulfillmentAssignment {
           ..add('displayName', displayName)
           ..add('role', role)
           ..add('assignedAt', assignedAt)
-          ..add('userId', userId))
+          ..add('userId', userId)
+          ..add('acknowledgedAt', acknowledgedAt)
+          ..add('endedAt', endedAt)
+          ..add('vehicle', vehicle))
         .toString();
   }
 }
@@ -139,6 +157,21 @@ class FulfillmentAssignmentBuilder
   int? get userId => _$this._userId;
   set userId(int? userId) => _$this._userId = userId;
 
+  DateTime? _acknowledgedAt;
+  DateTime? get acknowledgedAt => _$this._acknowledgedAt;
+  set acknowledgedAt(DateTime? acknowledgedAt) =>
+      _$this._acknowledgedAt = acknowledgedAt;
+
+  DateTime? _endedAt;
+  DateTime? get endedAt => _$this._endedAt;
+  set endedAt(DateTime? endedAt) => _$this._endedAt = endedAt;
+
+  FulfillmentArrangementVehicleBuilder? _vehicle;
+  FulfillmentArrangementVehicleBuilder get vehicle =>
+      _$this._vehicle ??= FulfillmentArrangementVehicleBuilder();
+  set vehicle(FulfillmentArrangementVehicleBuilder? vehicle) =>
+      _$this._vehicle = vehicle;
+
   FulfillmentAssignmentBuilder() {
     FulfillmentAssignment._defaults(this);
   }
@@ -150,6 +183,9 @@ class FulfillmentAssignmentBuilder
       _role = $v.role;
       _assignedAt = $v.assignedAt;
       _userId = $v.userId;
+      _acknowledgedAt = $v.acknowledgedAt;
+      _endedAt = $v.endedAt;
+      _vehicle = $v.vehicle?.toBuilder();
       _$v = null;
     }
     return this;
@@ -169,15 +205,31 @@ class FulfillmentAssignmentBuilder
   FulfillmentAssignment build() => _build();
 
   _$FulfillmentAssignment _build() {
-    final _$result = _$v ??
-        _$FulfillmentAssignment._(
-          displayName: BuiltValueNullFieldError.checkNotNull(
-              displayName, r'FulfillmentAssignment', 'displayName'),
-          role: BuiltValueNullFieldError.checkNotNull(
-              role, r'FulfillmentAssignment', 'role'),
-          assignedAt: assignedAt,
-          userId: userId,
-        );
+    _$FulfillmentAssignment _$result;
+    try {
+      _$result = _$v ??
+          _$FulfillmentAssignment._(
+            displayName: BuiltValueNullFieldError.checkNotNull(
+                displayName, r'FulfillmentAssignment', 'displayName'),
+            role: BuiltValueNullFieldError.checkNotNull(
+                role, r'FulfillmentAssignment', 'role'),
+            assignedAt: assignedAt,
+            userId: userId,
+            acknowledgedAt: acknowledgedAt,
+            endedAt: endedAt,
+            vehicle: _vehicle?.build(),
+          );
+    } catch (_) {
+      late String _$failedField;
+      try {
+        _$failedField = 'vehicle';
+        _vehicle?.build();
+      } catch (e) {
+        throw BuiltValueNestedFieldError(
+            r'FulfillmentAssignment', _$failedField, e.toString());
+      }
+      rethrow;
+    }
     replace(_$result);
     return _$result;
   }

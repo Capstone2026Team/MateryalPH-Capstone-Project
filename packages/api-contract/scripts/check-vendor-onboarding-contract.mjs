@@ -181,3 +181,36 @@ assert.deepEqual(spec.components.schemas.XenditAccountVerificationWebhook.proper
 assert.deepEqual(spec.components.schemas.VendorPaymentOnboarding.required, ['status', 'environment'])
 assert.deepEqual(spec.components.schemas.VendorPaymentOnboarding.properties.status.enum, ['NOT_CONNECTED', 'CONNECTING', 'PENDING', 'CONNECTED_TEST', 'CONNECTION_FAILED'])
 assert.equal(spec.components.schemas.VendorPaymentOnboarding.properties.invitation_url, undefined)
+
+// Team monitoring counts all matching historical records, with bounded windows and safe detail fields.
+const tracking = spec.paths['/vendors/account/activity'].get
+assert.deepEqual(tracking.parameters.map(parameter => parameter.name), ['page', 'member_id', 'role', 'days', 'category', 'from', 'to'])
+assert.deepEqual(tracking.parameters.find(parameter => parameter.name === 'days').schema.enum, [7, 30, 90])
+const trackingMeta = spec.components.schemas.VendorTeamActivityEnvelope.properties.meta
+for (const field of ['total', 'total_events', 'succeeded_events', 'failed_events', 'categories']) assert(trackingMeta.required.includes(field))
+for (const field of ['category', 'correlation_id']) assert(spec.components.schemas.VendorTeamActivity.required.includes(field))
+assert(!('body' in spec.components.schemas.VendorTeamActivity.properties))
+console.log('Team tracking contract passed: filters, complete summaries, attribution and private-content boundary.')
+
+// Role statistics: one member at a time, optional role groups, peso values only when visible, no message content.
+const performance = spec.paths['/vendors/account/activity/performance'].get
+assert.deepEqual(performance.parameters.map(parameter => [parameter.name, parameter.required]), [['member_id', true], ['from', false], ['to', false]])
+const performanceSchema = spec.components.schemas.VendorTeamPerformance
+assert.deepEqual(performanceSchema.required, ['member_id', 'role', 'timezone', 'sales_value_visible', 'activity', 'trend'])
+for (const group of ['sales', 'quotations', 'orders', 'disputes', 'inventory', 'fulfillment']) assert(group in performanceSchema.properties && !performanceSchema.required.includes(group))
+assert(!spec.components.schemas.VendorTeamSalesPerformance.required.includes('value_centavos'))
+assert.deepEqual(performanceSchema.properties.trend.properties.metric.enum, ['SALES', 'INVENTORY_UPDATES', 'HANDOVERS', 'ACTIONS'])
+for (const name of ['VendorTeamSalesPerformance', 'VendorTeamFulfillmentPerformance']) for (const field of ['body', 'buyer_name', 'buyer_id']) assert(!(field in spec.components.schemas[name].properties))
+console.log('Team performance contract passed: member scope, role groups, Owner-only peso values and content boundary.')
+
+// Draft selection, activation intent and current new-order availability are separate contracts.
+assert.equal(spec.components.schemas.VendorSetupDraft.properties.vendor_delivery_enabled.type, 'boolean')
+const deliverySetup = spec.components.schemas.VendorDeliverySetup
+for (const field of ['fulfillment_method', 'staff_ready', 'vehicle_ready', 'pickup_location_ready', 'service_settings_ready', 'ready', 'enabled', 'available', 'active_delivery_obligations']) {
+  assert(deliverySetup.required.includes(field))
+}
+assert.equal(spec.components.schemas.VendorOnboardingSnapshot.properties.setup.properties.delivery_setup.$ref, '#/components/schemas/VendorDeliverySetup')
+assert.equal(spec.components.schemas.FleetVehicleListMeta.properties.delivery_setup.$ref, '#/components/schemas/VendorDeliverySetup')
+const eligibility = readFileSync(resolve(root, '../../services/api/app/Domain/Vendors/VendorDeliveryEligibility.php'), 'utf8')
+for (const rule of ["'FULFILLMENT'", "'m.status', 'ACTIVE'", "'u.account_status', 'ACTIVE'", "'m.deleted_at'", 'configuredVehiclesQuery', 'ACTIVE_DELIVERY_OBLIGATIONS']) assert(eligibility.includes(rule))
+console.log('Vendor Delivery contract passed: draft activation and live staff/vehicle readiness are explicit.')

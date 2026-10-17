@@ -31,19 +31,37 @@ erDiagram
     ANALYTICS_ACTIVE_USER_FACTS {
         uuid id PK
     }
+    ANALYTICS_ACTIVITY_FACTS {
+        uuid id PK
+    }
     ANALYTICS_CATEGORY_FACTS {
         uuid id PK
     }
     ANALYTICS_DAILY_FACTS {
         uuid id PK
     }
+    ANALYTICS_GEO_RUNS {
+        uuid id PK
+    }
     ANALYTICS_GEOGRAPHY_FACTS {
+        uuid id PK
+    }
+    ANALYTICS_ORDER_FACTS {
+        uuid id PK
+    }
+    ANALYTICS_ORDER_LINE_FACTS {
+        uuid id PK
+    }
+    ANALYTICS_PRESENCE_FACTS {
         uuid id PK
     }
     ANALYTICS_PUBLISHED_RUNS {
         uuid id PK
     }
     ANALYTICS_REFRESH_RUNS {
+        uuid id PK
+    }
+    ANALYTICS_RESPONSE_FACTS {
         uuid id PK
     }
     AUDIT_LOGS {
@@ -62,6 +80,9 @@ erDiagram
         uuid id PK
     }
     BADGE_DEFINITIONS {
+        uuid id PK
+    }
+    BADGE_SUPPRESSIONS {
         uuid id PK
     }
     BOT_RISK_CHALLENGES {
@@ -152,6 +173,9 @@ erDiagram
     COMPLIANCE_SUBMISSIONS {
         uuid id PK
     }
+    CONVERSATION_ARCHIVES {
+        uuid id PK
+    }
     CONVERSATION_ASSIGNMENTS {
         uuid id PK
     }
@@ -188,6 +212,9 @@ erDiagram
     DISPUTE_DECISIONS {
         uuid id PK
     }
+    DISPUTE_EVENTS {
+        uuid id PK
+    }
     DISPUTE_EVIDENCE {
         uuid id PK
     }
@@ -197,10 +224,22 @@ erDiagram
     DISPUTE_REMEDIES {
         uuid id PK
     }
+    DISPUTE_RESOLUTION_PROPOSALS {
+        uuid id PK
+    }
     DISPUTE_RESPONSES {
         uuid id PK
     }
     EMAIL_OTPS {
+        uuid id PK
+    }
+    ENFORCEMENT_ACTIONS {
+        uuid id PK
+    }
+    ENFORCEMENT_EVENTS {
+        uuid id PK
+    }
+    EXPORT_ACCESS_EVENTS {
         uuid id PK
     }
     EXTERNAL_FILING_EVIDENCE {
@@ -263,6 +302,9 @@ erDiagram
     FINANCIAL_SNAPSHOTS {
         uuid id PK
     }
+    FULFILLMENT_ISSUES {
+        uuid id PK
+    }
     FULFILLMENT_MILESTONES {
         uuid id PK
     }
@@ -288,7 +330,13 @@ erDiagram
     INVENTORY_MOVEMENTS {
         uuid id PK
     }
+    INVOICE_RECORD_DOWNLOADS {
+        uuid id PK
+    }
     INVOICE_RECORDS {
+        uuid id PK
+    }
+    INVOICE_REQUESTS {
         uuid id PK
     }
     JOB_BATCHES {
@@ -317,6 +365,11 @@ erDiagram
     }
     LISTING_VARIANTS {
         uuid id PK
+    }
+    LISTING_VIEW_DAYS {
+        uuid vendor_listing_id PK
+        date view_date PK
+        uuid buyer_profile_id PK
     }
     LOGIN_EVENTS {
         uuid id PK
@@ -366,10 +419,19 @@ erDiagram
     MIGRATIONS {
         integer id PK
     }
+    NFR_EVENTS {
+        uuid id PK
+    }
     NO_SHOW_EVENTS {
         uuid id PK
     }
     NOTIFICATION_DELIVERIES {
+        uuid id PK
+    }
+    NOTIFICATION_DELIVERY_ATTEMPTS {
+        uuid id PK
+    }
+    NOTIFICATION_DEVICES {
         uuid id PK
     }
     NOTIFICATION_PREFERENCES {
@@ -405,13 +467,22 @@ erDiagram
     OPERATING_HOURS {
         uuid id PK
     }
+    OPERATION_RETRIES {
+        uuid id PK
+    }
     ORDER_DELIVERY_SNAPSHOTS {
         uuid id PK
     }
     ORDER_FULFILLMENT_ASSIGNMENTS {
         uuid id PK
     }
+    ORDER_INVOICE_DETAILS {
+        uuid id PK
+    }
     ORDER_LINES {
+        uuid id PK
+    }
+    ORDER_PAYMENT_REMINDERS {
         uuid id PK
     }
     ORDER_SNAPSHOTS {
@@ -459,6 +530,9 @@ erDiagram
     PLATFORM_ROLES {
         uuid id PK
     }
+    PLATFORM_SETTING_VERSIONS {
+        uuid id PK
+    }
     PLATFORM_SETTINGS {
         uuid id PK
     }
@@ -466,6 +540,9 @@ erDiagram
         uuid id PK
     }
     PRIVACY_ACKNOWLEDGMENTS {
+        uuid id PK
+    }
+    PRIVACY_REQUEST_EVENTS {
         uuid id PK
     }
     PRIVACY_REQUESTS {
@@ -487,6 +564,9 @@ erDiagram
         uuid id PK
     }
     PSGC_BOUNDARIES {
+        uuid id PK
+    }
+    PSGC_BOUNDARY_IMPORTS {
         uuid id PK
     }
     PSGC_VERSIONS {
@@ -534,10 +614,19 @@ erDiagram
     REMITTANCE_GROUPS {
         uuid id PK
     }
+    REVIEW_FLAGS {
+        uuid id PK
+    }
     REVIEW_MEDIA {
         uuid id PK
     }
     REVIEW_MODERATION {
+        uuid id PK
+    }
+    REVIEW_REVISIONS {
+        uuid id PK
+    }
+    REVIEW_WINDOWS {
         uuid id PK
     }
     REVIEWS {
@@ -547,6 +636,12 @@ erDiagram
         uuid id PK
     }
     ROUTE_CACHE_ENTRIES {
+        uuid id PK
+    }
+    SCHEDULED_TASK_RUNS {
+        uuid id PK
+    }
+    SCORE_EXCLUSIONS {
         uuid id PK
     }
     SCORE_SNAPSHOTS {
@@ -723,6 +818,9 @@ erDiagram
     WORK_PACKAGE_MISSING_LINES {
         uuid id PK
     }
+    WORK_PACKAGE_VERSION_DELETIONS {
+        uuid work_package_version_id PK
+    }
     WORK_PACKAGE_VERSIONS {
         uuid id PK
     }
@@ -731,13 +829,18 @@ erDiagram
     }
     ADDRESSES ||--|{ BUYER_LOCATIONS : "address_id → id"
     ADDRESSES ||--o{ DELIVERY_SERVICE_AREAS : "address_id → id"
-    ADDRESSES ||--|{ PRICE_OBSERVATIONS : "address_id → id"
+    ADDRESSES ||--o{ PRICE_OBSERVATIONS : "address_id → id"
     ADDRESSES ||--|{ PROJECT_SITES : "address_id → id"
     AGREEMENT_DOCUMENTS ||--|{ AGREEMENT_VERSIONS : "agreement_document_id → id"
     AGREEMENT_VERSIONS ||--|{ AGREEMENT_ACCEPTANCES : "agreement_version_id → id"
     AGREEMENT_VERSIONS ||--o{ NRPC_ACCEPTANCES : "agreement_version_id → id"
     AGREEMENT_VERSIONS ||--o{ NRPC_RECORDS : "agreement_version_id → id"
     AGREEMENT_VERSIONS ||--|{ PRIVACY_ACKNOWLEDGMENTS : "agreement_version_id → id"
+    ANALYTICS_GEO_RUNS ||--|{ ANALYTICS_ACTIVITY_FACTS : "analytics_geo_run_id → id"
+    ANALYTICS_GEO_RUNS ||--|{ ANALYTICS_ORDER_FACTS : "analytics_geo_run_id → id"
+    ANALYTICS_GEO_RUNS ||--|{ ANALYTICS_PRESENCE_FACTS : "analytics_geo_run_id → id"
+    ANALYTICS_GEO_RUNS ||--|{ ANALYTICS_RESPONSE_FACTS : "analytics_geo_run_id → id"
+    ANALYTICS_ORDER_FACTS ||--|{ ANALYTICS_ORDER_LINE_FACTS : "analytics_order_fact_id → id"
     ANALYTICS_REFRESH_RUNS ||--|{ ANALYTICS_PUBLISHED_RUNS : "analytics_refresh_run_id → id"
     ANALYTICS_REFRESH_RUNS ||--o{ ANALYTICS_REFRESH_RUNS : "supersedes_run_id → id"
     ANALYTICS_REFRESH_RUNS ||--|{ MATERIAL_PRICE_DAILY_AGGREGATES : "analytics_refresh_run_id → id"
@@ -749,6 +852,7 @@ erDiagram
     AUTO_ACCEPT_POLICIES ||--|{ AUTO_ACCEPT_POLICY_VERSIONS : "auto_accept_policy_id → id"
     AUTO_ACCEPT_POLICY_VERSIONS ||--|{ VENDOR_CONFIRMATION_POLICY_VERSIONS : "auto_accept_policy_version_id → id"
     AUTO_ACCEPT_POLICY_VERSIONS ||--o{ VENDOR_CONFIRMATIONS : "auto_accept_policy_version_id → id"
+    BADGE_DEFINITIONS ||--|{ BADGE_SUPPRESSIONS : "badge_definition_id → id"
     BADGE_DEFINITIONS ||--|{ VENDOR_BADGE_HISTORY : "badge_definition_id → id"
     BOT_RISK_CHALLENGES ||--o{ EMAIL_OTPS : "bot_risk_challenge_id → id"
     BUYER_LOCATIONS ||--o{ CARTS : "alternate_drop_off_location_id → id"
@@ -759,11 +863,22 @@ erDiagram
     BUYER_PROFILES ||--|{ CARTS : "buyer_profile_id → id"
     BUYER_PROFILES ||--|{ CHECKOUT_GROUPS : "buyer_profile_id → id"
     BUYER_PROFILES ||--|{ CONVERSATIONS : "buyer_profile_id → id"
+    BUYER_PROFILES ||--o{ DISPUTE_CASES : "buyer_profile_id → id"
+    BUYER_PROFILES ||--o{ DISPUTE_PARTIES : "buyer_profile_id → id"
     BUYER_PROFILES ||--|{ FAVORITE_VENDORS : "buyer_profile_id → id"
+    BUYER_PROFILES ||--|{ INVOICE_REQUESTS : "buyer_profile_id → id"
+    BUYER_PROFILES ||--|{ LISTING_VIEW_DAYS : "buyer_profile_id → id"
+    BUYER_PROFILES ||--|{ ORDER_INVOICE_DETAILS : "buyer_profile_id → id"
     BUYER_PROFILES ||--|{ ORDERS : "buyer_profile_id → id"
     BUYER_PROFILES ||--o{ PAYMENTS : "buyer_profile_id → id"
     BUYER_PROFILES ||--|{ PROJECTS : "buyer_profile_id → id"
     BUYER_PROFILES ||--|{ QUOTATIONS : "buyer_profile_id → id"
+    BUYER_PROFILES ||--|{ REVIEW_WINDOWS : "buyer_profile_id → id"
+    BUYER_PROFILES ||--o{ REVIEWS : "buyer_profile_id → id"
+    CANCELLATION_DECISIONS ||--|{ NFR_EVENTS : "cancellation_decision_id → id"
+    CANCELLATION_DECISIONS ||--o{ PHYSICAL_REIMBURSEMENTS : "cancellation_decision_id → id"
+    CANCELLATION_DECISIONS ||--o{ REFUNDS : "cancellation_decision_id → id"
+    CANCELLATION_REQUESTS ||--o{ CANCELLATION_DECISIONS : "cancellation_request_id → id"
     CARTS ||--|{ CART_ITEMS : "cart_id → id"
     CARTS ||--|{ CART_VENDOR_GROUPS : "cart_id → id"
     CARTS ||--o{ CHECKOUT_GROUPS : "cart_id → id"
@@ -781,20 +896,39 @@ erDiagram
     COMPLIANCE_SUBMISSIONS ||--|{ COMPLIANCE_REVIEWS : "compliance_submission_id → id"
     COMPLIANCE_SUBMISSIONS ||--o{ COMPLIANCE_SUBMISSIONS : "supersedes_submission_id → id"
     COMPLIANCE_SUBMISSIONS ||--o{ VENDOR_LISTINGS : "current_compliance_submission_id → id"
+    CONVERSATIONS ||--|{ CONVERSATION_ARCHIVES : "conversation_id → id"
     CONVERSATIONS ||--|{ CONVERSATION_ASSIGNMENTS : "conversation_id → id"
     CONVERSATIONS ||--|{ CONVERSATION_PARTICIPANTS : "conversation_id → id"
+    CONVERSATIONS ||--o{ CONVERSATIONS : "canonical_conversation_id → id"
     CONVERSATIONS ||--|{ MESSAGES : "conversation_id → id"
     CONVERSATIONS ||--|{ QUOTATIONS : "conversation_id → id"
+    DATA_EXPORTS ||--|{ EXPORT_ACCESS_EVENTS : "data_export_id → id"
     DELIVERY_QUOTES ||--|{ DELIVERY_ASSIGNMENTS : "delivery_quote_id → id"
     DISPUTE_CASES ||--|{ DISPUTE_APPEALS : "dispute_case_id → id"
     DISPUTE_CASES ||--|{ DISPUTE_CLARIFICATIONS : "dispute_case_id → id"
     DISPUTE_CASES ||--|{ DISPUTE_DECISIONS : "dispute_case_id → id"
+    DISPUTE_CASES ||--|{ DISPUTE_EVENTS : "dispute_case_id → id"
     DISPUTE_CASES ||--|{ DISPUTE_EVIDENCE : "dispute_case_id → id"
     DISPUTE_CASES ||--|{ DISPUTE_PARTIES : "dispute_case_id → id"
     DISPUTE_CASES ||--|{ DISPUTE_REMEDIES : "dispute_case_id → id"
+    DISPUTE_CASES ||--|{ DISPUTE_RESOLUTION_PROPOSALS : "dispute_case_id → id"
     DISPUTE_CASES ||--|{ DISPUTE_RESPONSES : "dispute_case_id → id"
+    DISPUTE_CASES ||--o{ ENFORCEMENT_ACTIONS : "dispute_case_id → id"
+    DISPUTE_CASES ||--o{ REFUNDS : "dispute_case_id → id"
+    DISPUTE_DECISIONS ||--o{ DISPUTE_APPEALS : "appealed_decision_id → id"
+    DISPUTE_DECISIONS ||--o{ DISPUTE_APPEALS : "result_decision_id → id"
+    DISPUTE_DECISIONS ||--o{ DISPUTE_CASES : "current_decision_id → id"
+    DISPUTE_DECISIONS ||--o{ DISPUTE_DECISIONS : "supersedes_decision_id → id"
+    DISPUTE_DECISIONS ||--o{ DISPUTE_REMEDIES : "dispute_decision_id → id"
+    DISPUTE_DECISIONS ||--o{ ENFORCEMENT_ACTIONS : "dispute_decision_id → id"
+    DISPUTE_DECISIONS ||--o{ PHYSICAL_REIMBURSEMENTS : "dispute_decision_id → id"
+    DISPUTE_DECISIONS ||--o{ REFUNDS : "dispute_decision_id → id"
+    DISPUTE_EVENTS ||--o{ DISPUTE_EVIDENCE : "dispute_event_id → id"
+    DISPUTE_EVENTS ||--o{ DISPUTE_RESPONSES : "dispute_event_id → id"
+    DISPUTE_RESOLUTION_PROPOSALS ||--o{ DISPUTE_DECISIONS : "dispute_proposal_id → id"
     EMAIL_OTPS ||--|{ ACCOUNT_EMAIL_CHANGES : "email_otp_id → id"
     EMAIL_OTPS ||--o{ AUTH_SESSIONS : "reauthentication_email_otp_id → id"
+    ENFORCEMENT_ACTIONS ||--|{ ENFORCEMENT_EVENTS : "enforcement_action_id → id"
     FEE_ADJUSTMENTS ||--o{ FEE_STATEMENT_LINES : "fee_adjustment_id → id"
     FEE_ADJUSTMENTS ||--o{ REFUNDS : "fee_adjustment_id → id"
     FEE_ASSESSMENTS ||--|{ FEE_ADJUSTMENTS : "fee_assessment_id → id"
@@ -803,21 +937,28 @@ erDiagram
     FEE_POLICY_VERSIONS ||--|{ FEE_ASSESSMENTS : "fee_policy_version_id → id"
     FEE_POLICY_VERSIONS ||--o{ FEE_STATEMENTS : "fee_policy_version_id → id"
     FEE_POLICY_VERSIONS ||--o{ FINANCIAL_SNAPSHOTS : "fee_policy_version_id → id"
+    FEE_STATEMENT_LINES ||--o{ FEE_STATEMENT_LINES : "corrects_line_id → id"
     FEE_STATEMENTS ||--|{ FEE_PAYMENT_ALLOCATIONS : "fee_statement_id → id"
     FEE_STATEMENTS ||--|{ FEE_STATEMENT_LINES : "fee_statement_id → id"
     FEE_STATEMENTS ||--o{ INVOICE_RECORDS : "fee_statement_id → id"
     FEE_STATEMENTS ||--o{ PAYMENTS : "fee_statement_id → id"
     FEE_STATEMENTS ||--o{ REFUNDS : "fee_statement_id → id"
+    FILES ||--o{ CANCELLATION_DECISIONS : "evidence_file_id → id"
     FILES ||--|{ CATALOG_IMPORT_JOBS : "file_id → id"
     FILES ||--o{ COMPLIANCE_EVIDENCE : "file_id → id"
     FILES ||--|{ COMPLIANCE_REFERENCE_REGISTERS : "file_id → id"
+    FILES ||--o{ DISPUTE_EVIDENCE : "file_id → id"
+    FILES ||--o{ DISPUTE_REMEDIES : "evidence_file_id → id"
     FILES ||--|{ EXTERNAL_FILING_EVIDENCE : "file_id → id"
+    FILES ||--o{ FULFILLMENT_PROOFS : "photo_file_id → id"
+    FILES ||--o{ FULFILLMENT_PROOFS : "signature_file_id → id"
     FILES ||--|{ INVOICE_RECORDS : "file_id → id"
     FILES ||--|{ LISTING_MEDIA : "file_id → id"
     FILES ||--|{ MESSAGE_ATTACHMENTS : "file_id → id"
     FILES ||--o{ PHYSICAL_PAYMENT_RECORDS : "evidence_file_id → id"
     FILES ||--o{ PHYSICAL_REIMBURSEMENTS : "evidence_file_id → id"
     FILES ||--o{ REMITTANCE_ASSESSMENTS : "evidence_file_id → id"
+    FILES ||--o{ REVIEW_MEDIA : "file_id → id"
     FILES ||--|{ STORE_MEDIA : "file_id → id"
     FILES ||--o{ STORE_PROFILES : "banner_file_id → id"
     FILES ||--o{ STORE_PROFILES : "logo_file_id → id"
@@ -838,6 +979,8 @@ erDiagram
     FINANCIAL_SNAPSHOTS ||--|{ FINANCIAL_SNAPSHOT_LINES : "financial_snapshot_id → id"
     FINANCIAL_SNAPSHOTS ||--o{ PAYMENTS : "financial_snapshot_id → id"
     FINANCIAL_SNAPSHOTS ||--|{ REMITTANCE_ASSESSMENTS : "financial_snapshot_id → id"
+    FULFILLMENT_MILESTONES ||--o{ FULFILLMENT_PROOFS : "milestone_id → id"
+    FULFILLMENTS ||--|{ FULFILLMENT_ISSUES : "fulfillment_id → id"
     FULFILLMENTS ||--|{ FULFILLMENT_MILESTONES : "fulfillment_id → id"
     FULFILLMENTS ||--|{ FULFILLMENT_PROOFS : "fulfillment_id → id"
     FULFILLMENTS ||--|{ NO_SHOW_EVENTS : "fulfillment_id → id"
@@ -845,6 +988,11 @@ erDiagram
     INVENTORY_ITEMS ||--|{ INVENTORY_HOLDS : "inventory_item_id → id"
     INVENTORY_ITEMS ||--|{ INVENTORY_MOVEMENTS : "inventory_item_id → id"
     INVENTORY_ITEMS ||--|{ STOCK_CONFIRMATION_EVENTS : "inventory_item_id → id"
+    INVOICE_RECORDS ||--|{ INVOICE_RECORD_DOWNLOADS : "invoice_record_id → id"
+    INVOICE_RECORDS ||--o{ INVOICE_RECORDS : "amends_invoice_record_id → id"
+    INVOICE_RECORDS ||--o{ INVOICE_REQUESTS : "fulfilled_invoice_record_id → id"
+    INVOICE_RECORDS ||--o{ INVOICE_REQUESTS : "invoice_record_id → id"
+    INVOICE_REQUESTS ||--o{ INVOICE_RECORDS : "invoice_request_id → id"
     LISTING_MEDIA ||--o{ LISTING_MEDIA : "replaces_media_id → id"
     LISTING_PRICE_VERSIONS ||--o{ CART_ITEMS : "listing_price_version_id → id"
     LISTING_PRICE_VERSIONS ||--o{ LISTING_PRICE_VERSIONS : "supersedes_price_version_id → id"
@@ -861,6 +1009,7 @@ erDiagram
     LISTING_VARIANTS ||--|{ PRICE_OBSERVATIONS : "listing_variant_id → id"
     LISTING_VARIANTS ||--o{ QUOTATION_LINES : "listing_variant_id → id"
     LISTING_VARIANTS ||--|{ VENDOR_CONFIRMATION_POLICY_VERSIONS : "listing_variant_id → id"
+    MATERIAL_CATEGORIES ||--o{ ANALYTICS_ORDER_LINE_FACTS : "material_category_id → id"
     MATERIAL_CATEGORIES ||--|{ BUYER_PREFERRED_CATEGORIES : "material_category_id → id"
     MATERIAL_CATEGORIES ||--|{ MATERIALS : "material_category_id → id"
     MATERIAL_CATEGORIES ||--|{ TECHNICAL_ATTRIBUTE_DEFINITIONS : "material_category_id → id"
@@ -870,8 +1019,10 @@ erDiagram
     MATERIAL_COMPARABLE_GROUP_VERSIONS ||--|{ MATERIAL_PRICE_DAILY_AGGREGATES : "material_comparable_group_version_id → id"
     MATERIAL_COMPARABLE_GROUP_VERSIONS ||--o{ PRICE_OBSERVATIONS : "comparable_group_version_id → id"
     MATERIAL_COMPARABLE_GROUPS ||--|{ MATERIAL_COMPARABLE_GROUP_VERSIONS : "material_comparable_group_id → id"
+    MATERIAL_COMPARABLE_GROUPS ||--o{ PRICE_OBSERVATIONS : "comparable_group_id → id"
     MATERIAL_TAGS ||--|{ LISTING_TAG_LINKS : "material_tag_id → id"
     MATERIAL_TAGS ||--|{ MATERIAL_TAG_LINKS : "material_tag_id → id"
+    MATERIALS ||--o{ ANALYTICS_ORDER_LINE_FACTS : "material_id → id"
     MATERIALS ||--|{ MATERIAL_ALIASES : "material_id → id"
     MATERIALS ||--|{ MATERIAL_COMPARABLE_GROUPS : "material_id → id"
     MATERIALS ||--|{ MATERIAL_COMPATIBLE_UNITS : "material_id → id"
@@ -879,9 +1030,11 @@ erDiagram
     MATERIALS ||--o{ PRODUCTS : "material_id → id"
     MATERIALS ||--|{ REGULATED_MATERIAL_RULES : "material_id → id"
     MATERIALS ||--o{ UNIT_CONVERSIONS : "material_id → id"
-    MATERIALS ||--|{ WORK_PACKAGE_LINES : "material_id → id"
+    MATERIALS ||--o{ WORK_PACKAGE_LINES : "material_id → id"
     MESSAGES ||--|{ MESSAGE_ATTACHMENTS : "message_id → id"
     MESSAGES ||--|{ MESSAGE_READ_RECEIPTS : "message_id → id"
+    NOTIFICATION_DELIVERIES ||--|{ NOTIFICATION_DELIVERY_ATTEMPTS : "notification_delivery_id → id"
+    NOTIFICATION_DEVICES ||--o{ NOTIFICATION_DELIVERIES : "device_id → id"
     NOTIFICATIONS ||--|{ NOTIFICATION_DELIVERIES : "notification_id → id"
     NRPC_RECORDS ||--o{ NRPC_ACCEPTANCES : "nrpc_record_id → id"
     NRPC_RECORDS ||--|{ NRPC_LINE_ALLOCATIONS : "nrpc_record_id → id"
@@ -898,21 +1051,32 @@ erDiagram
     ORDERS ||--|{ FEE_ASSESSMENT_EVENTS : "order_id → id"
     ORDERS ||--|{ FEE_ASSESSMENTS : "order_id → id"
     ORDERS ||--|{ FINANCIAL_SNAPSHOTS : "order_id → id"
+    ORDERS ||--|{ FULFILLMENT_ISSUES : "order_id → id"
+    ORDERS ||--o{ FULFILLMENT_MILESTONES : "order_id → id"
+    ORDERS ||--o{ FULFILLMENT_PROOFS : "order_id → id"
     ORDERS ||--|{ FULFILLMENTS : "order_id → id"
     ORDERS ||--o{ INVOICE_RECORDS : "order_id → id"
+    ORDERS ||--|{ INVOICE_REQUESTS : "order_id → id"
+    ORDERS ||--o{ METRIC_EVENTS : "order_id → id"
+    ORDERS ||--|{ NFR_EVENTS : "order_id → id"
     ORDERS ||--|{ NRPC_ACCEPTANCES : "order_id → id"
     ORDERS ||--|{ NRPC_RECORDS : "order_id → id"
     ORDERS ||--|{ ORDER_DELIVERY_SNAPSHOTS : "order_id → id"
     ORDERS ||--|{ ORDER_FULFILLMENT_ASSIGNMENTS : "order_id → id"
+    ORDERS ||--|{ ORDER_INVOICE_DETAILS : "order_id → id"
     ORDERS ||--|{ ORDER_LINES : "order_id → id"
+    ORDERS ||--|{ ORDER_PAYMENT_REMINDERS : "order_id → id"
     ORDERS ||--|{ ORDER_SNAPSHOTS : "order_id → id"
     ORDERS ||--|{ ORDER_STATUS_HISTORY : "order_id → id"
     ORDERS ||--o{ PAYMENTS : "order_id → id"
     ORDERS ||--|{ PHYSICAL_PAYMENT_RECORDS : "order_id → id"
+    ORDERS ||--o{ PHYSICAL_REIMBURSEMENTS : "order_id → id"
     ORDERS ||--o{ QUOTATIONS : "accepted_order_id → id"
     ORDERS ||--o{ REFUNDS : "order_id → id"
     ORDERS ||--|{ REMITTANCE_ASSESSMENTS : "order_id → id"
+    ORDERS ||--|{ REVIEW_WINDOWS : "order_id → id"
     ORDERS ||--|{ REVIEWS : "order_id → id"
+    ORDERS ||--|{ SCORE_EXCLUSIONS : "order_id → id"
     ORDERS ||--o{ TAX_ADJUSTMENTS : "order_id → id"
     ORDERS ||--|{ VENDOR_CONFIRMATIONS : "order_id → id"
     ORDERS ||--o{ WORK_PACKAGE_MISSING_LINES : "linked_order_id → id"
@@ -933,14 +1097,22 @@ erDiagram
     PLATFORM_ROLES ||--|{ ADMIN_INVITATIONS : "platform_role_id → id"
     PLATFORM_ROLES ||--|{ ADMIN_MEMBERSHIPS : "platform_role_id → id"
     PLATFORM_ROLES ||--|{ ROLE_PERMISSIONS : "platform_role_id → id"
+    PRIVACY_REQUESTS ||--|{ PRIVACY_REQUEST_EVENTS : "privacy_request_id → id"
     PRODUCTS ||--|{ VENDOR_LISTINGS : "product_id → id"
     PROJECTS ||--|{ BUDGET_OVERRIDES : "project_id → id"
     PROJECTS ||--|{ PROJECT_SITES : "project_id → id"
     PROJECTS ||--|{ WORK_PACKAGES : "project_id → id"
     PSGC_AREAS ||--o{ PSGC_AREAS : "parent_id → id"
     PSGC_AREAS ||--|{ PSGC_BOUNDARIES : "psgc_area_id → id"
+    PSGC_BOUNDARY_IMPORTS ||--o{ PSGC_BOUNDARIES : "psgc_boundary_import_id → id"
     PSGC_VERSIONS ||--o{ ADDRESSES : "psgc_version_id → id"
+    PSGC_VERSIONS ||--o{ ANALYTICS_ACTIVITY_FACTS : "psgc_version_id → id"
+    PSGC_VERSIONS ||--o{ ANALYTICS_GEO_RUNS : "psgc_version_id → id"
+    PSGC_VERSIONS ||--o{ ANALYTICS_ORDER_FACTS : "psgc_version_id → id"
+    PSGC_VERSIONS ||--o{ ANALYTICS_PRESENCE_FACTS : "psgc_version_id → id"
+    PSGC_VERSIONS ||--o{ ANALYTICS_RESPONSE_FACTS : "psgc_version_id → id"
     PSGC_VERSIONS ||--|{ PSGC_AREAS : "psgc_version_id → id"
+    PSGC_VERSIONS ||--|{ PSGC_BOUNDARY_IMPORTS : "psgc_version_id → id"
     QUOTATION_VERSIONS ||--o{ FINANCIAL_SNAPSHOTS : "quotation_version_id → id"
     QUOTATION_VERSIONS ||--o{ ORDERS : "quotation_version_id → id"
     QUOTATION_VERSIONS ||--o{ QUOTATION_CHANGES : "quotation_version_id → id"
@@ -953,7 +1125,7 @@ erDiagram
     QUOTATIONS ||--|{ QUOTATION_COUNTER_OFFERS : "quotation_id → id"
     QUOTATIONS ||--|{ QUOTATION_EVENTS : "quotation_id → id"
     QUOTATIONS ||--|{ QUOTATION_VERSIONS : "quotation_id → id"
-    REFUNDS ||--|{ PHYSICAL_REIMBURSEMENTS : "refund_id → id"
+    REFUNDS ||--o{ PHYSICAL_REIMBURSEMENTS : "refund_id → id"
     REFUNDS ||--|{ REFUND_ATTEMPTS : "refund_id → id"
     REFUNDS ||--|{ REFUND_EVENTS : "refund_id → id"
     REFUNDS ||--o{ TAX_ADJUSTMENTS : "refund_id → id"
@@ -963,8 +1135,11 @@ erDiagram
     REMITTANCE_ASSESSMENTS ||--o{ VENDOR_WITHHOLDING_ACCUMULATORS : "crossing_assessment_id → id"
     REMITTANCE_GROUPS ||--|{ REMITTANCE_ASSESSMENTS : "remittance_group_id → id"
     REMITTANCE_GROUPS ||--|{ REMITTANCE_COLLECTIONS : "remittance_group_id → id"
+    REVIEW_FLAGS ||--o{ REVIEW_MODERATION : "review_flag_id → id"
+    REVIEWS ||--|{ REVIEW_FLAGS : "review_id → id"
     REVIEWS ||--|{ REVIEW_MEDIA : "review_id → id"
     REVIEWS ||--|{ REVIEW_MODERATION : "review_id → id"
+    REVIEWS ||--|{ REVIEW_REVISIONS : "review_id → id"
     STORE_PROFILES ||--|{ OPERATING_HOURS : "store_profile_id → id"
     STORE_PROFILES ||--|{ STORE_MEDIA : "store_profile_id → id"
     STORE_PROFILES ||--|{ STORE_OPERATION_DATE_OVERRIDES : "store_profile_id → id"
@@ -973,6 +1148,7 @@ erDiagram
     TAX_REPORT_PACKAGES ||--|{ TAX_REPORT_PACKAGE_LINES : "tax_report_package_id → id"
     TAX_RULE_VERSIONS ||--o{ FINANCIAL_SNAPSHOTS : "tax_rule_version_id → id"
     TAX_RULE_VERSIONS ||--|{ WITHHOLDING_ASSIGNMENTS : "tax_rule_version_id → id"
+    UNITS ||--o{ ANALYTICS_ORDER_LINE_FACTS : "unit_id → id"
     UNITS ||--|{ LISTING_VARIANTS : "unit_id → id"
     UNITS ||--|{ MATERIAL_COMPARABLE_GROUP_VERSIONS : "canonical_unit_id → id"
     UNITS ||--|{ MATERIAL_COMPATIBLE_UNITS : "unit_id → id"
@@ -988,10 +1164,14 @@ erDiagram
     USERS ||--o{ ADMIN_MEMBERSHIPS : "invited_by_user_id → id"
     USERS ||--|{ ADMIN_MEMBERSHIPS : "user_id → id"
     USERS ||--|{ AGREEMENT_ACCEPTANCES : "user_id → id"
+    USERS ||--o{ ANALYTICS_GEO_RUNS : "requested_by_user_id → id"
+    USERS ||--o{ ANALYTICS_REFRESH_RUNS : "reviewed_by_user_id → id"
     USERS ||--o{ AUDIT_LOGS : "actor_user_id → id"
     USERS ||--|{ AUTH_SESSIONS : "user_id → id"
     USERS ||--o{ AUTO_ACCEPT_POLICIES : "updated_by_user_id → id"
     USERS ||--|{ AUTO_ACCEPT_POLICY_VERSIONS : "created_by_user_id → id"
+    USERS ||--|{ BADGE_SUPPRESSIONS : "created_by_user_id → id"
+    USERS ||--o{ BADGE_SUPPRESSIONS : "lifted_by_user_id → id"
     USERS ||--|{ BUDGET_OVERRIDES : "buyer_user_id → id"
     USERS ||--|{ BUSINESS_DOCUMENT_REVIEWS : "reviewer_user_id → id"
     USERS ||--|{ BUYER_PROFILES : "user_id → id"
@@ -1006,6 +1186,7 @@ erDiagram
     USERS ||--|{ COMPLIANCE_REFERENCE_REGISTERS : "imported_by_user_id → id"
     USERS ||--o{ COMPLIANCE_REVIEWS : "reviewer_user_id → id"
     USERS ||--o{ COMPLIANCE_SUBMISSIONS : "submitted_by_user_id → id"
+    USERS ||--|{ CONVERSATION_ARCHIVES : "user_id → id"
     USERS ||--o{ CONVERSATION_ASSIGNMENTS : "assigned_by_user_id → id"
     USERS ||--|{ CONVERSATION_ASSIGNMENTS : "assigned_user_id → id"
     USERS ||--|{ CONVERSATION_PARTICIPANTS : "user_id → id"
@@ -1013,13 +1194,26 @@ erDiagram
     USERS ||--|{ DATA_EXPORTS : "requested_by_user_id → id"
     USERS ||--|{ DELIVERY_ASSIGNMENTS : "assigned_by_user_id → id"
     USERS ||--o{ DISPUTE_APPEALS : "actor_user_id → id"
+    USERS ||--o{ DISPUTE_CASES : "assigned_admin_user_id → id"
+    USERS ||--o{ DISPUTE_CASES : "filed_by_user_id → id"
+    USERS ||--o{ DISPUTE_CASES : "vendor_handler_user_id → id"
     USERS ||--o{ DISPUTE_CLARIFICATIONS : "actor_user_id → id"
+    USERS ||--o{ DISPUTE_CLARIFICATIONS : "responded_by_user_id → id"
     USERS ||--o{ DISPUTE_DECISIONS : "actor_user_id → id"
+    USERS ||--o{ DISPUTE_EVENTS : "actor_user_id → id"
     USERS ||--o{ DISPUTE_EVIDENCE : "actor_user_id → id"
     USERS ||--o{ DISPUTE_PARTIES : "actor_user_id → id"
     USERS ||--o{ DISPUTE_REMEDIES : "actor_user_id → id"
+    USERS ||--o{ DISPUTE_REMEDIES : "recorded_by_user_id → id"
+    USERS ||--o{ DISPUTE_RESOLUTION_PROPOSALS : "answered_by_user_id → id"
+    USERS ||--|{ DISPUTE_RESOLUTION_PROPOSALS : "proposed_by_user_id → id"
     USERS ||--o{ DISPUTE_RESPONSES : "actor_user_id → id"
     USERS ||--o{ EMAIL_OTPS : "user_id → id"
+    USERS ||--o{ ENFORCEMENT_ACTIONS : "applied_by_user_id → id"
+    USERS ||--o{ ENFORCEMENT_ACTIONS : "issued_by_user_id → id"
+    USERS ||--o{ ENFORCEMENT_ACTIONS : "lifted_by_user_id → id"
+    USERS ||--o{ ENFORCEMENT_EVENTS : "actor_user_id → id"
+    USERS ||--|{ EXPORT_ACCESS_EVENTS : "user_id → id"
     USERS ||--o{ EXTERNAL_FILING_EVIDENCE : "verified_by_user_id → id"
     USERS ||--|{ EXTERNAL_IDENTITIES : "user_id → id"
     USERS ||--|{ FEE_ADJUSTMENTS : "approved_by_user_id → id"
@@ -1032,12 +1226,18 @@ erDiagram
     USERS ||--o{ FINANCIAL_LEDGER_ENTRIES : "actor_user_id → id"
     USERS ||--o{ FINANCIAL_POSTING_BATCHES : "prepared_by_user_id → id"
     USERS ||--o{ FINANCIAL_POSTING_BATCHES : "reviewed_by_user_id → id"
+    USERS ||--|{ FULFILLMENT_ISSUES : "reported_by_user_id → id"
+    USERS ||--o{ FULFILLMENT_ISSUES : "vendor_responded_by_user_id → id"
     USERS ||--o{ FULFILLMENT_MILESTONES : "actor_user_id → id"
     USERS ||--o{ FULFILLMENT_PROOFS : "actor_user_id → id"
     USERS ||--o{ IDEMPOTENCY_RECORDS : "actor_user_id → id"
     USERS ||--o{ INVENTORY_ITEMS : "updated_by_user_id → id"
     USERS ||--o{ INVENTORY_MOVEMENTS : "actor_user_id → id"
+    USERS ||--|{ INVOICE_RECORD_DOWNLOADS : "user_id → id"
+    USERS ||--o{ INVOICE_RECORDS : "reconciliation_noted_by_user_id → id"
+    USERS ||--o{ INVOICE_RECORDS : "uploaded_by_user_id → id"
     USERS ||--o{ INVOICE_RECORDS : "verified_by_user_id → id"
+    USERS ||--|{ INVOICE_REQUESTS : "requested_by_user_id → id"
     USERS ||--o{ LISTING_COMPARABLE_ASSIGNMENTS : "reviewed_by_user_id → id"
     USERS ||--o{ LISTING_MEDIA : "uploaded_by_user_id → id"
     USERS ||--|{ LISTING_PRICE_VERSIONS : "created_by_user_id → id"
@@ -1048,13 +1248,16 @@ erDiagram
     USERS ||--|{ MESSAGE_READ_RECEIPTS : "user_id → id"
     USERS ||--|{ MESSAGES : "sender_user_id → id"
     USERS ||--o{ NO_SHOW_EVENTS : "actor_user_id → id"
+    USERS ||--|{ NOTIFICATION_DEVICES : "user_id → id"
     USERS ||--|{ NOTIFICATION_PREFERENCES : "user_id → id"
     USERS ||--|{ NOTIFICATIONS : "user_id → id"
     USERS ||--o{ NRPC_ACCEPTANCES : "actor_user_id → id"
     USERS ||--o{ NRPC_RECORDS : "actor_user_id → id"
+    USERS ||--|{ OPERATION_RETRIES : "actor_user_id → id"
     USERS ||--|{ ORDER_DELIVERY_SNAPSHOTS : "confirmed_by_user_id → id"
     USERS ||--|{ ORDER_FULFILLMENT_ASSIGNMENTS : "assigned_by_user_id → id"
     USERS ||--|{ ORDER_FULFILLMENT_ASSIGNMENTS : "user_id → id"
+    USERS ||--|{ ORDER_INVOICE_DETAILS : "updated_by_user_id → id"
     USERS ||--o{ ORDER_SNAPSHOTS : "created_by_user_id → id"
     USERS ||--o{ ORDER_STATUS_HISTORY : "actor_user_id → id"
     USERS ||--o{ ORDERS : "online_balance_approved_by_user_id → id"
@@ -1062,19 +1265,29 @@ erDiagram
     USERS ||--o{ PHYSICAL_PAYMENT_RECORDS : "buyer_acknowledged_by_user_id → id"
     USERS ||--o{ PHYSICAL_PAYMENT_RECORDS : "recorded_by_user_id → id"
     USERS ||--o{ PHYSICAL_REIMBURSEMENTS : "confirmed_by_user_id → id"
-    USERS ||--|{ PHYSICAL_REIMBURSEMENTS : "recorded_by_user_id → id"
+    USERS ||--o{ PHYSICAL_REIMBURSEMENTS : "recorded_by_user_id → id"
     USERS ||--o{ PICKUP_AUTHORIZATIONS : "actor_user_id → id"
+    USERS ||--o{ PLATFORM_SETTING_VERSIONS : "changed_by_user_id → id"
     USERS ||--o{ PLATFORM_SETTINGS : "updated_by_user_id → id"
     USERS ||--|{ PRIVACY_ACKNOWLEDGMENTS : "user_id → id"
+    USERS ||--|{ PRIVACY_REQUEST_EVENTS : "actor_user_id → id"
+    USERS ||--o{ PRIVACY_REQUESTS : "handler_user_id → id"
+    USERS ||--o{ PRIVACY_REQUESTS : "identity_verified_by_user_id → id"
+    USERS ||--o{ PRIVACY_REQUESTS : "recorded_by_user_id → id"
     USERS ||--|{ PRIVACY_REQUESTS : "user_id → id"
     USERS ||--|{ QUOTATION_CHANGES : "actor_user_id → id"
     USERS ||--|{ QUOTATION_COUNTER_OFFERS : "actor_user_id → id"
     USERS ||--|{ QUOTATION_EVENTS : "actor_user_id → id"
     USERS ||--|{ QUOTATION_VERSIONS : "created_by_user_id → id"
     USERS ||--|{ RECOVERY_CODES : "user_id → id"
+    USERS ||--|{ REVIEW_FLAGS : "reporter_user_id → id"
+    USERS ||--o{ REVIEW_FLAGS : "resolved_by_user_id → id"
     USERS ||--o{ REVIEW_MEDIA : "actor_user_id → id"
     USERS ||--o{ REVIEW_MODERATION : "actor_user_id → id"
+    USERS ||--o{ REVIEW_REVISIONS : "actor_user_id → id"
     USERS ||--|{ REVIEWS : "reviewer_user_id → id"
+    USERS ||--|{ SCORE_EXCLUSIONS : "created_by_user_id → id"
+    USERS ||--o{ SCORE_EXCLUSIONS : "revoked_by_user_id → id"
     USERS ||--|{ STOCK_CONFIRMATION_EVENTS : "actor_user_id → id"
     USERS ||--|{ STORE_OPERATION_DATE_OVERRIDES : "created_by_user_id → id"
     USERS ||--|{ STORE_OPERATION_DATE_OVERRIDES : "updated_by_user_id → id"
@@ -1082,6 +1295,7 @@ erDiagram
     USERS ||--o{ TAX_ADJUSTMENTS : "reviewed_by_user_id → id"
     USERS ||--o{ TAX_CERTIFICATES : "verified_by_user_id → id"
     USERS ||--o{ TAX_EVIDENCE : "reviewed_by_user_id → id"
+    USERS ||--o{ TAX_REPORT_PACKAGES : "due_date_reviewer_id → id"
     USERS ||--|{ TAX_REPORT_PACKAGES : "prepared_by_user_id → id"
     USERS ||--o{ TAX_REPORT_PACKAGES : "reviewed_by_user_id → id"
     USERS ||--o{ TAX_RULE_VERSIONS : "approved_by_user_id → id"
@@ -1115,6 +1329,7 @@ erDiagram
     USERS ||--o{ VENDOR_VEHICLES : "updated_by_user_id → id"
     USERS ||--|{ VENDOR_VERIFICATION_CHANGE_HISTORY : "actor_user_id → id"
     USERS ||--o{ WORK_PACKAGE_MISSING_LINES : "waived_by_user_id → id"
+    USERS ||--|{ WORK_PACKAGE_VERSION_DELETIONS : "deleted_by_user_id → id"
     USERS ||--o{ WORK_PACKAGE_VERSIONS : "created_by_user_id → id"
     VEHICLE_RATE_VERSIONS ||--|{ DELIVERY_QUOTES : "vehicle_rate_version_id → id"
     VENDOR_ADDRESS_VERSIONS ||--o{ VENDOR_ADDRESSES : "current_version_id → id"
@@ -1134,10 +1349,15 @@ erDiagram
     VENDOR_LISTINGS ||--|{ LISTING_STATUS_HISTORY : "vendor_listing_id → id"
     VENDOR_LISTINGS ||--|{ LISTING_TAG_LINKS : "vendor_listing_id → id"
     VENDOR_LISTINGS ||--|{ LISTING_VARIANTS : "vendor_listing_id → id"
+    VENDOR_LISTINGS ||--|{ LISTING_VIEW_DAYS : "vendor_listing_id → id"
     VENDOR_LISTINGS ||--o{ ORDER_LINES : "vendor_listing_id → id"
+    VENDOR_LISTINGS ||--o{ PRICE_OBSERVATIONS : "vendor_listing_id → id"
+    VENDOR_LISTINGS ||--o{ REVIEWS : "vendor_listing_id → id"
     VENDOR_LISTINGS ||--|{ STOCK_CONFIRMATION_REMINDERS : "vendor_listing_id → id"
+    VENDOR_MEMBERSHIPS ||--o{ VENDOR_INVITATIONS : "accepted_membership_id → id"
     VENDOR_ONBOARDING_REQUIREMENTS ||--o{ VENDOR_DOCUMENTS : "onboarding_step_id → id"
     VENDOR_ORGANIZATIONS ||--o{ AGREEMENT_ACCEPTANCES : "vendor_organization_id → id"
+    VENDOR_ORGANIZATIONS ||--|{ BADGE_SUPPRESSIONS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ CART_VENDOR_GROUPS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ CATALOG_IMPORT_JOBS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ CHECKOUT_VENDOR_GROUPS : "vendor_organization_id → id"
@@ -1145,16 +1365,23 @@ erDiagram
     VENDOR_ORGANIZATIONS ||--o{ COMPLIANCE_EVIDENCE : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--o{ COMPLIANCE_SUBMISSIONS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ CONVERSATIONS : "vendor_organization_id → id"
+    VENDOR_ORGANIZATIONS ||--o{ DATA_EXPORTS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ DELIVERY_QUOTES : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ DELIVERY_SERVICE_AREAS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--o{ DIRECTORY_SUPPLIERS : "claimed_vendor_organization_id → id"
+    VENDOR_ORGANIZATIONS ||--o{ DISPUTE_CASES : "vendor_organization_id → id"
+    VENDOR_ORGANIZATIONS ||--o{ DISPUTE_PARTIES : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ EXTERNAL_FILING_EVIDENCE : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ FAVORITE_VENDORS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ FEE_ASSESSMENTS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ FEE_STATEMENTS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--o{ FINANCE_REVIEW_ITEMS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ INVOICE_RECORDS : "vendor_organization_id → id"
+    VENDOR_ORGANIZATIONS ||--|{ INVOICE_REQUESTS : "vendor_organization_id → id"
+    VENDOR_ORGANIZATIONS ||--|{ LISTING_VIEW_DAYS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ METRIC_EVENTS : "vendor_organization_id → id"
+    VENDOR_ORGANIZATIONS ||--|{ NFR_EVENTS : "vendor_organization_id → id"
+    VENDOR_ORGANIZATIONS ||--o{ NOTIFICATIONS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ ORDER_DELIVERY_SNAPSHOTS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ ORDERS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--o{ PAYMENTS : "vendor_organization_id → id"
@@ -1163,10 +1390,14 @@ erDiagram
     VENDOR_ORGANIZATIONS ||--o{ PRODUCTS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ QUOTATIONS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ REMITTANCE_GROUPS : "vendor_organization_id → id"
+    VENDOR_ORGANIZATIONS ||--|{ REVIEW_WINDOWS : "vendor_organization_id → id"
+    VENDOR_ORGANIZATIONS ||--o{ REVIEWS : "vendor_organization_id → id"
+    VENDOR_ORGANIZATIONS ||--|{ SCORE_EXCLUSIONS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ SCORE_SNAPSHOTS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ STORE_PROFILES : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ TAX_CERTIFICATES : "vendor_organization_id → id"
-    VENDOR_ORGANIZATIONS ||--|{ TAX_REPORT_PACKAGES : "vendor_organization_id → id"
+    VENDOR_ORGANIZATIONS ||--o{ TAX_REPORT_PACKAGE_LINES : "vendor_organization_id → id"
+    VENDOR_ORGANIZATIONS ||--o{ TAX_REPORT_PACKAGES : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ TAX_YEAR_ACCUMULATORS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ VENDOR_ACTIVATION_HISTORY : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ VENDOR_ADDRESSES : "vendor_organization_id → id"
@@ -1191,24 +1422,30 @@ erDiagram
     VENDOR_REPRESENTATIVE_VERSIONS ||--o{ AGREEMENT_ACCEPTANCES : "representative_version_id → id"
     VENDOR_REPRESENTATIVE_VERSIONS ||--|{ VENDOR_AUTHORITY_REVIEWS : "representative_version_id → id"
     VENDOR_REPRESENTATIVE_VERSIONS ||--o{ VENDOR_TAX_PROFILE_VERSIONS : "representative_version_id → id"
+    VENDOR_TAX_PROFILE_VERSIONS ||--o{ REMITTANCE_ASSESSMENTS : "tax_profile_version_id → id"
     VENDOR_TAX_PROFILE_VERSIONS ||--|{ TAX_EVIDENCE : "vendor_tax_profile_version_id → id"
     VENDOR_TAX_PROFILE_VERSIONS ||--o{ VENDOR_TAX_PROFILES : "current_version_id → id"
     VENDOR_TAX_PROFILE_VERSIONS ||--|{ WITHHOLDING_ASSIGNMENTS : "vendor_tax_profile_version_id → id"
     VENDOR_TAX_PROFILES ||--|{ VENDOR_TAX_PROFILE_VERSIONS : "vendor_tax_profile_id → id"
     VENDOR_VEHICLES ||--|{ DELIVERY_ASSIGNMENTS : "vendor_vehicle_id → id"
+    VENDOR_VEHICLES ||--o{ ORDER_FULFILLMENT_ASSIGNMENTS : "vehicle_id → id"
     VENDOR_VEHICLES ||--|{ VEHICLE_RATE_VERSIONS : "vendor_vehicle_id → id"
     VENDOR_VEHICLES ||--|{ VENDOR_VEHICLE_VERSIONS : "vendor_vehicle_id → id"
     VENDOR_WITHHOLDING_ACCUMULATORS ||--o{ REMITTANCE_ASSESSMENTS : "accumulator_id → id"
     VENDOR_WITHHOLDING_ACCUMULATORS ||--o{ TAX_ADJUSTMENTS : "accumulator_id → id"
     VENDOR_WITHHOLDING_ACCUMULATORS ||--|{ VENDOR_WITHHOLDING_STATUS_EVENTS : "accumulator_id → id"
     WEBHOOK_EVENTS ||--o{ PAYMENT_EVENTS : "webhook_event_id → id"
+    WEBHOOK_EVENTS ||--o{ REFUND_EVENTS : "webhook_event_id → id"
     WITHHOLDING_ASSIGNMENTS ||--|{ REMITTANCE_GROUPS : "withholding_assignment_id → id"
+    WORK_PACKAGE_LINES ||--o{ CART_ITEMS : "work_package_line_id → id"
     WORK_PACKAGE_LINES ||--|{ COMPILED_ESTIMATE_LINES : "work_package_line_id → id"
+    WORK_PACKAGE_LINES ||--o{ ORDER_LINES : "work_package_line_id → id"
     WORK_PACKAGE_LINES ||--|{ WORK_PACKAGE_MISSING_LINES : "work_package_line_id → id"
     WORK_PACKAGE_VERSIONS ||--|{ COMPILED_ESTIMATES : "work_package_version_id → id"
     WORK_PACKAGE_VERSIONS ||--o{ ORDERS : "work_package_version_id → id"
     WORK_PACKAGE_VERSIONS ||--|{ WORK_PACKAGE_LINES : "work_package_version_id → id"
     WORK_PACKAGE_VERSIONS ||--|{ WORK_PACKAGE_MISSING_LINES : "work_package_version_id → id"
+    WORK_PACKAGE_VERSIONS ||--|{ WORK_PACKAGE_VERSION_DELETIONS : "work_package_version_id → id"
     WORK_PACKAGE_VERSIONS ||--o{ WORK_PACKAGES : "current_version_id → id"
     WORK_PACKAGES ||--o{ BUDGET_OVERRIDES : "work_package_id → id"
     WORK_PACKAGES ||--o{ ORDERS : "work_package_id → id"

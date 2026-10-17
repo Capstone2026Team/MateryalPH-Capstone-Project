@@ -35,9 +35,9 @@ void main() {
       // TODO
     });
 
-    // finance.view. Payment log with evidence origin and reconciliation state.
+    // finance.view. Payment log with evidence origin, reconciliation state, refunded_centavos, net_collected_centavos, refund_pending_count and refund_failed_count. Refunds are aggregated per original capture; only confirmed refunds reduce net collections, and a PAID payment retains its original state even when refunded.
     //
-    //Future<AdminPaymentListEnvelope> listAdminPayments({ int page, String state, String purpose, String evidenceOrigin, String reconciliationState }) async
+    //Future<AdminPaymentListEnvelope> listAdminPayments({ int page, String state, String purpose, String evidenceOrigin, String reconciliationState, Date from, Date to }) async
     test('test listAdminPayments', () async {
       // TODO
     });
@@ -49,16 +49,16 @@ void main() {
       // TODO
     });
 
-    // finance.view. Monthly commission statements.
+    // finance.view. Monthly commission statements shared with Vendor Finance. Inclusive Manila dates filter issued_on. overdue=true returns only issued/partially paid positive balances past the due date; drafts, settled and voided statements are excluded. Approved credits reduce debt on the original statement and any paid excess becomes a separate original-payment refund payable.
     //
-    //Future<FeeStatementListEnvelope> listFeeStatements({ int page, String state }) async
+    //Future<FeeStatementListEnvelope> listFeeStatements({ bool overdue, int page, String state, Date from, Date to }) async
     test('test listFeeStatements', () async {
       // TODO
     });
 
     // finance.view. Reconciliation exceptions, payment mismatches, late captures, unresolved overlap, threshold adjustments, base reviews, overdue statements and fee-credit proposals.
     //
-    //Future<FinanceReviewItemListEnvelope> listFinanceReviewItems({ int page, String state, String kind }) async
+    //Future<FinanceReviewItemListEnvelope> listFinanceReviewItems({ int page, String state, String kind, Date from, Date to }) async
     test('test listFinanceReviewItems', () async {
       // TODO
     });

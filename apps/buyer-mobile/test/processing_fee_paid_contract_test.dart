@@ -8,10 +8,10 @@ void main() {
       basePathOverride: 'http://localhost/api/v1',
     ).serializers;
     final fee =
-        serializers.deserialize(
-              {'status': 'PAID', 'amount_centavos': 755},
-              specifiedType: const FullType(ProcessingFee),
-            )!
+        serializers.deserialize({
+              'status': 'PAID',
+              'amount_centavos': 755,
+            }, specifiedType: const FullType(ProcessingFee))!
             as ProcessingFee;
     expect(fee.status, ProcessingFeeStatusEnum.PAID);
     expect(fee.amountCentavos, 755);

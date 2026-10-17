@@ -1,6 +1,8 @@
+import '../../design_system/components/buyer_cart_button.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../design_system/components/buyer_overlays.dart';
 import '../../design_system/components/procurement_components.dart';
 import '../../design_system/generated/color_tokens.dart';
 import '../../design_system/theme.dart';
@@ -10,8 +12,11 @@ import 'cart_controller.dart';
 import 'explore_controller.dart';
 import 'procurement_models.dart';
 import 'procurement_navigation.dart';
+import '../trust/listing_reviews_section.dart';
 import 'procurement_repository.dart';
 import 'product_finalization_sheet.dart';
+import 'related_products_controller.dart';
+import 'search_results_screen.dart' show ListingCard;
 
 /// Product Details for one Tier 2 listing. Add to Cart records the price version shown here; the
 /// server rejects a changed price instead of silently accepting it. Nothing here reserves stock.
@@ -23,9 +28,13 @@ class ProductDetailsScreen extends StatefulWidget {
     required this.explore,
     required this.cart,
     required this.navigation,
+    this.initialVariantId,
   });
 
   final String listingId;
+
+  /// The variant to show first when it is available, e.g. a quoted one.
+  final String? initialVariantId;
   final ProcurementRepository repository;
   final ExploreController explore;
   final CartController cart;
@@ -40,24 +49,36 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   DiscoveryFailure? _failure;
   bool _loading = true;
   bool _adding = false;
-  String? _variantId;
-  int _quantity = 1;
+  late String? _variantId = widget.initialVariantId;
+
+  /// Decimal quantity text; ready-mixed concrete starts empty so the Buyer enters the volume.
+  String _quantity = '1';
   String? _fulfillment;
   String? _notice;
   bool _favorite = false;
   bool _descriptionExpanded = false;
   int _tab = 0;
+  int? _reviewCount;
   bool _finalizing = false;
   String? _pendingAddPayload;
 
   /// One key per add attempt, reused for its retries so a retry never adds twice.
   String? _pendingAddKey;
+  late final RelatedProductsController _relatedProducts;
 
   @override
   void initState() {
     super.initState();
+    _relatedProducts = RelatedProductsController(
+      repository: widget.repository,
+      explore: widget.explore,
+    )..addListener(_syncRelated);
     _load();
     widget.explore.addListener(_syncFavorite);
+  }
+
+  void _syncRelated() {
+    if (mounted) setState(() {});
   }
 
   void _syncFavorite() {
@@ -73,6 +94,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   @override
   void dispose() {
     widget.explore.removeListener(_syncFavorite);
+    _relatedProducts.dispose();
     super.dispose();
   }
 
@@ -81,10 +103,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     if (_finalizing || variant == null) return;
     _finalizing = true;
     String? addedConfiguration;
-    final completed = await showModalBottomSheet<bool>(
+    final completed = await showBuyerBottomSheet<bool>(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
       isDismissible: false,
       enableDrag: false,
       builder: (_) => ProductFinalizationSheet(
@@ -93,6 +113,12 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
         quantity: _quantity,
         fulfillment: _fulfillment,
         buy: buy,
+        repository: widget.repository,
+        cart: widget.cart,
+        savedLocations: () => widget.explore.savedLocations,
+        chooseDropOff: widget.navigation.discovery == null
+            ? null
+            : widget.navigation.chooseDropOff,
         onConfirm: (variantId, quantity, fulfillment) async {
           setState(() {
             _variantId = variantId;
@@ -113,8 +139,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
             if (line == null) {
               return 'Review this item in your cart before continuing.';
             }
-            if (formatQuantity(line.quantity) != '$quantity') {
-              await widget.cart.changeQuantity(line, '$quantity');
+            if (num.parse(line.quantity) != num.parse(quantity)) {
+              await widget.cart.changeQuantity(line, quantity);
               if (widget.cart.notice != null) return widget.cart.notice;
             }
           }
@@ -155,6 +181,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
       );
       if (!mounted) return;
       final available = detail.variants.where((variant) => variant.available);
+      final firstLoad = _detail == null;
       setState(() {
         _detail = detail;
         _favorite =
@@ -165,6 +192,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
             : available.isEmpty
             ? null
             : available.first.variantId;
+        if (firstLoad && detail.readyMixed != null) _quantity = '';
         _fulfillment ??= detail.pickupAvailable && !detail.deliveryOffered
             ? 'PICKUP'
             : !detail.pickupAvailable && detail.deliveryOffered
@@ -172,6 +200,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
             : null;
         _loading = false;
       });
+      if (_tab == 1) await _relatedProducts.show(detail, refresh: true);
     } on DiscoveryFailure catch (error) {
       if (!mounted) return;
       setState(() {
@@ -244,7 +273,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
       final cart = await widget.repository.addToCart(
         variantId: variant.variantId,
         expectedPriceVersionId: variant.priceVersionId!,
-        quantity: '$_quantity',
+        quantity: _quantity,
         origin: origin,
         radiusKm: widget.explore.radiusKm,
         idempotencyKey: key,
@@ -313,10 +342,9 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
               onPressed: () =>
                   widget.navigation.openStoreProfile(context, detail.vendorId),
             ),
-          RoundIconButton(
-            icon: LucideIcons.shoppingCart,
-            tooltip: 'Cart',
-            badgeCount: widget.cart.lineCount,
+          BuyerCartButton(
+            cart: widget.cart,
+            round: true,
             onPressed: () => widget.navigation.openCart(context),
           ),
         ],
@@ -356,6 +384,9 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                 : failure?.kind == DiscoveryFailureKind.notFound
                 ? StateKind.empty
                 : StateKind.error,
+            artwork: failure?.kind == DiscoveryFailureKind.notFound
+                ? StateArtwork.notFound
+                : null,
             title: failure?.kind == DiscoveryFailureKind.notFound
                 ? 'This product is no longer available'
                 : 'Product details could not load',
@@ -385,9 +416,16 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
             child: SegmentedTabs(
-              labels: const ['Overview', 'Related', 'Reviews'],
+              labels: [
+                'Overview',
+                'Related',
+                _reviewCount == null ? 'Reviews' : 'Reviews ($_reviewCount)',
+              ],
               selected: _tab,
-              onChanged: (index) => setState(() => _tab = index),
+              onChanged: (index) {
+                setState(() => _tab = index);
+                if (index == 1) _relatedProducts.show(detail);
+              },
             ),
           ),
           Padding(
@@ -505,7 +543,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
         StatusBand(tone: BandTone.warning, title: _notice!),
       ],
       const Divider(height: 28),
-      const _Label('Options'),
+      _Label(detail.readyMixed?.strengthLabel ?? 'Options'),
       Wrap(
         spacing: 8,
         runSpacing: 0,
@@ -540,18 +578,25 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
         crossAxisAlignment: WrapCrossAlignment.center,
         spacing: 12,
         children: [
-          const _Label('Quantity', bottom: 0),
-          if (variant == null || variant.wholeUnits)
+          if (variant == null || variant.wholeUnits) ...[
+            const _Label('Quantity', bottom: 0),
             QuantityStepper(
               compact: true,
-              quantity: _quantity,
+              quantity: int.tryParse(_quantity) ?? 1,
               unitName: variant?.unitName ?? '',
               enabled: variant != null,
+              onChanged: (value) => setState(() => _quantity = '$value'),
+            ),
+          ] else
+            DecimalQuantityField(
+              label: detail.readyMixed?.quantityLabel ?? 'Quantity',
+              value: _quantity,
+              unitName: variant.unitName,
+              decimals: stepDecimals(variant.quantityStep),
+              hint: detail.readyMixed == null
+                  ? null
+                  : 'Not sure? Request a free site inspection below.',
               onChanged: (value) => setState(() => _quantity = value),
-            )
-          else
-            Text(
-              'Sold in steps of ${variant.quantityStep} ${variant.unitName}. Adjust the exact quantity in the cart.',
             ),
         ],
       ),
@@ -582,6 +627,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
           style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
         ),
       ],
+      if (detail.readyMixed != null) ..._readyMixed(detail),
       const SizedBox(height: 16),
       _vendor(detail),
       if (detail.attributes.isNotEmpty ||
@@ -601,7 +647,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
           ...detail.attributes,
           ...?variant?.attributes,
         }.entries)
-          SpecificationRow(_attributeLabel(entry.key), entry.value),
+          SpecificationRow(detail.attributeLabel(entry.key), entry.value),
         if (variant?.sku != null) SpecificationRow('SKU', variant!.sku!),
       ],
       if (detail.description != null) ...[
@@ -636,56 +682,187 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     ];
   }
 
-  List<Widget> _related(ListingDetailView detail) => [
-    const SizedBox(height: 16),
-    _vendor(detail),
-    const SizedBox(height: 16),
-    Text(
-      'More from ${detail.vendorName}',
-      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-    ),
-    const SizedBox(height: 4),
-    Text(
-      'See this store’s other products within your ${widget.explore.radiusKm} km radius.',
-      style: const TextStyle(color: BuyerTheme.muted),
-    ),
-    const SizedBox(height: 12),
-    OutlinedButton.icon(
-      onPressed: () => widget.navigation.browseStore(
-        context,
-        vendorId: detail.vendorId,
-        vendorName: detail.vendorName,
+  /// Ready-mixed concrete: mixer-only Site Delivery and the free site
+  /// inspection for Buyers who do not yet know the volume.
+  List<Widget> _readyMixed(ListingDetailView detail) {
+    final concrete = detail.readyMixed!;
+    final open = concrete.openInspection;
+    final request = widget.navigation.requestSiteInspection;
+    return [
+      const SizedBox(height: 12),
+      StatusBand(
+        tone: BandTone.info,
+        title: 'Delivered by Concrete Mixer Truck / Transit Mixer',
+        message: concrete.notice,
       ),
-      icon: const Icon(LucideIcons.store),
-      label: const Text('Browse store products'),
-    ),
-  ];
+      const SizedBox(height: 8),
+      if (open != null)
+        StatusBand(
+          tone: BandTone.info,
+          title: open.status == 'SCHEDULED'
+              ? 'Your free site inspection is scheduled'
+              : 'Your free site inspection request was sent',
+          message: 'The store will quote the measured volume in Messages.',
+          action: TextButton(
+            onPressed: () => widget.navigation.openConversation(
+              context,
+              open.conversationId,
+            ),
+            child: const Text('Open conversation'),
+          ),
+        )
+      else if (concrete.siteInspectionAvailable && request != null)
+        OutlinedButton.icon(
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size.fromHeight(48),
+          ),
+          onPressed: () async {
+            await request(context, detail, _variantId);
+            if (mounted) await _load();
+          },
+          icon: const Icon(LucideIcons.ruler, size: 18),
+          label: const Text(
+            'Not sure of the volume? Request a free site inspection',
+          ),
+        ),
+    ];
+  }
+
+  List<Widget> _related(ListingDetailView detail) {
+    final sameVendor = _relatedProducts.items
+        .where((item) => item.vendorId == detail.vendorId)
+        .toList();
+    final otherVendors = _relatedProducts.items
+        .where((item) => item.vendorId != detail.vendorId)
+        .toList();
+    final failure = _relatedProducts.failure;
+    return [
+      const SizedBox(height: 16),
+      Text(
+        'Products in ${detail.categoryName ?? 'the same category'} within your ${widget.explore.radiusKm} km radius.',
+        style: const TextStyle(color: BuyerTheme.muted),
+      ),
+      const SizedBox(height: 12),
+      if (_relatedProducts.loading)
+        const SkeletonBox(height: 250)
+      else ...[
+        if (failure != null)
+          StateMessage(
+            kind: failure.kind == DiscoveryFailureKind.offline
+                ? StateKind.offline
+                : failure.kind == DiscoveryFailureKind.forbidden ||
+                      failure.kind == DiscoveryFailureKind.sessionExpired
+                ? StateKind.forbidden
+                : StateKind.error,
+            title: 'Related products could not load',
+            message: failure.message,
+            actionLabel: 'Retry',
+            onAction: _relatedProducts.items.isEmpty
+                ? _relatedProducts.reload
+                : _relatedProducts.loadMore,
+          ),
+        if (failure == null && _relatedProducts.items.isEmpty)
+          StateMessage(
+            kind: StateKind.empty,
+            compact: true,
+            title: 'This product has no related products',
+            message:
+                'No other products in the same category are available within your ${widget.explore.radiusKm} km radius.',
+          ),
+        if (sameVendor.isNotEmpty) ...[
+          _Label('Related products from ${detail.vendorName}'),
+          _relatedCards(sameVendor),
+        ],
+        if (otherVendors.isNotEmpty) ...[
+          const _Label('Related products from other vendors'),
+          _relatedCards(otherVendors),
+        ],
+        if (_relatedProducts.loadingMore)
+          const Padding(
+            padding: EdgeInsets.all(16),
+            child: Center(child: CircularProgressIndicator()),
+          )
+        else if (_relatedProducts.hasMore && failure == null)
+          OutlinedButton(
+            onPressed: _relatedProducts.loadMore,
+            child: const Text('Load more related products'),
+          ),
+      ],
+      const SizedBox(height: 12),
+      OutlinedButton.icon(
+        onPressed: () => widget.navigation.browseStore(
+          context,
+          vendorId: detail.vendorId,
+          vendorName: detail.vendorName,
+        ),
+        icon: const Icon(LucideIcons.store),
+        label: const Text('Browse store products'),
+      ),
+    ];
+  }
+
+  Widget _relatedCards(List<ListingCardView> products) => LayoutBuilder(
+    builder: (context, constraints) {
+      final scale = MediaQuery.textScalerOf(context).scale(1);
+      final minimum = scale > 1.3 ? 300.0 : 160.0;
+      final columns = (constraints.maxWidth / minimum).floor().clamp(1, 3);
+      return Column(
+        children: [
+          for (var row = 0; row < (products.length / columns).ceil(); row++)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (var column = 0; column < columns; column++) ...[
+                      if (column > 0) const SizedBox(width: 12),
+                      Expanded(
+                        child: row * columns + column < products.length
+                            ? ListingCard(
+                                card: products[row * columns + column],
+                                showFavorite: false,
+                                onOpen: () => widget.navigation.openListing(
+                                  context,
+                                  products[row * columns + column].listingId,
+                                ),
+                              )
+                            : const SizedBox.shrink(),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+        ],
+      );
+    },
+  );
 
   List<Widget> _reviews(ListingDetailView detail) {
     final sold = formatQuantity(detail.unitsSold);
     return [
       const SizedBox(height: 16),
-      Row(
-        children: [
-          Text(
-            detail.ratingLabel,
-            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(width: 6),
-          const Icon(
-            LucideIcons.star,
-            color: Color(MateryalColorTokens.statusWarning),
-          ),
-          const SizedBox(width: 12),
-          if (sold != '0')
-            Text('$sold sold', style: const TextStyle(color: BuyerTheme.muted)),
-        ],
-      ),
-      const SizedBox(height: 8),
-      const Text(
-        'Product ratings come from completed orders. Written reviews are not shown in this version.',
-        style: TextStyle(color: BuyerTheme.muted),
-      ),
+      if (widget.navigation.orders != null)
+        ListingReviewsSection(
+          key: ValueKey(detail.listingId),
+          repository: widget.navigation.orders!.reviews,
+          listingId: detail.listingId,
+          soldLabel: sold == '0' ? null : '$sold sold',
+          onCountChanged: (count) {
+            if (mounted && _reviewCount != count) {
+              setState(() => _reviewCount = count);
+            }
+          },
+        )
+      else
+        StateMessage(
+          kind: StateKind.error,
+          title: 'Product reviews are unavailable',
+          message: 'Reload Product Details to try again.',
+          actionLabel: 'Retry',
+          onAction: _load,
+        ),
     ];
   }
 
@@ -831,19 +1008,6 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
       ),
     );
   }
-
-  String _attributeLabel(String key) {
-    final words = key.split('_');
-    return words
-        .map(
-          (word) => word.isEmpty
-              ? word
-              : word == 'mm' || word == 'kg' || word == 'cm'
-              ? '($word)'
-              : '${word[0].toUpperCase()}${word.substring(1)}',
-        )
-        .join(' ');
-  }
 }
 
 class _Label extends StatelessWidget {
@@ -913,12 +1077,25 @@ class _GalleryState extends State<_Gallery> {
         height: height,
         color: BuyerTheme.canvas,
         alignment: Alignment.center,
-        child: const Column(
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(LucideIcons.package, size: 48, color: BuyerTheme.muted),
-            SizedBox(height: 4),
-            Text('No product photo', style: TextStyle(color: BuyerTheme.muted)),
+            Image.asset(
+              StateArtwork.pictures.asset,
+              width: height * 0.5,
+              height: height * 0.5,
+              excludeFromSemantics: true,
+              errorBuilder: (_, _, _) => const Icon(
+                LucideIcons.package,
+                size: 48,
+                color: BuyerTheme.muted,
+              ),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'No product photo',
+              style: TextStyle(color: BuyerTheme.muted),
+            ),
           ],
         ),
       );

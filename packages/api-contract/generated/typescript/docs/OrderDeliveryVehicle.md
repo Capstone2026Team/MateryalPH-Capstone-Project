@@ -19,6 +19,9 @@ Name | Type
 `totalVehicleTrips` | number
 `perTripCentavos` | number
 `tripTotalCentavos` | number
+`mobilizationBasis` | string
+`mobilizationFeeCentavos` | number
+`mobilizationTotalCentavos` | number
 
 ## Example
 
@@ -40,6 +43,9 @@ const example = {
   "totalVehicleTrips": null,
   "perTripCentavos": null,
   "tripTotalCentavos": null,
+  "mobilizationBasis": null,
+  "mobilizationFeeCentavos": null,
+  "mobilizationTotalCentavos": null,
 } satisfies OrderDeliveryVehicle
 
 console.log(example)

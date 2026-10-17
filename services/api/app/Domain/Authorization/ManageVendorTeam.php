@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace App\Domain\Authorization;
 
 use App\Domain\Agreements\AccountAgreements;
+use App\Domain\Disputes\DisputeStaffAccess;
 use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Identity\ManageAccount;
 use App\Domain\Identity\TokenSessionService;
+use App\Domain\Orders\OrderActor;
 use App\Domain\Vendors\IssueVendorInvitation;
+use App\Domain\Vendors\OnboardingRequirementResolver;
 use App\Models\AuthSession;
 use App\Models\VendorMembership;
 use Illuminate\Http\Request;
@@ -17,7 +20,7 @@ use Illuminate\Support\Facades\DB;
 
 final class ManageVendorTeam
 {
-    public function __construct(private readonly MembershipPolicy $policy, private readonly RecentAuthentication $recent, private readonly AuditRecorder $audit, private readonly TokenSessionService $sessions, private readonly ManageAccount $accounts, private readonly AccountAgreements $agreements, private readonly CurrentVendorTeamAuthority $authority) {}
+    public function __construct(private readonly MembershipPolicy $policy, private readonly RecentAuthentication $recent, private readonly AuditRecorder $audit, private readonly TokenSessionService $sessions, private readonly ManageAccount $accounts, private readonly AccountAgreements $agreements, private readonly CurrentVendorTeamAuthority $authority, private readonly DisputeStaffAccess $staffDisputes) {}
 
     /** @param array<string, mixed> $input */
     public function update(Request $request, string $id, array $input): void
@@ -27,7 +30,7 @@ final class ManageVendorTeam
         DB::transaction(function () use ($request, $id, $input): void {
             $organizationId = $request->attributes->get('account_scope')['organization_id'];
             $scope = $this->authority->lock($request, $organizationId);
-            $target = VendorMembership::query()->whereKey($id)->where('vendor_organization_id', $scope['organization_id'])->lockForUpdate()->first();
+            $target = VendorMembership::query()->whereNull('deleted_at')->whereKey($id)->where('vendor_organization_id', $scope['organization_id'])->lockForUpdate()->first();
             if ($target === null) {
                 throw new AuthenticationException('RESOURCE_NOT_FOUND', 'This team member is unavailable.', 404);
             }
@@ -49,6 +52,9 @@ final class ManageVendorTeam
                 $this->sessions->revoke($session, 'MEMBERSHIP_CHANGED');
             }
             $this->audit->account($request, 'VENDOR_STAFF_UPDATED', 'VENDOR_MEMBERSHIP', $id, $before, ['role' => $input['role'], 'can_manage_staff' => $target->can_manage_staff, 'name_changed' => $user?->name !== $input['full_name']]);
+            if ($before['role'] === 'FULFILLMENT' || $input['role'] === 'FULFILLMENT') {
+                app(OnboardingRequirementResolver::class)->synchronize($organizationId);
+            }
             $owner = DB::table('vendor_memberships as m')->join('users as u', 'u.id', '=', 'm.user_id')->where('m.vendor_organization_id', $scope['organization_id'])->where('m.role', 'OWNER')->where('m.status', 'ACTIVE')->first(['u.email', 'u.public_id']);
             if ($owner !== null) {
                 $this->accounts->notice($owner->email, $owner->public_id, 'A Vendor team member was updated. Review Team Accounts.');
@@ -71,7 +77,10 @@ final class ManageVendorTeam
                 throw new AuthenticationException('RESOURCE_VERSION_CONFLICT', 'Store settings changed. Refresh before trying again.', 409);
             }
             DB::table('vendor_organizations')->where('id', $org->id)->update(['staff_disputes_enabled' => $enabled, 'lock_version' => $version + 1, 'updated_at' => now()]);
-            $this->audit->account($request, 'VENDOR_STAFF_DISPUTES_CHANGED', 'VENDOR_ORGANIZATION', $org->id, ['enabled' => (bool) $org->staff_disputes_enabled], ['enabled' => $enabled]);
+            // Switching it off routes open staff-handled cases to the Owner and revokes staff case exports at once.
+            $effects = (bool) $org->staff_disputes_enabled === $enabled ? ['reassigned' => 0, 'exports_revoked' => 0]
+                : $this->staffDisputes->flagChanged((string) $org->id, $enabled, OrderActor::vendor($request, 'OWNER'));
+            $this->audit->account($request, 'VENDOR_STAFF_DISPUTES_CHANGED', 'VENDOR_ORGANIZATION', $org->id, ['enabled' => (bool) $org->staff_disputes_enabled], ['enabled' => $enabled] + $effects);
         });
     }
 }

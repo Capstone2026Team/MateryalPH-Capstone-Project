@@ -20,6 +20,7 @@ import {
 } from '@materyalph/api-client-ts'
 import { createWebApiConfiguration } from '@materyalph/web-ui'
 import { newIdempotencyKey } from './onboarding-api'
+import { apiDateFilters, type DateFilters } from './date-filters'
 
 export { readableOnboardingError as readableInventoryError, onboardingFieldErrors as inventoryFieldErrors } from './onboarding-api'
 export type { AutoAcceptPolicyDetail, FleetVehicle, FleetVehicleInput, FleetVehicleListMeta, InventoryLedgerMeta, InventoryMovement, InventoryRow, InventorySettings, PageMeta, PriceHistoryEntry, StockLabel }
@@ -30,7 +31,7 @@ const inventoryApi = () => new VendorInventoryApi(configuration())
 const autoAcceptApi = () => new VendorAutoAcceptApi(configuration())
 const fleetApi = () => new VendorFleetApi(configuration())
 
-export type InventoryFilters = { q?: string; listingId?: string; stock?: StockLabel; confirmation?: 'DUE' | 'STALE'; page?: number }
+export type InventoryFilters = { categoryId?: string; q?: string; listingId?: string; stock?: StockLabel; confirmation?: 'DUE' | 'STALE'; page?: number }
 
 export async function listInventory(filters: InventoryFilters): Promise<{ items: InventoryRow[]; meta: InventoryLedgerMeta }> {
   const response = await inventoryApi().listVendorInventoryItems(filters)
@@ -45,13 +46,13 @@ export async function confirmStock(items: { listingVariantId: string; lockVersio
   return (await inventoryApi().confirmVendorStock({ stockConfirmationRequest: { items } })).data
 }
 
-export async function listMovements(variantId: string, page = 1): Promise<{ items: InventoryMovement[]; meta: PageMeta }> {
-  const response = await inventoryApi().listVendorInventoryMovements({ variantId, page })
+export async function listMovements(variantId: string, page = 1, filters: DateFilters = {}): Promise<{ items: InventoryMovement[]; meta: PageMeta }> {
+  const response = await inventoryApi().listVendorInventoryMovements({ variantId, page, ...apiDateFilters(filters) })
   return { items: response.data, meta: response.meta }
 }
 
-export async function listPriceHistory(variantId: string): Promise<PriceHistoryEntry[]> {
-  return (await inventoryApi().listVendorPriceHistory({ variantId })).data
+export async function listPriceHistory(variantId: string, filters: DateFilters = {}): Promise<PriceHistoryEntry[]> {
+  return (await inventoryApi().listVendorPriceHistory({ variantId, ...apiDateFilters(filters) })).data
 }
 
 export async function getInventorySettings(): Promise<InventorySettings> {
@@ -119,6 +120,6 @@ export function conflictRow(failure: ApiFailure | null): InventoryRow | null {
 
 /** Trims trailing zeros from a four-decimal quantity for display. */
 export function quantityDisplay(value: string | null | undefined): string {
-  if (value === null || value === undefined || value === '') return '—'
+  if (value === null || value === undefined || value === '') return 'â€”'
   return value.includes('.') ? value.replace(/\.?0+$/, '') : value
 }

@@ -8,6 +8,7 @@ import 'package:materyalph_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
+**changeReason** | **String** | Required if vehicle | [optional]
 **vehicles** | [**BuiltList&lt;DeliveryVehicleSelection&gt;**](DeliveryVehicleSelection.md) |  |
 **finalFeeCentavos** | **int** | Must equal the disclosed formula for the vehicles |
 **fulfillmentDate** | [**Date**](Date.md) |  |

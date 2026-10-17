@@ -1,13 +1,18 @@
 
 # VendorOnboardingSnapshotSetup
 
-Private Store Setup snapshot, including the canonical weekly Store Operation schedule and vacation_mode boolean.
+Private Store Setup snapshot, including the canonical weekly Store Operation schedule, the effective vacation_mode boolean and its Vacation Mode window.
 
 ## Properties
 
 Name | Type
 ------------ | -------------
 `operatingSchedule` | [Array&lt;StoreOperatingDay&gt;](StoreOperatingDay.md)
+`deliverySetup` | [VendorDeliverySetup](VendorDeliverySetup.md)
+`vacationMode` | boolean
+`vacationStatus` | string
+`vacationStartsOn` | string
+`vacationEndsOn` | string
 
 ## Example
 
@@ -17,6 +22,11 @@ import type { VendorOnboardingSnapshotSetup } from '@materyalph/api-client-ts'
 // TODO: Update the object below with actual values
 const example = {
   "operatingSchedule": null,
+  "deliverySetup": null,
+  "vacationMode": null,
+  "vacationStatus": null,
+  "vacationStartsOn": null,
+  "vacationEndsOn": null,
 } satisfies VendorOnboardingSnapshotSetup
 
 console.log(example)

@@ -14,6 +14,8 @@ Name | Type | Description | Notes
 **hasMore** | **bool** |  |
 **total** | **int** |  |
 **suggestedRadiusKm** | **int** |  | [optional]
+**unfilteredTotal** | **int** | Candidates in this estimate before filters. | [optional]
+**sort** | **String** |  | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

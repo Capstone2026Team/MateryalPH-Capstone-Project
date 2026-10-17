@@ -8,12 +8,14 @@ import 'package:built_value/serializer.dart';
 import 'package:dio/dio.dart';
 
 import 'package:materyalph_api_client/src/api_util.dart';
+import 'package:materyalph_api_client/src/model/buy_again_envelope.dart';
 import 'package:materyalph_api_client/src/model/checkout_submission_envelope.dart';
 import 'package:materyalph_api_client/src/model/checkout_submit_request.dart';
 import 'package:materyalph_api_client/src/model/nrpc_accept_request.dart';
 import 'package:materyalph_api_client/src/model/nrpc_flag_request.dart';
 import 'package:materyalph_api_client/src/model/nrpc_reject_request.dart';
 import 'package:materyalph_api_client/src/model/order_detail_envelope.dart';
+import 'package:materyalph_api_client/src/model/order_fulfillment_conversation_envelope.dart';
 import 'package:materyalph_api_client/src/model/order_list_envelope.dart';
 import 'package:materyalph_api_client/src/model/order_revision_decision.dart';
 
@@ -226,6 +228,90 @@ class BuyerOrdersApi {
     }
 
     return Response<OrderDetailEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// buyBuyerOrderAgain
+  /// Buy Again for a completed or cancelled Item-Based order (otherwise 409 BUY_AGAIN_UNAVAILABLE). Each line is added to the cart at today&#39;s price version and the original quantity, merged into any existing line, using the same eligibility, radius and quantity checks as adding by hand. A line that cannot be added is listed in skipped with its reason; quantities are never reduced to fit stock, so exact inventory is never revealed. Nothing is ordered or reserved. Idempotency-Key makes retries safe; a replay returns the current cart with empty added and skipped lists and meta.replayed true.
+  ///
+  /// Parameters:
+  /// * [idempotencyKey]
+  /// * [orderId]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [BuyAgainEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<BuyAgainEnvelope>> buyBuyerOrderAgain({
+    required String idempotencyKey,
+    required String orderId,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/buyers/orders/{orderId}/buy-again'.replaceAll('{' r'orderId' '}', encodeQueryParameter(_serializers, orderId, const FullType(String)).toString());
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        r'Idempotency-Key': idempotencyKey,
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'passportBearer',
+          },
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    BuyAgainEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(BuyAgainEnvelope),
+      ) as BuyAgainEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<BuyAgainEnvelope>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -506,10 +592,11 @@ class BuyerOrdersApi {
   }
 
   /// listBuyerOrders
-  /// The Buyer&#39;s own orders, newest first, grouped by Awaiting Action, Active, Completed, Cancelled and Disputed. Order, payment, fulfillment, refund and dispute states are separate rows. Due windows are resolved before listing.
+  /// The Buyer&#39;s own orders, newest first. Status chips: CONFIRMATION (awaiting the Vendor, the Buyer&#39;s approval or NRPC acceptance, or payment), PROCESSING (confirmed, preparing, cancellation requested), TO_SHIP (ready for pickup, out for delivery), TO_RECEIVE (delivered or picked up, awaiting receipt confirmation), COMPLETED, CANCELLED (cancelled, declined, expired) and DISPUTED. procurement_type filters the Item and Project tabs; meta.counts follow the same procurement filter. Order, payment, fulfillment, refund and dispute states are separate rows. Due windows are resolved before listing. CANCELLED_REFUNDED is the Profile history of actual CANCELLED orders or orders with PARTIALLY_REFUNDED or REFUNDED refund state, filtered before pagination; declined and expired orders without a completed refund are excluded.
   ///
   /// Parameters:
   /// * [group]
+  /// * [procurementType]
   /// * [page]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
@@ -522,6 +609,7 @@ class BuyerOrdersApi {
   /// Throws [DioException] if API call or serialization fails
   Future<Response<OrderListEnvelope>> listBuyerOrders({
     String? group,
+    String? procurementType,
     int? page,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -551,6 +639,7 @@ class BuyerOrdersApi {
 
     final _queryParameters = <String, dynamic>{
       if (group != null) r'group': encodeQueryParameter(_serializers, group, const FullType(String)),
+      if (procurementType != null) r'procurement_type': encodeQueryParameter(_serializers, procurementType, const FullType(String)),
       if (page != null) r'page': encodeQueryParameter(_serializers, page, const FullType(int)),
     };
 
@@ -583,6 +672,90 @@ class BuyerOrdersApi {
     }
 
     return Response<OrderListEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// openBuyerFulfillmentConversation
+  /// Returns the order&#39;s single Fulfillment Messages thread, separate from inquiry conversations. Threads open at order submission; for an open order submitted before that, this opens it. One thread exists per order, so every retry returns the same thread. A closed order without a thread is 409 FULFILLMENT_THREAD_CLOSED. Another Buyer&#39;s order is 404.
+  ///
+  /// Parameters:
+  /// * [idempotencyKey]
+  /// * [orderId]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [OrderFulfillmentConversationEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<OrderFulfillmentConversationEnvelope>> openBuyerFulfillmentConversation({
+    required String idempotencyKey,
+    required String orderId,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/buyers/orders/{orderId}/fulfillment-conversation'.replaceAll('{' r'orderId' '}', encodeQueryParameter(_serializers, orderId, const FullType(String)).toString());
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        r'Idempotency-Key': idempotencyKey,
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'passportBearer',
+          },
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    OrderFulfillmentConversationEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(OrderFulfillmentConversationEnvelope),
+      ) as OrderFulfillmentConversationEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<OrderFulfillmentConversationEnvelope>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

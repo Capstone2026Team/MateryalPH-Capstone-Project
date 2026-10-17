@@ -2,14 +2,19 @@ import { expect, test } from '@playwright/test'
 
 test('optional team setup invites employees and fits the viewport', async ({ page }, testInfo) => {
   let invited = false
+  let verified = false
   await page.route('**/api/v1/**', async route => {
     const path = new URL(route.request().url()).pathname
     let data: unknown = {}
     let meta: unknown = {}
     if (path.endsWith('/auth/csrf')) data = { csrf_token: 'synthetic-csrf' }
     if (path.endsWith('/profile')) data = { id: 'owner', full_name: 'Vendor Owner', account_type: 'VENDOR', account_status: 'ACTIVE', role: 'OWNER', permissions: [], lock_version: 1 }
+    if (path.endsWith('/security')) data = { totp_enrolled: true }
+    if (path.endsWith('/reauthentication') && route.request().method() === 'POST') { verified = true; data = { verified: true } }
+    if (path.endsWith('/memberships')) { data = []; meta = { current_page: 1, last_page: 1 } }
     if (path.endsWith('/invitations')) {
       if (route.request().method() === 'POST') {
+        expect(verified).toBe(true)
         expect(route.request().postDataJSON()).toMatchObject({ invitee_name: 'Sample Employee', email: 'employee@example.test', role: 'STORE_STAFF', can_manage_staff: false })
         invited = true
         data = { queued: true }
@@ -29,17 +34,23 @@ test('optional team setup invites employees and fits the viewport', async ({ pag
   })
   await page.goto('/onboarding/setup')
   await page.getByRole('button', { name: '4 Team Accounts' }).click()
-  await expect(page.getByText('No invitations yet.', { exact: false })).toBeVisible()
+  await page.getByRole('link', { name: 'Open Team Accounts' }).click()
+  await page.getByRole('button', { name: 'Add new account', exact: true }).click()
+  await expect(page.getByRole('dialog', { name: 'Add new account', exact: true })).toBeVisible()
   await page.getByRole('combobox', { name: 'Fixed role' }).selectOption('STORE_MANAGER')
   await expect(page.getByRole('checkbox', { name: 'Allow this Store Manager to manage staff accounts' })).not.toBeChecked()
   await page.getByRole('combobox', { name: 'Fixed role' }).selectOption('STORE_STAFF')
   await page.getByRole('textbox', { name: 'Employee full name' }).fill('Sample Employee')
   await page.getByRole('textbox', { name: 'Email address' }).fill('employee@example.test')
   await page.getByRole('button', { name: 'Send invitation', exact: true }).click()
+  await page.getByRole('textbox', { name: 'Authenticator code' }).fill('123456')
+  await page.getByRole('button', { name: 'Verify and continue' }).click()
   await expect(page.getByText('Invitation queued for email delivery.', { exact: false })).toBeVisible()
   await expect(page.getByText('Sample Employee', { exact: true })).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   await page.screenshot({ path: testInfo.outputPath('team-setup.png'), fullPage: true })
+  await page.goto('/onboarding/setup')
+  await page.getByRole('button', { name: '4 Team Accounts' }).click()
   await page.getByRole('button', { name: 'Next', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Store Operation', exact: true })).toBeVisible()
   for (const day of ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']) {

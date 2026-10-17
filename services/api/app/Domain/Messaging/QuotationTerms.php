@@ -5,19 +5,25 @@ declare(strict_types=1);
 namespace App\Domain\Messaging;
 
 use App\Domain\Catalog\ListingTaxPolicy;
+use App\Domain\Catalog\ReadyMixedConcrete;
 use App\Domain\Finance\FinancialCalculator;
 use App\Domain\Finance\FinancialSnapshotService;
+use App\Domain\Finance\Money;
+use App\Domain\Finance\VendorDiscount;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Inventory\StockAvailability;
 use App\Domain\Orders\NrpcTerms;
 use App\Domain\Orders\OrderDeliveryPlanner;
 use App\Domain\Orders\OrderEligibility;
 use App\Domain\Payments\PaymentMethodPolicy;
+use App\Domain\Settings\PlatformSettings;
 use App\Domain\Vendors\ConfirmedDeliverySnapshot;
 use App\Domain\Vendors\DeliveryRecommendationService;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 /** One FIN-02 quotation calculator for both procurement contexts. No writes to public price sources. */
 final class QuotationTerms
@@ -27,7 +33,9 @@ final class QuotationTerms
      * @return array<string, mixed> */
     public function validate(array $input): array
     {
-        return Validator::make($input, [
+        $limits = (array) PlatformSettings::current()->value('quotations.deadline_limits');
+
+        $validated = Validator::make($input, [
             'lines' => ['required', 'array', 'min:1', 'max:100'],
             'lines.*.variant_id' => ['required', 'uuid', 'distinct'],
             'lines.*.quantity' => ['required', 'regex:/^\d{1,10}(\.\d{1,4})?$/', 'numeric', 'gt:0'],
@@ -36,7 +44,10 @@ final class QuotationTerms
             'lines.*.specifications.*' => ['string', 'max:200'],
             'fulfillment_method' => ['required', 'in:PICKUP,DELIVERY'], 'payment_method' => ['required', 'in:ONLINE,CASH_ON_DELIVERY,IN_STORE'],
             'fulfillment_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:'.now('Asia/Manila')->toDateString()],
-            'deadline_hours' => ['sometimes', 'integer', 'between:1,72'], 'vendor_discount_centavos' => ['sometimes', 'integer', 'min:0'],
+            'deadline_hours' => ['sometimes', 'integer', 'between:'.(int) $limits['min_hours'].','.(int) $limits['max_hours']], 'vendor_discount_centavos' => ['sometimes', 'integer', 'min:0', Rule::prohibitedIf(array_key_exists('discount', $input))],
+            'discount' => ['sometimes', 'array:scope,percent', 'min:2'],
+            'discount.scope' => ['required_with:discount', 'in:MATERIALS,DELIVERY'],
+            'discount.percent' => ['required_with:discount', 'string', 'regex:'.VendorDiscount::PERCENT_PATTERN, 'numeric', 'between:0,100'],
             'delivery' => ['nullable', 'array'], 'delivery.vehicles' => ['required_if:fulfillment_method,DELIVERY', 'array', 'min:1', 'max:20'],
             'delivery.vehicles.*.vehicle_id' => ['required', 'uuid'], 'delivery.vehicles.*.number_of_vehicles' => ['required', 'integer', 'min:1'],
             'delivery.vehicles.*.total_vehicle_trips' => ['required', 'integer', 'min:1'], 'delivery.vehicles.*.group_key' => ['sometimes', 'string', 'max:40'],
@@ -44,10 +55,16 @@ final class QuotationTerms
             'delivery.arrangement' => ['required_if:fulfillment_method,DELIVERY', 'string', 'max:2000'],
             'delivery.access_confirmed' => ['required_if:fulfillment_method,DELIVERY', 'boolean'],
             'delivery.heavy_vehicle_access_confirmed' => ['sometimes', 'boolean'], 'delivery.manual_review_note' => ['nullable', 'string', 'max:2000'],
+            'delivery.change_reason' => ['nullable', 'string', 'min:10', 'max:2000'],
             'nrpc' => ['nullable', 'array'], 'nrpc.amount_centavos' => ['required_with:nrpc', 'integer', 'min:1'],
             'nrpc.reason' => ['required_with:nrpc', 'string', 'min:3', 'max:2000'], 'nrpc.allocations' => ['required_with:nrpc', 'array', 'min:1'],
             'nrpc.allocations.*' => ['required', 'integer', 'min:1'],
         ])->validate();
+        if (($validated['discount']['scope'] ?? null) === 'DELIVERY' && $validated['fulfillment_method'] !== 'DELIVERY') {
+            throw ValidationException::withMessages(['discount.scope' => ['A delivery discount requires Site Delivery.']]);
+        }
+
+        return $validated;
     }
 
     /**
@@ -107,6 +124,9 @@ final class QuotationTerms
                 'source_price_version_id' => (string) $v->price_version_id, 'source_tax_version_id' => $taxVersion, 'publication_version' => (int) $v->publication_version,
                 'load' => ['weight_kg' => $v->weight_kg, 'length_cm' => $v->length_cm, 'width_cm' => $v->width_cm, 'height_cm' => $v->height_cm] + $this->materialLoad($v)];
         }
+        if ($input['fulfillment_method'] !== 'DELIVERY' && array_any($lines, static fn (array $line): bool => ($line['load']['material_kind'] ?? null) === DeliveryRecommendationService::READY_MIXED_CONCRETE)) {
+            throw new AuthenticationException('SITE_DELIVERY_REQUIRED', ReadyMixedConcrete::SITE_DELIVERY_MESSAGE, 422, ['fulfillment_method' => ['Choose Site Delivery.']]);
+        }
         app(PaymentMethodPolicy::class)->assertAllowed((string) $c->vendor_organization_id, (string) $input['fulfillment_method'], (string) $input['payment_method']);
         $blockers = app(OrderEligibility::class)->lineBlockers((string) $c->vendor_organization_id, array_column($lines, 'tax_category', 'variant_id'));
         if ($blockers !== []) {
@@ -120,19 +140,29 @@ final class QuotationTerms
             $loadLines = array_map(static fn (array $l): object => (object) ['id' => $l['variant_id'], 'quantity' => $l['quantity'], 'snapshot' => json_encode($l, JSON_THROW_ON_ERROR)], $lines);
             $load = app(OrderDeliveryPlanner::class)->load($this->deliveryOrder($c), $loadLines, [], (array) $route, true, (bool) ($input['delivery']['heavy_vehicle_access_confirmed'] ?? false));
             $delivery = app(ConfirmedDeliverySnapshot::class)->prepare($actor, $load, $input['delivery']['vehicles'], (int) $input['delivery']['final_fee_centavos'],
-                $input['delivery']['arrangement'], $input['fulfillment_date'], $input['delivery']['manual_review_note'] ?? null);
+                $input['delivery']['arrangement'], $input['fulfillment_date'], $input['delivery']['manual_review_note'] ?? null, $input['delivery']['change_reason'] ?? null);
         }
         $nrpc = $input['nrpc'] ?? null;
         $terms = $nrpc === null ? null : app(NrpcTerms::class)->current();
         if ($nrpc !== null && ($terms === null || $terms['content'] === null)) {
             throw new AuthenticationException('NRPC_TERMS_UNAVAILABLE', 'NRPC Terms must be available before publication.', 503);
         }
-        $commercial = FinancialCalculator::commercial($lines, (int) ($input['vendor_discount_centavos'] ?? 0), $delivery === null ? 0 : (int) $delivery['final_charge_centavos'], $nrpc);
+        $discount = null;
+        $materialsDiscount = (int) ($input['vendor_discount_centavos'] ?? 0);
+        if (isset($input['discount'])) {
+            $gross = array_sum(array_map(static fn (array $line): int => Money::lineAmount($line['quantity'], $line['unit_price_centavos']), $lines));
+            $discount = VendorDiscount::assess($input['discount'], $gross, $delivery === null ? 0 : (int) $delivery['final_charge_centavos'], $delivery !== null);
+            $materialsDiscount = $discount['scope'] === 'MATERIALS' ? $discount['deduction_centavos'] : 0;
+            if ($discount['scope'] === 'DELIVERY' && $delivery !== null) {
+                $delivery = VendorDiscount::deliverySnapshot($delivery, $discount);
+            }
+        }
+        $commercial = FinancialCalculator::commercial($lines, $materialsDiscount, $delivery === null ? 0 : (int) $delivery['final_charge_centavos'], $nrpc);
 
         return ['lines' => $lines, 'commercial' => $commercial, 'fulfillment_method' => $input['fulfillment_method'], 'payment_method' => $input['payment_method'],
             'fulfillment_date' => $input['fulfillment_date'], 'delivery' => $delivery, 'destination' => json_decode($this->deliveryOrder($c)->destination, true),
             'nrpc' => $nrpc === null ? null : $nrpc + ['terms' => $terms], 'price_source' => 'PRIVATE_TRANSACTION',
-            'fee_policy_version_id' => FinancialSnapshotService::currentFeePolicyId(), 'processing_fee_status' => 'PENDING_PAYMENT_CHANNEL'];
+            'fee_policy_version_id' => FinancialSnapshotService::currentFeePolicyId(), 'processing_fee_status' => 'PENDING_PAYMENT_CHANNEL'] + ($discount === null ? [] : ['discount' => $discount]);
     }
 
     /** @return array<string, mixed> */
@@ -140,7 +170,7 @@ final class QuotationTerms
     {
         $code = DB::table('vendor_listings as l')->join('products as p', 'p.id', '=', 'l.product_id')->join('materials as m', 'm.id', '=', 'p.material_id')->where('l.id', $variant->vendor_listing_id)->value('m.code');
 
-        return $code === 'READY_MIXED_CONCRETE' ? ['material_kind' => DeliveryRecommendationService::READY_MIXED_CONCRETE, 'volume_m3_per_unit' => $variant->unit_code === 'M3' ? '1' : null] : [];
+        return ReadyMixedConcrete::load(is_string($code) ? $code : null, (string) $variant->unit_code);
     }
 
     /** Full field-level before/after, including removals.

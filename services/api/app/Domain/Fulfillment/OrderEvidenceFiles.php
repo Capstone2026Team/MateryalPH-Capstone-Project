@@ -72,7 +72,8 @@ final class OrderEvidenceFiles
     /** Streams a private file that a record of this order references; anything else is not found. */
     public function stream(string $orderId, string $fileId, bool $forBuyer): StreamedResponse
     {
-        $referenced = DB::table('fulfillment_proofs')->where('order_id', $orderId)->where(fn ($q) => $q->where('photo_file_id', $fileId)->orWhere('signature_file_id', $fileId))->exists()
+        $referenced = DB::table('fulfillment_proofs')->where('order_id', $orderId)->where(fn ($q) => $q->where('photo_file_id', $fileId)->orWhere('signature_file_id', $fileId)
+            ->orWhereRaw("payload->'additional_photo_ids' @> ?::jsonb", [json_encode([$fileId], JSON_THROW_ON_ERROR)]))->exists()
             || DB::table('fulfillment_issues')->where('order_id', $orderId)->whereRaw('evidence_file_ids @> ?::jsonb', [json_encode([$fileId], JSON_THROW_ON_ERROR)])->exists()
             || DB::table('physical_reimbursements')->where('order_id', $orderId)->where('evidence_file_id', $fileId)->exists()
             // NRPC preparation evidence is a Vendor commercial record; the Buyer sees its status, not the file.

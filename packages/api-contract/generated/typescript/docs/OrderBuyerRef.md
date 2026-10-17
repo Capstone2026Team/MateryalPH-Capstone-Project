@@ -7,6 +7,8 @@
 Name | Type
 ------------ | -------------
 `displayName` | string
+`mobileE164` | string
+`avatarPath` | string
 
 ## Example
 
@@ -16,6 +18,8 @@ import type { OrderBuyerRef } from '@materyalph/api-client-ts'
 // TODO: Update the object below with actual values
 const example = {
   "displayName": null,
+  "mobileE164": null,
+  "avatarPath": null,
 } satisfies OrderBuyerRef
 
 console.log(example)

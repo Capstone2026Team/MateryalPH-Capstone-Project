@@ -46,7 +46,7 @@ final class GoogleOidcController extends Controller
             'mobile_e164' => ['required_if:mode,SIGN_UP', 'nullable', 'regex:/^\+[1-9]\d{7,14}$/'],
             'buyer_type' => [Rule::requiredIf(fn (): bool => $request->input('mode') === 'SIGN_UP' && $portal === 'BUYER'), 'nullable', 'string', 'max:32'],
             'company_name' => [Rule::requiredIf(fn (): bool => $request->input('mode') === 'SIGN_UP' && $portal === 'BUYER' && $request->input('buyer_type') === 'BUSINESS'), 'nullable', 'string', 'max:180'],
-            'business_name' => [Rule::requiredIf(fn (): bool => $request->input('mode') === 'SIGN_UP' && $portal === 'VENDOR'), 'nullable', 'string', 'max:180'],
+            'business_name' => ['nullable', 'string', 'max:180'],
             'terms_accepted' => ['sometimes', 'boolean'],
             'terms_version_id' => [Rule::requiredIf(fn (): bool => $request->input('mode') === 'SIGN_UP' && $portal === 'BUYER'), 'nullable', 'uuid'],
             'terms_content_hash' => [Rule::requiredIf(fn (): bool => $request->input('mode') === 'SIGN_UP' && $portal === 'BUYER'), 'nullable', 'regex:/^[a-f0-9]{64}$/D'],
@@ -126,7 +126,7 @@ final class GoogleOidcController extends Controller
         $destination = $result->portal === 'ADMIN'
             ? (string) config('app.admin_frontend_url')
             : (string) config('app.vendor_frontend_url');
-        if ($mfa->requiredFor($result->user)) {
+        if ($mfa->loginChallengeRequiredFor($result->user)) {
             $challenge = $mfa->begin($result->user, $result->clientKind, null);
             $audit->record($request, 'MFA_CHALLENGE_REQUIRED', true, $result->user, ['source' => 'GOOGLE_OIDC']);
 
@@ -169,8 +169,21 @@ final class GoogleOidcController extends Controller
         GoogleOidcService $oidc,
         TokenSessionService $sessions,
         AuditRecorder $audit,
+        MfaChallengeService $mfa,
     ): JsonResponse {
         $result = $oidc->consumeMobileExchangeCode((string) $request->validated('exchange_code'));
+        // Google proves the identity but never replaces a Buyer's enrolled authenticator.
+        if ($mfa->loginChallengeRequiredFor($result->user)) {
+            $challenge = $mfa->begin($result->user, 'MOBILE', $request->validated('device_id'));
+            $audit->record($request, 'MFA_CHALLENGE_REQUIRED', true, $result->user, ['source' => 'GOOGLE_OIDC', 'client_kind' => 'MOBILE']);
+
+            return ApiResponse::success([
+                'mfa_required' => true,
+                'mfa_enrollment_required' => $challenge->enrollmentRequired,
+                'challenge_expires_in' => $challenge->expiresIn,
+                'challenge_token' => $challenge->token,
+            ]);
+        }
         $tokens = $sessions->start(
             $result->user,
             'MOBILE',

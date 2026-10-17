@@ -7,6 +7,12 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(OrderDeliveryEstimate, () {
+    // Frozen system recommendation; absent on historical orders.
+    // BuiltList<DeliveryEstimateOption> options
+    test('to test the property `options`', () async {
+      // TODO
+    });
+
     // int feeMinCentavos
     test('to test the property `feeMinCentavos`', () async {
       // TODO

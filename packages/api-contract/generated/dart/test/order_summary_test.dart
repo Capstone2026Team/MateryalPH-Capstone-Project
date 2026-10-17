@@ -103,6 +103,42 @@ void main() {
       // TODO
     });
 
+    // Buyer list only. The order's Fulfillment Messages thread; null only for an order submitted before threads opened at submission.
+    // OrderConversationRef fulfillmentConversation
+    test('to test the property `fulfillmentConversation`', () async {
+      // TODO
+    });
+
+    // Buyer list only. Card shortcuts, each also allowed in Order Details: CONFIRM_RECEIPT and REPORT_PROBLEM while awaiting receipt, FILE_DISPUTE (Return/Refund) or VIEW_DISPUTE after completion, BUY_AGAIN for closed Item-Based orders, VIEW_CANCELLATION for cancelled, declined or expired orders.
+    // BuiltList<String> cardActions
+    test('to test the property `cardActions`', () async {
+      // TODO
+    });
+
+    // Buyer list only. End of the post-completion return and dispute window while FILE_DISPUTE is offered.
+    // DateTime returnRefundDueAt
+    test('to test the property `returnRefundDueAt`', () async {
+      // TODO
+    });
+
+    // Buyer list only. The active case when VIEW_DISPUTE is offered.
+    // String disputeCaseId
+    test('to test the property `disputeCaseId`', () async {
+      // TODO
+    });
+
+    // Buyer list only. Display name of the channel of the latest verified online payment.
+    // String paymentChannelName
+    test('to test the property `paymentChannelName`', () async {
+      // TODO
+    });
+
+    // Buyer list only. Why a cancelled, declined or expired order ended, in Buyer-facing words.
+    // OrderClosureReason closureReason
+    test('to test the property `closureReason`', () async {
+      // TODO
+    });
+
     // OrderBuyerRef buyer
     test('to test the property `buyer`', () async {
       // TODO

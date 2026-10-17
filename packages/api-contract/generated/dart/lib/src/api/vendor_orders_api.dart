@@ -8,6 +8,7 @@ import 'package:built_value/serializer.dart';
 import 'package:dio/dio.dart';
 
 import 'package:materyalph_api_client/src/api_util.dart';
+import 'package:materyalph_api_client/src/model/date.dart';
 import 'package:materyalph_api_client/src/model/delivery_plan_envelope.dart';
 import 'package:materyalph_api_client/src/model/delivery_plan_request.dart';
 import 'package:materyalph_api_client/src/model/order_detail_envelope.dart';
@@ -443,8 +444,11 @@ class VendorOrdersApi {
   ///
   /// Parameters:
   /// * [group]
+  /// * [closedState] - Only valid with group CLOSED. Filters before pagination; group counts remain unfiltered.
   /// * [q]
   /// * [page]
+  /// * [from] - Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Order submitted_at.
+  /// * [to] - Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Order submitted_at.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -456,8 +460,11 @@ class VendorOrdersApi {
   /// Throws [DioException] if API call or serialization fails
   Future<Response<OrderListEnvelope>> listVendorOrders({
     String? group,
+    String? closedState,
     String? q,
     int? page,
+    Date? from,
+    Date? to,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -487,8 +494,11 @@ class VendorOrdersApi {
 
     final _queryParameters = <String, dynamic>{
       if (group != null) r'group': encodeQueryParameter(_serializers, group, const FullType(String)),
+      if (closedState != null) r'closed_state': encodeQueryParameter(_serializers, closedState, const FullType(String)),
       if (q != null) r'q': encodeQueryParameter(_serializers, q, const FullType(String)),
       if (page != null) r'page': encodeQueryParameter(_serializers, page, const FullType(int)),
+      if (from != null) r'from': encodeQueryParameter(_serializers, from, const FullType(Date)),
+      if (to != null) r'to': encodeQueryParameter(_serializers, to, const FullType(Date)),
     };
 
     final _response = await _dio.request<Object>(

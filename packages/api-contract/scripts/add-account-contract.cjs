@@ -11,7 +11,7 @@ const object = (properties, required = Object.keys(properties)) => ({ type: 'obj
 const schemas = {
   AccountProfile: object({ id: string, full_name: string, email: string, account_type: string, account_status: string, lock_version: integer, created_at: nullable, buyer_type: nullable, company_name: nullable, organization_name: nullable, role: string, organization_id: nullable, membership_id: nullable, can_manage_staff: boolean, permissions: array(string) }),
   AccountProfileUpdate: object({ full_name: {type:'string',maxLength:160}, lock_version: {type:'integer',minimum:1}, buyer_type: {type:'string',enum:['INDIVIDUAL','BUSINESS']}, company_name: nullable }, ['full_name','lock_version']),
-  AccountSession: object({ id: string, description: string, current: boolean, created_at: nullable, last_active_at: nullable }),
+  AccountSession: object({ id: string, description: string, current: boolean, created_at: nullable, last_active_at: {...nullable, description: 'Session activity display, updated at most once per minute. Authentication, revocation and expiry are checked on every request.'} }),
   AccountSecurity: object({ totp_enrolled: boolean, recent_authentication_expires_at: nullable }),
   AccountReauthentication: object({ password: nullable, code: nullable, email_code: nullable }, []),
   AccountPasswordChange: object({ password: {type:'string',minLength:14,maxLength:1024}, password_confirmation: string }),
@@ -43,7 +43,8 @@ function operation(suffix,method,id,response,body, extra=[]){
  const audience = suffix.startsWith('memberships') ? ['vendors'] : (['roles','invitations'].includes(suffix) || suffix.startsWith('administrators')) ? ['admin'] : (suffix.startsWith('factor') || suffix === 'recovery-codes') ? ['vendors','admin'] : ['buyers','vendors','admin'];
  const parameters=[{name:'accountPortal',in:'path',required:true,schema:{type:'string',enum:audience}},...extra];
  const op={operationId:id,tags:['Accounts'],description:'Server enforces the route audience, active account and membership, resource ownership, Passport scope and session transport. buyers uses MOBILE bearer; vendors/admin use WEB cookies and CSRF on mutations. Privileged security changes require session-bound recent authentication. No client header can select or bypass transport security.',parameters,security:[{passportBearer:[]},{accessCookie:[],...(method==='get'?{}:{webCsrf:[]})}],responses:{'200':{description:'Successful account operation.',content:{'application/json':{schema:ref(response)}}}}};
- for(const code of ['401','403','404','409','419','422','429','503']) op.responses[code]={description:'Safe canonical error with correlation identifier.',content:{'application/json':{schema:ref('ErrorEnvelope')}}};
+ const credentialAction = method === 'post' && /^(reauthentication(?:\/email)?|password|email(?:\/confirm)?|factor(?:\/confirm)?|recovery-codes)$/.test(suffix);
+ for(const code of ['401','403','404','409','419','422',...(credentialAction ? ['429'] : []),'503']) op.responses[code]={description:'Safe canonical error with correlation identifier.',content:{'application/json':{schema:ref('ErrorEnvelope')}}};
  if(body)op.requestBody={required:true,content:{'application/json':{schema:ref(body)}}};
  (paths[key]??={})[method]=op;
 }

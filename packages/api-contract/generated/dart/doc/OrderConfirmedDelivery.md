@@ -8,6 +8,9 @@ import 'package:materyalph_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
+**systemRecommendation** | [**BuiltList&lt;DeliveryEstimateOption&gt;**](DeliveryEstimateOption.md) |  | [optional]
+**recommendationChanged** | **bool** |  | [optional]
+**changeReason** | **String** | Vendor explanation shown before Buyer approval and payment. Includes manual load review when no automatic fit was available. | [optional]
 **vehicles** | [**BuiltList&lt;OrderDeliveryVehicle&gt;**](OrderDeliveryVehicle.md) |  |
 **distanceMeters** | **int** |  |
 **routeSource** | **String** |  |

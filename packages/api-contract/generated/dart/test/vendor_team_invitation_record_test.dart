@@ -12,6 +12,17 @@ void main() {
       // TODO
     });
 
+    // int lockVersion
+    test('to test the property `lockVersion`', () async {
+      // TODO
+    });
+
+    // Owner-only eligibility for deleting this invitation.
+    // bool canDelete
+    test('to test the property `canDelete`', () async {
+      // TODO
+    });
+
     // String inviteeName
     test('to test the property `inviteeName`', () async {
       // TODO

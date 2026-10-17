@@ -6,8 +6,10 @@
 
 Name | Type
 ------------ | -------------
+`refundsTotal` | number
 `refundsFailed` | number
 `refundsPending` | number
+`reimbursementsTotal` | number
 `reimbursementsPending` | number
 `cancellationRequestsOpen` | number
 `nfrEvents30Days` | number
@@ -19,8 +21,10 @@ import type { AdminOrderOperationsSummary } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "refundsTotal": null,
   "refundsFailed": null,
   "refundsPending": null,
+  "reimbursementsTotal": null,
   "reimbursementsPending": null,
   "cancellationRequestsOpen": null,
   "nfrEvents30Days": null,

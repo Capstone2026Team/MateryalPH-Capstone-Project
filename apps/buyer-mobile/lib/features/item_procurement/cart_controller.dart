@@ -32,6 +32,24 @@ class CartController extends ChangeNotifier {
 
   int get lineCount => cart?.lineCount ?? 0;
 
+  /// Fixed-point sum retains the existing material-unit precision without rounding or binary floats.
+  String get quantity {
+    var units = BigInt.zero;
+    for (final line
+        in cart?.groups.expand((group) => group.lines) ?? <CartLineView>[]) {
+      final parts = line.quantity.split('.');
+      units +=
+          BigInt.parse(parts.first) * BigInt.from(10000) +
+          BigInt.parse(parts.length > 1 ? parts[1].padRight(4, '0') : '0');
+    }
+    final whole = units ~/ BigInt.from(10000);
+    final fraction = (units % BigInt.from(10000))
+        .toString()
+        .padLeft(4, '0')
+        .replaceFirst(RegExp(r'0+$'), '');
+    return fraction.isEmpty ? '$whole' : '$whole.$fraction';
+  }
+
   Future<void> load() async {
     if (_loadingCart || busy) return;
     _loadingCart = true;

@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 namespace App\Domain\Messaging;
 
+use App\Domain\Authorization\VendorTeamActivityBroadcast;
+use App\Domain\Authorization\VendorTeamActivityQuery;
 use App\Domain\Catalog\CatalogAccess;
+use App\Domain\Enforcement\BuyerCommerceRestriction;
 use App\Domain\Finance\Money;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Orders\OrderEligibility;
+use App\Domain\Settings\PlatformSettings;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
@@ -113,7 +117,7 @@ final class QuotationService
             $previous = $q->current_version_id === null ? null : DB::table('quotation_versions')->where('id', $q->current_version_id)->first();
             $before = $previous === null ? [] : json_decode($previous->content, true);
             $changes = QuotationTerms::changes($before, $content);
-            $hours = (int) ($input['deadline_hours'] ?? 24);
+            $hours = (int) ($input['deadline_hours'] ?? PlatformSettings::current()->field('quotations.deadline_limits', 'default_hours'));
             if ($previous !== null && (int) $previous->deadline_hours !== $hours) {
                 $changes[] = ['path' => 'deadline_hours', 'before' => (int) $previous->deadline_hours, 'after' => $hours,
                     'label' => 'Buyer response window changed from '.$previous->deadline_hours.' hours to '.$hours.' hours.'];
@@ -162,6 +166,9 @@ final class QuotationService
             $this->access->requireSales($request->user(), $c, true);
         } elseif ($request->user()->account_type !== 'BUYER') {
             throw new AuthenticationException('PERMISSION_DENIED', 'Only the Buyer can decide on the quotation.', 403);
+        }
+        if (in_array($action, ['accept', 'counter'], true)) {
+            BuyerCommerceRestriction::assertAllowed((string) $c->buyer_profile_id);
         }
         $key = $this->idempotency->requireIdempotencyKey($request);
         $result = DB::transaction(function () use ($request, $conversationId, $action, $input, $key, $c): ?string {
@@ -315,10 +322,14 @@ final class QuotationService
     /** @param array<string, mixed> $payload */
     public function event(object $q, User $actor, string $type, array $payload = []): void
     {
+        $role = $this->access->role($actor);
         DB::table('quotation_events')->insert(['id' => (string) Str::uuid7(), 'quotation_id' => $q->id, 'quotation_version_id' => $q->current_version_id,
-            'actor_user_id' => $actor->id, 'event_type' => $type, 'payload' => json_encode($payload + ['actor_role' => $this->access->role($actor), 'context_type' => $q->procurement_type,
+            'actor_user_id' => $actor->id, 'event_type' => $type, 'payload' => json_encode($payload + ['actor_role' => $role, 'context_type' => $q->procurement_type,
                 'conversation_id' => $q->conversation_id, 'buyer_profile_id' => $q->buyer_profile_id, 'vendor_organization_id' => $q->vendor_organization_id,
                 'correlation_id' => request()->attributes->get('correlation_id')], JSON_THROW_ON_ERROR), 'created_at' => now(), 'updated_at' => now()]);
+        if (in_array($role, VendorTeamActivityQuery::ROLES, true)) {
+            app(VendorTeamActivityBroadcast::class)->publish((string) $q->vendor_organization_id, $role);
+        }
         $this->messages->changed((string) $q->conversation_id);
     }
 
@@ -346,7 +357,8 @@ final class QuotationService
                         $count++;
                     } elseif (in_array($q->state, self::OPEN, true) && $q->reminded_at === null) {
                         $v = DB::table('quotation_versions')->where('id', $q->current_version_id)->first();
-                        $reminder = CarbonImmutable::parse($v->expires_at)->subMinutes((int) $v->deadline_hours >= 8 ? 240 : 30);
+                        $offsets = (array) PlatformSettings::current()->value('reminders.quotation_before_minutes');
+                        $reminder = CarbonImmutable::parse($v->expires_at)->subMinutes((int) $v->deadline_hours >= (int) $offsets['long_deadline_from_hours'] ? (int) $offsets['long_minutes'] : (int) $offsets['short_minutes']);
                         if ($reminder->lessThanOrEqualTo(CarbonImmutable::now())) {
                             DB::table('quotations')->where('id', $q->id)->update(['reminded_at' => now()]);
                             $this->systemEvent($q, 'REMINDER');

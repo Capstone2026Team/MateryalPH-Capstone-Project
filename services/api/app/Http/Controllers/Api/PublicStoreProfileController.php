@@ -64,6 +64,7 @@ final class PublicStoreProfileController extends Controller
             'niches' => $summary['niches'],
             'fulfillment_method' => $summary['fulfillment_method'],
             'score_label' => $summary['score_label'],
+            'badges' => $summary['badges'],
             'hours_status' => $schedule['status'],
             'operating_schedule' => $schedule['weekly'],
             'effective_today' => $effective,

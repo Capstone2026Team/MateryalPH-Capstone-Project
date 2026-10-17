@@ -6,6 +6,7 @@
 
 Name | Type
 ------------ | -------------
+`unreadCount` | number
 `available` | boolean
 `conversationId` | string
 `readOnly` | boolean
@@ -19,6 +20,7 @@ import type { FulfillmentThreadRef } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "unreadCount": null,
   "available": null,
   "conversationId": null,
   "readOnly": null,

@@ -64,7 +64,11 @@ class _GoogleSignupScreenState extends State<GoogleSignupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: buyerAppBar(context, 'Sign up with Google', onBack: widget.onBack),
+      appBar: buyerAppBar(
+        context,
+        'Sign up with Google',
+        onBack: widget.onBack,
+      ),
       body: SafeArea(
         top: false,
         child: AuthContent(

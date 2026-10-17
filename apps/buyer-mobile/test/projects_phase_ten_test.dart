@@ -168,11 +168,6 @@ void main() {
                     ...summary,
                     'project_status': 'ARCHIVED',
                     'version': version,
-                    'versions': {
-                      'items': [version],
-                      'page': 1,
-                      'has_more': false,
-                    },
                     'budget': budget,
                     'missing_lines': <Object?>[],
                     'document': <String, Object?>{},
@@ -210,7 +205,6 @@ void main() {
           ],
         );
         final map = RecordingMap();
-        String? analysisSite;
         await tester.pumpWidget(
           MaterialApp(
             debugShowCheckedModeBanner: false,
@@ -240,7 +234,6 @@ void main() {
               openConversation: (_, _) {},
               openOrder: (_, _) {},
               openStore: (_, _) {},
-              openAnalysis: (_, site) => analysisSite = projectText(site['id']),
             ),
           ),
         );
@@ -261,9 +254,8 @@ void main() {
         );
         await tester.tap(find.text('Sites'));
         await tester.pumpAndSettle();
-        await tester.ensureVisible(find.text('Market analysis'));
-        await tester.tap(find.text('Market analysis'));
-        expect(analysisSite, siteId);
+        expect(find.text('Locked foundation site'), findsOneWidget);
+        expect(find.text('Market analysis'), findsNothing);
         await tester.tap(find.text('Work Packages').first);
         await tester.pumpAndSettle();
         expect(
@@ -279,8 +271,8 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('Create new version'), findsNothing);
         expect(find.text('Cancel package'), findsNothing);
-        await tester.ensureVisible(find.text('Project Vendor Map'));
-        await tester.tap(find.text('Project Vendor Map'));
+        await tester.ensureVisible(find.text('Find vendors'));
+        await tester.tap(find.text('Find vendors'));
         await tester.pumpAndSettle();
         expect(map.last.procurementContext, SupplierMapContext.projectBased);
         expect(map.last.origin!.latitude, 14.60);
@@ -294,6 +286,238 @@ void main() {
         );
         expect(tester.takeException(), isNull);
         await tester.pumpWidget(const SizedBox());
+      },
+    );
+  }
+  for (final scenario in ['free', 'order', 'cancelled']) {
+    testWidgets(
+      switch (scenario) {
+        'order' =>
+          'a Work Package with an order hides edit, reactivate and delete',
+        'cancelled' => 'a cancelled Work Package can be reactivated in place',
+        _ =>
+          'a Work Package without an order can be edited and deleted directly',
+      },
+      (tester) async {
+        final hasOrder = scenario == 'order';
+        await tester.binding.setSurfaceSize(const Size(390, 900));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        const projectId = '01995000-0000-7000-8000-000000000011';
+        const packageId = '01995000-0000-7000-8000-000000000012';
+        const siteId = '01995000-0000-7000-8000-000000000013';
+        final budget = <String, Object?>{
+          'budget_centavos': 100000,
+          'pending_centavos': 0,
+          'actual_centavos': 0,
+          'awaiting_recovery_centavos': 0,
+          'committed_centavos': 0,
+          'remaining_centavos': 100000,
+          'utilization_percent': '0.00',
+          'warning': false,
+          'label': 'UNDER_BUDGET',
+          'allocated_centavos': 100000,
+          'unallocated_centavos': 0,
+          'pending_confirmation_count': 0,
+          'processing_fee_status': 'PENDING_PAYMENT_CHANNEL_UNTIL_QUOTED',
+        };
+        final site = <String, Object?>{
+          'id': siteId,
+          'name': 'Foundation site',
+          'discovery_origin': 'PROJECT_SITE',
+          'point': {
+            'latitude': '14.60',
+            'longitude': '121.00',
+            'label': 'Site',
+            'formatted_address': 'Quezon City',
+          },
+        };
+        final project = <String, Object?>{
+          'id': projectId,
+          'name': 'Home build',
+          'status': 'ACTIVE',
+          'budget_centavos': 100000,
+          'lock_version': 2,
+          'budget': budget,
+        };
+        final summary = <String, Object?>{
+          'id': packageId,
+          'project_id': projectId,
+          'name': 'Roofing package',
+          'status': scenario == 'cancelled' ? 'CANCELLED' : 'ACTIVE',
+          'budget_centavos': 100000,
+          'lock_version': 3,
+        };
+        final version = <String, Object?>{
+          'id': '01995000-0000-7000-8000-000000000014',
+          'version': 1,
+          'content_hash': 'saved-original',
+          'locked_at': '2026-10-01T00:00:00Z',
+          'content': {
+            'site': site,
+            'name': 'Roofing package',
+            'lines': <Object?>[],
+            'radius_km': 5,
+            'budget_centavos': 100000,
+            'fulfillment_method': 'PICKUP',
+            'payment_method': 'ONLINE',
+          },
+        };
+        var deleted = false, reactivated = false;
+        Map<String, Object?>? deleteBody, reactivateBody;
+        final client = api.MateryalphApiClient(
+          dio: Dio(BaseOptions(baseUrl: 'https://api.example.test')),
+          interceptors: [
+            InterceptorsWrapper(
+              onRequest: (request, handler) {
+                final path = request.uri.path;
+                Object? data = <String, Object?>{};
+                if (request.method == 'DELETE') {
+                  deleted = true;
+                  deleteBody = request.data as Map<String, Object?>?;
+                } else if (path.endsWith('/reactivate')) {
+                  reactivated = true;
+                  reactivateBody = request.data as Map<String, Object?>?;
+                  data = {
+                    ...summary,
+                    'status': 'ACTIVE',
+                    'project_status': 'ACTIVE',
+                    'has_order': false,
+                    'can_delete': true,
+                    'version': version,
+                    'budget': budget,
+                    'missing_lines': <Object?>[],
+                    'document': <String, Object?>{},
+                  };
+                } else if (path.endsWith('/estimates')) {
+                  data = {
+                    'estimate': null,
+                    'items': <Object?>[],
+                    'page': 1,
+                    'has_more': false,
+                    'total': 0,
+                  };
+                } else if (path.endsWith('/work-packages/$packageId')) {
+                  data = {
+                    ...summary,
+                    'project_status': 'ACTIVE',
+                    'has_order': hasOrder,
+                    'can_delete': !hasOrder,
+                    'version': version,
+                    'budget': budget,
+                    'missing_lines': <Object?>[],
+                    'document': <String, Object?>{},
+                  };
+                } else if (path.endsWith('/projects/$projectId')) {
+                  data = {
+                    ...project,
+                    'sites': [site],
+                    'packages': {
+                      'items': deleted ? <Object?>[] : [summary],
+                      'page': 1,
+                      'has_more': false,
+                    },
+                  };
+                } else {
+                  data = {
+                    'items': [project],
+                    'page': 1,
+                    'has_more': false,
+                  };
+                }
+                handler.resolve(
+                  Response<Object?>(
+                    requestOptions: request,
+                    statusCode: 200,
+                    data: {
+                      'data': data,
+                      'meta': <String, Object?>{},
+                      'errors': <Object?>[],
+                    },
+                  ),
+                );
+              },
+            ),
+          ],
+        );
+        await tester.pumpWidget(
+          MaterialApp(
+            debugShowCheckedModeBanner: false,
+            theme: BuyerTheme.light,
+            home: Scaffold(
+              body: ProjectsScreen(
+                repository: ProjectsRepository(
+                  client: client,
+                  onSessionExpired: () async {},
+                ),
+                discovery: FakeDiscoveryRepository(),
+                deviceLocation: FakeDeviceLocation(
+                  const DeviceLocationResult(DeviceLocationStatus.denied),
+                ),
+                mapBuilder: (context, props) => const SizedBox(),
+                openConversation: (_, _) {},
+                openOrder: (_, _) {},
+                openStore: (_, _) {},
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Home build').last);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Work Packages').first);
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(find.text('Roofing package'));
+        await tester.tap(find.text('Roofing package'));
+        await tester.pumpAndSettle();
+        expect(find.textContaining('Version'), findsNothing);
+        expect(find.text('Create new version'), findsNothing);
+        if (hasOrder) {
+          expect(find.text('Edit'), findsNothing);
+          expect(find.text('Reactivate'), findsNothing);
+          expect(find.widgetWithText(OutlinedButton, 'Delete'), findsNothing);
+          expect(deleted, isFalse);
+          return;
+        }
+        if (scenario == 'cancelled') {
+          expect(find.text('Edit'), findsOneWidget);
+          expect(find.text('Cancel package'), findsNothing);
+          await tester.ensureVisible(find.text('Reactivate'));
+          await tester.tap(find.text('Reactivate'));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text('Continue'));
+          await tester.pumpAndSettle();
+          expect(reactivated, isTrue);
+          expect(reactivateBody?['lock_version'], 3);
+          expect(find.text('Reactivate'), findsNothing);
+          expect(find.text('Cancel package'), findsNothing);
+          expect(tester.takeException(), isNull);
+          return;
+        }
+        expect(find.text('Edit'), findsOneWidget);
+        expect(find.text('Cancel package'), findsNothing);
+        expect(find.text('Reactivate'), findsNothing);
+        await tester.ensureVisible(
+          find.widgetWithText(OutlinedButton, 'Delete'),
+        );
+        await tester.tap(find.widgetWithText(OutlinedButton, 'Delete'));
+        await tester.pumpAndSettle();
+        expect(find.text('Delete Roofing package?'), findsOneWidget);
+        expect(
+          find.textContaining('quotation history stay on record'),
+          findsOneWidget,
+        );
+        await tester.tap(find.text('Keep it'));
+        await tester.pumpAndSettle();
+        expect(deleted, isFalse);
+        await tester.tap(find.widgetWithText(OutlinedButton, 'Delete'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+        await tester.pumpAndSettle();
+        expect(deleted, isTrue);
+        expect(deleteBody?['lock_version'], 3);
+        expect(find.text('Roofing package was deleted.'), findsOneWidget);
+        expect(find.text('Roofing package'), findsNothing);
+        expect(tester.takeException(), isNull);
       },
     );
   }
@@ -451,7 +675,9 @@ void main() {
           ),
         ),
       );
-      expect(find.text('Remaining ₱20.00'), findsOneWidget);
+      expect(find.text('Remaining'), findsOneWidget);
+      expect(find.text('₱20.00'), findsOneWidget);
+      expect(find.text('₱280.00 committed'), findsOneWidget);
       expect(
         find.textContaining('paid cancelled', findRichText: true),
         findsNothing,

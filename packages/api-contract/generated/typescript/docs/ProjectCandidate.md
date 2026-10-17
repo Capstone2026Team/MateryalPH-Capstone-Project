@@ -20,6 +20,8 @@ Name | Type
 `fulfillmentPercent` | string
 `missingLines` | Array&lt;{ [key: string]: any; }&gt;
 `lines` | Array&lt;{ [key: string]: any; }&gt;
+`selectionRequired` | boolean
+`specificationSelections` | { [key: string]: string; }
 `materialsCentavos` | number
 `includedVatCentavos` | number
 `deliveryCentavos` | number
@@ -38,6 +40,7 @@ Name | Type
 `stale` | boolean
 `label` | string
 `currentQuotationState` | string
+`isFavorite` | boolean
 
 ## Example
 
@@ -60,6 +63,8 @@ const example = {
   "fulfillmentPercent": null,
   "missingLines": null,
   "lines": null,
+  "selectionRequired": null,
+  "specificationSelections": null,
   "materialsCentavos": null,
   "includedVatCentavos": null,
   "deliveryCentavos": null,
@@ -78,6 +83,7 @@ const example = {
   "stale": null,
   "label": null,
   "currentQuotationState": null,
+  "isFavorite": null,
 } satisfies ProjectCandidate
 
 console.log(example)

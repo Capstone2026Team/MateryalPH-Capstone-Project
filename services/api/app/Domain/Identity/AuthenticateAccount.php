@@ -16,14 +16,30 @@ final class AuthenticateAccount
         if ($user === null || ! Hash::check($password, $user->password)) {
             throw new AuthenticationException('INVALID_CREDENTIALS', 'The email or password is incorrect.', 401);
         }
+        $this->assertEligible($user, $requestedPortal);
+
+        return $user;
+    }
+
+    public function recheck(User $authenticated, string $requestedPortal): User
+    {
+        $current = User::query()->find($authenticated->getKey());
+        if ($current === null || ! hash_equals((string) $authenticated->password, (string) $current->password)) {
+            throw new AuthenticationException('INVALID_CREDENTIALS', 'The email or password is incorrect.', 401);
+        }
+        $this->assertEligible($current, $requestedPortal);
+
+        return $current;
+    }
+
+    private function assertEligible(User $user, string $requestedPortal): void
+    {
         if ($user->account_status !== 'ACTIVE' && ! app(MfaChallengeService::class)->pendingAdminSetup($user)) {
             throw new AuthenticationException('ACCOUNT_NOT_ACTIVE', 'Verify your account or contact support before signing in.', 403);
         }
         if ($user->account_type !== $requestedPortal) {
             throw new AuthenticationException('PORTAL_ACCESS_DENIED', 'This account cannot sign in to the selected portal.', 403);
         }
-
-        return $user;
     }
 
     public function markAuthenticated(User $user): void

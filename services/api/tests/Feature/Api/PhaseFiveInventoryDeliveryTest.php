@@ -11,6 +11,7 @@ use App\Domain\Inventory\AutoAcceptGate;
 use App\Domain\Inventory\AutoAcceptPolicyService;
 use App\Domain\Inventory\InventoryLocks;
 use App\Domain\Messaging\BuyerInboxChannel;
+use App\Domain\Notifications\NotificationPolicy;
 use App\Domain\Operations\OutboxProcessor;
 use App\Domain\Operations\OutboxPublisher;
 use App\Domain\Vendors\ConfirmedDeliverySnapshot;
@@ -23,20 +24,26 @@ use App\Models\VendorMembership;
 use App\Models\VendorOrganization;
 use Carbon\CarbonImmutable;
 use Database\Seeders\SystemFoundationSeeder;
+use Illuminate\Contracts\Broadcasting\Broadcaster;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Broadcast;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Laravel\Passport\AccessToken;
+use Tests\Support\CreatesDiscoveryFixtures;
 use Tests\TestCase;
 
 final class PhaseFiveInventoryDeliveryTest extends TestCase
 {
+    use CreatesDiscoveryFixtures {
+        placeStore as private placeDeliveryStore;
+    }
     use RefreshDatabase;
 
     protected function setUp(): void
@@ -89,6 +96,21 @@ final class PhaseFiveInventoryDeliveryTest extends TestCase
         foreach (['quantity_on_hand', 'hard_reserved_quantity', 'soft_held_quantity', 'available_to_sell', 'reorder_level'] as $private) {
             self::assertStringNotContainsString($private, (string) $public);
         }
+    }
+
+    public function test_inventory_category_filter_scopes_rows_and_summary_without_changing_stock_rules(): void
+    {
+        [, $owner] = $this->activeStore();
+        $this->signInVendor($owner);
+        $listing = $this->publishableListing('CATEGORY-FILTER', variants: 2);
+        $category = DB::table('vendor_listings')->where('id', $listing)->value('material_category_id');
+        $this->getJson('/api/v1/vendor/inventory/items?category_id='.$category)->assertOk()
+            ->assertJsonCount(2, 'data')->assertJsonPath('meta.summary.variants', 2);
+        $this->getJson('/api/v1/vendor/inventory/items?category_id='.$category.'&stock=OUT_OF_STOCK')->assertOk()
+            ->assertJsonCount(0, 'data')->assertJsonPath('meta.summary.variants', 2);
+        $this->getJson('/api/v1/vendor/inventory/items?category_id='.Str::uuid())->assertOk()
+            ->assertJsonCount(0, 'data')->assertJsonPath('meta.summary.variants', 0);
+        $this->getJson('/api/v1/vendor/inventory/items?category_id=invalid')->assertUnprocessable();
     }
 
     public function test_manual_edits_use_optimistic_versions_and_record_append_only_movements(): void
@@ -241,6 +263,8 @@ final class PhaseFiveInventoryDeliveryTest extends TestCase
             ->assertJsonPath('data.policy.status', 'PAUSED')->assertJsonPath('data.policy.pause_reason', 'ALLOTMENT_EXHAUSTED');
         foreach ([$owner, $manager, $inventory] as $recipient) {
             $this->assertDatabaseHas('notifications', ['user_id' => $recipient->id, 'category' => 'AUTO_ACCEPT', 'title' => 'Auto-accept paused']);
+            $notice = DB::table('notifications')->where('user_id', $recipient->id)->where('category', 'AUTO_ACCEPT')->first();
+            self::assertSame('/products/inventory', app(NotificationPolicy::class)->target($recipient, $notice));
         }
         $this->assertDatabaseMissing('notifications', ['user_id' => $staff->id, 'category' => 'AUTO_ACCEPT']);
         self::assertSame(3, DB::table('outbox_events')->where('event_type', 'VENDOR_INVENTORY_NOTICE')->count());
@@ -426,6 +450,7 @@ final class PhaseFiveInventoryDeliveryTest extends TestCase
 
     public function test_fleet_and_delivery_changes_broadcast_private_empty_invalidations_only_to_current_managers(): void
     {
+        Queue::fake();
         [$organization, $owner] = $this->activeStore(delivery: true);
         $manager = $this->member($organization, 'STORE_MANAGER');
         $this->member($organization, 'STORE_STAFF');
@@ -436,7 +461,7 @@ final class PhaseFiveInventoryDeliveryTest extends TestCase
         self::assertNotNull($event);
         self::assertNull($event->processed_at);
         config()->set('broadcasting.default', 'reverb');
-        $broadcast = \Mockery::mock(\Illuminate\Contracts\Broadcasting\Broadcaster::class);
+        $broadcast = \Mockery::mock(Broadcaster::class);
         Broadcast::shouldReceive('connection')->with('reverb')->andReturn($broadcast);
         $ownerChannel = 'private-'.app(BuyerInboxChannel::class)->name($owner);
         $managerChannel = 'private-'.app(BuyerInboxChannel::class)->name($manager);
@@ -511,10 +536,15 @@ final class PhaseFiveInventoryDeliveryTest extends TestCase
         $staff = $this->member($organization, 'STORE_STAFF');
         $this->expectedDomainError(fn () => $snapshot->record($staff, $orderId, $load, [['vehicle_id' => $box['id'], 'number_of_vehicles' => 1, 'total_vehicle_trips' => $trips]], $fee, 'Staff attempt', $today), 'PERMISSION_DENIED');
 
-        $id = $snapshot->record($owner, $orderId, $load, [['vehicle_id' => $box['id'], 'number_of_vehicles' => 1, 'total_vehicle_trips' => $trips]], $fee, 'Two trips to the guarded gate.', $today);
+        $this->expectedDomainError(fn () => $snapshot->record($owner, $orderId, $load, [['vehicle_id' => $box['id'], 'number_of_vehicles' => 1, 'total_vehicle_trips' => $trips]], $fee, 'Two trips to the guarded gate.', $today), 'DELIVERY_CHANGE_REASON_REQUIRED');
+        $id = $snapshot->record($owner, $orderId, $load, [['vehicle_id' => $box['id'], 'number_of_vehicles' => 1, 'total_vehicle_trips' => $trips]], $fee, 'Two trips to the guarded gate.', $today,
+            changeReason: 'One vehicle will make both trips because the site can unload only one vehicle at a time.');
         $frozen = DB::table('order_delivery_snapshots')->where('id', $id)->first();
         $data = json_decode((string) $frozen->snapshot, true);
         self::assertSame($intended, $data['intended_location']);
+        self::assertTrue($data['recommendation_changed']);
+        self::assertSame(2, $data['system_recommendation'][0]['vehicles']);
+        self::assertNotEmpty($data['change_reason']);
         self::assertSame($alternative, $data['drop_off']);
         self::assertSame('ALTERNATIVE_DROP_OFF', $data['endpoint']);
         self::assertSame('ADVISORY_CONFIRMED', $frozen->basis);
@@ -552,12 +582,16 @@ final class PhaseFiveInventoryDeliveryTest extends TestCase
         $organization = VendorOrganization::query()->create(['legal_name' => $name.' Legal', 'store_name' => $name]);
         DB::table('vendor_organizations')->where('id', $organization->id)->update(['account_status' => 'ACTIVE', 'store_activation_status' => 'ACTIVE', 'store_verification_status' => 'APPROVED', 'store_setup_status' => 'COMPLETED']);
         $storeProfileId = (string) Str::uuid7();
-        DB::table('store_profiles')->insert(['id' => $storeProfileId, 'vendor_organization_id' => $organization->id, 'public_store_name' => $name, 'status' => 'COMPLETED', 'fulfillment_method' => $delivery ? 'BOTH' : 'SELF_PICKUP', 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('store_profiles')->insert(['id' => $storeProfileId, 'vendor_organization_id' => $organization->id, 'public_store_name' => $name, 'status' => 'COMPLETED', 'vendor_delivery_enabled' => $delivery, 'fulfillment_method' => $delivery ? 'BOTH' : 'SELF_PICKUP', 'created_at' => now(), 'updated_at' => now()]);
         if ($delivery) {
             DB::table('delivery_service_areas')->insert(['id' => (string) Str::uuid7(), 'vendor_organization_id' => $organization->id, 'area_type' => 'RADIUS', 'maximum_distance_km' => 50, 'active' => true, 'created_at' => now(), 'updated_at' => now()]);
         }
         app(StoreOperatingSchedule::class)->replaceWeekly($storeProfileId, array_map(fn (int $day): array => ['day_of_week' => $day, 'status' => 'OPEN', 'opens_at' => '08:00', 'closes_at' => '17:00'], range(1, 7)));
         $owner = $this->member($organization, 'OWNER');
+        if ($delivery) {
+            $this->member($organization, 'FULFILLMENT');
+            $this->placeDeliveryStore($organization->id, 1000);
+        }
         $profileId = (string) Str::uuid7();
         DB::table('vendor_tax_profiles')->insert(['id' => $profileId, 'vendor_organization_id' => $organization->id, 'status' => 'APPROVED', 'environment' => 'TEST', 'created_at' => now(), 'updated_at' => now()]);
         $versionId = (string) Str::uuid7();

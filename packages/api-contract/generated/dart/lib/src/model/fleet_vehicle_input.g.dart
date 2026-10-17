@@ -70,12 +70,41 @@ final BuiltSet<FleetVehicleInputHeavyClassificationEnum>
   _$fleetVehicleInputHeavyClassificationEnum_NOT_HEAVY,
 ]);
 
+const FleetVehicleInputMobilizationBasisEnum
+    _$fleetVehicleInputMobilizationBasisEnum_PER_TRUCK =
+    const FleetVehicleInputMobilizationBasisEnum._('PER_TRUCK');
+const FleetVehicleInputMobilizationBasisEnum
+    _$fleetVehicleInputMobilizationBasisEnum_PER_TRIP =
+    const FleetVehicleInputMobilizationBasisEnum._('PER_TRIP');
+
+FleetVehicleInputMobilizationBasisEnum
+    _$fleetVehicleInputMobilizationBasisEnumValueOf(String name) {
+  switch (name) {
+    case 'PER_TRUCK':
+      return _$fleetVehicleInputMobilizationBasisEnum_PER_TRUCK;
+    case 'PER_TRIP':
+      return _$fleetVehicleInputMobilizationBasisEnum_PER_TRIP;
+    default:
+      throw ArgumentError(name);
+  }
+}
+
+final BuiltSet<FleetVehicleInputMobilizationBasisEnum>
+    _$fleetVehicleInputMobilizationBasisEnumValues = BuiltSet<
+        FleetVehicleInputMobilizationBasisEnum>(const <FleetVehicleInputMobilizationBasisEnum>[
+  _$fleetVehicleInputMobilizationBasisEnum_PER_TRUCK,
+  _$fleetVehicleInputMobilizationBasisEnum_PER_TRIP,
+]);
+
 Serializer<FleetVehicleInputVehicleCategoryEnum>
     _$fleetVehicleInputVehicleCategoryEnumSerializer =
     _$FleetVehicleInputVehicleCategoryEnumSerializer();
 Serializer<FleetVehicleInputHeavyClassificationEnum>
     _$fleetVehicleInputHeavyClassificationEnumSerializer =
     _$FleetVehicleInputHeavyClassificationEnumSerializer();
+Serializer<FleetVehicleInputMobilizationBasisEnum>
+    _$fleetVehicleInputMobilizationBasisEnumSerializer =
+    _$FleetVehicleInputMobilizationBasisEnumSerializer();
 
 class _$FleetVehicleInputVehicleCategoryEnumSerializer
     implements PrimitiveSerializer<FleetVehicleInputVehicleCategoryEnum> {
@@ -145,6 +174,38 @@ class _$FleetVehicleInputHeavyClassificationEnumSerializer
           _fromWire[serialized] ?? (serialized is String ? serialized : ''));
 }
 
+class _$FleetVehicleInputMobilizationBasisEnumSerializer
+    implements PrimitiveSerializer<FleetVehicleInputMobilizationBasisEnum> {
+  static const Map<String, Object> _toWire = const <String, Object>{
+    'PER_TRUCK': 'PER_TRUCK',
+    'PER_TRIP': 'PER_TRIP',
+  };
+  static const Map<Object, String> _fromWire = const <Object, String>{
+    'PER_TRUCK': 'PER_TRUCK',
+    'PER_TRIP': 'PER_TRIP',
+  };
+
+  @override
+  final Iterable<Type> types = const <Type>[
+    FleetVehicleInputMobilizationBasisEnum
+  ];
+  @override
+  final String wireName = 'FleetVehicleInputMobilizationBasisEnum';
+
+  @override
+  Object serialize(Serializers serializers,
+          FleetVehicleInputMobilizationBasisEnum object,
+          {FullType specifiedType = FullType.unspecified}) =>
+      _toWire[object.name] ?? object.name;
+
+  @override
+  FleetVehicleInputMobilizationBasisEnum deserialize(
+          Serializers serializers, Object serialized,
+          {FullType specifiedType = FullType.unspecified}) =>
+      FleetVehicleInputMobilizationBasisEnum.valueOf(
+          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+}
+
 class _$FleetVehicleInput extends FleetVehicleInput {
   @override
   final String? id;
@@ -188,6 +249,10 @@ class _$FleetVehicleInput extends FleetVehicleInput {
   final int? perKmCentavos;
   @override
   final int? maximumDistanceKm;
+  @override
+  final int? mobilizationFeeCentavos;
+  @override
+  final FleetVehicleInputMobilizationBasisEnum? mobilizationBasis;
 
   factory _$FleetVehicleInput(
           [void Function(FleetVehicleInputBuilder)? updates]) =>
@@ -214,7 +279,9 @@ class _$FleetVehicleInput extends FleetVehicleInput {
       this.available,
       this.baseFeeCentavos,
       this.perKmCentavos,
-      this.maximumDistanceKm})
+      this.maximumDistanceKm,
+      this.mobilizationFeeCentavos,
+      this.mobilizationBasis})
       : super._();
   @override
   FleetVehicleInput rebuild(void Function(FleetVehicleInputBuilder) updates) =>
@@ -248,7 +315,9 @@ class _$FleetVehicleInput extends FleetVehicleInput {
         available == other.available &&
         baseFeeCentavos == other.baseFeeCentavos &&
         perKmCentavos == other.perKmCentavos &&
-        maximumDistanceKm == other.maximumDistanceKm;
+        maximumDistanceKm == other.maximumDistanceKm &&
+        mobilizationFeeCentavos == other.mobilizationFeeCentavos &&
+        mobilizationBasis == other.mobilizationBasis;
   }
 
   @override
@@ -275,6 +344,8 @@ class _$FleetVehicleInput extends FleetVehicleInput {
     _$hash = $jc(_$hash, baseFeeCentavos.hashCode);
     _$hash = $jc(_$hash, perKmCentavos.hashCode);
     _$hash = $jc(_$hash, maximumDistanceKm.hashCode);
+    _$hash = $jc(_$hash, mobilizationFeeCentavos.hashCode);
+    _$hash = $jc(_$hash, mobilizationBasis.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -302,7 +373,9 @@ class _$FleetVehicleInput extends FleetVehicleInput {
           ..add('available', available)
           ..add('baseFeeCentavos', baseFeeCentavos)
           ..add('perKmCentavos', perKmCentavos)
-          ..add('maximumDistanceKm', maximumDistanceKm))
+          ..add('maximumDistanceKm', maximumDistanceKm)
+          ..add('mobilizationFeeCentavos', mobilizationFeeCentavos)
+          ..add('mobilizationBasis', mobilizationBasis))
         .toString();
   }
 }
@@ -406,6 +479,18 @@ class FleetVehicleInputBuilder
   set maximumDistanceKm(int? maximumDistanceKm) =>
       _$this._maximumDistanceKm = maximumDistanceKm;
 
+  int? _mobilizationFeeCentavos;
+  int? get mobilizationFeeCentavos => _$this._mobilizationFeeCentavos;
+  set mobilizationFeeCentavos(int? mobilizationFeeCentavos) =>
+      _$this._mobilizationFeeCentavos = mobilizationFeeCentavos;
+
+  FleetVehicleInputMobilizationBasisEnum? _mobilizationBasis;
+  FleetVehicleInputMobilizationBasisEnum? get mobilizationBasis =>
+      _$this._mobilizationBasis;
+  set mobilizationBasis(
+          FleetVehicleInputMobilizationBasisEnum? mobilizationBasis) =>
+      _$this._mobilizationBasis = mobilizationBasis;
+
   FleetVehicleInputBuilder() {
     FleetVehicleInput._defaults(this);
   }
@@ -434,6 +519,8 @@ class FleetVehicleInputBuilder
       _baseFeeCentavos = $v.baseFeeCentavos;
       _perKmCentavos = $v.perKmCentavos;
       _maximumDistanceKm = $v.maximumDistanceKm;
+      _mobilizationFeeCentavos = $v.mobilizationFeeCentavos;
+      _mobilizationBasis = $v.mobilizationBasis;
       _$v = null;
     }
     return this;
@@ -476,6 +563,8 @@ class FleetVehicleInputBuilder
           baseFeeCentavos: baseFeeCentavos,
           perKmCentavos: perKmCentavos,
           maximumDistanceKm: maximumDistanceKm,
+          mobilizationFeeCentavos: mobilizationFeeCentavos,
+          mobilizationBasis: mobilizationBasis,
         );
     replace(_$result);
     return _$result;

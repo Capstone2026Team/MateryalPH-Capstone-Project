@@ -7,6 +7,7 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(WorkPackageLineInput, () {
+    // Canonical catalog material; omitted or null for an unlisted material the Buyer names. Unlisted lines accept any normalized unit and are always missing lines.
     // String materialId
     test('to test the property `materialId`', () async {
       // TODO
@@ -14,6 +15,16 @@ void main() {
 
     // String name
     test('to test the property `name`', () async {
+      // TODO
+    });
+
+    // String description
+    test('to test the property `description`', () async {
+      // TODO
+    });
+
+    // String color
+    test('to test the property `color`', () async {
       // TODO
     });
 

@@ -17,6 +17,8 @@ class _$VendorInvitationAcceptance extends VendorInvitationAcceptance {
   final String password;
   @override
   final String passwordConfirmation;
+  @override
+  final VendorBotProtectionEvidence? botProtection;
 
   factory _$VendorInvitationAcceptance(
           [void Function(VendorInvitationAcceptanceBuilder)? updates]) =>
@@ -27,7 +29,8 @@ class _$VendorInvitationAcceptance extends VendorInvitationAcceptance {
       required this.email,
       required this.fullName,
       required this.password,
-      required this.passwordConfirmation})
+      required this.passwordConfirmation,
+      this.botProtection})
       : super._();
   @override
   VendorInvitationAcceptance rebuild(
@@ -46,7 +49,8 @@ class _$VendorInvitationAcceptance extends VendorInvitationAcceptance {
         email == other.email &&
         fullName == other.fullName &&
         password == other.password &&
-        passwordConfirmation == other.passwordConfirmation;
+        passwordConfirmation == other.passwordConfirmation &&
+        botProtection == other.botProtection;
   }
 
   @override
@@ -57,6 +61,7 @@ class _$VendorInvitationAcceptance extends VendorInvitationAcceptance {
     _$hash = $jc(_$hash, fullName.hashCode);
     _$hash = $jc(_$hash, password.hashCode);
     _$hash = $jc(_$hash, passwordConfirmation.hashCode);
+    _$hash = $jc(_$hash, botProtection.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -68,7 +73,8 @@ class _$VendorInvitationAcceptance extends VendorInvitationAcceptance {
           ..add('email', email)
           ..add('fullName', fullName)
           ..add('password', password)
-          ..add('passwordConfirmation', passwordConfirmation))
+          ..add('passwordConfirmation', passwordConfirmation)
+          ..add('botProtection', botProtection))
         .toString();
   }
 }
@@ -99,6 +105,12 @@ class VendorInvitationAcceptanceBuilder
   set passwordConfirmation(String? passwordConfirmation) =>
       _$this._passwordConfirmation = passwordConfirmation;
 
+  VendorBotProtectionEvidenceBuilder? _botProtection;
+  VendorBotProtectionEvidenceBuilder get botProtection =>
+      _$this._botProtection ??= VendorBotProtectionEvidenceBuilder();
+  set botProtection(VendorBotProtectionEvidenceBuilder? botProtection) =>
+      _$this._botProtection = botProtection;
+
   VendorInvitationAcceptanceBuilder() {
     VendorInvitationAcceptance._defaults(this);
   }
@@ -111,6 +123,7 @@ class VendorInvitationAcceptanceBuilder
       _fullName = $v.fullName;
       _password = $v.password;
       _passwordConfirmation = $v.passwordConfirmation;
+      _botProtection = $v.botProtection?.toBuilder();
       _$v = null;
     }
     return this;
@@ -130,21 +143,35 @@ class VendorInvitationAcceptanceBuilder
   VendorInvitationAcceptance build() => _build();
 
   _$VendorInvitationAcceptance _build() {
-    final _$result = _$v ??
-        _$VendorInvitationAcceptance._(
-          token: BuiltValueNullFieldError.checkNotNull(
-              token, r'VendorInvitationAcceptance', 'token'),
-          email: BuiltValueNullFieldError.checkNotNull(
-              email, r'VendorInvitationAcceptance', 'email'),
-          fullName: BuiltValueNullFieldError.checkNotNull(
-              fullName, r'VendorInvitationAcceptance', 'fullName'),
-          password: BuiltValueNullFieldError.checkNotNull(
-              password, r'VendorInvitationAcceptance', 'password'),
-          passwordConfirmation: BuiltValueNullFieldError.checkNotNull(
-              passwordConfirmation,
-              r'VendorInvitationAcceptance',
-              'passwordConfirmation'),
-        );
+    _$VendorInvitationAcceptance _$result;
+    try {
+      _$result = _$v ??
+          _$VendorInvitationAcceptance._(
+            token: BuiltValueNullFieldError.checkNotNull(
+                token, r'VendorInvitationAcceptance', 'token'),
+            email: BuiltValueNullFieldError.checkNotNull(
+                email, r'VendorInvitationAcceptance', 'email'),
+            fullName: BuiltValueNullFieldError.checkNotNull(
+                fullName, r'VendorInvitationAcceptance', 'fullName'),
+            password: BuiltValueNullFieldError.checkNotNull(
+                password, r'VendorInvitationAcceptance', 'password'),
+            passwordConfirmation: BuiltValueNullFieldError.checkNotNull(
+                passwordConfirmation,
+                r'VendorInvitationAcceptance',
+                'passwordConfirmation'),
+            botProtection: _botProtection?.build(),
+          );
+    } catch (_) {
+      late String _$failedField;
+      try {
+        _$failedField = 'botProtection';
+        _botProtection?.build();
+      } catch (e) {
+        throw BuiltValueNestedFieldError(
+            r'VendorInvitationAcceptance', _$failedField, e.toString());
+      }
+      rethrow;
+    }
     replace(_$result);
     return _$result;
   }

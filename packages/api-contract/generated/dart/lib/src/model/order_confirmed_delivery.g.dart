@@ -127,6 +127,12 @@ class _$OrderConfirmedDeliveryEndpointEnumSerializer
 
 class _$OrderConfirmedDelivery extends OrderConfirmedDelivery {
   @override
+  final BuiltList<DeliveryEstimateOption>? systemRecommendation;
+  @override
+  final bool? recommendationChanged;
+  @override
+  final String? changeReason;
+  @override
   final BuiltList<OrderDeliveryVehicle> vehicles;
   @override
   final int distanceMeters;
@@ -160,7 +166,10 @@ class _$OrderConfirmedDelivery extends OrderConfirmedDelivery {
       (OrderConfirmedDeliveryBuilder()..update(updates))._build();
 
   _$OrderConfirmedDelivery._(
-      {required this.vehicles,
+      {this.systemRecommendation,
+      this.recommendationChanged,
+      this.changeReason,
+      required this.vehicles,
       required this.distanceMeters,
       this.routeSource,
       this.basis,
@@ -188,6 +197,9 @@ class _$OrderConfirmedDelivery extends OrderConfirmedDelivery {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is OrderConfirmedDelivery &&
+        systemRecommendation == other.systemRecommendation &&
+        recommendationChanged == other.recommendationChanged &&
+        changeReason == other.changeReason &&
         vehicles == other.vehicles &&
         distanceMeters == other.distanceMeters &&
         routeSource == other.routeSource &&
@@ -207,6 +219,9 @@ class _$OrderConfirmedDelivery extends OrderConfirmedDelivery {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, systemRecommendation.hashCode);
+    _$hash = $jc(_$hash, recommendationChanged.hashCode);
+    _$hash = $jc(_$hash, changeReason.hashCode);
     _$hash = $jc(_$hash, vehicles.hashCode);
     _$hash = $jc(_$hash, distanceMeters.hashCode);
     _$hash = $jc(_$hash, routeSource.hashCode);
@@ -228,6 +243,9 @@ class _$OrderConfirmedDelivery extends OrderConfirmedDelivery {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'OrderConfirmedDelivery')
+          ..add('systemRecommendation', systemRecommendation)
+          ..add('recommendationChanged', recommendationChanged)
+          ..add('changeReason', changeReason)
           ..add('vehicles', vehicles)
           ..add('distanceMeters', distanceMeters)
           ..add('routeSource', routeSource)
@@ -249,6 +267,22 @@ class _$OrderConfirmedDelivery extends OrderConfirmedDelivery {
 class OrderConfirmedDeliveryBuilder
     implements Builder<OrderConfirmedDelivery, OrderConfirmedDeliveryBuilder> {
   _$OrderConfirmedDelivery? _$v;
+
+  ListBuilder<DeliveryEstimateOption>? _systemRecommendation;
+  ListBuilder<DeliveryEstimateOption> get systemRecommendation =>
+      _$this._systemRecommendation ??= ListBuilder<DeliveryEstimateOption>();
+  set systemRecommendation(
+          ListBuilder<DeliveryEstimateOption>? systemRecommendation) =>
+      _$this._systemRecommendation = systemRecommendation;
+
+  bool? _recommendationChanged;
+  bool? get recommendationChanged => _$this._recommendationChanged;
+  set recommendationChanged(bool? recommendationChanged) =>
+      _$this._recommendationChanged = recommendationChanged;
+
+  String? _changeReason;
+  String? get changeReason => _$this._changeReason;
+  set changeReason(String? changeReason) => _$this._changeReason = changeReason;
 
   ListBuilder<OrderDeliveryVehicle>? _vehicles;
   ListBuilder<OrderDeliveryVehicle> get vehicles =>
@@ -324,6 +358,9 @@ class OrderConfirmedDeliveryBuilder
   OrderConfirmedDeliveryBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _systemRecommendation = $v.systemRecommendation?.toBuilder();
+      _recommendationChanged = $v.recommendationChanged;
+      _changeReason = $v.changeReason;
       _vehicles = $v.vehicles.toBuilder();
       _distanceMeters = $v.distanceMeters;
       _routeSource = $v.routeSource;
@@ -361,6 +398,9 @@ class OrderConfirmedDeliveryBuilder
     try {
       _$result = _$v ??
           _$OrderConfirmedDelivery._(
+            systemRecommendation: _systemRecommendation?.build(),
+            recommendationChanged: recommendationChanged,
+            changeReason: changeReason,
             vehicles: vehicles.build(),
             distanceMeters: BuiltValueNullFieldError.checkNotNull(
                 distanceMeters, r'OrderConfirmedDelivery', 'distanceMeters'),
@@ -386,6 +426,9 @@ class OrderConfirmedDeliveryBuilder
     } catch (_) {
       late String _$failedField;
       try {
+        _$failedField = 'systemRecommendation';
+        _systemRecommendation?.build();
+
         _$failedField = 'vehicles';
         vehicles.build();
 

@@ -151,6 +151,13 @@ class _BooleanConstSerializer<T> implements PrimitiveSerializer<T> {
 `;
         }
       }
+      // PHP requires bracketed multipart array keys. Limit this normalization to review media.
+      if (relativePath === "lib/src/api/buyer_reviews_api.dart") {
+        contents = contents.replace("r'files': files.toList(),", "r'files[]': files.toList(),");
+      }
+      if (relativePath === "lib/src/api/vendor_fulfillment_api.dart") {
+        contents = contents.replace("r'additional_photos': additionalPhotos.toList(),", "r'additional_photos[]': additionalPhotos.toList(),");
+      }
       // Nullable inline objects use nested built_value builders. dart-dio
       // currently assigns the deserialized value to the builder field directly.
       const nestedFields = {
@@ -163,6 +170,7 @@ class _BooleanConstSerializer<T> implements PrimitiveSerializer<T> {
         "lib/src/model/inventory_movement_list_envelope.dart": ["meta"],
         "lib/src/model/fleet_vehicle_list_envelope.dart": ["meta"],
         "lib/src/model/order_list_envelope.dart": ["meta"],
+        "lib/src/model/delivery_workspace_page.dart": ["meta"],
       }[relativePath] ?? [];
       for (const field of nestedFields) {
         contents = contents.replace(`result.${field} = valueDes;`, `result.${field} = valueDes.toBuilder();`);
@@ -172,7 +180,9 @@ class _BooleanConstSerializer<T> implements PrimitiveSerializer<T> {
       // dart-dio emits imports for error responses and flattened allOf models
       // even when its generated implementation never references those types.
       const body = contents.replace(/^import .*;\r?\n/gmu, "");
+      const retainedImports = new Set();
       contents = contents.replace(/^import '([^']+)';\r?\n/gmu, (line, uri) => {
+        if (retainedImports.has(uri)) return "";
         let symbol;
         if (uri === "package:built_collection/built_collection.dart" && !/\b(?:BuiltList|BuiltMap|BuiltSet|BuiltListMultimap|BuiltSetMultimap|ListBuilder|MapBuilder|SetBuilder)\b/u.test(body)) return "";
         if (uri === "package:built_value/json_object.dart") symbol = "JsonObject";
@@ -180,8 +190,16 @@ class _BooleanConstSerializer<T> implements PrimitiveSerializer<T> {
           const importedPath = join(output, "lib", uri.slice("package:materyalph_api_client/".length));
           if (existsSync(importedPath)) symbol = readFileSync(importedPath, "utf8").match(/\bclass\s+(\w+)/u)?.[1];
         }
-        return symbol && !new RegExp(`\\b${symbol}\\b`, "u").test(body) ? "" : line;
+        if (symbol && !new RegExp(`\\b${symbol}\\b`, "u").test(body)) return "";
+        retainedImports.add(uri);
+        return line;
       });
+    }
+    if (relativePath === "src/apis/BuyerReviewsApi.ts") {
+      contents = contents.replace("formParams.append('files', element as any);", "formParams.append('files[]', element as any);");
+    }
+    if (relativePath === "src/apis/VendorFulfillmentApi.ts") {
+      contents = contents.replace("formParams.append('additional_photos', element as any);", "formParams.append('additional_photos[]', element as any);");
     }
     const normalized = contents.replace(/[\t ]+$/gmu, "").replace(relativePath === "lib/src/model/vendor_setup_complete.dart" ? /(?:\r?\n){2,}$/u : /$^/u, "\n");
     if (normalized !== originalContents) writeFileSync(generatedPath, normalized);

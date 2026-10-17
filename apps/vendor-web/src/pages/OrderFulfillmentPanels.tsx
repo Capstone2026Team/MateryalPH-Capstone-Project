@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
-import { AlertTriangle, Camera, ClipboardCheck, MessageSquare, PauseCircle, ShieldAlert, Truck, UserRoundCheck } from 'lucide-react'
+import { AlertTriangle, Camera, ClipboardCheck, ImagePlus, PauseCircle, ShieldAlert, Truck, UserRoundCheck } from 'lucide-react'
 import {
-  Button, CancellationAvailability, ConfirmDialog, DeadlineCountdown, Field, MilestoneStepper, RefundTimeline, StatusBadge, StatusMessage,
+  Button, CancellationAvailability, ConfirmDialog, DeadlineCountdown, Field, FileSelectionField, MilestoneStepper, RefundTimeline, StatusBadge, StatusMessage,
   formatManilaDateTime, formatPesoCentavos, readOrderEvidenceFile, roleLabel,
 } from '@materyalph/web-ui'
 import type { FulfillmentProof, FulfillmentStep } from '@materyalph/api-client-ts'
+import type { DeliveryVehicleOption } from '@materyalph/api-client-ts'
+import { Link } from 'react-router-dom'
 import {
   apiBasePath, apiFailure, assignFulfillment, cancelOrder, finalizeCancellationRequest, getCancellationPreview, listAssignees, readableOrderError, recordMilestone, recordReimbursement,
-  recordTrip, reportVehicleIssue, respondToProblem, retryRefund,
+  recordTrip, reportVehicleIssue, respondToProblem, retryRefund, listDeliveryVehicles,
   type FulfillmentAssignee, type MilestoneInput, type OrderDetail, type VehicleIssueRequestCategoryEnum, type VendorCancellationPreview, type VendorCancelRequestReasonCodeEnum,
 } from '../lib/orders-api'
 import { newIdempotencyKey } from '../lib/onboarding-api'
@@ -49,6 +50,9 @@ function ProofSummary({ proof }: { proof: FulfillmentProof }) {
     {proof.milestone === 'PICKED_UP' && <div className="flex flex-wrap justify-between gap-x-3"><dt className="text-text-secondary">Handover</dt><dd className="font-semibold">{proof.handoverConfirmed ? 'Confirmed' : 'Not confirmed'}</dd></div>}
     {proof.vehicle && <div className="flex flex-wrap justify-between gap-x-3"><dt className="text-text-secondary">Vehicle and trip</dt><dd className="font-semibold">{String(proof.vehicle.name ?? 'Accepted vehicle')} · trip {String(proof.vehicle.trip_number ?? '1')}</dd></div>}
     <div className="flex flex-wrap gap-x-4">{proof.photoPath && <EvidenceLink path={proof.photoPath} label="View proof photo" />}{proof.signaturePath && <EvidenceLink path={proof.signaturePath} label="View signature" />}</div>
+    {proof.recordedBy && <div><dt className="text-text-secondary">Recorded by</dt><dd>{proof.recordedBy}</dd></div>}
+    {proof.note && <div><dt className="text-text-secondary">Delivery notes</dt><dd className="break-words">{proof.note}</dd></div>}
+    {proof.additionalPhotoPaths?.map((path, index) => <EvidenceLink key={path} path={path} label={`Additional photo ${index + 1}`} />)}
   </dl>
 }
 
@@ -57,11 +61,13 @@ function ProofSummary({ proof }: { proof: FulfillmentProof }) {
  * the step that requires it. The accepted vehicles, trips, fee and address are read-only; nothing here can change a
  * commercial term. There is no live tracking.
  */
-export function FulfillmentWorkspace({ order, onChanged, onReload }: { order: OrderDetail; onChanged: Notify; onReload: () => void }) {
+export function FulfillmentWorkspace({ order, onChanged, onReload, staffWorkspace = false }: { order: OrderDetail; onChanged: Notify; onReload: () => void; staffWorkspace?: boolean }) {
   const fulfillment = order.fulfillment
   if (!fulfillment) return null
   const permissions = order.permissions
   const canAct = Boolean(permissions?.canRecordMilestone) && ACTIONABLE.includes(fulfillment.nextAction)
+  const delivery = fulfillment.method === 'DELIVERY'
+  const awaitingDeliveryProof = delivery && (fulfillment.state === 'OUT_FOR_DELIVERY' || fulfillment.nextAction === 'RECORD_DELIVERY')
   const orderState = order.states.find(row => row.family === 'ORDER')?.state ?? ''
   return <section aria-labelledby="fulfillment-heading" className="grid min-w-0 gap-5 rounded-surface border border-border-default bg-surface-primary p-4 sm:p-5">
     <div className="flex flex-wrap items-start justify-between gap-3">
@@ -72,17 +78,40 @@ export function FulfillmentWorkspace({ order, onChanged, onReload }: { order: Or
       {fulfillment.late && <StatusBadge label="Past the expected date" tone="warning" icon={<AlertTriangle size={14} aria-hidden="true" />} />}
     </div>
     {orderState === 'CANCELLATION_REQUESTED' && <StatusMessage tone="error">The Buyer asked to cancel. Milestones are paused until you finalize the request below or the Buyer withdraws it.</StatusMessage>}
-    <MilestoneStepper steps={fulfillment.steps} renderProof={(step: FulfillmentStep) => step.proof ? <ProofSummary proof={step.proof} /> : null}
-      currentAction={canAct ? <MilestoneAction order={order} onChanged={onChanged} onReload={onReload} /> : !permissions?.canRecordMilestone && ACTIONABLE.includes(fulfillment.nextAction)
+    <MilestoneStepper steps={fulfillment.steps} showProofRequirements={!delivery || staffWorkspace} renderProof={(step: FulfillmentStep) => step.proof ? <ProofSummary proof={step.proof} /> : null}
+      renderStepContent={step => delivery && step.key === 'OUT_FOR_DELIVERY' && (fulfillment.assignment || fulfillment.nextAction === 'DISPATCH' || (awaitingDeliveryProof && permissions?.canAssignFulfillment))
+        ? <DeliveryAssignmentStep key={`${order.id}-${fulfillment.nextAction === 'DISPATCH'}`} order={order} onChanged={onChanged} onReload={onReload} /> : null}
+      currentAction={fulfillment.nextAction === 'DISPATCH' ? !permissions?.canAssignFulfillment && <p className="text-sm text-text-secondary">The Owner or Store Manager confirms the staff and vehicle assignment to dispatch this delivery.</p>
+        : awaitingDeliveryProof && !staffWorkspace ? <p className="text-sm text-text-secondary">{fulfillment.assignment?.displayName ?? 'The assigned Fulfillment Staff member'} records Delivered with the receiver’s name and delivery photo from their Fulfillment portal. This page updates when they submit the proof.</p>
+        : canAct ? <MilestoneAction key={fulfillment.nextAction} order={order} onChanged={onChanged} onReload={onReload} /> : !permissions?.canRecordMilestone && ACTIONABLE.includes(fulfillment.nextAction)
         ? <p className="text-sm text-text-secondary">Only the Owner, Store Manager or the assigned Fulfillment Staff record this milestone.</p> : undefined} />
     {fulfillment.nextAction === 'AWAIT_RECEIPT' && <ReceiptStatus order={order} onReload={onReload} />}
     {fulfillment.acceptedArrangement && <AcceptedArrangement order={order} onChanged={onChanged} />}
     {fulfillment.issue && <ProblemPanel order={order} onChanged={onChanged} />}
-    <ThreadEntry order={order} />
-    {permissions?.canAssignFulfillment && <AssignmentPanel order={order} onChanged={onChanged} />}
-    {!permissions?.canAssignFulfillment && fulfillment.assignment && <p className="flex items-center gap-2 text-sm"><UserRoundCheck size={16} aria-hidden="true" />Assigned to <strong>{fulfillment.assignment.displayName}</strong> (Fulfillment Staff)</p>}
+    {!delivery && permissions?.canAssignFulfillment && <AssignmentPanel order={order} onChanged={onChanged} onReload={onReload} />}
+    {!delivery && !permissions?.canAssignFulfillment && fulfillment.assignment && <AssignmentSummary order={order} />}
     {permissions?.canReportVehicleIssue && order.fulfillmentMethod === 'DELIVERY' && <VehicleIssueForm order={order} onChanged={onChanged} />}
+    {(fulfillment.vehicleIssues?.length ?? 0) > 0 && <section className="grid gap-3 border-t border-border-default pt-4" aria-label="Reported delivery issues"><h3 className="font-semibold">Delivery issues</h3>{fulfillment.vehicleIssues.map((issue, index) => <div key={index} className="text-sm"><p className="font-semibold">{VEHICLE_ISSUE_LABELS[issue.category] ?? issue.category}{issue.reportedAt ? ` · ${formatManilaDateTime(issue.reportedAt)}` : ''}</p><p className="break-words">{issue.description}</p></div>)}</section>}
+    {(fulfillment.assignmentHistory?.length ?? 0) > 0 && <section className="grid gap-3 border-t border-border-default pt-4" aria-label="Staff assignment history"><h3 className="font-semibold">Assignment history</h3><ol className="grid gap-3 text-sm">{fulfillment.assignmentHistory?.map((entry, index) => <li key={index}><p className="font-semibold">{entry.event === 'ASSIGNMENT_ACKNOWLEDGED' ? 'Assignment acknowledged' : entry.displayName ?? 'Staff assigned'}{entry.vehicleName ? ` · ${entry.vehicleName}` : ''}</p><p className="text-text-secondary">{entry.at ? formatManilaDateTime(entry.at) : ''} · {roleLabel(entry.actorRole ?? 'VENDOR')}</p>{entry.reason && <p className="break-words">{entry.reason}</p>}</li>)}</ol></section>}
   </section>
+}
+
+function AssignmentSummary({ order }: { order: OrderDetail }) {
+  const assignment = order.fulfillment!.assignment
+  if (!assignment) return null
+  return <div className="grid gap-2 text-sm"><p className="flex flex-wrap items-center gap-2"><UserRoundCheck size={16} aria-hidden="true" />Assigned to <strong>{assignment.displayName}</strong> (Fulfillment Staff)</p>{assignment.vehicle && <p>Vehicle: <strong>{assignment.vehicle.name}</strong></p>}{assignment.assignedAt && <p className="text-text-secondary">Assigned {formatManilaDateTime(assignment.assignedAt)}</p>}{assignment.acknowledgedAt && <p className="text-text-secondary">Acknowledged {formatManilaDateTime(assignment.acknowledgedAt)}</p>}</div>
+}
+
+function DeliveryAssignmentStep({ order, onChanged, onReload }: { order: OrderDetail; onChanged: Notify; onReload: () => void }) {
+  const [open, setOpen] = useState(false)
+  const dispatch = order.fulfillment!.nextAction === 'DISPATCH'
+  const canAssign = Boolean(order.permissions?.canAssignFulfillment)
+  const showForm = canAssign && (dispatch || open)
+  return <div className="mt-2 grid min-w-0 gap-3">
+    {!showForm && <AssignmentSummary order={order} />}
+    {canAssign && !showForm && <Button variant="secondary" className="w-fit" onClick={() => setOpen(true)}>{order.fulfillment!.assignment ? 'Reassign Fulfillment Staff' : 'Assign Fulfillment Staff'}</Button>}
+    {showForm && <AssignmentPanel dispatch={dispatch} order={order} onChanged={(updated, message) => { setOpen(false); onChanged(updated, message) }} onReload={onReload} />}
+  </div>
 }
 
 function ReceiptStatus({ order, onReload }: { order: OrderDetail; onReload: () => void }) {
@@ -94,23 +123,25 @@ function ReceiptStatus({ order, onReload }: { order: OrderDetail; onReload: () =
 
 function MilestoneAction({ order, onChanged, onReload }: { order: OrderDetail; onChanged: Notify; onReload: () => void }) {
   const next = order.fulfillment!.nextAction
-  const vehicles = order.fulfillment!.acceptedArrangement?.vehicles ?? []
   const [note, setNote] = useState('')
-  const [vehicleIndex, setVehicleIndex] = useState(0)
-  const [trip, setTrip] = useState(1)
   const [receiver, setReceiver] = useState('')
   const [receiverKind, setReceiverKind] = useState<'BUYER' | 'AUTHORIZED_RECEIVER'>('BUYER')
   const [handover, setHandover] = useState(false)
   const [photo, setPhoto] = useState<File | null>(null)
   const [signature, setSignature] = useState<File | null>(null)
+  const [additional, setAdditional] = useState<(File | null)[]>([])
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [message, setMessage] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const key = useRef(newIdempotencyKey())
-  const milestones: Record<string, MilestoneInput['milestone']> = { START_PREPARATION: 'PROCESSING', MARK_READY: 'READY_FOR_PICKUP', DISPATCH: 'OUT_FOR_DELIVERY', RECORD_PICKUP: 'PICKED_UP', RECORD_DELIVERY: 'DELIVERED' }
+  useEffect(() => { key.current = newIdempotencyKey() }, [note, receiver, receiverKind, handover, photo, signature, additional])
+  const milestones: Record<string, MilestoneInput['milestone']> = { START_PREPARATION: 'PROCESSING', MARK_READY: 'READY_FOR_PICKUP', RECORD_PICKUP: 'PICKED_UP', RECORD_DELIVERY: 'DELIVERED' }
   const milestone: MilestoneInput['milestone'] = milestones[next] ?? 'PROCESSING'
-  const label = ({ START_PREPARATION: 'Start preparing', MARK_READY: 'Mark ready for pickup', DISPATCH: 'Dispatch — out for delivery', RECORD_PICKUP: 'Record handover', RECORD_DELIVERY: 'Record delivery' } as Record<string, string>)[next]
-  const selected = vehicles[vehicleIndex]
+  const label = ({ START_PREPARATION: 'Start preparing', MARK_READY: 'Mark ready for pickup', RECORD_PICKUP: 'Record handover', RECORD_DELIVERY: 'Record delivery' } as Record<string, string>)[next]
+  function clearFieldError(name: string) {
+    setErrors(current => { const updated = { ...current }; delete updated[name]; return updated })
+    setMessage(null)
+  }
 
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -118,12 +149,14 @@ function MilestoneAction({ order, onChanged, onReload }: { order: OrderDetail; o
     if (milestone === 'DELIVERED' && !photo) local.file = 'Add a delivery photo.'
     if ((milestone === 'DELIVERED' || milestone === 'PICKED_UP') && receiver.trim().length < 2) local.receiver_name = 'Enter the receiver\'s name.'
     if (milestone === 'PICKED_UP' && !handover) local.handover_confirmed = 'Confirm the handover.'
-    if (milestone === 'OUT_FOR_DELIVERY' && vehicles.length === 0) local.vehicle_index = 'This order has no accepted delivery vehicle.'
+    for (const [name, file] of [['file', photo], ['signature', signature], ...additional.map((file, index) => [`additional_${index}`, file])] as [string, File | null][]) {
+      if (file && !['image/png', 'image/jpeg'].includes(file.type)) local[name] = 'Choose a JPG or PNG image.'
+      if (file && order.fulfillment?.proofUploadLimitKb && file.size > order.fulfillment.proofUploadLimitKb * 1024) local[name] = `Choose an image up to ${Math.round(order.fulfillment.proofUploadLimitKb / 1024)} MB.`
+    }
     setErrors(local)
     if (Object.keys(local).length) { setMessage('Add the required proof.'); return }
     const input: MilestoneInput = { milestone, lockVersion: order.lockVersion, ...(note.trim() ? { note: note.trim() } : {}) }
-    if (milestone === 'OUT_FOR_DELIVERY') Object.assign(input, { vehicleIndex, tripNumber: trip })
-    if (milestone === 'DELIVERED') Object.assign(input, { receiverName: receiver.trim(), ...(photo ? { file: photo } : {}), ...(signature ? { signature } : {}) })
+    if (milestone === 'DELIVERED') Object.assign(input, { receiverName: receiver.trim(), ...(photo ? { file: photo } : {}), ...(signature ? { signature } : {}), ...(additional.some(Boolean) ? { additionalPhotos: additional.filter((file): file is File => file !== null) } : {}) })
     if (milestone === 'PICKED_UP') Object.assign(input, { receiverName: receiver.trim(), receiverKind, handoverConfirmed: true, ...(photo ? { file: photo } : {}) })
     setBusy(true); setMessage(null)
     try {
@@ -131,41 +164,50 @@ function MilestoneAction({ order, onChanged, onReload }: { order: OrderDetail; o
       key.current = newIdempotencyKey()
       onChanged(updated, `${label} recorded.`)
     } catch (cause) {
-      key.current = newIdempotencyKey()
       const failure = await apiFailure(cause)
       if (failure?.code === 'MILESTONE_ALREADY_RECORDED' || failure?.code === 'ORDER_STATE_CONFLICT' || failure?.code === 'STALE_VERSION') { setMessage('This order changed. Reloading its current fulfillment status…'); onReload() }
       else setMessage(await readableOrderError(cause))
     } finally { setBusy(false) }
   }
 
-  return <form className="mt-2 grid gap-4 rounded-control border border-action-primary/40 bg-brand-orange-50/40 p-4" onSubmit={event => void submit(event)} noValidate aria-label={label}>
+  const deliveryProof = milestone === 'DELIVERED'
+  const noteField = <label className="grid min-w-0 content-start gap-2 text-sm font-semibold">Note (optional)<textarea className={`${control} ${deliveryProof ? 'min-h-24' : 'min-h-16'} py-2`} maxLength={500} value={note} onChange={event => setNote(event.target.value)} /></label>
+
+  return <form className={deliveryProof ? 'mt-3 grid w-full min-w-0 max-w-5xl gap-5 rounded-control border border-border-default bg-surface-canvas p-4 sm:p-5' : 'mt-2 grid gap-4 rounded-control border border-action-primary/40 bg-brand-orange-50/40 p-4'} onSubmit={event => void submit(event)} noValidate aria-label={label}>
+    {deliveryProof && <header className="flex items-start gap-3">
+      <Camera size={20} className="mt-0.5 shrink-0 text-action-primary" aria-hidden="true" />
+      <div className="min-w-0"><h3 className="text-lg font-semibold">Delivery proof</h3><p className="mt-1 text-sm leading-6 text-text-secondary">Enter who received the order and add a clear delivery photo.</p></div>
+    </header>}
     {message && <StatusMessage tone="error">{message}</StatusMessage>}
-    {milestone === 'OUT_FOR_DELIVERY' && <fieldset className="grid gap-3"><legend className="text-sm font-semibold">Accepted vehicle and trip</legend>
-      <div className="grid gap-2">{vehicles.map(vehicle => <label key={vehicle.vehicleIndex} className={`flex min-h-11 cursor-pointer items-center gap-3 rounded-control border px-3 py-2 text-sm ${vehicleIndex === vehicle.vehicleIndex ? 'border-action-primary bg-surface-primary' : 'border-border-default'}`}>
-        <input type="radio" name="vehicle" className="h-4 w-4 accent-action-primary" checked={vehicleIndex === vehicle.vehicleIndex} onChange={() => { setVehicleIndex(vehicle.vehicleIndex); setTrip(1) }} />
-        <span className="min-w-0 flex-1"><span className="font-semibold">{vehicle.name ?? 'Accepted vehicle'}</span> <span className="text-text-secondary">· {vehicle.numberOfVehicles} vehicle{vehicle.numberOfVehicles === 1 ? '' : 's'}, {vehicle.totalVehicleTrips} trip{vehicle.totalVehicleTrips === 1 ? '' : 's'}</span></span>
-      </label>)}</div>
-      {errors.vehicle_index && <p className="text-sm text-status-error" role="alert">{errors.vehicle_index}</p>}
-      {selected && selected.totalVehicleTrips > 1 && <label className="grid max-w-xs gap-2 text-sm font-semibold">Trip<select className={control} value={trip} onChange={event => setTrip(Number(event.target.value))}>
-        {Array.from({ length: selected.totalVehicleTrips }, (_, index) => <option key={index} value={index + 1}>Trip {index + 1} of {selected.totalVehicleTrips}</option>)}</select></label>}
-      <p className="text-xs text-text-secondary">Only the accepted vehicles and trips can be dispatched. A different vehicle or extra trip needs a revision the Buyer approves.</p>
-    </fieldset>}
-    {(milestone === 'DELIVERED' || milestone === 'PICKED_UP') && <div className="grid gap-4 sm:grid-cols-2">
-      <Field label={milestone === 'DELIVERED' ? 'Receiver name' : 'Collected by'} name="receiver_name" required value={receiver} maxLength={120} error={errors.receiver_name} onChange={event => setReceiver(event.target.value)} />
+    {(milestone === 'DELIVERED' || milestone === 'PICKED_UP') && <div className={deliveryProof ? 'grid min-w-0 items-start gap-5 md:grid-cols-2' : 'grid gap-4 sm:grid-cols-2'}>
+      <Field label={milestone === 'DELIVERED' ? 'Receiver name' : 'Collected by'} name="receiver_name" required value={receiver} maxLength={120} error={errors.receiver_name} onChange={event => { setReceiver(event.target.value); clearFieldError('receiver_name') }} />
       {milestone === 'PICKED_UP' && <label className="grid gap-2 text-sm font-semibold">Receiver<select className={control} value={receiverKind} onChange={event => setReceiverKind(event.target.value as 'BUYER' | 'AUTHORIZED_RECEIVER')}>
         <option value="BUYER">The Buyer</option><option value="AUTHORIZED_RECEIVER">An authorized receiver</option></select></label>}
-      <label className="grid gap-2 text-sm font-semibold">{milestone === 'DELIVERED' ? 'Delivery photo' : 'Handover photo (optional)'}{milestone === 'DELIVERED' && <span className="sr-only"> (required)</span>}
-        <input type="file" accept="image/png,image/jpeg" className="min-h-12 w-full min-w-0 text-sm" aria-invalid={Boolean(errors.file)} onChange={event => setPhoto(event.target.files?.[0] ?? null)} /></label>
-      {milestone === 'DELIVERED' && <label className="grid gap-2 text-sm font-semibold">Receiver signature (optional)<input type="file" accept="image/png,image/jpeg" className="min-h-12 w-full min-w-0 text-sm" onChange={event => setSignature(event.target.files?.[0] ?? null)} /></label>}
-      {errors.file && <p className="text-sm text-status-error sm:col-span-2" role="alert">{errors.file}</p>}
+      <div className={milestone === 'PICKED_UP' ? 'min-w-0 sm:col-span-2' : 'min-w-0'}>
+        <FileSelectionField camera label={milestone === 'DELIVERED' ? 'Delivery photo' : 'Handover photo (optional)'} chooseLabel="Choose photo" accept="image/png,image/jpeg" hint={`JPG or PNG${order.fulfillment?.proofUploadLimitKb ? ` · up to ${Math.round(order.fulfillment.proofUploadLimitKb / 1024)} MB` : ''}`} required={milestone === 'DELIVERED'} file={photo} disabled={busy} error={errors.file} onChange={file => { setPhoto(file); clearFieldError('file') }} />
+      </div>
       {milestone === 'PICKED_UP' && <label className="flex min-h-11 items-start gap-3 text-sm sm:col-span-2"><input type="checkbox" className="mt-0.5 h-5 w-5 accent-action-primary" checked={handover} onChange={event => setHandover(event.target.checked)} />
         <span>I handed over every line of this order to the person named above.</span></label>}
       {errors.handover_confirmed && <p className="text-sm text-status-error sm:col-span-2" role="alert">{errors.handover_confirmed}</p>}
     </div>}
-    <label className="grid gap-2 text-sm font-semibold">Note (optional)<textarea className={`${control} min-h-16 py-2`} maxLength={500} value={note} onChange={event => setNote(event.target.value)} /></label>
-    <div className="flex flex-wrap items-center gap-3">
-      <Button type="submit" disabled={busy}>{busy ? 'Recording…' : label}</Button>
-      {(milestone === 'READY_FOR_PICKUP' || milestone === 'OUT_FOR_DELIVERY') && <span className="text-xs text-text-secondary">This also opens Fulfillment Messages with the Buyer.</span>}
+    {deliveryProof ? <section aria-label="Optional delivery evidence" className="grid min-w-0 gap-4 border-t border-border-default pt-5">
+      <h4 className="text-sm font-semibold">Optional details</h4>
+      <div className="grid min-w-0 items-start gap-5 md:grid-cols-2">
+        <FileSelectionField label="Receiver signature (optional)" chooseLabel="Choose signature" accept="image/png,image/jpeg" hint="JPG or PNG" file={signature} disabled={busy} error={errors.signature} onChange={setSignature} />
+        {noteField}
+      </div>
+      <div className="grid min-w-0 gap-4">
+        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <p className="text-sm text-text-secondary">Up to 3 additional delivery photos</p>
+          {additional.length < 3 && <Button variant="secondary" className="w-full sm:w-auto" disabled={busy} onClick={() => setAdditional(current => [...current, null])}><ImagePlus size={16} aria-hidden="true" />Add another delivery photo</Button>}
+        </div>
+        {additional.length > 0 && <div className="grid min-w-0 items-start gap-4 md:grid-cols-2">{additional.map((file, index) => <FileSelectionField key={index} camera label={`Additional delivery photo ${index + 1} (optional)`} chooseLabel="Choose photo" accept="image/png,image/jpeg" hint="JPG or PNG" file={file} disabled={busy} error={errors[`additional_${index}`]} onChange={next => setAdditional(current => current.map((item, i) => i === index ? next : item))} />)}</div>}
+      </div>
+    </section> : noteField}
+    <div className={deliveryProof ? 'flex min-w-0 flex-col gap-3 border-t border-border-default pt-4 sm:flex-row sm:items-center sm:justify-between' : 'flex flex-wrap items-center gap-3'}>
+      {deliveryProof && <p className="max-w-lg text-sm text-text-secondary">The Buyer can review this proof in Order Details.</p>}
+      <Button type="submit" disabled={busy} className={deliveryProof ? 'w-full sm:w-auto' : undefined}>{busy ? 'Recording…' : label}</Button>
+      {milestone === 'READY_FOR_PICKUP' && <span className="text-xs text-text-secondary">This also opens Fulfillment Messages with the Buyer.</span>}
     </div>
   </form>
 }
@@ -173,7 +215,6 @@ function MilestoneAction({ order, onChanged, onReload }: { order: OrderDetail; o
 function AcceptedArrangement({ order, onChanged }: { order: OrderDetail; onChanged: Notify }) {
   const arrangement = order.fulfillment!.acceptedArrangement!
   const trips = order.fulfillment!.trips
-  const outForDelivery = order.fulfillment!.nextAction === 'RECORD_DELIVERY'
   const remaining = arrangement.vehicles.flatMap(vehicle => Array.from({ length: vehicle.totalVehicleTrips }, (_, index) => ({ vehicle, trip: index + 1 })))
     .filter(item => !trips.some(recorded => recorded.vehicleIndex === item.vehicle.vehicleIndex && recorded.tripNumber === item.trip))
   const [busy, setBusy] = useState(false)
@@ -188,7 +229,7 @@ function AcceptedArrangement({ order, onChanged }: { order: OrderDetail; onChang
     </dl>
     <p className="text-xs text-text-secondary">{arrangement.notice}</p>
     {trips.length > 0 && <ul className="grid gap-1 text-sm" aria-label="Dispatched trips">{trips.map(trip => <li key={`${trip.vehicleIndex}-${trip.tripNumber}`}>Trip {trip.tripNumber} of {trip.totalVehicleTrips} · {trip.name ?? 'Accepted vehicle'}{trip.dispatchedAt ? ` · ${formatManilaDateTime(trip.dispatchedAt)}` : ''}</li>)}</ul>}
-    {outForDelivery && order.permissions?.canRecordMilestone && remaining.length > 0 && <div className="flex flex-wrap items-center gap-3">
+    {order.fulfillment!.state === 'OUT_FOR_DELIVERY' && order.permissions?.canReportVehicleIssue && remaining.length > 0 && <div className="flex flex-wrap items-center gap-3">
       <Button variant="secondary" disabled={busy} onClick={() => void (async () => {
         setBusy(true); setError(null)
         try { onChanged(await recordTrip(order.id, remaining[0]!.vehicle.vehicleIndex, remaining[0]!.trip), `Trip ${remaining[0]!.trip} recorded.`) } catch (cause) { setError(await readableOrderError(cause)) } finally { setBusy(false) }
@@ -225,40 +266,56 @@ function ProblemPanel({ order, onChanged }: { order: OrderDetail; onChanged: Not
   </section>
 }
 
-function ThreadEntry({ order }: { order: OrderDetail }) {
-  const thread = order.fulfillment!.thread
-  return <p className="flex flex-wrap items-center gap-2 border-t border-border-default pt-4 text-sm">
-    <MessageSquare size={16} aria-hidden="true" />
-    {thread.available && thread.conversationId
-      ? <><Link to={`/messages?conversation=${thread.conversationId}`} className="font-semibold text-action-primary underline-offset-4 hover:underline">Open Fulfillment Messages</Link>{thread.readOnly && <span className="text-text-secondary">· read-only history</span>}</>
-      : <span className="text-text-secondary">{thread.notice ?? 'Fulfillment Messages are not open yet.'}</span>}
-  </p>
-}
-
-function AssignmentPanel({ order, onChanged }: { order: OrderDetail; onChanged: Notify }) {
+function AssignmentPanel({ order, onChanged, onReload, dispatch = false }: { order: OrderDetail; onChanged: Notify; onReload: () => void; dispatch?: boolean }) {
   const current = order.fulfillment!.assignment
   const [options, setOptions] = useState<FulfillmentAssignee[] | null>(null)
+  const [vehicles, setVehicles] = useState<DeliveryVehicleOption[] | null>(null)
   const [target, setTarget] = useState('')
-  const [reason, setReason] = useState('')
+  const [vehicle, setVehicle] = useState('')
+  const [reason, setReason] = useState(dispatch ? 'Confirmed delivery dispatch' : '')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  useEffect(() => { let active = true; listAssignees(order.id).then(rows => { if (active) setOptions(rows) }).catch(async cause => { const text = await readableOrderError(cause); if (active) setError(text) }); return () => { active = false } }, [order.id])
+  const [attempt, setAttempt] = useState(0)
+  const key = useRef(newIdempotencyKey())
+  const delivery = order.fulfillmentMethod === 'DELIVERY'
+  useEffect(() => { key.current = newIdempotencyKey() }, [target, vehicle, reason, order.lockVersion])
+  useEffect(() => {
+    let active = true
+    void Promise.all([listAssignees(order.id), delivery ? listDeliveryVehicles(order.id) : Promise.resolve([])]).then(([staff, fleet]) => {
+      if (!active) return
+      setError(null); setOptions(staff); setVehicles(fleet)
+      setTarget(value => staff.some(row => String(row.userId) === value) ? value : staff.some(row => row.userId === current?.userId) ? String(current!.userId) : staff.length === 1 ? String(staff[0]!.userId) : '')
+      setVehicle(value => value || String(current?.vehicle?.vehicleIndex ?? (fleet.filter(row => row.available).length === 1 ? fleet.find(row => row.available)!.vehicleIndex : '')))
+    }).catch(async cause => { const text = await readableOrderError(cause); if (active) setError(text) })
+    return () => { active = false }
+  }, [order, current?.userId, current?.vehicle?.vehicleIndex, delivery, attempt])
+  const selected = vehicles?.find(row => String(row.vehicleIndex) === vehicle)
+  const selectedStaff = options?.find(row => String(row.userId) === target)
   return <section aria-labelledby="assignment-heading" className="grid gap-3 border-t border-border-default pt-4">
-    <h3 id="assignment-heading" className="flex items-center gap-2 font-semibold"><UserRoundCheck size={16} aria-hidden="true" />Fulfillment Staff</h3>
-    <p className="text-sm">{current ? <>Assigned to <strong>{current.displayName}</strong>{current.assignedAt ? ` since ${formatManilaDateTime(current.assignedAt)}` : ''}.</> : 'No Fulfillment Staff assigned. The Owner or Store Manager can record milestones directly.'}</p>
+    <h3 id="assignment-heading" className="flex items-center gap-2 font-semibold"><UserRoundCheck size={16} aria-hidden="true" />{dispatch ? 'Confirm delivery assignment' : 'Fulfillment assignment'}</h3>
+    <p className="text-sm">{current ? <>Assigned to <strong>{current.displayName}</strong>{current.vehicle?.name ? ` · ${current.vehicle.name}` : ''}{current.assignedAt ? ` since ${formatManilaDateTime(current.assignedAt)}` : ''}.</> : delivery ? 'Assign a Fulfillment Staff member and choose an available accepted vehicle before proceeding to Out for Delivery.' : 'No Fulfillment Staff assigned. The Owner or Store Manager can record pickup milestones directly.'}</p>
     {options === null && !error && <p className="text-sm text-text-secondary">Loading Fulfillment Staff…</p>}
-    {options && options.length === 0 && <p className="text-sm text-text-secondary">No active Fulfillment Staff. Teams are optional; invite staff from Team if you need them.</p>}
-    {options && options.length > 0 && <form className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end" onSubmit={event => { event.preventDefault(); void (async () => {
-      if (!target || reason.trim().length < 5) { setError('Choose staff and give a reason of at least 5 characters.'); return }
+    {options && options.length === 0 && <StatusMessage>No active Fulfillment Staff are available. <Link to="/team" className="inline-flex min-h-11 items-center underline">Open Team Accounts</Link></StatusMessage>}
+    {delivery && vehicles && !vehicles.some(row => row.available) && <StatusMessage>No accepted vehicles are available. Restore availability in <Link to="/vehicles" className="inline-flex min-h-11 items-center underline">Vehicles</Link>; a different arrangement requires Buyer approval.</StatusMessage>}
+    {options && options.length > 0 && <form className="grid min-w-0 gap-4" onSubmit={event => { event.preventDefault(); void (async () => {
+      if (!selectedStaff || reason.trim().length < 5 || (delivery && !selected?.available)) { setError('Choose active staff, an available accepted vehicle and a reason of at least 5 characters.'); return }
       setBusy(true); setError(null)
-      try { const updated = await assignFulfillment(order.id, Number(target), reason.trim()); setReason(''); onChanged(updated, 'Fulfillment Staff assigned. Any former assignee lost access to this order and its messages.') } catch (cause) { setError(await readableOrderError(cause)) } finally { setBusy(false) }
+      try { const updated = await assignFulfillment(order.id, Number(target), reason.trim(), { lockVersion: order.lockVersion, ...(delivery ? { vehicleIndex: Number(vehicle) } : {}), dispatch }, key.current); key.current = newIdempotencyKey(); onChanged(updated, dispatch ? 'Delivery assignment confirmed. The order is out for delivery.' : 'Fulfillment assignment saved. Affected staff have been notified.') } catch (cause) {
+        const failure = await apiFailure(cause)
+        if (['STALE_VERSION', 'ORDER_STATE_CONFLICT', 'MILESTONE_ALREADY_RECORDED'].includes(failure?.code ?? '')) { setError('This order changed. Reloading its current fulfillment status…'); onReload() }
+        else { setError(await readableOrderError(cause)); setAttempt(value => value + 1) }
+      } finally { setBusy(false) }
     })() }}>
-      <label className="grid gap-2 text-sm font-semibold">{current ? 'Reassign to' : 'Assign'}<select className={control} value={target} onChange={event => setTarget(event.target.value)}>
-        <option value="">Choose Fulfillment Staff</option>{options.filter(option => !option.assigned).map(option => <option key={option.userId} value={option.userId}>{option.displayName}</option>)}</select></label>
+      <div className="grid min-w-0 gap-4 sm:grid-cols-2"><label className="grid gap-2 text-sm font-semibold">Fulfillment Staff<select className={control} disabled={busy} value={target} onChange={event => setTarget(event.target.value)}>
+        <option value="">Choose Fulfillment Staff</option>{options.map(option => <option key={option.userId} value={option.userId}>{option.displayName}</option>)}</select></label>
+      {delivery && <label className="grid gap-2 text-sm font-semibold">Delivery vehicle<select className={control} disabled={busy} value={vehicle} onChange={event => setVehicle(event.target.value)}><option value="">Choose accepted vehicle</option>{vehicles?.map(row => <option key={row.vehicleIndex} value={row.vehicleIndex} disabled={!row.available}>{row.name}{row.available ? '' : ' · Unavailable'}</option>)}</select></label>}</div>
+      {selected && <p className="text-sm">{selected.name} · {selected.numberOfVehicles} vehicle(s), {selected.totalVehicleTrips} accepted trip(s). {selected.unavailableReason}</p>}
+      {delivery && <div className="grid gap-2 rounded-control bg-surface-canvas p-3 text-sm"><p className="font-semibold">{order.reference} · {order.buyer?.displayName ?? 'Buyer'}</p><p className="break-words">{String((order.destination?.heavyVehicleRestriction === 'YES' ? order.destination?.alternateDropOff : order.destination?.intended)?.formattedAddress ?? 'Confirmed delivery destination')}</p>{order.destination?.accessInstructions && <p className="break-words">{String(order.destination.accessInstructions)}</p>}<p>Final delivery fee: {formatPesoCentavos(order.fulfillment!.acceptedArrangement?.finalFeeCentavos ?? 0)}</p><p className="text-text-secondary">Assignment changes preserve the accepted arrangement and fee.</p></div>}
       <Field label="Reason" name="assignment_reason" value={reason} maxLength={500} onChange={event => setReason(event.target.value)} />
-      <Button type="submit" variant="secondary" disabled={busy}>{busy ? 'Saving…' : current ? 'Reassign' : 'Assign'}</Button>
+      {dispatch && <p className="text-xs text-text-secondary">Done confirms the assignment and marks this order Out for Delivery. It appears in the selected staff member’s Fulfillment portal.</p>}
+      <Button className="w-full sm:w-fit" type="submit" variant={dispatch ? 'primary' : 'secondary'} disabled={busy || !selectedStaff || (delivery && !selected?.available)}>{busy ? 'Saving…' : dispatch ? 'Done' : current ? 'Reassign' : 'Assign'}</Button>
     </form>}
-    {error && <p role="alert" className="text-sm text-status-error">{error}</p>}
+    {error && <StatusMessage tone="error">{error}<Button variant="quiet" onClick={() => setAttempt(value => value + 1)}>Retry options</Button></StatusMessage>}
   </section>
 }
 

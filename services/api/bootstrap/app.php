@@ -28,6 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->trustProxies(at: array_filter(array_map('trim', explode(',', (string) env('TRUSTED_PROXIES', '')))));
         $middleware->redirectGuestsTo(static fn (Request $_request): ?string => null);
         $middleware->prependToGroup('api', [CorrelationId::class, IsolatePortalCookies::class]);
         $middleware->prependToPriorityList(AuthenticatesRequests::class, AuthenticateFromCookie::class);
@@ -39,7 +40,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        $exceptions->dontFlash(['invitation_url', 'provider_account_id', 'x-callback-token']);
+        $exceptions->dontFlash(['invitation_url', 'provider_account_id', 'x-callback-token', 'token', 'sealed_token', 'sealed_recipient']);
         $exceptions->render(function (IdentityAuthenticationException $exception) {
             return ApiResponse::error(
                 $exception->errorCode,

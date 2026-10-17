@@ -72,5 +72,31 @@ void main() {
       // TODO
     });
 
+    // int pendingRequirements
+    test('to test the property `pendingRequirements`', () async {
+      // TODO
+    });
+
+    // DateTime oldestPendingAt
+    test('to test the property `oldestPendingAt`', () async {
+      // TODO
+    });
+
+    // Technical TEST provider connection state; never live KYC.
+    // String providerStatus
+    test('to test the property `providerStatus`', () async {
+      // TODO
+    });
+
+    // String discoverabilityStatus
+    test('to test the property `discoverabilityStatus`', () async {
+      // TODO
+    });
+
+    // String holdCode
+    test('to test the property `holdCode`', () async {
+      // TODO
+    });
+
   });
 }

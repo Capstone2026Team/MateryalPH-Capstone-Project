@@ -5,6 +5,8 @@
 - `npm run validate` validates OpenAPI 3.1.
 - `npm run generate` regenerates both first-party clients with the generator version pinned in `openapitools.json`.
 
+Handwritten Dart checks in `scripts/` use this package's `pubspec.yaml`, which references the generated Dart client by local path. Run `dart pub get` from `packages/api-contract` after cloning or changing Dart dependencies so both the IDE and command-line checks can resolve the client. After the generated client's `build_runner build` finishes, `npm run test:quotation-discount-contract` verifies percentage discount scopes, legacy fixed-discount drafts and published assessment serialization.
+
 FIN and MAT component schemas establish later-phase terminology without publishing fake operational endpoints. Authentication paths match the Phase 1 Laravel implementation; the temporary product scaffold remains outside the approved public contract.
 
 ## Generated-code warning policy

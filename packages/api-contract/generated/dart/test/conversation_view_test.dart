@@ -67,6 +67,42 @@ void main() {
       // TODO
     });
 
+    // Current vendor Owner or Store Manager may list this sales inquiry buyer's fulfillment conversations. False for other roles and fulfillment threads.
+    // bool canListFulfillmentConversations
+    test('to test the property `canListFulfillmentConversations`', () async {
+      // TODO
+    });
+
+    // Currently authorized Item-Based main conversation for this Buyer and Store. Null if the viewer cannot access it or this is a fulfillment thread.
+    // String mainConversationId
+    test('to test the property `mainConversationId`', () async {
+      // TODO
+    });
+
+    // Number of currently authorized project inquiries for this Buyer and Store.
+    // int projectInquiryCount
+    test('to test the property `projectInquiryCount`', () async {
+      // TODO
+    });
+
+    // Received unread messages across all currently authorized project inquiries, including every page. Opening the main thread does not mark these messages read.
+    // int projectUnreadCount
+    test('to test the property `projectUnreadCount`', () async {
+      // TODO
+    });
+
+    // Work Package name for a project inquiry, or Item inquiry for the main thread.
+    // String inquiryLabel
+    test('to test the property `inquiryLabel`', () async {
+      // TODO
+    });
+
+    // Unread received messages across every fulfillment conversation for this inquiry buyer and store, including history and all pages. Zero unless can_list_fulfillment_conversations is true. Does not include sales messages or mark messages read.
+    // int fulfillmentUnreadCount
+    test('to test the property `fulfillmentUnreadCount`', () async {
+      // TODO
+    });
+
     // bool fulfillmentEntryEnabled
     test('to test the property `fulfillmentEntryEnabled`', () async {
       // TODO

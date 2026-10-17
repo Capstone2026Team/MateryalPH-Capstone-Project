@@ -3,6 +3,8 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:built_collection/built_collection.dart';
+import 'package:materyalph_api_client/src/model/mixer_volume_plan.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -11,6 +13,7 @@ part 'delivery_plan_vehicle.g.dart';
 /// DeliveryPlanVehicle
 ///
 /// Properties:
+/// * [recommended] - True for the lowest eligible formula-fee plan in this group
 /// * [vehicleId]
 /// * [name]
 /// * [vehicleCategory]
@@ -25,6 +28,10 @@ part 'delivery_plan_vehicle.g.dart';
 /// * [baseFeeCentavos]
 /// * [perKmCentavos]
 /// * [perTripCentavos]
+/// * [mobilizationFeeCentavos]
+/// * [mobilizationBasis]
+/// * [mobilizationTotalCentavos] - Candidates only.
+/// * [volumePlan] - Candidates only.
 /// * [withinRange]
 /// * [rateVersion]
 /// * [configurationVersion]
@@ -34,6 +41,10 @@ part 'delivery_plan_vehicle.g.dart';
 /// * [limitingFactor]
 @BuiltValue()
 abstract class DeliveryPlanVehicle implements Built<DeliveryPlanVehicle, DeliveryPlanVehicleBuilder> {
+  /// True for the lowest eligible formula-fee plan in this group
+  @BuiltValueField(wireName: r'recommended')
+  bool? get recommended;
+
   @BuiltValueField(wireName: r'vehicle_id')
   String get vehicleId;
 
@@ -75,6 +86,21 @@ abstract class DeliveryPlanVehicle implements Built<DeliveryPlanVehicle, Deliver
 
   @BuiltValueField(wireName: r'per_trip_centavos')
   int get perTripCentavos;
+
+  @BuiltValueField(wireName: r'mobilization_fee_centavos')
+  int? get mobilizationFeeCentavos;
+
+  @BuiltValueField(wireName: r'mobilization_basis')
+  DeliveryPlanVehicleMobilizationBasisEnum? get mobilizationBasis;
+  // enum mobilizationBasisEnum {  PER_TRUCK,  PER_TRIP,  ,  };
+
+  /// Candidates only.
+  @BuiltValueField(wireName: r'mobilization_total_centavos')
+  int? get mobilizationTotalCentavos;
+
+  /// Candidates only.
+  @BuiltValueField(wireName: r'volume_plan')
+  MixerVolumePlan? get volumePlan;
 
   @BuiltValueField(wireName: r'within_range')
   bool get withinRange;
@@ -120,6 +146,13 @@ class _$DeliveryPlanVehicleSerializer implements PrimitiveSerializer<DeliveryPla
     DeliveryPlanVehicle object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.recommended != null) {
+      yield r'recommended';
+      yield serializers.serialize(
+        object.recommended,
+        specifiedType: const FullType(bool),
+      );
+    }
     yield r'vehicle_id';
     yield serializers.serialize(
       object.vehicleId,
@@ -190,6 +223,34 @@ class _$DeliveryPlanVehicleSerializer implements PrimitiveSerializer<DeliveryPla
       object.perTripCentavos,
       specifiedType: const FullType(int),
     );
+    if (object.mobilizationFeeCentavos != null) {
+      yield r'mobilization_fee_centavos';
+      yield serializers.serialize(
+        object.mobilizationFeeCentavos,
+        specifiedType: const FullType(int),
+      );
+    }
+    if (object.mobilizationBasis != null) {
+      yield r'mobilization_basis';
+      yield serializers.serialize(
+        object.mobilizationBasis,
+        specifiedType: const FullType.nullable(DeliveryPlanVehicleMobilizationBasisEnum),
+      );
+    }
+    if (object.mobilizationTotalCentavos != null) {
+      yield r'mobilization_total_centavos';
+      yield serializers.serialize(
+        object.mobilizationTotalCentavos,
+        specifiedType: const FullType(int),
+      );
+    }
+    if (object.volumePlan != null) {
+      yield r'volume_plan';
+      yield serializers.serialize(
+        object.volumePlan,
+        specifiedType: const FullType.nullable(MixerVolumePlan),
+      );
+    }
     yield r'within_range';
     yield serializers.serialize(
       object.withinRange,
@@ -256,6 +317,14 @@ class _$DeliveryPlanVehicleSerializer implements PrimitiveSerializer<DeliveryPla
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'recommended':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.recommended = valueDes;
+          break;
         case r'vehicle_id':
           final valueDes = serializers.deserialize(
             value,
@@ -358,6 +427,38 @@ class _$DeliveryPlanVehicleSerializer implements PrimitiveSerializer<DeliveryPla
           ) as int;
           result.perTripCentavos = valueDes;
           break;
+        case r'mobilization_fee_centavos':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.mobilizationFeeCentavos = valueDes;
+          break;
+        case r'mobilization_basis':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(DeliveryPlanVehicleMobilizationBasisEnum),
+          ) as DeliveryPlanVehicleMobilizationBasisEnum?;
+          if (valueDes == null) continue;
+          result.mobilizationBasis = valueDes;
+          break;
+        case r'mobilization_total_centavos':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.mobilizationTotalCentavos = valueDes;
+          break;
+        case r'volume_plan':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(MixerVolumePlan),
+          ) as MixerVolumePlan?;
+          if (valueDes == null) continue;
+          result.volumePlan.replace(valueDes);
+          break;
         case r'within_range':
           final valueDes = serializers.deserialize(
             value,
@@ -440,4 +541,19 @@ class _$DeliveryPlanVehicleSerializer implements PrimitiveSerializer<DeliveryPla
   }
 }
 
+
+class DeliveryPlanVehicleMobilizationBasisEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'PER_TRUCK')
+  static const DeliveryPlanVehicleMobilizationBasisEnum PER_TRUCK = _$deliveryPlanVehicleMobilizationBasisEnum_PER_TRUCK;
+  @BuiltValueEnumConst(wireName: r'PER_TRIP')
+  static const DeliveryPlanVehicleMobilizationBasisEnum PER_TRIP = _$deliveryPlanVehicleMobilizationBasisEnum_PER_TRIP;
+
+  static Serializer<DeliveryPlanVehicleMobilizationBasisEnum> get serializer => _$deliveryPlanVehicleMobilizationBasisEnumSerializer;
+
+  const DeliveryPlanVehicleMobilizationBasisEnum._(String name): super(name);
+
+  static BuiltSet<DeliveryPlanVehicleMobilizationBasisEnum> get values => _$deliveryPlanVehicleMobilizationBasisEnumValues;
+  static DeliveryPlanVehicleMobilizationBasisEnum valueOf(String name) => _$deliveryPlanVehicleMobilizationBasisEnumValueOf(name);
+}
 

@@ -16,6 +16,6 @@ final class MfaRecoveryRequest extends FormRequest
     /** @return array<string, list<mixed>> */
     public function rules(): array
     {
-        return ['recovery_code' => ['required', 'string', 'max:32']];
+        return ['recovery_code' => ['required', 'string', 'max:32'], 'challenge_token' => MfaCodeRequest::challengeTokenRules($this)];
     }
 }

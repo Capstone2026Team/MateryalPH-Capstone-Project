@@ -72,5 +72,21 @@ void main() {
       // TODO
     });
 
+    // String mobilizationBasis
+    test('to test the property `mobilizationBasis`', () async {
+      // TODO
+    });
+
+    // int mobilizationFeeCentavos
+    test('to test the property `mobilizationFeeCentavos`', () async {
+      // TODO
+    });
+
+    // Zero for snapshots before mobilization existed.
+    // int mobilizationTotalCentavos
+    test('to test the property `mobilizationTotalCentavos`', () async {
+      // TODO
+    });
+
   });
 }

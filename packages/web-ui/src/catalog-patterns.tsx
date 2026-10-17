@@ -10,13 +10,13 @@ export type RecordColumn<T> = { key: string; header: string; cell: (row: T) => R
  * cards below, rendered from one column definition so both views stay in sync.
  * Wide tables scroll inside their own container, never the page.
  */
-export function ResponsiveRecordList<T>({ caption, rows, columns, rowKey, cardTitle, cardAction }: {
+export function ResponsiveRecordList<T>({ caption, rows, columns, rowKey, cardTitle, cardAction, tableClassName = '' }: {
   caption: string; rows: T[]; columns: RecordColumn<T>[]; rowKey: (row: T) => string
-  cardTitle: (row: T) => ReactNode; cardAction?: (row: T) => ReactNode
+  cardTitle: (row: T) => ReactNode; cardAction?: (row: T) => ReactNode; tableClassName?: string
 }) {
   return <>
-    <div className="hidden overflow-x-auto rounded-surface border border-border-default bg-surface-primary lg:block">
-      <table className="w-full min-w-[960px] text-left text-sm">
+    <div role="region" aria-label={`${caption} table`} tabIndex={0} className="hidden min-w-0 max-w-full overflow-x-auto rounded-surface border border-border-default bg-surface-primary lg:block">
+      <table className={`w-full min-w-[960px] table-auto text-left text-sm ${tableClassName}`}>
         <caption className="sr-only">{caption}</caption>
         <thead className="border-b border-border-default bg-surface-canvas"><tr>{columns.map(column => <th key={column.key} scope="col" className="px-4 py-3 font-semibold text-text-strong">{column.header}</th>)}</tr></thead>
         <tbody>{rows.map(row => <tr key={rowKey(row)} className="border-t border-border-default align-top">{columns.map(column => <td key={column.key} className={`px-4 py-3 ${column.className ?? ''}`}>{column.cell(row)}</td>)}</tr>)}</tbody>
@@ -140,11 +140,11 @@ export function SummaryTiles({ label, tiles }: { label: string; tiles: SummaryTi
 export type FilterChip = { value: string; label: string; count?: number | undefined; icon?: ReactNode }
 
 /** Single-choice filter or view switch as pressed buttons; counts are part of each accessible name. */
-export function FilterChips({ label, chips, value, onChange, disabled = false }: { label: string; chips: FilterChip[]; value: string; onChange: (value: string) => void; disabled?: boolean }) {
+export function FilterChips({ label, chips, value, onChange, disabled = false, appearance = 'chips' }: { label: string; chips: FilterChip[]; value: string; onChange: (value: string) => void; disabled?: boolean; appearance?: 'chips' | 'tabs' }) {
   return <div role="group" aria-label={label} className="flex min-w-0 flex-wrap gap-2">
     {chips.map(chip => {
       const pressed = chip.value === value
-      return <button key={chip.value} type="button" aria-pressed={pressed} disabled={disabled} onClick={() => onChange(chip.value)} className={`inline-flex min-h-11 items-center gap-2 rounded-pill border px-4 text-sm font-semibold transition-colors motion-reduce:transition-none disabled:opacity-60 ${pressed ? 'border-action-primary bg-action-primary text-white' : 'border-border-default bg-surface-primary text-text-strong hover:bg-surface-canvas'}`}>
+      return <button key={chip.value} type="button" aria-pressed={pressed} disabled={disabled} onClick={() => onChange(chip.value)} className={`inline-flex min-h-11 items-center gap-2 px-4 text-sm font-semibold transition-colors motion-reduce:transition-none disabled:opacity-60 ${appearance === 'tabs' ? `rounded-control border-b-2 ${pressed ? 'border-action-primary bg-surface-canvas text-action-primary' : 'border-transparent text-text-secondary hover:bg-surface-canvas'}` : `rounded-pill border ${pressed ? 'border-action-primary bg-action-primary text-white' : 'border-border-default bg-surface-primary text-text-strong hover:bg-surface-canvas'}`}`}>
         {chip.icon}{chip.label}{chip.count !== undefined && <span className={`rounded-pill px-1.5 text-xs tabular-nums ${pressed ? 'bg-white/20' : 'bg-surface-canvas'}`}>{chip.count}</span>}
       </button>
     })}

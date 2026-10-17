@@ -1,0 +1,23 @@
+/* Shared workspace defaults for both portals, including nested detail surfaces. */
+@layer components {
+  .portal-page { min-width: 0; font-size: var(--mp-text-body); line-height: var(--mp-leading-body); }
+  .portal-page :where(select, textarea) {
+    max-width: 100%; min-height: 48px; border: 1px solid var(--mp-color-border-default);
+    border-radius: var(--mp-radius-control); padding: 10px 12px;
+    background: var(--mp-color-surface-primary); color: var(--mp-color-text-strong); font: inherit;
+  }
+  .portal-page :where(select) { cursor: pointer; }
+  .portal-page :where(select, textarea, input):disabled { cursor: not-allowed; opacity: .6; }
+  .portal-page :where(table) { width: 100%; text-align: left; font-size: var(--mp-text-body); line-height: var(--mp-leading-body); }
+  .portal-page :where(thead) { background: var(--mp-color-surface-canvas); }
+  .portal-page :where(th) { padding: 12px 16px; color: var(--mp-color-text-secondary); font-weight: 600; }
+  .portal-page :where(td) { padding: 16px; border-bottom: 1px solid var(--mp-color-border-default); vertical-align: top; }
+  .portal-page :where(tbody > tr:last-child > td) { border-bottom: 0; }
+  .portal-page :where(tbody > tr:hover) { background: var(--mp-color-surface-canvas); }
+  .portal-page :where(td, th) { overflow-wrap: anywhere; }
+  .portal-page :where(th[scope="row"]) { color: var(--mp-color-text-strong); }
+  .portal-search-input::-webkit-search-cancel-button { appearance: none; }
+  @media (min-width: 640px) {
+    .portal-page :where(select, textarea) { min-height: 44px; padding-block: 8px; }
+  }
+}

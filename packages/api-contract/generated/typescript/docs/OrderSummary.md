@@ -1,7 +1,7 @@
 
 # OrderSummary
 
-Buyer rows add next_action; Vendor rows add buyer, primary_action and nrpc_indicator.
+Buyer rows add next_action, payment_retryable and the My Orders card fields (fulfillment_conversation, card_actions, return_refund_due_at, dispute_case_id, payment_channel_name, closure_reason); Vendor rows add buyer, primary_action and nrpc_indicator.
 
 ## Properties
 
@@ -26,6 +26,12 @@ Name | Type
 `expectedFulfillmentDate` | Date
 `nextAction` | string
 `paymentRetryable` | boolean
+`fulfillmentConversation` | [OrderConversationRef](OrderConversationRef.md)
+`cardActions` | Array&lt;string&gt;
+`returnRefundDueAt` | Date
+`disputeCaseId` | string
+`paymentChannelName` | string
+`closureReason` | [OrderClosureReason](OrderClosureReason.md)
 `buyer` | [OrderBuyerRef](OrderBuyerRef.md)
 `primaryAction` | [VendorOrderPrimaryAction](VendorOrderPrimaryAction.md)
 `nrpcIndicator` | boolean
@@ -56,6 +62,12 @@ const example = {
   "expectedFulfillmentDate": null,
   "nextAction": null,
   "paymentRetryable": null,
+  "fulfillmentConversation": null,
+  "cardActions": null,
+  "returnRefundDueAt": null,
+  "disputeCaseId": null,
+  "paymentChannelName": null,
+  "closureReason": null,
   "buyer": null,
   "primaryAction": null,
   "nrpcIndicator": null,

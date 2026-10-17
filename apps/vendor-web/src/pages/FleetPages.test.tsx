@@ -125,7 +125,7 @@ test('fulfillment staff see only the assigned-vehicle view and roles without Veh
   vi.mocked(onboarding.getVendorOnboarding).mockResolvedValue(snapshot(['portal.vehicles', 'vehicles.view_assigned']))
   vi.mocked(inventory.listFleet).mockResolvedValue({ items: [], meta: { scope: 'ASSIGNED_ONLY', delivery: null, permissions: { canManage: false } } })
   const first = open()
-  expect(await screen.findByRole('heading', { name: 'No assigned vehicle yet.' })).toBeInTheDocument()
+  expect(await screen.findByText('No vehicle assigned to your orders yet.')).toBeInTheDocument()
   expect(screen.queryByRole('region', { name: 'Fleet overview' })).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Save vehicles' })).not.toBeInTheDocument()
   first.unmount()
@@ -137,6 +137,7 @@ test('fulfillment staff see only the assigned-vehicle view and roles without Veh
 test('fleet metrics update immediately on an invalidation while preserving unsaved edits', async () => {
   open()
   const panel = await screen.findByRole('region', { name: 'Fleet overview' })
+  await waitFor(() => expect(watchConversation).toHaveBeenCalledWith(null, expect.any(Function), undefined, ['fleet.changed']))
   const metric = (label: string) => within(panel).getByText(label).closest('dt')!.parentElement!
   expect(within(metric('Total vehicles')).getByText('4')).toBeVisible()
   expect(within(metric('Active vehicles')).getByText('4')).toBeVisible()
@@ -169,6 +170,7 @@ test('missing fleet summary is unavailable rather than a fabricated zero', async
 test('automatic updates preserve the last snapshot on network errors but clear it when access is revoked', async () => {
   open()
   await screen.findByRole('region', { name: 'Fleet overview' })
+  await waitFor(() => expect(watchConversation).toHaveBeenCalledWith(null, expect.any(Function), undefined, ['fleet.changed']))
   vi.mocked(inventory.listFleet).mockRejectedValueOnce(new Error('Offline'))
   act(() => { vi.mocked(watchConversation).mock.calls[0]![1]() })
   expect(await screen.findByText(/Automatic updates are temporarily unavailable/)).toBeVisible()
@@ -185,6 +187,7 @@ test('invalidations during a fetch are coalesced and socket listeners stop on un
   vi.mocked(watchConversation).mockResolvedValue(stop)
   const view = open()
   await screen.findByRole('region', { name: 'Fleet overview' })
+  await waitFor(() => expect(watchConversation).toHaveBeenCalledWith(null, expect.any(Function), undefined, ['fleet.changed']))
   let complete!: (value: Awaited<ReturnType<typeof inventory.listFleet>>) => void
   vi.mocked(inventory.listFleet).mockImplementationOnce(() => new Promise(resolve => { complete = resolve }))
   const changed = vi.mocked(watchConversation).mock.calls[0]![1]

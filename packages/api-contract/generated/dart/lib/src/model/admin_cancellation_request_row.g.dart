@@ -8,6 +8,8 @@ part of 'admin_cancellation_request_row.dart';
 
 class _$AdminCancellationRequestRow extends AdminCancellationRequestRow {
   @override
+  final String? orderId;
+  @override
   final String id;
   @override
   final String orderReference;
@@ -27,7 +29,8 @@ class _$AdminCancellationRequestRow extends AdminCancellationRequestRow {
       (AdminCancellationRequestRowBuilder()..update(updates))._build();
 
   _$AdminCancellationRequestRow._(
-      {required this.id,
+      {this.orderId,
+      required this.id,
       required this.orderReference,
       this.vendorName,
       required this.reasonCode,
@@ -48,6 +51,7 @@ class _$AdminCancellationRequestRow extends AdminCancellationRequestRow {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is AdminCancellationRequestRow &&
+        orderId == other.orderId &&
         id == other.id &&
         orderReference == other.orderReference &&
         vendorName == other.vendorName &&
@@ -60,6 +64,7 @@ class _$AdminCancellationRequestRow extends AdminCancellationRequestRow {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, orderId.hashCode);
     _$hash = $jc(_$hash, id.hashCode);
     _$hash = $jc(_$hash, orderReference.hashCode);
     _$hash = $jc(_$hash, vendorName.hashCode);
@@ -74,6 +79,7 @@ class _$AdminCancellationRequestRow extends AdminCancellationRequestRow {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'AdminCancellationRequestRow')
+          ..add('orderId', orderId)
           ..add('id', id)
           ..add('orderReference', orderReference)
           ..add('vendorName', vendorName)
@@ -90,6 +96,10 @@ class AdminCancellationRequestRowBuilder
         Builder<AdminCancellationRequestRow,
             AdminCancellationRequestRowBuilder> {
   _$AdminCancellationRequestRow? _$v;
+
+  String? _orderId;
+  String? get orderId => _$this._orderId;
+  set orderId(String? orderId) => _$this._orderId = orderId;
 
   String? _id;
   String? get id => _$this._id;
@@ -128,6 +138,7 @@ class AdminCancellationRequestRowBuilder
   AdminCancellationRequestRowBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _orderId = $v.orderId;
       _id = $v.id;
       _orderReference = $v.orderReference;
       _vendorName = $v.vendorName;
@@ -156,6 +167,7 @@ class AdminCancellationRequestRowBuilder
   _$AdminCancellationRequestRow _build() {
     final _$result = _$v ??
         _$AdminCancellationRequestRow._(
+          orderId: orderId,
           id: BuiltValueNullFieldError.checkNotNull(
               id, r'AdminCancellationRequestRow', 'id'),
           orderReference: BuiltValueNullFieldError.checkNotNull(

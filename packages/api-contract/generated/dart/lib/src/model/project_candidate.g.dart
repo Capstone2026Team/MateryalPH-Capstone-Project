@@ -36,6 +36,10 @@ class _$ProjectCandidate extends ProjectCandidate {
   @override
   final BuiltList<BuiltMap<String, JsonObject?>> lines;
   @override
+  final bool? selectionRequired;
+  @override
+  final BuiltMap<String, String>? specificationSelections;
+  @override
   final int materialsCentavos;
   @override
   final int includedVatCentavos;
@@ -71,6 +75,8 @@ class _$ProjectCandidate extends ProjectCandidate {
   final String label;
   @override
   final String currentQuotationState;
+  @override
+  final bool? isFavorite;
 
   factory _$ProjectCandidate(
           [void Function(ProjectCandidateBuilder)? updates]) =>
@@ -91,6 +97,8 @@ class _$ProjectCandidate extends ProjectCandidate {
       required this.fulfillmentPercent,
       required this.missingLines,
       required this.lines,
+      this.selectionRequired,
+      this.specificationSelections,
       required this.materialsCentavos,
       required this.includedVatCentavos,
       this.deliveryCentavos,
@@ -108,7 +116,8 @@ class _$ProjectCandidate extends ProjectCandidate {
       required this.expiresAt,
       required this.stale,
       required this.label,
-      required this.currentQuotationState})
+      required this.currentQuotationState,
+      this.isFavorite})
       : super._();
   @override
   ProjectCandidate rebuild(void Function(ProjectCandidateBuilder) updates) =>
@@ -136,6 +145,8 @@ class _$ProjectCandidate extends ProjectCandidate {
         fulfillmentPercent == other.fulfillmentPercent &&
         missingLines == other.missingLines &&
         lines == other.lines &&
+        selectionRequired == other.selectionRequired &&
+        specificationSelections == other.specificationSelections &&
         materialsCentavos == other.materialsCentavos &&
         includedVatCentavos == other.includedVatCentavos &&
         deliveryCentavos == other.deliveryCentavos &&
@@ -153,7 +164,8 @@ class _$ProjectCandidate extends ProjectCandidate {
         expiresAt == other.expiresAt &&
         stale == other.stale &&
         label == other.label &&
-        currentQuotationState == other.currentQuotationState;
+        currentQuotationState == other.currentQuotationState &&
+        isFavorite == other.isFavorite;
   }
 
   @override
@@ -173,6 +185,8 @@ class _$ProjectCandidate extends ProjectCandidate {
     _$hash = $jc(_$hash, fulfillmentPercent.hashCode);
     _$hash = $jc(_$hash, missingLines.hashCode);
     _$hash = $jc(_$hash, lines.hashCode);
+    _$hash = $jc(_$hash, selectionRequired.hashCode);
+    _$hash = $jc(_$hash, specificationSelections.hashCode);
     _$hash = $jc(_$hash, materialsCentavos.hashCode);
     _$hash = $jc(_$hash, includedVatCentavos.hashCode);
     _$hash = $jc(_$hash, deliveryCentavos.hashCode);
@@ -191,6 +205,7 @@ class _$ProjectCandidate extends ProjectCandidate {
     _$hash = $jc(_$hash, stale.hashCode);
     _$hash = $jc(_$hash, label.hashCode);
     _$hash = $jc(_$hash, currentQuotationState.hashCode);
+    _$hash = $jc(_$hash, isFavorite.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -212,6 +227,8 @@ class _$ProjectCandidate extends ProjectCandidate {
           ..add('fulfillmentPercent', fulfillmentPercent)
           ..add('missingLines', missingLines)
           ..add('lines', lines)
+          ..add('selectionRequired', selectionRequired)
+          ..add('specificationSelections', specificationSelections)
           ..add('materialsCentavos', materialsCentavos)
           ..add('includedVatCentavos', includedVatCentavos)
           ..add('deliveryCentavos', deliveryCentavos)
@@ -229,7 +246,8 @@ class _$ProjectCandidate extends ProjectCandidate {
           ..add('expiresAt', expiresAt)
           ..add('stale', stale)
           ..add('label', label)
-          ..add('currentQuotationState', currentQuotationState))
+          ..add('currentQuotationState', currentQuotationState)
+          ..add('isFavorite', isFavorite))
         .toString();
   }
 }
@@ -299,6 +317,18 @@ class ProjectCandidateBuilder
       _$this._lines ??= ListBuilder<BuiltMap<String, JsonObject?>>();
   set lines(ListBuilder<BuiltMap<String, JsonObject?>>? lines) =>
       _$this._lines = lines;
+
+  bool? _selectionRequired;
+  bool? get selectionRequired => _$this._selectionRequired;
+  set selectionRequired(bool? selectionRequired) =>
+      _$this._selectionRequired = selectionRequired;
+
+  MapBuilder<String, String>? _specificationSelections;
+  MapBuilder<String, String> get specificationSelections =>
+      _$this._specificationSelections ??= MapBuilder<String, String>();
+  set specificationSelections(
+          MapBuilder<String, String>? specificationSelections) =>
+      _$this._specificationSelections = specificationSelections;
 
   int? _materialsCentavos;
   int? get materialsCentavos => _$this._materialsCentavos;
@@ -387,6 +417,10 @@ class ProjectCandidateBuilder
   set currentQuotationState(String? currentQuotationState) =>
       _$this._currentQuotationState = currentQuotationState;
 
+  bool? _isFavorite;
+  bool? get isFavorite => _$this._isFavorite;
+  set isFavorite(bool? isFavorite) => _$this._isFavorite = isFavorite;
+
   ProjectCandidateBuilder() {
     ProjectCandidate._defaults(this);
   }
@@ -408,6 +442,8 @@ class ProjectCandidateBuilder
       _fulfillmentPercent = $v.fulfillmentPercent;
       _missingLines = $v.missingLines.toBuilder();
       _lines = $v.lines.toBuilder();
+      _selectionRequired = $v.selectionRequired;
+      _specificationSelections = $v.specificationSelections?.toBuilder();
       _materialsCentavos = $v.materialsCentavos;
       _includedVatCentavos = $v.includedVatCentavos;
       _deliveryCentavos = $v.deliveryCentavos;
@@ -426,6 +462,7 @@ class ProjectCandidateBuilder
       _stale = $v.stale;
       _label = $v.label;
       _currentQuotationState = $v.currentQuotationState;
+      _isFavorite = $v.isFavorite;
       _$v = null;
     }
     return this;
@@ -473,6 +510,8 @@ class ProjectCandidateBuilder
                 fulfillmentPercent, r'ProjectCandidate', 'fulfillmentPercent'),
             missingLines: missingLines.build(),
             lines: lines.build(),
+            selectionRequired: selectionRequired,
+            specificationSelections: _specificationSelections?.build(),
             materialsCentavos: BuiltValueNullFieldError.checkNotNull(
                 materialsCentavos, r'ProjectCandidate', 'materialsCentavos'),
             includedVatCentavos: BuiltValueNullFieldError.checkNotNull(
@@ -509,6 +548,7 @@ class ProjectCandidateBuilder
                 currentQuotationState,
                 r'ProjectCandidate',
                 'currentQuotationState'),
+            isFavorite: isFavorite,
           );
     } catch (_) {
       late String _$failedField;
@@ -520,6 +560,9 @@ class ProjectCandidateBuilder
         missingLines.build();
         _$failedField = 'lines';
         lines.build();
+
+        _$failedField = 'specificationSelections';
+        _specificationSelections?.build();
 
         _$failedField = 'delivery';
         delivery.build();

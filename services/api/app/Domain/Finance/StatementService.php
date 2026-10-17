@@ -6,6 +6,7 @@ namespace App\Domain\Finance;
 
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Operations\OutboxPublisher;
+use App\Domain\Payments\RefundService;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -22,6 +23,96 @@ use Illuminate\Support\Str;
 final class StatementService
 {
     public function __construct(private readonly FinanceNotifier $notifier, private readonly OutboxPublisher $outbox) {}
+
+    /**
+     * Append a credit to its original bill. Preserve gross verified payments; any credit beyond the unpaid
+     * receivable is a refund payable, never new debt or a credit on a second monthly bill. Caller owns the transaction.
+     *
+     * @return array{refund_centavos: int, applied: bool}
+     */
+    public function applyCredit(object $adjustment): array
+    {
+        if (DB::transactionLevel() < 1) {
+            throw new \LogicException('Statement credits require the approval transaction.');
+        }
+        $statementId = DB::table('fee_statement_lines')->where('fee_assessment_id', $adjustment->fee_assessment_id)->value('fee_statement_id');
+        if ($statementId === null) {
+            return ['refund_centavos' => 0, 'applied' => false];
+        }
+        $statement = DB::table('fee_statements')->where('id', $statementId)->lockForUpdate()->first();
+        $previousLine = DB::table('fee_statement_lines')->where('fee_adjustment_id', $adjustment->id)->first();
+        if ($statement->state === 'VOIDED' || ($previousLine !== null && ($previousLine->fee_statement_id === $statementId
+            || ! DB::table('fee_statement_lines')->where('corrects_line_id', $previousLine->id)->where('line_type', 'CREDIT_REVERSAL')->exists()
+            || DB::table('fee_statement_lines')->where('corrects_line_id', $previousLine->id)->where('line_type', 'CREDIT_TRANSFER')->exists()))) {
+            return ['refund_centavos' => 0, 'applied' => false];
+        }
+        $credit = (int) $adjustment->amount_centavos;
+        $credits = (int) $statement->credits_centavos + $credit;
+        $balance = max(0, (int) $statement->charges_centavos - $credits - (int) $statement->paid_centavos);
+        $refund = max(0, $credit - (int) $statement->outstanding_centavos);
+        DB::table('fee_statement_lines')->insert(['id' => (string) Str::uuid7(), 'fee_statement_id' => $statementId,
+            ...($previousLine === null ? ['fee_adjustment_id' => $adjustment->id] : ['corrects_line_id' => $previousLine->id]),
+            'line_type' => $previousLine === null ? 'CREDIT' : 'CREDIT_TRANSFER', 'amount_centavos' => $credit, 'description' => 'Approved commission credit on original order', 'created_at' => now(), 'updated_at' => now()]);
+        $state = $statement->state === 'DRAFT' ? 'DRAFT' : ($balance === 0 ? 'PAID' : ((int) $statement->paid_centavos > 0 ? 'PARTIALLY_PAID' : 'ISSUED'));
+        DB::table('fee_statements')->where('id', $statementId)->update(['credits_centavos' => $credits, 'balance_centavos' => $balance,
+            'outstanding_centavos' => $balance, 'state' => $state, 'lock_version' => (int) $statement->lock_version + 1, 'updated_at' => now()]);
+        if ($balance === 0) {
+            DB::table('finance_review_items')->where('kind', 'STATEMENT_OVERDUE')->where('source_id', $statementId)->where('state', 'OPEN')
+                ->update(['state' => 'RESOLVED', 'resolution' => 'Settled by approved commission credit.', 'resolved_at' => now(), 'updated_at' => now()]);
+        }
+
+        return ['refund_centavos' => $refund, 'applied' => true];
+    }
+
+    /** Repair previously approved, unallocated credits once, with compensating ledger entries and original-source refunds. */
+    public function synchronizeCredits(string $correlationId): void
+    {
+        // Earlier billing could reuse a paid/refunded credit on a later bill. Append reversals before relocating
+        // credits, so no source line is edited/deleted and no credit reduces both a debt and refunded cash.
+        DB::table('fee_statement_lines as l')->join('fee_adjustments as a', 'a.id', '=', 'l.fee_adjustment_id')
+            ->join('fee_statement_lines as earned', 'earned.fee_assessment_id', '=', 'a.fee_assessment_id')
+            ->whereColumn('l.fee_statement_id', '<>', 'earned.fee_statement_id')
+            ->whereNotExists(fn ($q) => $q->selectRaw('1')->from('fee_statement_lines as reversal')->whereColumn('reversal.corrects_line_id', 'l.id')->where('reversal.line_type', 'CREDIT_REVERSAL'))
+            ->orderBy('l.id')->get(['l.*'])->each(function (object $line): void {
+                DB::transaction(function () use ($line): void {
+                    $statement = DB::table('fee_statements')->where('id', $line->fee_statement_id)->lockForUpdate()->first();
+                    if (DB::table('fee_statement_lines')->where('corrects_line_id', $line->id)->where('line_type', 'CREDIT_REVERSAL')->exists()) {
+                        return;
+                    }
+                    $credits = (int) $statement->credits_centavos - (int) $line->amount_centavos;
+                    $balance = max(0, (int) $statement->charges_centavos - $credits - (int) $statement->paid_centavos);
+                    DB::table('fee_statement_lines')->insert(['id' => (string) Str::uuid7(), 'fee_statement_id' => $statement->id, 'corrects_line_id' => $line->id,
+                        'line_type' => 'CREDIT_REVERSAL', 'amount_centavos' => (int) $line->amount_centavos, 'description' => 'Credit relocated to its original commission statement', 'created_at' => now(), 'updated_at' => now()]);
+                    $state = in_array($statement->state, ['DRAFT', 'VOIDED'], true) ? $statement->state : ($balance === 0 ? 'PAID' : ((int) $statement->paid_centavos > 0 ? 'PARTIALLY_PAID' : 'ISSUED'));
+                    DB::table('fee_statements')->where('id', $statement->id)->update(['credits_centavos' => $credits, 'balance_centavos' => $balance, 'outstanding_centavos' => $balance,
+                        'state' => $state, 'lock_version' => (int) $statement->lock_version + 1, 'updated_at' => now()]);
+                });
+            });
+        DB::table('fee_adjustments')->where('kind', 'CREDIT')->orderBy('id')->eachById(function (object $adjustment) use ($correlationId): void {
+            DB::transaction(function () use ($adjustment, $correlationId): void {
+                $assessment = DB::table('fee_assessments')->where('id', $adjustment->fee_assessment_id)->lockForUpdate()->first();
+                $result = $this->applyCredit($adjustment);
+                if (! $result['applied']) {
+                    return;
+                }
+                $previousPayable = (int) DB::table('financial_ledger_entries')->where('source_type', 'FEE_ADJUSTMENT')->where('source_id', $adjustment->id)
+                    ->where('account_code', 'FEE_REFUND_PAYABLE')->where('direction', 'CREDIT')->sum('amount_centavos');
+                $difference = $result['refund_centavos'] - $previousPayable;
+                $source = ['FEE_ADJUSTMENT', (string) $adjustment->id];
+                app(FinancialLedgerService::class)->post(FinancialLedgerService::PLATFORM_FEE, 'FEE_CREDIT_ALLOCATION', 'PLATFORM_FEE:CREDIT_ALLOCATION:'.$adjustment->id, [
+                    FinancialLedgerService::debit($difference >= 0 ? 'FEE_RECEIVABLE' : 'FEE_REFUND_PAYABLE', abs($difference), ...$source),
+                    FinancialLedgerService::credit($difference >= 0 ? 'FEE_REFUND_PAYABLE' : 'FEE_RECEIVABLE', abs($difference), ...$source),
+                ], $correlationId);
+                if ($result['refund_centavos'] > 0) {
+                    app(RefundService::class)->createFeeCreditRefunds($adjustment, $assessment, $correlationId, $result['refund_centavos']);
+                }
+                $this->outbox->publish('FEE_CREDIT_APPROVED', 'FEE_ADJUSTMENT', (string) $adjustment->id, ['fee_adjustment_id' => (string) $adjustment->id, 'credit_centavos' => (int) $adjustment->amount_centavos]);
+            });
+        });
+        DB::table('finance_review_items')->where('kind', 'STATEMENT_OVERDUE')->where('state', 'OPEN')
+            ->whereIn('source_id', DB::table('fee_statements')->where(fn ($q) => $q->whereIn('state', ['PAID', 'VOIDED'])->orWhere('outstanding_centavos', 0))->select('id'))
+            ->update(['state' => 'RESOLVED', 'resolution' => 'Commission statement no longer has collectible debt.', 'resolved_at' => now(), 'updated_at' => now()]);
+    }
 
     /** @return int statements drafted */
     public function draftMonthly(CarbonImmutable $now): int
@@ -46,7 +137,7 @@ final class StatementService
                 if ($charges === 0) {
                     return 0;
                 }
-                $credits = DB::table('fee_adjustments as a')->join('fee_assessments as f', 'f.id', '=', 'a.fee_assessment_id')->where('f.vendor_organization_id', $vendorId)
+                $credits = DB::table('fee_adjustments as a')->join('fee_assessments as f', 'f.id', '=', 'a.fee_assessment_id')->whereIn('f.id', $billable->pluck('id'))
                     ->where('a.kind', 'CREDIT')->whereNotExists(fn ($query) => $query->selectRaw('1')->from('fee_statement_lines as l')->whereColumn('l.fee_adjustment_id', 'a.id'))
                     ->orderBy('a.approved_at')->get(['a.id', 'a.amount_centavos', 'a.fee_assessment_id']);
                 $id = (string) Str::uuid7();
@@ -120,6 +211,9 @@ final class StatementService
         foreach (DB::table('fee_statements')->whereIn('state', ['ISSUED', 'PARTIALLY_PAID'])->where('outstanding_centavos', '>', 0)->where('due_on', '<=', $today)->pluck('id') as $id) {
             $sent += DB::transaction(function () use ($id, $today): int {
                 $statement = DB::table('fee_statements')->where('id', $id)->lockForUpdate()->first();
+                if (! in_array($statement->state, ['ISSUED', 'PARTIALLY_PAID'], true) || (int) $statement->outstanding_centavos <= 0 || (string) $statement->due_on > $today) {
+                    return 0;
+                }
                 $secondDate = CarbonImmutable::parse((string) $statement->due_on)->addDays(7)->toDateString();
                 $notice = match (true) {
                     (int) $statement->overdue_notices_sent === 0 => 1,

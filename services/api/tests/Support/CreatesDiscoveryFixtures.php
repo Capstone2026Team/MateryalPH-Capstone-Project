@@ -34,13 +34,16 @@ trait CreatesDiscoveryFixtures
         DB::table('vendor_organizations')->where('id', $organization->id)->update(['account_status' => 'ACTIVE', 'store_activation_status' => 'ACTIVE', 'store_verification_status' => 'APPROVED', 'store_setup_status' => 'COMPLETED']);
         $profileId = (string) Str::uuid7();
         DB::table('store_profiles')->insert(['id' => $profileId, 'vendor_organization_id' => $organization->id, 'public_store_name' => $name, 'description' => 'Construction supplies', 'public_phone' => '+639170000000',
-            'status' => 'COMPLETED', 'fulfillment_method' => $delivery ? 'BOTH' : 'SELF_PICKUP', 'bulk_capability' => false, 'created_at' => now(), 'updated_at' => now()]);
+            'status' => 'COMPLETED', 'vendor_delivery_enabled' => $delivery, 'fulfillment_method' => $delivery ? 'BOTH' : 'SELF_PICKUP', 'bulk_capability' => false, 'created_at' => now(), 'updated_at' => now()]);
         if ($delivery) {
             DB::table('delivery_service_areas')->insert(['id' => (string) Str::uuid7(), 'vendor_organization_id' => $organization->id, 'area_type' => 'RADIUS', 'maximum_distance_km' => 3, 'active' => true, 'created_at' => now(), 'updated_at' => now()]);
         }
         DB::table('vendor_classifications')->insert(['id' => (string) Str::uuid7(), 'vendor_organization_id' => $organization->id, 'supplier_type' => 'RETAIL_HARDWARE_STORE', 'niches' => json_encode(['Cement']), 'custom_labels' => '[]', 'version' => 1, 'lock_version' => 1, 'created_at' => now(), 'updated_at' => now()]);
         app(StoreOperatingSchedule::class)->replaceWeekly($profileId, array_map(static fn (int $day): array => ['day_of_week' => $day, 'status' => 'OPEN', 'opens_at' => '08:00', 'closes_at' => '17:00'], range(1, 7)));
         $owner = $this->storeMember($organization, 'OWNER');
+        if ($delivery) {
+            $this->storeMember($organization, 'FULFILLMENT');
+        }
         $taxProfileId = (string) Str::uuid7();
         DB::table('vendor_tax_profiles')->insert(['id' => $taxProfileId, 'vendor_organization_id' => $organization->id, 'status' => 'APPROVED', 'environment' => 'TEST', 'created_at' => now(), 'updated_at' => now()]);
         $versionId = (string) Str::uuid7();

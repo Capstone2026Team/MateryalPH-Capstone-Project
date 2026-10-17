@@ -8,8 +8,11 @@ use App\Domain\Authorization\AccountAccess;
 use App\Domain\Authorization\CurrentVendorTeamAuthority;
 use App\Domain\Authorization\FinancePolicy;
 use App\Domain\Identity\AuthenticationException;
+use App\Domain\Identity\EmailOtpService;
+use App\Domain\Identity\OtpCodeGenerator;
 use App\Domain\Identity\TokenSessionService;
 use App\Models\AuthSession;
+use App\Models\EmailOtp;
 use App\Models\User;
 use App\Models\VendorMembership;
 use App\Models\VendorOrganization;
@@ -118,6 +121,91 @@ final class PhaseTwoAdministrationTest extends TestCase
         $this->postJson('/api/v1/auth/vendor-invitations/accept', $payload)->assertCreated();
         $this->assertDatabaseHas('vendor_memberships', ['user_id' => $existing->getKey(), 'vendor_organization_id' => DB::table('vendor_invitations')->where('id', $id)->value('vendor_organization_id')]);
         self::assertNotNull(DB::table('vendor_invitations')->where('id', $id)->value('accepted_at'));
+    }
+
+    public function test_pending_vendor_identity_with_deleted_membership_can_rejoin_and_must_verify_email(): void
+    {
+        [$token, $id] = $this->vendorInvitation();
+        $organizationId = DB::table('vendor_invitations')->where('id', $id)->value('vendor_organization_id');
+        $password = 'legacy-pass1';
+        $existing = User::factory()->unverified()->create(['email' => 'invited@example.test', 'account_type' => 'VENDOR', 'account_status' => 'PENDING_VERIFICATION', 'password' => Hash::make($password)]);
+        $oldMembership = VendorMembership::query()->create(['vendor_organization_id' => $organizationId, 'user_id' => $existing->getKey(), 'role' => 'INVENTORY', 'status' => 'DEACTIVATED', 'deleted_at' => now()]);
+        $originalHash = $existing->password;
+        $originalName = $existing->name;
+        $this->mock(OtpCodeGenerator::class)->shouldReceive('sixDigits')->once()->andReturn('123456');
+        $oldOtp = EmailOtp::query()->create(['user_id' => $existing->getKey(), 'normalized_email' => $existing->email, 'purpose' => 'EMAIL_VERIFICATION', 'code_hash' => str_repeat('a', 64), 'expires_at' => now()->subMinute(), 'created_at' => now()->subMinutes(11)]);
+        $payload = ['token' => $token, 'email' => $existing->email, 'full_name' => 'Replacement name', 'password' => $password, 'password_confirmation' => $password];
+
+        $this->postJson('/api/v1/auth/vendor-invitations/accept', $payload)->assertCreated()->assertJsonPath('data.next', 'VERIFY_EMAIL_AND_SIGN_IN');
+
+        self::assertSame(1, User::query()->where('email', $existing->email)->count());
+        self::assertSame('PENDING_VERIFICATION', $existing->refresh()->account_status);
+        self::assertNull($existing->email_verified_at);
+        self::assertSame($originalHash, $existing->password);
+        self::assertSame($originalName, $existing->name);
+        $current = VendorMembership::query()->where('user_id', $existing->getKey())->whereNull('deleted_at')->sole();
+        self::assertNotSame($oldMembership->id, $current->id);
+        self::assertSame('STORE_STAFF', $current->role);
+        self::assertNotNull($oldMembership->refresh()->deleted_at);
+        self::assertSame('DEACTIVATED', $oldMembership->status);
+        $this->assertDatabaseHas('vendor_invitations', ['id' => $id, 'accepted_membership_id' => $current->id, 'lock_version' => 2]);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'VENDOR_INVITATION_ACCEPTED', 'actor_user_id' => $existing->getKey(), 'resource_id' => $current->id]);
+        self::assertNotNull($oldOtp->refresh()->invalidated_at);
+        self::assertSame(1, EmailOtp::query()->where('user_id', $existing->getKey())->whereNull('invalidated_at')->whereNull('consumed_at')->count());
+        self::assertSame(1, DB::table('outbox_events')->where('event_type', 'AUTH_EMAIL_OTP_REQUESTED')->count());
+        $this->assertDatabaseCount('auth_sessions', 0);
+        $this->postJson('/api/v1/auth/vendor-invitations/accept', $payload)->assertUnprocessable();
+        $this->postJson('/api/v1/auth/login', ['email' => $existing->email, 'password' => $password, 'portal' => 'VENDOR'])->assertForbidden()->assertJsonPath('errors.0.code', 'ACCOUNT_NOT_ACTIVE');
+        $this->postJson('/api/v1/auth/verify-email', ['email' => $existing->email, 'code' => '123456'])->assertOk();
+        self::assertSame('ACTIVE', $existing->refresh()->account_status);
+        self::assertNotNull($existing->email_verified_at);
+    }
+
+    public function test_pending_vendor_invitation_keeps_password_membership_and_account_restrictions(): void
+    {
+        [$token, $id] = $this->vendorInvitation();
+        $password = 'ExistingPassword123';
+        $existing = User::factory()->unverified()->create(['email' => 'invited@example.test', 'account_type' => 'VENDOR', 'account_status' => 'PENDING_VERIFICATION', 'password' => Hash::make($password)]);
+        $payload = ['token' => $token, 'email' => $existing->email, 'full_name' => 'Invited employee', 'password' => $password, 'password_confirmation' => $password];
+        $this->postJson('/api/v1/auth/vendor-invitations/accept', array_replace($payload, ['password' => 'WrongPassword123', 'password_confirmation' => 'WrongPassword123']))->assertUnprocessable()->assertJsonPath('errors.0.code', 'VENDOR_INVITATION_INVALID');
+
+        foreach (['SUSPENDED', 'DEACTIVATED', 'BANNED'] as $status) {
+            $existing->update(['account_status' => $status]);
+            $this->postJson('/api/v1/auth/vendor-invitations/accept', $payload)->assertUnprocessable()->assertJsonPath('errors.0.code', 'VENDOR_INVITATION_INVALID');
+        }
+        $existing->update(['account_type' => 'BUYER', 'account_status' => 'PENDING_VERIFICATION']);
+        $this->postJson('/api/v1/auth/vendor-invitations/accept', $payload)->assertUnprocessable()->assertJsonPath('errors.0.code', 'VENDOR_INVITATION_INVALID');
+        $existing->update(['account_type' => 'VENDOR']);
+        $organizationId = DB::table('vendor_invitations')->where('id', $id)->value('vendor_organization_id');
+        $membership = VendorMembership::query()->create(['vendor_organization_id' => $organizationId, 'user_id' => $existing->getKey(), 'role' => 'INVENTORY', 'status' => 'ACTIVE']);
+        foreach (['ACTIVE', 'SUSPENDED', 'DEACTIVATED'] as $status) {
+            $membership->update(['status' => $status]);
+            $this->postJson('/api/v1/auth/vendor-invitations/accept', $payload)->assertUnprocessable()->assertJsonPath('errors.0.code', 'VENDOR_INVITATION_INVALID');
+        }
+        self::assertNull(DB::table('vendor_invitations')->where('id', $id)->value('accepted_at'));
+        self::assertSame(1, VendorMembership::query()->where('user_id', $existing->getKey())->count());
+        $this->assertDatabaseCount('email_otps', 0);
+        self::assertSame(0, DB::table('audit_logs')->where('action', 'VENDOR_INVITATION_ACCEPTED')->count());
+    }
+
+    public function test_pending_vendor_invitation_respects_otp_cooldown_and_rolls_back_acceptance(): void
+    {
+        [$token, $id] = $this->vendorInvitation();
+        $password = 'ExistingPassword123';
+        $existing = User::factory()->unverified()->create(['email' => 'invited@example.test', 'account_type' => 'VENDOR', 'account_status' => 'PENDING_VERIFICATION', 'password' => Hash::make($password)]);
+        app(EmailOtpService::class)->issue($existing->email, 'EMAIL_VERIFICATION', $existing);
+        $payload = ['token' => $token, 'email' => $existing->email, 'full_name' => 'Invited employee', 'password' => $password, 'password_confirmation' => $password];
+
+        $this->postJson('/api/v1/auth/vendor-invitations/accept', $payload)->assertStatus(429)->assertJsonPath('errors.0.code', 'OTP_RESEND_THROTTLED');
+        self::assertNull(DB::table('vendor_invitations')->where('id', $id)->value('accepted_at'));
+        $this->assertDatabaseMissing('vendor_memberships', ['user_id' => $existing->getKey()]);
+        self::assertSame(1, EmailOtp::query()->where('user_id', $existing->getKey())->whereNull('invalidated_at')->count());
+        self::assertSame(0, DB::table('audit_logs')->where('action', 'VENDOR_INVITATION_ACCEPTED')->count());
+        $this->travel(61)->seconds();
+        $this->postJson('/api/v1/auth/vendor-invitations/accept', $payload)->assertCreated();
+        self::assertNotNull(DB::table('vendor_invitations')->where('id', $id)->value('accepted_at'));
+        self::assertSame('PENDING_VERIFICATION', $existing->refresh()->account_status);
+        self::assertSame(1, EmailOtp::query()->where('user_id', $existing->getKey())->whereNull('invalidated_at')->count());
     }
 
     public function test_acceptance_rechecks_manager_delegation_and_preserves_role_at_acceptance(): void

@@ -4,6 +4,8 @@
 
 // ignore_for_file: unused_element
 import 'package:materyalph_api_client/src/model/chat_quotation_page.dart';
+import 'package:built_collection/built_collection.dart';
+import 'package:materyalph_api_client/src/model/site_inspection.dart';
 import 'package:materyalph_api_client/src/model/conversation_view.dart';
 import 'package:materyalph_api_client/src/model/chat_message_page.dart';
 import 'package:built_value/built_value.dart';
@@ -17,6 +19,7 @@ part 'conversation_detail.g.dart';
 /// * [conversation]
 /// * [messages]
 /// * [quotations]
+/// * [siteInspections] - The Item-Based conversation's ten most recent free site inspection requests, newest first; empty for other conversations.
 @BuiltValue()
 abstract class ConversationDetail implements Built<ConversationDetail, ConversationDetailBuilder> {
   @BuiltValueField(wireName: r'conversation')
@@ -27,6 +30,10 @@ abstract class ConversationDetail implements Built<ConversationDetail, Conversat
 
   @BuiltValueField(wireName: r'quotations')
   ChatQuotationPage get quotations;
+
+  /// The Item-Based conversation's ten most recent free site inspection requests, newest first; empty for other conversations.
+  @BuiltValueField(wireName: r'site_inspections')
+  BuiltList<SiteInspection>? get siteInspections;
 
   ConversationDetail._();
 
@@ -66,6 +73,13 @@ class _$ConversationDetailSerializer implements PrimitiveSerializer<Conversation
       object.quotations,
       specifiedType: const FullType(ChatQuotationPage),
     );
+    if (object.siteInspections != null) {
+      yield r'site_inspections';
+      yield serializers.serialize(
+        object.siteInspections,
+        specifiedType: const FullType(BuiltList, [FullType(SiteInspection)]),
+      );
+    }
   }
 
   @override
@@ -109,6 +123,14 @@ class _$ConversationDetailSerializer implements PrimitiveSerializer<Conversation
             specifiedType: const FullType(ChatQuotationPage),
           ) as ChatQuotationPage;
           result.quotations.replace(valueDes);
+          break;
+        case r'site_inspections':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltList, [FullType(SiteInspection)]),
+          ) as BuiltList<SiteInspection>?;
+          if (valueDes == null) continue;
+          result.siteInspections.replace(valueDes);
           break;
         default:
           unhandled.add(key);

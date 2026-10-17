@@ -15,6 +15,8 @@ use App\Domain\Catalog\VendorCatalogService;
 use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Operations\OutboxPublisher;
+use App\Domain\Settings\PlatformSettings;
+use App\Support\PortalDateRange;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -22,12 +24,20 @@ use Illuminate\Support\Str;
 
 /**
  * Product PS/ICC compliance. Photo/OCR, QR and Manual Entry all converge on one
- * Review and Confirm submission. Product evidence decisions are separate from
+ * Review and Confirm submission. The Vendor supplies only the PS License No. or
+ * ICC sticker serial; the active DTI-BPS register supplies the rest. Automatic
+ * submission requires a register match; anything else stays with the Vendor to
+ * correct or to send for manual review on request (approved by the project
+ * owner on 2026-10-17). Product evidence decisions are separate from
  * business/tax evidence decisions and never touch Store Activation.
  */
 final class ProductComplianceService
 {
     public const PATHS = ['PHOTO_OCR', 'QR', 'MANUAL'];
+
+    public const MARKING_TYPES = ['PS_MARK', 'ICC_STICKER'];
+
+    public const REVIEW_MODES = ['AUTOMATIC', 'MANUAL_REVIEW'];
 
     public const OFFICIAL_REFERENCES = [
         ['label' => 'DTI-BPS PS and ICC Marks', 'url' => 'https://bps.dti.gov.ph/product-certification/ps-and-icc-marks'],
@@ -50,32 +60,47 @@ final class ProductComplianceService
     ) {}
 
     /** @return array<string, mixed> */
-    public function uploadEvidence(Request $request, string $listingId, string $path, UploadedFile $file, ?string $qrPayload): array
+    public function uploadEvidence(Request $request, string $listingId, string $path, UploadedFile $file, ?string $qrPayload, ?string $markingType = null): array
     {
         $organizationId = $this->access->organizationFor($request, CatalogAccess::SUBMIT_COMPLIANCE);
         if (! in_array($path, self::PATHS, true)) {
             throw new AuthenticationException('VALIDATION_FAILED', 'Review the highlighted fields and try again.', 422, ['path' => ['Choose Photo/OCR, QR or Manual Entry.']]);
         }
-        $image = $this->images->validate($file, (int) config('materyalph.catalog.max_compliance_evidence_kb', 10240), $path === 'QR' ? 'QR image' : 'marking photo');
-        DB::transaction(function () use ($organizationId, $listingId): void {
+        $image = $this->images->validate($file, min((int) config('materyalph.catalog.max_compliance_evidence_kb', 10240), PlatformSettings::current()->uploadKb('compliance_evidence')), $path === 'QR' ? 'QR image' : 'marking photo');
+        $ruleId = DB::transaction(function () use ($organizationId, $listingId): ?string {
             $this->access->lockActiveStore($organizationId);
             $listing = $this->catalog->ownedListing($listingId, $organizationId, false);
             if (! $listing->regulated) {
                 throw new AuthenticationException('COMPLIANCE_NOT_REQUIRED', 'This material is not on the DTI-BPS regulated list, so no PS/ICC evidence is requested.', 422);
             }
+
+            return $listing->regulated_material_rule_id;
         });
         $fileId = $this->files->store($file, 'VENDOR_ORGANIZATION', $organizationId, CatalogFileStore::COMPLIANCE_EVIDENCE, (int) $request->user()->getKey(), $image['mime']);
-        $extraction = match ($path) {
-            'PHOTO_OCR' => $this->extractor->extract((string) $file->getRealPath(), $image['mime']) + ['source' => 'OCR', 'provider' => $this->extractor->provider()],
-            'QR' => $this->qr->parse($qrPayload) + ['source' => 'QR', 'provider' => 'BROWSER_QR_DECODER'],
-            default => null,
-        };
         try {
+            $qrReading = $qrPayload === null || trim($qrPayload) === '' ? null : $this->qr->parse($qrPayload, $markingType) + ['source' => 'QR', 'provider' => 'BROWSER_QR_DECODER'];
+            $extraction = match ($path) {
+                // A marking photo often shows the ICC sticker's QR code too; an exact QR reading wins over OCR.
+                'PHOTO_OCR' => isset($qrReading['suggestions']['certificate_number']) ? $qrReading
+                    : $this->extractor->extract((string) $file->getRealPath(), $image['mime'], $markingType) + ['source' => 'OCR', 'provider' => $this->extractor->provider()],
+                'QR' => $qrReading ?? $this->qr->parse(null) + ['source' => 'QR', 'provider' => 'BROWSER_QR_DECODER'],
+                default => null,
+            };
+            if ($extraction !== null) {
+                $extraction = $this->confirmReading($extraction, $markingType, $ruleId);
+            }
             $evidenceId = DB::transaction(function () use ($request, $organizationId, $listingId, $fileId, $path, $extraction): string {
+                $request->user()->refresh();
+                $this->access->organizationFor($request, CatalogAccess::SUBMIT_COMPLIANCE);
+                $this->access->lockActiveStore($organizationId);
+                $listing = $this->catalog->ownedListing($listingId, $organizationId, true);
+                if (! $listing->regulated) {
+                    throw new AuthenticationException('COMPLIANCE_NOT_REQUIRED', 'This material no longer requires PS/ICC evidence.', 422);
+                }
                 $evidenceId = (string) Str::uuid7();
                 DB::table('compliance_evidence')->insert(['id' => $evidenceId, 'compliance_submission_id' => null, 'vendor_organization_id' => $organizationId, 'vendor_listing_id' => $listingId, 'file_id' => $fileId, 'evidence_kind' => $path === 'QR' ? 'QR_IMAGE' : 'MARKING_PHOTO', 'path' => $path, 'uploaded_by_user_id' => $request->user()->getKey(), 'payload' => json_encode(['path' => $path], JSON_THROW_ON_ERROR), 'created_at' => now(), 'updated_at' => now()]);
                 if ($extraction !== null) {
-                    DB::table('compliance_extractions')->insert(['id' => (string) Str::uuid7(), 'compliance_submission_id' => null, 'compliance_evidence_id' => $evidenceId, 'source' => $extraction['source'], 'provider' => $extraction['provider'], 'status' => $extraction['status'], 'confidence' => $extraction['confidence'], 'payload' => json_encode(['suggestions' => $extraction['suggestions']], JSON_THROW_ON_ERROR), 'created_at' => now(), 'updated_at' => now()]);
+                    DB::table('compliance_extractions')->insert(['id' => (string) Str::uuid7(), 'compliance_submission_id' => null, 'compliance_evidence_id' => $evidenceId, 'source' => $extraction['source'], 'provider' => $extraction['provider'], 'status' => $extraction['status'], 'confidence' => $extraction['confidence'], 'payload' => json_encode(['suggestions' => $extraction['suggestions'], 'register_listed' => $extraction['register_listed']], JSON_THROW_ON_ERROR), 'created_at' => now(), 'updated_at' => now()]);
                 }
                 $this->audit->account($request, 'PRODUCT_COMPLIANCE_EVIDENCE_UPLOADED', 'COMPLIANCE_EVIDENCE', $evidenceId, after: ['path' => $path, 'listing_id' => $listingId]);
 
@@ -90,9 +115,27 @@ final class ProductComplianceService
         return [
             'evidence_id' => $evidenceId, 'file_id' => $fileId, 'path' => $path, 'evidence_kind' => $path === 'QR' ? 'QR_IMAGE' : 'MARKING_PHOTO',
             'content_type' => $stored->content_type, 'byte_size' => (int) $stored->byte_size, 'scan_state' => $stored->scan_state,
-            'extraction' => $extraction === null ? ['source' => null, 'status' => 'NOT_REQUESTED', 'confidence' => null, 'suggestions' => (object) []]
-                : ['source' => $extraction['source'], 'status' => $extraction['status'], 'confidence' => $extraction['confidence'], 'suggestions' => (object) $extraction['suggestions'], 'assistance_only' => true],
+            'extraction' => $extraction === null ? ['source' => null, 'provider' => null, 'status' => 'NOT_REQUESTED', 'confidence' => null, 'suggestions' => (object) [], 'register_listed' => false, 'assistance_only' => true]
+                : ['source' => $extraction['source'], 'provider' => $extraction['provider'], 'status' => $extraction['status'], 'confidence' => $extraction['confidence'], 'suggestions' => (object) $extraction['suggestions'], 'register_listed' => $extraction['register_listed'], 'assistance_only' => true],
         ];
+    }
+
+    /**
+     * Looks up a PS License No. or ICC sticker serial in the active DTI-BPS
+     * register for this listing's regulated product. Read-only: nothing is
+     * submitted and nothing reaches Admin review.
+     *
+     * @return array<string, mixed>
+     */
+    public function lookup(Request $request, string $listingId, string $markingType, string $number): array
+    {
+        $organizationId = $this->access->organizationFor($request, CatalogAccess::SUBMIT_COMPLIANCE);
+        $listing = $this->catalog->ownedListing($listingId, $organizationId, false);
+        if (! $listing->regulated || $listing->regulated_material_rule_id === null) {
+            throw new AuthenticationException('COMPLIANCE_NOT_REQUIRED', 'This material is not on the DTI-BPS regulated list, so no PS/ICC evidence is requested.', 422);
+        }
+
+        return $this->presentLookup($markingType, $number, $this->reference->lookup($markingType, $number, $this->relevance($listing->regulated_material_rule_id)), (string) $listing->regulated_material_rule_id);
     }
 
     /**
@@ -131,19 +174,32 @@ final class ProductComplianceService
             if (! $evidence->contains(fn (object $item): bool => in_array($item->evidence_kind, $requiredKinds, true))) {
                 throw new AuthenticationException('VALIDATION_FAILED', 'Review the highlighted fields and try again.', 422, ['evidence_ids' => [$path === 'MANUAL' ? 'Manual Entry requires a clear photo of the physical marking.' : 'Attach the marking photo or QR image as evidence.']]);
             }
-            $declared = [
-                'marking_type' => (string) $input['marking_type'],
-                'certificate_number' => trim((string) $input['certificate_number']),
-                'manufacturer_name' => $this->text($input['manufacturer_name'] ?? null),
-                'manufacturer_address' => $this->text($input['manufacturer_address'] ?? null),
-                'importer_name' => $this->text($input['importer_name'] ?? null),
-                'importer_address' => $this->text($input['importer_address'] ?? null),
-                'country_of_manufacture' => $this->text($input['country_of_manufacture'] ?? null),
-                'brand' => $this->text($input['brand'] ?? null),
-                'batch_number' => $this->text($input['batch_number'] ?? null),
-            ];
+            $markingType = (string) $input['marking_type'];
+            $reviewMode = (string) ($input['review_mode'] ?? 'AUTOMATIC');
+            $number = trim((string) $input['certificate_number']);
             $rule = DB::table('regulated_material_rules')->where('id', $listing->regulated_material_rule_id)->first();
-            $match = $this->reference->match($declared, RegisterNormalizer::standards($rule->reference_standard));
+            $match = $this->reference->lookup($markingType, $number, $this->relevance((string) $rule->id));
+            if ($reviewMode === 'AUTOMATIC' && $match->result !== ReferenceMatch::MATCHED) {
+                // Nothing is submitted: the Vendor corrects the number, retries, or explicitly asks for manual review.
+                $lookup = $this->presentLookup($markingType, $number, $match, (string) $rule->id);
+                throw new AuthenticationException('COMPLIANCE_REGISTER_NOT_MATCHED', (string) $lookup['message'], 422, ['lookup' => $lookup]);
+            }
+            $record = $match->result === ReferenceMatch::MATCHED ? (array) $match->details['record'] : null;
+            $vendorText = fn (string $key): ?string => $this->text($input[$key] ?? null);
+            // A matched register record supplies the manufacturer or importer; the Vendor supplies only the number.
+            $declared = [
+                'marking_type' => $markingType,
+                'certificate_number' => $number,
+                'manufacturer_name' => $record !== null && $markingType === 'PS_MARK' ? $record['company_name'] : $vendorText('manufacturer_name'),
+                'manufacturer_address' => $record !== null && $markingType === 'PS_MARK' ? $record['address'] : $vendorText('manufacturer_address'),
+                'importer_name' => $record !== null && $markingType === 'ICC_STICKER' ? $record['company_name'] : $vendorText('importer_name'),
+                'importer_address' => $record !== null && $markingType === 'ICC_STICKER' ? $record['address'] : $vendorText('importer_address'),
+                'country_of_manufacture' => $vendorText('country_of_manufacture'),
+                'brand' => $record['brand'] ?? $vendorText('brand'),
+                'batch_number' => $vendorText('batch_number'),
+                'review_note' => $reviewMode === 'MANUAL_REVIEW' ? $vendorText('review_note') : null,
+                'register_record' => $record === null ? null : array_intersect_key($record, array_flip(['company_name', 'product_description', 'brand', 'model_type', 'reference_standard', 'origin', 'license_number', 'icc_certificate_number', 'serial_range'])),
+            ];
 
             DB::table('compliance_submissions')->where('vendor_listing_id', $listingId)->where('status', 'PENDING_ADMIN_REVIEW')->update(['status' => 'SUPERSEDED', 'lock_version' => DB::raw('lock_version + 1'), 'updated_at' => now()]);
             $previous = DB::table('compliance_submissions')->where('vendor_listing_id', $listingId)->orderByDesc('version')->first(['id', 'version']);
@@ -151,6 +207,7 @@ final class ProductComplianceService
             $verified = $match->result === ReferenceMatch::MATCHED;
             DB::table('compliance_submissions')->insert([
                 'id' => $submissionId, 'vendor_listing_id' => $listingId, 'vendor_organization_id' => $organizationId, 'path' => $path, 'status' => $verified ? 'VERIFIED' : 'PENDING_ADMIN_REVIEW',
+                'review_mode' => $reviewMode, 'compliance_reference_record_id' => $record['record_id'] ?? null,
                 'version' => ($previous === null ? 0 : (int) $previous->version) + 1, 'regulated_material_rule_id' => $rule->id, 'rule_version' => (int) $rule->version,
                 'marking_type' => $declared['marking_type'], 'declared' => json_encode($declared, JSON_THROW_ON_ERROR), 'submitted_by_user_id' => $request->user()->getKey(),
                 'submitted_at' => now(), 'supersedes_submission_id' => $previous?->id, 'decided_at' => $verified ? now() : null,
@@ -161,15 +218,15 @@ final class ProductComplianceService
             DB::table('compliance_reference_matches')->insert(['id' => (string) Str::uuid7(), 'compliance_submission_id' => $submissionId, 'provider' => $match->provider, 'result' => $match->result, 'source_reference' => $match->sourceReference, 'checked_at' => now(), 'payload' => json_encode($match->details + ['register_id' => $match->registerId], JSON_THROW_ON_ERROR), 'created_at' => now(), 'updated_at' => now()]);
             if ($verified) {
                 // Approved rule: an exact current register match is recorded as an audited system decision.
-                DB::table('compliance_reviews')->insert(['id' => (string) Str::uuid7(), 'compliance_submission_id' => $submissionId, 'reviewer_user_id' => null, 'decision' => 'APPROVED', 'reason' => 'Exact DTI-BPS register match ('.($match->details['rule'] ?? 'register').').', 'source_reference' => $match->sourceReference, 'submission_version' => ($previous === null ? 0 : (int) $previous->version) + 1, 'submission_lock_version' => 1, 'evidence_file_ids' => json_encode($evidence->pluck('file_id')->all(), JSON_THROW_ON_ERROR), 'reviewed_at' => now(), 'payload' => json_encode(['register_id' => $match->registerId, 'record_id' => $match->details['record_id'] ?? null], JSON_THROW_ON_ERROR), 'created_at' => now(), 'updated_at' => now()]);
+                DB::table('compliance_reviews')->insert(['id' => (string) Str::uuid7(), 'compliance_submission_id' => $submissionId, 'reviewer_user_id' => null, 'decision' => 'APPROVED', 'reason' => 'DTI-BPS register match ('.($match->details['rule'] ?? 'register').').', 'source_reference' => $match->sourceReference, 'submission_version' => ($previous === null ? 0 : (int) $previous->version) + 1, 'submission_lock_version' => 1, 'evidence_file_ids' => json_encode($evidence->pluck('file_id')->all(), JSON_THROW_ON_ERROR), 'reviewed_at' => now(), 'payload' => json_encode(['register_id' => $match->registerId, 'record_id' => $match->details['record_id'] ?? null], JSON_THROW_ON_ERROR), 'created_at' => now(), 'updated_at' => now()]);
             }
             DB::table('vendor_listings')->where('id', $listingId)->update(['compliance_status' => $verified ? 'VERIFIED' : 'PENDING_ADMIN_REVIEW', 'current_compliance_submission_id' => $submissionId, 'lock_version' => DB::raw('lock_version + 1'), 'updated_at' => now()]);
             $this->advanceListing($listingId, $request->user()->getKey(), $verified ? 'SYSTEM' : 'VENDOR', $submissionId);
             $this->access->claim($request, 'catalog.compliance.submit', $key, $listingId, 201);
-            $this->audit->account($request, 'PRODUCT_COMPLIANCE_SUBMITTED', 'COMPLIANCE_SUBMISSION', $submissionId, after: ['path' => $path, 'reference_result' => $match->result, 'status' => $verified ? 'VERIFIED' : 'PENDING_ADMIN_REVIEW']);
+            $this->audit->account($request, 'PRODUCT_COMPLIANCE_SUBMITTED', 'COMPLIANCE_SUBMISSION', $submissionId, after: ['path' => $path, 'review_mode' => $reviewMode, 'reference_result' => $match->result, 'status' => $verified ? 'VERIFIED' : 'PENDING_ADMIN_REVIEW']);
             $this->discoverability->evaluate($organizationId, $request->user()->getKey(), 'VENDOR');
 
-            return $verified ? [$organizationId, (string) $listing->display_name, 'verified through an exact DTI-BPS register match'] : null;
+            return $verified ? [$organizationId, (string) $listing->display_name, 'verified through a DTI-BPS register match'] : null;
         });
         if ($notice !== null) {
             $this->notify(...$notice);
@@ -200,7 +257,8 @@ final class ProductComplianceService
             $query->where('rm.result', $filters['reference_result']);
         }
         $query->orderBy('s.submitted_at', ($filters['sort'] ?? 'oldest') === 'newest' ? 'desc' : 'asc')->orderBy('s.id');
-        $page = $query->paginate(20, ['s.id', 's.version', 's.path', 's.status', 's.marking_type', 's.submitted_at', 'l.id as listing_id', 'l.display_name', 'l.vendor_sku', 'sp.public_store_name', 'm.name as material_name', 'r.product_name', 'r.reference_standard', 'rm.result as reference_result'], 'page', (int) ($filters['page'] ?? 1));
+        PortalDateRange::apply($query, 's.submitted_at', $filters);
+        $page = $query->paginate(20, ['s.id', 's.version', 's.path', 's.status', 's.marking_type', 's.review_mode', 's.submitted_at', 'l.id as listing_id', 'l.display_name', 'l.vendor_sku', 'sp.public_store_name', 'm.name as material_name', 'r.product_name', 'r.reference_standard', 'rm.result as reference_result'], 'page', (int) ($filters['page'] ?? 1));
 
         return ['items' => array_map(static fn (object $row): array => (array) $row, $page->items()), 'meta' => ['current_page' => $page->currentPage(), 'last_page' => $page->lastPage(), 'total' => $page->total()]];
     }
@@ -224,7 +282,7 @@ final class ProductComplianceService
         $match = DB::table('compliance_reference_matches')->where('compliance_submission_id', $submissionId)->orderByDesc('created_at')->first();
 
         return [
-            'submission' => ['id' => $submission->id, 'version' => (int) $submission->version, 'lock_version' => (int) $submission->lock_version, 'path' => $submission->path, 'status' => $submission->status, 'marking_type' => $submission->marking_type, 'declared' => ComparableMappingService::decode($submission->declared), 'submitted_at' => $submission->submitted_at, 'decided_at' => $submission->decided_at, 'rule_version' => $submission->rule_version === null ? null : (int) $submission->rule_version],
+            'submission' => ['id' => $submission->id, 'version' => (int) $submission->version, 'lock_version' => (int) $submission->lock_version, 'path' => $submission->path, 'status' => $submission->status, 'marking_type' => $submission->marking_type, 'review_mode' => $submission->review_mode, 'declared' => ComparableMappingService::decode($submission->declared), 'submitted_at' => $submission->submitted_at, 'decided_at' => $submission->decided_at, 'rule_version' => $submission->rule_version === null ? null : (int) $submission->rule_version],
             'listing' => $listing === null ? null : ((array) $listing) + ['technical_attributes' => ComparableMappingService::decode($listing->technical_attributes), 'media_file_ids' => DB::table('listing_media')->where('vendor_listing_id', $listing->id)->where('status', 'READY')->orderBy('sort_order')->pluck('file_id')->all()],
             'rule' => $rule === null ? null : ['id' => $rule->id, 'version' => (int) $rule->version, 'product_name' => $rule->product_name, 'reference_standard' => $rule->reference_standard, 'technical_regulation' => $rule->technical_regulation, 'scope' => $rule->scope, 'required_marking' => $rule->required_marking, 'marking_requirements' => ComparableMappingService::decode($rule->marking_requirements), 'source_reference' => $rule->source_reference],
             'evidence' => $evidence->map(fn (object $item): array => ['id' => $item->id, 'evidence_kind' => $item->evidence_kind, 'path' => $item->path, 'file_id' => $item->file_id, 'content_type' => $item->content_type, 'byte_size' => (int) $item->byte_size, 'scan_state' => $item->scan_state, 'checksum_prefix' => substr((string) $item->checksum_sha256, 0, 12), 'uploaded_at' => $item->created_at])->all(),
@@ -326,6 +384,76 @@ final class ProductComplianceService
             }
         }
         $this->transitions->transition($listing, $target, $source, $actorId, 'COMPLIANCE_'.($listing->compliance_status), $reason, $submissionId);
+    }
+
+    /**
+     * Picks the OCR/QR reading of the marking number that the active register
+     * lists, so a misread character ("AS00000001") resolves to the real serial.
+     *
+     * @param  array<string, mixed>  $extraction
+     * @return array<string, mixed>
+     */
+    private function confirmReading(array $extraction, ?string $markingType, ?string $ruleId): array
+    {
+        $suggestions = (array) $extraction['suggestions'];
+        $type = in_array($markingType, self::MARKING_TYPES, true) ? $markingType : ($suggestions['marking_type'] ?? null);
+        $candidates = array_values(array_filter([...(array) ($extraction['candidates'] ?? []), $suggestions['certificate_number'] ?? null], 'is_string'));
+        $listed = $type === null || $candidates === [] ? null : $this->reference->firstListed((string) $type, $candidates, $this->relevance($ruleId));
+        if ($listed !== null) {
+            $suggestions['certificate_number'] = $listed;
+            if ($extraction['status'] !== 'EXTRACTED') {
+                $extraction['status'] = 'EXTRACTED';
+            }
+        }
+        unset($extraction['candidates']);
+
+        return ['suggestions' => $suggestions, 'register_listed' => $listed !== null] + $extraction;
+    }
+
+    /** The listing rule's PNS standard and product names that a register record must correspond to. */
+    private function relevance(?string $ruleId): ProductRelevance
+    {
+        $rule = $ruleId === null ? null : DB::table('regulated_material_rules')->where('id', $ruleId)->first(['material_id', 'product_name', 'reference_standard']);
+        if ($rule === null) {
+            return new ProductRelevance([], []);
+        }
+        $material = DB::table('materials')->where('id', $rule->material_id)->value('name');
+        // Multi-word aliases only: a one-word alias such as "tubo" or "pvc" is too broad to identify a product.
+        $aliases = DB::table('material_aliases')->where('material_id', $rule->material_id)->orderBy('normalized_alias')->pluck('normalized_alias')
+            ->filter(static fn (mixed $alias): bool => is_string($alias) && str_contains(trim($alias), ' '))->values()->all();
+
+        return ProductRelevance::from($rule->reference_standard, array_values(array_filter([$rule->product_name, is_string($material) ? $material : null, ...$aliases], 'is_string')));
+    }
+
+    /** @return array<string, mixed> */
+    private function presentLookup(string $markingType, string $number, ReferenceMatch $match, string $ruleId): array
+    {
+        $numberName = $markingType === 'PS_MARK' ? 'PS License No.' : 'ICC sticker serial';
+        $listName = $markingType === 'PS_MARK' ? 'List of PS Licensees' : 'List of ICC Certificate Holders';
+        $snapshot = isset($match->details['snapshot_date']) ? ' dated '.$match->details['snapshot_date'] : '';
+        $record = $match->details['record'] ?? null;
+        $reason = $match->details['reason'] ?? null;
+        $product = DB::table('regulated_material_rules')->where('id', $ruleId)->value('product_name');
+        $message = match (true) {
+            $match->result === ReferenceMatch::MATCHED => 'Found in the DTI-BPS '.$listName.$snapshot.'. The details below come from that record.',
+            $match->result === ReferenceMatch::UNAVAILABLE => 'The DTI-BPS '.$listName.' is not loaded yet, so the number cannot be checked automatically. You can request a manual review.',
+            $reason === 'CERTIFICATE_NUMBER_GIVEN' => 'That looks like the ICC certificate number. Enter the sticker serial printed below the QR code, for example A500000001.',
+            $reason === 'NUMBER_FORMAT' => $markingType === 'PS_MARK' ? 'Enter the PS License No. as printed on the mark, for example Q-1234.' : 'Enter the ICC sticker serial printed below the QR code: one letter and the digits, for example A500000001.',
+            $reason === 'PRODUCT_NOT_COVERED' => 'This '.$numberName.' is listed for '.Str::lower((string) ($record['product_description'] ?? 'another product')).', not for '.Str::lower((string) $product).'. Check the number on the marking, or request a manual review.',
+            $reason === 'RECORD_EXPIRED' => 'This '.$numberName.' is listed, but its record has expired. Check the marking, or request a manual review.',
+            default => 'No record with this '.$numberName.' is in the DTI-BPS '.$listName.$snapshot.'. Check the number against the marking and try again, or request a manual review.',
+        };
+
+        return [
+            'marking_type' => $markingType,
+            'number' => $number,
+            'result' => $match->result,
+            'reason' => $reason,
+            'message' => $message,
+            'can_verify_automatically' => $match->result === ReferenceMatch::MATCHED,
+            'register' => $match->registerId === null ? null : ['register_kind' => $match->details['register_kind'] ?? null, 'snapshot_date' => $match->details['snapshot_date'] ?? null, 'source_reference' => $match->sourceReference],
+            'record' => is_array($record) ? array_diff_key($record, ['record_id' => true]) : null,
+        ];
     }
 
     private function notify(string $organizationId, string $listingName, string $outcome): void

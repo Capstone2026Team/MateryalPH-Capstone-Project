@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Catalog;
 
 use App\Domain\Inventory\StockConfirmationPolicy;
+use App\Domain\Vendors\VendorDeliveryEligibility;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -14,7 +15,9 @@ use Illuminate\Support\Facades\DB;
  * current offer lists and the daily capture. An eligible offer is one listing variant of an active Tier 2
  * organization whose listing is ACTIVE and publishable, meets any required product compliance, carries a
  * current finite positive ordinary public price with a permitted tax classification, and has confirmed,
- * non-stale inventory with a positive quantity available to sell. Quotation versions and financial snapshots
+ * non-stale inventory with a positive quantity available to sell. Ready-mixed concrete is offered only while its
+ * store can deliver it: Site Delivery available with a complete, available Concrete Mixer Truck / Transit Mixer
+ * (approved by the project owner on 2026-10-16). Quotation versions and financial snapshots
  * are PRIVATE_TRANSACTION sources and never join this public ordinary-listing-price relation. Exact quantities never leave this query.
  */
 final class EligibleOfferQuery
@@ -123,6 +126,8 @@ final class EligibleOfferQuery
             ->where('v.active', true)
             ->where('pv.effective_at', '<=', now())->where('pv.amount_centavos', '>', 0)
             ->whereRaw('i.quantity_on_hand - i.hard_reserved_quantity > 0')
-            ->whereNotNull('i.confirmed_at')->where('i.confirmed_at', '>', now()->subDays(StockConfirmationPolicy::HIDE_AFTER_DAYS)), 'pv.tax_category', 'o.id');
+            ->whereNotNull('i.confirmed_at')->where('i.confirmed_at', '>', now()->subDays(StockConfirmationPolicy::HIDE_AFTER_DAYS))
+            ->where(fn (Builder $mixer) => $mixer->whereRaw('NOT '.ReadyMixedConcrete::listingSql($listingAlias))
+                ->orWhereIn('o.id', app(VendorDeliveryEligibility::class)->mixerOrganizations())), 'pv.tax_category', 'o.id');
     }
 }

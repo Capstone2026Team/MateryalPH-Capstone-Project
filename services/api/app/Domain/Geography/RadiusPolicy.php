@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Geography;
 
 use App\Domain\Identity\AuthenticationException;
+use App\Domain\Settings\PlatformSettings;
 
 /**
  * The approved Buyer and Vendor radius allowlist (MAT-01). 50 km is the platform maximum for Buyer and
@@ -26,6 +27,23 @@ final class RadiusPolicy
      * 7-decimal coordinate precision, keeps the boundary inclusive and still excludes points 5 cm outside.
      */
     public const BOUNDARY_TOLERANCE_METERS = 0.01;
+
+    /** The effective Buyer default (Platform Setting discovery.buyer_default_radius_km); the constant is the approved default. */
+    public static function buyerDefault(): int
+    {
+        return PlatformSettings::current()->int('discovery.buyer_default_radius_km');
+    }
+
+    public static function vendorDefault(): int
+    {
+        return PlatformSettings::current()->int('discovery.vendor_default_radius_km');
+    }
+
+    /** Below this many eligible Tier 2 Vendors the next radius is offered, never applied. */
+    public static function expansionThreshold(): int
+    {
+        return PlatformSettings::current()->int('discovery.radius_expansion_threshold');
+    }
 
     public static function assertAllowed(mixed $radiusKm): int
     {

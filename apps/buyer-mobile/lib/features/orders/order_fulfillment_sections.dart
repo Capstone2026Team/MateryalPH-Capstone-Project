@@ -2,8 +2,10 @@ import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import '../../design_system/components/count_badge.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../design_system/components/buyer_overlays.dart';
 import '../../design_system/components/fulfillment_components.dart';
 import '../../design_system/components/order_components.dart';
 import '../../design_system/components/procurement_components.dart';
@@ -24,6 +26,32 @@ final _buyerFilePath = RegExp(
 /// The file id of an order-scoped Buyer evidence path, or null for anything else.
 String? buyerEvidenceFileId(String? path) =>
     path == null ? null : _buyerFilePath.firstMatch(path)?.group(1);
+
+/// The one receipt confirmation prompt, shared by Order Details and the My Orders card.
+Future<bool> confirmReceiptPrompt(
+  BuildContext context, {
+  required bool pickup,
+}) async =>
+    await showDialog<bool>(
+      context: context,
+      builder: (context) => BuyerDialog(
+        title: const Text('Confirm you received this order?'),
+        content: Text(
+          'Confirm only after checking the ${pickup ? 'items you picked up' : 'delivered items'}. This completes the order. For a later concern, use the return, warranty or dispute process.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Not now'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Confirm receipt'),
+          ),
+        ],
+      ),
+    ) ??
+    false;
 
 class OrderFulfillmentPanel extends StatelessWidget {
   const OrderFulfillmentPanel({
@@ -87,6 +115,17 @@ class OrderFulfillmentPanel extends StatelessWidget {
                     text:
                         '${fulfillment.assigneeName} · ${fulfillmentRoleLabel('FULFILLMENT')}',
                   ),
+                if (fulfillment.vehicleName != null)
+                  _Fact(
+                    icon: LucideIcons.truck,
+                    text: 'Delivery vehicle: ${fulfillment.vehicleName}',
+                  ),
+                if (fulfillment.assignedAt != null)
+                  _Fact(
+                    icon: LucideIcons.clock,
+                    text:
+                        'Assigned: ${formatManilaDateTime(fulfillment.assignedAt!)}',
+                  ),
               ],
             ),
           ),
@@ -106,6 +145,34 @@ class OrderFulfillmentPanel extends StatelessWidget {
                   ),
           ),
         ),
+        for (final deliveryIssue in fulfillment.deliveryIssues) ...[
+          const SizedBox(height: 10),
+          StatusBand(
+            tone: BandTone.warning,
+            title: 'Delivery update',
+            message: deliveryIssue,
+          ),
+        ],
+        if (fulfillment.proof case final proof?)
+          for (final path in [
+            if (proof.signaturePath != null) proof.signaturePath!,
+            ...proof.additionalPhotoPaths,
+          ])
+            if (buyerEvidenceFileId(path) case final fileId?)
+              Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: SizedBox(
+                  height: 160,
+                  child: EvidencePhoto(
+                    orderId: order.id,
+                    fileId: fileId,
+                    repository: repository,
+                    semanticLabel: path == proof.signaturePath
+                        ? 'Receiver signature'
+                        : 'Additional delivery photo',
+                  ),
+                ),
+              ),
         Padding(
           padding: const EdgeInsets.only(top: 6),
           child: Row(
@@ -167,7 +234,7 @@ class OrderFulfillmentPanel extends StatelessWidget {
           ),
         ],
         const SizedBox(height: 10),
-        _ThreadEntry(thread: thread, onOpen: onOpenThread),
+        FulfillmentThreadEntry(thread: thread, onOpen: onOpenThread),
       ],
     );
   }
@@ -271,8 +338,9 @@ class _IssueCard extends StatelessWidget {
   }
 }
 
-class _ThreadEntry extends StatelessWidget {
-  const _ThreadEntry({required this.thread, this.onOpen});
+/// The order's Fulfillment Messages entry, separate from inquiry conversations.
+class FulfillmentThreadEntry extends StatelessWidget {
+  const FulfillmentThreadEntry({super.key, required this.thread, this.onOpen});
 
   final FulfillmentThreadView thread;
   final ValueChanged<String>? onOpen;
@@ -283,7 +351,7 @@ class _ThreadEntry extends StatelessWidget {
     if (!thread.available || id == null) {
       return Text(
         thread.notice ??
-            'Fulfillment Messages open when the order is ready for pickup or out for delivery.',
+            'Fulfillment Messages are not available for this order.',
         style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
       );
     }
@@ -292,9 +360,22 @@ class _ThreadEntry extends StatelessWidget {
       children: [
         OutlinedButton.icon(
           onPressed: onOpen == null ? null : () => onOpen!(id),
-          icon: Icon(
-            thread.readOnly ? LucideIcons.lock : LucideIcons.messageSquareText,
-            size: 18,
+          icon: Semantics(
+            label: thread.unreadCount > 0
+                ? '${thread.unreadCount} unread fulfillment messages'
+                : 'No unread fulfillment messages',
+            child: Padding(
+              padding: EdgeInsets.only(right: thread.unreadCount > 0 ? 16 : 0),
+              child: CountBadge(
+                quantity: '${thread.unreadCount}',
+                child: Icon(
+                  thread.readOnly
+                      ? LucideIcons.lock
+                      : LucideIcons.messageSquareText,
+                  size: 18,
+                ),
+              ),
+            ),
           ),
           label: Text(
             thread.readOnly
@@ -369,30 +450,8 @@ class _EvidencePhotoState extends State<EvidencePhoto> {
         child: InkWell(
           onTap: () => showDialog<void>(
             context: context,
-            builder: (context) => Dialog(
-              insetPadding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Flexible(
-                    child: InteractiveViewer(
-                      child: Image.memory(
-                        bytes,
-                        semanticLabel: widget.semanticLabel,
-                        errorBuilder: (_, _, _) => const Padding(
-                          padding: EdgeInsets.all(24),
-                          child: Text('This photo could not be shown.'),
-                        ),
-                      ),
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Close'),
-                  ),
-                ],
-              ),
-            ),
+            builder: (context) =>
+                BuyerImageDialog(bytes: bytes, label: widget.semanticLabel),
           ),
           child: Image.memory(
             bytes,
@@ -544,14 +603,8 @@ Future<CancellationInput?> showCancellationSheet(
   BuildContext context, {
   required OrderDetailView order,
   required OrdersRepository repository,
-}) => showModalBottomSheet<CancellationInput>(
+}) => showBuyerBottomSheet<CancellationInput>(
   context: context,
-  isScrollControlled: true,
-  useSafeArea: true,
-  backgroundColor: Colors.white,
-  shape: const RoundedRectangleBorder(
-    borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-  ),
   builder: (_) => _CancellationSheet(order: order, repository: repository),
 );
 
@@ -846,14 +899,8 @@ Future<ProblemPhoto?> pickProblemPhoto() async {
 Future<ProblemInput?> showProblemSheet(
   BuildContext context, {
   ProblemPhotoPicker picker = pickProblemPhoto,
-}) => showModalBottomSheet<ProblemInput>(
+}) => showBuyerBottomSheet<ProblemInput>(
   context: context,
-  isScrollControlled: true,
-  useSafeArea: true,
-  backgroundColor: Colors.white,
-  shape: const RoundedRectangleBorder(
-    borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-  ),
   builder: (_) => _ProblemSheet(picker: picker),
 );
 

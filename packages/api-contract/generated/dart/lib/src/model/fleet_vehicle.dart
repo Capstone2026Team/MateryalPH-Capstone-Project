@@ -35,6 +35,8 @@ part 'fleet_vehicle.g.dart';
 /// * [baseFeeCentavos]
 /// * [perKmCentavos]
 /// * [maximumDistanceKm]
+/// * [mobilizationFeeCentavos] - Mixer mobilization fee on the current rate; zero for other vehicles.
+/// * [mobilizationBasis]
 /// * [eligibility]
 /// * [updatedAt]
 @BuiltValue()
@@ -108,6 +110,14 @@ abstract class FleetVehicle implements Built<FleetVehicle, FleetVehicleBuilder> 
 
   @BuiltValueField(wireName: r'maximum_distance_km')
   int? get maximumDistanceKm;
+
+  /// Mixer mobilization fee on the current rate; zero for other vehicles.
+  @BuiltValueField(wireName: r'mobilization_fee_centavos')
+  int? get mobilizationFeeCentavos;
+
+  @BuiltValueField(wireName: r'mobilization_basis')
+  FleetVehicleMobilizationBasisEnum? get mobilizationBasis;
+  // enum mobilizationBasisEnum {  PER_TRUCK,  PER_TRIP,  ,  };
 
   @BuiltValueField(wireName: r'eligibility')
   FleetVehicleEligibility get eligibility;
@@ -268,6 +278,20 @@ class _$FleetVehicleSerializer implements PrimitiveSerializer<FleetVehicle> {
       yield serializers.serialize(
         object.maximumDistanceKm,
         specifiedType: const FullType.nullable(int),
+      );
+    }
+    if (object.mobilizationFeeCentavos != null) {
+      yield r'mobilization_fee_centavos';
+      yield serializers.serialize(
+        object.mobilizationFeeCentavos,
+        specifiedType: const FullType.nullable(int),
+      );
+    }
+    if (object.mobilizationBasis != null) {
+      yield r'mobilization_basis';
+      yield serializers.serialize(
+        object.mobilizationBasis,
+        specifiedType: const FullType.nullable(FleetVehicleMobilizationBasisEnum),
       );
     }
     yield r'eligibility';
@@ -472,6 +496,22 @@ class _$FleetVehicleSerializer implements PrimitiveSerializer<FleetVehicle> {
           if (valueDes == null) continue;
           result.maximumDistanceKm = valueDes;
           break;
+        case r'mobilization_fee_centavos':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.mobilizationFeeCentavos = valueDes;
+          break;
+        case r'mobilization_basis':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(FleetVehicleMobilizationBasisEnum),
+          ) as FleetVehicleMobilizationBasisEnum?;
+          if (valueDes == null) continue;
+          result.mobilizationBasis = valueDes;
+          break;
         case r'eligibility':
           final valueDes = serializers.deserialize(
             value,
@@ -549,5 +589,20 @@ class FleetVehicleHeavyClassificationEnum extends EnumClass {
 
   static BuiltSet<FleetVehicleHeavyClassificationEnum> get values => _$fleetVehicleHeavyClassificationEnumValues;
   static FleetVehicleHeavyClassificationEnum valueOf(String name) => _$fleetVehicleHeavyClassificationEnumValueOf(name);
+}
+
+class FleetVehicleMobilizationBasisEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'PER_TRUCK')
+  static const FleetVehicleMobilizationBasisEnum PER_TRUCK = _$fleetVehicleMobilizationBasisEnum_PER_TRUCK;
+  @BuiltValueEnumConst(wireName: r'PER_TRIP')
+  static const FleetVehicleMobilizationBasisEnum PER_TRIP = _$fleetVehicleMobilizationBasisEnum_PER_TRIP;
+
+  static Serializer<FleetVehicleMobilizationBasisEnum> get serializer => _$fleetVehicleMobilizationBasisEnumSerializer;
+
+  const FleetVehicleMobilizationBasisEnum._(String name): super(name);
+
+  static BuiltSet<FleetVehicleMobilizationBasisEnum> get values => _$fleetVehicleMobilizationBasisEnumValues;
+  static FleetVehicleMobilizationBasisEnum valueOf(String name) => _$fleetVehicleMobilizationBasisEnumValueOf(name);
 }
 

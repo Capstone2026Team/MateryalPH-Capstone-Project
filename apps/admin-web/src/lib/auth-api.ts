@@ -1,5 +1,5 @@
-import { rateLimitMessage } from '@materyalph/web-ui'
-import { AccountType, AuthenticationApi, ResponseError } from '@materyalph/api-client-ts'
+import { rateLimitMessage, webRequestErrorMessage } from '@materyalph/web-ui'
+import { AccountType, AuthenticationApi, ResponseError, type VendorBotProtectionEvidence } from '@materyalph/api-client-ts'
 import { createWebApiConfiguration } from '@materyalph/web-ui'
 
 const basePath = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'
@@ -8,12 +8,12 @@ async function withWebAuthApi<T>(operation: (api: AuthenticationApi) => Promise<
   return operation(new AuthenticationApi(createWebApiConfiguration(basePath)))
 }
 
-export function signInAdmin(email: string, password: string) {
-  return withWebAuthApi((api) => api.login({ loginRequest: { email, password, portal: AccountType.Admin } }))
+export function signInAdmin(email: string, password: string, botProtection?: VendorBotProtectionEvidence) {
+  return withWebAuthApi((api) => api.login({ loginRequest: { email, password, portal: AccountType.Admin, botProtection: botProtection ?? null } }))
 }
 
-export function acceptAdminInvitation(input: { token: string; fullName: string; password: string; passwordConfirmation: string }) {
-  return withWebAuthApi((api) => api.acceptAdminInvitation({ adminInvitationRequest: { ...input, termsAccepted: true, privacyAccepted: true } }))
+export function acceptAdminInvitation(input: { token: string; email?: string; fullName: string; password: string; passwordConfirmation: string }, botProtection?: VendorBotProtectionEvidence) {
+  return withWebAuthApi((api) => api.acceptAdminInvitation({ adminInvitationRequest: { ...input, botProtection: botProtection ?? null, termsAccepted: true, privacyAccepted: true } }))
 }
 
 export function getMfaStatus() {
@@ -40,9 +40,21 @@ export function recoverMfaChallenge(recoveryCode: string) {
   return withWebAuthApi((api) => api.recoverMfaChallenge({ mfaRecoveryRequest: { recoveryCode } }))
 }
 
-export function requestPasswordRecovery(email: string) {
+export function requestPasswordRecovery(email: string, botProtection?: VendorBotProtectionEvidence) {
   return withWebAuthApi((api) => api.requestPasswordRecovery({
-    passwordRecoveryRequest: { email, portal: AccountType.Admin },
+    passwordRecoveryRequest: { email, portal: AccountType.Admin, botProtection: botProtection ?? null },
+  }))
+}
+
+export function verifyRiskChallenge(challengeId: string, email: string, code: string) {
+  return withWebAuthApi((api) => api.verifyWebBotChallenge({
+    challengeId, webVerifyBotChallengeRequest: { email, code, portal: 'ADMIN' },
+  }))
+}
+
+export function resendRiskChallenge(challengeId: string, email: string) {
+  return withWebAuthApi((api) => api.resendWebBotChallenge({
+    challengeId, webResendBotChallengeRequest: { email, portal: 'ADMIN' },
   }))
 }
 
@@ -51,6 +63,8 @@ export function resetPassword(email: string, code: string, password: string, pas
 }
 
 export async function readableApiError(error: unknown): Promise<string> {
+  const transportMessage = webRequestErrorMessage(error)
+  if (transportMessage) return transportMessage
   if (error instanceof ResponseError) {
     if (error.response.status === 429 && error.response.headers.has('Retry-After')) return rateLimitMessage(error.response)
     const payload: unknown = await error.response.clone().json().catch(() => null)

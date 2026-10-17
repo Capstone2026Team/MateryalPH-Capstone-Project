@@ -18,6 +18,7 @@ Name | Type | Description | Notes
 **mfaRequired** | **bool** |  | [optional]
 **mfaEnrollmentRequired** | **bool** |  | [optional]
 **challengeExpiresIn** | **int** |  | [optional]
+**challengeToken** | **String** | MOBILE transport only, present with mfa_required. Opaque single-use login challenge; keep it in memory and never persist or log it. | [optional]
 **recoveryCodes** | **BuiltList&lt;String&gt;** | Present only immediately after enrollment or recovery; store offline because these values are not returned again. | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

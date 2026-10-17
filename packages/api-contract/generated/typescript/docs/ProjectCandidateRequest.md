@@ -10,6 +10,7 @@ Name | Type
 `candidateId` | string
 `note` | string
 `budgetOverrideReason` | string
+`selections` | [Array&lt;ProjectSpecificationSelection&gt;](ProjectSpecificationSelection.md)
 
 ## Example
 
@@ -22,6 +23,7 @@ const example = {
   "candidateId": null,
   "note": null,
   "budgetOverrideReason": null,
+  "selections": null,
 } satisfies ProjectCandidateRequest
 
 console.log(example)

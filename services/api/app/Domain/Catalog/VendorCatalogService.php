@@ -9,6 +9,7 @@ use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Inventory\InventoryLedgerWriter;
 use App\Domain\Inventory\StockAvailability;
+use App\Domain\Settings\PlatformSettings;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -115,6 +116,13 @@ final class VendorCatalogService
             ->leftJoin('materials as m', 'm.id', '=', 'p.material_id')->leftJoin('material_categories as c', 'c.id', '=', 'l.material_category_id');
         if (! empty($filters['status'])) {
             $query->where('l.status', $filters['status']);
+        }
+        if (($filters['group'] ?? null) === 'NEEDS_ATTENTION') {
+            $query->whereIn('l.status', ['PENDING_COMPLIANCE', 'PENDING_ADMIN_REVIEW', 'TEMPORARILY_HIDDEN_STOCK_NOT_CONFIRMED', 'REJECTED']);
+        }
+        if (($filters['group'] ?? null) === 'OUT_OF_STOCK') {
+            $query->where('l.status', 'ACTIVE')->whereNotExists(fn ($stock) => $stock->selectRaw('1')->from('listing_variants as v')->join('inventory_items as i', 'i.listing_variant_id', '=', 'v.id')
+                ->whereColumn('v.vendor_listing_id', 'l.id')->where('v.active', true)->whereRaw('i.quantity_on_hand - i.hard_reserved_quantity > 0'));
         }
         $page = $query->orderByDesc('l.updated_at')->orderBy('l.id')->paginate(20, ['l.id', 'l.display_name', 'l.vendor_sku', 'l.status', 'l.compliance_status', 'l.regulated', 'l.other_label', 'l.lock_version', 'l.updated_at', 'l.publication_version', 'l.published_at', 'c.name as category_name', 'm.name as material_name'], 'page', (int) ($filters['page'] ?? 1));
         $ids = collect($page->items())->pluck('id')->all();
@@ -250,12 +258,19 @@ final class VendorCatalogService
             if (array_key_exists('tag_ids', $input)) {
                 $tags = array_values(array_unique(array_filter($input['tag_ids'], 'is_string')));
                 if (count($tags) > 3 || DB::table('material_tags')->whereIn('id', $tags)->count() !== count($tags)) {
-                    throw new AuthenticationException('VALIDATION_FAILED', 'Review the highlighted fields and try again.', 422, ['tag_ids' => ['Choose one to three approved search tags.']]);
+                    throw new AuthenticationException('VALIDATION_FAILED', 'Review the highlighted fields and try again.', 422, ['tag_ids' => ['Choose up to three approved search tags.']]);
                 }
                 DB::table('listing_tag_links')->where('vendor_listing_id', $listingId)->delete();
                 foreach ($tags as $tagId) {
                     DB::table('listing_tag_links')->insert(['id' => (string) Str::uuid7(), 'vendor_listing_id' => $listingId, 'material_tag_id' => $tagId, 'created_at' => now(), 'updated_at' => now()]);
                 }
+            }
+            if (array_key_exists('custom_tags', $input)) {
+                $rejected = CustomTags::invalid($input['custom_tags']);
+                if ($rejected !== []) {
+                    throw new AuthenticationException('VALIDATION_FAILED', 'Review the highlighted fields and try again.', 422, ['custom_tags' => ['Use letters, numbers, spaces, hyphens, ampersands or periods, 2 to '.CustomTags::MAX_LENGTH.' characters: '.implode(', ', array_slice($rejected, 0, 3)).'.']]);
+                }
+                CustomTags::replace($listingId, $input['custom_tags']);
             }
             DB::table('products')->where('id', $product->id)->update($productValues);
             DB::table('vendor_listings')->where('id', $listingId)->update($listingValues);
@@ -551,6 +566,7 @@ final class VendorCatalogService
             'material' => $material === null ? null : ['id' => $material->id, 'code' => $material->code, 'name' => $material->name, 'regulated' => (bool) $material->regulated],
             'material_match' => $listing->material_match, 'material_category_id' => $listing->material_category_id, 'other_label' => $listing->other_label,
             'tag_ids' => DB::table('listing_tag_links')->where('vendor_listing_id', $listing->id)->pluck('material_tag_id')->all(),
+            'custom_tags' => CustomTags::forListing((string) $listing->id),
             'technical_attributes' => ComparableMappingService::decode($listing->technical_attributes),
             'brand' => $product?->brand, 'model' => $product?->model, 'manufacturer' => $product?->manufacturer, 'manufacturer_address' => $product?->manufacturer_address, 'country_of_manufacture' => $product?->country_of_manufacture,
             'regulated' => (bool) $listing->regulated, 'compliance_status' => $listing->compliance_status,
@@ -562,7 +578,7 @@ final class VendorCatalogService
                 ->map(fn (object $media): array => ['id' => $media->id, 'file_id' => $media->file_id, 'alt_text' => $media->alt_text, 'status' => $media->status, 'version' => (int) $media->media_version, 'replaces_media_id' => $media->replaces_media_id, 'content_type' => $media->content_type, 'byte_size' => (int) $media->byte_size, 'scan_state' => $media->scan_state, 'uploaded_at' => $media->created_at])->all(),
             'compliance_submissions' => $submissions->map(fn (object $submission): array => [
                 'id' => $submission->id, 'version' => (int) $submission->version, 'path' => $submission->path, 'status' => $submission->status, 'marking_type' => $submission->marking_type,
-                'submitted_at' => $submission->submitted_at, 'decided_at' => $submission->decided_at,
+                'review_mode' => $submission->review_mode, 'submitted_at' => $submission->submitted_at, 'decided_at' => $submission->decided_at,
                 'latest_review' => ($review = DB::table('compliance_reviews')->where('compliance_submission_id', $submission->id)->orderByDesc('created_at')->first(['decision', 'reason', 'reviewed_at', 'reviewer_user_id'])) === null ? null : ['decision' => $review->decision, 'reason' => $review->reason, 'reviewed_at' => $review->reviewed_at, 'source' => $review->reviewer_user_id === null ? 'SYSTEM_REGISTER_MATCH' : 'ADMIN'],
             ])->all(),
             'status_history' => DB::table('listing_status_history')->where('vendor_listing_id', $listing->id)->orderByDesc('created_at')->orderByDesc('id')->limit(20)->get(['from_status', 'to_status', 'source', 'reason_code', 'reason', 'publication_version', 'created_at'])->all(),
@@ -882,6 +898,6 @@ final class VendorCatalogService
 
     private function maxImageKb(): int
     {
-        return (int) config('materyalph.catalog.max_listing_image_kb', 5120);
+        return min((int) config('materyalph.catalog.max_listing_image_kb', 5120), PlatformSettings::current()->uploadKb('listing_image'));
     }
 }

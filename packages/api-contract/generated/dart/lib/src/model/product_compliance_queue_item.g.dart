@@ -6,6 +6,68 @@ part of 'product_compliance_queue_item.dart';
 // BuiltValueGenerator
 // **************************************************************************
 
+const ProductComplianceQueueItemReviewModeEnum
+    _$productComplianceQueueItemReviewModeEnum_AUTOMATIC =
+    const ProductComplianceQueueItemReviewModeEnum._('AUTOMATIC');
+const ProductComplianceQueueItemReviewModeEnum
+    _$productComplianceQueueItemReviewModeEnum_MANUAL_REVIEW =
+    const ProductComplianceQueueItemReviewModeEnum._('MANUAL_REVIEW');
+
+ProductComplianceQueueItemReviewModeEnum
+    _$productComplianceQueueItemReviewModeEnumValueOf(String name) {
+  switch (name) {
+    case 'AUTOMATIC':
+      return _$productComplianceQueueItemReviewModeEnum_AUTOMATIC;
+    case 'MANUAL_REVIEW':
+      return _$productComplianceQueueItemReviewModeEnum_MANUAL_REVIEW;
+    default:
+      throw ArgumentError(name);
+  }
+}
+
+final BuiltSet<ProductComplianceQueueItemReviewModeEnum>
+    _$productComplianceQueueItemReviewModeEnumValues = BuiltSet<
+        ProductComplianceQueueItemReviewModeEnum>(const <ProductComplianceQueueItemReviewModeEnum>[
+  _$productComplianceQueueItemReviewModeEnum_AUTOMATIC,
+  _$productComplianceQueueItemReviewModeEnum_MANUAL_REVIEW,
+]);
+
+Serializer<ProductComplianceQueueItemReviewModeEnum>
+    _$productComplianceQueueItemReviewModeEnumSerializer =
+    _$ProductComplianceQueueItemReviewModeEnumSerializer();
+
+class _$ProductComplianceQueueItemReviewModeEnumSerializer
+    implements PrimitiveSerializer<ProductComplianceQueueItemReviewModeEnum> {
+  static const Map<String, Object> _toWire = const <String, Object>{
+    'AUTOMATIC': 'AUTOMATIC',
+    'MANUAL_REVIEW': 'MANUAL_REVIEW',
+  };
+  static const Map<Object, String> _fromWire = const <Object, String>{
+    'AUTOMATIC': 'AUTOMATIC',
+    'MANUAL_REVIEW': 'MANUAL_REVIEW',
+  };
+
+  @override
+  final Iterable<Type> types = const <Type>[
+    ProductComplianceQueueItemReviewModeEnum
+  ];
+  @override
+  final String wireName = 'ProductComplianceQueueItemReviewModeEnum';
+
+  @override
+  Object serialize(Serializers serializers,
+          ProductComplianceQueueItemReviewModeEnum object,
+          {FullType specifiedType = FullType.unspecified}) =>
+      _toWire[object.name] ?? object.name;
+
+  @override
+  ProductComplianceQueueItemReviewModeEnum deserialize(
+          Serializers serializers, Object serialized,
+          {FullType specifiedType = FullType.unspecified}) =>
+      ProductComplianceQueueItemReviewModeEnum.valueOf(
+          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+}
+
 class _$ProductComplianceQueueItem extends ProductComplianceQueueItem {
   @override
   final String id;
@@ -17,6 +79,8 @@ class _$ProductComplianceQueueItem extends ProductComplianceQueueItem {
   final String status;
   @override
   final String? markingType;
+  @override
+  final ProductComplianceQueueItemReviewModeEnum? reviewMode;
   @override
   final String? submittedAt;
   @override
@@ -46,6 +110,7 @@ class _$ProductComplianceQueueItem extends ProductComplianceQueueItem {
       required this.path,
       required this.status,
       this.markingType,
+      this.reviewMode,
       this.submittedAt,
       required this.listingId,
       required this.displayName,
@@ -74,6 +139,7 @@ class _$ProductComplianceQueueItem extends ProductComplianceQueueItem {
         path == other.path &&
         status == other.status &&
         markingType == other.markingType &&
+        reviewMode == other.reviewMode &&
         submittedAt == other.submittedAt &&
         listingId == other.listingId &&
         displayName == other.displayName &&
@@ -93,6 +159,7 @@ class _$ProductComplianceQueueItem extends ProductComplianceQueueItem {
     _$hash = $jc(_$hash, path.hashCode);
     _$hash = $jc(_$hash, status.hashCode);
     _$hash = $jc(_$hash, markingType.hashCode);
+    _$hash = $jc(_$hash, reviewMode.hashCode);
     _$hash = $jc(_$hash, submittedAt.hashCode);
     _$hash = $jc(_$hash, listingId.hashCode);
     _$hash = $jc(_$hash, displayName.hashCode);
@@ -114,6 +181,7 @@ class _$ProductComplianceQueueItem extends ProductComplianceQueueItem {
           ..add('path', path)
           ..add('status', status)
           ..add('markingType', markingType)
+          ..add('reviewMode', reviewMode)
           ..add('submittedAt', submittedAt)
           ..add('listingId', listingId)
           ..add('displayName', displayName)
@@ -151,6 +219,12 @@ class ProductComplianceQueueItemBuilder
   String? _markingType;
   String? get markingType => _$this._markingType;
   set markingType(String? markingType) => _$this._markingType = markingType;
+
+  ProductComplianceQueueItemReviewModeEnum? _reviewMode;
+  ProductComplianceQueueItemReviewModeEnum? get reviewMode =>
+      _$this._reviewMode;
+  set reviewMode(ProductComplianceQueueItemReviewModeEnum? reviewMode) =>
+      _$this._reviewMode = reviewMode;
 
   String? _submittedAt;
   String? get submittedAt => _$this._submittedAt;
@@ -203,6 +277,7 @@ class ProductComplianceQueueItemBuilder
       _path = $v.path;
       _status = $v.status;
       _markingType = $v.markingType;
+      _reviewMode = $v.reviewMode;
       _submittedAt = $v.submittedAt;
       _listingId = $v.listingId;
       _displayName = $v.displayName;
@@ -242,6 +317,7 @@ class ProductComplianceQueueItemBuilder
           status: BuiltValueNullFieldError.checkNotNull(
               status, r'ProductComplianceQueueItem', 'status'),
           markingType: markingType,
+          reviewMode: reviewMode,
           submittedAt: submittedAt,
           listingId: BuiltValueNullFieldError.checkNotNull(
               listingId, r'ProductComplianceQueueItem', 'listingId'),

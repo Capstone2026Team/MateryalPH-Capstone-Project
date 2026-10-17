@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Domain\Payments;
 
 use App\Domain\Catalog\CatalogAccess;
+use App\Domain\Disputes\DisputeRemedyService;
 use App\Domain\Fulfillment\OrderEvidenceFiles;
 use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Orders\OrderAccess;
+use App\Domain\Orders\OrderActor;
 use App\Domain\Orders\OrderNotifier;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
@@ -86,6 +88,7 @@ final class ReimbursementService
                 throw new AuthenticationException('REIMBURSEMENT_NOT_READY', 'You can confirm after the Vendor records the reimbursement.', 409);
             }
             DB::table('physical_reimbursements')->where('id', $row->id)->update(['state' => 'REIMBURSEMENT_CONFIRMED', 'buyer_acknowledged_at' => now(), 'lock_version' => (int) $row->lock_version + 1, 'updated_at' => now()]);
+            $order = app(DisputeRemedyService::class)->reimbursementConfirmed($order, $row, OrderActor::buyer($request));
             $this->keys->claim($request, 'REIMBURSEMENT_ACKNOWLEDGE', $key, $orderId, 200);
             $this->audit->account($request, 'CASH_REIMBURSEMENT_ACKNOWLEDGED', 'ORDER', $orderId, after: ['reimbursement_id' => (string) $row->id]);
             $this->notifier->vendor($order, 'Cash reimbursement confirmed for order '.$order->reference, 'The Buyer confirmed receiving the cash reimbursement.', ['OWNER', 'STORE_MANAGER', 'STORE_STAFF']);
@@ -97,16 +100,22 @@ final class ReimbursementService
     {
         $this->keys->requireAdmin($request, self::DECIDE_PERMISSION);
         DB::transaction(function () use ($request, $reimbursementId, $reason): void {
-            $row = DB::table('physical_reimbursements')->where('id', Str::isUuid($reimbursementId) ? $reimbursementId : '00000000-0000-0000-0000-000000000000')->lockForUpdate()->first();
-            if ($row === null || $row->order_id === null) {
+            $peek = DB::table('physical_reimbursements')->where('id', Str::isUuid($reimbursementId) ? $reimbursementId : '00000000-0000-0000-0000-000000000000')->first();
+            if ($peek === null || $peek->order_id === null) {
                 throw new AuthenticationException('REIMBURSEMENT_NOT_FOUND', 'This reimbursement is unavailable.', 404);
             }
+            // Order before reimbursement, matching every other order-scoped writer.
+            $locked = DB::table('orders')->where('id', $peek->order_id)->lockForUpdate()->first();
+            $row = DB::table('physical_reimbursements')->where('id', $peek->id)->lockForUpdate()->first();
             if ($row->state !== 'VENDOR_REIMBURSEMENT_PENDING' || $row->evidence_file_id === null) {
                 throw new AuthenticationException('REIMBURSEMENT_NOT_READY', 'Only a pending reimbursement with Vendor evidence can be confirmed.', 409);
             }
             DB::table('physical_reimbursements')->where('id', $row->id)->update(['state' => 'REIMBURSEMENT_CONFIRMED', 'confirmed_by_user_id' => $request->user()->getKey(),
                 'confirmation_reason' => mb_substr(trim($reason), 0, 2000), 'lock_version' => (int) $row->lock_version + 1, 'updated_at' => now()]);
             $this->audit->account($request, 'CASH_REIMBURSEMENT_CONFIRMED_BY_ADMIN', 'ORDER', (string) $row->order_id, after: ['reimbursement_id' => (string) $row->id], reason: $reason);
+            $role = (string) (DB::table('admin_memberships as m')->join('platform_roles as r', 'r.id', '=', 'm.platform_role_id')->where('m.user_id', $request->user()->getKey())->where('m.status', 'ACTIVE')->value('r.code') ?? 'ADMIN');
+            $correlation = $request->attributes->get('correlation_id');
+            app(DisputeRemedyService::class)->reimbursementConfirmed($locked, $row, new OrderActor((int) $request->user()->getKey(), $role, 'SYSTEM', is_string($correlation) && $correlation !== '' ? $correlation : (string) Str::uuid7()));
             $order = DB::table('orders')->where('id', $row->order_id)->first();
             $this->notifier->buyer($order, 'Cash reimbursement confirmed for order '.$order->reference, 'MateryalPH reviewed the Vendor\'s evidence and recorded the cash reimbursement as completed.');
         });

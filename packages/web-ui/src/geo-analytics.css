@@ -1,0 +1,91 @@
+/*
+ * Data-visualization roles for the Admin geographic analytics (light-first portals).
+ * Sequential magnitude: one hue, light → dark, the brand orange ramp extended by one darker step (orange-900).
+ * Categorical series: the validated reference slots 1–2 (blue, orange); both pass lightness, chroma, CVD,
+ * normal-vision and 3:1 contrast checks on the white surface. Suppressed cells use a neutral hatch plus text,
+ * so no meaning is carried by colour alone.
+ */
+.mp-viz {
+  --mp-viz-seq-1: var(--mp-color-brand-orange-100);
+  --mp-viz-seq-2: var(--mp-color-brand-orange-300);
+  --mp-viz-seq-3: var(--mp-color-brand-orange-500);
+  --mp-viz-seq-4: var(--mp-color-action-primary);
+  --mp-viz-seq-5: #7c2d12;
+  --mp-viz-empty: var(--mp-color-surface-canvas);
+  --mp-viz-suppressed: #e5e7eb;
+  --mp-viz-series-1: #2a78d6;
+  --mp-viz-series-2: #eb6834;
+  /* Slots 3–6 continue the same validated order (aqua, yellow, magenta, green). On white they pass lightness, chroma,
+     adjacent CVD (worst ΔE 9.1) and normal-vision (worst ΔE 19.6) checks; aqua, yellow and magenta sit below 3:1, so
+     every chart using them prints values or offers its table view, and scatter plots add a distinct marker shape. */
+  --mp-viz-series-3: #1baf7a;
+  --mp-viz-series-4: #eda100;
+  --mp-viz-series-5: #e87ba4;
+  --mp-viz-series-6: #008300;
+  --mp-viz-grid: var(--mp-color-border-default);
+  /* Forecasts are estimates: a neutral region and band, never a series colour. */
+  --mp-viz-forecast-region: rgba(148, 163, 184, 0.10);
+  --mp-viz-forecast-band: rgba(71, 85, 105, 0.16);
+}
+
+.mp-viz-forecast-swatch {
+  background-color: var(--mp-viz-forecast-band);
+  background-image: repeating-linear-gradient(90deg, var(--mp-color-text-strong) 0 5px, transparent 5px 9px);
+  background-size: 100% 2px;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.mp-viz-hatch {
+  background-color: var(--mp-viz-suppressed);
+  background-image: repeating-linear-gradient(45deg, transparent 0 5px, rgba(71, 85, 105, 0.45) 5px 6px);
+}
+
+.mp-geo-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  gap: 12px;
+}
+
+.mp-geo-tile:hover {
+  border-color: var(--mp-color-text-secondary);
+}
+
+/* Keep labels readable and identifiers visible while wide metric tables scroll. */
+.mp-geo-table :is(th, td) {
+  overflow-wrap: normal;
+  word-break: normal;
+  vertical-align: middle;
+}
+
+.mp-geo-table thead th {
+  white-space: nowrap;
+}
+
+.mp-geo-table tbody tr {
+  background: var(--mp-color-surface-primary);
+}
+
+.mp-geo-table tbody tr:hover {
+  background: var(--mp-color-surface-canvas);
+}
+
+.mp-geo-table tbody tr[data-highlighted] {
+  background: var(--mp-color-brand-orange-50);
+}
+
+.mp-geo-table tbody th {
+  background: inherit;
+}
+
+.mp-geo-table tbody tr:last-child :is(th, td) {
+  border-bottom: 0;
+}
+
+@media (forced-colors: active) {
+  .mp-viz-hatch { forced-color-adjust: none; background-image: repeating-linear-gradient(45deg, Canvas 0 5px, CanvasText 5px 6px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mp-viz * { transition: none !important; }
+}

@@ -21,8 +21,8 @@ use App\Http\Controllers\Api\XenditAccountVerificationWebhookController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', HealthController::class);
-Route::get('/stores', [PublicStoreProfileController::class, 'index'])->middleware('throttle:public-store');
-Route::get('/stores/{storeId}/profile', PublicStoreProfileController::class)->whereUuid('storeId')->middleware('throttle:public-store');
+Route::get('/stores', [PublicStoreProfileController::class, 'index']);
+Route::get('/stores/{storeId}/profile', PublicStoreProfileController::class)->whereUuid('storeId');
 Route::get('/agreements/current', AgreementController::class);
 
 require __DIR__.'/account.php';
@@ -79,6 +79,8 @@ Route::prefix('mobile/auth')->middleware('auth.transport:MOBILE')->group(functio
         Route::post('/password/reset', [PasswordRecoveryController::class, 'reset']);
         Route::post('/bot-challenges/{challengeId}/verify', [BotChallengeController::class, 'verify']);
         Route::post('/bot-challenges/{challengeId}/resend', [BotChallengeController::class, 'resend']);
+        Route::post('/mfa/challenge', [MfaController::class, 'challenge']);
+        Route::post('/mfa/recovery', [MfaController::class, 'recover']);
     });
     Route::post('/register', RegisterController::class)->middleware('throttle:auth-registration');
     Route::post('/refresh', RefreshController::class)->middleware('throttle:auth-refresh');
@@ -92,3 +94,7 @@ require __DIR__.'/messaging.php';
 require __DIR__.'/projects.php';
 require __DIR__.'/payments.php';
 require __DIR__.'/fulfillment.php';
+require __DIR__.'/disputes.php';
+require __DIR__.'/trust.php';
+require __DIR__.'/notifications.php';
+require __DIR__.'/admin-operations.php';

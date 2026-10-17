@@ -117,6 +117,7 @@ final class OrderDeliveryPlanner
             'heavy_classification' => (string) $vehicle['heavy_classification'], 'maximum_distance_km' => (int) $vehicle['maximum_distance_km'],
             'base_fee_centavos' => (int) $vehicle['base_fee_centavos'], 'per_km_centavos' => (int) $vehicle['per_km_centavos'],
             'per_trip_centavos' => DeliveryRecommendationService::feePerTripCentavos((int) $vehicle['base_fee_centavos'], (int) $vehicle['per_km_centavos'], $distance),
+            'mobilization_fee_centavos' => (int) ($vehicle['mobilization_fee_centavos'] ?? 0), 'mobilization_basis' => $vehicle['mobilization_basis'] ?? null,
             'within_range' => $distance <= (int) $vehicle['maximum_distance_km'] * 1000, 'rate_version' => (int) $vehicle['rate_version'], 'configuration_version' => (int) $vehicle['configuration_version'],
         ];
         $destination = self::destination($order);
@@ -126,16 +127,22 @@ final class OrderDeliveryPlanner
             'route' => ['distance_meters' => $distance, 'duration_seconds' => (int) ($route['duration_seconds'] ?? 0), 'basis' => DeliveryPreviewService::ROUTE_BASIS, 'source' => (string) ($route['source'] ?? 'GOOGLE_ROUTES')],
             'endpoint' => ['kind' => $destination['vehicle_endpoint'] ?? null, 'heavy_vehicle_restriction' => $destination['heavy_vehicle_restriction'] ?? null,
                 'intended' => self::publicPoint($destination['intended'] ?? null), 'alternate_drop_off' => self::publicPoint($destination['alternate_drop_off'] ?? null)],
-            'groups' => array_map(static fn (array $group): array => [
+            'groups' => array_map(fn (array $group): array => [
                 'key' => (string) $group['key'], 'label' => $names[(string) $group['key']] ?? (string) $group['key'], 'status' => (string) $group['status'],
                 'manual_review_reasons' => $group['manual_review_reasons'] ?? [],
+                'manual_review_vehicles' => array_map(static fn (array $vehicle): array => $vehicleView($vehicle) + [
+                    'number_of_vehicles' => min((int) $vehicle['number_available'], DeliveryRecommendationService::manualReviewMinimumTrips($vehicle, $group)),
+                    'total_vehicle_trips' => DeliveryRecommendationService::manualReviewMinimumTrips($vehicle, $group),
+                ], $this->recommendations->manualReviewVehicles($vehicles, $group, $load)),
                 'candidates' => array_map(static fn (array $candidate): array => $vehicleView($candidate['vehicle']) + [
+                    'recommended' => $candidate['vehicle_id'] === $group['candidates'][0]['vehicle_id'],
                     'number_of_vehicles' => (int) $candidate['number_of_vehicles'], 'total_vehicle_trips' => (int) $candidate['total_vehicle_trips'],
                     'estimated_charge_centavos' => (int) $candidate['estimated_charge_centavos'], 'limiting_factor' => (string) $candidate['limiting_factor'],
+                    'mobilization_total_centavos' => (int) $candidate['fee']['mobilization_total_centavos'], 'volume_plan' => $candidate['volume_plan'] ?? null,
                 ], $group['candidates'] ?? []),
             ], $evaluation['groups']),
             'eligible_vehicles' => array_map($vehicleView, $vehicles),
-            'fee_formula' => ['calculation_version' => DeliveryRecommendationService::CALCULATION_VERSION, 'rounding' => DeliveryRecommendationService::FEE_ROUNDING, 'final_fee_rule' => 'SUM_PER_TRIP_FEE_TIMES_TRIPS'],
+            'fee_formula' => ['calculation_version' => DeliveryRecommendationService::CALCULATION_VERSION, 'rounding' => DeliveryRecommendationService::FEE_ROUNDING, 'final_fee_rule' => DeliveryRecommendationService::FEE_RULE],
             'notice' => 'Advisory only. You confirm the vehicles, trips, drop-off, date and final fee; the Buyer approves them before payment.',
         ];
     }

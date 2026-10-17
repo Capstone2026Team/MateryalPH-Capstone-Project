@@ -102,6 +102,7 @@ final class TokenSessionService
     public function revoke(AuthSession $session, string $reason = 'LOGOUT'): void
     {
         $session->update(['revoked_at' => now(), 'revoke_reason' => $reason]);
+        DB::table('notification_devices')->where('session_id', $session->getKey())->whereNull('revoked_at')->update(['revoked_at' => now(), 'updated_at' => now()]);
         $this->accessTokens->revoke($session->oauth_access_token_id);
     }
 

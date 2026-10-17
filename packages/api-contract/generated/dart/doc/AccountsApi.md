@@ -17,9 +17,16 @@ Method | HTTP request | Description
 [**changeAccountPassword**](AccountsApi.md#changeaccountpassword) | **POST** /{accountPortal}/account/password |
 [**confirmAccountEmailChange**](AccountsApi.md#confirmaccountemailchange) | **POST** /{accountPortal}/account/email/confirm |
 [**confirmAccountFactorReplacement**](AccountsApi.md#confirmaccountfactorreplacement) | **POST** /{accountPortal}/account/factor/confirm |
+[**confirmBuyerTwoFactor**](AccountsApi.md#confirmbuyertwofactor) | **POST** /buyers/account/two-factor/confirm |
+[**deleteBuyerAccount**](AccountsApi.md#deletebuyeraccount) | **POST** /buyers/account/deletion |
+[**deleteVendorTeamInvitation**](AccountsApi.md#deletevendorteaminvitation) | **DELETE** /vendors/account/invitations/{invitationId} |
+[**deleteVendorTeamMember**](AccountsApi.md#deletevendorteammember) | **DELETE** /vendors/account/memberships/{membershipId} |
+[**disableBuyerTwoFactor**](AccountsApi.md#disablebuyertwofactor) | **POST** /buyers/account/two-factor/disable |
 [**getAccountPhoto**](AccountsApi.md#getaccountphoto) | **GET** /{webAccountPortal}/account/photo |
 [**getAccountProfile**](AccountsApi.md#getaccountprofile) | **GET** /{accountPortal}/account/profile |
 [**getAccountSecurity**](AccountsApi.md#getaccountsecurity) | **GET** /{accountPortal}/account/security |
+[**getBuyerAccountDeletionPreview**](AccountsApi.md#getbuyeraccountdeletionpreview) | **GET** /buyers/account/deletion |
+[**getBuyerAccountPhoto**](AccountsApi.md#getbuyeraccountphoto) | **GET** /buyers/account/photo |
 [**inviteAccountAdmin**](AccountsApi.md#inviteaccountadmin) | **POST** /{accountPortal}/account/invitations |
 [**listAccountAdminRoles**](AccountsApi.md#listaccountadminroles) | **GET** /{accountPortal}/account/roles |
 [**listAccountAdministrators**](AccountsApi.md#listaccountadministrators) | **GET** /{accountPortal}/account/administrators |
@@ -33,9 +40,11 @@ Method | HTTP request | Description
 [**sendAccountReauthenticationEmail**](AccountsApi.md#sendaccountreauthenticationemail) | **POST** /{accountPortal}/account/reauthentication/email |
 [**startAccountEmailChange**](AccountsApi.md#startaccountemailchange) | **POST** /{accountPortal}/account/email |
 [**startAccountFactorReplacement**](AccountsApi.md#startaccountfactorreplacement) | **POST** /{accountPortal}/account/factor |
+[**startBuyerTwoFactor**](AccountsApi.md#startbuyertwofactor) | **POST** /buyers/account/two-factor |
 [**updateAccountProfile**](AccountsApi.md#updateaccountprofile) | **PATCH** /{accountPortal}/account/profile |
 [**updateVendorStaff**](AccountsApi.md#updatevendorstaff) | **PATCH** /vendors/account/memberships/{membershipId} |
 [**uploadAccountPhoto**](AccountsApi.md#uploadaccountphoto) | **POST** /{webAccountPortal}/account/photo |
+[**uploadBuyerAccountPhoto**](AccountsApi.md#uploadbuyeraccountphoto) | **POST** /buyers/account/photo |
 
 
 # **acceptAccountAgreements**
@@ -95,6 +104,8 @@ Name | Type | Description  | Notes
 > AccountMutationResultEnvelope acceptVendorStaffInvitation(vendorInvitationAcceptance)
 
 
+
+Accepts an unexpired invitation for its invited email and fixed role. When Vendor bot protection is enabled, requires an Enterprise checkbox assessment with server-selected action vendor_invitation_accept, or an accessible email security check with a single-use HttpOnly proof bound to this email and action. Invalid, expired, revoked, deleted or accepted invitations cannot trigger a bot email challenge. Existing Vendor identities in ACTIVE or PENDING_VERIFICATION use their current password and must have no retained Vendor membership. Deleted memberships remain historical records. Pending identities receive a new email verification code and remain pending until verification; acceptance never signs in or activates the identity. Suspended, banned, deactivated and non-Vendor identities remain ineligible.
 
 ### Example
 ```dart
@@ -460,6 +471,241 @@ Name | Type | Description  | Notes
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **confirmBuyerTwoFactor**
+> AccountRecoveryCodesEnvelope confirmBuyerTwoFactor(buyerTwoFactorConfirmation)
+
+
+
+Confirms the pending authenticator with a current 6-digit code. Requires recent authentication. Turns 2FA on, signs out the Buyer's other devices and returns 8 single-use recovery codes once. From then on every Buyer sign-in, including Google, needs an authenticator or recovery code. A wrong code is 422 MFA_CODE_INVALID.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+
+final api = MateryalphApiClient().getAccountsApi();
+final BuyerTwoFactorConfirmation buyerTwoFactorConfirmation = ; // BuyerTwoFactorConfirmation |
+
+try {
+    final response = api.confirmBuyerTwoFactor(buyerTwoFactorConfirmation);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AccountsApi->confirmBuyerTwoFactor: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **buyerTwoFactorConfirmation** | [**BuyerTwoFactorConfirmation**](BuyerTwoFactorConfirmation.md)|  |
+
+### Return type
+
+[**AccountRecoveryCodesEnvelope**](AccountRecoveryCodesEnvelope.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **deleteBuyerAccount**
+> BuyerAccountDeletionResultEnvelope deleteBuyerAccount(buyerAccountDeletionRequest)
+
+
+
+Deletes the signed-in Buyer account. Requires recent authentication and the typed confirmation phrase. Refused with 409 ACCOUNT_DELETION_BLOCKED (details.blockers) while an order, dispute or refund is open. The account becomes DELETED (final), every session, push device and authenticator is revoked and an IN_APP DELETION privacy request is opened. Orders, payments, disputes, reviews and audit records are retained and later minimized, never deleted.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+
+final api = MateryalphApiClient().getAccountsApi();
+final BuyerAccountDeletionRequest buyerAccountDeletionRequest = ; // BuyerAccountDeletionRequest |
+
+try {
+    final response = api.deleteBuyerAccount(buyerAccountDeletionRequest);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AccountsApi->deleteBuyerAccount: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **buyerAccountDeletionRequest** | [**BuyerAccountDeletionRequest**](BuyerAccountDeletionRequest.md)|  |
+
+### Return type
+
+[**BuyerAccountDeletionResultEnvelope**](BuyerAccountDeletionResultEnvelope.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **deleteVendorTeamInvitation**
+> AccountMutationResultEnvelope deleteVendorTeamInvitation(invitationId, vendorTeamDeletion)
+
+
+
+Owner only. Allowed for unaccepted expired invitations or accepted invitations linked to a deleted membership. Otherwise returns TEAM_INVITATION_NOT_DELETABLE. Stale lock_version returns RESOURCE_VERSION_CONFLICT. Requires recent authentication and current agreements. Repeated deletion succeeds without duplicating audit events.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getAccountsApi();
+final String invitationId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final VendorTeamDeletion vendorTeamDeletion = ; // VendorTeamDeletion |
+
+try {
+    final response = api.deleteVendorTeamInvitation(invitationId, vendorTeamDeletion);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AccountsApi->deleteVendorTeamInvitation: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **invitationId** | **String**|  |
+ **vendorTeamDeletion** | [**VendorTeamDeletion**](VendorTeamDeletion.md)|  |
+
+### Return type
+
+[**AccountMutationResultEnvelope**](AccountMutationResultEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **deleteVendorTeamMember**
+> AccountMutationResultEnvelope deleteVendorTeamMember(membershipId, vendorTeamDeletion)
+
+
+
+Owner only, scoped to the current organization. Only DEACTIVATED non-Owner memberships can be deleted; otherwise TEAM_ACCOUNT_NOT_DEACTIVATED. Deleted memberships cannot be edited or reactivated. Stale lock_version returns RESOURCE_VERSION_CONFLICT. Requires recent authentication and current agreements. Repeated deletion succeeds without duplicating audit events.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getAccountsApi();
+final String membershipId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final VendorTeamDeletion vendorTeamDeletion = ; // VendorTeamDeletion |
+
+try {
+    final response = api.deleteVendorTeamMember(membershipId, vendorTeamDeletion);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AccountsApi->deleteVendorTeamMember: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **membershipId** | **String**|  |
+ **vendorTeamDeletion** | [**VendorTeamDeletion**](VendorTeamDeletion.md)|  |
+
+### Return type
+
+[**AccountMutationResultEnvelope**](AccountMutationResultEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **disableBuyerTwoFactor**
+> AccountMutationResultEnvelope disableBuyerTwoFactor(buyerTwoFactorDisable)
+
+
+
+Turns the Buyer's authenticator off. Requires recent authentication plus a fresh authenticator code or an unused recovery code. Retires every recovery code, spends the recent-authentication proof and emails a security notice.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+
+final api = MateryalphApiClient().getAccountsApi();
+final BuyerTwoFactorDisable buyerTwoFactorDisable = ; // BuyerTwoFactorDisable |
+
+try {
+    final response = api.disableBuyerTwoFactor(buyerTwoFactorDisable);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AccountsApi->disableBuyerTwoFactor: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **buyerTwoFactorDisable** | [**BuyerTwoFactorDisable**](BuyerTwoFactorDisable.md)|  |
+
+### Return type
+
+[**AccountMutationResultEnvelope**](AccountMutationResultEnvelope.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **getAccountPhoto**
 > Uint8List getAccountPhoto(expires, signature, version, owner, webAccountPortal)
 
@@ -606,6 +852,94 @@ Name | Type | Description  | Notes
 
  - **Content-Type**: Not defined
  - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **getBuyerAccountDeletionPreview**
+> BuyerAccountDeletionPreviewEnvelope getBuyerAccountDeletionPreview()
+
+
+
+What deleting the account keeps and whether open orders, disputes or pending refunds block it. Shown before the Buyer confirms.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+
+final api = MateryalphApiClient().getAccountsApi();
+
+try {
+    final response = api.getBuyerAccountDeletionPreview();
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AccountsApi->getBuyerAccountDeletionPreview: $e\n');
+}
+```
+
+### Parameters
+This endpoint does not need any parameter.
+
+### Return type
+
+[**BuyerAccountDeletionPreviewEnvelope**](BuyerAccountDeletionPreviewEnvelope.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **getBuyerAccountPhoto**
+> Uint8List getBuyerAccountPhoto(expires, owner, version, signature)
+
+
+
+Use the five-minute signed avatar_url from the Buyer profile through an authenticated request. Owner and current profile version are checked on every fetch. Private no-store response; the signed URL alone grants no access.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+
+final api = MateryalphApiClient().getAccountsApi();
+final int expires = 56; // int |
+final String owner = owner_example; // String |
+final int version = 56; // int |
+final String signature = signature_example; // String |
+
+try {
+    final response = api.getBuyerAccountPhoto(expires, owner, version, signature);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AccountsApi->getBuyerAccountPhoto: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **expires** | **int**|  |
+ **owner** | **String**|  |
+ **version** | **int**|  |
+ **signature** | **String**|  |
+
+### Return type
+
+[**Uint8List**](Uint8List.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: image/png, application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
@@ -808,7 +1142,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **listAccountMemberships**
-> AccountMembershipListEnvelope listAccountMemberships(accountPortal, page)
+> AccountMembershipListEnvelope listAccountMemberships(accountPortal, page, search, role)
 
 
 
@@ -825,9 +1159,11 @@ import 'package:materyalph_api_client/api.dart';
 final api = MateryalphApiClient().getAccountsApi();
 final String accountPortal = accountPortal_example; // String |
 final int page = 56; // int |
+final String search = search_example; // String |
+final String role = role_example; // String |
 
 try {
-    final response = api.listAccountMemberships(accountPortal, page);
+    final response = api.listAccountMemberships(accountPortal, page, search, role);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling AccountsApi->listAccountMemberships: $e\n');
@@ -840,6 +1176,8 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **accountPortal** | **String**|  |
  **page** | **int**|  | [optional]
+ **search** | **String**|  | [optional]
+ **role** | **String**|  | [optional]
 
 ### Return type
 
@@ -963,7 +1301,7 @@ Name | Type | Description  | Notes
 
 
 
-Server enforces the route audience, active account and membership, resource ownership, Passport scope and session transport. buyers uses MOBILE bearer; vendors/admin use WEB cookies and CSRF on mutations. Privileged security changes require session-bound recent authentication. No client header can select or bypass transport security.
+Server enforces the route audience, active account and membership, resource ownership, Passport scope and session transport. buyers uses MOBILE bearer; vendors/admin use WEB cookies and CSRF on mutations. Privileged security changes require session-bound recent authentication. No client header can select or bypass transport security. Requires an enrolled authenticator; a Buyer with optional 2FA may also regenerate codes. Previous codes stop working and the recent-authentication proof is spent.
 
 ### Example
 ```dart
@@ -1270,6 +1608,45 @@ Name | Type | Description  | Notes
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **startBuyerTwoFactor**
+> BuyerTwoFactorEnrollmentEnvelope startBuyerTwoFactor()
+
+
+
+Starts optional authenticator-app (TOTP, RFC 6238, SHA-1, 6 digits, 30 seconds) enrollment for the signed-in Buyer. Requires session-bound recent authentication. Returns the setup key and otpauth provisioning URI for a QR code or copy/paste; calling again before confirmation returns the same pending key. The key is shown only to the owner and is never logged.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+
+final api = MateryalphApiClient().getAccountsApi();
+
+try {
+    final response = api.startBuyerTwoFactor();
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AccountsApi->startBuyerTwoFactor: $e\n');
+}
+```
+
+### Parameters
+This endpoint does not need any parameter.
+
+### Return type
+
+[**BuyerTwoFactorEnrollmentEnvelope**](BuyerTwoFactorEnrollmentEnvelope.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **updateAccountProfile**
 > AccountProfileEnvelope updateAccountProfile(accountPortal, accountProfileUpdate)
 
@@ -1379,7 +1756,7 @@ Name | Type | Description  | Notes
 
 
 
-Owner-only personal photo. Maximum 2 MB JPEG/PNG/WebP and 4096 pixels per dimension. Malware-scanned, re-encoded to 256px PNG, privately stored. Five uploads/minute within the overall account budget. Fails closed if scanning or processing is unavailable.
+Owner-only personal photo. Maximum 2 MB JPEG/PNG/WebP and 4096 pixels per dimension. Malware-scanned, re-encoded to 256px PNG, privately stored. Fails closed if scanning or processing is unavailable.
 
 ### Example
 ```dart
@@ -1421,6 +1798,51 @@ Name | Type | Description  | Notes
 ### Authorization
 
 [accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: multipart/form-data
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **uploadBuyerAccountPhoto**
+> AccountProfileEnvelope uploadBuyerAccountPhoto(photo, lockVersion)
+
+
+
+Authenticated Buyer's own personal photo. Maximum 2 MB JPEG/PNG/WebP and 4096 pixels per dimension. Uses the shared malware scan, 256px PNG sanitization, private storage and profile version checks. Fails closed if scanning or processing is unavailable.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+
+final api = MateryalphApiClient().getAccountsApi();
+final MultipartFile photo = BINARY_DATA_HERE; // MultipartFile |
+final int lockVersion = 56; // int |
+
+try {
+    final response = api.uploadBuyerAccountPhoto(photo, lockVersion);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AccountsApi->uploadBuyerAccountPhoto: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **photo** | **MultipartFile**|  |
+ **lockVersion** | **int**|  |
+
+### Return type
+
+[**AccountProfileEnvelope**](AccountProfileEnvelope.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
 
 ### HTTP request headers
 

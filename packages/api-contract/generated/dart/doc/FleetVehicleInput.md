@@ -29,6 +29,8 @@ Name | Type | Description | Notes
 **baseFeeCentavos** | **int** |  | [optional]
 **perKmCentavos** | **int** |  | [optional]
 **maximumDistanceKm** | **int** |  | [optional]
+**mobilizationFeeCentavos** | **int** | Concrete Mixer Truck / Transit Mixer only (owner decision 2026-10-16). A positive fee needs mobilization_basis. Any change appends a rate version. | [optional]
+**mobilizationBasis** | **String** | PER_TRUCK charges once per truck dispatched; PER_TRIP once per trip. | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

@@ -8,9 +8,13 @@ part of 'admin_order_operations_summary.dart';
 
 class _$AdminOrderOperationsSummary extends AdminOrderOperationsSummary {
   @override
+  final int refundsTotal;
+  @override
   final int refundsFailed;
   @override
   final int refundsPending;
+  @override
+  final int reimbursementsTotal;
   @override
   final int reimbursementsPending;
   @override
@@ -23,8 +27,10 @@ class _$AdminOrderOperationsSummary extends AdminOrderOperationsSummary {
       (AdminOrderOperationsSummaryBuilder()..update(updates))._build();
 
   _$AdminOrderOperationsSummary._(
-      {required this.refundsFailed,
+      {required this.refundsTotal,
+      required this.refundsFailed,
       required this.refundsPending,
+      required this.reimbursementsTotal,
       required this.reimbursementsPending,
       required this.cancellationRequestsOpen,
       required this.nfrEvents30Days})
@@ -42,8 +48,10 @@ class _$AdminOrderOperationsSummary extends AdminOrderOperationsSummary {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is AdminOrderOperationsSummary &&
+        refundsTotal == other.refundsTotal &&
         refundsFailed == other.refundsFailed &&
         refundsPending == other.refundsPending &&
+        reimbursementsTotal == other.reimbursementsTotal &&
         reimbursementsPending == other.reimbursementsPending &&
         cancellationRequestsOpen == other.cancellationRequestsOpen &&
         nfrEvents30Days == other.nfrEvents30Days;
@@ -52,8 +60,10 @@ class _$AdminOrderOperationsSummary extends AdminOrderOperationsSummary {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, refundsTotal.hashCode);
     _$hash = $jc(_$hash, refundsFailed.hashCode);
     _$hash = $jc(_$hash, refundsPending.hashCode);
+    _$hash = $jc(_$hash, reimbursementsTotal.hashCode);
     _$hash = $jc(_$hash, reimbursementsPending.hashCode);
     _$hash = $jc(_$hash, cancellationRequestsOpen.hashCode);
     _$hash = $jc(_$hash, nfrEvents30Days.hashCode);
@@ -64,8 +74,10 @@ class _$AdminOrderOperationsSummary extends AdminOrderOperationsSummary {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'AdminOrderOperationsSummary')
+          ..add('refundsTotal', refundsTotal)
           ..add('refundsFailed', refundsFailed)
           ..add('refundsPending', refundsPending)
+          ..add('reimbursementsTotal', reimbursementsTotal)
           ..add('reimbursementsPending', reimbursementsPending)
           ..add('cancellationRequestsOpen', cancellationRequestsOpen)
           ..add('nfrEvents30Days', nfrEvents30Days))
@@ -79,6 +91,10 @@ class AdminOrderOperationsSummaryBuilder
             AdminOrderOperationsSummaryBuilder> {
   _$AdminOrderOperationsSummary? _$v;
 
+  int? _refundsTotal;
+  int? get refundsTotal => _$this._refundsTotal;
+  set refundsTotal(int? refundsTotal) => _$this._refundsTotal = refundsTotal;
+
   int? _refundsFailed;
   int? get refundsFailed => _$this._refundsFailed;
   set refundsFailed(int? refundsFailed) =>
@@ -88,6 +104,11 @@ class AdminOrderOperationsSummaryBuilder
   int? get refundsPending => _$this._refundsPending;
   set refundsPending(int? refundsPending) =>
       _$this._refundsPending = refundsPending;
+
+  int? _reimbursementsTotal;
+  int? get reimbursementsTotal => _$this._reimbursementsTotal;
+  set reimbursementsTotal(int? reimbursementsTotal) =>
+      _$this._reimbursementsTotal = reimbursementsTotal;
 
   int? _reimbursementsPending;
   int? get reimbursementsPending => _$this._reimbursementsPending;
@@ -111,8 +132,10 @@ class AdminOrderOperationsSummaryBuilder
   AdminOrderOperationsSummaryBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _refundsTotal = $v.refundsTotal;
       _refundsFailed = $v.refundsFailed;
       _refundsPending = $v.refundsPending;
+      _reimbursementsTotal = $v.reimbursementsTotal;
       _reimbursementsPending = $v.reimbursementsPending;
       _cancellationRequestsOpen = $v.cancellationRequestsOpen;
       _nfrEvents30Days = $v.nfrEvents30Days;
@@ -137,10 +160,16 @@ class AdminOrderOperationsSummaryBuilder
   _$AdminOrderOperationsSummary _build() {
     final _$result = _$v ??
         _$AdminOrderOperationsSummary._(
+          refundsTotal: BuiltValueNullFieldError.checkNotNull(
+              refundsTotal, r'AdminOrderOperationsSummary', 'refundsTotal'),
           refundsFailed: BuiltValueNullFieldError.checkNotNull(
               refundsFailed, r'AdminOrderOperationsSummary', 'refundsFailed'),
           refundsPending: BuiltValueNullFieldError.checkNotNull(
               refundsPending, r'AdminOrderOperationsSummary', 'refundsPending'),
+          reimbursementsTotal: BuiltValueNullFieldError.checkNotNull(
+              reimbursementsTotal,
+              r'AdminOrderOperationsSummary',
+              'reimbursementsTotal'),
           reimbursementsPending: BuiltValueNullFieldError.checkNotNull(
               reimbursementsPending,
               r'AdminOrderOperationsSummary',

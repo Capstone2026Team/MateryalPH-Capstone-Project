@@ -8,9 +8,13 @@ part of 'work_package_line_input.dart';
 
 class _$WorkPackageLineInput extends WorkPackageLineInput {
   @override
-  final String materialId;
+  final String? materialId;
   @override
   final String name;
+  @override
+  final String? description;
+  @override
+  final String? color;
   @override
   final String unitId;
   @override
@@ -25,8 +29,10 @@ class _$WorkPackageLineInput extends WorkPackageLineInput {
       (WorkPackageLineInputBuilder()..update(updates))._build();
 
   _$WorkPackageLineInput._(
-      {required this.materialId,
+      {this.materialId,
       required this.name,
+      this.description,
+      this.color,
       required this.unitId,
       required this.quantity,
       required this.specifications,
@@ -47,6 +53,8 @@ class _$WorkPackageLineInput extends WorkPackageLineInput {
     return other is WorkPackageLineInput &&
         materialId == other.materialId &&
         name == other.name &&
+        description == other.description &&
+        color == other.color &&
         unitId == other.unitId &&
         quantity == other.quantity &&
         specifications == other.specifications &&
@@ -58,6 +66,8 @@ class _$WorkPackageLineInput extends WorkPackageLineInput {
     var _$hash = 0;
     _$hash = $jc(_$hash, materialId.hashCode);
     _$hash = $jc(_$hash, name.hashCode);
+    _$hash = $jc(_$hash, description.hashCode);
+    _$hash = $jc(_$hash, color.hashCode);
     _$hash = $jc(_$hash, unitId.hashCode);
     _$hash = $jc(_$hash, quantity.hashCode);
     _$hash = $jc(_$hash, specifications.hashCode);
@@ -71,6 +81,8 @@ class _$WorkPackageLineInput extends WorkPackageLineInput {
     return (newBuiltValueToStringHelper(r'WorkPackageLineInput')
           ..add('materialId', materialId)
           ..add('name', name)
+          ..add('description', description)
+          ..add('color', color)
           ..add('unitId', unitId)
           ..add('quantity', quantity)
           ..add('specifications', specifications)
@@ -90,6 +102,14 @@ class WorkPackageLineInputBuilder
   String? _name;
   String? get name => _$this._name;
   set name(String? name) => _$this._name = name;
+
+  String? _description;
+  String? get description => _$this._description;
+  set description(String? description) => _$this._description = description;
+
+  String? _color;
+  String? get color => _$this._color;
+  set color(String? color) => _$this._color = color;
 
   String? _unitId;
   String? get unitId => _$this._unitId;
@@ -119,6 +139,8 @@ class WorkPackageLineInputBuilder
     if ($v != null) {
       _materialId = $v.materialId;
       _name = $v.name;
+      _description = $v.description;
+      _color = $v.color;
       _unitId = $v.unitId;
       _quantity = $v.quantity;
       _specifications = $v.specifications.toBuilder();
@@ -146,10 +168,11 @@ class WorkPackageLineInputBuilder
     try {
       _$result = _$v ??
           _$WorkPackageLineInput._(
-            materialId: BuiltValueNullFieldError.checkNotNull(
-                materialId, r'WorkPackageLineInput', 'materialId'),
+            materialId: materialId,
             name: BuiltValueNullFieldError.checkNotNull(
                 name, r'WorkPackageLineInput', 'name'),
+            description: description,
+            color: color,
             unitId: BuiltValueNullFieldError.checkNotNull(
                 unitId, r'WorkPackageLineInput', 'unitId'),
             quantity: BuiltValueNullFieldError.checkNotNull(

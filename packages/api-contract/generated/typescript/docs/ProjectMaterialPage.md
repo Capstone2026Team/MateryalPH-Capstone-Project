@@ -6,7 +6,8 @@
 
 Name | Type
 ------------ | -------------
-`items` | Array&lt;{ [key: string]: any; }&gt;
+`items` | [Array&lt;ProjectMaterial&gt;](ProjectMaterial.md)
+`units` | [Array&lt;ProjectMaterialUnit&gt;](ProjectMaterialUnit.md)
 
 ## Example
 
@@ -16,6 +17,7 @@ import type { ProjectMaterialPage } from '@materyalph/api-client-ts'
 // TODO: Update the object below with actual values
 const example = {
   "items": null,
+  "units": null,
 } satisfies ProjectMaterialPage
 
 console.log(example)

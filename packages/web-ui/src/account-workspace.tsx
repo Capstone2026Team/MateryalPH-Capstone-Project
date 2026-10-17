@@ -1,12 +1,18 @@
-import { FileCheck2, ImagePlus, LogOut, MonitorSmartphone, Settings, ShieldCheck, UserRound, Users } from 'lucide-react'
+import { PageHeader, FilterTabs } from './page-patterns'
+import { CalendarDays, Clock, FileCheck2, ImagePlus, Info, KeyRound, Laptop, LogOut, Mail, Send, ShieldCheck, Store, type LucideIcon } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
-import { AccountsApi, AuthenticationApi, ResponseError, type AccountProfile, type AccountSession, type AccountAgreement, type AccountMembership, type AccountRole, type AccountAdministrator } from '@materyalph/api-client-ts'
+import { AccountsApi, ResponseError, type AccountProfile, type AccountSession, type AccountAgreement, type AccountRole, type AccountAdministrator } from '@materyalph/api-client-ts'
+import { AccountVerificationDialog } from './account-verification-dialog'
+import { AccountAvatar } from './account-avatar'
 import { Button } from './button'
 import { Field } from './field'
+import { Select } from './filter-controls'
+import { StatusBadge } from './portal-shell'
+import { AuthenticatorCodeField } from './authenticator-code-field'
 import { StatusMessage } from './status-message'
-import { rateLimitMessage, clearWebSessionTransport, createWebApiConfiguration } from './web-api-session'
+import { rateLimitMessage, clearWebSessionTransport, signOutWebSession, createWebApiConfiguration } from './web-api-session'
 
-type Section = 'Profile' | 'Account' | 'Security' | 'Sessions' | 'Agreements' | 'Staff access' | 'Admin invitations' | 'Admin accounts'
+type Section = 'Profile' | 'Account' | 'Security' | 'Sessions' | 'Agreements' | 'Admin invitations' | 'Admin accounts'
 type Props = { portal: 'vendors' | 'admin'; basePath: string; loginPath: string; renderQr: (uri: string) => ReactNode; embedded?: boolean }
 type PendingSecurityAction = { title: string; run: (client: AccountsApi) => Promise<void>; success: string; reload: boolean }
 
@@ -19,7 +25,6 @@ export function AccountWorkspace({ portal: accountPortal, basePath, loginPath, r
   const [denied, setDenied] = useState(false)
   const [sessions, setSessions] = useState<AccountSession[]>([])
   const [agreements, setAgreements] = useState<AccountAgreement[]>([])
-  const [memberships, setMemberships] = useState<AccountMembership[]>([])
   const [administrators, setAdministrators] = useState<AccountAdministrator[]>([])
   const [roles, setRoles] = useState<AccountRole[]>([])
   const [page, setPage] = useState(1)
@@ -32,10 +37,7 @@ export function AccountWorkspace({ portal: accountPortal, basePath, loginPath, r
   const actionLock = useRef(false)
   const [totp, setTotp] = useState(false)
   const [pendingSecurityAction, setPendingSecurityAction] = useState<PendingSecurityAction | null>(null)
-  const [verificationMode, setVerificationMode] = useState<'password' | 'email'>('password')
-  const [verificationError, setVerificationError] = useState('')
-  const verificationRef = useRef<HTMLDivElement>(null)
-  const returnFocusRef = useRef<HTMLElement | null>(null)
+
 
   const api = useCallback(() => new AccountsApi(createWebApiConfiguration(basePath, { refreshSession: true })), [basePath])
 
@@ -70,9 +72,6 @@ export function AccountWorkspace({ portal: accountPortal, basePath, loginPath, r
         const result = await client.listAccountSessions({ accountPortal, page }); setSessions(result.data); setLastPage(Number(result.meta.last_page ?? 1))
       }
       if (section === 'Agreements') setAgreements((await client.listAccountAgreements({ accountPortal })).data)
-      if (section === 'Staff access' && accountPortal === 'vendors' && response.data.permissions.includes('staff.manage')) {
-        const result = await client.listAccountMemberships({ accountPortal: 'vendors', page }); setMemberships(result.data); setLastPage(Number(result.meta.last_page ?? 1))
-      }
       if (section === 'Admin accounts' && accountPortal === 'admin' && response.data.permissions.includes('admin.manage_accounts')) {
         const result = await client.listAccountAdministrators({ accountPortal: 'admin', page }); setAdministrators(result.data); setLastPage(Number(result.meta.last_page ?? 1))
         setRoles((await client.listAccountAdminRoles({ accountPortal: 'admin' })).data)
@@ -102,59 +101,11 @@ export function AccountWorkspace({ portal: accountPortal, basePath, loginPath, r
   function submit(event: FormEvent<HTMLFormElement>, action: (data: FormData) => Promise<void>) {
     event.preventDefault(); const form = event.currentTarget; const data = new FormData(form); if (form.querySelector('input[type="password"],input[autocomplete="one-time-code"]')) form.reset(); void action(data)
   }
-  function closeVerification() {
-    if (busy) return
-    setPendingSecurityAction(null)
-    setVerificationError('')
-    returnFocusRef.current?.focus()
-  }
   function promptVerification(action: PendingSecurityAction) {
-    if (busy || actionLock.current) return
-    returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
-    setVerificationMode('password')
-    setVerificationError('')
-    setPendingSecurityAction(action)
-  }
-  useEffect(() => {
-    if (!pendingSecurityAction) return
-    verificationRef.current?.querySelector<HTMLInputElement>('input')?.focus()
-  }, [pendingSecurityAction, verificationMode])
-  async function verifyAndRun(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (!pendingSecurityAction || actionLock.current) return
-    const form = event.currentTarget
-    const values = new FormData(form)
-    form.reset()
-    actionLock.current = true
-    setBusy(true)
-    setVerificationError('')
-    try {
-      const client = api()
-      await client.reauthenticateAccount({ accountPortal, accountReauthentication: totp
-        ? { code: String(values.get('code')) }
-        : verificationMode === 'email' ? { emailCode: String(values.get('email_code')) } : { password: String(values.get('password')) } })
-      setPendingSecurityAction(null)
-      try {
-        await pendingSecurityAction.run(client)
-        setMessage({ error: false, text: pendingSecurityAction.success })
-        if (pendingSecurityAction.reload) { await load(); window.dispatchEvent(new Event('materyalph:profile-updated')) }
-      } catch (error) { await failure(error) }
-      returnFocusRef.current?.focus()
-    } catch (error) { setVerificationError(await errorText(error)) }
-    finally { actionLock.current = false; setBusy(false) }
-  }
-  async function sendVerificationEmail() {
-    setBusy(true)
-    setVerificationError('')
-    try {
-      await api().sendAccountReauthenticationEmail({ accountPortal })
-      setVerificationMode('email')
-    } catch (error) { setVerificationError(await errorText(error)) }
-    finally { setBusy(false) }
+    if (!busy && !actionLock.current) setPendingSecurityAction(action)
   }
   const date = (value: string | null) => value ? new Date(value).toLocaleString('en-PH', { timeZone: 'Asia/Manila' }) + ' (Asia/Manila)' : 'Not available'
   const nav: Section[] = ['Profile', 'Account', 'Security', 'Sessions', 'Agreements']
-  if (profile?.permissions.includes('staff.manage')) nav.push('Staff access')
   if (profile?.permissions.includes('admin.manage_accounts')) nav.push('Admin accounts')
   if (profile?.permissions.includes('admin.invite')) nav.push('Admin invitations')
 
@@ -162,64 +113,143 @@ export function AccountWorkspace({ portal: accountPortal, basePath, loginPath, r
     {!embedded && <header className="mb-8 flex flex-wrap items-center justify-between gap-4 border-b border-border-default pb-6"><a href={accountPortal === 'vendors' ? '/dashboard' : '/vendor-verification'} aria-label="MateryalPH home"><img className="w-40" src="/brand/materyalph-logo.png" alt="MateryalPH" /></a><span>{accountPortal === 'vendors' ? 'Vendor account' : 'Admin account'}</span><Button variant="secondary" disabled={busy || !profile} onClick={() => window.confirm('Sign out every device, including this one?') && void act(async client => { await client.revokeAccountSessions({ accountPortal, accountSessionRevocation: { scope: 'ALL' } }); window.location.assign(loginPath) }, 'Signed out.', false)}>Sign out all devices</Button></header>}
     {message && <StatusMessage tone={message.error ? 'error' : 'success'}>{message.text}</StatusMessage>}
     {denied ? <section><h1 className="text-2xl font-bold">Sign-in required</h1><a className="inline-flex min-h-12 items-center text-action-primary underline" href={loginPath}>Return to sign in</a></section> : !profile ? <section aria-busy={busy}><h1 className="text-2xl font-bold">{busy ? 'Checking your account…' : 'Account unavailable'}</h1><Button variant="secondary" disabled={busy} onClick={() => void load()}>Retry</Button></section> : <>
-      <h1 className="mb-2 text-3xl font-semibold tracking-tight">Settings</h1><p className="mb-8 text-text-secondary">{profile.fullName} · {profile.role.replaceAll('_', ' ')}</p>
-      <div className="grid items-start gap-6 md:grid-cols-[15rem_minmax(0,1fr)]"><nav aria-label="Account settings" className="flex h-fit flex-wrap content-start gap-1 rounded-surface border border-border-default bg-surface-primary p-3 md:flex-col">{nav.map(item => <Button key={item} className="justify-start gap-3 text-left" variant={section === item ? 'primary' : 'quiet'} aria-current={section === item ? 'page' : undefined} onClick={() => { setSection(item); setPage(1); setFactor(null); setCodes([]); setMessage(null) }}>{(() => { const Icon = ({ Profile: UserRound, Account: Settings, Security: ShieldCheck, Sessions: MonitorSmartphone, Agreements: FileCheck2 } as Record<string, typeof Settings>)[item] ?? Users; return <Icon className="shrink-0" size={18} aria-hidden="true" /> })()}<span className="min-w-0 flex-1 whitespace-nowrap text-left">{item === 'Sessions' ? 'Sessions / Devices' : item}</span></Button>)}<Button variant="secondary" disabled={busy} onClick={() => void act(async () => { await new AuthenticationApi(createWebApiConfiguration(basePath, { refreshSession: true })).logout(); clearWebSessionTransport(basePath); window.location.assign(loginPath) }, 'Signed out.', false)}><LogOut size={18} aria-hidden="true" /> Sign out</Button></nav>
-      <section aria-busy={busy} className="min-w-0 rounded-surface border border-border-default bg-surface-primary p-5 sm:p-8"><h2 className={`mb-6 border-b border-border-default pb-5 text-xl font-semibold${section === 'Security' ? ' mx-auto w-full max-w-xl' : ''}`}>{section}</h2>
-        {section === 'Profile' && <><div className="mb-6 flex flex-wrap items-center gap-5 border-b border-border-default pb-6"><div className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-full bg-brand-orange-100 text-2xl font-semibold text-action-primary">{profile.avatarUrl ? <img src={profile.avatarUrl} alt="Your personal profile" className="h-full w-full object-cover" /> : profile.fullName.trim().split(/\s+/).slice(0, 2).map(part => part[0]).join('')}</div><div><h3 className="font-semibold">Profile picture</h3><p className="mt-1 max-w-lg text-sm leading-6 text-text-secondary">Personal account photo, separate from your store logo. JPEG, PNG or WebP up to 2 MB. The image is security-scanned and cropped to a square.</p><label className="mt-3 inline-flex min-h-11 cursor-pointer items-center rounded-control border border-border-default px-4 text-sm font-semibold"><ImagePlus size={18} className="mr-2" aria-hidden="true" />{busy ? 'Processing…' : 'Upload profile picture'}<input type="file" className="sr-only" accept="image/jpeg,image/png,image/webp" disabled={busy} onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; if (!file) return; if (file.size > 2 * 1024 * 1024 || !['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) { setMessage({ error: true, text: 'Choose a JPEG, PNG or WebP image up to 2 MB.' }); return } void act(client => client.uploadAccountPhoto({ webAccountPortal: accountPortal, photo: file, lockVersion: profile.lockVersion }), 'Profile picture saved.') }} /></label></div></div><form className="grid max-w-xl gap-5" onSubmit={event => submit(event, data => act(client => client.updateAccountProfile({ accountPortal, accountProfileUpdate: { fullName: String(data.get('full_name')), lockVersion: profile.lockVersion } }), 'Profile saved.'))}><Field key={profile.lockVersion} label="Full name" name="full_name" defaultValue={profile.fullName} required maxLength={160} /><Button type="submit" disabled={busy}>Save profile</Button></form></>}
-        {section === 'Account' && <dl className="grid gap-6 sm:grid-cols-2"><div><dt>Email</dt><dd className="break-all">{profile.email}</dd></div><div><dt>Fixed role</dt><dd>{profile.role.replaceAll('_',' ')}</dd></div>{profile.organizationName && <div><dt>Store membership</dt><dd>{profile.organizationName}</dd></div>}<div><dt>Account created</dt><dd>{date(profile.createdAt)}</dd></div><div><dt>Permissions</dt><dd className="mt-2 text-sm text-text-secondary"><details><summary className="cursor-pointer">View assigned permissions</summary><ul className="mt-3 grid gap-2">{profile.permissions.map(permission => <li className="break-words" key={permission}>{permission}</li>)}</ul></details></dd></div></dl>}
-        {section === 'Security' && <div className="mx-auto grid w-full max-w-xl gap-6">
-          <form className="grid gap-4" onSubmit={event => { event.preventDefault(); const form = event.currentTarget; const data = new FormData(form); promptVerification({ title: 'Change password', run: async client => { const result = await client.changeAccountPassword({ accountPortal, accountPasswordChange: { password: String(data.get('new_password')), passwordConfirmation: String(data.get('password_confirmation')) } }); form.reset(); if (result.data.signInRequired) window.location.assign(loginPath) }, success: 'Password changed.', reload: false }) }}><h3 className="text-lg font-semibold">Change password</h3><Field label="New password" name="new_password" type="password" autoComplete="new-password" minLength={14} required /><Field label="Confirm new password" name="password_confirmation" type="password" autoComplete="new-password" minLength={14} required /><p>Changing your password signs out your web sessions.</p><Button type="submit" disabled={busy}>Change password</Button></form>
-          <form className="grid gap-4 border-t border-border-default pt-6" onSubmit={event => { event.preventDefault(); const email = String(new FormData(event.currentTarget).get('email')); promptVerification({ title: 'Change primary email', run: async client => { setEmailChange((await client.startAccountEmailChange({ accountPortal, accountEmailChange: { email } })).data) }, success: 'Verification sent to the new email.', reload: false }) }}><h3 className="text-lg font-semibold">Change primary email</h3><Field label="New email" name="email" type="email" required /><Button type="submit" disabled={busy}>Send verification</Button></form>
-          {emailChange && <form className="grid gap-4" onSubmit={event => submit(event, data => act(async client => { await client.confirmAccountEmailChange({accountPortal,accountCodeConfirmation:{id:emailChange.id,code:String(data.get('email_code'))}}); window.location.assign(loginPath) }, 'Email changed.', false))}><p>Expires {date(emailChange.expiresAt)}. Completing this change signs out all sessions.</p><Field label="New-email verification code" name="email_code" inputMode="numeric" pattern="[0-9]{6}" required /><Button type="submit" disabled={busy}>Confirm email change</Button></form>}
-          {totp && <div className="grid gap-4 border-t border-border-default pt-6"><h3 className="text-lg font-semibold">Authenticator and recovery codes</h3><p>Your authenticator remains mandatory. Replacement keeps your existing factor active until the new code is confirmed.</p><Button variant="secondary" disabled={busy} onClick={() => promptVerification({ title: 'Replace authenticator', run: async client => { setFactor((await client.startAccountFactorReplacement({ accountPortal })).data) }, success: 'Scan the new authenticator setup.', reload: false })}>Replace authenticator</Button><Button variant="secondary" disabled={busy} onClick={() => { if (window.confirm('Replace all recovery codes? Previous codes will stop working.')) promptVerification({ title: 'Replace recovery codes', run: async client => { setCodes((await client.replaceAccountRecoveryCodes({ accountPortal })).data.recoveryCodes) }, success: 'Save these codes securely. They are shown once.', reload: false }) }}>Replace recovery codes</Button></div>}
-          {factor && <form className="grid gap-4" onSubmit={event => submit(event, data => act(async client => { const result=await client.confirmAccountFactorReplacement({accountPortal,accountCodeConfirmation:{id:factor.id,code:String(data.get('factor_code'))}}); setFactor(null);setCodes(result.data.recoveryCodes);setSignInAfterCodes(true) }, 'Authenticator replaced. Save the new recovery codes, then sign in.', false))}>{renderQr(factor.provisioningUri)}<p className="break-all">Manual setup key: {factor.secret}</p><p>Expires {date(factor.expiresAt)}</p><Field label="New authenticator code" name="factor_code" inputMode="numeric" pattern="[0-9]{6}" required /><Button type="submit" disabled={busy}>Confirm replacement and sign out</Button></form>}
-          {codes.length > 0 && <section aria-label="One-time recovery codes"><h3 className="text-lg font-semibold">Save your recovery codes</h3><ul className="my-4 grid gap-2">{codes.map(code => <li key={code}>{code}</li>)}</ul><Button onClick={() => {setCodes([]);if(signInAfterCodes)window.location.assign(loginPath)}}>I saved my codes</Button></section>}
-          <div className="grid gap-3 border-t border-border-default pt-6"><h3 className="text-base font-semibold">Other protected settings</h3><p className="text-sm text-text-secondary">Staff access, invitations, and protected store settings require a recent security check.</p><Button className="justify-self-start" variant="secondary" disabled={busy} onClick={() => promptVerification({ title: 'other protected settings', run: async () => {}, success: 'Security verification is valid for 15 minutes.', reload: false })}>Verify for other settings</Button></div>
+      <div className="mb-6"><PageHeader eyebrow="Account" title="Settings" description="Manage your profile, security, sessions and agreements." /><p className="mt-4 text-[13px] text-text-secondary">{profile.fullName} · {profile.role.replaceAll('_', ' ')}</p></div>
+
+      <div className="grid items-start gap-6"><nav aria-label="Account settings" className="flex flex-wrap items-center justify-between gap-4"><FilterTabs appearance="tabs" label="Account sections" value={section} chips={nav.map(item => ({ value: item, label: item === 'Sessions' ? 'Sessions / Devices' : item }))} onChange={value => { setSection(value as Section); setPage(1); setFactor(null); setCodes([]); setMessage(null) }} /><Button variant="secondary" disabled={busy} onClick={() => void act(async () => { await signOutWebSession(basePath); window.location.assign(loginPath) }, 'Signed out.', false)}><LogOut size={18} aria-hidden="true" /> Sign out</Button></nav>
+      <section aria-busy={busy} className="min-w-0 rounded-surface border border-border-default bg-surface-primary p-5 sm:p-8"><h2 className="mb-6 border-b border-border-default pb-5 text-xl font-semibold">{section}</h2>
+        {section === 'Profile' && <div className="grid gap-8">
+          <div className="flex flex-col gap-5 rounded-control border border-border-default bg-surface-canvas p-5 sm:flex-row sm:items-center sm:gap-6 sm:p-6">
+            <AccountAvatar portal={accountPortal} basePath={basePath} avatarUrl={profile.avatarUrl} fullName={profile.fullName} alt="Your personal profile" className="grid h-24 w-24 shrink-0 place-items-center overflow-hidden rounded-full bg-brand-orange-100 text-3xl font-semibold uppercase text-action-primary ring-4 ring-surface-primary" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-lg font-semibold">{profile.fullName}</p>
+              <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-text-secondary"><span className="break-all">{profile.email}</span><span className="rounded-pill border border-border-default bg-surface-primary px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-text-strong">{profile.role.replaceAll('_', ' ')}</span></p>
+              <h3 className="mt-4 text-sm font-semibold">Profile picture</h3>
+              <p className="mt-1 max-w-lg text-sm leading-6 text-text-secondary">Personal account photo, separate from your store logo. JPEG, PNG or WebP up to 2 MB. The image is security-scanned and cropped to a square.</p>
+              <label className={`mt-3 inline-flex min-h-12 items-center rounded-control border border-border-default bg-surface-primary px-4 text-sm font-semibold transition-colors duration-150 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-focus-ring motion-reduce:transition-none sm:min-h-11 ${busy ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:border-brand-orange-300 hover:bg-surface-canvas'}`}><ImagePlus size={18} className="mr-2" aria-hidden="true" />{busy ? 'Processing…' : profile.avatarUrl ? 'Change profile picture' : 'Upload profile picture'}<input type="file" className="sr-only" accept="image/jpeg,image/png,image/webp" disabled={busy} onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; if (!file) return; if (file.size > 2 * 1024 * 1024 || !['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) { setMessage({ error: true, text: 'Choose a JPEG, PNG or WebP image up to 2 MB.' }); return } void act(client => client.uploadAccountPhoto({ webAccountPortal: accountPortal, photo: file, lockVersion: profile.lockVersion }), 'Profile picture saved.') }} /></label>
+            </div>
+          </div>
+          <SecuritySetting title="Personal details" description="Your full name as it appears on your account.">
+            <form className="grid gap-5" onSubmit={event => submit(event, data => act(client => client.updateAccountProfile({ accountPortal, accountProfileUpdate: { fullName: String(data.get('full_name')), lockVersion: profile.lockVersion } }), 'Profile saved.'))}>
+              <Field key={profile.lockVersion} label="Full name" name="full_name" defaultValue={profile.fullName} required maxLength={160} />
+              <div className="flex flex-col gap-3 sm:flex-row"><Button type="submit" disabled={busy}>Save profile</Button><Button variant="secondary" disabled={busy} onClick={() => void load()}>{busy ? 'Updating…' : 'Refresh'}</Button></div>
+            </form>
+          </SecuritySetting>
         </div>}
-        {section === 'Sessions' && <><p className="mb-4">Times are shown in Asia/Manila. Revocation immediately removes backend access.</p>{sessions.length === 0 && <p>No active sessions.</p>}<ul className="divide-y divide-border-default">{sessions.map(session => <li key={session.id} className="flex flex-wrap items-center justify-between gap-4 py-5"><div><h3 className="font-semibold">{session.description}{session.current ? ' · Current session' : ''}</h3><p>Signed in {date(session.createdAt)}</p><p>Last active {date(session.lastActiveAt)}</p></div><Button variant="secondary" disabled={busy} onClick={() => {if(window.confirm('Sign out this session?')) void act(async client => {await client.revokeAccountSession({accountPortal,sessionId:session.id});if(session.current)window.location.assign(loginPath)},'Session revoked.')}}>Revoke session</Button></li>)}</ul><Button variant="secondary" disabled={busy} onClick={() => {if(window.confirm('Sign out all other sessions?')) void act(client => client.revokeAccountSessions({accountPortal,accountSessionRevocation:{scope:'OTHERS'}}),'Other sessions signed out.')}}>Sign out other sessions</Button></>}
-        {section === 'Agreements' && <div className="grid gap-6"><p className="text-sm leading-6 text-text-secondary">Review the published terms for your account. Acceptance is recorded separately for each version.</p>{agreements.length === 0 && <p>No agreements are available.</p>}{agreements.map(agreement => <section key={agreement.id} className="overflow-hidden rounded-control border border-border-default"><header className="flex flex-wrap items-start justify-between gap-4 border-b border-border-default bg-surface-canvas p-5"><div className="flex items-start gap-3"><FileCheck2 className="mt-1 shrink-0 text-text-secondary" size={20} aria-hidden="true" /><div><h3 className="text-lg font-semibold">{agreement.title}</h3><p className="mt-1 text-xs text-text-secondary">Version {agreement.version}</p></div></div><span className="rounded-pill border border-border-default bg-surface-primary px-3 py-1 text-xs font-semibold">{agreement.acceptedAt ? 'Accepted' : agreement.requiresAcceptance ? 'Acceptance required' : 'Not yet accepted'}</span></header><div className="p-5 sm:p-6">{agreement.acceptedAt && <p className="mb-4 text-xs text-text-secondary">Accepted {date(agreement.acceptedAt)}</p>}{agreement.contentAvailable ? <><div className="whitespace-pre-wrap break-words text-sm leading-7 text-text-strong">{agreement.content}</div>{!agreement.acceptedAt && <div className="mt-6 border-t border-border-default pt-5"><Button disabled={busy} onClick={() => void act(client=>client.acceptAccountAgreements({accountPortal,accountAgreementAcceptance:{versionIds:[agreement.id]}}),'Agreement recorded.')}>{agreement.code === 'PRIVACY_NOTICE' ? 'Acknowledge Privacy Notice' : 'Accept this version'}</Button></div>}</> : <p className="text-sm leading-6 text-text-secondary">Approved agreement text is not available yet. Contact support for the published copy.</p>}</div></section>)}</div>}
-        {section === 'Staff access' && accountPortal === 'vendors' && profile.permissions.includes('staff.manage') && <><p className="mb-6">Verify your identity in Security before changing access. Every change is audited and notifies the Owner.</p>{memberships.length === 0 && <p>No eligible staff memberships.</p>}<ul className="divide-y divide-border-default">{memberships.map(member=><li key={member.id} className="grid gap-3 py-5"><h3 className="font-semibold">{member.name} · {member.role.replaceAll('_',' ')}</h3><p>{member.status}</p><form className="grid gap-4 sm:grid-cols-2" onSubmit={event => submit(event, data => act(client => client.updateVendorStaff({ membershipId: member.id, vendorStaffUpdate: { fullName: String(data.get('full_name')).trim(), role: String(data.get('role')) as import('@materyalph/api-client-ts').VendorStaffUpdate['role'], lockVersion: member.lockVersion ?? 1 } }), 'Staff details updated. Previous sessions were revoked.'))}><Field label="Employee full name" name="full_name" defaultValue={member.name} maxLength={160} required /><label className="grid gap-2 text-sm">Fixed role<select name="role" defaultValue={member.role} className="min-h-11 rounded-control border border-border-default bg-surface-primary px-3">{[['STORE_MANAGER', 'Store Manager'], ['STORE_STAFF', 'Store Staff'], ['CUSTOMER_SERVICE', 'Customer Service Staff'], ['INVENTORY', 'Inventory Staff'], ['FULFILLMENT', 'Fulfillment Staff']].filter(([value]) => value !== 'STORE_MANAGER' || profile.permissions.includes('managers.manage')).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><Button type="submit" disabled={busy}>Save staff details</Button></form>{member.role==='STORE_MANAGER' && profile.permissions.includes('staff.delegate') && <Button variant="secondary" disabled={busy} onClick={()=>void act(client=>client.changeAccountDelegation({ accountPortal: 'vendors',membershipId:member.id,accountDelegation:{canManageStaff:!member.canManageStaff}}),'Delegation updated.')}>{member.canManageStaff?'Remove staff-management delegation':'Allow staff-management delegation'}</Button>}<Button variant="secondary" disabled={busy} onClick={()=>{if(window.confirm('Change this employee’s access and revoke their sessions?'))void act(client=>client.changeAccountMembershipStatus({ accountPortal: 'vendors',membershipId:member.id,accountMembershipStatus:{status:member.status==='ACTIVE'?'DEACTIVATED':'ACTIVE'}}),'Membership updated.')}}>{member.status==='ACTIVE'?'Deactivate access':'Reactivate access'}</Button></li>)}</ul></>}
-        {section === 'Admin accounts' && accountPortal === 'admin' && profile.permissions.includes('admin.manage_accounts') && <>
-          <p className="mb-6">Verify your identity in Security before changing staff access. Changes preserve historical attribution and sign out the affected account.</p>
-          {administrators.length === 0 && <p>No Admin accounts are available.</p>}
-          <ul className="divide-y divide-border-default">{administrators.map(admin => <li key={admin.id} className="py-6">
-            <h3 className="font-semibold">{admin.name}</h3><p>{admin.role.replaceAll('_', ' ')} · {admin.status}</p>
-            {admin.id !== profile.id && admin.role !== 'ADMIN_SUPERADMIN' && <form className="mt-4 grid max-w-xl gap-4" onSubmit={event => submit(event, data => {
-              if (!window.confirm('Change this Admin account and sign out its sessions?')) return Promise.resolve()
-              return act(client => client.changeAccountAdministrator({ accountPortal: 'admin', publicId: admin.id, accountAdminChange: { lockVersion: admin.lockVersion, reason: String(data.get('reason')), status: String(data.get('status')) as 'ACTIVE' | 'SUSPENDED' | 'DEACTIVATED', roleId: String(data.get('role_id')) } }), 'Admin access updated.')
-            })}>
-              <label className="grid gap-2">Role<select className="min-h-12 border border-border-default bg-surface-primary px-3" name="role_id" defaultValue={admin.roleId} required>{roles.map(role => <option value={role.id} key={role.id}>{role.name}</option>)}</select></label>
-              <label className="grid gap-2">Access status<select className="min-h-12 border border-border-default bg-surface-primary px-3" name="status" defaultValue={admin.status} required>{!['ACTIVE','SUSPENDED','DEACTIVATED'].includes(admin.status) && <option value="" disabled>Setup pending</option>}<option value="ACTIVE">Active</option><option value="SUSPENDED">Suspended</option><option value="DEACTIVATED">Deactivated</option></select></label>
-              <Field label="Reason for access change" name="reason" required minLength={3} maxLength={500} />
-              <Button type="submit" disabled={busy}>Update Admin access</Button>
-            </form>}
+        {section === 'Account' && <dl className="grid gap-4 sm:grid-cols-2">
+          <AccountDetail icon={Mail} label="Email"><span className="break-all">{profile.email}</span></AccountDetail>
+          <AccountDetail icon={ShieldCheck} label="Fixed role"><span className="rounded-pill border border-border-default bg-surface-primary px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide">{profile.role.replaceAll('_', ' ')}</span></AccountDetail>
+          {profile.organizationName && <AccountDetail icon={Store} label="Store membership">{profile.organizationName}</AccountDetail>}
+          <AccountDetail icon={CalendarDays} label="Account created">{date(profile.createdAt)}</AccountDetail>
+          <AccountDetail icon={KeyRound} label="Permissions" className="sm:col-span-2"><details className="group"><summary className="inline-flex min-h-11 cursor-pointer items-center text-sm font-semibold text-action-primary">View assigned permissions ({profile.permissions.length})</summary><ul className="mt-2 flex flex-wrap gap-2">{profile.permissions.map(permission => <li className="break-all rounded-pill border border-border-default bg-surface-primary px-3 py-1 text-xs font-normal text-text-secondary" key={permission}>{permission}</li>)}</ul></details></AccountDetail>
+        </dl>}
+        {section === 'Security' && <div className="grid gap-6">
+          <SecuritySetting title="Change password" description="Changing your password signs out your web sessions.">
+            <form className="grid gap-4" onSubmit={event => { event.preventDefault(); const form = event.currentTarget; const data = new FormData(form); promptVerification({ title: 'Change password', run: async client => { const result = await client.changeAccountPassword({ accountPortal, accountPasswordChange: { password: String(data.get('new_password')), passwordConfirmation: String(data.get('password_confirmation')) } }); form.reset(); if (result.data.signInRequired) window.location.assign(loginPath) }, success: 'Password changed.', reload: false }) }}>
+              <Field label="New password" name="new_password" type="password" autoComplete="new-password" minLength={14} required />
+              <Field label="Confirm new password" name="password_confirmation" type="password" autoComplete="new-password" minLength={14} required />
+              <Button className="w-full sm:w-auto sm:justify-self-start" type="submit" disabled={busy}>Change password</Button>
+            </form>
+          </SecuritySetting>
+          <SecuritySetting title="Change primary email" description="Verify your new email to complete the change. This signs out all sessions.">
+            <form className="grid gap-4" onSubmit={event => { event.preventDefault(); const email = String(new FormData(event.currentTarget).get('email')); promptVerification({ title: 'Change primary email', run: async client => { setEmailChange((await client.startAccountEmailChange({ accountPortal, accountEmailChange: { email } })).data) }, success: 'Verification sent to the new email.', reload: false }) }}>
+              <Field label="New email" name="email" type="email" required />
+              <Button className="w-full sm:w-auto sm:justify-self-start" type="submit" disabled={busy}>Send verification</Button>
+            </form>
+            {emailChange && <form className="grid gap-4 border-t border-border-default pt-4" onSubmit={event => submit(event, data => act(async client => { await client.confirmAccountEmailChange({accountPortal,accountCodeConfirmation:{id:emailChange.id,code:String(data.get('email_code'))}}); window.location.assign(loginPath) }, 'Email changed.', false))}><p className="text-sm leading-6 text-text-secondary">Expires {date(emailChange.expiresAt)}. Completing this change signs out all sessions.</p><Field label="New-email verification code" name="email_code" inputMode="numeric" pattern="[0-9]{6}" required /><Button className="w-full sm:w-auto sm:justify-self-start" type="submit" disabled={busy}>Confirm email change</Button></form>}
+          </SecuritySetting>
+          {(totp || factor || codes.length > 0) && <SecuritySetting title="Authenticator and recovery codes" description="Your authenticator remains mandatory. Replacement keeps your existing factor active until the new code is confirmed.">
+            {totp && <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+              <Button variant="secondary" disabled={busy} onClick={() => promptVerification({ title: 'Replace authenticator', run: async client => { setFactor((await client.startAccountFactorReplacement({ accountPortal })).data) }, success: 'Scan the new authenticator setup.', reload: false })}>Replace authenticator</Button>
+              <Button variant="secondary" disabled={busy} onClick={() => { if (window.confirm('Replace all recovery codes? Previous codes will stop working.')) promptVerification({ title: 'Replace recovery codes', run: async client => { setCodes((await client.replaceAccountRecoveryCodes({ accountPortal })).data.recoveryCodes) }, success: 'Save these codes securely. They are shown once.', reload: false }) }}>Replace recovery codes</Button>
+            </div>}
+            {factor && <form className="grid gap-4 border-t border-border-default pt-4" onSubmit={event => submit(event, data => act(async client => { const result=await client.confirmAccountFactorReplacement({accountPortal,accountCodeConfirmation:{id:factor.id,code:String(data.get('factor_code'))}}); setFactor(null);setCodes(result.data.recoveryCodes);setSignInAfterCodes(true) }, 'Authenticator replaced. Save the new recovery codes, then sign in.', false))}>{renderQr(factor.provisioningUri)}<p className="break-all">Manual setup key: {factor.secret}</p><p>Expires {date(factor.expiresAt)}</p><AuthenticatorCodeField label="New authenticator code" name="factor_code" disabled={busy} required /><Button className="w-full sm:w-auto sm:justify-self-start" type="submit" disabled={busy}>Confirm replacement and sign out</Button></form>}
+            {codes.length > 0 && <section aria-label="One-time recovery codes" className="border-t border-border-default pt-4"><h3 className="text-lg font-semibold">Save your recovery codes</h3><ul className="my-4 grid gap-2 sm:grid-cols-2">{codes.map(code => <li className="break-all font-mono" key={code}>{code}</li>)}</ul><Button className="w-full sm:w-auto" onClick={() => {setCodes([]);if(signInAfterCodes)window.location.assign(loginPath)}}>I saved my codes</Button></section>}
+          </SecuritySetting>}
+        </div>}
+        {section === 'Sessions' && <div className="grid gap-5">
+          <p className="flex items-start gap-3 rounded-control border border-border-default bg-surface-canvas p-4 text-sm leading-6 text-text-secondary"><Info size={18} className="mt-0.5 shrink-0" aria-hidden="true" /><span>Times are shown in Asia/Manila. Revocation immediately removes backend access.</span></p>
+          {sessions.length === 0 && <p className="rounded-control border border-dashed border-border-default p-6 text-center text-sm text-text-secondary">No active sessions.</p>}
+          <ul className="grid gap-3">{sessions.map(session => <li key={session.id} className="flex flex-col gap-4 rounded-control border border-border-default p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+            <div className="flex min-w-0 items-start gap-4">
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-brand-orange-100 text-action-primary"><Laptop size={20} aria-hidden="true" /></span>
+              <div className="min-w-0">
+                <h3 className="flex flex-wrap items-center gap-x-3 gap-y-1 font-semibold">{session.description}{session.current && <span className="rounded-pill bg-brand-orange-100 px-2.5 py-0.5 text-xs font-semibold text-action-primary">Current session</span>}</h3>
+                <dl className="mt-2 grid gap-1 text-sm text-text-secondary sm:grid-cols-[auto_1fr] sm:gap-x-4"><dt className="font-medium text-text-strong">Signed in</dt><dd>{date(session.createdAt)}</dd><dt className="font-medium text-text-strong">Last active</dt><dd>{date(session.lastActiveAt)}</dd></dl>
+              </div>
+            </div>
+            <Button className="w-full sm:w-auto" variant="secondary" disabled={busy} onClick={() => {if(window.confirm('Sign out this session?')) void act(async client => {await client.revokeAccountSession({accountPortal,sessionId:session.id});if(session.current)window.location.assign(loginPath)},'Session revoked.')}}>Revoke session</Button>
           </li>)}</ul>
-        </>}
-        {section === 'Admin invitations' && accountPortal === 'admin' && profile.permissions.includes('admin.invite') && <form className="grid max-w-xl gap-5" onChange={() => setInvitationKey(crypto.randomUUID())} onSubmit={event=>submit(event,data=>act(client=>client.inviteAccountAdmin({ accountPortal: 'admin',idempotencyKey:invitationKey,accountAdminInvitation:{email:String(data.get('invite_email')),roleId:String(data.get('role_id'))}}),'Invitation request received. Eligible recipients receive a one-time setup link.'))}><p>Verify your identity in Security first. Invitations expire after 24 hours; TOTP is required before protected access.</p><Field label="Staff email" name="invite_email" type="email" required /><label className="grid gap-2">Fixed Admin role<select className="min-h-12 rounded-control border border-border-default bg-surface-primary px-3" name="role_id" required><option value="">Choose a role</option>{roles.map(role=><option key={role.id} value={role.id}>{role.name}</option>)}</select></label><Button type="submit" disabled={busy}>Send invitation</Button></form>}
-        {(section==='Sessions'||section==='Staff access'||section==='Admin accounts')&&lastPage>1&&<div className="mt-6 flex items-center gap-4"><Button variant="secondary" disabled={busy||page<=1} onClick={()=>setPage(page-1)}>Previous</Button><span>Page {page} of {lastPage}</span><Button variant="secondary" disabled={busy||page>=lastPage} onClick={()=>setPage(page+1)}>Next</Button></div>}
-        {embedded && section === 'Sessions' && <Button className="mt-6" variant="secondary" disabled={busy || !profile} onClick={() => window.confirm('Sign out every device, including this one?') && void act(async client => { await client.revokeAccountSessions({ accountPortal, accountSessionRevocation: { scope: 'ALL' } }); clearWebSessionTransport(basePath); window.location.assign(loginPath) }, 'Signed out.', false)}>Sign out all devices</Button>}
-        <div className={`mt-6${section === 'Security' ? ' mx-auto w-full max-w-xl' : ''}`}><Button variant="secondary" disabled={busy} onClick={()=>void load()}>{busy?'Updating…':'Refresh'}</Button></div>
+        </div>}
+        {section === 'Agreements' && <div className="grid gap-6"><p className="text-sm leading-6 text-text-secondary">Review the published terms for your account. Acceptance is recorded separately for each version.</p>{agreements.length === 0 && <p>No agreements are available.</p>}{agreements.map(agreement => <section key={agreement.id} className="overflow-hidden rounded-control border border-border-default"><header className="flex flex-wrap items-start justify-between gap-4 border-b border-border-default bg-surface-canvas p-5"><div className="flex items-start gap-3"><FileCheck2 className="mt-1 shrink-0 text-text-secondary" size={20} aria-hidden="true" /><div><h3 className="text-lg font-semibold">{agreement.title}</h3><p className="mt-1 text-xs text-text-secondary">Version {agreement.version}</p></div></div><span className="rounded-pill border border-border-default bg-surface-primary px-3 py-1 text-xs font-semibold">{agreement.acceptedAt ? 'Accepted' : agreement.requiresAcceptance ? 'Acceptance required' : 'Not yet accepted'}</span></header><div className="p-5 sm:p-6">{agreement.acceptedAt && <p className="mb-4 text-xs text-text-secondary">Accepted {date(agreement.acceptedAt)}</p>}{agreement.contentAvailable ? <><div className="whitespace-pre-wrap break-words text-sm leading-7 text-text-strong">{agreement.content}</div>{!agreement.acceptedAt && <div className="mt-6 border-t border-border-default pt-5"><Button disabled={busy} onClick={() => void act(client=>client.acceptAccountAgreements({accountPortal,accountAgreementAcceptance:{versionIds:[agreement.id]}}),'Agreement recorded.')}>{agreement.code === 'PRIVACY_NOTICE' ? 'Acknowledge Privacy Notice' : 'Accept this version'}</Button></div>}</> : <p className="text-sm leading-6 text-text-secondary">Approved agreement text is not available yet. Contact support for the published copy.</p>}</div></section>)}</div>}
+
+        {section === 'Admin accounts' && accountPortal === 'admin' && profile.permissions.includes('admin.manage_accounts') && <div className="grid gap-5">
+          <p className="flex items-start gap-3 rounded-control border border-border-default bg-surface-canvas p-4 text-sm leading-6 text-text-secondary"><Info size={18} className="mt-0.5 shrink-0" aria-hidden="true" /><span>Verify your identity in Security before changing staff access. Changes preserve historical attribution and sign out the affected account.</span></p>
+          {administrators.length === 0 && <p className="rounded-control border border-dashed border-border-default p-6 text-center text-sm text-text-secondary">No Admin accounts are available.</p>}
+          <ul className="grid gap-3">{administrators.map(admin => <li key={admin.id} className="rounded-control border border-border-default p-4 sm:p-5">
+            <div className="flex min-w-0 flex-wrap items-center gap-4">
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-brand-orange-100 text-sm font-semibold uppercase text-action-primary" aria-hidden="true">{admin.name.trim().split(/\s+/).slice(0, 2).map(part => part[0]).join('')}</span>
+              <div className="min-w-0 flex-1">
+                <h3 className="flex flex-wrap items-center gap-x-2 gap-y-1 font-semibold"><span className="break-words">{admin.name}</span>{admin.id === profile.id && <span className="rounded-pill bg-brand-orange-100 px-2.5 py-0.5 text-xs font-semibold text-action-primary">You</span>}</h3>
+                <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-text-secondary">{admin.role.replaceAll('_', ' ')}</p>
+              </div>
+              <StatusBadge label={admin.status.replaceAll('_', ' ')} tone={admin.status === 'ACTIVE' ? 'success' : admin.status === 'SUSPENDED' ? 'warning' : admin.status === 'DEACTIVATED' ? 'error' : 'neutral'} />
+            </div>
+            {admin.id !== profile.id && admin.role !== 'ADMIN_SUPERADMIN' && <details className="mt-4 border-t border-border-default pt-2">
+              <summary className="inline-flex min-h-11 cursor-pointer items-center text-sm font-semibold text-action-primary">Manage access</summary>
+              <form className="mt-3 grid gap-5" onSubmit={event => submit(event, data => {
+                if (!window.confirm('Change this Admin account and sign out its sessions?')) return Promise.resolve()
+                return act(client => client.changeAccountAdministrator({ accountPortal: 'admin', publicId: admin.id, accountAdminChange: { lockVersion: admin.lockVersion, reason: String(data.get('reason')), status: String(data.get('status')) as 'ACTIVE' | 'SUSPENDED' | 'DEACTIVATED', roleId: String(data.get('role_id')) } }), 'Admin access updated.')
+              })}>
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <Select label="Role" name="role_id" defaultValue={admin.roleId} required>{roles.map(role => <option value={role.id} key={role.id}>{role.name}</option>)}</Select>
+                  <Select label="Access status" name="status" defaultValue={admin.status} required>{!['ACTIVE','SUSPENDED','DEACTIVATED'].includes(admin.status) && <option value="" disabled>Setup pending</option>}<option value="ACTIVE">Active</option><option value="SUSPENDED">Suspended</option><option value="DEACTIVATED">Deactivated</option></Select>
+                </div>
+                <Field label="Reason for access change" name="reason" required minLength={3} maxLength={500} />
+                <div><Button type="submit" disabled={busy}>Update Admin access</Button></div>
+              </form>
+            </details>}
+          </li>)}</ul>
+        </div>}
+        {section === 'Admin invitations' && accountPortal === 'admin' && profile.permissions.includes('admin.invite') && <div className="grid gap-8">
+          <div className="rounded-control border border-border-default bg-surface-canvas p-5 sm:p-6">
+            <h3 className="text-sm font-semibold">Before you invite</h3>
+            <ul className="mt-3 grid gap-3 text-sm leading-6 text-text-secondary sm:grid-cols-3">
+              <li className="flex items-start gap-3"><ShieldCheck size={18} className="mt-1 shrink-0 text-action-primary" aria-hidden="true" /><span>Verify your identity in Security first.</span></li>
+              <li className="flex items-start gap-3"><Clock size={18} className="mt-1 shrink-0 text-action-primary" aria-hidden="true" /><span>Invitations expire after 24 hours.</span></li>
+              <li className="flex items-start gap-3"><KeyRound size={18} className="mt-1 shrink-0 text-action-primary" aria-hidden="true" /><span>TOTP is required before protected access.</span></li>
+            </ul>
+          </div>
+          <SecuritySetting title="Invite a staff member" description="Eligible recipients receive a one-time setup link at the email you enter.">
+            <form className="grid gap-5" onChange={() => setInvitationKey(crypto.randomUUID())} onSubmit={event=>submit(event,data=>act(client=>client.inviteAccountAdmin({ accountPortal: 'admin',idempotencyKey:invitationKey,accountAdminInvitation:{email:String(data.get('invite_email')),roleId:String(data.get('role_id'))}}),'Invitation request received. Eligible recipients receive a one-time setup link.'))}>
+              <Field label="Staff email" name="invite_email" type="email" autoComplete="off" required />
+              <Select label="Fixed Admin role" name="role_id" required defaultValue=""><option value="">Choose a role</option>{roles.map(role=><option key={role.id} value={role.id}>{role.name}</option>)}</Select>
+              <div className="flex flex-col gap-3 sm:flex-row"><Button type="submit" disabled={busy}><Send size={18} aria-hidden="true" />Send invitation</Button><Button variant="secondary" disabled={busy} onClick={() => void load()}>{busy ? 'Updating…' : 'Refresh'}</Button></div>
+            </form>
+          </SecuritySetting>
+        </div>}
+        {(section==='Sessions'||section==='Admin accounts')&&lastPage>1&&<div className="mt-6 flex items-center gap-4"><Button variant="secondary" disabled={busy||page<=1} onClick={()=>setPage(page-1)}>Previous</Button><span>Page {page} of {lastPage}</span><Button variant="secondary" disabled={busy||page>=lastPage} onClick={()=>setPage(page+1)}>Next</Button></div>}
+        {section === 'Sessions' && <div className="mt-6 flex flex-col gap-3 border-t border-border-default pt-5 sm:flex-row sm:flex-wrap">
+          <Button variant="secondary" disabled={busy} onClick={() => {if(window.confirm('Sign out all other sessions?')) void act(client => client.revokeAccountSessions({accountPortal,accountSessionRevocation:{scope:'OTHERS'}}),'Other sessions signed out.')}}>Sign out other sessions</Button>
+          {embedded && <Button variant="secondary" disabled={busy || !profile} onClick={() => window.confirm('Sign out every device, including this one?') && void act(async client => { await client.revokeAccountSessions({ accountPortal, accountSessionRevocation: { scope: 'ALL' } }); clearWebSessionTransport(basePath); window.location.assign(loginPath) }, 'Signed out.', false)}>Sign out all devices</Button>}
+          <Button className="sm:ml-auto" variant="quiet" disabled={busy} onClick={()=>void load()}>{busy?'Updating…':'Refresh'}</Button>
+        </div>}
+        {section !== 'Profile' && section !== 'Sessions' && section !== 'Admin invitations' && <div className={`mt-6${section === 'Security' ? ' flex justify-end border-t border-border-default pt-5' : ''}`}><Button variant="secondary" disabled={busy} onClick={()=>void load()}>{busy?'Updating…':'Refresh'}</Button></div>}
       </section></div></>}
-    {pendingSecurityAction && <div className="fixed inset-0 z-50 grid place-items-center bg-text-strong/60 p-4" onMouseDown={event => { if (event.target === event.currentTarget) closeVerification() }}>
-      <div ref={verificationRef} role="dialog" aria-modal="true" aria-labelledby="security-verification-title" aria-describedby="security-verification-description" className="w-full max-w-md rounded-surface border border-border-default bg-surface-primary p-6 shadow-xl" onKeyDown={event => {
-        if (event.key === 'Escape') { event.preventDefault(); closeVerification() }
-        if (event.key === 'Tab') {
-          const controls = Array.from(verificationRef.current?.querySelectorAll<HTMLElement>('input:not(:disabled), button:not(:disabled)') ?? [])
-          const first = controls[0], last = controls.at(-1)
-          if (!first || !last) return
-          if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus() }
-          else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() }
-        }
-      }}>
-        <h2 id="security-verification-title" className="text-xl font-semibold">Confirm {pendingSecurityAction.title.toLowerCase()}</h2>
-        <p id="security-verification-description" className="mt-2 text-sm text-text-secondary">{totp ? 'Enter a fresh code from your authenticator app to continue.' : 'Verify your account to continue.'}</p>
-        <form className="mt-5 grid gap-4" onSubmit={event => void verifyAndRun(event)}>
-          {totp ? <Field label="Authenticator code" name="code" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} autoComplete="one-time-code" required /> : verificationMode === 'email' ? <Field label="Current-email verification code" name="email_code" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} autoComplete="one-time-code" required /> : <Field label="Current password" name="password" type="password" autoComplete="current-password" required />}
-          {verificationError && <StatusMessage tone="error">{verificationError}</StatusMessage>}
-          <div className="flex flex-wrap justify-end gap-3"><Button variant="secondary" disabled={busy} onClick={closeVerification}>Cancel</Button><Button type="submit" disabled={busy}>{busy ? 'Verifying…' : 'Verify and continue'}</Button></div>
-        </form>
-        {!totp && verificationMode === 'password' && <Button className="mt-4 w-full" variant="quiet" disabled={busy} onClick={() => void sendVerificationEmail()}>Send email verification instead</Button>}
-      </div>
-    </div>}
+    {pendingSecurityAction && <AccountVerificationDialog api={api} portal={accountPortal} title={`Confirm ${pendingSecurityAction.title.toLowerCase()}`} explainError={errorText} onClose={() => setPendingSecurityAction(null)} onVerified={async () => { const action = pendingSecurityAction; setPendingSecurityAction(null); await act(action.run, action.success, action.reload) }} />}
+
+  </div>
+}
+
+function SecuritySetting({ title, description, children }: { title: string; description: string; children: ReactNode }) {
+  return <div className="grid min-w-0 gap-4 border-t border-border-default pt-6 first:border-t-0 first:pt-0 md:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] md:gap-8">
+    <div className="min-w-0"><h3 className="text-lg font-semibold">{title}</h3><p className="mt-2 max-w-sm text-sm leading-6 text-text-secondary">{description}</p></div>
+    <div className="grid min-w-0 content-start gap-4">{children}</div>
+  </div>
+}
+
+function AccountDetail({ icon: Icon, label, className = '', children }: { icon: LucideIcon; label: string; className?: string; children: ReactNode }) {
+  return <div className={`flex min-w-0 items-start gap-3 rounded-control border border-border-default bg-surface-canvas p-4 ${className}`}>
+    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-brand-orange-100 text-action-primary"><Icon size={18} aria-hidden="true" /></span>
+    <div className="min-w-0 flex-1"><dt className="text-xs font-semibold uppercase tracking-wide text-text-secondary">{label}</dt><dd className="mt-1 break-words font-medium text-text-strong">{children}</dd></div>
   </div>
 }

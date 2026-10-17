@@ -1,0 +1,8 @@
+.recaptcha-checkbox { display: grid; min-width: 0; justify-items: center; gap: .5rem; }
+.recaptcha-checkbox[aria-disabled="true"] { opacity: .7; pointer-events: none; }
+.recaptcha-checkbox > div { max-width: 100%; overflow: hidden; }
+.recaptcha-notice { margin: -.25rem 0 0; color: var(--mp-color-text-secondary); font-size: .8rem; line-height: 1.5; text-align: center; }
+.risk-step-up__heading { display: flex; align-items: flex-start; gap: .9rem; border-block-end: 1px solid var(--mp-color-border-default); padding-block-end: 1rem; }
+.risk-step-up__heading > svg { width: 1.5rem; height: 1.5rem; flex: 0 0 auto; color: var(--mp-color-action-primary); }
+.risk-step-up__heading h3 { margin: 0; font-size: 1.15rem; }
+.risk-step-up__heading p { margin: .35rem 0 0; color: var(--mp-color-text-secondary); font-size: .82rem; line-height: 1.55; }

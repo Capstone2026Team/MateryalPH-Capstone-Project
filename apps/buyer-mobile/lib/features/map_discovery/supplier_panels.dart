@@ -6,6 +6,7 @@ import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../design_system/components/discovery_controls.dart';
+import '../../design_system/components/procurement_components.dart';
 import '../../design_system/generated/color_tokens.dart';
 import '../../design_system/theme.dart';
 import '../../widgets/auth_content.dart';
@@ -166,21 +167,26 @@ class SupplierListPanel extends StatelessWidget {
           )
         else if (visible.isEmpty && page != null)
           SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: _EmptyState(
-                message: view == SupplierListView.favorites
-                    ? 'None of your Favorite Suppliers are within ${controller.radiusKm} km with current offerings.'
-                    : controller.filters.activeCount > 0
-                    ? 'No suppliers match your filters within ${controller.radiusKm} km.'
-                    : 'No suppliers were found within ${controller.radiusKm} km of this location.',
-                actionLabel: controller.filters.activeCount > 0
-                    ? 'Adjust filters'
-                    : 'Change location',
-                onAction: controller.filters.activeCount > 0
-                    ? onAdjustFilters
-                    : onChangeLocation,
-              ),
+            child: StateMessage(
+              kind: StateKind.empty,
+              compact: true,
+              artwork: view == SupplierListView.favorites
+                  ? StateArtwork.favorites
+                  : StateArtwork.noResults,
+              title: view == SupplierListView.favorites
+                  ? 'No Favorite Suppliers nearby'
+                  : 'No suppliers found',
+              message: view == SupplierListView.favorites
+                  ? 'None of your Favorite Suppliers are within ${controller.radiusKm} km with current offerings.'
+                  : controller.filters.activeCount > 0
+                  ? 'No suppliers match your filters within ${controller.radiusKm} km.'
+                  : 'No suppliers were found within ${controller.radiusKm} km of this location.',
+              secondaryLabel: controller.filters.activeCount > 0
+                  ? 'Adjust filters'
+                  : 'Change location',
+              onSecondary: controller.filters.activeCount > 0
+                  ? onAdjustFilters
+                  : onChangeLocation,
             ),
           )
         else
@@ -536,27 +542,6 @@ class _ExpansionPrompt extends StatelessWidget {
         ),
       ],
     ),
-  );
-}
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState({
-    required this.message,
-    required this.actionLabel,
-    required this.onAction,
-  });
-  final String message;
-  final String actionLabel;
-  final VoidCallback onAction;
-
-  @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(message),
-      const SizedBox(height: 8),
-      OutlinedButton(onPressed: onAction, child: Text(actionLabel)),
-    ],
   );
 }
 

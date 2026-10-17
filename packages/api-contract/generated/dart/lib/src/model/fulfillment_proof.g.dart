@@ -140,6 +140,12 @@ class _$FulfillmentProof extends FulfillmentProof {
   final String? signaturePath;
   @override
   final BuiltMap<String, JsonObject?>? vehicle;
+  @override
+  final String? note;
+  @override
+  final String? recordedBy;
+  @override
+  final BuiltList<String>? additionalPhotoPaths;
 
   factory _$FulfillmentProof(
           [void Function(FulfillmentProofBuilder)? updates]) =>
@@ -153,7 +159,10 @@ class _$FulfillmentProof extends FulfillmentProof {
       required this.handoverConfirmed,
       this.photoPath,
       this.signaturePath,
-      this.vehicle})
+      this.vehicle,
+      this.note,
+      this.recordedBy,
+      this.additionalPhotoPaths})
       : super._();
   @override
   FulfillmentProof rebuild(void Function(FulfillmentProofBuilder) updates) =>
@@ -174,7 +183,10 @@ class _$FulfillmentProof extends FulfillmentProof {
         handoverConfirmed == other.handoverConfirmed &&
         photoPath == other.photoPath &&
         signaturePath == other.signaturePath &&
-        vehicle == other.vehicle;
+        vehicle == other.vehicle &&
+        note == other.note &&
+        recordedBy == other.recordedBy &&
+        additionalPhotoPaths == other.additionalPhotoPaths;
   }
 
   @override
@@ -188,6 +200,9 @@ class _$FulfillmentProof extends FulfillmentProof {
     _$hash = $jc(_$hash, photoPath.hashCode);
     _$hash = $jc(_$hash, signaturePath.hashCode);
     _$hash = $jc(_$hash, vehicle.hashCode);
+    _$hash = $jc(_$hash, note.hashCode);
+    _$hash = $jc(_$hash, recordedBy.hashCode);
+    _$hash = $jc(_$hash, additionalPhotoPaths.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -202,7 +217,10 @@ class _$FulfillmentProof extends FulfillmentProof {
           ..add('handoverConfirmed', handoverConfirmed)
           ..add('photoPath', photoPath)
           ..add('signaturePath', signaturePath)
-          ..add('vehicle', vehicle))
+          ..add('vehicle', vehicle)
+          ..add('note', note)
+          ..add('recordedBy', recordedBy)
+          ..add('additionalPhotoPaths', additionalPhotoPaths))
         .toString();
   }
 }
@@ -249,6 +267,20 @@ class FulfillmentProofBuilder
   set vehicle(MapBuilder<String, JsonObject?>? vehicle) =>
       _$this._vehicle = vehicle;
 
+  String? _note;
+  String? get note => _$this._note;
+  set note(String? note) => _$this._note = note;
+
+  String? _recordedBy;
+  String? get recordedBy => _$this._recordedBy;
+  set recordedBy(String? recordedBy) => _$this._recordedBy = recordedBy;
+
+  ListBuilder<String>? _additionalPhotoPaths;
+  ListBuilder<String> get additionalPhotoPaths =>
+      _$this._additionalPhotoPaths ??= ListBuilder<String>();
+  set additionalPhotoPaths(ListBuilder<String>? additionalPhotoPaths) =>
+      _$this._additionalPhotoPaths = additionalPhotoPaths;
+
   FulfillmentProofBuilder() {
     FulfillmentProof._defaults(this);
   }
@@ -264,6 +296,9 @@ class FulfillmentProofBuilder
       _photoPath = $v.photoPath;
       _signaturePath = $v.signaturePath;
       _vehicle = $v.vehicle?.toBuilder();
+      _note = $v.note;
+      _recordedBy = $v.recordedBy;
+      _additionalPhotoPaths = $v.additionalPhotoPaths?.toBuilder();
       _$v = null;
     }
     return this;
@@ -297,12 +332,18 @@ class FulfillmentProofBuilder
             photoPath: photoPath,
             signaturePath: signaturePath,
             vehicle: _vehicle?.build(),
+            note: note,
+            recordedBy: recordedBy,
+            additionalPhotoPaths: _additionalPhotoPaths?.build(),
           );
     } catch (_) {
       late String _$failedField;
       try {
         _$failedField = 'vehicle';
         _vehicle?.build();
+
+        _$failedField = 'additionalPhotoPaths';
+        _additionalPhotoPaths?.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
             r'FulfillmentProof', _$failedField, e.toString());

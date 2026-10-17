@@ -15,6 +15,7 @@ use App\Domain\Orders\OrderEligibility;
 use App\Domain\Orders\OrderTransitionService;
 use App\Domain\Projects\ProjectBudget;
 use App\Domain\Projects\ProjectInquiryService;
+use App\Domain\Vendors\VendorDeliveryEligibility;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -31,6 +32,9 @@ final class QuotationAcceptance
             throw new AuthenticationException('QUOTATION_VERSION_CONFLICT', 'Review the current quotation before accepting.', 409);
         }
         $eligibility = app(OrderEligibility::class);
+        if ($content['fulfillment_method'] === 'DELIVERY' && ! app(VendorDeliveryEligibility::class)->available((string) $q->vendor_organization_id)) {
+            throw new AuthenticationException('FULFILLMENT_NOT_OFFERED', 'Vendor Delivery is currently unavailable for new orders. Ask the Vendor to complete delivery setup before accepting.', 422);
+        }
         $org = DB::table('vendor_organizations')->where('id', $q->vendor_organization_id)->first();
         if ($eligibility->storeBlockers($org) !== [] || ! $eligibility->onlinePaymentReady((string) $org->id)) {
             throw new AuthenticationException('STORE_NOT_ELIGIBLE', 'The store cannot accept this quotation right now.', 409);
@@ -100,6 +104,7 @@ final class QuotationAcceptance
         $order = DB::table('orders')->where('id', $id)->first();
         $actor = OrderActor::buyer($request);
         app(OrderTransitionService::class)->opened($order, $actor);
+        app(FulfillmentThreadService::class)->ensureForOrder($id);
         $snapshot = app(OrderCommercial::class)->record($order, 'VENDOR_CONFIRMED', $content + ['accepted_quotation_version_id' => $v->id, 'accepted_quotation_hash' => $v->content_hash], $acceptedMoney, $actor);
         $nrpcId = null;
         if ($nrpc !== null) {

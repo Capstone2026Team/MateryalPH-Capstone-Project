@@ -1,10 +1,12 @@
-import { rateLimitMessage } from '@materyalph/web-ui'
+import { rateLimitMessage, webRequestErrorMessage } from '@materyalph/web-ui'
 import {
   AccountType,
+  AccountsApi,
   AuthenticationApi,
   ResponseError,
   type VendorBotProtectionEvidence,
   type RegisterRequest,
+  type VendorInvitationAcceptance,
 } from '@materyalph/api-client-ts'
 import { clearWebSessionTransport, createWebApiConfiguration } from '@materyalph/web-ui'
 
@@ -14,20 +16,13 @@ export async function withWebAuthApi<T>(operation: (api: AuthenticationApi) => P
   return operation(new AuthenticationApi(createWebApiConfiguration(basePath)))
 }
 
-export type RiskChallenge = { id: string; expiresAt: string; resendAfterSeconds: number }
+export { asBotStepUpRequired, BotStepUpRequired, type RiskChallenge } from '@materyalph/web-ui'
 
 export type ValidationFieldErrors = Readonly<Record<string, readonly string[]>>
 
 export type ValidationFailure = {
   message: string
   fieldErrors: ValidationFieldErrors
-}
-
-export class BotStepUpRequired extends Error {
-  constructor(public readonly challenge: RiskChallenge) {
-    super('Email risk verification is required.')
-    this.name = 'BotStepUpRequired'
-  }
 }
 
 export async function signIn(email: string, password: string, botProtection?: VendorBotProtectionEvidence) {
@@ -77,16 +72,16 @@ export function requestPasswordRecovery(email: string, botProtection?: VendorBot
 }
 
 export function verifyRiskChallenge(challengeId: string, email: string, code: string) {
-  return withWebAuthApi((api) => api.verifyBotChallenge({
+  return withWebAuthApi((api) => api.verifyWebBotChallenge({
     challengeId,
-    verifyBotChallengeRequest: { email, code },
+    webVerifyBotChallengeRequest: { email, code },
   }))
 }
 
 export function resendRiskChallenge(challengeId: string, email: string) {
-  return withWebAuthApi((api) => api.resendBotChallenge({
+  return withWebAuthApi((api) => api.resendWebBotChallenge({
     challengeId,
-    resendBotChallengeRequest: { email },
+    webResendBotChallengeRequest: { email },
   }))
 }
 
@@ -102,13 +97,12 @@ export function resendVendorVerification(email: string) {
   return withWebAuthApi((api) => api.resendEmailVerification({ emailRequest: { email } }))
 }
 
-export async function startGoogleRegistration(input: { mobileE164: string; businessName: string }) {
+export async function startGoogleRegistration(input: { mobileE164: string }) {
   const response = await withWebAuthApi((api) => api.startGoogleOidc({
     googleOidcStartRequest: {
       portal: AccountType.Vendor,
       mode: 'SIGN_UP',
       mobileE164: input.mobileE164,
-      businessName: input.businessName,
       termsAccepted: true,
       privacyAccepted: true,
     },
@@ -124,6 +118,12 @@ export async function registerVendor(request: Omit<RegisterRequest, 'botProtecti
   }))
 }
 
+export function acceptVendorStaffInvitation(request: Omit<VendorInvitationAcceptance, 'botProtection'>, botProtection: VendorBotProtectionEvidence) {
+  return new AccountsApi(createWebApiConfiguration(basePath)).acceptVendorStaffInvitation({
+    vendorInvitationAcceptance: { ...request, botProtection },
+  })
+}
+
 export async function startGoogleSignIn() {
   const response = await withWebAuthApi((api) => api.startGoogleOidc({
     googleOidcStartRequest: { portal: AccountType.Vendor, mode: 'SIGN_IN' },
@@ -134,6 +134,8 @@ export async function startGoogleSignIn() {
 }
 
 export async function readableApiError(error: unknown): Promise<string> {
+  const transportMessage = webRequestErrorMessage(error)
+  if (transportMessage) return transportMessage
   if (error instanceof ResponseError) {
     if (error.response.status === 429 && error.response.headers.has('Retry-After')) return rateLimitMessage(error.response)
     const payload: unknown = await error.response.clone().json().catch(() => null)
@@ -160,17 +162,6 @@ export async function asValidationFailure(error: unknown): Promise<ValidationFai
   }
 }
 
-export async function asBotStepUpRequired(error: unknown): Promise<BotStepUpRequired | null> {
-  if (!(error instanceof ResponseError) || error.response.status !== 403) return null
-  const payload: unknown = await error.response.clone().json().catch(() => null)
-  if (!isBotStepUpEnvelope(payload)) return null
-  const first = payload.errors[0]
-  if (first?.code !== 'BOT_STEP_UP_REQUIRED') return null
-  const { challenge_id: id, expires_at: expiresAt, resend_after_seconds: resendAfterSeconds } = first.details
-  if (typeof id !== 'string' || typeof expiresAt !== 'string' || typeof resendAfterSeconds !== 'number') return null
-  return new BotStepUpRequired({ id, expiresAt, resendAfterSeconds })
-}
-
 function isApiErrorEnvelope(value: unknown): value is { errors: Array<{ message: string }> } {
   return typeof value === 'object' && value !== null && 'errors' in value && Array.isArray(value.errors)
 }
@@ -194,11 +185,3 @@ function safeValidationFieldErrors(details: unknown): ValidationFieldErrors {
   return fieldErrors
 }
 
-function isBotStepUpEnvelope(value: unknown): value is {
-  errors: Array<{ code: string; details: { challenge_id: unknown; expires_at: unknown; resend_after_seconds: unknown } }>
-} {
-  if (!isApiErrorEnvelope(value)) return false
-  const first = value.errors[0]
-  return typeof first === 'object' && first !== null && 'code' in first && 'details' in first
-    && typeof first.details === 'object' && first.details !== null
-}

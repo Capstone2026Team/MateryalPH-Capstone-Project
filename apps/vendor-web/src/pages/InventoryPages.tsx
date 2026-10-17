@@ -1,23 +1,25 @@
+import { Package, CheckCircle2, AlertTriangle, XCircle, Settings2 } from 'lucide-react'
 import { useEffect, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { CircleOff, History, Pencil, PauseCircle, PlayCircle, Zap } from 'lucide-react'
+import { History, Pencil, Zap } from 'lucide-react'
 import {
-  AutoAcceptPanel, Button, ConfirmDialog, ConflictBanner, DenseLedgerTable, Field, FilterChips, StaleStockBand, StatusMessage, StockLabelBadge, SummaryTiles,
-  formatManilaDateTime, type AutoAcceptPanelValues, type LedgerColumn, type SummaryTile,
+  ALL_DATES, AutoAcceptPanel, Button, ConfirmDialog, ConflictBanner, DateFilter, DenseLedgerTable, Field, Pagination, Select, SidePanel, StaleStockBand, StatusMessage, StockLabelBadge, StatCard, ActiveFilters, FormDialog, Toolbar, InfoNote, EmptyState,
+  dateFilterLabel, formatManilaDateTime, type AutoAcceptPanelValues, type DateFilterRange, type LedgerColumn,
 } from '@materyalph/web-ui'
 import {
   apiFailure, configureAutoAccept, confirmStock, conflictRow, getAutoAccept, getInventorySettings, inventoryFieldErrors, listInventory, listMovements, listPriceHistory,
   pauseAutoAccept, quantityDisplay, readableInventoryError, resumeAutoAccept, saveInventorySettings, updateAllotment, updateInventoryRow,
   type AutoAcceptPolicyDetail, type InventoryLedgerMeta, type InventoryMovement, type InventoryRow, type InventorySettings, type PriceHistoryEntry, type StockLabel,
 } from '../lib/inventory-api'
-import { centavosToPeso, formatCentavos, pesoToCentavos } from '../lib/catalog-api'
+import { getCatalogTaxonomy, type CatalogTaxonomy, centavosToPeso, formatCentavos, pesoToCentavos } from '../lib/catalog-api'
 import { statusLabel } from '../lib/vendor-status'
 import { CatalogGate } from './CatalogPages'
 import { useCatalogAccess } from '../lib/catalog-access'
-import { ListingState, ProductsTabs } from './CatalogShared'
+import { ListingBadge, ListingState, ProductsTabs, ProductActions } from './CatalogShared'
+import { CatalogProductPhoto } from '../components/CatalogProductPhoto'
 import { ErrorState, PageHeader } from './PhaseThreeVendorPages'
 
-type Mode = 'edit' | 'auto' | 'history'
+type Mode = 'edit' | 'auto' | 'history' | 'details'
 const REASONS = [
   { value: 'COUNT', label: 'Physical count' }, { value: 'RECEIVED', label: 'Received stock' }, { value: 'RETURNED', label: 'Customer return' },
   { value: 'DAMAGED', label: 'Damaged' }, { value: 'LOST', label: 'Lost or missing' }, { value: 'CORRECTION', label: 'Correction' },
@@ -27,13 +29,6 @@ const confirmationText: Record<string, string> = { CONFIRMED: 'Confirmed', REMIN
 
 function variantName(row: InventoryRow): string {
   return row.variantLabel ? `${row.listingName} — ${row.variantLabel}` : row.listingName
-}
-
-function AutoAcceptState({ row }: { row: InventoryRow }) {
-  const policy = row.autoAccept
-  if (policy.status === 'ACTIVE') return <span className="inline-flex items-center gap-1 font-semibold text-status-success"><PlayCircle size={14} aria-hidden="true" />On · {policy.remainingAllotmentQuantity} left</span>
-  if (policy.status === 'PAUSED') return <span className="inline-flex items-center gap-1 font-semibold text-status-warning"><PauseCircle size={14} aria-hidden="true" />Paused</span>
-  return <span className="inline-flex items-center gap-1 text-text-secondary"><CircleOff size={14} aria-hidden="true" />Off</span>
 }
 
 /** Inline row editor. A stale version keeps the typed values and shows the saved values beside them. */
@@ -93,7 +88,7 @@ function RowEditor({ row, canAdjust, canPrice, onSaved, onCancel }: { row: Inven
   }
 
   return <form className="grid min-w-0 gap-4" onSubmit={event => void submit(event)} aria-label={`Edit ${variantName(row)}`}>
-    <h3 className="text-base font-semibold">Edit {variantName(row)}</h3>
+    <h3 className="text-base font-semibold">Edit stock and price</h3>
     {conflict && <ConflictBanner onUseCurrent={useCurrent}>
       <p>Someone saved this row after you opened it. Nothing was overwritten; your typed values are still in the form.</p>
       <dl className="mt-2 grid grid-cols-1 gap-x-6 gap-y-1 sm:grid-cols-3">
@@ -103,14 +98,14 @@ function RowEditor({ row, canAdjust, canPrice, onSaved, onCancel }: { row: Inven
       </dl>
     </ConflictBanner>}
     {message && <StatusMessage tone="error">{message}</StatusMessage>}
-    <div className="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2">
+    <div className="grid min-w-0 grid-cols-1 items-start gap-x-6 gap-y-5 md:grid-cols-2">
       <Field label={`Quantity on hand (${row.unitCode})`} name="quantity_on_hand" inputMode="decimal" value={quantity} disabled={!canAdjust || busy} error={errors.quantity_on_hand} onChange={event => setQuantity(event.target.value)} hint={`Cannot be lower than the ${quantityDisplay(base.inventory?.hardReservedQuantity ?? '0')} ${row.unitCode} already reserved. Saving a count also confirms stock.`} />
       <label className="grid min-w-0 gap-2 text-sm font-semibold">Reason for the change<select className={control} value={reason} disabled={!canAdjust || busy} onChange={event => setReason(event.target.value)}>{REASONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
       <Field label={`Reorder level (${row.unitCode})`} name="reorder_level" inputMode="decimal" value={reorder} disabled={!canAdjust || busy} error={errors.reorder_level} onChange={event => setReorder(event.target.value)} hint="Buyers see Limited Stock at or below this level. Empty means no Limited Stock label." />
       <Field label="Ordinary price (₱)" name="price.amount_centavos" inputMode="decimal" value={price} disabled={!canPrice || !base.price || busy} error={errors['price.amount_centavos']} onChange={event => setPrice(event.target.value)} hint={base.price ? `VAT-inclusive. Saving creates price version ${base.price.version + 1}; earlier versions stay in history.` : 'Set the first price in the product editor.'} />
-      <Field label="Note (optional)" name="note" value={note} maxLength={500} disabled={!canAdjust || busy} onChange={event => setNote(event.target.value)} hint="Recorded with the movement for your team." />
+      <div className="md:col-span-2"><Field label="Note (optional)" name="note" value={note} maxLength={500} disabled={!canAdjust || busy} onChange={event => setNote(event.target.value)} hint="Recorded with the movement for your team." /></div>
     </div>
-    <div className="flex flex-wrap gap-3"><Button type="submit" disabled={busy}>{busy ? 'Saving…' : 'Save row'}</Button><Button variant="secondary" disabled={busy} onClick={onCancel}>Cancel</Button></div>
+    <div className="flex flex-wrap gap-3 border-t border-border-default pt-4"><Button type="submit" disabled={busy}>{busy ? 'Saving…' : 'Save row'}</Button><Button variant="secondary" disabled={busy} onClick={onCancel}>Cancel</Button></div>
   </form>
 }
 
@@ -145,7 +140,11 @@ function AutoAcceptEditor({ row, onChanged }: { row: InventoryRow; onChanged: (p
     void run(() => configureAutoAccept(row.listingVariantId, { lockVersion: policy.lockVersion, enabled: values.enabled, allotmentQuantity: values.allotment.trim() || '0', maxUnitCount: values.maxUnitCount.trim() || null, maxOrderAmountCentavos: amount }), values.enabled ? 'Auto-accept saved.' : 'Auto-accept turned off. Orders wait for manual confirmation.')
   }
   return <div className="grid min-w-0 gap-3">
-    {detail.stock && <p className="text-sm text-text-secondary">On hand {quantityDisplay(detail.stock.quantityOnHand)} · Reserved {quantityDisplay(detail.stock.hardReservedQuantity)} · Soft-held {quantityDisplay(detail.stock.softHeldQuantity)} · Available {quantityDisplay(detail.stock.availableToSell)} {detail.unitCode}. Only you and your team see these numbers.</p>}
+    {detail.stock && <div className="border-b border-border-default pb-5">
+      <h3 className="text-base font-semibold">Stock available for auto-accept</h3>
+      <dl className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">{[['On hand', detail.stock.quantityOnHand], ['Reserved', detail.stock.hardReservedQuantity], ['Soft-held', detail.stock.softHeldQuantity], ['Available', detail.stock.availableToSell]].map(([label, value]) => <div key={label} className="border-l border-border-default pl-3"><dt className="text-xs text-text-secondary">{label}</dt><dd className="mt-1 font-semibold tabular-nums">{quantityDisplay(value)} {detail.unitCode}</dd></div>)}</dl>
+      <p className="mt-3 text-xs text-text-secondary">Only you and your team see these numbers.</p>
+    </div>}
     {notice && <StatusMessage tone={notice.tone}>{notice.text}</StatusMessage>}
     <AutoAcceptPanel unit={detail.unitCode} busy={busy} fieldErrors={fieldErrors} canConfigure={detail.permissions.canConfigure} canUpdateAllotment={detail.permissions.canUpdateAllotment}
       policy={{ status: policy.status, pauseReason: policy.pauseReason ?? null, remainingAllotment: policy.remainingAllotmentQuantity, maxUnitCount: policy.maxUnitCount ? quantityDisplay(policy.maxUnitCount) : null, maxOrderAmountPesos: policy.maxOrderAmountCentavos ? centavosToPeso(policy.maxOrderAmountCentavos) : null, lastEditor: policy.lastEditor ?? null }}
@@ -153,35 +152,43 @@ function AutoAcceptEditor({ row, onChanged }: { row: InventoryRow; onChanged: (p
       onSaveAllotment={allotment => void run(() => updateAllotment(row.listingVariantId, policy.lockVersion, allotment.trim() || '0'), 'Allotment saved. A paused policy stays paused until the Owner or Store Manager resumes it.')}
       onPause={() => void run(() => pauseAutoAccept(row.listingVariantId, policy.lockVersion), 'Auto-accept paused.')}
       onResume={allotment => void run(() => resumeAutoAccept(row.listingVariantId, policy.lockVersion, allotment), `Auto-accept resumed with ${allotment} ${detail.unitCode}.`)} />
-    {detail.versions.length > 0 && <details className="text-sm"><summary className="min-h-11 cursor-pointer py-2 font-semibold">Policy history ({detail.versions.length})</summary>
+    {detail.versions.length > 0 && <details className="border-t border-border-default pt-3 text-sm"><summary className="min-h-11 cursor-pointer py-2 font-semibold">Policy history ({detail.versions.length})</summary>
       <ol className="grid gap-1">{detail.versions.map(version => <li key={version.version}>v{version.version} · {statusLabel(version.changeKind)} · allotment {version.remainingAllotmentQuantity} · {version.actor} · {version.createdAt ? formatManilaDateTime(version.createdAt) : ''}</li>)}</ol>
     </details>}
   </div>
 }
 
 function RowHistory({ row }: { row: InventoryRow }) {
+  const [range, setRange] = useState(ALL_DATES)
+  const [page, setPage] = useState(1)
+  const [movementMeta, setMovementMeta] = useState<Awaited<ReturnType<typeof listMovements>>['meta'] | null>(null)
   const [movements, setMovements] = useState<InventoryMovement[] | null>(null)
   const [prices, setPrices] = useState<PriceHistoryEntry[]>([])
   const [error, setError] = useState<string | null>(null)
   const [attempt, setAttempt] = useState(0)
   useEffect(() => {
     let active = true
-    setError(null)
-    Promise.all([listMovements(row.listingVariantId), listPriceHistory(row.listingVariantId)])
-      .then(([loaded, history]) => { if (active) { setMovements(loaded.items); setPrices(history) } })
+    setMovements(null); setError(null)
+    const dates = { ...(range.from ? { from: range.from } : {}), ...(range.to ? { to: range.to } : {}) }
+    Promise.all([listMovements(row.listingVariantId, page, dates), listPriceHistory(row.listingVariantId, dates)])
+      .then(([loaded, history]) => { if (active) { setMovements(loaded.items); setMovementMeta(loaded.meta); setPrices(history) } })
       .catch(async cause => { const text = await readableInventoryError(cause); if (active) setError(text) })
     return () => { active = false }
-  }, [row.listingVariantId, attempt])
-  if (error) return <ErrorState message={error} onRetry={() => setAttempt(value => value + 1)} />
-  if (!movements) return <p className="text-sm text-text-secondary" role="status">Loading history…</p>
-  return <div className="grid min-w-0 gap-4 md:grid-cols-2">
-    <section className="min-w-0"><h3 className="font-semibold">Stock movements</h3>
-      {movements.length === 0 ? <p className="mt-2 text-sm text-text-secondary">No movements yet.</p>
+  }, [row.listingVariantId, page, range.from, range.to, attempt])
+  const changeDates = (next: DateFilterRange) => { setPage(1); setRange(next) }
+  return <div className="grid min-w-0 gap-5">
+    <Toolbar filters={<DateFilter title="Inventory history dates" value={range} onChange={changeDates} />} />
+    <ActiveFilters filters={range.from || range.to ? [{ key: 'dates', label: dateFilterLabel(range), onRemove: () => changeDates(ALL_DATES) }] : []} onClear={() => changeDates(ALL_DATES)} />
+    {error ? <ErrorState message={error} onRetry={() => setAttempt(value => value + 1)} /> : !movements ? <p className="text-sm text-text-secondary" role="status">Loading history…</p> : <div className="grid min-w-0 gap-6 md:grid-cols-2 md:gap-0 md:divide-x md:divide-border-default">
+    <section className="min-w-0 md:pr-6"><h3 className="font-semibold">Stock movements</h3>
+      {movements.length === 0 ? <p className="mt-2 text-sm text-text-secondary">{range.from || range.to ? 'No movements in this date range.' : 'No movements yet.'}</p>
         : <ol className="mt-2 grid gap-2 text-sm">{movements.map(movement => <li key={movement.id} className="border-t border-border-default pt-2"><span className="font-semibold">{statusLabel(movement.movementType)}</span> {Number(movement.quantityDelta) > 0 ? '+' : ''}{quantityDisplay(movement.quantityDelta)} → {quantityDisplay(movement.quantityOnHandAfter)} {row.unitCode}<br /><span className="text-text-secondary">{movement.actor} · {formatManilaDateTime(movement.recordedAt)}{movement.note ? ` · ${movement.note}` : ''}</span></li>)}</ol>}
+      {movementMeta && movementMeta.lastPage > 1 && <div className="mt-4"><Pagination page={page} lastPage={movementMeta.lastPage} total={movementMeta.total} onChange={setPage} /></div>}
     </section>
-    <section className="min-w-0"><h3 className="font-semibold">Price versions</h3>
-      <ol className="mt-2 grid gap-2 text-sm">{prices.map(price => <li key={price.priceVersionId} className="border-t border-border-default pt-2"><span className="font-semibold">v{price.version} {formatCentavos(price.amountCentavos)}</span> {price.priceKind === 'VOLUME_TIER' ? `from ${quantityDisplay(price.minimumQuantity)} ${row.unitCode}` : ''} · {price.current ? 'Current' : 'Retired'}<br /><span className="text-text-secondary">{price.createdBy ?? 'Vendor user'} · {formatManilaDateTime(price.effectiveAt)}</span></li>)}</ol>
+    <section className="min-w-0 border-t border-border-default pt-6 md:border-t-0 md:pl-6 md:pt-0"><h3 className="font-semibold">Price versions</h3>
+      {prices.length === 0 ? <p className="mt-2 text-sm text-text-secondary">{range.from || range.to ? 'No price versions in this date range.' : 'No price versions yet.'}</p> : <ol className="mt-2 grid gap-2 text-sm">{prices.map(price => <li key={price.priceVersionId} className="border-t border-border-default pt-2"><span className="font-semibold">v{price.version} {formatCentavos(price.amountCentavos)}</span> {price.priceKind === 'VOLUME_TIER' ? `from ${quantityDisplay(price.minimumQuantity)} ${row.unitCode}` : ''} · {price.current ? 'Current' : 'Retired'}<br /><span className="text-text-secondary">{price.createdBy ?? 'Vendor user'} · {formatManilaDateTime(price.effectiveAt)}</span></li>)}</ol>}
     </section>
+    </div>}
   </div>
 }
 
@@ -209,17 +216,16 @@ function ReminderSettings() {
     catch (cause) { setNotice({ tone: 'error', text: await readableInventoryError(cause) }) }
     finally { setBusy(false) }
   }
-  return <details className="rounded-surface border border-border-default bg-surface-primary p-4">
-    <summary className="min-h-11 cursor-pointer py-2 font-semibold">Reminders and auto-accept pickup date</summary>
-    <form className="mt-3 grid min-w-0 gap-4 sm:grid-cols-[minmax(0,12rem)_minmax(0,1fr)_auto] sm:items-end" onSubmit={event => void save(event)}>
+  return <div>
+    <form className="grid min-w-0 gap-4" onSubmit={event => void save(event)}>
       <Field label="Reminder time (Asia/Manila)" name="reminder_local_time" type="time" value={time} disabled={!settings.canEdit || busy} onChange={event => setTime(event.target.value)} />
       <label className="flex min-h-12 items-center gap-3 text-sm"><input type="checkbox" className="h-5 w-5 accent-action-primary" checked={email} disabled={!settings.canEdit || busy} onChange={event => setEmail(event.target.checked)} />Also email Day {settings.reminderDays.join(' and Day ')} reminders (in-app reminders are always on; no SMS)</label>
-      <div className="sm:col-span-2"><Field label="Auto-accept ready-for-pickup lead time (days)" name="auto_accept_ready_lead_days" type="number" min={0} max={30} inputMode="numeric" value={leadDays} disabled={!settings.canEdit || busy} error={leadError} onChange={event => setLeadDays(event.target.value)} hint="An auto-accepted Self-Pickup order is ready this many days after acceptance (Philippine date). Leave empty to send every Self-Pickup order to manual review. Site Delivery is never auto-accepted." /></div>
-      {settings.canEdit && <Button type="submit" disabled={busy}>{busy ? 'Saving…' : 'Save settings'}</Button>}
+      <div className="min-w-0"><Field label="Auto-accept ready-for-pickup lead time (days)" name="auto_accept_ready_lead_days" type="number" min={0} max={30} inputMode="numeric" value={leadDays} disabled={!settings.canEdit || busy} error={leadError} onChange={event => setLeadDays(event.target.value)} hint="An auto-accepted Self-Pickup order is ready this many days after acceptance (Philippine date). Leave empty to send every Self-Pickup order to manual review. Site Delivery is never auto-accepted." /></div>
+      {settings.canEdit && <Button type="submit" variant="secondary" disabled={busy}>{busy ? 'Saving…' : 'Save settings'}</Button>}
     </form>
     {!settings.canEdit && <p className="mt-2 text-sm text-text-secondary">The Owner or Store Manager sets these values.</p>}
     {notice && <div className="mt-3"><StatusMessage tone={notice.tone}>{notice.text}</StatusMessage></div>}
-  </details>
+  </div>
 }
 
 export function VendorInventoryPage() {
@@ -228,6 +234,11 @@ export function VendorInventoryPage() {
   const stock = (searchParams.get('stock') ?? '') as StockLabel | ''
   const confirmation = (searchParams.get('confirmation') ?? '') as 'DUE' | 'STALE' | ''
   const q = searchParams.get('q') ?? ''
+  const categoryId = searchParams.get('category') ?? ''
+  const [taxonomy, setTaxonomy] = useState<CatalogTaxonomy | null>(null)
+  const [remindersOpen, setRemindersOpen] = useState(false)
+  const [pauseTarget, setPauseTarget] = useState<InventoryRow | null>(null)
+  const [pausing, setPausing] = useState(false)
   const listingId = searchParams.get('listing') ?? ''
   const page = Math.max(1, Number(searchParams.get('page') ?? '1') || 1)
   const [query, setQuery] = useState(q)
@@ -242,6 +253,9 @@ export function VendorInventoryPage() {
   const [confirmOpen, setConfirmOpen] = useState(false)
   const ready = access.canView && access.active && access.canViewInventory
 
+  useEffect(() => { if (!ready) return; let active = true; void getCatalogTaxonomy().then(value => { if (active) setTaxonomy(value) }).catch(() => undefined); return () => { active = false } }, [ready])
+  useEffect(() => { setQuery(q) }, [q])
+
   const setParams = (patch: Record<string, string>) => setSearchParams(current => {
     const next = new URLSearchParams(current)
     for (const [key, value] of Object.entries(patch)) { if (value) next.set(key, value); else next.delete(key) }
@@ -253,12 +267,12 @@ export function VendorInventoryPage() {
     if (!ready) return
     let active = true
     setLoading(true); setError(null)
-    listInventory({ ...(q ? { q } : {}), ...(listingId ? { listingId } : {}), ...(stock ? { stock } : {}), ...(confirmation ? { confirmation } : {}), page })
+    listInventory({ ...(categoryId ? { categoryId } : {}), ...(q ? { q } : {}), ...(listingId ? { listingId } : {}), ...(stock ? { stock } : {}), ...(confirmation ? { confirmation } : {}), page })
       .then(result => { if (active) { setRows(result.items); setMeta(result.meta) } })
       .catch(async cause => { const text = await readableInventoryError(cause); if (active) setError(text) })
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
-  }, [ready, q, listingId, stock, confirmation, page, attempt])
+  }, [ready, q, categoryId, listingId, stock, confirmation, page, attempt])
 
   const permissions = meta?.permissions
   const counted = rows.filter(row => row.inventory !== null)
@@ -269,69 +283,101 @@ export function VendorInventoryPage() {
     finally { setConfirming(false); setConfirmOpen(false) }
   }
   function toggle(row: InventoryRow, mode: Mode) {
-    setExpanded(current => current?.key === row.listingVariantId && current.mode === mode ? null : { key: row.listingVariantId, mode })
+    setExpanded({ key: row.listingVariantId, mode })
   }
 
   const summary = meta?.summary
-  const tiles: SummaryTile[] = summary ? [
-    { key: 'variants', label: 'Variants', value: summary.variants, hint: 'Active variants of your listings' },
-    { key: 'out', label: 'Out of Stock', value: summary.outOfStock, hint: 'Nothing available to sell', tone: 'error' },
-    { key: 'limited', label: 'Limited Stock', value: summary.limitedStock, hint: 'At or below the reorder level', tone: 'warning' },
-    { key: 'due', label: 'Confirm soon', value: summary.confirmationDue, hint: 'Counted 7 to 14 days ago', tone: 'info' },
-    { key: 'stale', label: 'Not confirmed', value: summary.stale, hint: 'Over 15 days: excluded from Buyers', tone: 'error' },
-  ] : []
-  const columns: LedgerColumn<InventoryRow>[] = [
-    { key: 'product', header: 'Product / variant', cell: row => <span className="grid gap-0.5"><span className="break-words font-semibold">{variantName(row)}</span><span className="text-xs text-text-secondary">SKU {row.sku}</span>{row.listingStatus !== 'ACTIVE' && <span className="text-xs"><ListingState status={row.listingStatus} /></span>}</span> },
-    { key: 'onhand', header: 'On hand', className: 'tabular-nums', cell: row => row.inventory ? <>{quantityDisplay(row.inventory.quantityOnHand)} <span className="text-text-secondary">{row.unitCode}</span></> : <span className="text-text-secondary">No count</span> },
-    { key: 'reserved', header: 'Hard reserved', className: 'tabular-nums', cell: row => quantityDisplay(row.inventory?.hardReservedQuantity) },
-    { key: 'soft', header: 'Soft-held', className: 'tabular-nums', cell: row => quantityDisplay(row.inventory?.softHeldQuantity) },
-    { key: 'available', header: 'Available to sell', className: 'tabular-nums font-semibold', cell: row => quantityDisplay(row.inventory?.availableToSell) },
-    { key: 'reorder', header: 'Reorder level', className: 'tabular-nums', cell: row => row.inventory?.reorderLevel ? quantityDisplay(row.inventory.reorderLevel) : <span className="text-text-secondary">Not set</span> },
-    { key: 'public', header: 'Buyers see', cell: row => <StockLabelBadge label={row.publicLabel} prefix="" /> },
-    { key: 'confirmed', header: 'Stock confirmed (Asia/Manila)', cell: row => <span className="grid gap-0.5 whitespace-nowrap"><span className={`font-semibold ${row.stockConfirmation.state === 'OVERDUE' || row.stockConfirmation.state === 'NOT_CONFIRMED' ? 'text-status-error' : row.stockConfirmation.state === 'CONFIRMED' ? '' : 'text-status-warning'}`}>{confirmationText[row.stockConfirmation.state] ?? row.stockConfirmation.state}</span><span className="text-xs text-text-secondary">{formatManilaDateTime(row.stockConfirmation.confirmedAt).replace(' (Asia/Manila)', '')}</span></span> },
-    { key: 'price', header: 'Price', className: 'tabular-nums', cell: row => row.price ? <>{formatCentavos(row.price.amountCentavos)} <span className="text-xs text-text-secondary">v{row.price.version}</span></> : <span className="text-text-secondary">No price</span> },
-    { key: 'auto', header: 'Auto-accept', cell: row => <AutoAcceptState row={row} /> },
-    { key: 'actions', header: 'Actions', className: 'whitespace-nowrap', cell: row => <span className="flex flex-nowrap gap-1">
-      {(permissions?.canAdjust || permissions?.canChangePrice) && <Button variant="quiet" aria-expanded={expanded?.key === row.listingVariantId && expanded.mode === 'edit'} onClick={() => toggle(row, 'edit')} aria-label={`Edit ${variantName(row)}`}><Pencil size={16} aria-hidden="true" /> Edit</Button>}
-      {permissions?.canViewAutoAccept && <Button variant="quiet" aria-expanded={expanded?.key === row.listingVariantId && expanded.mode === 'auto'} onClick={() => toggle(row, 'auto')} aria-label={`Auto-accept for ${variantName(row)}`}><Zap size={16} aria-hidden="true" /> Auto-accept</Button>}
-      <Button variant="quiet" aria-expanded={expanded?.key === row.listingVariantId && expanded.mode === 'history'} onClick={() => toggle(row, 'history')} aria-label={`History of ${variantName(row)}`}><History size={16} aria-hidden="true" /> History</Button>
-    </span> },
+  const kpis = [
+    { label: 'Variants', value: summary?.variants, filter: '', icon: <Package size={18} />, hint: 'Active variants matching search, category and listing filters.' },
+    { label: 'In stock', value: summary ? summary.variants - summary.limitedStock - summary.outOfStock : undefined, filter: 'IN_STOCK', icon: <CheckCircle2 size={18} />, hint: 'Available quantity is above the reorder level, or no level is set.' },
+    { label: 'Limited stock', value: summary?.limitedStock, filter: 'LIMITED_STOCK', icon: <AlertTriangle size={18} />, hint: 'Available quantity is positive and at or below the reorder level.' },
+    { label: 'Out of stock', value: summary?.outOfStock, filter: 'OUT_OF_STOCK', icon: <XCircle size={18} />, hint: 'No available quantity or no recorded stock count.' },
   ]
+  const clearFilters = () => { setQuery(''); setSearchParams({}, { replace: true }) }
+  const activeFilters = [
+    ...(q ? [{ key: 'q', label: `Search: ${q}`, onRemove: () => { setQuery(''); setParams({ q: '' }) } }] : []),
+    ...(stock ? [{ key: 'stock', label: statusLabel(stock), onRemove: () => setParams({ stock: '' }) }] : []),
+    ...(confirmation ? [{ key: 'confirmation', label: confirmation === 'DUE' ? 'Confirmation due' : 'Not confirmed 15+ days', onRemove: () => setParams({ confirmation: '' }) }] : []),
+    ...(categoryId ? [{ key: 'category', label: taxonomy?.categories.find(item => item.id === categoryId)?.name ?? 'Category', onRemove: () => setParams({ category: '' }) }] : []),
+    ...(listingId ? [{ key: 'listing', label: 'Selected listing', onRemove: () => setParams({ listing: '' }) }] : []),
+  ]
+  const columns: LedgerColumn<InventoryRow>[] = [
+    { key: 'product', header: 'Product / variant', cell: row => <span className="grid gap-2"><button type="button" aria-haspopup="dialog" aria-label={`View inventory details for ${variantName(row)}`} onClick={() => toggle(row, 'details')} className="min-h-11 rounded-control text-left font-semibold hover:text-action-primary focus-visible:outline-2 focus-visible:outline-focus-ring">{variantName(row)}</button>{row.listingStatus !== 'ACTIVE' && <ListingState status={row.listingStatus} />}</span> },
+    { key: 'sku', header: 'SKU', cell: row => row.sku },
+    { key: 'public', header: 'Stock status', cell: row => <StockLabelBadge label={row.publicLabel} prefix="" /> },
+    { key: 'confirmed', header: 'Confirmation', cell: row => <span className="grid gap-2"><span>{confirmationText[row.stockConfirmation.state] ?? row.stockConfirmation.state}</span><span className="text-[13px] text-text-secondary">{formatManilaDateTime(row.stockConfirmation.confirmedAt)}</span></span> },
+    { key: 'reorder', header: 'Reorder level', cell: row => row.inventory?.reorderLevel != null ? `${quantityDisplay(row.inventory.reorderLevel)} ${row.unitCode}` : 'Not set' },
+    { key: 'auto', header: 'Auto-accept', cell: row => <div className="grid gap-2"><button type="button" role="switch" aria-checked={row.autoAccept.status === 'ACTIVE'} aria-label={`Auto-accept for ${variantName(row)}`} disabled={!permissions?.canConfigureAutoAccept} onClick={() => row.autoAccept.status === 'ACTIVE' ? setPauseTarget(row) : toggle(row, 'auto')} title={row.autoAccept.status === 'ACTIVE' ? 'Pause auto-accept' : 'Configure or resume auto-accept'} className={`inline-flex min-h-11 w-fit items-center gap-2 rounded-control px-2 disabled:opacity-60 ${row.autoAccept.status === 'ACTIVE' ? 'text-status-success' : 'text-text-secondary'}`}><span aria-hidden="true" className={`flex h-6 w-10 items-center rounded-full p-1 ${row.autoAccept.status === 'ACTIVE' ? 'justify-end bg-action-primary' : 'bg-slate-400'}`}><span className="h-4 w-4 rounded-full bg-white" /></span><span>{row.autoAccept.status === 'ACTIVE' ? 'On' : row.autoAccept.status === 'PAUSED' ? 'Paused' : 'Off'}</span></button>{row.autoAccept.status === 'ACTIVE' && <span className="text-[13px] text-text-secondary">{row.autoAccept.remainingAllotmentQuantity} left</span>}</div> },
+
+  ]
+  const selectedRow = rows.find(row => row.listingVariantId === expanded?.key)
   const lastPage = meta?.lastPage ?? 1
-  const staleItems = (meta?.staleListings.items ?? []).map(item => ({ id: item.listingId, name: item.listingName, state: item.confirmation.state, hideAt: item.confirmation.hideAt, hidden: item.listingStatus === 'TEMPORARILY_HIDDEN_STOCK_NOT_CONFIRMED' }))
+
 
   return <CatalogGate access={access} activeHref="/products">
     <div className="space-y-6">
-      <PageHeader eyebrow="Store Management" title="My Products" description="Exact stock, reorder levels, counts and Item-Based auto-accept for each variant. Only your team sees these numbers; Buyers see In Stock, Limited Stock or Out of Stock." />
+      <PageHeader eyebrow="Store Management" title="My Products" description="Monitor stock, confirmation and auto-accept for every variant." actions={<ProductActions canManage={access.canManage} primary={!expanded} />} />
       <ProductsTabs active="inventory" showInventory={access.canViewInventory} />
       {!access.canViewInventory ? <StatusMessage tone="error">Your role does not include the inventory ledger. Ask the store Owner if you need stock access.</StatusMessage> : <>
-        {meta && <StaleStockBand count={meta.staleListings.count} items={staleItems} renderAction={item => <Button variant="secondary" onClick={() => setParams({ listing: item.id, confirmation: '', stock: '' })}>Review<span className="sr-only"> {item.name}</span></Button>} />}
+        <dl aria-label="Inventory summary" className="grid grid-cols-2 gap-4 xl:grid-cols-4">{kpis.map(item => <StatCard key={item.label} label={item.label} value={loading || error ? '—' : item.value ?? '—'} icon={<span aria-hidden="true">{item.icon}</span>} hint={item.hint} active={stock === item.filter} onClick={() => setParams({ stock: item.filter })} />)}</dl>
+        <Toolbar searchFirst search={{ label: 'Search product or SKU', placeholder: 'Product or SKU', value: query, onChange: setQuery, maxLength: 120, onSubmit: event => { event.preventDefault(); setParams({ q: query.trim() }) } }} filters={<>
+          <Select label="Stock level" hideLabel value={stock} onChange={event => setParams({ stock: event.target.value })}><option value="">All stock levels</option><option value="IN_STOCK">In stock</option><option value="LIMITED_STOCK">Limited stock</option><option value="OUT_OF_STOCK">Out of stock</option></Select>
+          <Select label="Confirmation" hideLabel value={confirmation} onChange={event => setParams({ confirmation: event.target.value })}><option value="">Any confirmation</option><option value="DUE">Due</option><option value="STALE">Not confirmed 15+ days</option></Select>
+          <Select label="Category" hideLabel value={categoryId} onChange={event => setParams({ category: event.target.value })}><option value="">All categories</option>{taxonomy?.categories.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</Select>
+        </>} viewToggle={<Button variant="secondary" onClick={() => setRemindersOpen(true)}><Settings2 size={16} aria-hidden="true" />Reminders</Button>} />
+        <ActiveFilters filters={activeFilters} onClear={clearFilters} />
+        <InfoNote dismissible>Exact stock is private to your team. Buyers see In Stock, Limited Stock or Out of Stock.</InfoNote>
+        {meta && meta.staleListings.count > 0 && <details className="text-sm"><summary className="min-h-11 cursor-pointer py-3">Stock confirmation alerts</summary><StaleStockBand count={meta.staleListings.count} items={meta.staleListings.items.map(item => ({ id: item.listingId, name: item.listingName, state: item.confirmation.state, hideAt: item.confirmation.hideAt, hidden: item.listingStatus === 'TEMPORARILY_HIDDEN_STOCK_NOT_CONFIRMED' }))} renderAction={item => <Button variant="secondary" onClick={() => setParams({ listing: item.id, confirmation: '', stock: '' })}>Review<span className="sr-only"> {item.name}</span></Button>} /></details>}
         {notice && <StatusMessage tone={notice.tone}>{notice.text}</StatusMessage>}
-        {summary && <SummaryTiles label="Inventory summary" tiles={tiles} />}
-        <div className="grid gap-3 rounded-surface border border-border-default bg-surface-primary p-4">
-          <FilterChips label="Filter by what Buyers see" value={stock} disabled={loading} onChange={value => setParams({ stock: value })} chips={[{ value: '', label: 'All stock' }, { value: 'IN_STOCK', label: 'In Stock' }, { value: 'LIMITED_STOCK', label: 'Limited Stock' }, { value: 'OUT_OF_STOCK', label: 'Out of Stock' }]} />
-          <FilterChips label="Filter by stock confirmation" value={confirmation} disabled={loading} onChange={value => setParams({ confirmation: value })} chips={[{ value: '', label: 'Any confirmation' }, { value: 'DUE', label: 'Confirmation due' }, { value: 'STALE', label: 'Not confirmed 15+ days' }]} />
-          <form className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_auto]" role="search" aria-label="Search inventory" onSubmit={event => { event.preventDefault(); setParams({ q: query.trim() }) }}>
-            <Field label="Search product or SKU" name="q" value={query} onChange={event => setQuery(event.target.value)} />
-            <div className="flex flex-wrap items-end gap-2"><Button type="submit" disabled={loading}>Search</Button>{(q || stock || confirmation || listingId) && <Button variant="secondary" disabled={loading} onClick={() => { setQuery(''); setSearchParams({}, { replace: true }) }}>Clear</Button>}</div>
-          </form>
-        </div>
-        <ReminderSettings />
+        {remindersOpen && <SidePanel open title="Reminders" description="Stock reminders and auto-accept pickup date" onClose={() => setRemindersOpen(false)}><ReminderSettings /></SidePanel>}
         {loading ? <div className="grid gap-2" aria-busy="true" aria-label="Loading inventory">{[0, 1, 2, 3].map(index => <div key={index} className="h-12 animate-pulse rounded-control bg-surface-primary motion-reduce:animate-none" />)}</div>
           : error ? <ErrorState message={error} onRetry={() => setAttempt(value => value + 1)} />
-            : rows.length === 0 ? <section className="rounded-surface border border-dashed border-border-default bg-surface-primary p-8 text-center"><h2 className="text-xl font-semibold">{q || stock || confirmation || listingId ? 'No variants match these filters.' : 'No stock to track yet.'}</h2><p className="mx-auto mt-2 max-w-md text-sm text-text-secondary">{q || stock || confirmation || listingId ? 'Clear the filters to see every variant.' : 'Add a product with a counted quantity in the Listings tab; it appears here automatically.'}</p></section>
+            : rows.length === 0 ? <EmptyState message={q || stock || confirmation || listingId || categoryId ? 'No variants match these filters.' : 'No stock to track yet.'} action={<Button variant="secondary" onClick={() => { setQuery(''); setSearchParams({}, { replace: true }); setAttempt(value => value + 1) }}>Reset filters</Button>} />
               : <>
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <p className="text-sm text-text-secondary" aria-live="polite">{meta?.total ?? rows.length} variants · Page {page} of {lastPage}</p>
                   {permissions?.canAdjust && counted.length > 0 && <Button variant="secondary" onClick={() => setConfirmOpen(true)}>Confirm counts on this page</Button>}
                 </div>
-                <DenseLedgerTable caption="Inventory ledger" columns={columns} rows={rows} rowKey={row => row.listingVariantId} expandedKey={expanded?.key ?? null}
-                  renderExpanded={row => expanded?.mode === 'edit'
-                    ? <RowEditor key={row.lockVersion} row={row} canAdjust={Boolean(permissions?.canAdjust)} canPrice={Boolean(permissions?.canChangePrice)} onCancel={() => setExpanded(null)} onSaved={(saved, text) => { setRows(current => current.map(item => item.listingVariantId === saved.listingVariantId ? saved : item)); setExpanded(null); setNotice({ tone: 'success', text }) }} />
-                    : expanded?.mode === 'auto' ? <AutoAcceptEditor row={row} onChanged={next => setRows(current => current.map(item => item.listingVariantId === row.listingVariantId ? { ...item, autoAccept: next } : item))} /> : <RowHistory row={row} />} />
-                {lastPage > 1 && <nav aria-label="Inventory pages" className="flex flex-wrap items-center gap-3"><Button variant="secondary" disabled={page <= 1} onClick={() => setParams({ page: String(page - 1) })}>Previous</Button><span>Page {page} of {lastPage}</span><Button variant="secondary" disabled={page >= lastPage} onClick={() => setParams({ page: String(page + 1) })}>Next</Button></nav>}
+                <DenseLedgerTable responsive caption="Inventory ledger" columns={columns} rows={rows} rowKey={row => row.listingVariantId} onRowClick={row => toggle(row, 'details')} />
+                {lastPage > 1 && <Pagination page={page} lastPage={lastPage} total={meta?.total ?? 0} busy={loading} onChange={next => setParams({ page: String(next) })} />}
               </>}
       </>}
+      {ready && !loading && !error && selectedRow && expanded && <FormDialog open title={variantName(selectedRow)} description={`SKU: ${selectedRow.sku}`} onClose={() => setExpanded(null)} footer={null}
+        headerMedia={<CatalogProductPhoto key={selectedRow.listingId} listingId={selectedRow.listingId} />}
+        headerDetails={<dl aria-label="Product status" className="flex flex-wrap gap-x-5 gap-y-3 text-sm">
+          <div><dt className="mb-1 text-xs text-text-secondary">Stock status</dt><dd><StockLabelBadge label={selectedRow.publicLabel} prefix="" /></dd></div>
+          <div><dt className="mb-1 text-xs text-text-secondary">Listing status</dt><dd><ListingBadge status={selectedRow.listingStatus} /></dd></div>
+        </dl>}>
+        {(() => {
+          const row = selectedRow
+          return <div className="grid gap-6">
+            <div role="group" className="flex flex-wrap gap-2 border-b border-border-default pb-5" aria-label="Inventory actions">
+              <Button variant={expanded?.mode === 'details' ? 'primary' : 'secondary'} aria-pressed={expanded?.mode === 'details'} onClick={() => toggle(row, 'details')}>Stock details</Button>
+              {(permissions?.canAdjust || permissions?.canChangePrice) && <Button variant={expanded?.mode === 'edit' ? 'primary' : 'secondary'} aria-label={`Edit ${variantName(row)}`} aria-pressed={expanded?.mode === 'edit'} onClick={() => toggle(row, 'edit')}><Pencil size={16} aria-hidden="true" />Edit</Button>}
+              {permissions?.canViewAutoAccept && <Button variant={expanded?.mode === 'auto' ? 'primary' : 'secondary'} aria-label={`Auto-accept settings for ${variantName(row)}`} aria-pressed={expanded?.mode === 'auto'} onClick={() => toggle(row, 'auto')}><Zap size={16} aria-hidden="true" />Auto-accept settings</Button>}
+              <Button variant={expanded?.mode === 'history' ? 'primary' : 'secondary'} aria-label={`History of ${variantName(row)}`} aria-pressed={expanded?.mode === 'history'} onClick={() => toggle(row, 'history')}><History size={16} aria-hidden="true" />History</Button>
+            </div>
+            <dl aria-label="Inventory overview" className="grid gap-5 border-b border-border-default pb-6 text-sm sm:grid-cols-3">
+              <div><dt className="text-xs text-text-secondary">Confirmation</dt><dd className="mt-1.5 font-semibold">{confirmationText[row.stockConfirmation.state] ?? row.stockConfirmation.state}<span className="mt-1 block text-xs font-normal text-text-secondary">{formatManilaDateTime(row.stockConfirmation.confirmedAt)}</span></dd></div>
+              <div className="border-t border-border-default pt-4 sm:border-l sm:border-t-0 sm:pl-5 sm:pt-0"><dt className="text-xs text-text-secondary">Reorder level</dt><dd className="mt-1.5 font-semibold tabular-nums">{row.inventory?.reorderLevel != null ? `${quantityDisplay(row.inventory.reorderLevel)} ${row.unitCode}` : 'Not set'}</dd></div>
+              <div className="border-t border-border-default pt-4 sm:border-l sm:border-t-0 sm:pl-5 sm:pt-0"><dt className="text-xs text-text-secondary">Ordinary price</dt><dd className="mt-1.5 font-semibold tabular-nums">{row.price ? formatCentavos(row.price.amountCentavos) : 'No price'}{row.price && <span className="mt-1 block text-xs font-normal text-text-secondary">Price version {row.price.version}</span>}</dd></div>
+            </dl>
+            {expanded?.mode === 'edit'
+                    ? <RowEditor key={row.lockVersion} row={row} canAdjust={Boolean(permissions?.canAdjust)} canPrice={Boolean(permissions?.canChangePrice)} onCancel={() => toggle(row, 'details')} onSaved={(saved, text) => { setRows(current => current.map(item => item.listingVariantId === saved.listingVariantId ? saved : item)); setExpanded(null); setNotice({ tone: 'success', text }) }} />
+                    : expanded?.mode === 'auto' ? <AutoAcceptEditor row={row} onChanged={next => setRows(current => current.map(item => item.listingVariantId === row.listingVariantId ? { ...item, autoAccept: next } : item))} /> : expanded?.mode === 'details' ? <section aria-label="Stock quantities">
+                      <h3 className="text-base font-semibold">Stock quantities</h3>
+                      <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-5 lg:grid-cols-4">{[['On hand', row.inventory?.quantityOnHand], ['Hard reserved', row.inventory?.hardReservedQuantity], ['Soft-held', row.inventory?.softHeldQuantity], ['Available to sell', row.inventory?.availableToSell]].map(([label, value]) => <div key={label} className={`min-w-0 border-l-2 pl-4 ${label === 'Available to sell' ? 'border-action-primary' : 'border-border-default'}`}><dt className="text-xs text-text-secondary">{label}</dt><dd className={`mt-2 break-words text-xl font-semibold tabular-nums ${label === 'Available to sell' ? 'text-action-primary' : ''}`}>{value == null ? 'No count' : <>{quantityDisplay(value)} <span className="text-sm font-normal text-text-secondary">{row.unitCode}</span></>}</dd></div>)}</dl>
+                      <p className="mt-5 text-xs text-text-secondary">Exact stock quantities are private to your team.</p>
+                    </section> : <RowHistory row={row} />}
+          </div>
+        })()}
+      </FormDialog>}
+      <ConfirmDialog open={pauseTarget !== null} title="Pause auto-accept?" confirmLabel="Pause auto-accept" busy={pausing} onCancel={() => setPauseTarget(null)} onConfirm={() => void (async () => {
+        if (!pauseTarget) return
+        setPausing(true)
+        try { const next = await pauseAutoAccept(pauseTarget.listingVariantId, pauseTarget.autoAccept.lockVersion); setRows(current => current.map(row => row.listingVariantId === pauseTarget.listingVariantId ? { ...row, autoAccept: next.policy } : row)); setPauseTarget(null); setNotice({ tone: 'success', text: 'Auto-accept paused.' }) }
+        catch (cause) { setNotice({ tone: 'error', text: await readableInventoryError(cause) }) }
+        finally { setPausing(false) }
+      })()}><p>Future orders will wait for manual confirmation until the policy is resumed.</p></ConfirmDialog>
       <ConfirmDialog open={confirmOpen} tone="primary" title="Confirm these stock counts?" confirmLabel={`Confirm ${counted.length} count${counted.length === 1 ? '' : 's'}`} busy={confirming} onCancel={() => setConfirmOpen(false)} onConfirm={() => void confirmPage()}>
         <p>You confirm that the quantity on hand shown for {counted.length} variant{counted.length === 1 ? '' : 's'} on this page matches your physical stock. If any row changed in the meantime, nothing is confirmed.</p>
       </ConfirmDialog>

@@ -13,7 +13,7 @@ Name | Type | Description | Notes
 **mobileE164** | **String** |  |
 **password** | **String** |  |
 **passwordConfirmation** | **String** |  |
-**businessName** | **String** |  |
+**businessName** | **String** | Optional and no longer collected at registration; the Public Store Name is entered in Business Information. | [optional]
 **termsAccepted** | **bool** |  |
 **privacyAccepted** | **bool** |  |
 **botProtection** | [**VendorBotProtectionEvidence**](VendorBotProtectionEvidence.md) | Vendor checkbox or accessible email fallback evidence. | [optional]

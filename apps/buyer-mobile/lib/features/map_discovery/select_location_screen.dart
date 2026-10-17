@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../design_system/components/buyer_overlays.dart';
 import '../../design_system/motion.dart';
 import '../../design_system/components/discovery_controls.dart';
 import '../../design_system/components/procurement_components.dart';
@@ -54,7 +55,6 @@ class SelectLocationScreen extends StatefulWidget {
 }
 
 class _SelectLocationScreenState extends State<SelectLocationScreen> {
-  final _label = TextEditingController();
   final _description = TextEditingController();
   final _confirmForm = GlobalKey<FormState>();
 
@@ -78,18 +78,6 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
   GoogleMapController? _map;
   final _search = TextEditingController();
   final _searchFocus = FocusNode();
-  final _detailsKey = GlobalKey();
-  double _cardHeight = 220;
-
-  void _measureDetails() {
-    final box = _detailsKey.currentContext?.findRenderObject();
-    if (mounted &&
-        box is RenderBox &&
-        box.hasSize &&
-        (box.size.height - _cardHeight).abs() > 1) {
-      setState(() => _cardHeight = box.size.height);
-    }
-  }
 
   @override
   void initState() {
@@ -211,9 +199,7 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
     _search.dispose();
     _searchFocus.dispose();
     _map?.dispose();
-    for (final controller in [_label, _description]) {
-      controller.dispose();
-    }
+    _description.dispose();
     super.dispose();
   }
 
@@ -297,14 +283,13 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
     try {
       final saved = await widget.repository.saveLocation(
         resolutionToken: preview.resolutionToken,
-        label: _label.text.trim().isNotEmpty
-            ? _label.text.trim()
-            : displayAddress(preview.formattedAddress ?? description).substring(
-                0,
-                displayAddress(
-                  preview.formattedAddress ?? description,
-                ).length.clamp(0, 60),
-              ),
+        label: displayAddress(preview.formattedAddress ?? description)
+            .substring(
+              0,
+              displayAddress(
+                preview.formattedAddress ?? description,
+              ).length.clamp(0, 60),
+            ),
         kind: _kind,
         makePrimary: _makePrimary,
         addressLine: preview.needsManualDescription ? description : null,
@@ -330,23 +315,24 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
+    // The map keeps the same viewport even when a text field opens the keyboard.
+    resizeToAvoidBottomInset: false,
     body: SafeArea(
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final keyboard =
-              MediaQuery.viewInsetsOf(context).bottom > 0 &&
-              _searchFocus.hasFocus;
-          final maxCardHeight = constraints.maxHeight * 0.48;
-          final bottom = keyboard
-              ? 0.0
-              : _cardHeight.clamp(0.0, maxCardHeight).toDouble() + 12;
-          WidgetsBinding.instance.addPostFrameCallback(
-            (_) => _measureDetails(),
+          final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+          final keyboard = keyboardInset > 0 && _searchFocus.hasFocus;
+          // Details overlay the map; they never change its viewport or padding.
+          // Leave the native Google attribution visible below the card.
+          final cardBottom = keyboardInset + 48;
+          final availableHeight = (constraints.maxHeight - keyboardInset).clamp(
+            0.0,
+            constraints.maxHeight,
           );
           return Stack(
             children: [
               Positioned.fill(
-                child: IgnorePointer(ignoring: _saving, child: _pinMap(bottom)),
+                child: IgnorePointer(ignoring: _saving, child: _pinMap()),
               ),
               Positioned(
                 top: 12,
@@ -405,7 +391,7 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
                     if (_suggestions.isNotEmpty)
                       ConstrainedBox(
                         constraints: BoxConstraints(
-                          maxHeight: constraints.maxHeight * 0.46,
+                          maxHeight: availableHeight * 0.46,
                         ),
                         child: MapFloatingSurface(
                           radius: 12,
@@ -460,31 +446,32 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
               ),
               if (!keyboard)
                 Positioned(
-                  right: 16,
-                  bottom: bottom + 12,
-                  child: MapFloatingSurface(
-                    radius: 999,
-                    child: IconButton(
-                      tooltip: 'Use current location',
-                      onPressed: _busy || _saving ? null : _useDevice,
-                      icon: const Icon(LucideIcons.locateFixed),
-                    ),
-                  ),
-                ),
-              if (!keyboard)
-                Positioned(
                   left: 16,
                   right: 16,
-                  bottom: 12,
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(maxHeight: maxCardHeight),
-                    child: MapFloatingSurface(
-                      key: _detailsKey,
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.all(16),
-                        child: _details(),
+                  bottom: cardBottom,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: MapFloatingSurface(
+                          radius: 999,
+                          child: IconButton(
+                            tooltip: 'Use current location',
+                            onPressed: _busy || _saving ? null : _useDevice,
+                            icon: const Icon(LucideIcons.locateFixed),
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 12),
+                      MapFloatingSurface(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: _details(),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
             ],
@@ -494,9 +481,8 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
     ),
   );
 
-  Future<void> _showSaved() => showModalBottomSheet<void>(
+  Future<void> _showSaved() => showBuyerBottomSheet<void>(
     context: context,
-    showDragHandle: true,
     builder: (sheetContext) => ListView(
       shrinkWrap: true,
       children: [
@@ -518,7 +504,7 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
     ),
   );
 
-  Widget _pinMap(double bottom) {
+  Widget _pinMap() {
     if (!widget.mapsAvailable) {
       return const ColoredBox(
         color: BuyerTheme.canvas,
@@ -547,7 +533,7 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
             gestureRecognizers: {
               Factory<OneSequenceGestureRecognizer>(EagerGestureRecognizer.new),
             },
-            padding: EdgeInsets.only(top: 100, bottom: bottom + 16),
+            padding: EdgeInsets.zero,
             onCameraMoveStarted: () {
               if (_programmaticMove || _saving) return;
               _resolveSequence++;
@@ -597,8 +583,6 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
           ),
         ),
         Positioned.fill(
-          top: 100,
-          bottom: bottom + 16,
           child: const IgnorePointer(
             child: Center(
               child: Padding(
@@ -623,31 +607,58 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          'Location Details',
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+        Semantics(
+          header: true,
+          child: const Text(
+            'Location details',
+            style: TextStyle(
+              fontSize: 18,
+              height: 26 / 18,
+              fontWeight: FontWeight.w600,
+              color: BuyerTheme.ink,
+            ),
+          ),
         ),
-        const SizedBox(height: 8),
-        if (_busy) const LinearProgressIndicator(),
+        const SizedBox(height: 12),
+        if (_busy) ...[
+          const LinearProgressIndicator(),
+          const SizedBox(height: 12),
+        ],
         if (_preview?.formattedAddress != null)
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(
-                LucideIcons.mapPin,
-                color: BuyerTheme.action,
-                size: 20,
+              const Padding(
+                padding: EdgeInsets.only(top: 2),
+                child: Icon(
+                  LucideIcons.mapPin,
+                  color: BuyerTheme.action,
+                  size: 20,
+                ),
               ),
-              const SizedBox(width: 8),
-              Expanded(child: Text(_preview!.formattedAddress!)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  _preview!.formattedAddress!,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    height: 1.5,
+                    color: BuyerTheme.muted,
+                  ),
+                ),
+              ),
             ],
           )
         else if (_preview != null) ...[
           const Text(
             'Address lookup is unavailable. Describe this pinned location.',
+            style: TextStyle(
+              fontSize: 14,
+              height: 1.5,
+              color: BuyerTheme.muted,
+            ),
           ),
+          const SizedBox(height: 12),
           TextFormField(
             controller: _description,
             maxLength: 300,
@@ -663,18 +674,23 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
                 : _busy
                 ? 'Resolving selected location…'
                 : 'Search a location or move the map to choose a pin.',
-          ),
-        if (widget.requireSave && _preview != null) ...[
-          TextFormField(
-            controller: _label,
-            maxLength: 60,
-            decoration: const InputDecoration(
-              labelText: 'Location label (optional)',
+            style: const TextStyle(
+              fontSize: 14,
+              height: 1.5,
+              color: BuyerTheme.muted,
             ),
           ),
+        if (widget.requireSave && _preview != null) ...[
+          const SizedBox(height: 16),
           DropdownButtonFormField<String>(
             initialValue: _kind,
             isExpanded: true,
+            style: const TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 14,
+              height: 1.5,
+              color: BuyerTheme.ink,
+            ),
             decoration: const InputDecoration(labelText: 'Location type'),
             items: [
               for (final entry in kLocationKinds.entries)
@@ -682,26 +698,35 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
             ],
             onChanged: (value) => setState(() => _kind = value ?? 'DELIVERY'),
           ),
+          const SizedBox(height: 8),
           CheckboxListTile(
             contentPadding: EdgeInsets.zero,
-            title: const Text('Make this my primary location'),
+            controlAffinity: ListTileControlAffinity.leading,
+            dense: true,
+            visualDensity: VisualDensity.standard,
+            title: const Text(
+              'Make this my primary location',
+              style: TextStyle(fontSize: 14, height: 1.5),
+            ),
             value: _makePrimary,
             onChanged: (value) => setState(() => _makePrimary = value ?? false),
           ),
         ],
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         FilledButton(
           onPressed: _busy || _saving || _pinMoving || _preview == null
               ? null
               : _confirm,
           child: Text(_saving ? 'Saving…' : 'Choose Location'),
         ),
-        if (!widget.requireSave)
+        if (!widget.requireSave) ...[
+          const SizedBox(height: 8),
           const Text(
             'Your choice will be saved for your next visit.',
             style: TextStyle(fontSize: 12, color: BuyerTheme.muted),
             textAlign: TextAlign.center,
           ),
+        ],
       ],
     ),
   );

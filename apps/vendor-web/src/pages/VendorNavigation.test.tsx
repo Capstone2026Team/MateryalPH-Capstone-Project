@@ -5,9 +5,12 @@ import { beforeEach, expect, test, vi } from 'vitest'
 import { VendorDashboardPage, VendorWelcomePage, VendorVerificationPage, VendorSetupPage, VendorStoreProfilePage } from './PhaseThreeVendorPages'
 import { VendorEntryPage } from './VendorEntryPage'
 import * as api from '../lib/onboarding-api'
+import * as finance from '../lib/finance-api'
 import { ResponseError } from '@materyalph/api-client-ts'
 import { vendorLoginDestination } from '../lib/vendor-destination'
 
+vi.mock('../lib/dashboard-api', async original => ({ ...await original<typeof import('../lib/dashboard-api')>(), getVendorDashboardInsights: vi.fn(async () => (await import('../test/dashboard-insights-fixture')).vendorInsightsFixture()) }))
+vi.mock('../lib/finance-api', async original => ({ ...await original<typeof import('../lib/finance-api')>(), getFinanceOverview: vi.fn(), updatePhysicalPayments: vi.fn() }))
 vi.mock('../lib/onboarding-api', async original => ({ ...await original<typeof import('../lib/onboarding-api')>(), getVendorOnboarding: vi.fn(), previewVendorRequirements: vi.fn(), dismissVendorWelcome: vi.fn(), saveVendorVerificationDraft: vi.fn(), saveVendorSetupDraft: vi.fn(), submitVendorVerification: vi.fn(), completeVendorSetup: vi.fn(), getVendorPrivateFileUrl: vi.fn(), uploadVendorMedia: vi.fn(), removeVendorMedia: vi.fn(), uploadVendorDocument: vi.fn(), removePendingVendorDocument: vi.fn(), requestStoreEmailVerification: vi.fn(), confirmStoreEmailVerification: vi.fn() }))
 let snapshot: api.VendorOnboardingSnapshot
 beforeEach(() => {
@@ -22,9 +25,11 @@ beforeEach(() => {
   vi.mocked(api.submitVendorVerification).mockImplementation(async () => snapshot)
   vi.mocked(api.completeVendorSetup).mockImplementation(async () => snapshot)
   vi.mocked(api.getVendorPrivateFileUrl).mockImplementation(async fileId => ({ url: `https://example.test/private/${fileId}`, expiresAt: new Date() }))
+  vi.mocked(finance.getFinanceOverview).mockResolvedValue({ demoLabel: 'DEMO', xenditConnection: {}, taxProfile: {}, withholdingArrangement: {}, commissionTerms: {}, onlineChannels: {}, physicalPayments: { cod_enabled: false, in_store_enabled: false, lock_version: 4 }, refundCapability: {}, statements: {}, notices: [] })
+  vi.mocked(finance.updatePhysicalPayments).mockImplementation(async (lockVersion, codEnabled, inStoreEnabled) => ({ lockVersion: lockVersion + 1, codEnabled, inStoreEnabled }))
 })
 function open(path: string) {
-  return render(<MemoryRouter initialEntries={[path]}><Routes><Route path="/entry" element={<VendorEntryPage />} /><Route path="/welcome" element={<VendorWelcomePage />} /><Route path="/dashboard" element={<VendorDashboardPage />} /><Route path="/onboarding/verification" element={<VendorVerificationPage />} /><Route path="/onboarding/setup" element={<VendorSetupPage />} /><Route path="/store-profile" element={<VendorStoreProfilePage />} /><Route path="/settings" element={<h1>Personal account settings</h1>} /></Routes></MemoryRouter>)
+  return render(<MemoryRouter initialEntries={[path]}><Routes><Route path="/entry" element={<VendorEntryPage />} /><Route path="/welcome" element={<VendorWelcomePage />} /><Route path="/dashboard" element={<VendorDashboardPage />} /><Route path="/onboarding/verification" element={<VendorVerificationPage />} /><Route path="/onboarding/setup" element={<VendorSetupPage />} /><Route path="/store-profile" element={<VendorStoreProfilePage />} /><Route path="/vehicles" element={<h1>Vehicles Management</h1>} /><Route path="/settings" element={<h1>Personal account settings</h1>} /></Routes></MemoryRouter>)
 }
 
 test('onboarding is standalone without dashboard navigation', async () => {
@@ -116,8 +121,8 @@ test('failed code requests and confirmations leave the replacement unverified an
 test('activated dashboard changes sections without showing onboarding forms', async () => {
   snapshot.activation.status = 'ACTIVE'
   open('/dashboard')
-  fireEvent.click(await screen.findByRole('button', { name: 'Sales & Revenue' }))
-  expect(screen.getByText('Average order value')).toBeVisible()
+  fireEvent.click(await screen.findByRole('tab', { name: 'Sales & Revenue' }))
+  expect(await screen.findByText('Average order value')).toBeVisible()
   expect(screen.queryByText('Quality summary')).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Save verification draft' })).not.toBeInTheDocument()
 })
@@ -194,11 +199,26 @@ test('employee dashboard hides Owner finance, onboarding controls and unrelated 
   snapshot.permissions = ['catalog.manage', 'inventory.manage', 'portal.orders', 'portal.products', 'portal.notifications']
   open('/dashboard')
   expect(await screen.findByRole('heading', { name: 'Your team dashboard' })).toBeVisible()
-  expect(screen.getByText(/This store is not yet active/)).toBeVisible()
+  expect(screen.getByText(/Your store must complete onboarding and verification/)).toBeVisible()
   expect(screen.queryByRole('link', { name: 'Continue Store Setup' })).not.toBeInTheDocument()
   expect(screen.queryByRole('link', { name: 'Wallet' })).not.toBeInTheDocument()
   expect(screen.queryByRole('link', { name: 'Team Accounts' })).not.toBeInTheDocument()
   expect(screen.queryByText('Sales & Revenue')).not.toBeInTheDocument()
+})
+
+test('active Inventory Staff enter their focused workspace while the Owner retains the full dashboard', async () => {
+  snapshot.activation.status = 'ACTIVE'
+  snapshot.permissions = ['catalog.manage', 'inventory.manage', 'inventory.view', 'portal.orders', 'portal.products', 'portal.notifications']
+  const employee = open('/dashboard')
+  expect(await screen.findByRole('heading', { name: 'Your inventory dashboard' })).toBeVisible()
+  expect(await screen.findByText('In stock')).toBeVisible()
+  expect(screen.queryByRole('tab', { name: 'Performance' })).not.toBeInTheDocument()
+  expect(screen.queryByText('Store-wide order trends')).not.toBeInTheDocument()
+  employee.unmount()
+  snapshot.permissions = ['vendor.onboarding.submit', 'vendor.onboarding.manage']
+  open('/dashboard')
+  expect(await screen.findByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible()
+  expect(await screen.findByRole('tab', { name: 'Sales & Revenue' })).toBeVisible()
 })
 
 test('an unavailable API keeps entry recoverable instead of routing to login', async () => {
@@ -389,7 +409,7 @@ test('setup review requires saved edits and team setup remains optional', async 
   fireEvent.change(await screen.findByRole('textbox', { name: 'Public store name' }), { target: { value: 'Draft name' } })
   expect(screen.queryByRole('button', { name: /Commission Terms/ })).not.toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: '4 Team Accounts' }))
-  await waitFor(() => expect(screen.getByText(/Team Accounts are optional/)).toBeVisible())
+  await waitFor(() => expect(screen.getByText(/Self-Pickup Only needs no staff accounts/)).toBeVisible())
   expect(screen.queryByRole('link', { name: 'Manage Team Accounts' })).not.toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: 'Next' }))
   expect(api.saveVendorSetupDraft).toHaveBeenCalled()
@@ -819,13 +839,13 @@ test('fulfillment hides delivery for pickup and retains progressive vehicle edit
   open('/onboarding/setup')
   fireEvent.click(await screen.findByRole('button', { name: '2 Fulfillment Configuration' }))
   fireEvent.click(screen.getByRole('radio', { name: 'Yes' }))
-  fireEvent.click(screen.getByRole('radio', { name: 'Vendor Delivery' }))
+  fireEvent.click(screen.getByRole('radio', { name: 'Vendor Delivery Only' }))
   expect(screen.queryByRole('textbox', { name: 'Vehicle Name' })).not.toBeInTheDocument()
   fireEvent.change(screen.getByRole('combobox', { name: 'Vehicle Category' }), { target: { value: 'TRUCK' } })
   expect(screen.queryByRole('textbox', { name: 'Vehicle Name' })).not.toBeInTheDocument()
   fireEvent.change(screen.getByRole('combobox', { name: 'Vehicle Type' }), { target: { value: 'FLATBED_TRUCK' } })
   fireEvent.change(screen.getByRole('textbox', { name: 'Vehicle Name' }), { target: { value: 'Delivery truck' } })
-  fireEvent.click(screen.getByRole('radio', { name: 'Self-Pickup' }))
+  fireEvent.click(screen.getByRole('radio', { name: 'Self-Pickup Only' }))
   expect(screen.queryByRole('region', { name: 'Delivery Configuration' })).not.toBeInTheDocument()
   fireEvent.click(screen.getByRole('radio', { name: 'No' }))
   fireEvent.submit(document.getElementById('setup-draft')!)
@@ -834,7 +854,7 @@ test('fulfillment hides delivery for pickup and retains progressive vehicle edit
   expect(pickup).toMatchObject({ bulkCapability: false, fulfillmentMethod: 'SELF_PICKUP' })
   expect(pickup).not.toHaveProperty('delivery')
   expect(pickup).not.toHaveProperty('vehicles')
-  fireEvent.click(screen.getByRole('radio', { name: 'Both' }))
+  fireEvent.click(screen.getByRole('radio', { name: 'Both (Self-Pickup & Vendor Delivery)' }))
   expect(screen.getByRole('textbox', { name: 'Vehicle Name' })).toHaveValue('Delivery truck')
   expect(screen.queryByLabelText('Delivery radius (km)')).not.toBeInTheDocument()
   expect(screen.queryByLabelText('Vehicle maximum distance (km)')).not.toBeInTheDocument()
@@ -868,7 +888,7 @@ test('Finish Later saves and restores an unfinished vehicle and failed dashboard
   })
   open('/onboarding/setup')
   fireEvent.click(await screen.findByRole('button', { name: '2 Fulfillment Configuration' }))
-  fireEvent.click(screen.getByRole('radio', { name: 'Vendor Delivery' }))
+  fireEvent.click(screen.getByRole('radio', { name: 'Vendor Delivery Only' }))
   fireEvent.change(screen.getByRole('combobox', { name: 'Vehicle Category' }), { target: { value: 'TRUCK' } })
   fireEvent.change(screen.getByRole('combobox', { name: 'Vehicle Type' }), { target: { value: 'FLATBED_TRUCK' } })
   fireEvent.change(screen.getByRole('textbox', { name: 'Vehicle Name' }), { target: { value: 'Unfinished truck' } })
@@ -892,21 +912,80 @@ test('Store Profile combines business evidence, removes duplicate tabs and persi
   snapshot.verification = { status: 'APPROVED', documents: [{ requirement_key: 'lgu_permit', file_id: 'file-1', original_name: 'permit.pdf', version: 1, review: { expiration_kind: 'DATE', verified_expiration_date: '2027-12-31', remarks: 'Verified by Admin' } }], address: { street: 'Example street', city_municipality: 'Quezon City', postal_code: '1100' } }
   snapshot.sections = { STORE_VERIFICATION: { key: 'STORE_VERIFICATION', label: 'Verification', status: 'APPROVED', complete: 1, total: 1, progress: { complete: 1, total: 1 }, steps: [{ id: 'permit', key: 'lgu_permit', label: 'LGU permit', level: 'REQUIRED', status: 'APPROVED', lockVersion: 1 }] } }
   snapshot.setup = { status: 'COMPLETED', vacation_mode: false }
-  vi.mocked(api.saveVendorSetupDraft).mockImplementation(async () => ({ ...snapshot, setup: { ...snapshot.setup, vacation_mode: true } }))
+  vi.mocked(api.saveVendorSetupDraft).mockImplementation(async draft => ({ ...snapshot, setup: { ...snapshot.setup, vacation_mode: draft.vacationMode === true, vacation_status: draft.vacationMode ? 'ACTIVE' : 'OFF', vacation_starts_on: draft.vacationStartsOn ?? null, vacation_ends_on: draft.vacationEndsOn ?? null } }))
   open('/store-profile')
   await screen.findByRole('heading', { name: 'Sample Supply' })
   expect(screen.queryByRole('button', { name: 'Primary Contact' })).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Documents' })).not.toBeInTheDocument()
-  fireEvent.click(screen.getByRole('button', { name: 'Business Information' }))
+  fireEvent.click(screen.getByRole('tab', { name: 'Business Information' }))
   expect(screen.getByRole('complementary', { name: 'Business documents' })).toBeVisible()
   expect(screen.getByText('2027-12-31')).toBeVisible()
   expect(screen.getByRole('button', { name: 'View document' })).toBeVisible()
-  fireEvent.click(screen.getByRole('button', { name: 'Store Location' }))
+  fireEvent.click(screen.getByRole('tab', { name: 'Store Location' }))
   expect(screen.getByText('No registered map pin is available. Update your registered address in Business Information.')).toBeVisible()
-  fireEvent.click(screen.getByRole('button', { name: 'Vacation Mode' }))
+  fireEvent.click(screen.getByRole('tab', { name: 'Vacation Mode' }))
   fireEvent.click(screen.getByRole('button', { name: 'Turn on Vacation Mode' }))
-  await waitFor(() => expect(api.saveVendorSetupDraft).toHaveBeenCalledWith({ organizationLockVersion: 7, vacationMode: true }))
+  const dialog = within(screen.getByRole('dialog', { name: 'Set up Vacation Mode' }))
+  fireEvent.click(dialog.getByRole('button', { name: 'Turn on Vacation Mode' }))
+  expect(dialog.getByText('Choose the first day of Vacation Mode.')).toBeVisible()
+  expect(dialog.getByText('Choose the last day of Vacation Mode.')).toBeVisible()
+  expect(api.saveVendorSetupDraft).not.toHaveBeenCalled()
+  fireEvent.change(dialog.getByLabelText(/First day/), { target: { value: '2099-01-12' } })
+  fireEvent.change(dialog.getByLabelText(/Last day/), { target: { value: '2099-01-10' } })
+  fireEvent.click(dialog.getByRole('button', { name: 'Turn on Vacation Mode' }))
+  expect(dialog.getByText('The end date must be on or after the start date.')).toBeVisible()
+  expect(api.saveVendorSetupDraft).not.toHaveBeenCalled()
+  fireEvent.change(dialog.getByLabelText(/Last day/), { target: { value: '2099-01-14' } })
+  fireEvent.click(dialog.getByRole('button', { name: 'Turn on Vacation Mode' }))
+  await waitFor(() => expect(api.saveVendorSetupDraft).toHaveBeenCalledWith({ organizationLockVersion: 7, vacationMode: true, vacationStartsOn: '2099-01-12', vacationEndsOn: '2099-01-14' }))
   expect(await screen.findByRole('button', { name: 'Turn off Vacation Mode' })).toBeVisible()
+  expect(screen.getByText('On until January 14, 2099')).toBeVisible()
+  expect(screen.getByText('January 12, 2099')).toBeVisible()
+})
+
+test('a scheduled Vacation Mode can be cancelled and a past start date is refused', async () => {
+  snapshot.activation.status = 'ACTIVE'
+  snapshot.organization = { store_name: 'Sample Supply', lock_version: 7 }
+  snapshot.setup = { status: 'COMPLETED', vacation_mode: false, vacation_status: 'SCHEDULED', vacation_starts_on: '2099-01-12', vacation_ends_on: '2099-01-14' }
+  vi.mocked(api.saveVendorSetupDraft).mockImplementation(async () => ({ ...snapshot, setup: { status: 'COMPLETED', vacation_mode: false, vacation_status: 'OFF', vacation_starts_on: null, vacation_ends_on: null } }))
+  open('/store-profile')
+  fireEvent.click(await screen.findByRole('tab', { name: 'Vacation Mode' }))
+  expect(screen.getByText('Scheduled')).toBeVisible()
+  fireEvent.click(screen.getByRole('button', { name: 'Edit dates' }))
+  const dialog = within(screen.getByRole('dialog', { name: 'Edit Vacation Mode dates' }))
+  expect(dialog.getByLabelText(/First day/)).toHaveValue('2099-01-12')
+  fireEvent.change(dialog.getByLabelText(/First day/), { target: { value: '2020-01-01' } })
+  fireEvent.click(dialog.getByRole('button', { name: 'Save dates' }))
+  expect(dialog.getByText('The start date cannot be in the past.')).toBeVisible()
+  expect(api.saveVendorSetupDraft).not.toHaveBeenCalled()
+  fireEvent.click(dialog.getByRole('button', { name: 'Cancel' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel Vacation Mode' }))
+  await waitFor(() => expect(api.saveVendorSetupDraft).toHaveBeenCalledWith({ organizationLockVersion: 7, vacationMode: false }))
+  expect(await screen.findByRole('button', { name: 'Turn on Vacation Mode' })).toBeVisible()
+})
+
+test('Store Hours show a read-only week and are edited in a pop-up', async () => {
+  snapshot.activation.status = 'ACTIVE'
+  snapshot.organization = { store_name: 'Sample Supply', lock_version: 7 }
+  snapshot.setup = { status: 'COMPLETED', operating_schedule: Array.from({ length: 7 }, (_, index) => ({ day_of_week: index + 1, status: index === 6 ? 'CLOSED' : 'OPEN', opens_at: index === 6 ? null : '08:00', closes_at: index === 6 ? null : '17:00' })) }
+  open('/store-profile')
+  fireEvent.click(await screen.findByRole('tab', { name: 'Operating Hours' }))
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  expect(screen.queryByRole('combobox', { name: 'Monday status' })).not.toBeInTheDocument()
+  const hours = within(screen.getByRole('region', { name: 'Store Hours' }))
+  expect(hours.getAllByText('8:00 AM – 5:00 PM')).toHaveLength(6)
+  expect(hours.getByText('Closed')).toBeVisible()
+  fireEvent.click(screen.getByRole('button', { name: 'Edit Store Hours' }))
+  const dialog = within(screen.getByRole('dialog', { name: 'Edit Store Hours' }))
+  fireEvent.change(dialog.getByLabelText('Monday closing time'), { target: { value: '06:00' } })
+  fireEvent.click(dialog.getByRole('button', { name: 'Save Store Hours' }))
+  expect(dialog.getByText('Enter an opening time and a later closing time.')).toBeVisible()
+  expect(api.saveVendorSetupDraft).not.toHaveBeenCalled()
+  fireEvent.change(dialog.getByLabelText('Monday closing time'), { target: { value: '18:00' } })
+  fireEvent.click(dialog.getByRole('button', { name: 'Save Store Hours' }))
+  await waitFor(() => expect(api.saveVendorSetupDraft).toHaveBeenCalledWith(expect.objectContaining({ organizationLockVersion: 7, operatingSchedule: expect.arrayContaining([{ dayOfWeek: 1, status: 'OPEN', opensAt: '08:00', closesAt: '18:00' }, { dayOfWeek: 7, status: 'CLOSED', opensAt: null, closesAt: null }]) })))
+  expect(await screen.findByText('Store Hours saved to your public Store Profile.')).toBeVisible()
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 })
 
 test('Store Profile edits fulfillment directly and saves before switching sections', async () => {
@@ -914,32 +993,129 @@ test('Store Profile edits fulfillment directly and saves before switching sectio
   snapshot.organization = { store_name: 'Sample Supply', lock_version: 7 }
   snapshot.setup = { status: 'COMPLETED', profile: { bulk_capability: false, fulfillment_method: 'SELF_PICKUP' } }
   open('/store-profile')
-  fireEvent.click(await screen.findByRole('button', { name: 'Fulfillment Configuration' }))
+  fireEvent.click(await screen.findByRole('tab', { name: 'Fulfillment Configuration' }))
   expect(screen.queryByRole('link', { name: 'Update fulfillment configuration' })).not.toBeInTheDocument()
   expect(screen.getByRole('radio', { name: 'No' })).toBeChecked()
   fireEvent.click(screen.getByRole('radio', { name: 'Yes' }))
-  fireEvent.click(screen.getByRole('radio', { name: 'Both' }))
-  fireEvent.change(screen.getByRole('textbox', { name: 'Coverage notes' }), { target: { value: 'Quezon City service area' } })
-  fireEvent.click(screen.getByRole('button', { name: 'Vehicles Management' }))
-  await waitFor(() => expect(api.saveVendorSetupDraft).toHaveBeenCalledWith(expect.objectContaining({ organizationLockVersion: 7, bulkCapability: true, fulfillmentMethod: 'BOTH', delivery: { coverageNotes: 'Quezon City service area' } })))
-  expect(await screen.findByRole('heading', { name: 'Registered vehicles' })).toBeVisible()
+  fireEvent.click(screen.getByRole('radio', { name: 'Both (Self-Pickup & Vendor Delivery)' }))
+  expect(screen.queryByText('Service coverage')).not.toBeInTheDocument()
+  expect(screen.queryByRole('textbox', { name: 'Coverage notes' })).not.toBeInTheDocument()
+  fireEvent.click(screen.getByRole('tab', { name: 'Store Information' }))
+  await waitFor(() => expect(api.saveVendorSetupDraft).toHaveBeenCalledWith(expect.objectContaining({ organizationLockVersion: 7, bulkCapability: true, fulfillmentMethod: 'BOTH' })))
+  expect(await screen.findByRole('heading', { name: 'Public store information' })).toBeVisible()
 })
 
-test('Store Profile vehicle edits stay in place on save failure and can be retried', async () => {
+async function openFulfillmentPayments(method = 'SELF_PICKUP') {
+  snapshot.activation.status = 'ACTIVE'
+  snapshot.permissions.push('payments.configure')
+  snapshot.setup = { status: 'COMPLETED', profile: { bulk_capability: false, fulfillment_method: method } }
+  open('/store-profile')
+  fireEvent.click(await screen.findByRole('tab', { name: 'Fulfillment Configuration' }))
+  await waitFor(() => expect(screen.getByRole('radio', { name: 'Both (Self-Pickup & Vendor Delivery)' })).toBeEnabled())
+  return {
+    cod: screen.getByRole('checkbox', { name: /Accept Cash on Delivery/ }),
+    inStore: screen.getByRole('checkbox', { name: /Accept In-Store Payment/ }),
+  }
+}
+
+test('physical payments follow fulfillment selection and cannot be manually checked or unchecked', async () => {
+  const { cod, inStore } = await openFulfillmentPayments()
+  expect(cod).not.toBeChecked()
+  expect(inStore).toBeChecked()
+  expect(cod).toBeDisabled()
+  expect(inStore).toBeDisabled()
+  cod.click()
+  inStore.click()
+  expect(cod).not.toBeChecked()
+  expect(inStore).toBeChecked()
+  fireEvent.click(screen.getByRole('radio', { name: 'Vendor Delivery Only' }))
+  expect(cod).toBeChecked()
+  expect(inStore).not.toBeChecked()
+  cod.click()
+  inStore.click()
+  expect(cod).toBeChecked()
+  expect(inStore).not.toBeChecked()
+  fireEvent.click(screen.getByRole('radio', { name: 'Both (Self-Pickup & Vendor Delivery)' }))
+  expect(cod).toBeChecked()
+  expect(inStore).toBeChecked()
+  fireEvent.click(screen.getByRole('radio', { name: 'Self-Pickup Only' }))
+  expect(cod).not.toBeChecked()
+  expect(inStore).toBeChecked()
+  fireEvent.click(screen.getByRole('radio', { name: 'Both (Self-Pickup & Vendor Delivery)' }))
+  fireEvent.click(screen.getByRole('tab', { name: 'Store Information' }))
+  await waitFor(() => expect(finance.updatePhysicalPayments).toHaveBeenCalledWith(4, true, true))
+  expect(api.saveVendorSetupDraft).toHaveBeenCalledWith(expect.objectContaining({ fulfillmentMethod: 'BOTH' }))
+  expect(await screen.findByRole('heading', { name: 'Public store information' })).toBeVisible()
+})
+
+test('automatic physical payment selections save using the returned version', async () => {
+  const { cod, inStore } = await openFulfillmentPayments('BOTH')
+  expect(cod).toBeChecked()
+  expect(inStore).toBeChecked()
+  expect(screen.getByRole('button', { name: 'Save fulfillment configuration' })).toBeEnabled()
+  fireEvent.click(screen.getByRole('button', { name: 'Save fulfillment configuration' }))
+  await screen.findByText('Fulfillment configuration saved. Changes apply to future procurement.')
+  expect(finance.updatePhysicalPayments).toHaveBeenCalledWith(4, true, true)
+  expect(api.saveVendorSetupDraft).not.toHaveBeenCalled()
+  expect(screen.getByRole('button', { name: 'Save fulfillment configuration' })).toBeDisabled()
+  fireEvent.click(screen.getByRole('radio', { name: 'Vendor Delivery Only' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Save fulfillment configuration' }))
+  await waitFor(() => expect(finance.updatePhysicalPayments).toHaveBeenCalledWith(5, true, false))
+})
+
+test('failed payment update keeps fulfillment open and retries only the unsaved payment preferences', async () => {
+  vi.mocked(finance.updatePhysicalPayments).mockRejectedValueOnce(new Error('Payment settings unavailable'))
+  const { cod, inStore } = await openFulfillmentPayments()
+  fireEvent.click(screen.getByRole('radio', { name: 'Both (Self-Pickup & Vendor Delivery)' }))
+  fireEvent.click(screen.getByRole('tab', { name: 'Store Information' }))
+  expect(await screen.findByText(/Fulfillment saved, but physical payment options were not saved/)).toBeVisible()
+  expect(cod).toBeChecked()
+  expect(inStore).toBeChecked()
+  expect(screen.queryByRole('heading', { name: 'Public store information' })).not.toBeInTheDocument()
+  expect(api.saveVendorSetupDraft).toHaveBeenCalledTimes(1)
+  fireEvent.click(screen.getByRole('tab', { name: 'Store Information' }))
+  expect(await screen.findByRole('heading', { name: 'Public store information' })).toBeVisible()
+  expect(api.saveVendorSetupDraft).toHaveBeenCalledTimes(1)
+  expect(finance.updatePhysicalPayments).toHaveBeenCalledTimes(2)
+})
+
+test('fulfillment payment preferences load with retry and remain disabled until the read succeeds', async () => {
+  vi.mocked(finance.getFinanceOverview).mockRejectedValueOnce(new Error('Payment settings unavailable'))
+  snapshot.activation.status = 'ACTIVE'
+  snapshot.permissions.push('payments.configure')
+  snapshot.setup = { status: 'COMPLETED', profile: { bulk_capability: false, fulfillment_method: 'SELF_PICKUP' } }
+  open('/store-profile')
+  fireEvent.click(await screen.findByRole('tab', { name: 'Fulfillment Configuration' }))
+  const retry = await screen.findByRole('button', { name: 'Retry loading payment options' })
+  expect(screen.getByRole('radio', { name: 'Both (Self-Pickup & Vendor Delivery)' })).toBeDisabled()
+  expect(screen.getByRole('checkbox', { name: /Accept Cash on Delivery/ })).toBeDisabled()
+  expect(finance.updatePhysicalPayments).not.toHaveBeenCalled()
+  fireEvent.click(retry)
+  await waitFor(() => expect(screen.getByRole('radio', { name: 'Both (Self-Pickup & Vendor Delivery)' })).toBeEnabled())
+  expect(finance.getFinanceOverview).toHaveBeenCalledTimes(2)
+})
+
+test('fulfillment avoids Owner payment reads and controls without payments.configure', async () => {
+  snapshot.activation.status = 'ACTIVE'
+  snapshot.setup = { status: 'COMPLETED', profile: { bulk_capability: false, fulfillment_method: 'SELF_PICKUP' } }
+  open('/store-profile')
+  fireEvent.click(await screen.findByRole('tab', { name: 'Fulfillment Configuration' }))
+  expect(screen.queryByRole('checkbox', { name: /Accept Cash on Delivery/ })).not.toBeInTheDocument()
+  expect(finance.getFinanceOverview).not.toHaveBeenCalled()
+})
+
+test('Store Profile reaches the dedicated vehicle workspace without duplicating its editor', async () => {
   snapshot.activation.status = 'ACTIVE'
   snapshot.organization = { store_name: 'Sample Supply', lock_version: 7 }
-  snapshot.setup = { status: 'COMPLETED', profile: { fulfillment_method: 'VENDOR_DELIVERY' }, vehicles: [{ id: 'vehicle-1', vehicle_category: 'TRUCK', vehicle_type: 'FLATBED_TRUCK', name: 'Old truck', capacity_kg: 1000, number_available: 1, cargo_length_m: 3, cargo_width_m: 2, cargo_height_m: 2, heavy_classification: 'HEAVY', base_fee_centavos: 50000, per_km_centavos: 2500, image_file_id: 'image-1', active: true }] }
-  vi.mocked(api.saveVendorSetupDraft).mockRejectedValueOnce(new Error('Offline'))
+  snapshot.permissions.push('portal.vehicles', 'vehicles.manage')
+  snapshot.setup = { status: 'COMPLETED', profile: { fulfillment_method: 'VENDOR_DELIVERY' } }
   open('/store-profile')
-  fireEvent.click(await screen.findByRole('button', { name: 'Vehicles Management' }))
-  expect(screen.queryByRole('link', { name: 'Update vehicle configuration' })).not.toBeInTheDocument()
-  fireEvent.change(screen.getByRole('textbox', { name: 'Vehicle Name' }), { target: { value: 'Updated truck' } })
-  fireEvent.click(screen.getByRole('button', { name: 'Save vehicles' }))
-  expect(await screen.findByText('Offline')).toBeVisible()
-  expect(screen.getByRole('textbox', { name: 'Vehicle Name' })).toHaveValue('Updated truck')
-  fireEvent.click(screen.getByRole('button', { name: 'Save vehicles' }))
-  await waitFor(() => expect(api.saveVendorSetupDraft).toHaveBeenCalledTimes(2))
-  expect(vi.mocked(api.saveVendorSetupDraft).mock.calls[1]?.[0]).toMatchObject({ organizationLockVersion: 7, vehicles: [expect.objectContaining({ id: 'vehicle-1', name: 'Updated truck', baseFeeCentavos: 50000, perKmCentavos: 2500 })] })
+  await screen.findByRole('heading', { name: 'Sample Supply', level: 1 })
+  expect(screen.queryByRole('tab', { name: 'Vehicles Management' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('textbox', { name: 'Vehicle Name' })).not.toBeInTheDocument()
+  fireEvent.click(screen.getByRole('link', { name: 'Vehicles' }))
+  expect(await screen.findByRole('heading', { name: 'Vehicles Management' })).toBeVisible()
+  expect(api.saveVendorSetupDraft).not.toHaveBeenCalled()
 })
 
 
@@ -948,14 +1124,14 @@ test('business updates unlock approved fields and save before changing profile s
   snapshot.organization = { store_name: 'Sample Supply', lock_version: 2, business_type: 'CORPORATION' }
   snapshot.verification = { status: 'APPROVED' }
   open('/store-profile')
-  fireEvent.click(await screen.findByRole('button', { name: 'Business Information' }))
+  fireEvent.click(await screen.findByRole('tab', { name: 'Business Information' }))
   fireEvent.click(screen.getByRole('button', { name: 'Update information or documents' }))
   const name = await screen.findByRole('textbox', { name: 'Public Store Name' })
   expect(name).not.toBeDisabled()
   fireEvent.change(name, { target: { value: 'Updated Supply' } })
   let finishSave: ((value: api.VendorOnboardingSnapshot) => void) | undefined
   vi.mocked(api.saveVendorVerificationDraft).mockImplementation(() => new Promise(resolve => { finishSave = resolve }))
-  fireEvent.click(screen.getByRole('button', { name: 'Store Location' }))
+  fireEvent.click(screen.getByRole('tab', { name: 'Store Location' }))
   await waitFor(() => expect(api.saveVendorVerificationDraft).toHaveBeenCalled())
   expect(screen.queryByRole('heading', { name: 'Store location' })).not.toBeInTheDocument()
   finishSave?.(snapshot)

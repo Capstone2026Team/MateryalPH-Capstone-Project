@@ -12,6 +12,14 @@ interface ComplianceTextExtractor
 {
     public function provider(): string;
 
-    /** @return array{status: string, confidence: ?float, suggestions: array<string, string>} */
-    public function extract(string $path, string $contentType): array;
+    public function available(): bool;
+
+    /**
+     * Candidates are look-alike readings of the marking number for the register
+     * lookup to confirm; they are never shown as facts.
+     *
+     * @param  ?string  $markingType  PS_MARK or ICC_STICKER when the Vendor already chose it.
+     * @return array{status: string, confidence: ?float, suggestions: array<string, string>, candidates: list<string>}
+     */
+    public function extract(string $path, string $contentType, ?string $markingType = null): array;
 }

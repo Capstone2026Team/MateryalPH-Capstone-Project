@@ -3,8 +3,9 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:materyalph_api_client/src/model/project_material.dart';
+import 'package:materyalph_api_client/src/model/project_material_unit.dart';
 import 'package:built_collection/built_collection.dart';
-import 'package:built_value/json_object.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -14,10 +15,15 @@ part 'project_material_page.g.dart';
 ///
 /// Properties:
 /// * [items]
+/// * [units] - Every normalized unit, for an unlisted material.
 @BuiltValue()
 abstract class ProjectMaterialPage implements Built<ProjectMaterialPage, ProjectMaterialPageBuilder> {
   @BuiltValueField(wireName: r'items')
-  BuiltList<BuiltMap<String, JsonObject?>> get items;
+  BuiltList<ProjectMaterial> get items;
+
+  /// Every normalized unit, for an unlisted material.
+  @BuiltValueField(wireName: r'units')
+  BuiltList<ProjectMaterialUnit> get units;
 
   ProjectMaterialPage._();
 
@@ -45,7 +51,12 @@ class _$ProjectMaterialPageSerializer implements PrimitiveSerializer<ProjectMate
     yield r'items';
     yield serializers.serialize(
       object.items,
-      specifiedType: const FullType(BuiltList, [FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)])]),
+      specifiedType: const FullType(BuiltList, [FullType(ProjectMaterial)]),
+    );
+    yield r'units';
+    yield serializers.serialize(
+      object.units,
+      specifiedType: const FullType(BuiltList, [FullType(ProjectMaterialUnit)]),
     );
   }
 
@@ -73,9 +84,16 @@ class _$ProjectMaterialPageSerializer implements PrimitiveSerializer<ProjectMate
         case r'items':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(BuiltList, [FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)])]),
-          ) as BuiltList<BuiltMap<String, JsonObject?>>;
+            specifiedType: const FullType(BuiltList, [FullType(ProjectMaterial)]),
+          ) as BuiltList<ProjectMaterial>;
           result.items.replace(valueDes);
+          break;
+        case r'units':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(BuiltList, [FullType(ProjectMaterialUnit)]),
+          ) as BuiltList<ProjectMaterialUnit>;
+          result.units.replace(valueDes);
           break;
         default:
           unhandled.add(key);

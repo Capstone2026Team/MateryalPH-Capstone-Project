@@ -9,27 +9,42 @@ export 'payment_models.dart';
 /// Immutable Buyer order view models. Order, payment, fulfillment, refund and dispute stay separate
 /// fields; money is integer centavos; deadlines are UTC instants shown in Asia/Manila.
 
+const _months = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
+
 /// The exact Asia/Manila date and time of an instant, with the year: "Oct 5, 2026, 9:45 AM PHT".
 /// Asia/Manila has no daylight saving, so the fixed UTC+8 offset is exact.
 String formatManilaDateTime(DateTime instant) {
   final manila = instant.toUtc().add(const Duration(hours: 8));
-  const months = [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
-  ];
   final hour = manila.hour % 12 == 0 ? 12 : manila.hour % 12;
   final minute = manila.minute.toString().padLeft(2, '0');
-  return '${months[manila.month - 1]} ${manila.day}, ${manila.year}, $hour:$minute ${manila.hour < 12 ? 'AM' : 'PM'} PHT';
+  return '${_months[manila.month - 1]} ${manila.day}, ${manila.year}, $hour:$minute ${manila.hour < 12 ? 'AM' : 'PM'} PHT';
+}
+
+/// The Asia/Manila calendar date of an instant: "Oct 5, 2026".
+String formatManilaDate(DateTime instant) {
+  final manila = instant.toUtc().add(const Duration(hours: 8));
+  return '${_months[manila.month - 1]} ${manila.day}, ${manila.year}';
+}
+
+/// A Philippine calendar date sent as YYYY-MM-DD, shown as "Oct 7, 2026"; anything else as sent.
+String formatCalendarDate(String date) {
+  final match = RegExp(r'^(\d{4})-(\d{2})-(\d{2})').firstMatch(date);
+  final month = match == null ? 0 : int.parse(match[2]!);
+  if (month < 1 || month > 12) return date;
+  return '${_months[month - 1]} ${int.parse(match![3]!)}, ${match[1]}';
 }
 
 @immutable
@@ -151,6 +166,15 @@ class OrderSummaryView {
     required this.nextAction,
     required this.autoAccepted,
     this.paymentRetryable = false,
+    this.procurementType = 'ITEM_BASED',
+    this.paymentMethod = 'ONLINE',
+    this.paymentChannelName,
+    this.expectedFulfillmentDate,
+    this.fulfillmentConversation,
+    this.cardActions = const {},
+    this.returnRefundDueAt,
+    this.disputeCaseId,
+    this.closureReason,
   });
 
   final String id;
@@ -166,13 +190,70 @@ class OrderSummaryView {
   final bool deliveryPending;
   final OrderDeadlineView? deadline;
 
-  /// REVIEW_REVISION, REVIEW_NRPC, PAY or null.
+  /// REVIEW_REVISION, REVIEW_NRPC, PAY, CONFIRM_RECEIPT or null.
   final String? nextAction;
   final bool paymentRetryable;
   final bool autoAccepted;
 
+  /// ITEM_BASED or PROJECT_BASED.
+  final String procurementType;
+
+  /// ONLINE, CASH_ON_DELIVERY or IN_STORE.
+  final String paymentMethod;
+
+  /// Channel of the latest verified online payment, for example GCash.
+  final String? paymentChannelName;
+
+  /// Philippine calendar date (YYYY-MM-DD) the Vendor expects to be ready or to deliver.
+  final String? expectedFulfillmentDate;
+
+  /// The order's Fulfillment Messages thread; null only for orders submitted before threads
+  /// opened at submission.
+  final OrderConversationRefView? fulfillmentConversation;
+
+  /// Server-allowed card shortcuts: CONFIRM_RECEIPT, REPORT_PROBLEM, FILE_DISPUTE, VIEW_DISPUTE,
+  /// BUY_AGAIN, VIEW_CANCELLATION.
+  final Set<String> cardActions;
+
+  /// End of the post-completion return and dispute window while FILE_DISPUTE is offered.
+  final DateTime? returnRefundDueAt;
+  final String? disputeCaseId;
+
+  /// Why a cancelled, declined or expired order ended, in Buyer-facing words.
+  final String? closureReason;
+
   String state(String family) =>
       states.firstWhere((row) => row.family == family).state;
+}
+
+@immutable
+class OrderConversationRefView {
+  const OrderConversationRefView({
+    required this.id,
+    required this.readOnly,
+    this.unreadCount = 0,
+  });
+
+  final String id;
+  final bool readOnly;
+  final int unreadCount;
+}
+
+@immutable
+class BuyAgainSkippedView {
+  const BuyAgainSkippedView({required this.displayName, required this.message});
+
+  final String displayName;
+  final String message;
+}
+
+@immutable
+class BuyAgainResultView {
+  const BuyAgainResultView({required this.added, required this.skipped});
+
+  /// Display names of the lines added to the cart at today's prices.
+  final List<String> added;
+  final List<BuyAgainSkippedView> skipped;
 }
 
 @immutable
@@ -285,6 +366,7 @@ class ConfirmedDeliveryView {
     required this.finalFeeCentavos,
     this.fulfillmentDate,
     this.arrangement,
+    this.changeReason,
     this.intended,
     this.alternateDropOff,
   });
@@ -295,14 +377,30 @@ class ConfirmedDeliveryView {
   final int finalFeeCentavos;
   final String? fulfillmentDate;
   final String? arrangement;
+  final String? changeReason;
   final OrderPointView? intended;
   final OrderPointView? alternateDropOff;
+}
+
+@immutable
+class VendorDiscountView {
+  const VendorDiscountView({
+    required this.scope,
+    required this.percent,
+    required this.basisCentavos,
+    required this.deductionCentavos,
+  });
+  final String scope;
+  final String percent;
+  final int basisCentavos;
+  final int deductionCentavos;
 }
 
 @immutable
 class MoneyView {
   const MoneyView({
     required this.status,
+    this.discount,
     required this.materialsGrossCentavos,
     required this.vendorDiscountCentavos,
     required this.materialsSubtotalCentavos,
@@ -323,6 +421,7 @@ class MoneyView {
 
   /// ADVISORY_UNTIL_VENDOR_CONFIRMATION, AWAITING_BUYER_ACCEPTANCE or ACCEPTED.
   final String status;
+  final VendorDiscountView? discount;
   final int materialsGrossCentavos;
   final int vendorDiscountCentavos;
   final int materialsSubtotalCentavos;
@@ -450,6 +549,7 @@ class OrderDetailView {
     required this.autoAccepted,
     this.destination,
     this.confirmedDelivery,
+    this.deliveryRecommendation = const [],
     this.nrpc,
     this.vendorResponseDueAt,
     this.buyerResponseDueAt,
@@ -463,6 +563,8 @@ class OrderDetailView {
     this.fulfillment,
     this.cancellation,
     this.refundTimeline,
+    this.dispute,
+    this.invoice,
   });
 
   final String id;
@@ -482,6 +584,7 @@ class OrderDetailView {
   final bool autoAccepted;
   final OrderDestinationView? destination;
   final ConfirmedDeliveryView? confirmedDelivery;
+  final List<String> deliveryRecommendation;
   final NrpcView? nrpc;
   final DateTime? vendorResponseDueAt;
   final DateTime? buyerResponseDueAt;
@@ -499,6 +602,12 @@ class OrderDetailView {
   final FulfillmentView? fulfillment;
   final CancellationView? cancellation;
   final RefundTimelineView? refundTimeline;
+
+  /// The order's active or latest case, with whether a new one may be filed now.
+  final OrderDisputeRefView? dispute;
+
+  /// Vendor invoice copy status; MateryalPH documents are never the Vendor's tax invoice.
+  final OrderInvoiceRefView? invoice;
 
   String state(String family) =>
       states.firstWhere((row) => row.family == family).state;
@@ -546,4 +655,35 @@ class CheckoutView {
   final DateTime submittedAt;
   final List<CheckoutChildView> orders;
   final String notice;
+}
+
+class OrderDisputeRefView {
+  const OrderDisputeRefView({
+    required this.caseId,
+    required this.reference,
+    required this.status,
+    required this.filedByParty,
+    this.filingAvailable = false,
+    this.filingNote,
+  });
+
+  final String caseId;
+  final String reference;
+  final String status;
+  final String filedByParty;
+  final bool filingAvailable;
+  final String? filingNote;
+}
+
+class OrderInvoiceRefView {
+  const OrderInvoiceRefView({
+    required this.status,
+    required this.records,
+    required this.openRequests,
+  });
+
+  /// ISSUED, NOT_YET_UPLOADED or NOT_DUE.
+  final String status;
+  final int records;
+  final int openRequests;
 }

@@ -28,6 +28,8 @@ class _$AuthEnvelopeAllOfData extends AuthEnvelopeAllOfData {
   @override
   final int? challengeExpiresIn;
   @override
+  final String? challengeToken;
+  @override
   final BuiltList<String>? recoveryCodes;
 
   factory _$AuthEnvelopeAllOfData(
@@ -45,6 +47,7 @@ class _$AuthEnvelopeAllOfData extends AuthEnvelopeAllOfData {
       this.mfaRequired,
       this.mfaEnrollmentRequired,
       this.challengeExpiresIn,
+      this.challengeToken,
       this.recoveryCodes})
       : super._();
   @override
@@ -70,6 +73,7 @@ class _$AuthEnvelopeAllOfData extends AuthEnvelopeAllOfData {
         mfaRequired == other.mfaRequired &&
         mfaEnrollmentRequired == other.mfaEnrollmentRequired &&
         challengeExpiresIn == other.challengeExpiresIn &&
+        challengeToken == other.challengeToken &&
         recoveryCodes == other.recoveryCodes;
   }
 
@@ -86,6 +90,7 @@ class _$AuthEnvelopeAllOfData extends AuthEnvelopeAllOfData {
     _$hash = $jc(_$hash, mfaRequired.hashCode);
     _$hash = $jc(_$hash, mfaEnrollmentRequired.hashCode);
     _$hash = $jc(_$hash, challengeExpiresIn.hashCode);
+    _$hash = $jc(_$hash, challengeToken.hashCode);
     _$hash = $jc(_$hash, recoveryCodes.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
@@ -104,6 +109,7 @@ class _$AuthEnvelopeAllOfData extends AuthEnvelopeAllOfData {
           ..add('mfaRequired', mfaRequired)
           ..add('mfaEnrollmentRequired', mfaEnrollmentRequired)
           ..add('challengeExpiresIn', challengeExpiresIn)
+          ..add('challengeToken', challengeToken)
           ..add('recoveryCodes', recoveryCodes))
         .toString();
   }
@@ -158,6 +164,11 @@ class AuthEnvelopeAllOfDataBuilder
   set challengeExpiresIn(int? challengeExpiresIn) =>
       _$this._challengeExpiresIn = challengeExpiresIn;
 
+  String? _challengeToken;
+  String? get challengeToken => _$this._challengeToken;
+  set challengeToken(String? challengeToken) =>
+      _$this._challengeToken = challengeToken;
+
   ListBuilder<String>? _recoveryCodes;
   ListBuilder<String> get recoveryCodes =>
       _$this._recoveryCodes ??= ListBuilder<String>();
@@ -181,6 +192,7 @@ class AuthEnvelopeAllOfDataBuilder
       _mfaRequired = $v.mfaRequired;
       _mfaEnrollmentRequired = $v.mfaEnrollmentRequired;
       _challengeExpiresIn = $v.challengeExpiresIn;
+      _challengeToken = $v.challengeToken;
       _recoveryCodes = $v.recoveryCodes?.toBuilder();
       _$v = null;
     }
@@ -215,6 +227,7 @@ class AuthEnvelopeAllOfDataBuilder
             mfaRequired: mfaRequired,
             mfaEnrollmentRequired: mfaEnrollmentRequired,
             challengeExpiresIn: challengeExpiresIn,
+            challengeToken: challengeToken,
             recoveryCodes: _recoveryCodes?.build(),
           );
     } catch (_) {

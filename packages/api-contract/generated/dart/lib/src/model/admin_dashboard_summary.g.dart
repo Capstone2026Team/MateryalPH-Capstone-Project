@@ -21,6 +21,8 @@ class _$AdminDashboardSummary extends AdminDashboardSummary {
   final int? auditEvents;
   @override
   final bool canViewAudit;
+  @override
+  final BuiltList<OperationsQueue>? queues;
 
   factory _$AdminDashboardSummary(
           [void Function(AdminDashboardSummaryBuilder)? updates]) =>
@@ -33,7 +35,8 @@ class _$AdminDashboardSummary extends AdminDashboardSummary {
       this.activeBuyers,
       this.pendingDocumentReviews,
       this.auditEvents,
-      required this.canViewAudit})
+      required this.canViewAudit,
+      this.queues})
       : super._();
   @override
   AdminDashboardSummary rebuild(
@@ -54,7 +57,8 @@ class _$AdminDashboardSummary extends AdminDashboardSummary {
         activeBuyers == other.activeBuyers &&
         pendingDocumentReviews == other.pendingDocumentReviews &&
         auditEvents == other.auditEvents &&
-        canViewAudit == other.canViewAudit;
+        canViewAudit == other.canViewAudit &&
+        queues == other.queues;
   }
 
   @override
@@ -67,6 +71,7 @@ class _$AdminDashboardSummary extends AdminDashboardSummary {
     _$hash = $jc(_$hash, pendingDocumentReviews.hashCode);
     _$hash = $jc(_$hash, auditEvents.hashCode);
     _$hash = $jc(_$hash, canViewAudit.hashCode);
+    _$hash = $jc(_$hash, queues.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -80,7 +85,8 @@ class _$AdminDashboardSummary extends AdminDashboardSummary {
           ..add('activeBuyers', activeBuyers)
           ..add('pendingDocumentReviews', pendingDocumentReviews)
           ..add('auditEvents', auditEvents)
-          ..add('canViewAudit', canViewAudit))
+          ..add('canViewAudit', canViewAudit)
+          ..add('queues', queues))
         .toString();
   }
 }
@@ -120,6 +126,11 @@ class AdminDashboardSummaryBuilder
   bool? get canViewAudit => _$this._canViewAudit;
   set canViewAudit(bool? canViewAudit) => _$this._canViewAudit = canViewAudit;
 
+  ListBuilder<OperationsQueue>? _queues;
+  ListBuilder<OperationsQueue> get queues =>
+      _$this._queues ??= ListBuilder<OperationsQueue>();
+  set queues(ListBuilder<OperationsQueue>? queues) => _$this._queues = queues;
+
   AdminDashboardSummaryBuilder() {
     AdminDashboardSummary._defaults(this);
   }
@@ -134,6 +145,7 @@ class AdminDashboardSummaryBuilder
       _pendingDocumentReviews = $v.pendingDocumentReviews;
       _auditEvents = $v.auditEvents;
       _canViewAudit = $v.canViewAudit;
+      _queues = $v.queues?.toBuilder();
       _$v = null;
     }
     return this;
@@ -153,18 +165,32 @@ class AdminDashboardSummaryBuilder
   AdminDashboardSummary build() => _build();
 
   _$AdminDashboardSummary _build() {
-    final _$result = _$v ??
-        _$AdminDashboardSummary._(
-          generatedAt: BuiltValueNullFieldError.checkNotNull(
-              generatedAt, r'AdminDashboardSummary', 'generatedAt'),
-          activeVendors: activeVendors,
-          inactiveVendors: inactiveVendors,
-          activeBuyers: activeBuyers,
-          pendingDocumentReviews: pendingDocumentReviews,
-          auditEvents: auditEvents,
-          canViewAudit: BuiltValueNullFieldError.checkNotNull(
-              canViewAudit, r'AdminDashboardSummary', 'canViewAudit'),
-        );
+    _$AdminDashboardSummary _$result;
+    try {
+      _$result = _$v ??
+          _$AdminDashboardSummary._(
+            generatedAt: BuiltValueNullFieldError.checkNotNull(
+                generatedAt, r'AdminDashboardSummary', 'generatedAt'),
+            activeVendors: activeVendors,
+            inactiveVendors: inactiveVendors,
+            activeBuyers: activeBuyers,
+            pendingDocumentReviews: pendingDocumentReviews,
+            auditEvents: auditEvents,
+            canViewAudit: BuiltValueNullFieldError.checkNotNull(
+                canViewAudit, r'AdminDashboardSummary', 'canViewAudit'),
+            queues: _queues?.build(),
+          );
+    } catch (_) {
+      late String _$failedField;
+      try {
+        _$failedField = 'queues';
+        _queues?.build();
+      } catch (e) {
+        throw BuiltValueNestedFieldError(
+            r'AdminDashboardSummary', _$failedField, e.toString());
+      }
+      rethrow;
+    }
     replace(_$result);
     return _$result;
   }

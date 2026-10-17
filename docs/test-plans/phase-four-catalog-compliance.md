@@ -1,6 +1,6 @@
 # Phase 4 — Catalog and PS/ICC product compliance
 
-Scope: taxonomy and canonical materials, Vendor listings (seven listing statuses), variants, versioned prices, listing media, bulk CSV import, publication snapshots, Marketplace Discoverability, DTI-BPS PS Mark / ICC sticker evidence, register snapshot import, the exact-match auto-verify rule `compliance.register-exact.v1`, and Admin Product Compliance review.
+Scope: taxonomy and canonical materials, Vendor listings (seven listing statuses), variants, versioned prices, listing media, bulk CSV import, publication snapshots, Marketplace Discoverability, DTI-BPS PS Mark / ICC sticker evidence, register snapshot import, the register auto-verify rule (originally `compliance.register-exact.v1`, replaced on 2026-10-17 by `compliance.register-number.v2`; see `product-compliance-register-lookup.md`), and Admin Product Compliance review.
 
 Out of scope: full inventory and Limited Stock, and setting `TEMPORARILY_HIDDEN_STOCK_NOT_CONFIRMED` (Phase 5 owns both). Also out of scope: Buyer catalog browsing, an OCR engine, and an Admin UI for comparable groups.
 
@@ -71,7 +71,7 @@ Each was confirmed by stashing the working tree (tracked changes) and running th
 
 ## Manual acceptance still required
 
-- **Live register import.** Import a real DTI-BPS PS licensee or ICC certificate CSV export, activate it, and confirm an exact match auto-verifies. Confirm that a near-miss routes to review.
+- **Live register import.** Import the current DTI-BPS PS licensee or ICC certificate list (XLSX or CSV as DTI-BPS provides it), activate it, and confirm that a listed number auto-verifies. Confirm that an unlisted number stays with the Vendor until they request manual review.
 - **Live upload scanning.** Upload images against the real scanner and object storage, including the fail-closed path with the scanner stopped.
 - **QR decoding in real browsers.** Decoding uses `BarcodeDetector`, which Chromium supports and Safari and Firefox do not (manual entry is the fallback).
 - **Product Compliance notice email.** Check it in Mailpit after an Admin decision.

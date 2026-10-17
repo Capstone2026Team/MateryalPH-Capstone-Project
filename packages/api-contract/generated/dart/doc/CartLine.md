@@ -15,6 +15,7 @@ Name | Type | Description | Notes
 **vendorId** | **String** |  |
 **displayName** | **String** |  |
 **variantLabel** | **String** |  |
+**workPackageLineId** | **String** | Work Package line this purchase covers. | [optional]
 **image** | [**ListingImage**](ListingImage.md) |  |
 **unitCode** | **String** |  |
 **unitName** | **String** |  |
@@ -26,6 +27,7 @@ Name | Type | Description | Notes
 **lineTotalCentavos** | **int** |  |
 **issues** | [**BuiltList&lt;CartIssue&gt;**](CartIssue.md) |  |
 **status** | **String** |  |
+**readyMixedConcrete** | **bool** | Ready-mixed concrete; its Vendor group is Site Delivery only and Self-Pickup adds a SITE_DELIVERY_REQUIRED issue. | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

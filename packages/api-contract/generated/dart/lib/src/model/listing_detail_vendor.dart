@@ -4,8 +4,10 @@
 
 // ignore_for_file: unused_element
 import 'package:materyalph_api_client/src/model/score_label.dart';
+import 'package:built_collection/built_collection.dart';
 import 'package:materyalph_api_client/src/model/supplier_open_status.dart';
 import 'package:materyalph_api_client/src/model/public_address_summary.dart';
+import 'package:materyalph_api_client/src/model/public_badge.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -22,6 +24,7 @@ part 'listing_detail_vendor.g.dart';
 /// * [openStatus]
 /// * [vacationMode]
 /// * [supplierType]
+/// * [badges] - Active automatic badges (text plus icon); Admin-suppressed badges are omitted.
 @BuiltValue()
 abstract class ListingDetailVendor implements Built<ListingDetailVendor, ListingDetailVendorBuilder> {
   @BuiltValueField(wireName: r'id')
@@ -47,6 +50,10 @@ abstract class ListingDetailVendor implements Built<ListingDetailVendor, Listing
 
   @BuiltValueField(wireName: r'supplier_type')
   String? get supplierType;
+
+  /// Active automatic badges (text plus icon); Admin-suppressed badges are omitted.
+  @BuiltValueField(wireName: r'badges')
+  BuiltList<PublicBadge>? get badges;
 
   ListingDetailVendor._();
 
@@ -111,6 +118,13 @@ class _$ListingDetailVendorSerializer implements PrimitiveSerializer<ListingDeta
       object.supplierType,
       specifiedType: const FullType.nullable(String),
     );
+    if (object.badges != null) {
+      yield r'badges';
+      yield serializers.serialize(
+        object.badges,
+        specifiedType: const FullType(BuiltList, [FullType(PublicBadge)]),
+      );
+    }
   }
 
   @override
@@ -191,6 +205,14 @@ class _$ListingDetailVendorSerializer implements PrimitiveSerializer<ListingDeta
           ) as String?;
           if (valueDes == null) continue;
           result.supplierType = valueDes;
+          break;
+        case r'badges':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltList, [FullType(PublicBadge)]),
+          ) as BuiltList<PublicBadge>?;
+          if (valueDes == null) continue;
+          result.badges.replace(valueDes);
           break;
         default:
           unhandled.add(key);

@@ -7,8 +7,17 @@ void main() {
   final instance = MateryalphApiClient().getAuthenticationApi();
 
   group(AuthenticationApi, () {
+    // Invitation-only Admin registration. Validates the invitation, recipient when supplied, and current inviter authority before bot verification or email delivery. When bot protection is enabled, requires the server-selected admin_invitation_accept checkbox action and configured hostname, or an accessible email proof bound to the invited email, portal, and action. Acceptance rechecks invitation availability after the provider call. No account or membership is created and no invitation consumed when bot validation fails. Authenticator enrollment remains required before staff access.
+    //
     //Future<RegistrationEnvelope> acceptAdminInvitation(AdminInvitationRequest adminInvitationRequest) async
     test('test acceptAdminInvitation', () async {
+      // TODO
+    });
+
+    // Completes a Buyer sign-in (password or Google) when the Buyer enrolled an authenticator. The challenge_token comes from the login or Google exchange body, is opaque, single-use, expires with challenge_expires_in and is bound to the MOBILE transport. Five wrong codes end the challenge. Codes cannot be replayed.
+    //
+    //Future<AuthEnvelope> completeBuyerMobileMfaChallenge(BuyerMobileMfaChallengeRequest buyerMobileMfaChallengeRequest) async
+    test('test completeBuyerMobileMfaChallenge', () async {
       // TODO
     });
 
@@ -54,6 +63,8 @@ void main() {
       // TODO
     });
 
+    // Vendor and Admin browser login requires an Enterprise checkbox assessment when bot protection is enabled, or an accessible single-use email security proof. The server selects vendor_login or admin_login and validates the configured hostname. Admin MFA remains mandatory after bot validation.
+    //
     //Future<AuthEnvelope> login(LoginRequest loginRequest) async
     test('test login', () async {
       // TODO
@@ -71,6 +82,13 @@ void main() {
 
     //Future<SuccessEnvelope> logoutBuyerMobile() async
     test('test logoutBuyerMobile', () async {
+      // TODO
+    });
+
+    // Completes the Buyer challenge with a single-use recovery code when the authenticator is unavailable. All other sessions are revoked and a replacement set of recovery codes is returned once.
+    //
+    //Future<AuthEnvelope> recoverBuyerMobileMfaChallenge(BuyerMobileMfaRecoveryRequest buyerMobileMfaRecoveryRequest) async
+    test('test recoverBuyerMobileMfaChallenge', () async {
       // TODO
     });
 
@@ -109,11 +127,6 @@ void main() {
       // TODO
     });
 
-    //Future<SuccessEnvelope> resendBotChallenge(String challengeId, ResendBotChallengeRequest resendBotChallengeRequest) async
-    test('test resendBotChallenge', () async {
-      // TODO
-    });
-
     //Future<SuccessEnvelope> resendBuyerMobileBotChallenge(String challengeId, ResendBotChallengeRequest resendBotChallengeRequest) async
     test('test resendBuyerMobileBotChallenge', () async {
       // TODO
@@ -128,6 +141,11 @@ void main() {
     //
     //Future<SuccessEnvelope> resendEmailVerification(EmailRequest emailRequest) async
     test('test resendEmailVerification', () async {
+      // TODO
+    });
+
+    //Future<SuccessEnvelope> resendWebBotChallenge(String challengeId, WebResendBotChallengeRequest webResendBotChallengeRequest) async
+    test('test resendWebBotChallenge', () async {
       // TODO
     });
 
@@ -156,11 +174,6 @@ void main() {
       // TODO
     });
 
-    //Future<BotProofEnvelope> verifyBotChallenge(String challengeId, VerifyBotChallengeRequest verifyBotChallengeRequest) async
-    test('test verifyBotChallenge', () async {
-      // TODO
-    });
-
     //Future<BotProofEnvelope> verifyBuyerMobileBotChallenge(String challengeId, VerifyBotChallengeRequest verifyBotChallengeRequest) async
     test('test verifyBuyerMobileBotChallenge', () async {
       // TODO
@@ -173,6 +186,11 @@ void main() {
 
     //Future<SuccessEnvelope> verifyEmail(VerifyEmailRequest verifyEmailRequest) async
     test('test verifyEmail', () async {
+      // TODO
+    });
+
+    //Future<BotProofEnvelope> verifyWebBotChallenge(String challengeId, WebVerifyBotChallengeRequest webVerifyBotChallengeRequest) async
+    test('test verifyWebBotChallenge', () async {
       // TODO
     });
 

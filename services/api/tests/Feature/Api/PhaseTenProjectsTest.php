@@ -89,6 +89,9 @@ final class PhaseTenProjectsTest extends TestCase
     private function inquiry(array $w, array $candidate): array
     {
         $id = $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/inquiries', ['lock_version' => $w['lock_version'], 'candidate_id' => $candidate['id']], $this->key())->assertCreated()->json('data.id');
+        $header = $this->getJson('/api/v1/buyers/conversations/'.$id)->assertOk()->json('data.conversation');
+        self::assertNotNull($header['main_conversation_id']);
+        $this->getJson('/api/v1/buyers/conversations/'.$header['main_conversation_id'])->assertOk()->assertJsonPath('data.conversation.context_type', 'ITEM_BASED');
 
         return [$id, $this->getJson('/api/v1/buyers/work-packages/'.$w['id'])->assertOk()->json('data')];
     }
@@ -117,12 +120,12 @@ final class PhaseTenProjectsTest extends TestCase
         $this->getJson('/api/v1/buyers/conversations/'.$chat)->assertOk()->assertJsonPath('data.quotations.quotation.state', 'EXPIRED');
         self::assertSame('INVALIDATED', DB::table('compiled_estimates')->where('id', $e['estimate']['id'])->value('state'));
         $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/estimates', ['lock_version' => $w['lock_version'], 'radius_km' => 5])->assertConflict();
-        $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/versions', $input + ['lock_version' => $w['lock_version']], $this->key())->assertConflict();
+        $this->putJson('/api/v1/buyers/work-packages/'.$w['id'], $input + ['lock_version' => $w['lock_version']], $this->key())->assertConflict()->assertJsonPath('errors.0.code', 'PROJECT_CLOSED');
         $this->postJson('/api/v1/buyers/projects/'.$p['id'].'/work-packages', $input, $this->key())->assertConflict();
         $this->patchJson('/api/v1/buyers/projects/'.$p['id'], ['lock_version' => $p['lock_version'] + 1, 'status' => 'ACTIVE'], $this->key())->assertConflict();
     }
 
-    public function test_versions_are_locked_explicit_corrections_expire_history_and_owner_scope_is_enforced(): void
+    public function test_editing_a_quoted_package_in_place_expires_inquiries_keeps_the_quoted_copy_and_enforces_owner_scope(): void
     {
         [$vendor] = $this->pickupStore('Version supplier');
         $this->bulk($vendor->id);
@@ -131,10 +134,10 @@ final class PhaseTenProjectsTest extends TestCase
         $e = $this->scan($w);
         [$chat,$w] = $this->inquiry($w, $e['items'][0]);
         $old = $w['version'];
-        $this->putJson('/api/v1/buyers/work-packages/'.$w['id'], $input + ['lock_version' => $w['lock_version']], $this->key())->assertConflict();
-        $next = $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/versions', $input + ['lock_version' => $w['lock_version']], $this->key())->assertOk()->json('data');
-        self::assertSame('DRAFT', $next['status']);
-        self::assertSame(2, $next['version']['version']);
+        $next = $this->putJson('/api/v1/buyers/work-packages/'.$w['id'], $input + ['lock_version' => $w['lock_version']], $this->key())->assertOk()->json('data');
+        self::assertSame($w['id'], $next['id']);
+        self::assertSame('ACTIVE', $next['status']);
+        self::assertNotNull($next['version']['locked_at']);
         self::assertNotSame($old['id'], $next['version']['id']);
         self::assertSame($old['content_hash'], DB::table('work_package_versions')->where('id', $old['id'])->value('content_hash'));
         self::assertSame('INVALIDATED', DB::table('compiled_estimates')->where('id', $e['estimate']['id'])->value('state'));
@@ -288,6 +291,39 @@ final class PhaseTenProjectsTest extends TestCase
         $this->bulk($v->id, false);
         self::assertSame($confirmed, DB::table('order_delivery_snapshots')->where('order_id', $order)->value('snapshot'));
         $this->getJson('/api/v1/buyers/projects/'.$p['id'])->assertOk()->assertJsonPath('data.sites.0.point.location_id', $site);
+    }
+
+    public function test_direct_project_selection_keeps_the_delivery_estimate_in_buyer_and_vendor_order_summaries(): void
+    {
+        [$vendor, $owner] = $this->activeStore('Project estimate summary', false, true);
+        $this->bulk($vendor->id);
+        $this->signInStoreMember($owner);
+        $this->orderListing('PROJECT-DELIVERY-SUMMARY');
+        $vehicle = $this->addVehicle($vendor->id);
+        DB::table('delivery_service_areas')->where('vendor_organization_id', $vendor->id)->update(['maximum_distance_km' => 40]);
+        $this->placeStore($vendor->id, 1000);
+        $this->connectOnlinePayments($vendor->id);
+        $buyer = $this->buyer();
+        [, $package] = $this->package(extra: ['fulfillment_method' => 'DELIVERY', 'site_contact' => 'Site supervisor',
+            'access_instructions' => 'Unload at the site.', 'heavy_vehicle_restriction' => 'NO']);
+        $candidate = $this->scan($package)['items'][0];
+        $fee = $candidate['delivery']['estimate']['fee_min_centavos'];
+        self::assertSame(60500, $fee);
+        $order = $this->postJson('/api/v1/buyers/work-packages/'.$package['id'].'/selection', [
+            'lock_version' => $package['lock_version'], 'candidate_id' => $candidate['id'],
+        ], $this->key())->assertCreated()->json('data.id');
+        $assertEstimate = static fn ($response) => $response->assertOk()
+            ->assertJsonPath('data.money.delivery.estimate.min_centavos', $fee)
+            ->assertJsonPath('data.money.delivery.amount_centavos', null)
+            ->assertJsonPath('data.money.commercial_total_centavos', null)
+            ->assertJsonPath('data.delivery.status', 'ADVISORY_ESTIMATE')
+            ->assertJsonPath('data.delivery.estimate.fee_min_centavos', $fee);
+        $assertEstimate($this->getJson('/api/v1/buyers/orders/'.$order));
+        $this->signInStoreMember($owner);
+        $assertEstimate($this->getJson('/api/v1/vendor/orders/'.$order));
+        DB::table('vendor_vehicles')->where('id', $vehicle)->update(['available' => false]);
+        $this->signInBuyer($buyer);
+        $assertEstimate($this->getJson('/api/v1/buyers/orders/'.$order));
     }
 
     public function test_database_rejects_inserting_into_a_locked_original(): void

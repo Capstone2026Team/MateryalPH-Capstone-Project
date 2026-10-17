@@ -1,12 +1,31 @@
 export { Button, type ButtonProps, type ButtonVariant } from './button'
+export { CopyableText } from './copyable-text'
+export { NotificationsWorkspace, notificationError } from './notifications-workspace'
+export { watchNotificationUpdates } from './notification-realtime'
+export { useNotificationUnreadCount } from './use-notification-unread-count'
+export { enableWebPush } from './web-push'
 export { ConfirmDialog } from './confirm-dialog'
+export { FormDialog } from './form-dialog'
+export { BuyerRatingForm, ReviewRatingSummary, type BuyerRatingValues, type BuyerRatingSubmission } from './review-patterns'
+export { ReviewListCard, ReviewDetailContent, ProductReviewSummary, type ReviewPresentationRow, type ProductReviewSummaryData } from './review-details'
 export { VendorTeamInvitations } from './vendor-team-invitations'
 export { VendorTeamActivity } from './vendor-team-activity'
-export { DateFilter, ALL_DATES, type DateFilterRange } from './date-filter'
+export { TeamPerformanceStatistics } from './vendor-team-performance'
+export { DateFilter, ALL_DATES, dateComparisonPreset, dateFilterPreset, dateFilterLabel, manilaToday, type DateFilterRange } from './date-filter'
+export { FilterPanel, SearchInput, Select, Pagination, DataTable } from './filter-controls'
+export { CatalogProductPicker } from './catalog-product-picker'
+export { SpecificationFields } from './specification-fields'
+export { QuotationMaterialsEditor } from './quotation-materials-editor'
+export { QuotationDiscountEditor, VendorDiscountEditor } from './quotation-discount-editor'
+export { quotationDiscountPreview } from './quotation-discount'
 export { SectionWorkspace, PreviewMetrics } from './section-workspace'
 export { DashboardHeader, MetricCard, DashboardPanel, DashboardEmptyState, DashboardPreviewSection } from './dashboard-patterns'
 export { useAutomaticRefresh } from './use-automatic-refresh'
 export { Field, FormErrors, type FieldProps } from './field'
+export { PasswordField, passwordRequirements, type PasswordFieldProps, type PasswordRequirement } from './password-field'
+export { MoneyField } from './money-field'
+export { FileSelectionField } from './file-selection-field'
+export { FileSelectionReview } from './file-selection-review'
 export { StatusMessage } from './status-message'
 export { PhoneField, type PhoneFieldProps } from './phone-field'
 export { PortalBrand } from './portal-brand'
@@ -15,7 +34,7 @@ export { AccountWorkspace } from './account-workspace'
 export { PortalAccountMenu } from './portal-account-menu'
 export { PortalIdentityProvider } from './portal-identity'
 export { PortalShell, ProgressBar, StatusBadge, type PortalNavItem, type PortalNavSection } from './portal-shell'
-export { rateLimitMessage, clearWebSessionTransport, createWebApiConfiguration, getWebCsrfToken } from './web-api-session'
+export { rateLimitMessage, clearWebSessionTransport, createWebApiConfiguration, getWebCsrfToken, webRequestErrorMessage, readReviewMediaFile } from './web-api-session'
 export { OnboardingFlow, OnboardingStepContent, type StepSection } from './onboarding-flow'
 export { ResponsiveRecordList, RowGroup, MediaUploadField, RowErrorTable, ReviewWorkspace, SummaryTiles, FilterChips, type RecordColumn, type MediaItem, type RowErrorRecord, type SummaryTile, type FilterChip } from './catalog-patterns'
 export { FieldRow, AuthorityScopePanel, DocumentUploadField, OnboardingFormSection } from './onboarding-fields'
@@ -44,8 +63,61 @@ export { XenditConnection, type XenditConnectionProps } from './xendit-connectio
 export { StoreOperationSchedule, StoreHours, emptyStoreSchedule, storeScheduleErrors, type StoreOperatingDay } from './store-operation-schedule'
 
 export { ProfileDetails, ProfileSplitPanel } from './profile-details'
-export { OrderStateRows, DeadlineCountdown, MoneyBreakdown, formatPesoCentavos, orderStateLabel, orderStateTone } from './order-patterns'
+export { RevealableValue } from './revealable-value'
+export { OrderHistory, OrderProgress, OrderSummaryCard, OrderStateRows, DeadlineCountdown, MoneyBreakdown, formatPesoCentavos, orderStateLabel, orderStateTone } from './order-patterns'
 
-export { ConversationHeader, ConversationInbox, ChatMessageBubble, ChatAvatar, QuotationVersionCard, ChatAttachmentButton, chatRoleLabel, conversationLabel } from './messaging-patterns'
-export { DemoLabel, WithholdingStatusBadge, ThresholdPanel, PaymentAttemptBadge, PaymentChannelList, FinanceSection, type ThresholdPanelData, type PaymentChannelRow } from './finance-patterns'
+export { ConversationHeader, ConversationInbox, ChatMessageBubble, ChatTypingIndicator, ChatAvatar, QuotationVersionCard, ChatAttachmentButton, chatRoleLabel, conversationLabel } from './messaging-patterns'
+export { DemoLabel, WithholdingStatusBadge, ThresholdPanel, PaymentAttemptBadge, PaymentChannelList, FinanceSection, FinanceDetails, FinanceCalculationBreakdown, type FinanceCalculationRow, type ThresholdPanelData, type PaymentChannelRow } from './finance-patterns'
+export { PhysicalPaymentOptions } from './physical-payment-options'
 export { MilestoneStepper, RefundTimeline, RefundStatusBadge, CancellationAvailability, roleLabel } from './fulfillment-patterns'
+export { readSignedCaseFile } from './web-api-session'
+export {
+  DisputeStatusBadge, DisputeDeadlines, DisputeTimeline, SignedFileButton, OriginalPaymentMethodNotice, InvoiceRecordList, PlatformDocumentNotice,
+  disputeIssueLabel, disputeRemedyLabel, disputeStateLabel, disputeEventLabel, disputeRoleLabel,
+} from './dispute-patterns'
+export {
+  PriceTrendChart, PriceTrendTable, PriceTrendPanel, TrendSummary, AnalyticsNullState, SuppressionNotice, DatasetNotice, BadgeList, StarRatingDisplay, StarRatingInput, ScoreTile,
+  formatAnalyticsDate, formatPhpDecimal, analyticsDay, type PricePoint, type TrendValue,
+} from './analytics-patterns'
+
+export { SidePanel } from './side-panel'
+export { PortalResourceProvider, usePortalResource } from './portal-resources'
+
+export { VendorTeamMembers, type TeamMemberQuery } from './vendor-team-members'
+
+export { AccountVerificationDialog, useAccountVerification, type RequestAccountVerification } from './account-verification-dialog'
+export { RowActionMenu, ActiveFilters, PortalPagePatterns, PageHeader, StatCard, StatCards, FilterTabs, Toolbar, InfoNote, EmptyState } from './page-patterns'
+export { loadGoogleMaps } from './google-maps'
+export { DeliveryRouteMap, decodeDeliveryPolyline } from './delivery-route-map'
+export { FulfillmentAssignmentCard, fulfillmentDestinationLabel, fulfillmentScheduledDate } from './fulfillment-assignment-card'
+export {
+  GeoBreadcrumbs, ChoroplethLegend, GeoChoroplethMap, SortableDataTable, TrendLineChart, DemandHeatmap, choroplethThresholds, choroplethBin,
+  type GeoAreaValue, type GeoFeature, type SortableColumn, type TrendSeries, type TrendForecast, type TrendMarker, type VizColor, type HeatmapCell,
+} from './geo-analytics-patterns'
+export {
+  KpiCard, KpiBreakdown, Sparkline, BarList, ShareBar, SegmentScatter, AssociationRuleList, ForecastNote, IndicatorClassBadge, MethodNote, ChartDataTable, PeriodSelector,
+  formatCompactCentavos, formatCount, formatChartDay, formatChartMonth, formatDurationSeconds,
+  type KpiDelta, type KpiBreakdownData, type KpiBreakdownRow, type BarListItem, type ShareSegment, type ScatterPoint, type RuleRow, type ForecastView, type ChartTableColumn,
+} from './chart-patterns'
+export { HealthBadge, FactList, EventTimeline, ReasonedDecisionForm, type HealthState, type TimelineEvent } from './operations-patterns'
+
+export { DocumentExportButton, DocumentExportWorkspace, saveDocumentBlob, type DocumentExportContext } from './document-export-dialog'
+export { InsightPanel, RankedList, InsightList, SampleMeter, type RankedItem, type InsightItem, type InsightPriority } from './insight-patterns'
+export { AuthenticatorCodeField } from './authenticator-code-field'
+export { RecaptchaCheckbox, type RecaptchaCheckboxRef, type RecaptchaCheckboxProps } from './recaptcha-checkbox'
+export { EmailSecurityCheck } from './email-security-check'
+export { asBotStepUpRequired, BotStepUpRequired, useWebBotProtection, type RiskChallenge } from './web-bot-protection'
+export {
+  renderWebCheckbox, webBotEvidence, webCookieBotEvidence, BotProtectionConfigurationError,
+  RecaptchaRenderCancelledError, resetEnterpriseLoaderForTests, type WebBotAction, type EnterpriseCheckboxHandle,
+} from './recaptcha-enterprise'
+export { CountBadge } from './count-badge'
+export { ProjectInquiryList } from './project-inquiry-list'
+export { useNavigationUpdates } from './use-navigation-updates'
+export { useNavigationRefresh } from './use-navigation-refresh'
+export { DeliveryArrangementFields, type DeliveryArrangementValues } from './delivery-arrangement-fields'
+export { VendorDeliverySetup, type VendorDeliveryReadiness } from './vendor-delivery-setup'
+export { deliveryPlanVehicleOptions } from './delivery-plan-options'
+export { QuotationDeliveryArrangement } from './quotation-delivery-arrangement'
+export { NrpcPreparationEditor } from './nrpc-preparation-editor'
+export { nrpcPreparationAssessment, orderNrpcMaterialPreview, orderMaterialAmountLines, type NrpcPreparedMaterial, type NrpcPreparationValue } from './nrpc-preparation'

@@ -5,16 +5,23 @@ declare(strict_types=1);
 namespace App\Domain\Orders;
 
 use App\Domain\Catalog\CatalogAccess;
+use App\Domain\Catalog\ReadyMixedConcrete;
+use App\Domain\Enforcement\BuyerCommerceRestriction;
 use App\Domain\Finance\Money;
 use App\Domain\Geography\BuyerProfiles;
 use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Inventory\StockAvailability;
+use App\Domain\Invoices\InvoiceService;
+use App\Domain\Messaging\FulfillmentThreadService;
 use App\Domain\Operations\OutboxPublisher;
 use App\Domain\Payments\PaymentMethodPolicy;
 use App\Domain\Procurement\CartService;
 use App\Domain\Procurement\CheckoutPreviewService;
 use App\Domain\Procurement\ListingPublicFacts;
+use App\Domain\Projects\ProjectBudget;
+use App\Domain\Projects\ProjectService;
+use App\Domain\Settings\PlatformSettings;
 use App\Domain\Vendors\NewProcurementAvailability;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\QueryException;
@@ -54,12 +61,13 @@ final class OrderSubmissionService
     ) {}
 
     /**
-     * @param  array{cart_lock_version: int, vendor_ids: list<string>, split_confirmed?: bool, payment_methods?: array<string, string>}  $input
+     * @param  array{cart_lock_version: int, vendor_ids: list<string>, split_confirmed?: bool, payment_methods?: array<string, string>, work_package_id?: string|null, work_package_lock_version?: int, budget_override_reason?: string|null, invoice_details?: array{billing_name: string, billing_address: string, tin?: string|null}|null}  $input
      * @return array{checkout: array<string, mixed>, replayed: bool}
      */
     public function submit(Request $request, array $input): array
     {
         $buyerId = $this->profiles->idFor($request);
+        BuyerCommerceRestriction::assertAllowed($buyerId);
         $key = $this->idempotency->requireIdempotencyKey($request);
         $vendorIds = array_values(array_unique(array_map('strval', $input['vendor_ids'])));
         sort($vendorIds);
@@ -69,7 +77,8 @@ final class OrderSubmissionService
             $methods[$vendorId] = (string) ($input['payment_methods'][$vendorId] ?? 'ONLINE');
         }
         $requestHash = hash_hmac('sha256', json_encode(['cart' => (int) $input['cart_lock_version'], 'vendors' => $vendorIds, 'split' => (bool) ($input['split_confirmed'] ?? false)]
-            + (array_values(array_unique($methods)) === ['ONLINE'] ? [] : ['methods' => $methods]), JSON_THROW_ON_ERROR), (string) config('app.key'));
+            + (array_values(array_unique($methods)) === ['ONLINE'] ? [] : ['methods' => $methods])
+            + array_intersect_key($input, array_flip(['work_package_id', 'work_package_lock_version', 'budget_override_reason', 'invoice_details'])), JSON_THROW_ON_ERROR), (string) config('app.key'));
         $scopedKey = hash('sha256', 'checkout|'.$buyerId.'|'.$key);
         if (($existing = $this->replay($scopedKey, $requestHash)) !== null) {
             return ['checkout' => $this->present($existing), 'replayed' => true];
@@ -99,6 +108,14 @@ final class OrderSubmissionService
 
         try {
             $checkoutId = DB::transaction(function () use ($request, $input, $buyerId, $vendorIds, $groups, $scopedKey, $requestHash, $methods): string {
+                $package = null;
+                if (isset($input['work_package_id'])) {
+                    $package = app(ProjectService::class)->package($request, $input['work_package_id'], true);
+                    ProjectService::version($package, (int) $input['work_package_lock_version']);
+                    if (in_array(app(ProjectService::class)->packageSummary($package)['status'], ['CANCELLED', 'COMPLETED'], true) || $package->current_version_id === null) {
+                        throw new AuthenticationException('WORK_PACKAGE_CLOSED', 'Choose an open Work Package for this purchase.', 409);
+                    }
+                }
                 $cart = $this->carts->cart($buyerId, true);
                 if (($existing = $this->replay($scopedKey, $requestHash)) !== null) {
                     return (string) $existing->id;
@@ -107,6 +124,7 @@ final class OrderSubmissionService
                     throw new AuthenticationException('CART_VERSION_CONFLICT', 'Your cart changed on another screen or device. Review the latest checkout and submit again.', 409, ['current_lock_version' => (int) $cart->lock_version]);
                 }
                 $actor = OrderActor::buyer($request);
+                DB::table('vendor_organizations')->whereIn('id', $vendorIds)->orderBy('id')->lockForUpdate()->get(['id']);
                 $checkoutId = (string) Str::uuid7();
                 DB::table('checkout_groups')->insert(['id' => $checkoutId, 'buyer_profile_id' => $buyerId, 'reference' => $this->reference('CHK'), 'state' => 'SUBMITTED',
                     'idempotency_key' => $scopedKey, 'request_hash' => $requestHash, 'cart_id' => $cart->id, 'submitted_by_user_id' => $actor->userId, 'submitted_at' => now(),
@@ -115,13 +133,33 @@ final class OrderSubmissionService
                 $destination = $this->carts->destination($cart);
                 foreach ($vendorIds as $vendorId) {
                     $this->availability->assertAvailable($vendorId);
+                    $method = (string) DB::table('store_profiles')->where('vendor_organization_id', $vendorId)->value('fulfillment_method');
                     $vendorLines = array_values(array_filter($lines, static fn (array $line): bool => $line['vendor_id'] === $vendorId));
+                    if (! in_array($groups[$vendorId]['fulfillment_method'], CartService::groupFulfillmentOptions($method, $vendorId, $vendorLines), true)) {
+                        throw new AuthenticationException('FULFILLMENT_NOT_OFFERED', 'The selected fulfillment method is unavailable. Review checkout and choose an available method.', 422);
+                    }
                     $this->assertUnchanged($vendorLines);
                     $this->paymentMethods->assertAllowed($vendorId, (string) $groups[$vendorId]['fulfillment_method'], $methods[$vendorId]);
                     $orderId = $this->createOrder($checkoutId, $buyerId, $vendorId, $groups[$vendorId], $vendorLines, $destination, $cart, $actor, $methods[$vendorId]);
+                    if ($package !== null) {
+                        foreach ($vendorLines as $line) {
+                            if (($line['work_package_line_id'] ?? null) !== null && ! DB::table('work_package_lines')->where('id', $line['work_package_line_id'])->where('work_package_version_id', $package->current_version_id)->exists()) {
+                                throw new AuthenticationException('WORK_PACKAGE_LINE_CONFLICT', 'A cart material belongs to another Work Package version. Review the Project link.', 422);
+                            }
+                        }
+                        DB::table('orders')->where('id', $orderId)->update(['work_package_id' => $package->id, 'work_package_version_id' => $package->current_version_id]);
+                        $this->audit->account($request, 'ITEM_ORDER_LINKED_TO_PROJECT', 'ORDER', $orderId, after: ['work_package_id' => $package->id, 'work_package_version_id' => $package->current_version_id]);
+                    }
+                    if (isset($input['invoice_details'])) {
+                        app(InvoiceService::class)->saveBuyerDetails($request, $orderId, $input['invoice_details']);
+                    }
                     DB::table('checkout_vendor_groups')->insert(['id' => (string) Str::uuid7(), 'checkout_group_id' => $checkoutId, 'vendor_organization_id' => $vendorId, 'order_id' => $orderId, 'created_at' => now(), 'updated_at' => now()]);
                     DB::table('cart_items')->whereIn('id', array_column($vendorLines, 'id'))->delete();
                     DB::table('cart_vendor_groups')->where('cart_id', $cart->id)->where('vendor_organization_id', $vendorId)->delete();
+                }
+                if ($package !== null) {
+                    $amount = (int) DB::table('orders')->where('checkout_group_id', $checkoutId)->sum('commercial_total_centavos');
+                    app(ProjectBudget::class)->guard($request, $package, $amount, $input);
                 }
                 DB::table('carts')->where('id', $cart->id)->update(['lock_version' => (int) $cart->lock_version + 1, 'updated_at' => now()]);
                 $this->audit->account($request, 'CHECKOUT_SUBMITTED', 'CHECKOUT_GROUP', $checkoutId, after: ['vendor_groups' => count($vendorIds)]);
@@ -239,8 +277,8 @@ final class OrderSubmissionService
         $variantIds = array_column($lines, 'variant_id');
         $facts = DB::table('listing_variants as v')->join('vendor_listings as l', 'l.id', '=', 'v.vendor_listing_id')->join('products as p', 'p.id', '=', 'l.product_id')
             ->join('units as u', 'u.id', '=', 'v.unit_id')->leftJoin('materials as m', 'm.id', '=', 'p.material_id')->leftJoin('material_categories as c', 'c.id', '=', 'l.material_category_id')
-            ->whereIn('v.id', $variantIds)->get(['v.id', 'v.sku', 'v.unit_id', 'v.weight_kg', 'v.length_cm', 'v.width_cm', 'v.height_cm', 'u.precision', 'l.vendor_sku', 'l.regulated',
-                'l.compliance_status', 'l.current_compliance_submission_id', 'l.publication_version', 'p.brand', 'm.name as material_name', 'c.name as category_name'])->keyBy('id');
+            ->whereIn('v.id', $variantIds)->get(['v.id', 'v.sku', 'v.unit_id', 'v.weight_kg', 'v.length_cm', 'v.width_cm', 'v.height_cm', 'u.precision', 'u.code as unit_code', 'l.vendor_sku', 'l.regulated',
+                'l.compliance_status', 'l.current_compliance_submission_id', 'l.publication_version', 'p.brand', 'm.name as material_name', 'm.code as material_code', 'c.name as category_name'])->keyBy('id');
         $tiers = $this->facts->volumeTiers($variantIds);
         $materials = 0;
         $rows = [];
@@ -252,7 +290,7 @@ final class OrderSubmissionService
             $materials += $gross;
             $rows[] = [
                 'id' => (string) Str::uuid7(), 'order_id' => $orderId, 'line_number' => $index + 1, 'listing_variant_id' => $line['variant_id'], 'vendor_listing_id' => $line['listing_id'],
-                'unit_id' => $fact->unit_id, 'quantity' => $quantity, 'unit_price_centavos' => $unit, 'discount_centavos' => 0,
+                'unit_id' => $fact->unit_id, 'quantity' => $quantity, 'unit_price_centavos' => $unit, 'discount_centavos' => 0, 'work_package_line_id' => $line['work_package_line_id'] ?? null,
                 'included_vat_centavos' => Money::includedVat($gross, (string) $line['current']['tax_category']), 'payable_centavos' => $gross, 'tax_category' => $line['current']['tax_category'],
                 'listing_price_version_id' => $line['current']['price_version_id'], 'applied_price_version_id' => $line['current']['applied_price_version_id'],
                 'ordinary_unit_price_centavos' => (int) $line['current']['unit_price_centavos'],
@@ -265,7 +303,8 @@ final class OrderSubmissionService
                     'publication_version' => (int) $fact->publication_version, 'stock_label_at_submission' => $line['current']['stock_label'],
                     'volume_tier_applied' => (bool) $line['current']['volume_tier_applied'],
                     'load' => ['weight_kg' => $fact->weight_kg === null ? null : (string) $fact->weight_kg, 'length_cm' => $fact->length_cm === null ? null : (string) $fact->length_cm,
-                        'width_cm' => $fact->width_cm === null ? null : (string) $fact->width_cm, 'height_cm' => $fact->height_cm === null ? null : (string) $fact->height_cm],
+                        'width_cm' => $fact->width_cm === null ? null : (string) $fact->width_cm, 'height_cm' => $fact->height_cm === null ? null : (string) $fact->height_cm]
+                        + ReadyMixedConcrete::load($fact->material_code, (string) $fact->unit_code),
                 ], JSON_THROW_ON_ERROR),
                 'created_at' => now(), 'updated_at' => now(),
             ];
@@ -277,7 +316,7 @@ final class OrderSubmissionService
             'procurement_type' => 'ITEM_BASED', 'order_state' => OrderStates::AWAITING_VENDOR_CONFIRMATION, 'payment_state' => 'NOT_REQUIRED', 'refund_state' => 'NOT_REQUESTED',
             'fulfillment_state' => 'NOT_STARTED', 'dispute_state' => 'NONE', 'fulfillment_method' => $method, 'payment_method' => $paymentMethod,
             'materials_centavos' => $materials, 'vendor_discount_centavos' => 0, 'delivery_centavos' => $delivery, 'nrpc_centavos' => 0, 'commercial_total_centavos' => $materials + (int) $delivery,
-            'submitted_at' => $now, 'vendor_response_due_at' => $now->addHours(self::VENDOR_RESPONSE_HOURS), 'current_snapshot_version' => 1,
+            'submitted_at' => $now, 'vendor_response_due_at' => $now->addHours(PlatformSettings::current()->int('orders.vendor_response_hours')), 'current_snapshot_version' => 1,
             'destination' => json_encode($this->destination($method, $destination, $group), JSON_THROW_ON_ERROR),
             'access_instructions_encrypted' => $method === 'DELIVERY' ? $cart->access_instructions_encrypted : null,
             'lock_version' => 1, 'created_at' => $now, 'updated_at' => $now,
@@ -291,6 +330,7 @@ final class OrderSubmissionService
             'lines' => array_map(static fn (array $row): array => ['order_line_id' => $row['id'], 'line_number' => $row['line_number'], 'quantity' => $row['quantity'], 'unit_price_centavos' => $row['unit_price_centavos']], $rows),
         ], $commercial, $actor);
         $this->transitions->opened($order, $actor);
+        app(FulfillmentThreadService::class)->ensureForOrder($orderId);
         $this->outbox->publish('ORDER_SUBMITTED', 'ORDER', $orderId, ['order_id' => $orderId, 'vendor_organization_id' => $vendorId, 'checkout_group_id' => $checkoutId]);
         $this->notifier->vendor($order, 'New order request '.$order->reference, 'A Buyer submitted an order request. Confirm, revise or decline it by '.CarbonImmutable::parse((string) $order->vendor_response_due_at)->setTimezone('Asia/Manila')->format('M j, Y g:i A').' (Philippine time).');
 

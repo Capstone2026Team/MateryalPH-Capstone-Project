@@ -11,6 +11,7 @@ use App\Domain\Catalog\PriceVersionService;
 use App\Domain\Catalog\VolumePricing;
 use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
+use App\Support\PortalDateRange;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -57,6 +58,9 @@ final class InventoryLedgerService
             if (! empty($filters['q'])) {
                 $term = '%'.addcslashes(mb_strtolower((string) $filters['q']), '%_\\').'%';
                 $query->where(fn (Builder $search) => $search->whereRaw('lower(l.display_name) LIKE ?', [$term])->orWhereRaw('lower(l.vendor_sku) LIKE ?', [$term])->orWhereRaw('lower(v.sku) LIKE ?', [$term]));
+            }
+            if (! empty($filters['category_id'])) {
+                $query->where('l.material_category_id', $filters['category_id']);
             }
             if (! empty($filters['listing_id'])) {
                 $query->where('l.id', $filters['listing_id']);
@@ -201,15 +205,19 @@ final class InventoryLedgerService
         return $this->rows($variantIds);
     }
 
-    /** @return array{items: list<array<string, mixed>>, meta: array<string, mixed>} */
-    public function movements(Request $request, string $variantId, int $page): array
+    /**
+     * @param  array<string, mixed>  $filters
+     * @return array{items: list<array<string, mixed>>, meta: array<string, mixed>}
+     */
+    public function movements(Request $request, string $variantId, int $page, array $filters = []): array
     {
         $organizationId = $this->access->organizationFor($request, [InventoryAccess::VIEW]);
         $this->assertOwned($organizationId, $variantId);
-        $result = DB::table('inventory_movements as m')->join('inventory_items as i', 'i.id', '=', 'm.inventory_item_id')
+        $query = DB::table('inventory_movements as m')->join('inventory_items as i', 'i.id', '=', 'm.inventory_item_id')
             ->leftJoin('user_profiles as up', 'up.user_id', '=', 'm.actor_user_id')->where('i.listing_variant_id', $variantId)
-            ->orderByDesc('m.created_at')->orderByDesc('m.id')
-            ->paginate(self::PAGE_SIZE, ['m.id', 'm.movement_type', 'm.quantity', 'm.quantity_on_hand_before', 'm.quantity_on_hand_after', 'm.hard_reserved_after', 'm.soft_held_after', 'm.reason_code', 'm.note', 'm.source_type', 'm.actor_user_id', 'm.auto_accept_policy_version_id', 'm.created_at', 'up.full_name'], 'page', $page);
+            ->orderByDesc('m.created_at')->orderByDesc('m.id');
+        PortalDateRange::apply($query, 'm.created_at', $filters);
+        $result = $query->paginate(self::PAGE_SIZE, ['m.id', 'm.movement_type', 'm.quantity', 'm.quantity_on_hand_before', 'm.quantity_on_hand_after', 'm.hard_reserved_after', 'm.soft_held_after', 'm.reason_code', 'm.note', 'm.source_type', 'm.actor_user_id', 'm.auto_accept_policy_version_id', 'm.created_at', 'up.full_name'], 'page', $page);
 
         return ['items' => array_map(static fn (object $row): array => [
             'id' => $row->id, 'movement_type' => $row->movement_type, 'quantity_delta' => StockAvailability::quantity($row->quantity),
@@ -222,13 +230,16 @@ final class InventoryLedgerService
         ], $result->items()), 'meta' => ['current_page' => $result->currentPage(), 'last_page' => $result->lastPage(), 'total' => $result->total()]];
     }
 
-    /** @return list<array<string, mixed>> */
-    public function priceHistory(Request $request, string $variantId): array
+    /**
+     * @param  array<string, mixed>  $filters
+     * @return list<array<string, mixed>>
+     */
+    public function priceHistory(Request $request, string $variantId, array $filters = []): array
     {
         $organizationId = $this->access->organizationFor($request, [InventoryAccess::VIEW]);
         $this->assertOwned($organizationId, $variantId);
 
-        return $this->prices->history($variantId);
+        return $this->prices->history($variantId, filters: $filters);
     }
 
     /** @return array<string, mixed> */

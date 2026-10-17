@@ -253,7 +253,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **listVendorVerificationQueue**
-> AdminVendorVerificationQueueEnvelope listVendorVerificationQueue(status, businessType, regionCode, submittedFrom, submittedTo, sort, page)
+> AdminVendorVerificationQueueEnvelope listVendorVerificationQueue(status, businessType, regionCode, submittedFrom, submittedTo, sort, setupStatus, activation, discoverability, blocker, requirementKey, ageDays, expiryDays, page)
 
 
 
@@ -272,10 +272,17 @@ final String regionCode = regionCode_example; // String | Current PSGC region co
 final Date submittedFrom = 2013-10-20; // Date | Inclusive Asia/Manila submission date.
 final Date submittedTo = 2013-10-20; // Date | Inclusive Asia/Manila submission date.
 final String sort = sort_example; // String |
+final String setupStatus = setupStatus_example; // String |
+final String activation = activation_example; // String |
+final String discoverability = discoverability_example; // String |
+final String blocker = blocker_example; // String |
+final String requirementKey = requirementKey_example; // String | A requirement awaiting review.
+final int ageDays = 56; // int | Oldest pending requirement at least this many days old.
+final int expiryDays = 56; // int | An approved document expires within this many days.
 final int page = 56; // int |
 
 try {
-    final response = api.listVendorVerificationQueue(status, businessType, regionCode, submittedFrom, submittedTo, sort, page);
+    final response = api.listVendorVerificationQueue(status, businessType, regionCode, submittedFrom, submittedTo, sort, setupStatus, activation, discoverability, blocker, requirementKey, ageDays, expiryDays, page);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling AdminVendorVerificationApi->listVendorVerificationQueue: $e\n');
@@ -292,6 +299,13 @@ Name | Type | Description  | Notes
  **submittedFrom** | **Date**| Inclusive Asia/Manila submission date. | [optional]
  **submittedTo** | **Date**| Inclusive Asia/Manila submission date. | [optional]
  **sort** | **String**|  | [optional] [default to 'submitted_desc']
+ **setupStatus** | **String**|  | [optional]
+ **activation** | **String**|  | [optional]
+ **discoverability** | **String**|  | [optional]
+ **blocker** | **String**|  | [optional]
+ **requirementKey** | **String**| A requirement awaiting review. | [optional]
+ **ageDays** | **int**| Oldest pending requirement at least this many days old. | [optional]
+ **expiryDays** | **int**| An approved document expires within this many days. | [optional]
  **page** | **int**|  | [optional]
 
 ### Return type

@@ -12,6 +12,7 @@ use App\Domain\Messaging\ConversationFiles;
 use App\Domain\Messaging\ConversationProducts;
 use App\Domain\Messaging\ConversationService;
 use App\Domain\Messaging\QuotationService;
+use App\Domain\Messaging\SiteInspectionService;
 use App\Http\ApiResponse;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
@@ -39,6 +40,20 @@ final class ConversationController extends Controller
         return ApiResponse::success();
     }
 
+    public function projectInquiries(Request $request, string $conversationId): JsonResponse
+    {
+        $request->validate(['page' => ['sometimes', 'integer', 'between:1,10000']]);
+
+        return ApiResponse::success($this->conversations->projectInquiries($request, $conversationId));
+    }
+
+    public function fulfillmentConversations(Request $request, string $conversationId): JsonResponse
+    {
+        $request->validate(['page' => ['sometimes', 'integer', 'between:1,10000']]);
+
+        return ApiResponse::success($this->conversations->fulfillmentConversations($request, $conversationId));
+    }
+
     public function restore(Request $request, string $conversationId): JsonResponse
     {
         $this->conversations->archive($request, $conversationId, false);
@@ -53,13 +68,47 @@ final class ConversationController extends Controller
         return ApiResponse::success(['id' => $this->conversations->create($request, $input)], [], 201);
     }
 
+    public function fromOrder(Request $request, string $orderId): JsonResponse
+    {
+        return ApiResponse::success(['id' => $this->conversations->fromOrder($request, $orderId)]);
+    }
+
     public function show(Request $request, string $conversationId, QuotationService $quotations): JsonResponse
     {
         $c = $this->access->require($request->user(), $conversationId);
         $request->validate(['before' => ['sometimes', 'uuid'], 'page' => ['sometimes', 'integer', 'between:1,10000'], 'legacy_page' => ['sometimes', 'integer', 'between:1,10000']]);
 
         return ApiResponse::success(['conversation' => $this->conversations->header($request, $c), 'messages' => $this->conversations->messages($request, $conversationId),
-            'quotations' => $quotations->show($request, $conversationId)]);
+            'quotations' => $quotations->show($request, $conversationId), 'site_inspections' => app(SiteInspectionService::class)->forConversation($request->user(), $c)]);
+    }
+
+    public function requestSiteInspection(Request $request, SiteInspectionService $inspections): JsonResponse
+    {
+        $input = $request->validate(['listing_id' => ['required', 'uuid'], 'listing_variant_id' => ['nullable', 'uuid'], 'location_id' => ['required', 'uuid'],
+            'heavy_vehicle_restriction' => ['sometimes', 'in:NO,YES'], 'alternate_drop_off_location_id' => ['required_if:heavy_vehicle_restriction,YES', 'nullable', 'uuid', 'different:location_id'],
+            'access_instructions' => ['required_if:heavy_vehicle_restriction,YES', 'nullable', 'string', 'min:5', 'max:500'],
+            'preferred_date' => ['required', 'date_format:Y-m-d'], 'notes' => ['nullable', 'string', 'max:1000']]);
+
+        return ApiResponse::success($inspections->request($request, $input), [], 201);
+    }
+
+    public function cancelSiteInspection(Request $request, string $conversationId, string $inspectionId, SiteInspectionService $inspections): JsonResponse
+    {
+        $input = $request->validate(['lock_version' => ['required', 'integer', 'min:1']]);
+        $inspections->cancel($request, $conversationId, $inspectionId, $input['lock_version']);
+
+        return ApiResponse::success(['site_inspections' => $inspections->forConversation($request->user(), $this->access->require($request->user(), $conversationId))]);
+    }
+
+    public function decideSiteInspection(Request $request, string $conversationId, string $inspectionId, string $action, SiteInspectionService $inspections): JsonResponse
+    {
+        $input = $request->validate(['lock_version' => ['required', 'integer', 'min:1'],
+            'scheduled_for' => [$action === 'schedule' ? 'required' : 'prohibited', 'date'], 'note' => ['nullable', 'string', 'max:1000'],
+            'reason' => [$action === 'decline' ? 'required' : 'prohibited', 'string', 'min:10', 'max:1000'],
+            'measured_volume_m3' => [$action === 'complete' ? 'required' : 'prohibited', 'string', 'max:12']]);
+        $inspections->decide($request, $conversationId, $inspectionId, $action, $input);
+
+        return ApiResponse::success(['site_inspections' => $inspections->forConversation($request->user(), $this->access->require($request->user(), $conversationId))]);
     }
 
     public function send(Request $request, string $conversationId): JsonResponse

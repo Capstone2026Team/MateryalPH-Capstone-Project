@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../design_system/components/buyer_app_bar.dart';
+import '../../design_system/components/peso_amount_field.dart';
 import '../../design_system/components/procurement_components.dart';
 import '../map_discovery/discovery_models.dart';
 import 'projects_repository.dart';
@@ -33,7 +34,7 @@ class _ProjectEditorState extends State<ProjectEditor> {
     final p = widget.project;
     if (p == null) return;
     _name.text = projectText(p['name']);
-    _budget.text = projectMoney(p['budget_centavos']).replaceAll('₱', '');
+    _budget.text = pesoFieldText(projectInt(p['budget_centavos']));
     _start.text = projectText(p['starts_on']);
     _end.text = projectText(p['ends_on']);
     final site = projectRows(p['sites']).firstOrNull;
@@ -50,17 +51,21 @@ class _ProjectEditorState extends State<ProjectEditor> {
   }
 
   Future<void> _date(TextEditingController field) async {
+    final isEnd = identical(field, _end);
+    final start = DateTime.tryParse(_start.text);
+    final firstDate = isEnd && start != null ? start : DateTime(2020);
+    final current = DateTime.tryParse(field.text) ?? start ?? DateTime.now();
     final value = await showDatePicker(
       context: context,
-      firstDate: DateTime(2020),
+      firstDate: firstDate,
       lastDate: DateTime(2100),
-      initialDate:
-          DateTime.tryParse(field.text) ??
-          DateTime.tryParse(_start.text) ??
-          DateTime.now(),
+      initialDate: current.isBefore(firstDate) ? firstDate : current,
     );
     if (value != null && mounted) {
-      setState(() => field.text = value.toIso8601String().substring(0, 10));
+      setState(() {
+        field.text = value.toIso8601String().substring(0, 10);
+        if (!isEnd && _end.text.compareTo(_start.text) < 0) _end.clear();
+      });
     }
   }
 
@@ -161,16 +166,12 @@ class _ProjectEditorState extends State<ProjectEditor> {
                       : null,
                 ),
                 const SizedBox(height: 12),
-                TextFormField(
+                PesoAmountField(
                   controller: _budget,
                   enabled: !_busy,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  decoration: const InputDecoration(
-                    labelText: 'Overall budget (₱)',
-                    helperText: 'Your budget for all Work Packages.',
-                  ),
+                  label: 'Overall budget',
+                  helperText:
+                      'Your budget for all Work Packages. Up to ₱999,999,999.99.',
                   validator: (v) => parseProjectMoney(v ?? '') == null
                       ? 'Enter a valid amount with up to two decimal places.'
                       : null,

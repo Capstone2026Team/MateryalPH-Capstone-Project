@@ -13,6 +13,8 @@ part 'vendor_team_invitation_record.g.dart';
 ///
 /// Properties:
 /// * [id]
+/// * [lockVersion]
+/// * [canDelete] - Owner-only eligibility for deleting this invitation.
 /// * [inviteeName]
 /// * [email]
 /// * [inviteeMobile]
@@ -29,6 +31,13 @@ part 'vendor_team_invitation_record.g.dart';
 abstract class VendorTeamInvitationRecord implements Built<VendorTeamInvitationRecord, VendorTeamInvitationRecordBuilder> {
   @BuiltValueField(wireName: r'id')
   String get id;
+
+  @BuiltValueField(wireName: r'lock_version')
+  int get lockVersion;
+
+  /// Owner-only eligibility for deleting this invitation.
+  @BuiltValueField(wireName: r'can_delete')
+  bool get canDelete;
 
   @BuiltValueField(wireName: r'invitee_name')
   String? get inviteeName;
@@ -94,6 +103,16 @@ class _$VendorTeamInvitationRecordSerializer implements PrimitiveSerializer<Vend
     yield serializers.serialize(
       object.id,
       specifiedType: const FullType(String),
+    );
+    yield r'lock_version';
+    yield serializers.serialize(
+      object.lockVersion,
+      specifiedType: const FullType(int),
+    );
+    yield r'can_delete';
+    yield serializers.serialize(
+      object.canDelete,
+      specifiedType: const FullType(bool),
     );
     if (object.inviteeName != null) {
       yield r'invitee_name';
@@ -190,6 +209,20 @@ class _$VendorTeamInvitationRecordSerializer implements PrimitiveSerializer<Vend
             specifiedType: const FullType(String),
           ) as String;
           result.id = valueDes;
+          break;
+        case r'lock_version':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.lockVersion = valueDes;
+          break;
+        case r'can_delete':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(bool),
+          ) as bool;
+          result.canDelete = valueDes;
           break;
         case r'invitee_name':
           final valueDes = serializers.deserialize(

@@ -17,6 +17,8 @@ class _$ListingVendorCard extends ListingVendorCard {
   final ScoreLabel scoreLabel;
   @override
   final bool vacationMode;
+  @override
+  final BuiltList<PublicBadge>? badges;
 
   factory _$ListingVendorCard(
           [void Function(ListingVendorCardBuilder)? updates]) =>
@@ -27,7 +29,8 @@ class _$ListingVendorCard extends ListingVendorCard {
       required this.name,
       this.logoUrl,
       required this.scoreLabel,
-      required this.vacationMode})
+      required this.vacationMode,
+      this.badges})
       : super._();
   @override
   ListingVendorCard rebuild(void Function(ListingVendorCardBuilder) updates) =>
@@ -45,7 +48,8 @@ class _$ListingVendorCard extends ListingVendorCard {
         name == other.name &&
         logoUrl == other.logoUrl &&
         scoreLabel == other.scoreLabel &&
-        vacationMode == other.vacationMode;
+        vacationMode == other.vacationMode &&
+        badges == other.badges;
   }
 
   @override
@@ -56,6 +60,7 @@ class _$ListingVendorCard extends ListingVendorCard {
     _$hash = $jc(_$hash, logoUrl.hashCode);
     _$hash = $jc(_$hash, scoreLabel.hashCode);
     _$hash = $jc(_$hash, vacationMode.hashCode);
+    _$hash = $jc(_$hash, badges.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -67,7 +72,8 @@ class _$ListingVendorCard extends ListingVendorCard {
           ..add('name', name)
           ..add('logoUrl', logoUrl)
           ..add('scoreLabel', scoreLabel)
-          ..add('vacationMode', vacationMode))
+          ..add('vacationMode', vacationMode)
+          ..add('badges', badges))
         .toString();
   }
 }
@@ -98,6 +104,11 @@ class ListingVendorCardBuilder
   bool? get vacationMode => _$this._vacationMode;
   set vacationMode(bool? vacationMode) => _$this._vacationMode = vacationMode;
 
+  ListBuilder<PublicBadge>? _badges;
+  ListBuilder<PublicBadge> get badges =>
+      _$this._badges ??= ListBuilder<PublicBadge>();
+  set badges(ListBuilder<PublicBadge>? badges) => _$this._badges = badges;
+
   ListingVendorCardBuilder() {
     ListingVendorCard._defaults(this);
   }
@@ -110,6 +121,7 @@ class ListingVendorCardBuilder
       _logoUrl = $v.logoUrl;
       _scoreLabel = $v.scoreLabel.toBuilder();
       _vacationMode = $v.vacationMode;
+      _badges = $v.badges?.toBuilder();
       _$v = null;
     }
     return this;
@@ -141,12 +153,16 @@ class ListingVendorCardBuilder
             scoreLabel: scoreLabel.build(),
             vacationMode: BuiltValueNullFieldError.checkNotNull(
                 vacationMode, r'ListingVendorCard', 'vacationMode'),
+            badges: _badges?.build(),
           );
     } catch (_) {
       late String _$failedField;
       try {
         _$failedField = 'scoreLabel';
         scoreLabel.build();
+
+        _$failedField = 'badges';
+        _badges?.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
             r'ListingVendorCard', _$failedField, e.toString());

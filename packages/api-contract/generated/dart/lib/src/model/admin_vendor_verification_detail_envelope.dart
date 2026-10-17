@@ -13,11 +13,12 @@ part 'admin_vendor_verification_detail_envelope.g.dart';
 /// AdminVendorVerificationDetailEnvelope
 ///
 /// Properties:
-/// * [data]
+/// * [data] - Sectioned case. Includes workstreams and activation_restrictions as documented by AdminVendorVerificationDetail.
 /// * [meta]
 /// * [errors]
 @BuiltValue()
 abstract class AdminVendorVerificationDetailEnvelope implements Built<AdminVendorVerificationDetailEnvelope, AdminVendorVerificationDetailEnvelopeBuilder> {
+  /// Sectioned case. Includes workstreams and activation_restrictions as documented by AdminVendorVerificationDetail.
   @BuiltValueField(wireName: r'data')
   BuiltMap<String, JsonObject?> get data;
 

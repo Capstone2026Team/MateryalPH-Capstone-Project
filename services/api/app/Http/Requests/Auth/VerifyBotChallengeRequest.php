@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Auth;
 
+use App\Http\AuthTransport;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 final class VerifyBotChallengeRequest extends FormRequest
 {
@@ -19,6 +21,9 @@ final class VerifyBotChallengeRequest extends FormRequest
         return [
             'email' => ['required', 'email:rfc', 'max:254'],
             'code' => ['required', 'regex:/^\d{6}$/'],
+            'portal' => AuthTransport::fromRequest($this) === AuthTransport::WEB
+                ? ['sometimes', 'required', Rule::in(['VENDOR', 'ADMIN'])]
+                : ['prohibited'],
         ];
     }
 }

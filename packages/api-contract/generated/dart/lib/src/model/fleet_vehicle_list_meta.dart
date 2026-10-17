@@ -6,6 +6,7 @@
 import 'package:built_collection/built_collection.dart';
 import 'package:materyalph_api_client/src/model/fleet_vehicle_list_meta_delivery.dart';
 import 'package:materyalph_api_client/src/model/fleet_vehicle_list_meta_permissions.dart';
+import 'package:materyalph_api_client/src/model/vendor_delivery_setup.dart';
 import 'package:materyalph_api_client/src/model/fleet_vehicle_list_meta_limits.dart';
 import 'package:materyalph_api_client/src/model/fleet_summary.dart';
 import 'package:built_value/built_value.dart';
@@ -16,6 +17,7 @@ part 'fleet_vehicle_list_meta.g.dart';
 /// FleetVehicleListMeta
 ///
 /// Properties:
+/// * [deliverySetup]
 /// * [scope]
 /// * [summary] - Organization-wide summary returned to Owners and Store Managers only; omitted for ASSIGNED_ONLY access.
 /// * [delivery]
@@ -23,6 +25,9 @@ part 'fleet_vehicle_list_meta.g.dart';
 /// * [limits]
 @BuiltValue()
 abstract class FleetVehicleListMeta implements Built<FleetVehicleListMeta, FleetVehicleListMetaBuilder> {
+  @BuiltValueField(wireName: r'delivery_setup')
+  VendorDeliverySetup? get deliverySetup;
+
   @BuiltValueField(wireName: r'scope')
   FleetVehicleListMetaScopeEnum get scope;
   // enum scopeEnum {  ORGANIZATION,  ASSIGNED_ONLY,  };
@@ -63,6 +68,13 @@ class _$FleetVehicleListMetaSerializer implements PrimitiveSerializer<FleetVehic
     FleetVehicleListMeta object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.deliverySetup != null) {
+      yield r'delivery_setup';
+      yield serializers.serialize(
+        object.deliverySetup,
+        specifiedType: const FullType(VendorDeliverySetup),
+      );
+    }
     yield r'scope';
     yield serializers.serialize(
       object.scope,
@@ -117,6 +129,14 @@ class _$FleetVehicleListMetaSerializer implements PrimitiveSerializer<FleetVehic
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'delivery_setup':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(VendorDeliverySetup),
+          ) as VendorDeliverySetup?;
+          if (valueDes == null) continue;
+          result.deliverySetup.replace(valueDes);
+          break;
         case r'scope':
           final valueDes = serializers.deserialize(
             value,

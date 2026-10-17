@@ -11,12 +11,23 @@ class _$FulfillmentAssignmentRequest extends FulfillmentAssignmentRequest {
   final int userId;
   @override
   final String reason;
+  @override
+  final int? vehicleIndex;
+  @override
+  final int? lockVersion;
+  @override
+  final bool? dispatch;
 
   factory _$FulfillmentAssignmentRequest(
           [void Function(FulfillmentAssignmentRequestBuilder)? updates]) =>
       (FulfillmentAssignmentRequestBuilder()..update(updates))._build();
 
-  _$FulfillmentAssignmentRequest._({required this.userId, required this.reason})
+  _$FulfillmentAssignmentRequest._(
+      {required this.userId,
+      required this.reason,
+      this.vehicleIndex,
+      this.lockVersion,
+      this.dispatch})
       : super._();
   @override
   FulfillmentAssignmentRequest rebuild(
@@ -32,7 +43,10 @@ class _$FulfillmentAssignmentRequest extends FulfillmentAssignmentRequest {
     if (identical(other, this)) return true;
     return other is FulfillmentAssignmentRequest &&
         userId == other.userId &&
-        reason == other.reason;
+        reason == other.reason &&
+        vehicleIndex == other.vehicleIndex &&
+        lockVersion == other.lockVersion &&
+        dispatch == other.dispatch;
   }
 
   @override
@@ -40,6 +54,9 @@ class _$FulfillmentAssignmentRequest extends FulfillmentAssignmentRequest {
     var _$hash = 0;
     _$hash = $jc(_$hash, userId.hashCode);
     _$hash = $jc(_$hash, reason.hashCode);
+    _$hash = $jc(_$hash, vehicleIndex.hashCode);
+    _$hash = $jc(_$hash, lockVersion.hashCode);
+    _$hash = $jc(_$hash, dispatch.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -48,7 +65,10 @@ class _$FulfillmentAssignmentRequest extends FulfillmentAssignmentRequest {
   String toString() {
     return (newBuiltValueToStringHelper(r'FulfillmentAssignmentRequest')
           ..add('userId', userId)
-          ..add('reason', reason))
+          ..add('reason', reason)
+          ..add('vehicleIndex', vehicleIndex)
+          ..add('lockVersion', lockVersion)
+          ..add('dispatch', dispatch))
         .toString();
   }
 }
@@ -67,6 +87,18 @@ class FulfillmentAssignmentRequestBuilder
   String? get reason => _$this._reason;
   set reason(String? reason) => _$this._reason = reason;
 
+  int? _vehicleIndex;
+  int? get vehicleIndex => _$this._vehicleIndex;
+  set vehicleIndex(int? vehicleIndex) => _$this._vehicleIndex = vehicleIndex;
+
+  int? _lockVersion;
+  int? get lockVersion => _$this._lockVersion;
+  set lockVersion(int? lockVersion) => _$this._lockVersion = lockVersion;
+
+  bool? _dispatch;
+  bool? get dispatch => _$this._dispatch;
+  set dispatch(bool? dispatch) => _$this._dispatch = dispatch;
+
   FulfillmentAssignmentRequestBuilder() {
     FulfillmentAssignmentRequest._defaults(this);
   }
@@ -76,6 +108,9 @@ class FulfillmentAssignmentRequestBuilder
     if ($v != null) {
       _userId = $v.userId;
       _reason = $v.reason;
+      _vehicleIndex = $v.vehicleIndex;
+      _lockVersion = $v.lockVersion;
+      _dispatch = $v.dispatch;
       _$v = null;
     }
     return this;
@@ -101,6 +136,9 @@ class FulfillmentAssignmentRequestBuilder
               userId, r'FulfillmentAssignmentRequest', 'userId'),
           reason: BuiltValueNullFieldError.checkNotNull(
               reason, r'FulfillmentAssignmentRequest', 'reason'),
+          vehicleIndex: vehicleIndex,
+          lockVersion: lockVersion,
+          dispatch: dispatch,
         );
     replace(_$result);
     return _$result;

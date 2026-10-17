@@ -24,9 +24,21 @@ void main() {
       // TODO
     });
 
-    // Owner-only immediate pause of all new procurement. Existing work and messaging remain available. Does not alter weekly hours or activation.
+    // Owner-only pause of all new procurement over the Asia/Manila date window in vacation_starts_on to vacation_ends_on, both required when true. Existing work and messaging remain available. False clears the window. Does not alter weekly hours or activation.
     // bool vacationMode
     test('to test the property `vacationMode`', () async {
+      // TODO
+    });
+
+    // First Asia/Manila day of the pause. Today or later, unless an active window keeps its saved start. Today starts the pause immediately; a later date schedules it.
+    // String vacationStartsOn
+    test('to test the property `vacationStartsOn`', () async {
+      // TODO
+    });
+
+    // Last Asia/Manila day of the pause, inclusive; on or after vacation_starts_on. Procurement reopens at the next midnight.
+    // String vacationEndsOn
+    test('to test the property `vacationEndsOn`', () async {
       // TODO
     });
 
@@ -47,6 +59,12 @@ void main() {
 
     // String fulfillmentMethod
     test('to test the property `fulfillmentMethod`', () async {
+      // TODO
+    });
+
+    // True activates delivery only after current staff, vehicle, location and service requirements pass; otherwise 422 VENDOR_DELIVERY_SETUP_REQUIRED. False saves a draft or pauses new deliveries. Omission preserves saved intent. Switching to SELF_PICKUP while delivery obligations remain returns 409 ACTIVE_DELIVERY_OBLIGATIONS. Accepted orders and assignments remain unchanged.
+    // bool vendorDeliveryEnabled
+    test('to test the property `vendorDeliveryEnabled`', () async {
       // TODO
     });
 

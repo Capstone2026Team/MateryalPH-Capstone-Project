@@ -37,6 +37,10 @@ class _$VendorOrderPermissions extends VendorOrderPermissions {
   final bool? canRetryRefund;
   @override
   final bool? canRespondProblem;
+  @override
+  final bool? canFileDispute;
+  @override
+  final bool? canUploadInvoice;
 
   factory _$VendorOrderPermissions(
           [void Function(VendorOrderPermissionsBuilder)? updates]) =>
@@ -57,7 +61,9 @@ class _$VendorOrderPermissions extends VendorOrderPermissions {
       this.canFinalizeCancellation,
       this.canReportVehicleIssue,
       this.canRetryRefund,
-      this.canRespondProblem})
+      this.canRespondProblem,
+      this.canFileDispute,
+      this.canUploadInvoice})
       : super._();
   @override
   VendorOrderPermissions rebuild(
@@ -86,7 +92,9 @@ class _$VendorOrderPermissions extends VendorOrderPermissions {
         canFinalizeCancellation == other.canFinalizeCancellation &&
         canReportVehicleIssue == other.canReportVehicleIssue &&
         canRetryRefund == other.canRetryRefund &&
-        canRespondProblem == other.canRespondProblem;
+        canRespondProblem == other.canRespondProblem &&
+        canFileDispute == other.canFileDispute &&
+        canUploadInvoice == other.canUploadInvoice;
   }
 
   @override
@@ -107,6 +115,8 @@ class _$VendorOrderPermissions extends VendorOrderPermissions {
     _$hash = $jc(_$hash, canReportVehicleIssue.hashCode);
     _$hash = $jc(_$hash, canRetryRefund.hashCode);
     _$hash = $jc(_$hash, canRespondProblem.hashCode);
+    _$hash = $jc(_$hash, canFileDispute.hashCode);
+    _$hash = $jc(_$hash, canUploadInvoice.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -128,7 +138,9 @@ class _$VendorOrderPermissions extends VendorOrderPermissions {
           ..add('canFinalizeCancellation', canFinalizeCancellation)
           ..add('canReportVehicleIssue', canReportVehicleIssue)
           ..add('canRetryRefund', canRetryRefund)
-          ..add('canRespondProblem', canRespondProblem))
+          ..add('canRespondProblem', canRespondProblem)
+          ..add('canFileDispute', canFileDispute)
+          ..add('canUploadInvoice', canUploadInvoice))
         .toString();
   }
 }
@@ -207,6 +219,16 @@ class VendorOrderPermissionsBuilder
   set canRespondProblem(bool? canRespondProblem) =>
       _$this._canRespondProblem = canRespondProblem;
 
+  bool? _canFileDispute;
+  bool? get canFileDispute => _$this._canFileDispute;
+  set canFileDispute(bool? canFileDispute) =>
+      _$this._canFileDispute = canFileDispute;
+
+  bool? _canUploadInvoice;
+  bool? get canUploadInvoice => _$this._canUploadInvoice;
+  set canUploadInvoice(bool? canUploadInvoice) =>
+      _$this._canUploadInvoice = canUploadInvoice;
+
   VendorOrderPermissionsBuilder() {
     VendorOrderPermissions._defaults(this);
   }
@@ -229,6 +251,8 @@ class VendorOrderPermissionsBuilder
       _canReportVehicleIssue = $v.canReportVehicleIssue;
       _canRetryRefund = $v.canRetryRefund;
       _canRespondProblem = $v.canRespondProblem;
+      _canFileDispute = $v.canFileDispute;
+      _canUploadInvoice = $v.canUploadInvoice;
       _$v = null;
     }
     return this;
@@ -273,6 +297,8 @@ class VendorOrderPermissionsBuilder
           canReportVehicleIssue: canReportVehicleIssue,
           canRetryRefund: canRetryRefund,
           canRespondProblem: canRespondProblem,
+          canFileDispute: canFileDispute,
+          canUploadInvoice: canUploadInvoice,
         );
     replace(_$result);
     return _$result;

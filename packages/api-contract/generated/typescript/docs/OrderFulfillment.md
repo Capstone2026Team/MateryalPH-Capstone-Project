@@ -22,6 +22,8 @@ Name | Type
 `vehicleIssues` | [Array&lt;FulfillmentVehicleIssue&gt;](FulfillmentVehicleIssue.md)
 `thread` | [FulfillmentThreadRef](FulfillmentThreadRef.md)
 `nextAction` | string
+`assignmentHistory` | [Array&lt;DeliveryAssignmentHistory&gt;](DeliveryAssignmentHistory.md)
+`proofUploadLimitKb` | number
 
 ## Example
 
@@ -45,6 +47,8 @@ const example = {
   "vehicleIssues": null,
   "thread": null,
   "nextAction": null,
+  "assignmentHistory": null,
+  "proofUploadLimitKb": null,
 } satisfies OrderFulfillment
 
 console.log(example)

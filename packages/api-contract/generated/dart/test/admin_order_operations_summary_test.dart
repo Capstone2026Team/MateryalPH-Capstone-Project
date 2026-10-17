@@ -7,6 +7,12 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(AdminOrderOperationsSummary, () {
+    // All refund records, including processed refunds, independent of list filters and pagination.
+    // int refundsTotal
+    test('to test the property `refundsTotal`', () async {
+      // TODO
+    });
+
     // int refundsFailed
     test('to test the property `refundsFailed`', () async {
       // TODO
@@ -14,6 +20,12 @@ void main() {
 
     // int refundsPending
     test('to test the property `refundsPending`', () async {
+      // TODO
+    });
+
+    // All order-linked cash reimbursements, including confirmed reimbursements, independent of list filters.
+    // int reimbursementsTotal
+    test('to test the property `reimbursementsTotal`', () async {
       // TODO
     });
 

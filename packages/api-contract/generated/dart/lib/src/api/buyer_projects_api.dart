@@ -11,6 +11,7 @@ import 'package:materyalph_api_client/src/api_util.dart';
 import 'package:materyalph_api_client/src/model/chat_empty_response.dart';
 import 'package:materyalph_api_client/src/model/chat_id_response.dart';
 import 'package:materyalph_api_client/src/model/project_candidate_request.dart';
+import 'package:materyalph_api_client/src/model/project_candidate_response.dart';
 import 'package:materyalph_api_client/src/model/project_compile.dart';
 import 'package:materyalph_api_client/src/model/project_create.dart';
 import 'package:materyalph_api_client/src/model/project_estimate_page_response.dart';
@@ -23,9 +24,13 @@ import 'package:materyalph_api_client/src/model/project_preference_reset.dart';
 import 'package:materyalph_api_client/src/model/project_preference_save.dart';
 import 'package:materyalph_api_client/src/model/project_preferences_response.dart';
 import 'package:materyalph_api_client/src/model/project_route_response.dart';
+import 'package:materyalph_api_client/src/model/project_selection_preview.dart';
 import 'package:materyalph_api_client/src/model/project_update.dart';
 import 'package:materyalph_api_client/src/model/project_version_request.dart';
 import 'package:materyalph_api_client/src/model/project_view_response.dart';
+import 'package:materyalph_api_client/src/model/work_package_alternative_page_response.dart';
+import 'package:materyalph_api_client/src/model/work_package_budget_estimate_request.dart';
+import 'package:materyalph_api_client/src/model/work_package_budget_estimate_response.dart';
 import 'package:materyalph_api_client/src/model/work_package_input.dart';
 import 'package:materyalph_api_client/src/model/work_package_view_response.dart';
 
@@ -144,7 +149,7 @@ class BuyerProjectsApi {
   }
 
   /// closeWorkPackage
-  /// Cancel an unassigned package, retaining every locked version. Selected work follows order cancellation rules.
+  /// Cancel an unassigned package, retaining its saved contents. Selected work follows order cancellation rules.
   ///
   /// Parameters:
   /// * [packageId]
@@ -454,7 +459,7 @@ class BuyerProjectsApi {
   }
 
   /// createWorkPackage
-  /// Save a Draft. Normalized units, positive quantities, explicit site and access are validated.
+  /// Save a Draft. Normalized units, positive quantities, explicit site and access are validated. The budget is deducted from the Project budget immediately; WORK_PACKAGE_BUDGET_EXCEEDS_PROJECT (422) when non-cancelled allocations would exceed it.
   ///
   /// Parameters:
   /// * [projectId]
@@ -481,112 +486,6 @@ class BuyerProjectsApi {
     ProgressCallback? onReceiveProgress,
   }) async {
     final _path = r'/buyers/projects/{projectId}/work-packages'.replaceAll('{' r'projectId' '}', encodeQueryParameter(_serializers, projectId, const FullType(String)).toString());
-    final _options = Options(
-      method: r'POST',
-      headers: <String, dynamic>{
-        r'Idempotency-Key': idempotencyKey,
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'passportBearer',
-          },
-        ],
-        ...?extra,
-      },
-      contentType: 'application/json',
-      validateStatus: validateStatus,
-    );
-
-    dynamic _bodyData;
-
-    try {
-      const _type = FullType(WorkPackageInput);
-      _bodyData = _serializers.serialize(workPackageInput, specifiedType: _type);
-
-    } catch(error, stackTrace) {
-      throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    final _response = await _dio.request<Object>(
-      _path,
-      data: _bodyData,
-      options: _options,
-      cancelToken: cancelToken,
-      onSendProgress: onSendProgress,
-      onReceiveProgress: onReceiveProgress,
-    );
-
-    WorkPackageViewResponse? _responseData;
-
-    try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(WorkPackageViewResponse),
-      ) as WorkPackageViewResponse;
-
-    } catch (error, stackTrace) {
-      throw DioException(
-        requestOptions: _response.requestOptions,
-        response: _response,
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    return Response<WorkPackageViewResponse>(
-      data: _responseData,
-      headers: _response.headers,
-      isRedirect: _response.isRedirect,
-      requestOptions: _response.requestOptions,
-      redirects: _response.redirects,
-      statusCode: _response.statusCode,
-      statusMessage: _response.statusMessage,
-      extra: _response.extra,
-    );
-  }
-
-  /// createWorkPackageVersion
-  /// Explicit correction version invalidates estimates and expires inquiries. Selected work requires prior order cancellation.
-  ///
-  /// Parameters:
-  /// * [packageId]
-  /// * [idempotencyKey]
-  /// * [workPackageInput]
-  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
-  /// * [headers] - Can be used to add additional headers to the request
-  /// * [extras] - Can be used to add flags to the request
-  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
-  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
-  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
-  ///
-  /// Returns a [Future] containing a [Response] with a [WorkPackageViewResponse] as data
-  /// Throws [DioException] if API call or serialization fails
-  Future<Response<WorkPackageViewResponse>> createWorkPackageVersion({
-    required String packageId,
-    required String idempotencyKey,
-    required WorkPackageInput workPackageInput,
-    CancelToken? cancelToken,
-    Map<String, dynamic>? headers,
-    Map<String, dynamic>? extra,
-    ValidateStatus? validateStatus,
-    ProgressCallback? onSendProgress,
-    ProgressCallback? onReceiveProgress,
-  }) async {
-    final _path = r'/buyers/work-packages/{packageId}/versions'.replaceAll('{' r'packageId' '}', encodeQueryParameter(_serializers, packageId, const FullType(String)).toString());
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
@@ -769,7 +668,7 @@ class BuyerProjectsApi {
   }
 
   /// deleteWorkPackage
-  /// Delete only a Draft with no locked historical version. Retain activated evidence.
+  /// Delete a Work Package that has no order, tagged purchase or selected Vendor. A Draft with no locked history is removed; any other package is cancelled and hidden from the Buyer while its saved originals, estimates and quotations are retained. A package with an order returns WORK_PACKAGE_HAS_ORDER.
   ///
   /// Parameters:
   /// * [packageId]
@@ -872,7 +771,7 @@ class BuyerProjectsApi {
   }
 
   /// editWorkPackage
-  /// Editable Draft only; saves an append-only draft version.
+  /// Edit the Work Package directly, with no new list entry. Allowed until an order, tagged purchase or selected Vendor exists (otherwise WORK_PACKAGE_HAS_ORDER). Estimates and open quotation requests built on the old materials are invalidated; a compared or quoted package returns to Active.
   ///
   /// Parameters:
   /// * [packageId]
@@ -966,6 +865,109 @@ class BuyerProjectsApi {
     }
 
     return Response<WorkPackageViewResponse>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// estimateWorkPackageBudget
+  /// Advisory materials-only budget estimate for a Work Package being drafted. Each catalog line is priced at the half-up average of one price per eligible Vendor (that Vendor&#39;s lowest exact match) within the radius of the site. Unlisted and unmatched lines carry no price. Excludes delivery fees and labor. Nothing is stored.
+  ///
+  /// Parameters:
+  /// * [projectId]
+  /// * [workPackageBudgetEstimateRequest]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [WorkPackageBudgetEstimateResponse] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<WorkPackageBudgetEstimateResponse>> estimateWorkPackageBudget({
+    required String projectId,
+    required WorkPackageBudgetEstimateRequest workPackageBudgetEstimateRequest,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/buyers/projects/{projectId}/work-package-estimate'.replaceAll('{' r'projectId' '}', encodeQueryParameter(_serializers, projectId, const FullType(String)).toString());
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'passportBearer',
+          },
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(WorkPackageBudgetEstimateRequest);
+      _bodyData = _serializers.serialize(workPackageBudgetEstimateRequest, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    WorkPackageBudgetEstimateResponse? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(WorkPackageBudgetEstimateResponse),
+      ) as WorkPackageBudgetEstimateResponse;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<WorkPackageBudgetEstimateResponse>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -1149,11 +1151,15 @@ class BuyerProjectsApi {
   }
 
   /// getProjectEstimates
-  /// Immutable, paginated snapshots. Complete one-Vendor matches first; missing lines explicit. Expiry is exactly 48 hours.
+  /// Immutable, paginated snapshots. Complete one-Vendor matches first by default; missing lines explicit. Expiry is exactly 48 hours. Sorting and filters run on the server so every page is consistent; each ordering ends on the system rank.
   ///
   /// Parameters:
   /// * [packageId]
   /// * [page]
+  /// * [sort]
+  /// * [favoritesOnly]
+  /// * [completeOnly]
+  /// * [withinBudget]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -1166,6 +1172,10 @@ class BuyerProjectsApi {
   Future<Response<ProjectEstimatePageResponse>> getProjectEstimates({
     required String packageId,
     int? page,
+    String? sort,
+    bool? favoritesOnly,
+    bool? completeOnly,
+    bool? withinBudget,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -1194,6 +1204,10 @@ class BuyerProjectsApi {
 
     final _queryParameters = <String, dynamic>{
       if (page != null) r'page': encodeQueryParameter(_serializers, page, const FullType(int)),
+      if (sort != null) r'sort': encodeQueryParameter(_serializers, sort, const FullType(String)),
+      if (favoritesOnly != null) r'favorites_only': encodeQueryParameter(_serializers, favoritesOnly, const FullType(bool)),
+      if (completeOnly != null) r'complete_only': encodeQueryParameter(_serializers, completeOnly, const FullType(bool)),
+      if (withinBudget != null) r'within_budget': encodeQueryParameter(_serializers, withinBudget, const FullType(bool)),
     };
 
     final _response = await _dio.request<Object>(
@@ -1316,7 +1330,7 @@ class BuyerProjectsApi {
   }
 
   /// getWorkPackage
-  /// Locked original, paginated version history, missing-item resolution and budget metrics. PDF generation remains Phase 15.
+  /// The package&#39;s current materials, missing-item resolution, budget metrics and delete/edit availability. PDF generation remains Phase 15.
   ///
   /// Parameters:
   /// * [packageId]
@@ -1595,6 +1609,204 @@ class BuyerProjectsApi {
     );
   }
 
+  /// listWorkPackageLineAlternatives
+  /// Eligible Item-Based offers for the same canonical material and unit within the package radius of its site, for buying a missing line separately. Exact matches first, then price. Unlisted lines return status UNLISTED with no items.
+  ///
+  /// Parameters:
+  /// * [packageId]
+  /// * [lineId]
+  /// * [page]
+  /// * [excludeVendorId]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [WorkPackageAlternativePageResponse] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<WorkPackageAlternativePageResponse>> listWorkPackageLineAlternatives({
+    required String packageId,
+    required String lineId,
+    int? page,
+    String? excludeVendorId,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/buyers/work-packages/{packageId}/lines/{lineId}/alternatives'.replaceAll('{' r'packageId' '}', encodeQueryParameter(_serializers, packageId, const FullType(String)).toString()).replaceAll('{' r'lineId' '}', encodeQueryParameter(_serializers, lineId, const FullType(String)).toString());
+    final _options = Options(
+      method: r'GET',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'passportBearer',
+          },
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _queryParameters = <String, dynamic>{
+      if (page != null) r'page': encodeQueryParameter(_serializers, page, const FullType(int)),
+      if (excludeVendorId != null) r'exclude_vendor_id': encodeQueryParameter(_serializers, excludeVendorId, const FullType(String)),
+    };
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      queryParameters: _queryParameters,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    WorkPackageAlternativePageResponse? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(WorkPackageAlternativePageResponse),
+      ) as WorkPackageAlternativePageResponse;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<WorkPackageAlternativePageResponse>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// previewProjectSpecificationSelection
+  /// Re-price a fresh candidate with the Buyer&#39;s specification choices (lines, totals, delivery estimate, score and budget label). Nothing is stored; send the same selections when selecting or inquiring. An unknown option is SPECIFICATION_OPTION_INVALID.
+  ///
+  /// Parameters:
+  /// * [packageId]
+  /// * [candidateId]
+  /// * [projectSelectionPreview]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [ProjectCandidateResponse] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<ProjectCandidateResponse>> previewProjectSpecificationSelection({
+    required String packageId,
+    required String candidateId,
+    required ProjectSelectionPreview projectSelectionPreview,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/buyers/work-packages/{packageId}/candidates/{candidateId}/selection-preview'.replaceAll('{' r'packageId' '}', encodeQueryParameter(_serializers, packageId, const FullType(String)).toString()).replaceAll('{' r'candidateId' '}', encodeQueryParameter(_serializers, candidateId, const FullType(String)).toString());
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'passportBearer',
+          },
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(ProjectSelectionPreview);
+      _bodyData = _serializers.serialize(projectSelectionPreview, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    ProjectCandidateResponse? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(ProjectCandidateResponse),
+      ) as ProjectCandidateResponse;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<ProjectCandidateResponse>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
   /// previewWorkPackageCsv
   /// Validate at most 100 CSV lines without saving. Header: material_code,name,unit_code,quantity,preferred_brand,specifications.
   ///
@@ -1685,6 +1897,112 @@ class BuyerProjectsApi {
     }
 
     return Response<ProjectImportPreviewResponse>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// reactivateWorkPackage
+  /// Return a cancelled Work Package to Active in place; no copy is made. The Project budget is checked again because cancelling released it. A package with an order, selected Vendor or tagged purchase cannot be reactivated.
+  ///
+  /// Parameters:
+  /// * [packageId]
+  /// * [idempotencyKey]
+  /// * [projectVersionRequest]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [WorkPackageViewResponse] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<WorkPackageViewResponse>> reactivateWorkPackage({
+    required String packageId,
+    required String idempotencyKey,
+    required ProjectVersionRequest projectVersionRequest,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/buyers/work-packages/{packageId}/reactivate'.replaceAll('{' r'packageId' '}', encodeQueryParameter(_serializers, packageId, const FullType(String)).toString());
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        r'Idempotency-Key': idempotencyKey,
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'passportBearer',
+          },
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(ProjectVersionRequest);
+      _bodyData = _serializers.serialize(projectVersionRequest, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    WorkPackageViewResponse? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(WorkPackageViewResponse),
+      ) as WorkPackageViewResponse;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<WorkPackageViewResponse>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

@@ -27,5 +27,11 @@ void main() {
       // TODO
     });
 
+    // The Buyer's specification choice for each line whose `selection_required` is true. Selection and inquiry are rejected with SPECIFICATION_SELECTION_REQUIRED until every such line has one.
+    // BuiltList<ProjectSpecificationSelection> selections
+    test('to test the property `selections`', () async {
+      // TODO
+    });
+
   });
 }

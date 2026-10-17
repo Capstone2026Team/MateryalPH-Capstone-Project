@@ -11,10 +11,12 @@ Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**acceptBuyerOrderNrpc**](BuyerOrdersApi.md#acceptbuyerordernrpc) | **POST** /buyers/orders/{orderId}/nrpc/accept |
 [**approveBuyerOrderRevision**](BuyerOrdersApi.md#approvebuyerorderrevision) | **POST** /buyers/orders/{orderId}/revision/approve |
+[**buyBuyerOrderAgain**](BuyerOrdersApi.md#buybuyerorderagain) | **POST** /buyers/orders/{orderId}/buy-again |
 [**flagBuyerOrderNrpc**](BuyerOrdersApi.md#flagbuyerordernrpc) | **POST** /buyers/orders/{orderId}/nrpc/flag |
 [**getBuyerCheckout**](BuyerOrdersApi.md#getbuyercheckout) | **GET** /buyers/checkouts/{checkoutId} |
 [**getBuyerOrder**](BuyerOrdersApi.md#getbuyerorder) | **GET** /buyers/orders/{orderId} |
 [**listBuyerOrders**](BuyerOrdersApi.md#listbuyerorders) | **GET** /buyers/orders |
+[**openBuyerFulfillmentConversation**](BuyerOrdersApi.md#openbuyerfulfillmentconversation) | **POST** /buyers/orders/{orderId}/fulfillment-conversation |
 [**rejectBuyerOrderNrpc**](BuyerOrdersApi.md#rejectbuyerordernrpc) | **POST** /buyers/orders/{orderId}/nrpc/reject |
 [**rejectBuyerOrderRevision**](BuyerOrdersApi.md#rejectbuyerorderrevision) | **POST** /buyers/orders/{orderId}/revision/reject |
 [**submitBuyerCheckout**](BuyerOrdersApi.md#submitbuyercheckout) | **POST** /buyers/checkouts |
@@ -110,6 +112,51 @@ Name | Type | Description  | Notes
 ### HTTP request headers
 
  - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **buyBuyerOrderAgain**
+> BuyAgainEnvelope buyBuyerOrderAgain(idempotencyKey, orderId)
+
+
+
+Buy Again for a completed or cancelled Item-Based order (otherwise 409 BUY_AGAIN_UNAVAILABLE). Each line is added to the cart at today's price version and the original quantity, merged into any existing line, using the same eligibility, radius and quantity checks as adding by hand. A line that cannot be added is listed in skipped with its reason; quantities are never reduced to fit stock, so exact inventory is never revealed. Nothing is ordered or reserved. Idempotency-Key makes retries safe; a replay returns the current cart with empty added and skipped lists and meta.replayed true.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+
+final api = MateryalphApiClient().getBuyerOrdersApi();
+final String idempotencyKey = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String orderId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+
+try {
+    final response = api.buyBuyerOrderAgain(idempotencyKey, orderId);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling BuyerOrdersApi->buyBuyerOrderAgain: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **idempotencyKey** | **String**|  |
+ **orderId** | **String**|  |
+
+### Return type
+
+[**BuyAgainEnvelope**](BuyAgainEnvelope.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
@@ -248,11 +295,11 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **listBuyerOrders**
-> OrderListEnvelope listBuyerOrders(group, page)
+> OrderListEnvelope listBuyerOrders(group, procurementType, page)
 
 
 
-The Buyer's own orders, newest first, grouped by Awaiting Action, Active, Completed, Cancelled and Disputed. Order, payment, fulfillment, refund and dispute states are separate rows. Due windows are resolved before listing.
+The Buyer's own orders, newest first. Status chips: CONFIRMATION (awaiting the Vendor, the Buyer's approval or NRPC acceptance, or payment), PROCESSING (confirmed, preparing, cancellation requested), TO_SHIP (ready for pickup, out for delivery), TO_RECEIVE (delivered or picked up, awaiting receipt confirmation), COMPLETED, CANCELLED (cancelled, declined, expired) and DISPUTED. procurement_type filters the Item and Project tabs; meta.counts follow the same procurement filter. Order, payment, fulfillment, refund and dispute states are separate rows. Due windows are resolved before listing. CANCELLED_REFUNDED is the Profile history of actual CANCELLED orders or orders with PARTIALLY_REFUNDED or REFUNDED refund state, filtered before pagination; declined and expired orders without a completed refund are excluded.
 
 ### Example
 ```dart
@@ -260,10 +307,11 @@ import 'package:materyalph_api_client/api.dart';
 
 final api = MateryalphApiClient().getBuyerOrdersApi();
 final String group = group_example; // String |
+final String procurementType = procurementType_example; // String |
 final int page = 56; // int |
 
 try {
-    final response = api.listBuyerOrders(group, page);
+    final response = api.listBuyerOrders(group, procurementType, page);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling BuyerOrdersApi->listBuyerOrders: $e\n');
@@ -275,11 +323,57 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **group** | **String**|  | [optional]
+ **procurementType** | **String**|  | [optional]
  **page** | **int**|  | [optional]
 
 ### Return type
 
 [**OrderListEnvelope**](OrderListEnvelope.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **openBuyerFulfillmentConversation**
+> OrderFulfillmentConversationEnvelope openBuyerFulfillmentConversation(idempotencyKey, orderId)
+
+
+
+Returns the order's single Fulfillment Messages thread, separate from inquiry conversations. Threads open at order submission; for an open order submitted before that, this opens it. One thread exists per order, so every retry returns the same thread. A closed order without a thread is 409 FULFILLMENT_THREAD_CLOSED. Another Buyer's order is 404.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+
+final api = MateryalphApiClient().getBuyerOrdersApi();
+final String idempotencyKey = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String orderId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+
+try {
+    final response = api.openBuyerFulfillmentConversation(idempotencyKey, orderId);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling BuyerOrdersApi->openBuyerFulfillmentConversation: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **idempotencyKey** | **String**|  |
+ **orderId** | **String**|  |
+
+### Return type
+
+[**OrderFulfillmentConversationEnvelope**](OrderFulfillmentConversationEnvelope.md)
 
 ### Authorization
 

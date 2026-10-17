@@ -9,6 +9,10 @@ Name | Type
 `cartLockVersion` | number
 `vendorIds` | Set&lt;string&gt;
 `splitConfirmed` | boolean
+`workPackageId` | string
+`workPackageLockVersion` | number
+`budgetOverrideReason` | string
+`invoiceDetails` | [CheckoutInvoiceDetails](CheckoutInvoiceDetails.md)
 `paymentMethods` | { [key: string]: string; }
 
 ## Example
@@ -21,6 +25,10 @@ const example = {
   "cartLockVersion": null,
   "vendorIds": null,
   "splitConfirmed": null,
+  "workPackageId": null,
+  "workPackageLockVersion": null,
+  "budgetOverrideReason": null,
+  "invoiceDetails": null,
   "paymentMethods": null,
 } satisfies CheckoutSubmitRequest
 

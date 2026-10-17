@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace App\Domain\Procurement;
 
 use App\Domain\Catalog\CatalogAccess;
+use App\Domain\Catalog\ReadyMixedConcrete;
 use App\Domain\Catalog\VolumePricing;
 use App\Domain\Finance\FinancialSnapshotService;
 use App\Domain\Geography\BuyerProfiles;
 use App\Domain\Geography\GeographyScopeResolver;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Inventory\StockAvailability;
+use App\Domain\Operations\OutboxPublisher;
+use App\Domain\Vendors\VendorDeliveryEligibility;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -57,6 +60,37 @@ final class CartService
     }
 
     /**
+     * Preview the selected product before it is added to the cart. Use the Buyer's saved delivery
+     * destination and current eligible public offer; never mutate lines, reserve stock or confirm a fee.
+     *
+     * @param  array<string, mixed>  $input
+     * @return array<string, mixed>
+     */
+    public function previewDelivery(Request $request, array $input, DeliveryPreviewService $delivery): array
+    {
+        $buyerId = $this->profiles->idFor($request);
+        $offer = $this->offerQuery($this->offers->anywhere())->where('v.id', $input['listing_variant_id'])
+            ->addSelect(['v.weight_kg', 'v.length_cm', 'v.width_cm', 'v.height_cm', 'u.code as unit_code'])->first();
+        if ($offer === null || $offer->vacation_mode) {
+            throw new AuthenticationException('LISTING_UNAVAILABLE', 'This product is no longer available. Refresh to see current offers.', 409);
+        }
+        if (! in_array('DELIVERY', self::fulfillmentOptions((string) $offer->fulfillment_method, (string) $offer->organization_id), true)) {
+            throw new AuthenticationException('DELIVERY_NOT_OFFERED', 'This store does not offer Site Delivery.', 422);
+        }
+        $quantity = $this->quantity($input['quantity'], (int) $offer->unit_precision);
+        $this->assertAvailable($quantity, (string) $offer->available);
+        $load = [];
+        foreach (['weight_kg', 'length_cm', 'width_cm', 'height_cm'] as $field) {
+            $load[$field] = $offer->{$field} === null ? null : (string) $offer->{$field};
+        }
+        $load += ReadyMixedConcrete::load($offer->ready_mixed_concrete ? ReadyMixedConcrete::MATERIAL_CODE : null, (string) $offer->unit_code);
+
+        return $delivery->preview((string) $offer->organization_id, $this->destination($this->cart($buyerId)), [
+            ['id' => (string) $offer->variant_id, 'quantity' => $quantity, 'load' => $load],
+        ]);
+    }
+
+    /**
      * @param  array<string, mixed>  $input
      * @return array<string, mixed>
      */
@@ -84,20 +118,11 @@ final class CartService
                 throw new AuthenticationException('PRICE_CHANGED', 'The price changed since you opened this product. Review the current price and add again.', 409,
                     ['current_price_version_id' => (string) $offer->price_version_id, 'current_unit_price_centavos' => (int) $offer->amount_centavos]);
             }
-            $quantity = $this->quantity($input['quantity'] ?? null, (int) $offer->unit_precision);
-            $existing = DB::table('cart_items')->where('cart_id', $cart->id)->where('listing_variant_id', $variantId)->lockForUpdate()->first();
-            $total = $existing === null || $existing->saved_for_later_at !== null ? $quantity : bcadd(StockAvailability::quantity($existing->quantity), $quantity, 4);
-            $this->assertAvailable($total, (string) $offer->available);
-            if ($existing === null && DB::table('cart_items')->where('cart_id', $cart->id)->count() >= self::MAX_LINES) {
-                throw new AuthenticationException('CART_FULL', 'Your cart can hold up to '.self::MAX_LINES.' lines. Remove a line first.', 422);
+            $tag = $input['work_package_line_id'] ?? null;
+            if ($tag !== null) {
+                $this->assertMissingLineTag($buyerId, (string) $tag, $variantId);
             }
-            $snapshot = $this->snapshot($offer) + ['quantity' => $total, 'saved_for_later_at' => null, 'updated_at' => now()];
-            if ($existing === null) {
-                DB::table('cart_items')->insert($snapshot + ['id' => (string) Str::uuid7(), 'cart_id' => $cart->id, 'listing_variant_id' => $variantId, 'lock_version' => 1, 'created_at' => now()]);
-            } else {
-                DB::table('cart_items')->where('id', $existing->id)->update($snapshot + ['lock_version' => (int) $existing->lock_version + 1]);
-            }
-            $this->ensureGroup((string) $cart->id, (string) $offer->organization_id, (string) $offer->fulfillment_method, $input['fulfillment_method'] ?? null);
+            $this->putLine($cart, $offer, $this->quantity($input['quantity'] ?? null, (int) $offer->unit_precision), $input['fulfillment_method'] ?? null, $tag);
             $this->touch($cart);
             $this->idempotency->claim($request, 'BUYER_CART_ADD', $key, $buyerId, 200);
 
@@ -105,6 +130,94 @@ final class CartService
         });
 
         return $this->present(DB::table('carts')->where('id', $cartId)->first());
+    }
+
+    /**
+     * Buy Again (approved by the project owner on 2026-10-10): adds each line of a closed order at today's price
+     * version and the original quantity, merged into any existing cart line. A line the Buyer could not add by hand
+     * (unavailable, outside the radius, store paused, quantity not confirmable now, cart full) is skipped with its
+     * reason; the quantity is never reduced to fit stock, so exact inventory is never revealed. Nothing is reserved.
+     *
+     * @param  list<array{variant_id: string, quantity: string, display_name: string}>  $lines
+     * @return array{cart: array<string, mixed>, added: list<array<string, string>>, skipped: list<array<string, string>>, replayed: bool}
+     */
+    public function addAgain(Request $request, string $orderId, array $lines, ?string $fulfillmentMethod): array
+    {
+        $buyerId = $this->profiles->idFor($request);
+        $key = $this->idempotency->requireIdempotencyKey($request);
+        $result = DB::transaction(function () use ($request, $buyerId, $key, $orderId, $lines, $fulfillmentMethod): array {
+            $cart = $this->cart($buyerId, true);
+            if ($this->idempotency->replayed($request, 'BUYER_BUY_AGAIN', $key, $orderId)) {
+                return ['cart_id' => (string) $cart->id, 'added' => [], 'skipped' => [], 'replayed' => true];
+            }
+            $scope = $this->scopes->forBuyer($buyerId, []);
+            $added = [];
+            $skipped = [];
+            foreach ($lines as $line) {
+                try {
+                    $offer = $this->offerQuery($this->offers->within($scope))->where('v.id', $line['variant_id'])->first();
+                    if ($offer === null) {
+                        throw $this->offers->anywhere()->where('v.id', $line['variant_id'])->exists()
+                            ? new AuthenticationException('OUTSIDE_SELECTED_RADIUS', 'This store is outside your selected radius.', 422)
+                            : new AuthenticationException('LISTING_UNAVAILABLE', 'This product is no longer available.', 409);
+                    }
+                    if ($offer->vacation_mode) {
+                        throw new AuthenticationException('STORE_ON_VACATION', 'This store has paused new procurement.', 409);
+                    }
+                    $this->putLine($cart, $offer, $this->quantity($line['quantity'], (int) $offer->unit_precision), $fulfillmentMethod);
+                    $added[] = ['display_name' => $line['display_name'], 'quantity' => $line['quantity']];
+                } catch (AuthenticationException $exception) {
+                    $skipped[] = ['display_name' => $line['display_name'], 'reason_code' => $exception->errorCode, 'message' => $exception->getMessage()];
+                }
+            }
+            if ($added !== []) {
+                $this->touch($cart);
+            }
+            $this->idempotency->claim($request, 'BUYER_BUY_AGAIN', $key, $orderId, 200);
+
+            return ['cart_id' => (string) $cart->id, 'added' => $added, 'skipped' => $skipped, 'replayed' => false];
+        });
+
+        return ['cart' => $this->present(DB::table('carts')->where('id', $result['cart_id'])->first())] + $result;
+    }
+
+    /**
+     * A cart line may name the Work Package line it is bought for (owner decision 2026-10-12). Only a catalog
+     * line of the Buyer's own current package version qualifies, and only with the same material and unit;
+     * unlisted lines are resolved by waiver.
+     */
+    private function assertMissingLineTag(string $buyerId, string $lineId, string $variantId): void
+    {
+        $line = DB::table('work_package_lines as wl')->join('work_package_versions as wv', 'wv.id', '=', 'wl.work_package_version_id')
+            ->join('work_packages as w', 'w.id', '=', 'wv.work_package_id')->join('projects as pr', 'pr.id', '=', 'w.project_id')
+            ->where('wl.id', $lineId)->where('pr.buyer_profile_id', $buyerId)->whereColumn('w.current_version_id', 'wv.id')->first(['wl.material_id', 'wl.unit_id']);
+        $variant = DB::table('listing_variants as v')->join('vendor_listings as l', 'l.id', '=', 'v.vendor_listing_id')->join('products as p', 'p.id', '=', 'l.product_id')
+            ->where('v.id', $variantId)->first(['p.material_id', 'v.unit_id']);
+        if ($line === null || $line->material_id === null || $variant === null || $variant->material_id !== $line->material_id || $variant->unit_id !== $line->unit_id) {
+            throw new AuthenticationException('MISSING_LINE_TAG_INVALID', 'This product does not match the Work Package material and unit it would cover.', 422);
+        }
+    }
+
+    /** Adds the quantity to the variant's cart line (or a new line) at the offer's current price version. */
+    private function putLine(object $cart, object $offer, string $quantity, mixed $fulfillmentMethod, ?string $workPackageLineId = null): void
+    {
+        $variantId = (string) $offer->variant_id;
+        $existing = DB::table('cart_items')->where('cart_id', $cart->id)->where('listing_variant_id', $variantId)->lockForUpdate()->first();
+        $total = $existing === null || $existing->saved_for_later_at !== null ? $quantity : bcadd(StockAvailability::quantity($existing->quantity), $quantity, 4);
+        $this->assertAvailable($total, (string) $offer->available);
+        if ($existing === null && DB::table('cart_items')->where('cart_id', $cart->id)->count() >= self::MAX_LINES) {
+            throw new AuthenticationException('CART_FULL', 'Your cart can hold up to '.self::MAX_LINES.' lines. Remove a line first.', 422);
+        }
+        $snapshot = $this->snapshot($offer) + ['quantity' => $total, 'saved_for_later_at' => null, 'updated_at' => now()];
+        if ($workPackageLineId !== null) {
+            $snapshot['work_package_line_id'] = $workPackageLineId;
+        }
+        if ($existing === null) {
+            DB::table('cart_items')->insert($snapshot + ['id' => (string) Str::uuid7(), 'cart_id' => $cart->id, 'listing_variant_id' => $variantId, 'lock_version' => 1, 'created_at' => now()]);
+        } else {
+            DB::table('cart_items')->where('id', $existing->id)->update($snapshot + ['lock_version' => (int) $existing->lock_version + 1]);
+        }
+        $this->ensureGroup((string) $cart->id, (string) $offer->organization_id, (string) $offer->fulfillment_method, $fulfillmentMethod, (bool) $offer->ready_mixed_concrete);
     }
 
     /**
@@ -185,7 +298,11 @@ final class CartService
                 throw new AuthenticationException('CART_GROUP_NOT_FOUND', 'This Vendor is no longer in your cart.', 404);
             }
             $method = (string) $input['fulfillment_method'];
-            $offered = self::fulfillmentOptions((string) DB::table('store_profiles')->where('vendor_organization_id', $vendorId)->value('fulfillment_method'));
+            $active = array_filter($this->lines((string) $cart->id), static fn (array $line): bool => $line['vendor_id'] === $vendorId && ! $line['saved_for_later']);
+            if ($method === 'PICKUP' && array_any($active, static fn (array $line): bool => $line['ready_mixed_concrete'])) {
+                throw new AuthenticationException('SITE_DELIVERY_REQUIRED', ReadyMixedConcrete::SITE_DELIVERY_MESSAGE, 422, ['fulfillment_method' => ['Choose Site Delivery.']]);
+            }
+            $offered = self::fulfillmentOptions((string) DB::table('store_profiles')->where('vendor_organization_id', $vendorId)->value('fulfillment_method'), $vendorId);
             if (! in_array($method, $offered, true)) {
                 throw new AuthenticationException('FULFILLMENT_NOT_OFFERED', $method === 'DELIVERY' ? 'This store does not offer Site Delivery.' : 'This store does not offer Self-Pickup.', 422);
             }
@@ -267,8 +384,8 @@ final class CartService
     {
         $items = DB::table('cart_items as c')->join('listing_variants as v', 'v.id', '=', 'c.listing_variant_id')->join('vendor_listings as l', 'l.id', '=', 'v.vendor_listing_id')
             ->join('units as u', 'u.id', '=', 'v.unit_id')->where('c.cart_id', $cartId)->orderBy('c.created_at')->orderBy('c.id')
-            ->get(['c.*', 'v.label as variant_label', 'v.weight_kg', 'v.length_cm', 'v.width_cm', 'v.height_cm', 'l.id as listing_id', 'l.display_name', 'l.vendor_organization_id', 'l.publication_version as current_publication_version',
-                'u.code as unit_code', 'u.name as unit_name', 'u.precision as unit_precision']);
+            ->select(['c.*', 'v.label as variant_label', 'v.weight_kg', 'v.length_cm', 'v.width_cm', 'v.height_cm', 'l.id as listing_id', 'l.display_name', 'l.vendor_organization_id', 'l.publication_version as current_publication_version',
+                'u.code as unit_code', 'u.name as unit_name', 'u.precision as unit_precision'])->selectRaw(ReadyMixedConcrete::listingSql('l').' AS ready_mixed_concrete')->get();
         $variantIds = $items->pluck('listing_variant_id')->map(static fn (mixed $id): string => (string) $id)->all();
         $offers = $variantIds === [] ? collect() : $this->offerQuery($this->offers->anywhere())->whereIn('v.id', $variantIds)->get()->keyBy('variant_id');
         $tiers = $this->facts->volumeTiers($variantIds);
@@ -303,6 +420,7 @@ final class CartService
             $lines[] = [
                 'id' => (string) $item->id, 'lock_version' => (int) $item->lock_version, 'listing_id' => (string) $item->listing_id, 'variant_id' => (string) $item->listing_variant_id,
                 'vendor_id' => (string) $item->vendor_organization_id, 'display_name' => (string) $item->display_name, 'variant_label' => $item->variant_label,
+                'work_package_line_id' => $item->work_package_line_id === null ? null : (string) $item->work_package_line_id,
                 'image' => $images[(string) $item->listing_id][0] ?? null,
                 'unit_code' => (string) $item->unit_code, 'unit_name' => (string) $item->unit_name, 'quantity' => $quantity, 'quantity_step' => self::quantityStep((int) $item->unit_precision),
                 'saved_for_later' => $item->saved_for_later_at !== null,
@@ -313,8 +431,10 @@ final class CartService
                 'line_total_centavos' => $current === null ? null : FinancialSnapshotService::lineAmountCentavos($quantity, $current['applied_unit_price_centavos']),
                 'issues' => $issues,
                 'status' => $this->worst($issues),
+                'ready_mixed_concrete' => (bool) $item->ready_mixed_concrete,
                 'load' => ['weight_kg' => $item->weight_kg === null ? null : (string) $item->weight_kg, 'length_cm' => $item->length_cm === null ? null : (string) $item->length_cm,
-                    'width_cm' => $item->width_cm === null ? null : (string) $item->width_cm, 'height_cm' => $item->height_cm === null ? null : (string) $item->height_cm],
+                    'width_cm' => $item->width_cm === null ? null : (string) $item->width_cm, 'height_cm' => $item->height_cm === null ? null : (string) $item->height_cm]
+                    + ReadyMixedConcrete::load($item->ready_mixed_concrete ? ReadyMixedConcrete::MATERIAL_CODE : null, (string) $item->unit_code),
             ];
         }
 
@@ -322,14 +442,40 @@ final class CartService
     }
 
     /** @return list<string> DELIVERY and/or PICKUP */
-    public static function fulfillmentOptions(string $storeMethod): array
+    public static function fulfillmentOptions(string $storeMethod, string $organizationId): array
     {
+        $delivery = in_array($storeMethod, ['VENDOR_DELIVERY', 'BOTH'], true) && app(VendorDeliveryEligibility::class)->available($organizationId);
+
         return match ($storeMethod) {
-            'BOTH' => ['DELIVERY', 'PICKUP'],
-            'VENDOR_DELIVERY' => ['DELIVERY'],
+            'BOTH' => $delivery ? ['DELIVERY', 'PICKUP'] : ['PICKUP'],
+            'VENDOR_DELIVERY' => $delivery ? ['DELIVERY'] : [],
             'SELF_PICKUP' => ['PICKUP'],
             default => [],
         };
+    }
+
+    /**
+     * A Vendor group's fulfillment options: a group holding ready-mixed concrete is Site Delivery only.
+     *
+     * @param  list<array<string, mixed>>  $lines  the group's active cart lines
+     * @return list<string>
+     */
+    public static function groupFulfillmentOptions(string $storeMethod, string $organizationId, array $lines): array
+    {
+        $options = self::fulfillmentOptions($storeMethod, $organizationId);
+
+        return array_any($lines, static fn (array $line): bool => (bool) ($line['ready_mixed_concrete'] ?? false))
+            ? array_values(array_intersect($options, ['DELIVERY'])) : $options;
+    }
+
+    /**
+     * Issue shown on a group's ready-mixed lines while the Buyer still has Self-Pickup selected.
+     *
+     * @return array{code: string, severity: string, message: string}
+     */
+    public static function siteDeliveryIssue(): array
+    {
+        return ['code' => 'SITE_DELIVERY_REQUIRED', 'severity' => self::ACTION_REQUIRED, 'message' => ReadyMixedConcrete::SITE_DELIVERY_MESSAGE];
     }
 
     /**
@@ -393,9 +539,13 @@ final class CartService
         $presented = [];
         foreach ($vendorIds as $vendorId) {
             $store = $stores->get($vendorId);
-            $options = self::fulfillmentOptions((string) ($store->fulfillment_method ?? ''));
             $chosen = $groups->get($vendorId)?->fulfillment_method;
             $groupLines = array_values(array_filter($active, static fn (array $line): bool => $line['vendor_id'] === $vendorId));
+            $options = self::groupFulfillmentOptions((string) ($store->fulfillment_method ?? ''), $vendorId, $groupLines);
+            if ($chosen === 'PICKUP') {
+                $groupLines = array_map(fn (array $line): array => $line['ready_mixed_concrete']
+                    ? array_replace($line, ['issues' => [...$line['issues'], self::siteDeliveryIssue()], 'status' => $this->worst([...$line['issues'], self::siteDeliveryIssue()])]) : $line, $groupLines);
+            }
             $presented[] = [
                 'vendor' => ['id' => $vendorId, 'name' => (string) ($store->public_store_name ?? 'Store unavailable'), 'vacation_mode' => (bool) ($store->vacation_mode ?? false)],
                 'fulfillment_method' => $chosen ?? (count($options) === 1 ? $options[0] : null),
@@ -427,7 +577,8 @@ final class CartService
         return $offers->join('units as u', 'u.id', '=', 'v.unit_id')
             ->select(['v.id as variant_id', 'l.id as listing_id', 'o.id as organization_id', 'l.publication_version', 'pv.id as price_version_id', 'pv.amount_centavos', 'pv.tax_category',
                 'i.reorder_level', 'p.fulfillment_method', 'p.vacation_mode', 'u.precision as unit_precision'])
-            ->selectRaw('i.quantity_on_hand - i.hard_reserved_quantity AS available');
+            ->selectRaw('i.quantity_on_hand - i.hard_reserved_quantity AS available')
+            ->selectRaw(ReadyMixedConcrete::listingSql('l').' AS ready_mixed_concrete');
     }
 
     /** @return array<string, mixed> */
@@ -463,9 +614,15 @@ final class CartService
         }
     }
 
-    private function ensureGroup(string $cartId, string $organizationId, string $storeMethod, mixed $requested): void
+    private function ensureGroup(string $cartId, string $organizationId, string $storeMethod, mixed $requested, bool $readyMixed = false): void
     {
-        $options = self::fulfillmentOptions($storeMethod);
+        $options = self::groupFulfillmentOptions($storeMethod, $organizationId, [['ready_mixed_concrete' => $readyMixed]]);
+        if ($readyMixed && $requested === 'PICKUP') {
+            throw new AuthenticationException('SITE_DELIVERY_REQUIRED', ReadyMixedConcrete::SITE_DELIVERY_MESSAGE, 422, ['fulfillment_method' => ['Choose Site Delivery.']]);
+        }
+        if (is_string($requested) && ! in_array($requested, $options, true)) {
+            throw new AuthenticationException('FULFILLMENT_NOT_OFFERED', 'This fulfillment method is currently unavailable. Choose an available method.', 422);
+        }
         $group = DB::table('cart_vendor_groups')->where('cart_id', $cartId)->where('vendor_organization_id', $organizationId)->first();
         $method = is_string($requested) && in_array($requested, $options, true) ? $requested : null;
         if ($group === null) {
@@ -489,6 +646,7 @@ final class CartService
     private function touch(object $cart): void
     {
         DB::table('carts')->where('id', $cart->id)->update(['lock_version' => (int) $cart->lock_version + 1, 'updated_at' => now()]);
+        app(OutboxPublisher::class)->publish('CART_CHANGED', 'CART', (string) $cart->id, []);
     }
 
     private function ownsActiveLocation(string $buyerId, string $locationId): bool

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { loadGoogleMaps as loadSharedGoogleMaps } from '@materyalph/web-ui'
 
 export type VendorAddressCoordinates = {
   latitude: number
@@ -43,43 +44,8 @@ type GoogleWindow = Window & {
 }
 
 const DEFAULT_CENTER = { lat: 14.5995, lng: 120.9842 }
-const SCRIPT_ID = 'materyalph-google-maps-browser-script'
 
-function configuredGoogleMaps(): GoogleMapsApi | undefined {
-  const google = (window as GoogleWindow).google
-  return google?.maps ? google : undefined
-}
-
-let mapsLoading: Promise<GoogleMapsApi> | undefined
-
-function loadGoogleMaps(browserKey: string): Promise<GoogleMapsApi> {
-  const configured = configuredGoogleMaps()
-  if (configured?.maps.Map) return Promise.resolve(configured)
-  if (mapsLoading) return mapsLoading
-  mapsLoading = new Promise((resolve, reject) => {
-    document.getElementById(SCRIPT_ID)?.remove()
-    const script = document.createElement('script')
-    const fail = () => {
-      window.clearTimeout(timeout)
-      script.remove()
-      mapsLoading = undefined
-      reject(new Error('Google Maps could not initialize.'))
-    }
-    const timeout = window.setTimeout(fail, 15000)
-    ;(window as GoogleWindow).materyalMapsReady = () => {
-      const google = configuredGoogleMaps()
-      if (!google?.maps.Map) { fail(); return }
-      window.clearTimeout(timeout)
-      resolve(google)
-    }
-    script.id = SCRIPT_ID
-    script.async = true
-    script.onerror = fail
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(browserKey)}&v=weekly&loading=async&callback=materyalMapsReady`
-    document.head.appendChild(script)
-  })
-  return mapsLoading
-}
+const loadGoogleMaps = (browserKey: string) => loadSharedGoogleMaps<GoogleMapsApi>(browserKey)
 
 function validCoordinates(latitude: number | undefined, longitude: number | undefined): VendorAddressCoordinates | null {
   if (latitude === undefined || longitude === undefined || !Number.isFinite(latitude) || !Number.isFinite(longitude)) return null
